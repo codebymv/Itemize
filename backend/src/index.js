@@ -30,7 +30,12 @@ app.use(express.json());
 // Auth routes
 app.use('/api/auth', authRouter);
 
-// Health check endpoint
+// Health check endpoint for Railway deployment
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString(), environment: process.env.NODE_ENV });
+});
+
+// Backward compatibility for local development
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
