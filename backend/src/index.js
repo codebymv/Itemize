@@ -33,14 +33,28 @@ app.use('/api/auth', (req, res, next) => {
   next();
 }, authRouter);
 
-// Health check endpoint for Railway deployment
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString(), environment: process.env.NODE_ENV });
+// Health check endpoints for Railway deployment
+// Define these early so they work even if other parts of the app have issues
+
+// Primary health check endpoint at /health for Railway
+app.get('/health', (req, res) => {
+  // Return OK even if database connection is not available
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    dbConnected: !!pool,
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Backward compatibility for local development
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Also support /api/health for API consistency
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    dbConnected: !!pool,
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Get all lists
@@ -181,27 +195,56 @@ aiSuggestionService.initialize();
 // Initialize the database connection before fully starting the server
 async function startServer() {
   try {
+    // Parse PORT as a number (Railway provides this automatically)
+    const portNumber = parseInt(port, 10);
+    if (isNaN(portNumber)) {
+      console.error(`Invalid PORT value: ${port}`);
+      process.exit(1);
+    }
+    
     // Check if we have a valid pool
     if (pool) {
       const dbInitialized = await initializeDatabase(pool);
       if (dbInitialized) {
-        console.log('Database initialized successfully');
+        console.log('Database schema initialized successfully');
       } else {
-        console.log('Falling back to in-memory storage...');
+        console.log('Database initialization failed');
       }
     } else {
-      console.log('Unable to create database connection, falling back to in-memory storage...');
+      console.warn('No database connection, skipping initialization');
     }
+    
+    // Print all environment variables without sensitive values for debugging
+    console.log('Environment variables:');
+    console.log(`  NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+    console.log(`  PORT: ${portNumber}`);
+    console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'not set'}`);
+    console.log(`  FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
+    console.log(`  GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? '[REDACTED]' : 'not set'}`);
+    console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? '[REDACTED]' : 'not set'}`);
+    console.log(`  GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '[REDACTED]' : 'not set'}`);
+    console.log('------------------------------');
+    
+    // Start the server with more explicit binding
+    // Railway dynamically assigns a port that the app needs to listen on
+    const server = app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port} (${new Date().toISOString()})`);
+      console.log('Health check endpoints:');
+      console.log('  - /health');
+      console.log('  - /api/health');
+    });
+    
+    // Add error handler for the server
+    server.on('error', (error) => {
+      console.error('Server error:', error);
+      process.exit(1);
+    });
+    
   } catch (error) {
-    console.error('Error initializing database:', error);
-    console.log('Falling back to in-memory storage...');
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-  
-  // Start the server regardless of database initialization result
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-}
+};
 
 // Start the server
 startServer();

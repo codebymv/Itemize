@@ -1,29 +1,88 @@
 const { Pool } = require('pg');
 
+// In-memory storage fallbacks if database fails
+const inMemoryUsers = [];
+const inMemoryLists = [];
+let useInMemory = false;
+
 // Connection configuration with better error handling
 const createDbConnection = () => {
   try {
-    // For Railway deployments, prefer connection pooler approach
+    // Check if DATABASE_URL is provided
+    const dbUrl = process.env.DATABASE_URL;
+    console.log('Starting database connection with URL:', dbUrl ? 'URL provided' : 'No URL found');
+    
+    if (!dbUrl) {
+      console.warn('DATABASE_URL not found in environment. Using in-memory storage.');
+      useInMemory = true;
+      return null;
+    }
+    
+    // For Railway deployments, we need to parse the connection info more granularly
+    let connectionConfig;
+    
+    try {
+      // Try to extract host from connection string to log it for debugging
+      const matches = dbUrl.match(/postgresql:\/\/.*?@([^:]+)(:[0-9]+)?/);
+      if (matches && matches[1]) {
+        const host = matches[1];
+        console.log(`Attempting to connect to host: ${host}`);
+        
+        // Try to resolve the host to its IP addresses for debugging
+        require('dns').lookup(host, { all: true }, (err, addresses) => {
+          if (err) {
+            console.error('DNS lookup error:', err.message);
+          } else {
+            console.log('Host resolves to:', addresses.map(a => `${a.address} (${a.family === 4 ? 'IPv4' : 'IPv6'})`).join(', '));
+          }
+        });
+      }
+    } catch (err) {
+      console.log('Could not parse host from connection string:', err.message);
+    }
+    
+    // Create a connection pool with more conservative settings
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: dbUrl,
       ssl: {
         rejectUnauthorized: false // Required for Supabase connections
       },
-      // Add explicit connection parameters for better stability
-      max: 5,              // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-      connectionTimeoutMillis: 5000, // How long to wait for a connection to become available
+      // More conservative connection settings for Railway
+      max: 3,                     // Maximum number of clients (keeping it lower)
+      min: 0,                     // Minimum number of clients
+      idleTimeoutMillis: 10000,   // 10 seconds idle timeout
+      connectionTimeoutMillis: 10000, // 10 seconds connection timeout
+      statement_timeout: 10000,   // Statement timeout
+      query_timeout: 10000,      // Query timeout
     });
 
-    // Test the connection
+    // Set up event handlers
     pool.on('connect', (client) => {
-      console.log('Connected to PostgreSQL database');
+      console.log('Connected to PostgreSQL database successfully');
+      useInMemory = false;
     });
 
     pool.on('error', (err, client) => {
-      console.error('Unexpected error on idle client', err);
-      // Don't crash on connection errors, but log them
+      console.error('Database pool error:', err.message);
+      // Don't crash the application on pool errors
+      if (err.code === 'ENETUNREACH' || err.code === 'ENOTFOUND') {
+        console.warn('Network unreachable or host not found. Switching to in-memory storage.');
+        useInMemory = true;
+      }
     });
+    
+    // Test the connection immediately
+    console.log('Testing database connection...');
+    pool.query('SELECT 1 as health_check')
+      .then(() => {
+        console.log('✅ Database connection test successful');
+        useInMemory = false;
+      })
+      .catch((err) => {
+        console.error('❌ Database connection test failed:', err.message, err.stack);
+        console.warn('Switching to in-memory storage');
+        useInMemory = true;
+      });
 
     return pool;
   } catch (error) {
