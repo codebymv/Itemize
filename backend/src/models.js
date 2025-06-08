@@ -1,25 +1,72 @@
 const { Sequelize, DataTypes } = require('sequelize');
 
-// Initialize Sequelize with the DATABASE_URL from environment variables
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'postgres',
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false // For Supabase connection
-    }
-  },
-  // Add connection pool configuration for better stability
-  pool: {
-    max: 5,           // Maximum number of connections in pool
-    min: 0,           // Minimum number of connections in pool
-    acquire: 30000,   // Maximum time (ms) to acquire a connection
-    idle: 10000       // Maximum time (ms) a connection can be idle before being released
-  },
-  // Force IPv4 preference for connections
-  host: process.env.DB_HOST || 'localhost',  // Use explicit DB_HOST if available
-  logging: process.env.NODE_ENV === 'development' ? console.log : false
-});
+// Parse connection URL to extract components
+const parseDbUrl = () => {
+  try {
+    if (!process.env.DATABASE_URL) return null;
+    
+    // Parse the connection URL
+    const regex = /^postgresql:\/\/(\w+):(.*?)@([^:]+)(:[0-9]+)?\/(.*?)$/;
+    const match = process.env.DATABASE_URL.match(regex);
+    
+    if (!match) return null;
+    
+    return {
+      username: match[1],
+      password: match[2],
+      host: match[3],
+      port: match[4] ? parseInt(match[4].substring(1)) : 5432,
+      database: match[5]
+    };
+  } catch (err) {
+    console.error('Error parsing database URL:', err);
+    return null;
+  }
+};
+
+const dbConfig = parseDbUrl();
+let sequelize;
+
+if (dbConfig) {
+  // Initialize Sequelize with explicit configuration parameters instead of URL
+  // This allows us to handle IPv4/IPv6 issues more explicitly
+  sequelize = new Sequelize({
+    database: dbConfig.database,
+    username: dbConfig.username,
+    password: dbConfig.password,
+    host: dbConfig.host,
+    port: dbConfig.port,
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false // For Supabase connection
+      }
+    },
+    // Add connection pool configuration for better stability
+    pool: {
+      max: 5,           // Maximum number of connections in pool
+      min: 0,           // Minimum number of connections in pool
+      acquire: 30000,   // Maximum time (ms) to acquire a connection
+      idle: 10000       // Maximum time (ms) a connection can be idle before being released
+    },
+    logging: process.env.NODE_ENV === 'development' ? console.log : false
+  });
+  
+  console.log(`Database connection initialized with host: ${dbConfig.host}, port: ${dbConfig.port}`);
+} else {
+  // Fallback to direct URL if parsing fails
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    logging: process.env.NODE_ENV === 'development' ? console.log : false
+  });
+}
 
 // Define User model
 const User = sequelize.define('User', {

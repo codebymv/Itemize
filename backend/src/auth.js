@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const router = express.Router();
-const { User } = require('./models');
+const { userOperations } = require('./db');
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -35,29 +35,29 @@ router.post('/google-login', asyncHandler(async (req, res) => {
 
     console.log('Processing Google login for:', email);
     
+    // Get the database pool from request
+    const pool = req.dbPool;
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
     // Find or create a user in our database
     let user;
     try {
       console.log('Looking up user by email:', email);
-      user = await User.findOne({ where: { email } });
+      
+      // Use the userOperations to find or create user
+      user = await userOperations.findOrCreate(pool, {
+        email,
+        name,
+        googleId,
+        picture,
+        provider: 'google'
+      });
       
       if (!user) {
-        console.log('Creating new user:', email);
-        user = await User.create({
-          email,
-          name,
-          googleId,
-          picture,
-          provider: 'google'
-        });
-      } else {
-        // Update existing user with Google info
-        console.log('Updating existing user:', email);
-        user.googleId = googleId;
-        user.name = user.name || name; // Only update if name is not set
-        user.picture = picture;
-        user.provider = 'google';
-        await user.save();
+        throw new Error('Failed to create or retrieve user');
       }
     } catch (error) {
       console.error('Error handling user:', error);
@@ -110,26 +110,27 @@ router.post('/google-credential', asyncHandler(async (req, res) => {
     
     const { sub: googleId, email, name, picture } = response.data;
     
+    // Get the database pool from request
+    const pool = req.dbPool;
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
     // Find or create a user in our database
     let user;
     try {
-      user = await User.findOne({ where: { email } });
+      // Use the userOperations to find or create user
+      user = await userOperations.findOrCreate(pool, {
+        email,
+        name,
+        googleId,
+        picture,
+        provider: 'google'
+      });
       
       if (!user) {
-        user = await User.create({
-          email,
-          name,
-          googleId,
-          picture,
-          provider: 'google'
-        });
-      } else {
-        // Update existing user with Google info
-        user.googleId = googleId;
-        user.name = user.name || name;
-        user.picture = picture;
-        user.provider = 'google';
-        await user.save();
+        throw new Error('Failed to create or retrieve user');
       }
     } catch (error) {
       console.error('Error handling Google credential user:', error);

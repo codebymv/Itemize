@@ -5,8 +5,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-// Import database models with Sequelize
-const { sequelize, User, List, initializeDatabase } = require('./models');
+// Import our new database module using pg directly
+const { createDbConnection, initializeDatabase, userOperations, listOperations } = require('./db');
 // Now import auth module after environment variables are loaded
 const { router: authRouter, authenticateJWT } = require('./auth');
 // Import AI suggestion service
@@ -15,7 +15,8 @@ const aiSuggestionService = require('./services/aiSuggestionService');
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Sequelize is now handling the database connection in models.js
+// Initialize database connection
+const pool = createDbConnection();
 
 // Middleware
 app.use(helmet());
@@ -26,8 +27,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Auth routes
-app.use('/api/auth', authRouter);
+// Auth routes - pass database pool to auth router
+app.use('/api/auth', (req, res, next) => {
+  req.dbPool = pool;
+  next();
+}, authRouter);
 
 // Health check endpoint for Railway deployment
 app.get('/api/health', (req, res) => {
@@ -42,10 +46,11 @@ app.get('/health', (req, res) => {
 // Get all lists
 app.get('/api/lists', authenticateJWT, async (req, res) => {
   try {
-    const lists = await List.findAll({
-      where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
-    });
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    const lists = await listOperations.findAllByUserId(pool, req.user.id);
     res.json(lists);
   } catch (error) {
     console.error('Error fetching lists:', error);
@@ -56,18 +61,26 @@ app.get('/api/lists', authenticateJWT, async (req, res) => {
 // Create a new list
 app.post('/api/lists', authenticateJWT, async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
     const { title, category, items } = req.body;
     
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    const list = await List.create({
+    const list = await listOperations.create(pool, {
       title,
       category: category || 'General',
       items: items || [],
       userId: req.user.id
     });
+    
+    if (!list) {
+      return res.status(500).json({ error: 'Failed to create list' });
+    }
     
     res.status(201).json(list);
   } catch (error) {
@@ -79,26 +92,32 @@ app.post('/api/lists', authenticateJWT, async (req, res) => {
 // Update a list
 app.put('/api/lists/:id', authenticateJWT, async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
     const { id } = req.params;
     const { title, category, items } = req.body;
     
-    const list = await List.findOne({
-      where: { 
-        id: id,
-        userId: req.user.id // Ensure user can only update their own lists
-      }
-    });
+    // First check if the list exists and belongs to the user
+    const existingList = await listOperations.findById(pool, id, req.user.id);
     
-    if (!list) {
+    if (!existingList) {
       return res.status(404).json({ error: 'List not found' });
     }
     
-    list.title = title;
-    list.category = category;
-    list.items = items;
-    await list.save();
+    // Update the list
+    const updatedList = await listOperations.update(pool, id, req.user.id, {
+      title,
+      category,
+      items
+    });
     
-    res.json(list);
+    if (!updatedList) {
+      return res.status(500).json({ error: 'Failed to update list' });
+    }
+    
+    res.json(updatedList);
   } catch (error) {
     console.error('Error updating list:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -108,20 +127,19 @@ app.put('/api/lists/:id', authenticateJWT, async (req, res) => {
 // Delete a list
 app.delete('/api/lists/:id', authenticateJWT, async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
     const { id } = req.params;
     
-    const list = await List.findOne({
-      where: { 
-        id: id,
-        userId: req.user.id // Ensure user can only delete their own lists
-      }
-    });
+    // Delete the list and verify ownership in one operation
+    const success = await listOperations.delete(pool, id, req.user.id);
     
-    if (!list) {
-      return res.status(404).json({ error: 'List not found' });
+    if (!success) {
+      return res.status(404).json({ error: 'List not found or could not be deleted' });
     }
     
-    await list.destroy();
     res.json({ message: 'List deleted successfully' });
   } catch (error) {
     console.error('Error deleting list:', error);
@@ -157,15 +175,33 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Initialize database with Sequelize before starting server
-initializeDatabase().then((dbInitialized) => {
-  if (dbInitialized) {
-    console.log('Database initialized successfully');
-  } else {
-    console.warn('Database initialization failed, using fallback mode');
+// Initialize AI suggestion service first - this doesn't depend on the database
+aiSuggestionService.initialize();
+
+// Initialize the database connection before fully starting the server
+async function startServer() {
+  try {
+    // Check if we have a valid pool
+    if (pool) {
+      const dbInitialized = await initializeDatabase(pool);
+      if (dbInitialized) {
+        console.log('Database initialized successfully');
+      } else {
+        console.log('Falling back to in-memory storage...');
+      }
+    } else {
+      console.log('Unable to create database connection, falling back to in-memory storage...');
+    }
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    console.log('Falling back to in-memory storage...');
   }
   
+  // Start the server regardless of database initialization result
   app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
-});
+}
+
+// Start the server
+startServer();
