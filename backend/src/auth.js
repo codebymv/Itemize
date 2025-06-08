@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const router = express.Router();
+const { User } = require('./models');
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -15,155 +16,162 @@ const generateTokens = (userId) => {
   return { accessToken, refreshToken };
 };
 
-// Google OAuth login endpoint
+/**
+ * Handle Google OAuth login endpoint using direct token-based approach
+ * This endpoint receives user data from Google directly from the frontend
+ */
 router.post('/google-login', async (req, res) => {
   try {
-    const { code } = req.body;
+    const { googleId, email, name, picture } = req.body;
     
-    if (!code) {
-      return res.status(400).json({ message: 'Authorization code is required' });
+    if (!googleId || !email || !name) {
+      return res.status(400).json({ error: 'Missing user information' });
     }
 
-    // Add debugging to see what's being sent
-    console.log('Attempting OAuth token exchange with:', { 
-      clientIdLength: GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.length : 0,
-      clientSecretLength: GOOGLE_CLIENT_SECRET ? GOOGLE_CLIENT_SECRET.length : 0,
-      code: code ? code.substring(0, 10) + '...' : 'missing',
-      redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`
-    });
+    console.log('Processing Google login for:', email);
     
-    // Exchange authorization code for access token
-    let googleUser;
-    try {
-      console.log('Actual values being used for OAuth exchange:', {
-        client_id_partial: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 10)}...` : 'MISSING',
-        client_secret_present: !!GOOGLE_CLIENT_SECRET,
-        code_length: code ? code.length : 0,
-        redirect_uri: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`
+    // Find or create a user in our database
+    let user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      console.log('Creating new user:', email);
+      user = await User.create({
+        email,
+        name,
+        googleId,
+        picture
       });
-
-      // Hard-code the exact URI to match Google OAuth settings
-      let redirectUri;
-      if (process.env.NODE_ENV === 'production') {
-        // Use exact URI that matches Google OAuth settings - without port number
-        redirectUri = 'https://itemize.up.railway.app/auth/callback';
-        console.log('SERVER: Using production redirect URI (no port):', redirectUri);
-      } else {
-        // For local development
-        redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`;
-        console.log('SERVER: Using development redirect URI:', redirectUri);
+    } else {
+      // Update existing user with Google info
+      console.log('Updating existing user:', email);
+      user.googleId = googleId;
+      user.name = user.name || name; // Only update if name is not set
+      user.picture = picture;
+      await user.save();
+    }
+    
+    // Create JWT token with 7-day expiry
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        email: user.email,
+        name: user.name
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    // Return the user data and token
+    res.status(200).json({
+      token,
+      user: {
+        uid: user.id, // Use uid to match frontend expected format
+        email: user.email,
+        name: user.name,
+        photoURL: user.picture // Use photoURL to match frontend expected format
       }
-      
-      const tokenData = {
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        code: code,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri
-      };
-
-      console.log('Making token request with data:', JSON.stringify(tokenData));
-
-      const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', tokenData);
-      const { access_token } = tokenResponse.data;
-
-      // Get user info from Google
-      const userResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${access_token}`
-        }
-      });
-      
-      googleUser = userResponse.data;
-    } catch (error) {
-      console.error('Detailed token exchange error:', error.response ? {
-        status: error.response.status,
-        data: error.response.data
-      } : error.message);
-      
-      return res.status(401).json({ message: 'Google authentication failed', error: error.response?.data || error.message });
-    }
-    
-    // Create user object
-    const user = {
-      id: googleUser.id,
-      email: googleUser.email,
-      name: googleUser.name,
-      picture: googleUser.picture
-    };
-
-    // Generate JWT tokens
-    const { accessToken: jwtToken, refreshToken } = generateTokens(user.id);
-
-    res.json({
-      token: jwtToken,
-      refreshToken: refreshToken,
-      expiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
-      user: user
     });
-
   } catch (error) {
-    console.error('Google OAuth error:', error.response?.data || error.message);
-    res.status(401).json({ 
-      message: 'Authentication failed', 
-      error: error.response?.data?.error_description || error.message 
-    });
+    console.error('Google login error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to process authentication' });
   }
 });
 
-// Token refresh endpoint
-router.post('/refresh', async (req, res) => {
+/**
+ * Handle Google ID token verification endpoint for Google One Tap
+ */
+router.post('/google-credential', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { credential } = req.body;
     
-    if (!token) {
-      return res.status(401).json({ message: 'Refresh token is required' });
+    if (!credential) {
+      return res.status(400).json({ error: 'Missing credential' });
     }
 
-    // Verify refresh token (allow expired access tokens)
-    const decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+    // Verify the Google ID token
+    const response = await axios.get(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
+    );
     
-    if (decoded.type !== 'refresh') {
-      return res.status(401).json({ message: 'Invalid refresh token' });
+    const { sub: googleId, email, name, picture } = response.data;
+    
+    // Find or create a user in our database
+    let user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      user = await User.create({
+        email,
+        name,
+        googleId,
+        picture
+      });
+    } else {
+      // Update existing user with Google info
+      user.googleId = googleId;
+      user.name = user.name || name;
+      user.picture = picture;
+      await user.save();
     }
-
-    // Generate new tokens
-    const { accessToken, refreshToken } = generateTokens(decoded.userId);
     
-    res.json({
-      token: accessToken,
-      refreshToken: refreshToken,
-      expiresIn: 7 * 24 * 60 * 60 // 7 days in seconds
+    // Create JWT token
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        email: user.email,
+        name: user.name
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.status(200).json({
+      token,
+      user: {
+        uid: user.id,
+        email: user.email,
+        name: user.name,
+        photoURL: user.picture
+      }
     });
-
   } catch (error) {
-    console.error('Token refresh error:', error.message);
-    res.status(401).json({ message: 'Token refresh failed, please login again' });
+    console.error('Google credential verification error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to verify Google credential' });
   }
 });
 
-// Logout endpoint
+/**
+ * Logout endpoint
+ */
 router.post('/logout', (req, res) => {
-  // In a production app, you might want to blacklist the token
-  res.json({ message: 'Logged out successfully' });
+  // We don't need to do much here since we're using stateless JWT
+  // The frontend will remove the token from storage
+  res.status(200).json({ message: 'Logged out successfully' });
 });
 
-// Middleware to verify JWT tokens
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+/**
+ * Middleware to authenticate JWT
+ */
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
-    return res.status(401).json({ message: 'Access token is required' });
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (err) {
+        return res.sendStatus(403);
+      }
+
+      req.user = user;
+      next();
+    });
+  } else {
+    res.sendStatus(401);
   }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
 };
 
-module.exports = { router, authenticateToken };
+// Export the router and middleware
+module.exports = {
+  router,
+  authenticateJWT
+};

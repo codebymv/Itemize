@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -13,6 +14,7 @@ import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
@@ -30,10 +32,11 @@ const RootRedirect = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <div className="min-h-screen bg-background">
             <Navbar />
             <main>
@@ -57,7 +60,8 @@ const App = () => (
             </main>
           </div>
         </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </GoogleOAuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -7,7 +7,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { Pool } = require('pg');
 // Now import auth module after environment variables are loaded
-const { router: authRouter, authenticateToken } = require('./auth');
+const { router: authRouter, authenticateJWT } = require('./auth');
 
 const app = express();
 const port = process.env.PORT || 3001;

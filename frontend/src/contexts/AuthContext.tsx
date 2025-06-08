@@ -1,20 +1,26 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
+import axios from 'axios';
 
-interface User {
-  id: string;
-  email: string;
+export interface User {
+  uid: string;
   name: string;
-  picture?: string;
+  email: string;
+  photoURL?: string;
 }
 
 interface AuthContextType {
   currentUser: User | null;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
   loading: boolean;
+  login: () => void;
+  logout: () => void;
+  handleGoogleSuccess: (credentialResponse: CredentialResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Token expiration buffer (1 day)
+const EXPIRATION_BUFFER = 24 * 60 * 60 * 1000;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -27,152 +33,183 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const backendLogoutFailures = useRef(0);
 
-  const login = async () => {
-    try {
-      // Get the client ID from environment
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        throw new Error('Google Client ID not configured');
-      }
-      
-      // Use one of several authorized redirect URIs that match Google OAuth settings
-      // Make sure these URIs are ALL added to your Google OAuth console
-      let redirectUri;
-      
-      // EXACT match with Google OAuth settings
-      if (window.location.hostname === 'itemize.up.railway.app') {
-        // Use EXACTLY the URI from Google OAuth console - without port number
-        redirectUri = 'https://itemize.up.railway.app/auth/callback';
-        console.log('Using production redirect URI (no port):', redirectUri);
-      } else {
-        // For local development
-        redirectUri = window.location.origin + '/auth/callback';
-      }
-
-      console.log('Using redirect URI:', redirectUri);
-      console.log('Client ID:', clientId ? clientId.substring(0, 10) + '...' : 'missing');
-      
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile`;
-      
-      console.log('OAuth login initiated with:', { 
-        clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ? import.meta.env.VITE_GOOGLE_CLIENT_ID.substring(0, 10) + '...' : 'missing',
-        redirectUri,
-        url: googleAuthUrl
-      });
-      
-      // Open popup window for Google OAuth
-      const popup = window.open(googleAuthUrl, 'google-auth', 'width=500,height=600');
-      
-      // Listen for the popup to close or send a message
-      return new Promise<void>((resolve, reject) => {
-        const checkClosed = setInterval(() => {
-          if (popup?.closed) {
-            clearInterval(checkClosed);
-            // Check if user was authenticated by looking for stored token
-            const token = localStorage.getItem('auth_token');
-            if (token) {
-              loadUserFromToken();
-              resolve();
-            } else {
-              reject(new Error('Authentication cancelled'));
-            }
-          }
-        }, 1000);
-        
-        // Listen for messages from popup
-        const messageListener = (event: MessageEvent) => {
-          if (event.origin !== window.location.origin) return;
-          
-          if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-            clearInterval(checkClosed);
-            popup?.close();
-            window.removeEventListener('message', messageListener);
-            loadUserFromToken();
-            resolve();
-          } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-            clearInterval(checkClosed);
-            popup?.close();
-            window.removeEventListener('message', messageListener);
-            reject(new Error(event.data.error));
-          }
-        };
-        
-        window.addEventListener('message', messageListener);
-      });
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      throw error;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      // First, call backend logout endpoint if you want to handle server-side cleanup
-      try {
-        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-          }
-        });
-      } catch (error) {
-        // Continue with local logout even if backend call fails
-        console.error('Error logging out on server:', error);
-      }
-      
-      // Clear local storage
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('token_expiry');
-      localStorage.removeItem('user');
-      
-      // Update state
-      setCurrentUser(null);
-      
-      // No need to redirect to Google's endpoints
-      // Just let the app handle the state change naturally
-    } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
-    }
-  };
-
-  const loadUserFromToken = async () => {
-    const token = localStorage.getItem('auth_token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      try {
-        setCurrentUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        logout();
-      }
-    }
-  };
-
+  // Initialize authentication state from localStorage
   useEffect(() => {
-    // Check for existing authentication on mount
-    const initAuth = async () => {
-      setLoading(true);
-      await loadUserFromToken();
-      setLoading(false);
+    const initializeAuth = () => {
+      try {
+        const savedToken = localStorage.getItem('itemize_token');
+        const tokenExpiry = localStorage.getItem('itemize_token_expiry');
+        const savedUser = localStorage.getItem('itemize_user');
+        
+        if (savedToken && tokenExpiry && savedUser) {
+          const expiryTime = parseInt(tokenExpiry);
+          if (Date.now() < expiryTime - EXPIRATION_BUFFER) {
+            // Token is still valid
+            setToken(savedToken);
+            setCurrentUser(JSON.parse(savedUser));
+          } else {
+            // Token expired or close to expiry, clear auth data
+            console.log('Token expired or close to expiry, clearing auth data');
+            localStorage.removeItem('itemize_token');
+            localStorage.removeItem('itemize_token_expiry');
+            localStorage.removeItem('itemize_user');
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        // Clear potentially corrupt data
+        localStorage.removeItem('itemize_token');
+        localStorage.removeItem('itemize_token_expiry');
+        localStorage.removeItem('itemize_user');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    initAuth();
+    initializeAuth();
   }, []);
+
+  // Use Google Login hook
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        console.log('Google login successful, getting user info');
+        
+        // Get user info from Google using the access token
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+          },
+        });
+        
+        const googleUser = await userInfoResponse.json();
+        console.log('Received user info from Google');
+        
+        // Send the Google user info to your backend
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        console.log('Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
+        
+        const response = await axios.post(`${apiUrl}/api/auth/google-login`, {
+          googleId: googleUser.id,
+          email: googleUser.email,
+          name: googleUser.name,
+          picture: googleUser.picture
+        });
+
+        const { token: backendToken, user: userData } = response.data;
+        
+        console.log('Backend auth successful');
+        
+        // Set token expiry (7 days)
+        const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+        
+        // Store auth data
+        localStorage.setItem('itemize_token', backendToken);
+        localStorage.setItem('itemize_token_expiry', expiryTime.toString());
+        localStorage.setItem('itemize_user', JSON.stringify(userData));
+        
+        // Update state
+        setToken(backendToken);
+        setCurrentUser(userData);
+        
+      } catch (error) {
+        console.error('Google login failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      console.error('Google login failed');
+      setLoading(false);
+    },
+  });
+
+  const login = () => {
+    googleLogin();
+  };
+
+  const logout = () => {
+    console.log('Logging out user...');
+    
+    // Clear state
+    setToken(null);
+    setCurrentUser(null);
+    
+    // Clear local storage
+    localStorage.removeItem('itemize_token');
+    localStorage.removeItem('itemize_token_expiry');
+    localStorage.removeItem('itemize_user');
+    
+    // Sign out from Google
+    try {
+      googleLogout();
+    } catch (googleError) {
+      console.error('Error signing out from Google:', googleError);
+    }
+    
+    // Call backend logout if needed
+    if (backendLogoutFailures.current < 3) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        axios.post(`${apiUrl}/api/auth/logout`).catch((error) => {
+          console.error('Backend logout failed:', error);
+          backendLogoutFailures.current++;
+        });
+      } catch (error) {
+        console.error('Backend logout failed:', error);
+        backendLogoutFailures.current++;
+      }
+    }
+  };
+
+  // For handling credential response from Google One Tap
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    setLoading(true);
+    try {
+      console.log('Google One Tap login successful');
+      
+      // Send the credential to your backend
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await axios.post(`${apiUrl}/api/auth/google-credential`, {
+        credential: credentialResponse.credential
+      });
+
+      const { token: backendToken, user: userData } = response.data;
+      
+      // Set token expiry (7 days)
+      const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+      
+      // Store auth data
+      localStorage.setItem('itemize_token', backendToken);
+      localStorage.setItem('itemize_token_expiry', expiryTime.toString());
+      localStorage.setItem('itemize_user', JSON.stringify(userData));
+      
+      // Update state
+      setToken(backendToken);
+      setCurrentUser(userData);
+      
+    } catch (error) {
+      console.error('Google credential login failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const value: AuthContextType = {
     currentUser,
+    loading,
     login,
     logout,
-    loading
+    handleGoogleSuccess
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
