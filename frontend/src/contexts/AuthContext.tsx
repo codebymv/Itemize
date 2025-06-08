@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useRef } from 'r
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
 import api from '@/lib/api';
 import axios from 'axios'; // Keep axios for Google API calls
+import { toast } from '@/components/ui/use-toast'; // Import toast
 
 export interface User {
   uid: string;
@@ -175,7 +176,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLastAuthenticated(Date.now());
           
           console.log('Backend auth successful, state updated');
-          
+          toast({
+            title: 'Welcome!',
+            description: 'Successfully signed in with Google.',
+          });
         } catch (backendError) {
           console.error('Backend auth error:', backendError);
           throw new Error(`Backend authentication failed: ${backendError.message}`);
@@ -258,7 +262,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(backendToken);
       setCurrentUser(userData);
       setLastAuthenticated(Date.now());
-      
+      toast({
+        title: 'Welcome!',
+        description: 'Successfully signed in with Google.',
+      });
     } catch (error) {
       console.error('Google credential login failed:', error);
     } finally {

@@ -66,76 +66,55 @@ setTimeout(async () => {
   // Try to initialize the database but don't let it crash the server
   try {
     console.log('Initializing database connection...');
-    // Database initialization
-    const { Pool } = require('pg');
-    
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    });
-    
-    // Test database connection
-    const client = await pool.connect();
-    const result = await client.query('SELECT NOW()');
-    console.log('✅ Database connected:', result.rows[0].now);
-    
-    // Initialize database schema if needed
-    try {
-      console.log('Checking database schema...');
-      // Create users table if it doesn't exist
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          google_id VARCHAR(255),
-          email VARCHAR(255) NOT NULL UNIQUE,
-          name VARCHAR(255),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      
-      // Create lists table if it doesn't exist
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS lists (
-          id SERIAL PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          category VARCHAR(100) DEFAULT 'General',
-          items JSONB DEFAULT '[]'::jsonb,
-          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      
-      console.log('✅ Database schema initialized');
-    } catch (schemaError) {
-      console.error('Error initializing database schema:', schemaError.message);
+    const db = require('./db');
+    const actualPool = db.createDbConnection(); // Call function to get pool
+    let databaseInitialized = false;
+
+    if (actualPool) {
+      try {
+        console.log('Attempting to initialize database schema with actualPool...');
+        await db.initializeDatabase(actualPool); // Pass the created pool
+        console.log('✅ Database schema initialized via actualPool');
+        databaseInitialized = true;
+      } catch (initError) {
+        console.error('❌ Error initializing database schema with actualPool:', initError.message, initError.stack);
+      }
+    } else {
+      console.warn('⚠️ Database pool (actualPool) not obtained. Operations requiring DB may fail.');
     }
-    
-    client.release();
-    
-    // Add database pool to all requests BEFORE initializing auth routes
-    app.use((req, res, next) => {
-      req.dbPool = pool;
-      next();
-    });
-    
-    console.log('✅ Database middleware added to all requests');
-    
-    // Initialize auth routes AFTER database middleware
-    try {
-      console.log('Initializing auth routes...');
-      const { router: authRouter, authenticateJWT } = require('./auth');
-      app.use('/api/auth', authRouter);
-      console.log('✅ Auth routes initialized');
-      
-      // Only add protected routes if auth is successfully initialized
-      // Lists API routes
-      console.log('Initializing lists API routes...');
+
+    // Initialize auth routes
+    if (actualPool) {
+        try {
+            console.log('Initializing auth routes...');
+            const { router: authRouter, authenticateJWT: authMiddleware } = require('./auth');
+            
+            // Middleware to make dbPool available to auth routes
+            app.use((req, res, next) => {
+                req.dbPool = actualPool;
+                next();
+            });
+            
+            app.use('/api/auth', authRouter);
+            console.log('✅ Auth routes initialized and mounted on /api/auth');
+            
+            // Make authenticateJWT available for other routes
+            // Ensure this doesn't conflict if authenticateJWT was already defined globally
+            // For clarity, we'll use the imported authMiddleware for list routes
+            global.authenticateJWT = authMiddleware; // Or pass it around as needed
+
+        } catch (authInitError) {
+            console.error('Failed to initialize auth routes:', authInitError.message);
+        }
+    } else {
+        console.warn('Skipping auth routes initialization due to missing pool.');
+    }
       
       // Get all lists
-      app.get('/api/lists', authenticateJWT, async (req, res) => {
+      // Ensure authenticateJWT is correctly referenced. If it's now global.authenticateJWT or authMiddleware
+      app.get('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
-          const client = await pool.connect();
+          const client = await actualPool.connect();
           const result = await client.query(
             'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
             [req.user.id]
@@ -149,7 +128,7 @@ setTimeout(async () => {
       });
 
       // Create a new list
-      app.post('/api/lists', authenticateJWT, async (req, res) => {
+      app.post('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
           const { title, category, items } = req.body;
           
@@ -157,7 +136,7 @@ setTimeout(async () => {
             return res.status(400).json({ error: 'Title is required' });
           }
 
-          const client = await pool.connect();
+          const client = await actualPool.connect();
           const result = await client.query(
             'INSERT INTO lists (title, category, items, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
             [title, category || 'General', JSON.stringify(items || []), req.user.id]
@@ -172,12 +151,12 @@ setTimeout(async () => {
       });
 
       // Update a list
-      app.put('/api/lists/:id', authenticateJWT, async (req, res) => {
+      app.put('/api/lists/:id', global.authenticateJWT, async (req, res) => {
         try {
           const { id } = req.params;
           const { title, category, items } = req.body;
           
-          const client = await pool.connect();
+          const client = await actualPool.connect();
           const result = await client.query(
             'UPDATE lists SET title = $1, category = $2, items = $3 WHERE id = $4 AND user_id = $5 RETURNING *',
             [title, category, JSON.stringify(items), id, req.user.id]
@@ -196,11 +175,11 @@ setTimeout(async () => {
       });
 
       // Delete a list
-      app.delete('/api/lists/:id', authenticateJWT, async (req, res) => {
+      app.delete('/api/lists/:id', global.authenticateJWT, async (req, res) => {
         try {
           const { id } = req.params;
           
-          const client = await pool.connect();
+          const client = await actualPool.connect();
           const result = await client.query(
             'DELETE FROM lists WHERE id = $1 AND user_id = $2 RETURNING id',
             [id, req.user.id]
@@ -226,7 +205,7 @@ setTimeout(async () => {
         const aiSuggestionService = require('./services/aiSuggestionService');
         
         // AI suggestions endpoint
-        app.post('/api/suggestions', authenticateJWT, async (req, res) => {
+        app.post('/api/suggestions', global.authenticateJWT, async (req, res) => {
           try {
             const { listTitle, existingItems } = req.body;
             
@@ -247,10 +226,7 @@ setTimeout(async () => {
         console.error('Failed to initialize AI suggestion service:', aiError.message);
         // Continue running even if AI service fails
       }
-    } catch (authError) {
-      console.error('Failed to initialize auth routes:', authError.message);
-      // Continue running even if auth fails
-    }
+    
     
   } catch (dbError) {
     console.error('Database connection error:', dbError.message);

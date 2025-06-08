@@ -22,17 +22,17 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
 
 
-  const handleLogin = async () => {
+  const handleLogin = () => {
     try {
-      await login();
-      toast({
-        title: 'Welcome!',
-        description: 'Successfully signed in with Google.',
-      });
+      login(); // Initiate login, success/error is handled in AuthContext
     } catch (error) {
+      // This catch block might not be necessary if login() itself doesn't throw
+      // or if errors are meant to be handled globally by AuthContext.
+      // For now, we'll keep it in case login() can throw an immediate error.
+      console.error('Error initiating login:', error);
       toast({
         title: 'Error',
-        description: 'Failed to sign in. Please try again.',
+        description: 'Could not start sign-in process. Please try again.',
         variant: 'destructive',
       });
     }

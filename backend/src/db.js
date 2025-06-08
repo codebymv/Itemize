@@ -101,7 +101,7 @@ const initializeDatabase = async (pool) => {
   try {
     // Create users table if it doesn't exist
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS public.users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255),
@@ -111,39 +111,34 @@ const initializeDatabase = async (pool) => {
       );
     `);
     
-    // Add missing columns to users table if they don't exist
-    // First check if google_id column exists
-    const columnCheckResult = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name='users' AND column_name='google_id'
-    `);
+
+
+
+
+
+
+
     
-    // If google_id column doesn't exist, add it
-    if (columnCheckResult.rows.length === 0) {
-      console.log('✅ Added missing google_id column to users table.');
-      await pool.query(`ALTER TABLE users ADD COLUMN google_id VARCHAR(255);`);
+    // Add missing columns to users table if they don't exist
+    try {
+      await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
+      // console.log('Ensured google_id column exists in public.users table.');
+    } catch (e) {
+      console.error('Error ensuring google_id column exists:', e);
+      throw e; // Re-throw if altering the table fails for unexpected reasons
     }
 
-    // Check if updated_at column exists in users table
-    const checkUpdatedAtColumn = await pool.query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name='users' AND column_name='updated_at';
-    `);
-
-    if (checkUpdatedAtColumn.rows.length === 0) {
-      // If updated_at column doesn't exist, add it
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-      `);
-      console.log('✅ Added missing updated_at column to users table.');
+    try {
+      await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`);
+      // console.log('Ensured updated_at column exists in public.users table.');
+    } catch (e) {
+      console.error('Error ensuring updated_at column exists:', e);
+      throw e; // Re-throw if altering the table fails for unexpected reasons
     }
 
     // Create lists table if it doesn't exist
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS lists (
+      CREATE TABLE IF NOT EXISTS public.lists (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         category VARCHAR(255) DEFAULT 'General',
@@ -153,6 +148,19 @@ const initializeDatabase = async (pool) => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Diagnostic: Log actual columns for public.users table
+    try {
+      const { rows } = await pool.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'users'
+        ORDER BY ordinal_position;
+      `);
+      console.log('Columns in public.users after initialization:', JSON.stringify(rows, null, 2));
+    } catch (diagError) {
+      console.error('Error during diagnostic query for public.users columns:', diagError);
+    }
 
     console.log('Database initialized successfully');
     return true;
@@ -170,7 +178,7 @@ const userOperations = {
       if (!pool) return null;
       
       const result = await pool.query(
-        'SELECT * FROM users WHERE id = $1',
+        'SELECT * FROM public.users WHERE id = $1',
         [id]
       );
       
@@ -188,7 +196,7 @@ const userOperations = {
       
       console.log('Looking up user by email:', email);
       const result = await pool.query(
-        'SELECT * FROM users WHERE email = $1',
+        'SELECT * FROM public.users WHERE email = $1',
         [email]
       );
       
@@ -208,7 +216,7 @@ const userOperations = {
       // If user exists, update their info
       if (user) {
         const updateResult = await pool.query(
-          `UPDATE users SET 
+          `UPDATE public.users SET 
             name = $1, 
             google_id = $2,
             updated_at = CURRENT_TIMESTAMP
@@ -220,8 +228,8 @@ const userOperations = {
       
       // Otherwise create a new user
       const createResult = await pool.query(
-        `INSERT INTO users (email, name, google_id) 
-         VALUES ($1, $2, $3) 
+        `INSERT INTO public.users (email, name, google_id, created_at, updated_at) 
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
          RETURNING *`,
         [userData.email, userData.name, userData.googleId]
       );
@@ -240,7 +248,7 @@ const listOperations = {
   findAllByUserId: async (pool, userId) => {
     try {
       const result = await pool.query(
-        'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
+        'SELECT * FROM public.lists WHERE user_id = $1 ORDER BY created_at DESC',
         [userId]
       );
       return result.rows;
@@ -253,7 +261,7 @@ const listOperations = {
   // Find one list by ID (and optionally verify user ownership)
   findById: async (pool, listId, userId = null) => {
     try {
-      let query = 'SELECT * FROM lists WHERE id = $1';
+      let query = 'SELECT * FROM public.lists WHERE id = $1';
       let params = [listId];
       
       // If userId provided, verify ownership
@@ -274,7 +282,7 @@ const listOperations = {
   create: async (pool, listData) => {
     try {
       const result = await pool.query(
-        `INSERT INTO lists (title, category, items, user_id) 
+        `INSERT INTO public.lists (title, category, items, user_id) 
          VALUES ($1, $2, $3, $4) 
          RETURNING *`,
         [
@@ -295,7 +303,7 @@ const listOperations = {
   update: async (pool, listId, userId, listData) => {
     try {
       const result = await pool.query(
-        `UPDATE lists SET 
+        `UPDATE public.lists SET 
           title = $1, 
           category = $2, 
           items = $3,
@@ -322,7 +330,7 @@ const listOperations = {
   delete: async (pool, listId, userId) => {
     try {
       const result = await pool.query(
-        'DELETE FROM lists WHERE id = $1 AND user_id = $2 RETURNING id',
+        'DELETE FROM public.lists WHERE id = $1 AND user_id = $2 RETURNING id',
         [listId, userId]
       );
       return result.rows[0] ? true : false;
