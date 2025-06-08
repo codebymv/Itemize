@@ -48,6 +48,9 @@ const AuthCallback = () => {
           return;
         }
 
+        console.log('Authorization code found, length:', code.length);
+        console.log('Sending request to backend at:', `${import.meta.env.VITE_API_URL}/api/auth/google-login`);
+
         // Send the authorization code to the backend
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
           method: 'POST',
@@ -57,12 +60,16 @@ const AuthCallback = () => {
           body: JSON.stringify({ code }),
         });
 
+        console.log('Backend response received, status:', response.status);
+
         if (!response.ok) {
           throw new Error('Failed to authenticate with backend');
         }
 
         const data = await response.json();
         
+        console.log('User authenticated successfully:', data.user?.email || 'unknown');
+
         // Store the tokens
         localStorage.setItem('auth_token', data.accessToken);
         localStorage.setItem('refresh_token', data.refreshToken);
@@ -70,6 +77,7 @@ const AuthCallback = () => {
 
         // Send success message to parent window if this is a popup
         if (window.opener) {
+          console.log('Window opener found, posting success message');
           window.opener.postMessage({
             type: 'GOOGLE_AUTH_SUCCESS',
             user: data.user,
@@ -77,11 +85,16 @@ const AuthCallback = () => {
           }, window.location.origin);
           window.close();
         } else {
+          console.log('No opener window, navigating to home page');
           // If not a popup, redirect to home page
           navigate('/', { replace: true });
         }
       } catch (error) {
-        console.error('Authentication error:', error);
+        console.error('Error during auth callback:', error);
+        console.error('Response data:', error.response?.data);
+        console.error('Response status:', error.response?.status);
+        
+        // Send error to opener window if it exists
         if (window.opener) {
           window.opener.postMessage({
             type: 'GOOGLE_AUTH_ERROR',

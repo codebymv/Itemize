@@ -30,21 +30,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async () => {
     try {
-      // Hard-code the exact redirect URI that matches Google OAuth settings
-      // This ensures we're using the exact URI configured in Google OAuth
+      // Get the client ID from environment
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        throw new Error('Google Client ID not configured');
+      }
+      
+      // Use one of several authorized redirect URIs that match Google OAuth settings
+      // Make sure these URIs are ALL added to your Google OAuth console
       let redirectUri;
       
-      // Use the port version in production, otherwise fallback to local for development
+      // EXACT match with Google OAuth settings
       if (window.location.hostname === 'itemize.up.railway.app') {
-        redirectUri = 'https://itemize.up.railway.app:8080/auth/callback';
+        // Use EXACTLY the URI from Google OAuth console - without port number
+        redirectUri = 'https://itemize.up.railway.app/auth/callback';
+        console.log('Using production redirect URI (no port):', redirectUri);
       } else {
         // For local development
         redirectUri = window.location.origin + '/auth/callback';
       }
 
       console.log('Using redirect URI:', redirectUri);
+      console.log('Client ID:', clientId ? clientId.substring(0, 10) + '...' : 'missing');
       
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile`;
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile`;
       
       console.log('OAuth login initiated with:', { 
         clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ? import.meta.env.VITE_GOOGLE_CLIENT_ID.substring(0, 10) + '...' : 'missing',

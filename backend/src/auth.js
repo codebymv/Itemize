@@ -42,12 +42,24 @@ router.post('/google-login', async (req, res) => {
         redirect_uri: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`
       });
 
+      // Hard-code the exact URI to match Google OAuth settings
+      let redirectUri;
+      if (process.env.NODE_ENV === 'production') {
+        // Use exact URI that matches Google OAuth settings - without port number
+        redirectUri = 'https://itemize.up.railway.app/auth/callback';
+        console.log('SERVER: Using production redirect URI (no port):', redirectUri);
+      } else {
+        // For local development
+        redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`;
+        console.log('SERVER: Using development redirect URI:', redirectUri);
+      }
+      
       const tokenData = {
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`
+        redirect_uri: redirectUri
       };
 
       console.log('Making token request with data:', JSON.stringify(tokenData));
