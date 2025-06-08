@@ -121,8 +121,24 @@ const initializeDatabase = async (pool) => {
     
     // If google_id column doesn't exist, add it
     if (columnCheckResult.rows.length === 0) {
-      console.log('Adding missing google_id column to users table');
+      console.log('✅ Added missing google_id column to users table.');
       await pool.query(`ALTER TABLE users ADD COLUMN google_id VARCHAR(255);`);
+    }
+
+    // Check if updated_at column exists in users table
+    const checkUpdatedAtColumn = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name='users' AND column_name='updated_at';
+    `);
+
+    if (checkUpdatedAtColumn.rows.length === 0) {
+      // If updated_at column doesn't exist, add it
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      `);
+      console.log('✅ Added missing updated_at column to users table.');
     }
 
     // Create lists table if it doesn't exist
