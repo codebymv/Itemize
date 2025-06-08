@@ -9,6 +9,11 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Error handler wrapper
+const asyncHandler = fn => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
 // Token generation helper
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
@@ -20,7 +25,7 @@ const generateTokens = (userId) => {
  * Handle Google OAuth login endpoint using direct token-based approach
  * This endpoint receives user data from Google directly from the frontend
  */
-router.post('/google-login', async (req, res) => {
+router.post('/google-login', asyncHandler(async (req, res) => {
   try {
     const { googleId, email, name, picture } = req.body;
     
@@ -31,23 +36,33 @@ router.post('/google-login', async (req, res) => {
     console.log('Processing Google login for:', email);
     
     // Find or create a user in our database
-    let user = await User.findOne({ where: { email } });
-    
-    if (!user) {
-      console.log('Creating new user:', email);
-      user = await User.create({
-        email,
-        name,
-        googleId,
-        picture
-      });
-    } else {
-      // Update existing user with Google info
-      console.log('Updating existing user:', email);
-      user.googleId = googleId;
-      user.name = user.name || name; // Only update if name is not set
-      user.picture = picture;
-      await user.save();
+    let user;
+    try {
+      console.log('Looking up user by email:', email);
+      user = await User.findOne({ where: { email } });
+      
+      if (!user) {
+        console.log('Creating new user:', email);
+        user = await User.create({
+          email,
+          name,
+          googleId,
+          picture,
+          provider: 'google'
+        });
+      } else {
+        // Update existing user with Google info
+        console.log('Updating existing user:', email);
+        user.googleId = googleId;
+        user.name = user.name || name; // Only update if name is not set
+        user.picture = picture;
+        user.provider = 'google';
+        await user.save();
+      }
+    } catch (error) {
+      console.error('Error handling user:', error);
+      res.status(500).json({ error: 'Database error, using in-memory user store' });
+      return;
     }
     
     // Create JWT token with 7-day expiry
@@ -75,12 +90,12 @@ router.post('/google-login', async (req, res) => {
     console.error('Google login error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to process authentication' });
   }
-});
+}));
 
 /**
  * Handle Google ID token verification endpoint for Google One Tap
  */
-router.post('/google-credential', async (req, res) => {
+router.post('/google-credential', asyncHandler(async (req, res) => {
   try {
     const { credential } = req.body;
     
@@ -96,21 +111,30 @@ router.post('/google-credential', async (req, res) => {
     const { sub: googleId, email, name, picture } = response.data;
     
     // Find or create a user in our database
-    let user = await User.findOne({ where: { email } });
-    
-    if (!user) {
-      user = await User.create({
-        email,
-        name,
-        googleId,
-        picture
-      });
-    } else {
-      // Update existing user with Google info
-      user.googleId = googleId;
-      user.name = user.name || name;
-      user.picture = picture;
-      await user.save();
+    let user;
+    try {
+      user = await User.findOne({ where: { email } });
+      
+      if (!user) {
+        user = await User.create({
+          email,
+          name,
+          googleId,
+          picture,
+          provider: 'google'
+        });
+      } else {
+        // Update existing user with Google info
+        user.googleId = googleId;
+        user.name = user.name || name;
+        user.picture = picture;
+        user.provider = 'google';
+        await user.save();
+      }
+    } catch (error) {
+      console.error('Error handling Google credential user:', error);
+      res.status(500).json({ error: 'Database error, using in-memory user store' });
+      return;
     }
     
     // Create JWT token
@@ -137,7 +161,7 @@ router.post('/google-credential', async (req, res) => {
     console.error('Google credential verification error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to verify Google credential' });
   }
-});
+}));
 
 /**
  * Logout endpoint

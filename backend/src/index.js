@@ -6,6 +6,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { Pool } = require('pg');
+// Import database models
+const { sequelize, initializeModels } = require('./models');
 // Now import auth module after environment variables are loaded
 const { router: authRouter, authenticateJWT } = require('./auth');
 
@@ -128,6 +130,9 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Initialize database models before starting server
+initializeModels().then(() => {
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
 });

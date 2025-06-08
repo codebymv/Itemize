@@ -53,13 +53,13 @@ const Home: React.FC = () => {
         <div className="text-center mb-20">
           <div className="mb-6">
             <img 
-              src="/cover.png" 
+              src="/icon.png" 
               alt="Itemize" 
               className="h-24 md:h-32 w-auto mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
-            Organize Your Life with <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Itemize</span>
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl flex items-center justify-center gap-3">
+            Organize Your Life with <img src="/profile.png" alt="Itemize" className="h-48 md:h-64 inline-block" />
           </h1>
           <p className="mt-3 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
             The simple, elegant way to create and manage lists for any purpose.
@@ -73,14 +73,6 @@ const Home: React.FC = () => {
             >
               Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="rounded-md px-8 py-3 border-2 border-blue-600 text-blue-600 font-medium hover:bg-blue-50"
-              size="lg"
-            >
-              Take a Tour
             </Button>
           </div>
         </div>
