@@ -30,8 +30,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async () => {
     try {
-      // Simple Google OAuth using popup window
-      const redirectUri = window.location.origin + '/auth/callback';
+      // Hard-code the exact redirect URI that matches Google OAuth settings
+      // This ensures we're using the exact URI configured in Google OAuth
+      let redirectUri;
+      
+      // Use the port version in production, otherwise fallback to local for development
+      if (window.location.hostname === 'itemize.up.railway.app') {
+        redirectUri = 'https://itemize.up.railway.app:8080/auth/callback';
+      } else {
+        // For local development
+        redirectUri = window.location.origin + '/auth/callback';
+      }
+
+      console.log('Using redirect URI:', redirectUri);
+      
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile`;
       
       console.log('OAuth login initiated with:', { 
