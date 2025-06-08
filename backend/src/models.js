@@ -9,6 +9,15 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
       rejectUnauthorized: false // For Supabase connection
     }
   },
+  // Add connection pool configuration for better stability
+  pool: {
+    max: 5,           // Maximum number of connections in pool
+    min: 0,           // Minimum number of connections in pool
+    acquire: 30000,   // Maximum time (ms) to acquire a connection
+    idle: 10000       // Maximum time (ms) a connection can be idle before being released
+  },
+  // Force IPv4 preference for connections
+  host: process.env.DB_HOST || 'localhost',  // Use explicit DB_HOST if available
   logging: process.env.NODE_ENV === 'development' ? console.log : false
 });
 

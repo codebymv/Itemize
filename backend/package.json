@@ -4,8 +4,8 @@
   "description": "Backend API for Listify app",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node --dns-result-order=ipv4first src/index.js",
+    "dev": "nodemon --dns-result-order=ipv4first src/index.js",
     "build": "echo 'No build step required'"
   },
   "dependencies": {
