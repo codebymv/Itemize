@@ -28,25 +28,6 @@ const UserHome = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const { toast } = useToast();
 
-  // Load lists from localStorage on component mount
-  useEffect(() => {
-    const savedLists = localStorage.getItem('lists');
-    if (savedLists) {
-      const parsedLists = JSON.parse(savedLists);
-      // Convert date strings back to Date objects
-      const listsWithDates = parsedLists.map((list: any) => ({
-        ...list,
-        createdAt: new Date(list.createdAt)
-      }));
-      setLists(listsWithDates);
-    }
-  }, []);
-
-  // Save lists to localStorage whenever lists change
-  useEffect(() => {
-    localStorage.setItem('lists', JSON.stringify(lists));
-  }, [lists]);
-
   const createList = (title: string, type: string) => {
     const newList: List = {
       id: Date.now().toString(),

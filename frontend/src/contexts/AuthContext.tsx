@@ -37,34 +37,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const backendLogoutFailures = useRef(0);
 
-  // Initialize authentication state from localStorage
+  // Initialize authentication state
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        const savedToken = localStorage.getItem('itemize_token');
-        const tokenExpiry = localStorage.getItem('itemize_token_expiry');
-        const savedUser = localStorage.getItem('itemize_user');
-        
-        if (savedToken && tokenExpiry && savedUser) {
-          const expiryTime = parseInt(tokenExpiry);
-          if (Date.now() < expiryTime - EXPIRATION_BUFFER) {
-            // Token is still valid
-            setToken(savedToken);
-            setCurrentUser(JSON.parse(savedUser));
-          } else {
-            // Token expired or close to expiry, clear auth data
-            console.log('Token expired or close to expiry, clearing auth data');
-            localStorage.removeItem('itemize_token');
-            localStorage.removeItem('itemize_token_expiry');
-            localStorage.removeItem('itemize_user');
-          }
-        }
+        // Supabase handles session persistence, so no need to check localStorage here.
+        // The Supabase client will automatically manage the session.
+        // We might need to listen to Supabase's auth state changes to update React state.
+        setToken(null); // Or get from Supabase session if needed immediately
+        setCurrentUser(null);  // Or get from Supabase session if needed immediately
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Clear potentially corrupt data
-        localStorage.removeItem('itemize_token');
-        localStorage.removeItem('itemize_token_expiry');
-        localStorage.removeItem('itemize_user');
       } finally {
         setLoading(false);
       }
@@ -109,9 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
         
         // Store auth data
-        localStorage.setItem('itemize_token', backendToken);
-        localStorage.setItem('itemize_token_expiry', expiryTime.toString());
-        localStorage.setItem('itemize_user', JSON.stringify(userData));
+
         
         // Update state
         setToken(backendToken);
@@ -141,9 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
     
     // Clear local storage
-    localStorage.removeItem('itemize_token');
-    localStorage.removeItem('itemize_token_expiry');
-    localStorage.removeItem('itemize_user');
+
     
     // Sign out from Google
     try {
@@ -185,9 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
       
       // Store auth data
-      localStorage.setItem('itemize_token', backendToken);
-      localStorage.setItem('itemize_token_expiry', expiryTime.toString());
-      localStorage.setItem('itemize_user', JSON.stringify(userData));
+
       
       // Update state
       setToken(backendToken);

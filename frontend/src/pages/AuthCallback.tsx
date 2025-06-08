@@ -71,9 +71,7 @@ const AuthCallback = () => {
         console.log('User authenticated successfully:', data.user?.email || 'unknown');
 
         // Store the tokens
-        localStorage.setItem('auth_token', data.accessToken);
-        localStorage.setItem('refresh_token', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
+
 
         // Send success message to parent window if this is a popup
         if (window.opener) {
