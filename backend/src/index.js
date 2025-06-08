@@ -47,11 +47,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// 404 handler - make sure this is registered after all valid routes
-app.use('*', (req, res) => {
-  res.status(200).send('Server is running. Use /health or /api/health to check status.');
-});
-
 // Start the server - KEEP BINDING TO 0.0.0.0 for Railway
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${port}`);
@@ -118,13 +113,15 @@ setTimeout(async () => {
     
     client.release();
     
-    // Pass pool to routes that need it
+    // Add database pool to all requests BEFORE initializing auth routes
     app.use((req, res, next) => {
       req.dbPool = pool;
       next();
     });
     
-    // Initialize auth routes
+    console.log('✅ Database middleware added to all requests');
+    
+    // Initialize auth routes AFTER database middleware
     try {
       console.log('Initializing auth routes...');
       const { router: authRouter, authenticateJWT } = require('./auth');
@@ -259,4 +256,11 @@ setTimeout(async () => {
     console.error('Database connection error:', dbError.message);
     console.log('Server will continue running for health checks');
   }
+  
+  // 404 handler - MUST be registered after all valid routes
+  app.use('*', (req, res) => {
+    res.status(200).send('Server is running. Use /health or /api/health to check status.');
+  });
+  
+  console.log('✅ All routes registered, including catch-all handler');
 }, 500); // Wait a bit to ensure server is up first

@@ -37,20 +37,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [lastAuthenticated, setLastAuthenticated] = useState<number>(0);
   const backendLogoutFailures = useRef(0);
 
   // Initialize authentication state
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
-        // Supabase handles session persistence, so no need to check localStorage here.
-        // The Supabase client will automatically manage the session.
-        // We might need to listen to Supabase's auth state changes to update React state.
-        setToken(null); // Or get from Supabase session if needed immediately
-        setCurrentUser(null);  // Or get from Supabase session if needed immediately
+        console.log('Starting authentication initialization');
+        // Check for saved authentication data in localStorage
+        const savedToken = localStorage.getItem('itemize_token');
+        const savedUser = localStorage.getItem('itemize_user');
+        const expiryTime = localStorage.getItem('itemize_expiry');
+        
+        console.log('Auth data from storage:', { 
+          hasToken: !!savedToken, 
+          hasUser: !!savedUser, 
+          hasExpiry: !!expiryTime 
+        });
+        
+        // Safely check localStorage values
+        if (savedToken && 
+            typeof savedToken === 'string' && 
+            savedUser && 
+            typeof savedUser === 'string' && 
+            savedUser !== 'undefined' && 
+            expiryTime && 
+            !isNaN(parseInt(expiryTime)) && 
+            parseInt(expiryTime) > Date.now()) {
+          
+          try {
+            const userData = JSON.parse(savedUser);
+            
+            // Validate user data has the expected structure
+            if (userData && typeof userData === 'object' && userData.uid) {
+              console.log('Restoring authentication with user:', userData);
+              setToken(savedToken);
+              setCurrentUser(userData);
+              setLastAuthenticated(Date.now());
+              console.log('Authentication restored successfully');
+            } else {
+              console.error('Invalid user data structure:', userData);
+              throw new Error('Invalid user data structure');
+            }
+          } catch (parseError) {
+            console.error('Failed to parse saved user data:', parseError);
+            // Clean up invalid data
+            localStorage.removeItem('itemize_token');
+            localStorage.removeItem('itemize_user');
+            localStorage.removeItem('itemize_expiry');
+            setToken(null);
+            setCurrentUser(null);
+          }
+        } else {
+          // Clear any invalid or expired data
+          console.log('No valid authentication found, cleaning up storage');
+          localStorage.removeItem('itemize_token');
+          localStorage.removeItem('itemize_user');
+          localStorage.removeItem('itemize_expiry');
+          setToken(null);
+          setCurrentUser(null);
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
+        // Reset state on error
+        setToken(null);
+        setCurrentUser(null);
       } finally {
+        console.log('Authentication initialization complete');
         setLoading(false);
       }
     };
@@ -66,39 +120,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Google login successful, getting user info');
         
         // Get user info from Google using the access token
-        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
+        const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
         });
         
-        const googleUser = await userInfoResponse.json();
-        console.log('Received user info from Google');
+        const googleUser = userResponse.data;
+        console.log('Received user info from Google:', googleUser);
         
-        // Send the Google user info to your backend
+        // Now authenticate with your backend using the Google user info
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         console.log('Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
         
-        const response = await api.post(`/api/auth/google-login`, {
-          googleId: googleUser.id,
-          email: googleUser.email,
-          name: googleUser.name,
-          picture: googleUser.picture
-        });
+        // Make API request with proper data
+        try {
+          const response = await axios.post(`${apiUrl}/api/auth/google-login`, {
+            googleId: googleUser.sub,  // Ensure we send the correct Google ID
+            email: googleUser.email,
+            name: googleUser.name,
+            picture: googleUser.picture
+          });
 
-        const { token: backendToken, user: userData } = response.data;
-        
-        console.log('Backend auth successful');
-        
-        // Set token expiry (7 days)
-        const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
-        
-        // Store auth data
-
-        
-        // Update state
-        setToken(backendToken);
-        setCurrentUser(userData);
+          console.log('Backend auth response:', response.data);
+          
+          // Extract data from response with proper error checking
+          if (!response.data) {
+            throw new Error('Empty response data from backend');
+          }
+          
+          const backendToken = response.data.token;
+          const userData = response.data.user;
+          
+          if (!backendToken) {
+            throw new Error('Missing token in backend response');
+          }
+          
+          if (!userData || !userData.uid) {
+            throw new Error('Missing or invalid user data in backend response');
+          }
+          
+          // Set token expiry (7 days)
+          const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+          
+          // Store auth data
+          localStorage.setItem('itemize_token', backendToken);
+          localStorage.setItem('itemize_user', JSON.stringify(userData));
+          localStorage.setItem('itemize_expiry', expiryTime.toString());
+          
+          // Update state
+          console.log('Setting authentication state with:', { token: backendToken, user: userData });
+          setToken(backendToken);
+          setCurrentUser(userData);
+          
+          // Force a re-render by setting a timestamp
+          setLastAuthenticated(Date.now());
+          
+          console.log('Backend auth successful, state updated');
+          
+        } catch (backendError) {
+          console.error('Backend auth error:', backendError);
+          throw new Error(`Backend authentication failed: ${backendError.message}`);
+        }
         
       } catch (error) {
         console.error('Google login failed:', error);
@@ -124,7 +205,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
     
     // Clear local storage
-
+    localStorage.removeItem('itemize_token');
+    localStorage.removeItem('itemize_user');
+    localStorage.removeItem('itemize_expiry');
     
     // Sign out from Google
     try {
@@ -166,11 +249,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
       
       // Store auth data
-
+      localStorage.setItem('itemize_token', backendToken);
+      localStorage.setItem('itemize_user', JSON.stringify(userData));
+      localStorage.setItem('itemize_expiry', expiryTime.toString());
       
       // Update state
+      console.log('Setting authentication state with:', { token: backendToken, user: userData });
       setToken(backendToken);
       setCurrentUser(userData);
+      setLastAuthenticated(Date.now());
       
     } catch (error) {
       console.error('Google credential login failed:', error);
@@ -178,6 +265,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  // Add extra logging for debugging
+  useEffect(() => {
+    console.log('Auth context changed:', { 
+      isAuthenticated: !!currentUser && !!token,
+      hasUser: !!currentUser,
+      hasToken: !!token,
+      lastAuthenticated,
+      userData: currentUser
+    });
+  }, [currentUser, token, lastAuthenticated]);
 
   const value: AuthContextType = {
     currentUser,

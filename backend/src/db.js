@@ -105,13 +105,25 @@ const initializeDatabase = async (pool) => {
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255),
-        picture TEXT,
-        "googleId" VARCHAR(255),
-        provider VARCHAR(50) DEFAULT 'google',
-        "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        google_id VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    
+    // Add missing columns to users table if they don't exist
+    // First check if google_id column exists
+    const columnCheckResult = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='users' AND column_name='google_id'
+    `);
+    
+    // If google_id column doesn't exist, add it
+    if (columnCheckResult.rows.length === 0) {
+      console.log('Adding missing google_id column to users table');
+      await pool.query(`ALTER TABLE users ADD COLUMN google_id VARCHAR(255);`);
+    }
 
     // Create lists table if it doesn't exist
     await pool.query(`
@@ -120,9 +132,9 @@ const initializeDatabase = async (pool) => {
         title VARCHAR(255) NOT NULL,
         category VARCHAR(255) DEFAULT 'General',
         items JSONB DEFAULT '[]'::jsonb,
-        "userId" INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -139,7 +151,13 @@ const userOperations = {
   // Find a user by ID
   findById: async (pool, id) => {
     try {
-      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      if (!pool) return null;
+      
+      const result = await pool.query(
+        'SELECT * FROM users WHERE id = $1',
+        [id]
+      );
+      
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error finding user by ID:', error);
@@ -150,7 +168,14 @@ const userOperations = {
   // Find a user by email
   findByEmail: async (pool, email) => {
     try {
-      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      if (!pool) return null;
+      
+      console.log('Looking up user by email:', email);
+      const result = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+      
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error finding user by email:', error);
@@ -169,21 +194,20 @@ const userOperations = {
         const updateResult = await pool.query(
           `UPDATE users SET 
             name = $1, 
-            picture = $2, 
-            "googleId" = $3,
-            "updatedAt" = CURRENT_TIMESTAMP
-           WHERE id = $4 RETURNING *`,
-          [userData.name, userData.picture, userData.googleId, user.id]
+            google_id = $2,
+            updated_at = CURRENT_TIMESTAMP
+           WHERE id = $3 RETURNING *`,
+          [userData.name, userData.googleId, user.id]
         );
         return updateResult.rows[0];
       }
       
       // Otherwise create a new user
       const createResult = await pool.query(
-        `INSERT INTO users (email, name, picture, "googleId", provider) 
-         VALUES ($1, $2, $3, $4, $5) 
+        `INSERT INTO users (email, name, google_id) 
+         VALUES ($1, $2, $3) 
          RETURNING *`,
-        [userData.email, userData.name, userData.picture, userData.googleId, userData.provider || 'google']
+        [userData.email, userData.name, userData.googleId]
       );
       
       return createResult.rows[0];
@@ -200,7 +224,7 @@ const listOperations = {
   findAllByUserId: async (pool, userId) => {
     try {
       const result = await pool.query(
-        'SELECT * FROM lists WHERE "userId" = $1 ORDER BY "createdAt" DESC',
+        'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
         [userId]
       );
       return result.rows;
@@ -218,7 +242,7 @@ const listOperations = {
       
       // If userId provided, verify ownership
       if (userId) {
-        query += ' AND "userId" = $2';
+        query += ' AND user_id = $2';
         params.push(userId);
       }
       
@@ -234,7 +258,7 @@ const listOperations = {
   create: async (pool, listData) => {
     try {
       const result = await pool.query(
-        `INSERT INTO lists (title, category, items, "userId") 
+        `INSERT INTO lists (title, category, items, user_id) 
          VALUES ($1, $2, $3, $4) 
          RETURNING *`,
         [
@@ -259,8 +283,8 @@ const listOperations = {
           title = $1, 
           category = $2, 
           items = $3,
-          "updatedAt" = CURRENT_TIMESTAMP
-         WHERE id = $4 AND "userId" = $5
+          updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4 AND user_id = $5
          RETURNING *`,
         [
           listData.title,
@@ -282,7 +306,7 @@ const listOperations = {
   delete: async (pool, listId, userId) => {
     try {
       const result = await pool.query(
-        'DELETE FROM lists WHERE id = $1 AND "userId" = $2 RETURNING id',
+        'DELETE FROM lists WHERE id = $1 AND user_id = $2 RETURNING id',
         [listId, userId]
       );
       return result.rows[0] ? true : false;

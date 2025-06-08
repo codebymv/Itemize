@@ -203,13 +203,22 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
 
     const inputLower = input.toLowerCase().trim();
     
-    // First try to find an exact prefix match (standard autocomplete behavior)
-    const exactMatch = suggestions.find(suggestion => 
+    // Priority 1: Exact Prefix Match - prefer shorter completions
+    const prefixMatches = suggestions.filter(suggestion => 
       suggestion.toLowerCase().startsWith(inputLower) && 
       suggestion.toLowerCase() !== inputLower
     );
-    
-    if (exactMatch) return exactMatch;
+
+    if (prefixMatches.length > 0) {
+      // Sort by length (shortest first), then alphabetically for tie-breaking
+      prefixMatches.sort((a, b) => {
+        if (a.length !== b.length) {
+          return a.length - b.length;
+        }
+        return a.localeCompare(b);
+      });
+      return prefixMatches[0];
+    }
     
     // If no exact match found and input is at least 2 characters, try fuzzy matching
     if (inputLower.length >= 2) {

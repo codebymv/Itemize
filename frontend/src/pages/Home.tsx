@@ -5,20 +5,35 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock } from 'lucide-react';
 
 const Home: React.FC = () => {
-  const { login, currentUser } = useAuth();
+  const { login, currentUser, isAuthenticated, token } = useAuth();
   const navigate = useNavigate();
+  const navigatedRef = React.useRef(false);
+
+  console.log('Home component rendered:', { 
+    hasUser: !!currentUser, 
+    hasToken: !!token,
+    isAuthenticated, 
+    alreadyNavigated: navigatedRef.current 
+  });
 
   // If user is already authenticated, redirect to user-home
   React.useEffect(() => {
-    if (currentUser) {
-      navigate('/lists');
+    if (isAuthenticated && !navigatedRef.current) {
+      console.log('Navigating to /lists due to authenticated user:', { user: currentUser, token });
+      navigatedRef.current = true;
+      // Ensure the navigation happens in the next tick to allow React to complete rendering
+      setTimeout(() => navigate('/lists'), 0);
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, isAuthenticated, token]);
 
   const handleGetStarted = async () => {
     try {
+      console.log('Starting login process');
+      navigatedRef.current = false; // Reset navigation flag
       await login();
-      navigate('/lists');
+      console.log('Login process completed, will navigate to /lists after auth context updates');
+      
+      // The useEffect will handle navigation once auth state is updated
     } catch (error) {
       console.error('Login failed:', error);
     }

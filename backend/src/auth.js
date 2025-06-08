@@ -27,7 +27,7 @@ const generateTokens = (userId) => {
  */
 router.post('/google-login', asyncHandler(async (req, res) => {
   try {
-    const { googleId, email, name, picture } = req.body;
+    const { googleId, email, name } = req.body;
     
     if (!googleId || !email || !name) {
       return res.status(400).json({ error: 'Missing user information' });
@@ -52,7 +52,6 @@ router.post('/google-login', asyncHandler(async (req, res) => {
         email,
         name,
         googleId,
-        picture,
         provider: 'google'
       });
       
@@ -83,7 +82,7 @@ router.post('/google-login', asyncHandler(async (req, res) => {
         uid: user.id, // Use uid to match frontend expected format
         email: user.email,
         name: user.name,
-        photoURL: user.picture // Use photoURL to match frontend expected format
+        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random` // Use default avatar generator
       }
     });
   } catch (error) {
@@ -125,7 +124,6 @@ router.post('/google-credential', asyncHandler(async (req, res) => {
         email,
         name,
         googleId,
-        picture,
         provider: 'google'
       });
       
@@ -155,7 +153,7 @@ router.post('/google-credential', asyncHandler(async (req, res) => {
         uid: user.id,
         email: user.email,
         name: user.name,
-        photoURL: user.picture
+        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
       }
     });
   } catch (error) {
