@@ -59,7 +59,7 @@ const Navbar: React.FC = () => {
   const handleNavigate = (path: string) => {
     // For logo clicks, direct to appropriate home page based on auth status
     if (path === '/') {
-      navigate(currentUser ? '/user-home' : '/home');
+      navigate(currentUser ? '/lists' : '/home');
     } else {
       navigate(path);
     }
@@ -97,7 +97,7 @@ const Navbar: React.FC = () => {
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9 border-2 border-primary/10">
                       <AvatarImage 
-                        src={currentUser.picture || ''} 
+                        src={currentUser.photoURL || ''} 
                         alt={currentUser.name || 'User'} 
                       />
                       <AvatarFallback className="bg-primary/10 text-primary font-medium">
@@ -118,14 +118,14 @@ const Navbar: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleNavigate('/profile')}>
+                  {/* <DropdownMenuItem onClick={() => handleNavigate('/profile')}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleNavigate('/settings')}>
+                  </DropdownMenuItem> */}
+                  {/* <DropdownMenuItem onClick={() => handleNavigate('/settings')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

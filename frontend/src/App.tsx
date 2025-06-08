@@ -1,3 +1,6 @@
+// Import API interceptor first to ensure it's initialized before any API calls
+import "@/lib/api";
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,7 +29,7 @@ const RootRedirect = () => {
     </div>;
   }
   
-  return currentUser ? <Navigate to="/user-home" replace /> : <Navigate to="/home" replace />;
+  return currentUser ? <Navigate to="/lists" replace /> : <Navigate to="/home" replace />;
 };
 
 const App = () => (
@@ -50,7 +53,7 @@ const App = () => (
                 
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/user-home" element={<UserHome />} />
+                  <Route path="/lists" element={<UserHome />} />
                   {/* Add other protected routes here */}
                 </Route>
                 

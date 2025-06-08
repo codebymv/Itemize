@@ -32,7 +32,11 @@ interface ListCardProps {
 const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(list.title);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [editCategory, setEditCategory] = useState(list.type);
   const [newItemText, setNewItemText] = useState('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemText, setEditingItemText] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
   const { toast } = useToast();
 
@@ -48,6 +52,44 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
       });
     }
     setIsEditing(false);
+  };
+
+  const handleEditCategory = () => {
+    if (editCategory.trim() && editCategory.trim() !== list.type) {
+      onUpdate({
+        ...list,
+        type: editCategory.trim()
+      });
+      toast({
+        title: "Category updated",
+        description: "Your list category has been changed.",
+      });
+    }
+    setIsEditingCategory(false);
+  };
+  
+  const startEditingItem = (item: ListItem) => {
+    setEditingItemId(item.id);
+    setEditingItemText(item.text);
+  };
+  
+  const handleEditItem = () => {
+    if (editingItemId && editingItemText.trim()) {
+      onUpdate({
+        ...list,
+        items: list.items.map(item => 
+          item.id === editingItemId 
+            ? { ...item, text: editingItemText.trim() }
+            : item
+        )
+      });
+      
+      toast({
+        title: "Item updated",
+        description: "Your list item has been changed.",
+      });
+    }
+    setEditingItemId(null);
   };
 
   const handleAddItem = () => {
@@ -131,17 +173,47 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
                   onClick={() => setIsEditing(true)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 rounded"
                 >
-                  <Edit3 className="h-3 w-3 text-slate-400" />
+                  <Edit3 className="h-3 w-3 text-slate-500" />
                 </button>
               </div>
             )}
             
-            <div className="flex items-center justify-between mt-2">
-              <Badge variant="secondary" className="text-xs">
-                {list.type}
-              </Badge>
-              {totalCount > 0 && (
-                <span className="text-xs text-slate-500">
+            <div className="mt-1 flex items-center">
+              {isEditingCategory ? (
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    onBlur={handleEditCategory}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleEditCategory();
+                      if (e.key === 'Escape') {
+                        setEditCategory(list.type);
+                        setIsEditingCategory(false);
+                      }
+                    }}
+                    className="h-6 text-xs px-2 py-0 w-24"
+                    autoFocus
+                  />
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={handleEditCategory}>
+                    <Check className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {list.type}
+                  </Badge>
+                  <button
+                    onClick={() => setIsEditingCategory(true)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 rounded"
+                  >
+                    <Edit3 className="h-3 w-3 text-slate-500" />
+                  </button>
+                </div>
+              )}
+              {list.items.length > 0 && (
+                <span className="text-xs text-slate-500 ml-2">
                   {completedCount}/{totalCount} completed
                 </span>
               )}
@@ -197,18 +269,48 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
                 {item.completed && <Check className="h-3 w-3" />}
               </button>
               
-              <span className={`flex-1 text-sm ${
-                item.completed ? 'line-through text-slate-500' : 'text-slate-700'
-              }`}>
-                {item.text}
-              </span>
-              
-              <button
-                onClick={() => removeItem(item.id)}
-                className="opacity-0 group-hover/item:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-500"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {editingItemId === item.id ? (
+                <div className="flex flex-1 items-center space-x-2">
+                  <Input
+                    value={editingItemText}
+                    onChange={(e) => setEditingItemText(e.target.value)}
+                    onBlur={handleEditItem}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleEditItem();
+                      if (e.key === 'Escape') {
+                        setEditingItemId(null);
+                      }
+                    }}
+                    className="text-sm h-7 py-0"
+                    autoFocus
+                  />
+                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={handleEditItem}>
+                    <Check className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center">
+                  <span className={`flex-1 text-sm ${
+                    item.completed ? 'line-through text-slate-500' : 'text-slate-700'
+                  }`}>
+                    {item.text}
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => startEditingItem(item)}
+                      className="opacity-0 group-hover/item:opacity-100 transition-opacity p-1 hover:bg-slate-100 rounded text-slate-500"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="opacity-0 group-hover/item:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

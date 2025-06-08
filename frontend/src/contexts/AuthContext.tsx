@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
-import axios from 'axios';
+import api from '@/lib/api';
+import axios from 'axios'; // Keep axios for Google API calls
 
 export interface User {
   uid: string;
@@ -93,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         console.log('Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
         
-        const response = await axios.post(`${apiUrl}/api/auth/google-login`, {
+        const response = await api.post(`/api/auth/google-login`, {
           googleId: googleUser.id,
           email: googleUser.email,
           name: googleUser.name,
@@ -155,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (backendLogoutFailures.current < 3) {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        axios.post(`${apiUrl}/api/auth/logout`).catch((error) => {
+        api.post(`/api/auth/logout`).catch((error) => {
           console.error('Backend logout failed:', error);
           backendLogoutFailures.current++;
         });

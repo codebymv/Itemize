@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
 import ListCard from "@/components/ListCard";
-import QuickAddForm from "@/components/QuickAddForm";
 
 interface ListItem {
   id: string;
@@ -133,28 +132,26 @@ const UserHome = () => {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-slate-900">My Lists</h1>
               
-              <div className="flex space-x-2">
+              <div className="flex items-center gap-3">
+                {/* Desktop search */}
+                <div className="relative hidden sm:block">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search lists..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+
                 <Button 
                   onClick={() => setShowCreateModal(true)}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">New List</span>
+                  New List
                 </Button>
-              </div>
-            </div>
-            
-            {/* Desktop search and filters */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="relative hidden sm:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                <Input
-                  placeholder="Search lists..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64"
-                />
               </div>
             </div>
           </div>
@@ -193,12 +190,7 @@ const UserHome = () => {
           })}
         </div>
 
-        {/* Quick Add Section */}
-        {lists.length > 0 && (
-          <div className="mb-8">
-            <QuickAddForm onCreateList={createList} />
-          </div>
-        )}
+        {/* Lists section */}
 
         {/* Lists Grid */}
         {filteredLists.length === 0 ? (

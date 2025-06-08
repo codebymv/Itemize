@@ -1,97 +1,100 @@
-// In-memory storage for users and lists until database is set up
-const usersStore = new Map();
-const listsStore = new Map();
-let userIdCounter = 1;
-let listIdCounter = 1;
+const { Sequelize, DataTypes } = require('sequelize');
 
-/**
- * Simple in-memory User model to use until database is set up
- */
-class User {
-  static async findOne({ where }) {
-    const { email, googleId } = where || {};
-    
-    if (email) {
-      return [...usersStore.values()].find(user => user.email === email);
+// Initialize Sequelize with the DATABASE_URL from environment variables
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // For Supabase connection
     }
-    
-    if (googleId) {
-      return [...usersStore.values()].find(user => user.googleId === googleId);
-    }
-    
-    return null;
-  }
-  
-  static async create(userData) {
-    const id = userIdCounter++;
-    const timestamp = new Date();
-    
-    const user = {
-      id,
-      email: userData.email,
-      name: userData.name,
-      picture: userData.picture,
-      googleId: userData.googleId,
-      provider: userData.provider || 'google',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      save: async function() {
-        usersStore.set(this.id, this);
-        return this;
-      }
-    };
-    
-    usersStore.set(id, user);
-    return user;
-  }
-}
+  },
+  logging: process.env.NODE_ENV === 'development' ? console.log : false
+});
 
-/**
- * Simple in-memory List model to use until database is set up
- */
-class List {
-  static async findAll(options = {}) {
-    const { where } = options;
-    let lists = [...listsStore.values()];
-    
-    if (where && where.userId) {
-      lists = lists.filter(list => list.userId === where.userId);
-    }
-    
-    return lists;
+// Define User model
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  email: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: false
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  picture: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  googleId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  provider: {
+    type: DataTypes.STRING,
+    defaultValue: 'google'
   }
-  
-  static async findByPk(id) {
-    return listsStore.get(id) || null;
-  }
-  
-  static async create(listData) {
-    const id = listIdCounter++;
-    const timestamp = new Date();
-    
-    const list = {
-      id,
-      title: listData.title,
-      category: listData.category || 'General',
-      items: listData.items || [],
-      userId: listData.userId,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      save: async function() {
-        listsStore.set(this.id, this);
-        return this;
-      },
-      destroy: async function() {
-        return listsStore.delete(this.id);
-      }
-    };
-    
-    listsStore.set(id, list);
-    return list;
-  }
-}
+});
 
-// Mock initialization - no actual database needed yet
+// Define List model
+const List = sequelize.define('List', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  category: {
+    type: DataTypes.STRING,
+    defaultValue: 'General'
+  },
+  items: {
+    type: DataTypes.JSONB, // Store items as JSON array
+    defaultValue: []
+  }
+});
+
+// Set up associations - each list belongs to a user
+List.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(List, { foreignKey: 'userId' });
+
+// Function to initialize database
+const initializeDatabase = async () => {
+  try {
+    // Test the connection
+    await sequelize.authenticate();
+    console.log('Connection to database has been established successfully.');
+    
+    // Sync all models with database
+    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    console.log('All models were synchronized successfully.');
+    
+    return true;
+  } catch (error) {
+    console.error('Unable to connect to the database or synchronize models:', error);
+    // Fall back to in-memory if database connection fails
+    console.log('Falling back to in-memory storage...');
+    return true; // Return true to allow server to start anyway
+  }
+};
+
+module.exports = {
+  sequelize,
+  User,
+  List,
+  initializeDatabase
+};
+
+// Legacy initialization function - kept for compatibility
 const initializeModels = async () => {
   try {
     console.log('Using in-memory data store (no database connection)');
@@ -104,7 +107,9 @@ const initializeModels = async () => {
 
 // Export models
 module.exports = {
+  sequelize,
   User,
   List,
+  initializeDatabase,
   initializeModels
 };

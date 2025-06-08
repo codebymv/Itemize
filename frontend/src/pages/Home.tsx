@@ -11,14 +11,14 @@ const Home: React.FC = () => {
   // If user is already authenticated, redirect to user-home
   React.useEffect(() => {
     if (currentUser) {
-      navigate('/user-home');
+      navigate('/lists');
     }
   }, [currentUser, navigate]);
 
   const handleGetStarted = async () => {
     try {
       await login();
-      navigate('/user-home');
+      navigate('/lists');
     } catch (error) {
       console.error('Login failed:', error);
     }
@@ -58,8 +58,27 @@ const Home: React.FC = () => {
               className="h-24 md:h-32 w-auto mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl flex items-center justify-center gap-3">
-            Organize Your Life with <img src="/profile.png" alt="Itemize" className="h-48 md:h-64 inline-block" />
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+            {/* Mobile layout (stack text and image) */}
+            <div className="flex flex-col items-center md:hidden gap-1 pb-2">
+              <div className="text-center w-full">
+                <div className="text-2xl md:text-xl inline-block whitespace-nowrap font-semibold">
+                  Organize your life with
+                </div>
+              </div>
+              <div className="mt-1">
+                <div className="text-2xl md:text-2xl font-light italic tracking-wide text-gray-600">
+                  ITEMIZE
+                </div>
+              </div>
+            </div>
+            
+            {/* Desktop layout (text and image in row) */}
+            <div className="hidden md:flex flex-row items-center justify-center gap-3">
+              <span>Organize your life</span>
+              <span>with</span>
+              <img src="/profile.png" alt="Itemize" className="h-64 inline-block" />
+            </div>
           </h1>
           <p className="mt-3 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
             The simple, elegant way to create and manage lists for any purpose.

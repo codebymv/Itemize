@@ -5,20 +5,15 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { Pool } = require('pg');
-// Import database models
-const { sequelize, initializeModels } = require('./models');
+// Import database models with Sequelize
+const { sequelize, User, List, initializeDatabase } = require('./models');
 // Now import auth module after environment variables are loaded
 const { router: authRouter, authenticateJWT } = require('./auth');
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// Sequelize is now handling the database connection in models.js
 
 // Middleware
 app.use(helmet());
@@ -43,12 +38,13 @@ app.get('/health', (req, res) => {
 });
 
 // Get all lists
-app.get('/api/lists', async (req, res) => {
+app.get('/api/lists', authenticateJWT, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM lists ORDER BY created_at DESC'
-    );
-    res.json(result.rows);
+    const lists = await List.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(lists);
   } catch (error) {
     console.error('Error fetching lists:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -56,7 +52,7 @@ app.get('/api/lists', async (req, res) => {
 });
 
 // Create a new list
-app.post('/api/lists', async (req, res) => {
+app.post('/api/lists', authenticateJWT, async (req, res) => {
   try {
     const { title, category, items } = req.body;
     
@@ -64,12 +60,14 @@ app.post('/api/lists', async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    const result = await pool.query(
-      'INSERT INTO lists (title, category, items) VALUES ($1, $2, $3) RETURNING *',
-      [title, category || 'General', JSON.stringify(items || [])]
-    );
+    const list = await List.create({
+      title,
+      category: category || 'General',
+      items: items || [],
+      userId: req.user.id
+    });
     
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(list);
   } catch (error) {
     console.error('Error creating list:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -77,21 +75,28 @@ app.post('/api/lists', async (req, res) => {
 });
 
 // Update a list
-app.put('/api/lists/:id', async (req, res) => {
+app.put('/api/lists/:id', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, category, items } = req.body;
     
-    const result = await pool.query(
-      'UPDATE lists SET title = $1, category = $2, items = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
-      [title, category, JSON.stringify(items), id]
-    );
+    const list = await List.findOne({
+      where: { 
+        id: id,
+        userId: req.user.id // Ensure user can only update their own lists
+      }
+    });
     
-    if (result.rows.length === 0) {
+    if (!list) {
       return res.status(404).json({ error: 'List not found' });
     }
     
-    res.json(result.rows[0]);
+    list.title = title;
+    list.category = category;
+    list.items = items;
+    await list.save();
+    
+    res.json(list);
   } catch (error) {
     console.error('Error updating list:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -99,19 +104,22 @@ app.put('/api/lists/:id', async (req, res) => {
 });
 
 // Delete a list
-app.delete('/api/lists/:id', async (req, res) => {
+app.delete('/api/lists/:id', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const result = await pool.query(
-      'DELETE FROM lists WHERE id = $1 RETURNING *',
-      [id]
-    );
+    const list = await List.findOne({
+      where: { 
+        id: id,
+        userId: req.user.id // Ensure user can only delete their own lists
+      }
+    });
     
-    if (result.rows.length === 0) {
+    if (!list) {
       return res.status(404).json({ error: 'List not found' });
     }
     
+    await list.destroy();
     res.json({ message: 'List deleted successfully' });
   } catch (error) {
     console.error('Error deleting list:', error);
@@ -130,8 +138,14 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Initialize database models before starting server
-initializeModels().then(() => {
+// Initialize database with Sequelize before starting server
+initializeDatabase().then((dbInitialized) => {
+  if (dbInitialized) {
+    console.log('Database initialized successfully');
+  } else {
+    console.warn('Database initialization failed, using fallback mode');
+  }
+  
   app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });

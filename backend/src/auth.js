@@ -61,7 +61,7 @@ router.post('/google-login', asyncHandler(async (req, res) => {
       }
     } catch (error) {
       console.error('Error handling user:', error);
-      res.status(500).json({ error: 'Database error, using in-memory user store' });
+      res.status(500).json({ error: 'Database error occurred' });
       return;
     }
     
