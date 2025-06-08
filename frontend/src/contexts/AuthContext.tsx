@@ -16,6 +16,8 @@ interface AuthContextType {
   login: () => void;
   logout: () => void;
   handleGoogleSuccess: (credentialResponse: CredentialResponse) => void;
+  token: string | null; // Expose the token to consumers
+  isAuthenticated: boolean; // Add isAuthenticated flag
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -182,7 +184,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     login,
     logout,
-    handleGoogleSuccess
+    handleGoogleSuccess,
+    token,
+    isAuthenticated: !!currentUser && !!token
   };
 
   return (

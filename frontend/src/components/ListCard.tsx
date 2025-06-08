@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
-import { MoreVertical, Trash2, Edit3, Plus, Check, X, GripVertical } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { MoreVertical, Trash2, Edit3, Plus, Check, X, GripVertical, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useAISuggestions } from "@/hooks/use-ai-suggestions";
 
 interface ListItem {
   id: string;
@@ -29,7 +30,7 @@ interface ListCardProps {
   onDelete: (listId: string) => void;
 }
 
-const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
+export const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(list.title);
   const [isEditingCategory, setIsEditingCategory] = useState(false);
@@ -38,6 +39,15 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemText, setEditingItemText] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
+    try {
+      // Check if AI suggestions are enabled in localStorage
+      const saved = localStorage.getItem('itemize-ai-suggest-enabled');
+      return saved ? JSON.parse(saved) : false;
+    } catch (e) {
+      return false;
+    }
+  });
   const { toast } = useToast();
 
   const handleEditTitle = () => {
@@ -106,7 +116,11 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
       });
       
       setNewItemText('');
-      setShowAddItem(false);
+      
+      // Don't close the add item UI if AI is enabled
+      if (!aiEnabled) {
+        setShowAddItem(false);
+      }
       
       toast({
         title: "Item added",
@@ -138,6 +152,92 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
 
   const completedCount = list.items.filter(item => item.completed).length;
   const totalCount = list.items.length;
+
+  // Get items as simple text strings for AI suggestions
+  const itemTexts = list.items.map(item => item.text);
+  
+  // Setup AI suggestions
+  const { 
+    currentSuggestion, 
+    suggestions,
+    isLoading, 
+    debouncedFetchSuggestions,
+    fetchSuggestions,
+    getNextSuggestion, 
+    getSuggestionForInput, 
+    acceptSuggestion 
+  } = useAISuggestions({
+    enabled: aiEnabled,
+    listTitle: list.title,
+    existingItems: itemTexts
+  });
+  
+  // Listen for changes to localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem('itemize-ai-suggest-enabled');
+        setAiEnabled(saved ? JSON.parse(saved) : false);
+      } catch (e) {
+        console.error('Error reading AI setting:', e);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Fetch initial suggestions when the component mounts and enabled
+  useEffect(() => {
+    if (aiEnabled && list.items.length > 0) {
+      debouncedFetchSuggestions();
+    }
+  }, [aiEnabled, list.items.length, debouncedFetchSuggestions]);
+  
+  // Current suggestion based on input
+  const currentInputSuggestion = newItemText ? getSuggestionForInput(newItemText) : null;
+  
+  // Handle accepting a suggestion with tab key
+  const handleAcceptSuggestion = () => {
+    if (currentInputSuggestion) {
+      setNewItemText(currentInputSuggestion);
+    } else if (currentSuggestion) {
+      setNewItemText(currentSuggestion);
+    }
+  };
+  
+  // Handle getting a suggestion
+  const handleGetSuggestion = () => {
+    if (!aiEnabled) {
+      localStorage.setItem('itemize-ai-suggest-enabled', 'true');
+      setAiEnabled(true); // Auto-enable if disabled
+      // Need to fetch suggestions after enabling
+      setTimeout(() => debouncedFetchSuggestions(), 100);
+    } else if (currentSuggestion) {
+      // Add the current suggestion directly to the list
+      const newItem: ListItem = {
+        id: Date.now().toString(),
+        text: currentSuggestion,
+        completed: false
+      };
+      
+      onUpdate({
+        ...list,
+        items: [...list.items, newItem]
+      });
+      
+      toast({
+        title: "Item added",
+        description: `Added "${currentSuggestion}" to your list.`,
+      });
+      
+      // Get the next suggestion
+      getNextSuggestion();
+    } else {
+      // If no current suggestion, try to fetch new ones
+      debouncedFetchSuggestions();
+    }
+  };
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-slate-200">
@@ -317,34 +417,81 @@ const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) => {
 
         {/* Add new item */}
         {showAddItem ? (
-          <div className="flex items-center space-x-2">
-            <Input
-              placeholder="Add new item..."
-              value={newItemText}
-              onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddItem();
-                if (e.key === 'Escape') {
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Input
+                  placeholder="Add new item..."
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddItem();
+                    if (e.key === 'Escape') {
+                      setNewItemText('');
+                      setShowAddItem(false);
+                    }
+                    if ((e.key === 'Tab' || e.key === 'ArrowRight') && currentInputSuggestion) {
+                      e.preventDefault();
+                      handleAcceptSuggestion();
+                    }
+                  }}
+                  className="text-sm pr-6"
+                  autoFocus
+                />
+                {/* Show AI icon when suggestions are available */}
+                {aiEnabled && (suggestions.length > 0 || isLoading) && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                    <Sparkles size={14} className={`text-blue-500 ${isLoading ? 'animate-pulse' : ''}`} />
+                  </div>
+                )}
+                
+                {/* Show GitHub Copilot style suggestion */}
+                {aiEnabled && currentInputSuggestion && newItemText && (
+                  <div className="absolute inset-0 flex items-center pointer-events-none">
+                    <div className="pl-3 text-transparent">{newItemText}</div>
+                    <div className="text-gray-400">
+                      {currentInputSuggestion.slice(newItemText.length)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button 
+                size="sm" 
+                onClick={handleAddItem} 
+                disabled={!newItemText.trim()}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => {
                   setNewItemText('');
                   setShowAddItem(false);
-                }
-              }}
-              className="text-sm"
-              autoFocus
-            />
-            <Button size="sm" onClick={handleAddItem} disabled={!newItemText.trim()}>
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => {
-                setNewItemText('');
-                setShowAddItem(false);
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* AI Suggestion button */}
+            {aiEnabled && list.items.length > 0 && (
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="flex items-center justify-start text-gray-500 hover:text-blue-600"
+                onClick={handleGetSuggestion}
+              >
+                <Sparkles size={14} className="mr-1.5" />
+                {currentSuggestion ? (
+                  <span>Suggest: <span className="font-medium">{currentSuggestion}</span></span>
+                ) : (
+                  <span>Get suggestion</span>
+                )}
+              </Button>
+            )}
           </div>
         ) : (
           <Button

@@ -9,6 +9,8 @@ const morgan = require('morgan');
 const { sequelize, User, List, initializeDatabase } = require('./models');
 // Now import auth module after environment variables are loaded
 const { router: authRouter, authenticateJWT } = require('./auth');
+// Import AI suggestion service
+const aiSuggestionService = require('./services/aiSuggestionService');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -124,6 +126,23 @@ app.delete('/api/lists/:id', authenticateJWT, async (req, res) => {
   } catch (error) {
     console.error('Error deleting list:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// AI suggestions endpoint
+app.post('/api/suggestions', authenticateJWT, async (req, res) => {
+  try {
+    const { listTitle, existingItems } = req.body;
+    
+    if (!listTitle || !Array.isArray(existingItems)) {
+      return res.status(400).json({ error: 'Invalid request parameters' });
+    }
+
+    const result = await aiSuggestionService.suggestListItems(listTitle, existingItems);
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating suggestions:', error);
+    res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 });
 
