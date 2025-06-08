@@ -7,9 +7,8 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // Log startup
-console.log(`Starting server on port ${port} at ${new Date().toISOString()}`);
+console.log(`Starting minimal server on port ${port} at ${new Date().toISOString()}`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
-console.log(`DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'not set'}`);
 
 // Set up health check endpoint for Railway
 app.get('/health', (req, res) => {

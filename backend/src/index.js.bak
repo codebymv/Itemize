@@ -1,0 +1,300 @@
+// Load environment variables
+require('dotenv').config();
+
+// Create Express app
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3001;
+
+// Log startup
+console.log(`Starting minimal server on port ${port} at ${new Date().toISOString()}`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+
+// Set up health check endpoint for Railway
+app.get('/health', (req, res) => {
+  console.log('Health check hit at:', new Date().toISOString());
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Also support /api/health for consistency
+app.get('/api/health', (req, res) => {
+  console.log('API Health check hit at:', new Date().toISOString());
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Add a catch-all route
+app.use('*', (req, res) => {
+  res.status(200).send('Server is running. Use /health or /api/health to check status.');
+});
+
+// Start the server
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`✅ Server running on port ${port}`);
+  console.log('Health check endpoints available at:');
+  console.log('  - /health');
+  console.log('  - /api/health');
+});
+
+server.on('error', (error) => {
+  console.error('Server error:', error.message);
+});
+
+// Auth routes - pass database pool to auth router
+app.use('/api/auth', (req, res, next) => {
+  req.dbPool = pool;
+  next();
+}, authRouter);
+
+// Health check endpoints for Railway deployment
+// Define these early so they work even if other parts of the app have issues
+
+// Primary health check endpoint at /health for Railway
+app.get('/health', (req, res) => {
+  // Return OK even if database connection is not available
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    dbConnected: !!pool,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Also support /api/health for API consistency
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    dbConnected: !!pool,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Get all lists
+app.get('/api/lists', authenticateJWT, async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    const lists = await listOperations.findAllByUserId(pool, req.user.id);
+    res.json(lists);
+  } catch (error) {
+    console.error('Error fetching lists:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new list
+app.post('/api/lists', authenticateJWT, async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
+    const { title, category, items } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const list = await listOperations.create(pool, {
+      title,
+      category: category || 'General',
+      items: items || [],
+      userId: req.user.id
+    });
+    
+    if (!list) {
+      return res.status(500).json({ error: 'Failed to create list' });
+    }
+    
+    res.status(201).json(list);
+  } catch (error) {
+    console.error('Error creating list:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update a list
+app.put('/api/lists/:id', authenticateJWT, async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
+    const { id } = req.params;
+    const { title, category, items } = req.body;
+    
+    // First check if the list exists and belongs to the user
+    const existingList = await listOperations.findById(pool, id, req.user.id);
+    
+    if (!existingList) {
+      return res.status(404).json({ error: 'List not found' });
+    }
+    
+    // Update the list
+    const updatedList = await listOperations.update(pool, id, req.user.id, {
+      title,
+      category,
+      items
+    });
+    
+    if (!updatedList) {
+      return res.status(500).json({ error: 'Failed to update list' });
+    }
+    
+    res.json(updatedList);
+  } catch (error) {
+    console.error('Error updating list:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a list
+app.delete('/api/lists/:id', authenticateJWT, async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+
+    const { id } = req.params;
+    
+    // Delete the list and verify ownership in one operation
+    const success = await listOperations.delete(pool, id, req.user.id);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'List not found or could not be deleted' });
+    }
+    
+    res.json({ message: 'List deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting list:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// AI suggestions endpoint
+app.post('/api/suggestions', authenticateJWT, async (req, res) => {
+  try {
+    const { listTitle, existingItems } = req.body;
+    
+    if (!listTitle || !Array.isArray(existingItems)) {
+      return res.status(400).json({ error: 'Invalid request parameters' });
+    }
+
+    const result = await aiSuggestionService.suggestListItems(listTitle, existingItems);
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating suggestions:', error);
+    res.status(500).json({ error: 'Failed to generate suggestions' });
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// Initialize AI suggestion service if available but don't crash if it fails
+try {
+  if (aiService) {
+    console.log('Initializing AI suggestion service...');
+    aiService.initialize();
+    console.log('AI suggestion service initialized');
+  }
+} catch (err) {
+  console.error('Failed to initialize AI service, but server will continue:', err.message);
+}
+
+// Delayed initialization after health checks are set up
+async function initializeApp() {
+  try {
+    // Try to initialize database if the pool was created
+    if (pool && db && auth) {
+      try {
+        // These modules should be already loaded safely at the top
+        console.log('Initializing database schema...');
+        const dbInitialized = await db.initializeDatabase(pool);
+        
+        if (dbInitialized) {
+          console.log('✅ Database schema initialized successfully');
+          
+          // Set up auth routes with database pool
+          app.use('/api/auth', (req, res, next) => {
+            req.dbPool = pool;
+            next();
+          }, auth.router);
+          
+          // API routes for lists
+          console.log('Setting up API routes...');
+          
+          // Get all lists
+          app.get('/api/lists', auth.authenticateJWT, async (req, res) => {
+            try {
+              if (!pool) {
+                return res.status(503).json({ error: 'Database connection unavailable' });
+              }
+              const userId = req.user.id;
+              const lists = await db.listOperations.findAllByUserId(pool, userId);
+              res.json(lists);
+            } catch (error) {
+              console.error('Error getting lists:', error);
+              res.status(500).json({ error: 'Failed to get lists' });
+            }
+          });
+          
+          // Add other routes here similarly
+          
+          console.log('API routes initialized successfully');
+        } else {
+          console.warn('⚠️ Database initialization failed, but server will continue');
+        }
+      } catch (err) {
+        console.error('Error during app initialization:', err.message);
+        // Continue anyway so health check endpoints work
+      }
+    } else {
+      console.log('Skipping full initialization as dependencies are missing, but server will run for health checks');
+    }
+  } catch (err) {
+    console.error('Failed in app initialization:', err.message);
+    // Don't crash, as health checks are already set up
+  }
+}
+
+// Start the server
+console.log(`Starting server on port ${port}...`);
+
+// Print environment info for debugging
+console.log('Environment variables (sanitized):');
+console.log(`  NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+console.log(`  PORT: ${port}`);
+console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'not set'}`);
+console.log(`  FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
+console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? '[REDACTED]' : 'not set'}`);
+
+// Start listening immediately to pass health checks
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`✅ Server running on port ${port} (${new Date().toISOString()})`);
+  console.log('Health check endpoints available at:');
+  console.log('  - /health');
+  console.log('  - /api/health');
+  
+  // Initialize the rest of the app after we're already listening
+  setTimeout(() => {
+    initializeApp().catch(err => {
+      console.error('Failed to initialize app:', err);
+      // Don't crash, as server is already running
+    });
+  }, 500);
+});
+
+server.on('error', (err) => {
+  console.error('Server error:', err.message);
+});
