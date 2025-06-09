@@ -1,6 +1,9 @@
 
-import React, { useState } from 'react';
-import { List, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { List, Plus, ChevronsUpDown, Check } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils"; // For conditional class names
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +13,29 @@ interface CreateListModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateList: (title: string, type: string) => void;
+  existingCategories: string[];
 }
 
-const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCreateList }) => {
+const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCreateList, existingCategories }) => {
   const [title, setTitle] = useState('');
   const [customType, setCustomType] = useState('');
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  useEffect(() => {
+    // If a category is selected from the dropdown, update customType
+    // If user types a new category, customType will be updated directly by CommandInput
+    if (selectedCategory) {
+      setCustomType(selectedCategory);
+    }
+  }, [selectedCategory]);
+
+  // Reset selectedCategory when customType is cleared (e.g. on modal close)
+  useEffect(() => {
+    if (!customType) {
+      setSelectedCategory('');
+    }
+  }, [customType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +75,73 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
 
           <div>
             <Label htmlFor="customType">Category (Optional)</Label>
-            <Input
-              id="customType"
-              placeholder="General (default)"
-              value={customType}
-              onChange={(e) => setCustomType(e.target.value)}
-              className="mt-1"
-            />
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={popoverOpen}
+                  className="w-full justify-between mt-1 font-normal"
+                >
+                  {customType || "Select category or type new..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search or create category..." 
+                    value={customType} 
+                    onValueChange={(currentValue) => {
+                      setCustomType(currentValue);
+                      setSelectedCategory(''); // Clear selection if typing new
+                    }}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      {customType.trim() ? `Create "${customType}"` : "No category found."}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {existingCategories.map((category) => (
+                        <CommandItem
+                          key={category}
+                          value={category}
+                          onSelect={(currentValue) => {
+                            setSelectedCategory(currentValue === selectedCategory ? "" : currentValue);
+                            setCustomType(currentValue === customType ? "" : currentValue); // Also set customType here
+                            setPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              customType === category ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {category}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    {customType.trim() && !existingCategories.includes(customType.trim()) && (
+                      <CommandItem
+                        key={customType.trim()}
+                        value={customType.trim()}
+                        onSelect={() => {
+                          setSelectedCategory(customType.trim());
+                          // customType is already set by CommandInput
+                          setPopoverOpen(false);
+                        }}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create "{customType.trim()}"
+                      </CommandItem>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <p className="text-xs text-gray-500 mt-1">
-              Leave empty for "General" or create your own category
+              Select an existing category, type a new one, or leave empty for "General".
             </p>
           </div>
 

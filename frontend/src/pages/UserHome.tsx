@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
-import ListCard from "@/components/ListCard";
+import { ListCard } from "@/components/ListCard";
 import AISuggestToggle from "@/components/ui/AISuggestToggle";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,14 +49,17 @@ const UserHome = () => {
         }
       });
       
-      // Map response data to our List type with proper color
-      const listsWithColor = response.data.map((list: any) => ({
-        ...list,
-        createdAt: new Date(list.createdAt),
-        color: getTypeColor(list.category || 'General')
+      // Map response data to our List type, ensuring correct category mapping and defaults
+      const listsWithDataMapped = response.data.map((listFromBackend: any) => ({
+        id: listFromBackend.id,
+        title: listFromBackend.title,
+        type: listFromBackend.category || 'General', // Map backend 'category' to frontend 'type'
+        items: listFromBackend.items || [], // Ensure items is an array
+        createdAt: new Date(listFromBackend.createdAt),
+        color: getTypeColor(listFromBackend.category || 'General')
       }));
       
-      setLists(listsWithColor);
+      setLists(listsWithDataMapped);
     } catch (error) {
       console.error('Failed to fetch lists:', error);
       toast({
@@ -95,6 +98,7 @@ const UserHome = () => {
         title: "List created!",
         description: `Your ${type} list "${title}" has been created.`,
       });
+
     } catch (error) {
       console.error('Failed to create list:', error);
       toast({
@@ -143,9 +147,14 @@ const UserHome = () => {
         }
       });
       
+      const newCategory = updatedList.type;
+      const oldList = lists.find(list => list.id === updatedList.id);
+      const oldCategory = oldList ? oldList.type : undefined;
+
       setLists(prev => prev.map(list => 
-        list.id === updatedList.id ? updatedList : list
+        list.id === updatedList.id ? { ...updatedList, color: getTypeColor(newCategory) } : list
       ));
+
     } catch (error) {
       console.error('Failed to update list:', error);
       toast({
@@ -181,10 +190,16 @@ const UserHome = () => {
   });
 
   const getUniqueTypes = () => {
-    const types = ['all'];
-    const uniqueTypes = new Set(lists.map(list => list.type));
-    types.push(...Array.from(uniqueTypes).sort());
-    return types;
+    const types = new Set(lists.map(list => list.type || 'General'));
+    return ['all', ...Array.from(types).sort()];
+  };
+
+  const getActualUniqueCategories = (): string[] => {
+    const uniqueListTypes = Array.from(new Set(lists.map(list => list.type).filter(type => type && type.toLowerCase() !== 'general')));
+    if (uniqueListTypes.length === 0 && lists.some(list => list.type && list.type.toLowerCase() === 'general')) {
+      return ['General']; // Only return 'General' if it's explicitly used and no other categories exist
+    }
+    return uniqueListTypes.length > 0 ? uniqueListTypes.sort() : ['General']; // Default to 'General' if no categories
   };
 
   const getFilterCounts = () => {
@@ -321,6 +336,7 @@ const UserHome = () => {
                 list={list}
                 onUpdate={updateList}
                 onDelete={deleteList}
+                existingCategories={getActualUniqueCategories()}
               />
             ))}
           </div>
@@ -332,6 +348,7 @@ const UserHome = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateList={createList}
+        existingCategories={getActualUniqueCategories()}
       />
     </div>
   );

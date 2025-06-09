@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
-import ListCard from "@/components/ListCard";
+import { ListCard } from "@/components/ListCard";
 import QuickAddForm from "@/components/QuickAddForm";
 
 interface ListItem {
@@ -93,6 +93,15 @@ const Index = () => {
     const uniqueTypes = new Set(lists.map(list => list.type));
     types.push(...Array.from(uniqueTypes).sort());
     return types;
+  };
+
+  const getActualUniqueCategories = (): string[] => {
+    if (!lists || lists.length === 0) {
+      return [];
+    }
+    // Ensure list.type is treated as string and filter out any undefined/null if they sneak in
+    const uniqueCategories = new Set(lists.map(list => String(list.type || '')).filter(Boolean)); 
+    return Array.from(uniqueCategories).sort();
   };
 
   const getFilterCounts = () => {
@@ -221,6 +230,7 @@ const Index = () => {
                 list={list}
                 onUpdate={updateList}
                 onDelete={deleteList}
+                existingCategories={getActualUniqueCategories()}
               />
             ))}
           </div>
@@ -232,6 +242,7 @@ const Index = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateList={createList}
+        existingCategories={getActualUniqueCategories()}
       />
     </div>
   );
