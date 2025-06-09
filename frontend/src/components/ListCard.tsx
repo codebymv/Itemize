@@ -446,12 +446,24 @@ export const ListCard: React.FC<ListCardProps> = ({ list, onUpdate, onDelete }) 
                 )}
                 
                 {/* Show GitHub Copilot style suggestion */}
-                {aiEnabled && currentInputSuggestion && newItemText && (
-                  <div className="absolute inset-0 flex items-center pointer-events-none">
-                    <div className="pl-3 text-transparent">{newItemText}</div>
-                    <div className="text-gray-400">
-                      {currentInputSuggestion.slice(newItemText.length)}
-                    </div>
+                {aiEnabled && currentInputSuggestion && newItemText && 
+                 currentInputSuggestion.toLowerCase().startsWith(newItemText.toLowerCase()) &&
+                  (
+                  <div className="absolute inset-0 flex items-center pointer-events-none"> {/* Main container still non-interactive to not block input typing */}
+                    <span className="pl-3 text-transparent" aria-hidden="true">{newItemText}</span>
+                    <span
+                      className="text-gray-400 cursor-pointer"
+                      onClick={() => {
+                        // A simple check for mobile. Consider a more robust solution for isMobile.
+                        const isMobileDevice = window.innerWidth <= 768; 
+                        if (isMobileDevice) {
+                          handleAcceptSuggestion();
+                        }
+                      }}
+                      style={{ pointerEvents: 'auto' }} // Make this specific span interactive
+                    >
+                      {currentInputSuggestion.substring(newItemText.length)}
+                    </span>
                   </div>
                 )}
               </div>

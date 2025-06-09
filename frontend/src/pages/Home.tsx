@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock } from 'lucide-react';
+import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles } from 'lucide-react';
 
 const Home: React.FC = () => {
   const { login, currentUser, isAuthenticated, token } = useAuth();
@@ -138,20 +138,20 @@ const Home: React.FC = () => {
             
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 transform transition-all duration-300 hover:shadow-md hover:-translate-y-1">
               <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
-                <PenLine className="h-7 w-7 text-blue-600" />
+                <Sparkles className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Stay Organized</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Smart Suggestions</h3>
               <p className="text-gray-600">
-                Easily manage your tasks with advanced features like filtering, searching, and quick item checking.
+                Let AI help you build lists faster with intelligent item suggestions and effortless autocomplete.
               </p>
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <div className="flex items-center text-sm text-blue-600">
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Smart filtering options</span>
+                  <span>AI-powered item suggestions</span>
                 </div>
                 <div className="flex items-center text-sm text-blue-600 mt-2">
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>One-tap task completion</span>
+                  <span>Effortless autocomplete</span>
                 </div>
               </div>
             </div>
