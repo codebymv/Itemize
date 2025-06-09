@@ -25,6 +25,10 @@ const ListCard: React.FC<ListCardProps> = ({
     
     // List operations
     handleDeleteList,
+
+    // Color
+    handleSaveListColor, // New: function to save color
+    isSavingColor,       // New: state for color saving status
     
     // Category editing
     isEditingCategory, setIsEditingCategory,
@@ -71,16 +75,19 @@ const ListCard: React.FC<ListCardProps> = ({
   const completedItems = list.items.filter(item => item.completed).length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
+  const listDisplayColor = list.color_value || '#808080'; // Default to grey if no color is set
+
   return (
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={setIsCollapsibleOpen}
       className="w-full mb-4"
+      style={{ '--list-color': listDisplayColor } as React.CSSProperties}
     >
       <Card className="w-full border shadow-sm">
         <ListCardHeader
           title={list.title}
-          color={list.color}
+          listColor={list.color_value} // Use list.color_value
           isEditing={isEditing}
           editTitle={editTitle}
           isCollapsibleOpen={isCollapsibleOpen}
@@ -89,6 +96,8 @@ const ListCard: React.FC<ListCardProps> = ({
           handleEditTitle={handleEditTitle}
           handleDeleteList={handleDeleteList}
           titleEditRef={titleEditRef}
+          onColorSave={handleSaveListColor} // New prop
+          isSavingColor={isSavingColor}     // New prop
         />
 
         <ListCategorySelector
@@ -111,6 +120,7 @@ const ListCard: React.FC<ListCardProps> = ({
                 progress={progress}
                 totalItems={totalItems}
                 completedItems={completedItems}
+                // color will be handled by CSS variable --list-color
               />
             )}
             

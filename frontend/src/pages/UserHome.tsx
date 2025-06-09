@@ -18,10 +18,10 @@ interface ListItem {
 interface List {
   id: string;
   title: string;
-  type: string;
+  type: string; // maps to 'category' in backend
   items: ListItem[];
   createdAt: Date;
-  color: string;
+  color_value?: string | null; // Updated to match global type and backend
 }
 
 const UserHome = () => {
@@ -56,7 +56,7 @@ const UserHome = () => {
         type: listFromBackend.category || 'General', // Map backend 'category' to frontend 'type'
         items: listFromBackend.items || [], // Ensure items is an array
         createdAt: new Date(listFromBackend.createdAt),
-        color: getTypeColor(listFromBackend.category || 'General')
+        color_value: listFromBackend.color_value || '#808080' // Use color_value, default to grey
       }));
       
       setLists(listsWithDataMapped);
@@ -86,9 +86,10 @@ const UserHome = () => {
       
       const newList: List = {
         ...response.data,
-        type: response.data.category,
+        type: response.data.category, // Ensure backend returns category as type
+        items: response.data.items || [], // Ensure items is an array
         createdAt: new Date(response.data.createdAt),
-        color: getTypeColor(type)
+        color_value: response.data.color_value || '#808080' // Use color_value from response or default
       };
       
       setLists(prev => [newList, ...prev]);
@@ -138,7 +139,8 @@ const UserHome = () => {
       const listData = {
         title: updatedList.title,
         category: updatedList.type,
-        items: updatedList.items
+        items: updatedList.items,
+        color_value: updatedList.color_value // Add color_value to the payload
       };
       
       await api.put(`/api/lists/${updatedList.id}`, listData, {
@@ -152,7 +154,7 @@ const UserHome = () => {
       const oldCategory = oldList ? oldList.type : undefined;
 
       setLists(prev => prev.map(list => 
-        list.id === updatedList.id ? { ...updatedList, color: getTypeColor(newCategory) } : list
+        list.id === updatedList.id ? { ...updatedList, color_value: updatedList.color_value || '#808080' } : list
       ));
 
     } catch (error) {

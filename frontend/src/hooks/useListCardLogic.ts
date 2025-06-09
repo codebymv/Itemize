@@ -70,6 +70,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicP
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemText, setEditingItemText] = useState('');
+  const [isSavingColor, setIsSavingColor] = useState(false);
   
   // Refs for click outside detection
   const titleEditRef = useRef<HTMLInputElement>(null);
@@ -254,6 +255,31 @@ export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicP
       items: [...list.items, newItem]
     });
   };
+
+  // Handle saving the list color
+  const handleSaveListColor = async (newColor: string) => {
+    setIsSavingColor(true);
+    try {
+      // --- BEGIN Placeholder for backend API call ---
+      // In a real app, you would call your API service here:
+      // await api.updateListColor(list.id, newColor);
+      // For now, simulate a delay and potential error:
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // if (Math.random() < 0.3) { // Simulate a 30% chance of error
+      //   throw new Error("Simulated API error saving color");
+      // }
+      // --- END Placeholder for backend API call ---
+
+      // Optimistically update the list in the parent component's state
+      onUpdate({ ...list, color_value: newColor });
+    } catch (error) {
+      console.error("Failed to save list color:", error);
+      // Re-throw the error so ListCardHeader can revert the preview if needed
+      throw error; 
+    } finally {
+      setIsSavingColor(false);
+    }
+  };
   
   return {
     // Collapsible
@@ -269,6 +295,10 @@ export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicP
     
     // List operations
     handleDeleteList,
+
+    // Color saving
+    handleSaveListColor,
+    isSavingColor,
     
     // Category editing
     isEditingCategory,

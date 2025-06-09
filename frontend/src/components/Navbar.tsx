@@ -134,7 +134,7 @@ const Navbar: React.FC = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={handleLogin} variant="default" size="sm">
+              <Button onClick={handleLogin} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white" size="sm">
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign in
               </Button>

@@ -115,11 +115,13 @@ setTimeout(async () => {
       app.get('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
           const client = await actualPool.connect();
+          // Make sure to include color_value in the results
           const result = await client.query(
-            'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
+            'SELECT id, title, category, items, created_at, updated_at, user_id, color_value FROM lists WHERE user_id = $1 ORDER BY id DESC',
             [req.user.id]
           );
           client.release();
+          
           res.json(result.rows);
         } catch (error) {
           console.error('Error fetching lists:', error);
@@ -130,7 +132,7 @@ setTimeout(async () => {
       // Create a new list
       app.post('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
-          const { title, category, items } = req.body;
+          const { title, category, items, color_value } = req.body;
           
           if (!title) {
             return res.status(400).json({ error: 'Title is required' });
@@ -138,8 +140,8 @@ setTimeout(async () => {
 
           const client = await actualPool.connect();
           const result = await client.query(
-            'INSERT INTO lists (title, category, items, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
-            [title, category || 'General', JSON.stringify(items || []), req.user.id]
+            'INSERT INTO lists (title, category, items, user_id, color_value) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [title, category || 'General', JSON.stringify(items || []), req.user.id, color_value || null]
           );
           client.release();
           
@@ -154,12 +156,12 @@ setTimeout(async () => {
       app.put('/api/lists/:id', global.authenticateJWT, async (req, res) => {
         try {
           const { id } = req.params;
-          const { title, category, items } = req.body;
+          const { title, category, items, color_value } = req.body;
           
           const client = await actualPool.connect();
           const result = await client.query(
-            'UPDATE lists SET title = $1, category = $2, items = $3 WHERE id = $4 AND user_id = $5 RETURNING *',
-            [title, category, JSON.stringify(items), id, req.user.id]
+            'UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4 WHERE id = $5 AND user_id = $6 RETURNING *',
+            [title, category, JSON.stringify(items), color_value, id, req.user.id]
           );
           client.release();
           

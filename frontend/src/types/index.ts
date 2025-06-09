@@ -8,10 +8,10 @@ export interface ListItem {
 export interface List {
   id: string;
   title: string;
-  type: string;
+  type: string; // Represents category
   items: ListItem[];
-  createdAt: Date;
-  color: string;
+  createdAt?: Date; // Made optional as it might not always be present or needed by frontend
+  color_value?: string | null; // Changed from 'color' to 'color_value', stores hex, can be null or undefined
 }
 
 // Props for ListCard component

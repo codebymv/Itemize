@@ -116,6 +116,10 @@ const List = sequelize.define('List', {
   items: {
     type: DataTypes.JSONB, // Store items as JSON array
     defaultValue: []
+  },
+  color_value: {
+    type: DataTypes.TEXT, // Store hex color codes as text
+    allowNull: true       // Allow null for lists without a specific color
   }
 });
 

@@ -95,7 +95,8 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
             >
               <Sparkles 
                 size={14} 
-                className={`text-blue-600 ${isLoadingSuggestions ? 'animate-pulse' : ''}`} 
+                style={{ color: 'var(--list-color)' }}
+                className={`${isLoadingSuggestions ? 'animate-pulse' : ''}`} 
               />
             </button>
           )}
@@ -147,9 +148,9 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
           className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
           disabled={isLoadingSuggestions}
         >
-          <Sparkles className="w-4 h-4 text-blue-600" />
+          <Sparkles className="w-4 h-4" style={{ color: 'var(--list-color)' }} />
           <span className="font-medium">Suggest:</span>
-          <span className="text-blue-600 font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+          <span style={{ color: 'var(--list-color)' }} className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
             {currentSuggestion || ''}
           </span>
           {isLoadingSuggestions && <span className="ml-2 animate-pulse">·</span>}

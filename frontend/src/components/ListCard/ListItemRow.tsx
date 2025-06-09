@@ -65,8 +65,10 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
             className="flex items-center flex-grow cursor-pointer"
             onClick={() => toggleItemCompleted(item.id)}
           >
-            <div className={`w-4 h-4 rounded-sm border mr-2 flex items-center justify-center ${
-              item.completed ? 'bg-blue-600 border-blue-600' : 'border-gray-300 hover:border-blue-400'
+            <div 
+              style={item.completed ? { backgroundColor: 'var(--list-color)', borderColor: 'var(--list-color)' } : {}}
+              className={`w-4 h-4 rounded-sm border mr-2 flex items-center justify-center ${
+              item.completed ? '' : 'border-gray-300 hover:border-[var(--list-color)]'
             }`}>
               {item.completed && <Check className="h-3 w-3 text-white" />}
             </div>
