@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { AISuggestProvider } from "@/context/AISuggestContext";
 import Navbar from "@/components/Navbar";
 import Home from "./pages/Home";
 import UserHome from "./pages/UserHome";
@@ -37,9 +38,10 @@ const App = () => (
     <TooltipProvider>
       <GoogleOAuthProvider clientId={googleClientId}>
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+          <AISuggestProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
           <div className="min-h-screen bg-background">
             <Navbar />
             <main>
@@ -63,6 +65,7 @@ const App = () => (
             </main>
           </div>
         </BrowserRouter>
+          </AISuggestProvider>
         </AuthProvider>
       </GoogleOAuthProvider>
     </TooltipProvider>

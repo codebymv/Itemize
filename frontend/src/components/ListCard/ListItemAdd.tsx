@@ -86,17 +86,19 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
             onKeyDown={handleKeyDown}
           />
           
-          {/* Show AI icon/button in the input */}
-          <button 
-            type="button"
-            onClick={handleGetSuggestion}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
-          >
-            <Sparkles 
-              size={14} 
-              className={`${aiEnabled ? 'text-blue-600' : 'text-gray-400'} ${isLoadingSuggestions ? 'animate-pulse' : ''}`} 
-            />
-          </button>
+          {/* Show AI icon/button in the input only when AI is enabled */}
+          {aiEnabled && (
+            <button 
+              type="button"
+              onClick={handleGetSuggestion}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
+            >
+              <Sparkles 
+                size={14} 
+                className={`text-blue-600 ${isLoadingSuggestions ? 'animate-pulse' : ''}`} 
+              />
+            </button>
+          )}
           
           {/* Show GitHub Copilot style suggestion */}
           {/* Debug condition: {aiEnabled && !!currentInputSuggestion && !!newItemText} */}

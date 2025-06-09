@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { useAISuggest } from "@/context/AISuggestContext";
 import { useAISuggestions } from "@/hooks/use-ai-suggestions";
 import { List, ListItem } from '@/types';
 
@@ -10,16 +11,8 @@ interface UseListCardLogicProps {
 }
 
 export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicProps) => {
-  // AI setting state from localStorage
-  const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
-    try {
-      // Check if AI suggestions are enabled in localStorage
-      const saved = localStorage.getItem('itemize-ai-suggest-enabled');
-      return saved ? JSON.parse(saved) : false;
-    } catch (e) {
-      return false;
-    }
-  });
+  // Use the global AI suggestions context
+  const { aiEnabled, setAiEnabled } = useAISuggest();
 
   // Get items as simple text strings for AI suggestions
   const itemTexts = list.items.map(item => item.text);
@@ -224,7 +217,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicP
   const handleGetSuggestion = () => {
     console.log('Getting next suggestion');
     if (!aiEnabled) {
-      localStorage.setItem('itemize-ai-suggest-enabled', 'true');
+      // Just use the context function to update the global state
       setAiEnabled(true); // Auto-enable if disabled
       // Need to fetch suggestions after enabling
       setTimeout(() => debouncedFetchSuggestions(), 100);
