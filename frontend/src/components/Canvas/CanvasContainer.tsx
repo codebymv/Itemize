@@ -394,7 +394,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       });
 
       filteredNotes = notes.filter(note => {
-        return note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase());
+        return (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+               (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()));
       });
     }
 

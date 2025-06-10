@@ -15,10 +15,10 @@ import { ListCard } from "../components/ListCard";
 import { useAuth } from "../contexts/AuthContext";
 import { NoteCard } from '../components/NoteCard';
 import { NewNoteModal } from '../components/NewNoteModal';
+import { useUnifiedCategories } from '../hooks/useUnifiedCategories';
 
 const CanvasPage: React.FC = () => {
   const [lists, setLists] = useState<List[]>([]);
-  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +36,17 @@ const CanvasPage: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [errorNotes, setErrorNotes] = useState<string | null>(null);
+
+  // Unified category management for both lists and notes
+  const {
+    categories,
+    categoryNames,
+    totalCategories,
+    filterByCategory,
+    getCategorySuggestions,
+    isCategoryInUse,
+    getCategoryDisplayText
+  } = useUnifiedCategories(lists, notes);
   
   // Reference to canvas container methods
   const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
@@ -69,12 +80,7 @@ const CanvasPage: React.FC = () => {
         const fetchedLists = await fetchCanvasLists(token);
         setLists(fetchedLists);
         
-        // Extract unique categories
-        const categories = Array.from(
-          new Set(fetchedLists.map((list: any) => list.type))
-        ).filter(Boolean) as string[];
-        
-        setExistingCategories(categories);
+        // Categories are now managed by useUnifiedCategories hook
       } catch (error) {
         console.error('Error fetching lists:', error);
         setError('Failed to load lists. Please try again.');
@@ -141,10 +147,7 @@ const CanvasPage: React.FC = () => {
       const newNote = await apiCreateNote(payloadWithDefaults, token);
       setNotes(prev => [newNote, ...prev]);
       
-      // Add category to existing categories if it's new
-      if (category && !existingCategories.includes(category)) {
-        setExistingCategories(prev => [...prev, category]);
-      }
+      // Category is now managed by unified category system
       
       toast({
         title: "Note created!",
@@ -215,9 +218,7 @@ const CanvasPage: React.FC = () => {
       setShowCreateModal(false);
       
       // Update categories if needed
-      if (type && !existingCategories.includes(type)) {
-        setExistingCategories(prev => [...prev, type]);
-      }
+      // Category is now managed by unified category system
       
       // Removed success toast - no need to distract user for routine list creation
     } catch (error) {
@@ -241,9 +242,7 @@ const CanvasPage: React.FC = () => {
       );
       
       // Update categories if this introduced a new category
-      if (updatedList.type && !existingCategories.includes(updatedList.type)) {
-        setExistingCategories(prev => [...prev, updatedList.type]);
-      }
+      // Categories are now managed by unified category system
       
       // Removed success toast - no need to distract user for routine list updates
     } catch (error) {
@@ -309,10 +308,7 @@ const CanvasPage: React.FC = () => {
       setNotes(prev => [response, ...prev]);
       setShowCreateNoteModal(false);
       
-      // Add category to existing categories if it's new
-      if (category && !existingCategories.includes(category)) {
-        setExistingCategories(prev => [...prev, category]);
-      }
+      // Categories are now managed by unified category system
       
       // Removed success toast - no need to distract user for routine note creation
     } catch (error) {
@@ -418,19 +414,23 @@ const CanvasPage: React.FC = () => {
     );
   }
 
-  // Utility functions for filtering lists
+  // Utility functions for filtering lists and notes with unified categories
   const getUniqueTypes = () => {
-    const types = ['all', ...existingCategories];
+    const types = ['all', ...categoryNames];
     // Ensure there are no duplicates or empty values
     return Array.from(new Set(types.filter(Boolean)));
   };
 
-  const getFilteredLists = () => {
-    let filtered = [...lists];
+  const getFilteredContent = () => {
+    // Use unified category filtering for both lists and notes
+    const { filteredLists, filteredNotes } = filterByCategory(
+      selectedFilter !== 'all' ? selectedFilter : null
+    );
     
-    // Apply search filter
+    // Apply search filter to lists
+    let searchFilteredLists = [...filteredLists];
     if (searchQuery) {
-      filtered = filtered.filter(list => {
+      searchFilteredLists = searchFilteredLists.filter(list => {
         return list.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (list.items && list.items.some(item => 
               item.text?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -438,28 +438,34 @@ const CanvasPage: React.FC = () => {
       });
     }
     
-    // Apply category filter (only in mobile view)
-    if (selectedFilter !== 'all') {
-      filtered = filtered.filter(list => list.type === selectedFilter);
+    // Apply search filter to notes
+    let searchFilteredNotes = [...filteredNotes];
+    if (searchQuery) {
+      searchFilteredNotes = searchFilteredNotes.filter(note => {
+        return note.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               note.content?.toLowerCase().includes(searchQuery.toLowerCase());
+      });
     }
     
-    return filtered;
+    return { 
+      filteredLists: searchFilteredLists, 
+      filteredNotes: searchFilteredNotes 
+    };
   };
   
-  // Get count of lists per category for filter tabs
+  // Get count of lists and notes per category for filter tabs
   const getFilterCounts = () => {
-    const counts: Record<string, number> = { all: lists.length };
+    const counts: Record<string, number> = { all: lists.length + notes.length };
     
-    lists.forEach(list => {
-      if (list.type) {
-        counts[list.type] = (counts[list.type] || 0) + 1;
-      }
+    // Use unified category data for counts
+    categories.forEach(category => {
+      counts[category.name] = category.totalCount;
     });
     
     return counts;
   };
 
-  const filteredLists = getFilteredLists();
+  const { filteredLists, filteredNotes } = getFilteredContent();
 
   // Header component shared by both views
   const HeaderSection = () => (
@@ -495,25 +501,20 @@ const CanvasPage: React.FC = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   
-                  if (isMobileView) {
-                    // For mobile, open the standard modal
-                    setShowCreateModal(true);
+                  // Show button context menu for both mobile and desktop
+                  if (showButtonContextMenu) {
+                    // Close if already open
+                    setShowButtonContextMenu(false);
                   } else {
-                    // For desktop, show button context menu
-                    if (showButtonContextMenu) {
-                      // Close if already open
-                      setShowButtonContextMenu(false);
-                    } else {
-                      // Open button context menu
-                      const buttonElement = document.getElementById('new-canvas-button');
-                      if (buttonElement) {
-                        const rect = buttonElement.getBoundingClientRect();
-                        setButtonMenuPosition({
-                          x: rect.left + rect.width / 2,
-                          y: rect.bottom + 5
-                        });
-                        setShowButtonContextMenu(true);
-                      }
+                    // Open button context menu
+                    const buttonElement = document.getElementById('new-canvas-button');
+                    if (buttonElement) {
+                      const rect = buttonElement.getBoundingClientRect();
+                      setButtonMenuPosition({
+                        x: rect.left + rect.width / 2,
+                        y: rect.bottom + 5
+                      });
+                      setShowButtonContextMenu(true);
                     }
                   }
                 }}
@@ -566,8 +567,8 @@ const CanvasPage: React.FC = () => {
           })}
         </div>
 
-        {/* Lists section */}
-        {filteredLists.length === 0 ? (
+        {/* Content section - Lists and Notes */}
+        {filteredLists.length === 0 && filteredNotes.length === 0 ? (
           <div className="text-center py-12">
             {lists.length === 0 && notes.length === 0 ? (
               <div className="max-w-md mx-auto">
@@ -603,55 +604,52 @@ const CanvasPage: React.FC = () => {
             ) : (
               <div className="text-slate-500">
                 <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No lists match your search criteria.</p>
+                <p>No content matches your search criteria.</p>
               </div>
             )}
           </div>
         ) : (
           <>
-            {/* My Lists header */}
-            <h2 className="text-xl font-light text-slate-900 mb-6">My Lists</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredLists.map((list) => (
-                <ListCard
-                  key={list.id}
-                  list={list}
-                  onUpdate={updateList}
-                  onDelete={deleteList}
-                  existingCategories={existingCategories}
-                />
-              ))}
-            </div>
+            {/* My Lists section */}
+            {filteredLists.length > 0 && (
+              <>
+                <h2 className="text-xl font-light text-slate-900 mb-6">My Lists</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredLists.map((list) => (
+                    <ListCard
+                      key={list.id}
+                      list={list}
+                      onUpdate={updateList}
+                      onDelete={deleteList}
+                      existingCategories={categoryNames}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            
+            {/* My Notes section */}
+            {filteredNotes.length > 0 && (
+              <div className={filteredLists.length > 0 ? "mt-12" : ""}>
+                <h2 className="text-xl font-light text-slate-900 mb-6">My Notes</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredNotes.map((note) => (
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      onUpdate={async (noteId, updatedData) => {
+                        await handleUpdateNote(noteId, updatedData);
+                      }}
+                      onDelete={async (noteId) => {
+                        await handleDeleteNote(noteId);
+                      }}
+                      existingCategories={categoryNames}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </>
-        )}
-        
-        {/* Mobile Notes section */}
-        {notes.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-light text-slate-900 mb-6">My Notes</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {notes
-                .filter(note => {
-                  if (!searchQuery) return true;
-                  const query = searchQuery.toLowerCase();
-                  return (note.title && note.title.toLowerCase().includes(query)) ||
-                         (note.content && note.content.toLowerCase().includes(query));
-                })
-                .map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    onUpdate={async (noteId, updatedData) => {
-                      await handleUpdateNote(noteId, updatedData);
-                    }}
-                    onDelete={async (noteId) => {
-                      await handleDeleteNote(noteId);
-                    }}
-                    existingCategories={existingCategories}
-                  />
-                ))}
-            </div>
-          </div>
         )}
       </div>
     );
@@ -680,7 +678,7 @@ const CanvasPage: React.FC = () => {
         // Desktop: Full-width Canvas View with drag and drop
         <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
           <CanvasContainer 
-            existingCategories={existingCategories} 
+            existingCategories={categoryNames} 
             searchQuery={searchQuery}
             onOpenNewNoteModal={handleOpenNewNoteModal} 
             notes={notes} // Pass notes state
@@ -699,7 +697,7 @@ const CanvasPage: React.FC = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateList={createList}
-        existingCategories={existingCategories}
+        existingCategories={categoryNames}
       />
       
       {/* Create Note Modal - used by mobile view */}
@@ -707,7 +705,7 @@ const CanvasPage: React.FC = () => {
         isOpen={showCreateNoteModal}
         onClose={() => setShowCreateNoteModal(false)}
         onCreateNote={createNote}
-        existingCategories={existingCategories}
+        existingCategories={categoryNames}
       />
       
       {/* Desktop Canvas Note Modal */}
@@ -717,7 +715,7 @@ const CanvasPage: React.FC = () => {
           onClose={() => setShowNewNoteModal(false)}
           onCreateNote={handleCreateNote} 
           initialPosition={newNoteInitialPosition}
-          existingCategories={existingCategories}
+          existingCategories={categoryNames}
         />
       )}
 

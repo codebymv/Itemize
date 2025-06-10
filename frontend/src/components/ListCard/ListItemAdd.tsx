@@ -77,7 +77,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
             value={newItemText}
             onChange={(e) => setNewItemText(e.target.value)}
             placeholder="Add new item..."
-            className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            className={`h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${aiEnabled ? 'pr-8' : ''}`}
             style={{ fontFamily: '"Raleway", sans-serif' }}
             onKeyDown={handleKeyDown}
           />
@@ -102,11 +102,15 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
           {aiEnabled && currentInputSuggestion && newItemText && 
            currentInputSuggestion.toLowerCase().startsWith(newItemText.toLowerCase()) && (
             <div className="absolute left-0 top-0 right-8 bottom-0 flex items-center pointer-events-none z-10"> 
-              <div className="px-3 flex items-center w-full">
+              <div className="px-3 flex items-center w-full pr-2">
                 <span className="text-transparent">{newItemText}</span>
                 <span
                   className="text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap font-medium"
-                  style={{ pointerEvents: 'none', fontFamily: '"Raleway", sans-serif' }} 
+                  style={{ 
+                    pointerEvents: 'none', 
+                    fontFamily: '"Raleway", sans-serif',
+                    maxWidth: 'calc(100% - 2rem)' // Account for sparkle icon space
+                  }} 
                   title="Press Tab or Right Arrow to accept"
                 >
                   {currentInputSuggestion.substring(newItemText.length)}

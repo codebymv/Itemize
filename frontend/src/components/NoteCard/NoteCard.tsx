@@ -199,6 +199,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
               contentEditRef={contentEditRef}
               noteCategory={note.category}
               noteColor={noteDisplayColor}
+              noteId={note.id}
+              onAutoSave={async (content: string) => {
+                await onUpdate(note.id, { content });
+              }}
+              updatedAt={note.updated_at}
             />
           </div>
         </CollapsibleContent>

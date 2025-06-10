@@ -317,9 +317,8 @@ const Home: React.FC = () => {
                 <div className="flex items-center space-x-2 text-gray-400">
                   <PenLine className="h-4 w-4" />
                   <span className="text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>Add new item...</span>
-                  <div className="ml-auto flex items-center space-x-1">
-                                              <Sparkles className="h-4 w-4 text-blue-600" />
-                                          <span className="text-xs text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>AI</span>
+                  <div className="ml-auto">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
                   </div>
                 </div>
               </div>
@@ -360,8 +359,7 @@ const Home: React.FC = () => {
               {/* Note Content Area */}
               <div className="flex-1 mx-6 mb-6 mt-4">
                 <div 
-                  className="bg-white border-2 rounded-lg p-3 h-full flex flex-col"
-                  style={{ borderColor: '#F59E0B' }}
+                  className="bg-white rounded-lg p-3 h-full flex flex-col"
                 >
                   <div className="text-sm text-gray-700 flex-1" style={{ fontFamily: '"Raleway", sans-serif' }}>
                     <div className="space-y-3">
@@ -374,25 +372,19 @@ const Home: React.FC = () => {
                       <p>Join thousands of users who have transformed their productivity with Itemize's intuitive dual approach to organization.</p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-amber-200">
+                    <div className="mt-4 pt-3 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
                           Last edited: Just now
                         </div>
-                        <div className="flex items-center gap-1 text-xs">
+                        <div title="AI-powered suggestions">
                           <Sparkles className="h-3 w-3 text-amber-500" />
-                          <span className="text-amber-600" style={{ fontFamily: '"Raleway", sans-serif' }}>AI</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Content editing hint */}
-                  <div className="mt-2 pt-2 border-t border-amber-100">
-                    <div className="text-xs text-gray-400 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                      Click anywhere to edit content...
-                    </div>
-                  </div>
+
                 </div>
               </div>
             </div>

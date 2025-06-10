@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Edit3, Check, X, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
+import { useAISuggest } from '@/context/AISuggestContext';
+import { formatRelativeTime } from '@/utils/timeUtils';
 
 interface NoteContentProps {
   content: string;
@@ -13,7 +15,10 @@ interface NoteContentProps {
   handleEditContent: () => void;
   contentEditRef: React.RefObject<HTMLTextAreaElement>;
   noteCategory?: string;
-  noteColor?: string; // Add note color prop
+  noteColor?: string;
+  noteId: number; // Add noteId for autosave
+  onAutoSave: (content: string) => Promise<void>; // Add autosave handler
+  updatedAt?: string; // Add updated_at timestamp from database
 }
 
 export const NoteContent: React.FC<NoteContentProps> = ({
@@ -25,26 +30,23 @@ export const NoteContent: React.FC<NoteContentProps> = ({
   handleEditContent,
   contentEditRef,
   noteCategory,
-  noteColor = '#FFFFE0'
+  noteColor = '#FFFFE0',
+  noteId,
+  onAutoSave,
+  updatedAt
 }) => {
-  // Note AI enabled state - separate from lists
-  const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
-    try {
-      // Force enable note AI by clearing old disabled setting
-      localStorage.setItem('itemize-note-ai-enabled', 'true');
-      return true;
-    } catch (e) {
-      return true;
-    }
-  });
-  
-  // Save note AI setting to localStorage
-  useEffect(() => {
-    localStorage.setItem('itemize-note-ai-enabled', JSON.stringify(aiEnabled));
-  }, [aiEnabled]);
+  // Use global AI enabled state from context
+  const { aiEnabled } = useAISuggest();
   
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [showSuggestionButton, setShowSuggestionButton] = useState<boolean>(false);
+  
+  // Autosave state
+  const [isAutoSaving, setIsAutoSaving] = useState<boolean>(false);
+  const [lastSavedContent, setLastSavedContent] = useState<string>(content);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const AUTOSAVE_DELAY = 3000; // 3 seconds
 
   // Smart note suggestions hook
   const {
@@ -64,6 +66,62 @@ export const NoteContent: React.FC<NoteContentProps> = ({
 
   // Get current autocomplete suggestion based on cursor position
   const currentAutocomplete = getSuggestionForInput(editContent, cursorPosition);
+  
+  // Autosave function
+  const performAutosave = useCallback(async (content: string) => {
+    if (content.trim() === lastSavedContent.trim()) {
+      return; // No changes to save
+    }
+    
+    try {
+      setIsAutoSaving(true);
+      await onAutoSave(content);
+      setLastSavedContent(content);
+      setHasUnsavedChanges(false);
+      console.log('📝 Autosaved note:', noteId);
+    } catch (error) {
+      console.error('❌ Autosave failed:', error);
+    } finally {
+      setIsAutoSaving(false);
+    }
+  }, [lastSavedContent, onAutoSave, noteId]);
+  
+  // Track unsaved changes
+  useEffect(() => {
+    if (isEditingContent) {
+      setHasUnsavedChanges(editContent.trim() !== lastSavedContent.trim());
+    }
+  }, [editContent, lastSavedContent, isEditingContent]);
+  
+  // Debounced autosave effect
+  useEffect(() => {
+    if (!isEditingContent) return;
+    
+    // Clear existing timeout
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+    
+    // Set new timeout for autosave
+    autosaveTimeoutRef.current = setTimeout(() => {
+      if (editContent.trim() !== lastSavedContent.trim()) {
+        performAutosave(editContent);
+      }
+    }, AUTOSAVE_DELAY);
+    
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [editContent, isEditingContent, performAutosave, lastSavedContent]);
+  
+  // Update lastSavedContent when content prop changes (from external updates)
+  useEffect(() => {
+    setLastSavedContent(content);
+    setHasUnsavedChanges(false);
+  }, [content]);
   
   // Debug logging for note autocomplete
   useEffect(() => {
@@ -89,6 +147,10 @@ export const NoteContent: React.FC<NoteContentProps> = ({
         contentEditRef.current && 
         !contentEditRef.current.contains(event.target as Node)
       ) {
+        // Clear autosave timeout since we're manually saving
+        if (autosaveTimeoutRef.current) {
+          clearTimeout(autosaveTimeoutRef.current);
+        }
         handleEditContent();
       }
     };
@@ -132,6 +194,10 @@ export const NoteContent: React.FC<NoteContentProps> = ({
     // Save on Ctrl+Enter or Escape
     if ((e.ctrlKey && e.key === 'Enter') || e.key === 'Escape') {
       e.preventDefault();
+      // Clear autosave timeout since we're manually saving
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
       handleEditContent();
       return;
     }
@@ -174,15 +240,25 @@ export const NoteContent: React.FC<NoteContentProps> = ({
 
   return (
     <div 
-      className="flex-1 flex flex-col h-full relative"
-      onClick={() => {
+      className="flex-1 flex flex-col h-full relative cursor-pointer"
+      onClick={(e) => {
+        // Don't trigger if clicking on AI indicator
+        const target = e.target as HTMLElement;
+        if (target.closest('.ai-indicator, .sparkles-icon')) {
+          return;
+        }
+        
         if (!isEditingContent) {
           setIsEditingContent(true);
           setEditContent(content);
-          // Focus the textarea after state update
+          // Focus the textarea after state update with a longer delay for mobile
           setTimeout(() => {
             contentEditRef.current?.focus();
-          }, 0);
+            // For mobile, also trigger the virtual keyboard
+            if (window.innerWidth < 768) {
+              contentEditRef.current?.click();
+            }
+          }, 100);
         }
       }}
     >
@@ -204,8 +280,16 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               handleSelectionChange(e);
             }
           }}
-          className="flex-1 resize-none bg-transparent p-3 w-full cursor-text whitespace-pre-wrap !border-none !ring-0 !ring-offset-0 !outline-none focus:!border-none focus:!ring-0 focus:!ring-offset-0 focus-visible:!border-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
-          placeholder={isEditingContent ? "Type your note content..." : "Click anywhere to add content..."}
+          onTouchStart={(e) => {
+            // Ensure mobile devices can focus the textarea
+            if (!isEditingContent) {
+              e.stopPropagation();
+            }
+          }}
+          className={`flex-1 resize-none bg-transparent w-full cursor-text whitespace-pre-wrap !border-none !ring-0 !ring-offset-0 !outline-none focus:!border-none focus:!ring-0 focus:!ring-offset-0 focus-visible:!border-none focus-visible:!ring-0 focus-visible:!ring-offset-0 ${
+            aiEnabled && isEditingContent ? 'p-3 pr-8' : 'p-3'
+          }`}
+          placeholder={isEditingContent ? "Type your note content..." : (window.innerWidth < 768 ? "Tap to edit content..." : "Click anywhere to add content...")}
           readOnly={!isEditingContent}
           style={{ 
             height: '100%', 
@@ -221,7 +305,9 @@ export const NoteContent: React.FC<NoteContentProps> = ({
         {/* GitHub Copilot-style autocomplete overlay */}
         {isEditingContent && currentAutocomplete && cursorPosition === editContent.length && (
           <div 
-            className="absolute inset-0 p-3 pointer-events-none overflow-hidden whitespace-pre-wrap"
+            className={`absolute inset-0 pointer-events-none overflow-hidden whitespace-pre-wrap ${
+              aiEnabled ? 'p-3 pr-8' : 'p-3'
+            }`}
             style={{ 
               fontFamily: '"Raleway", sans-serif',
               fontSize: '14px',
@@ -238,18 +324,46 @@ export const NoteContent: React.FC<NoteContentProps> = ({
           </div>
         )}
 
-        {/* AI status indicator */}
-        {aiEnabled && isEditingContent && (
-          <div className="absolute top-2 right-2 flex items-center gap-1">
-            {isLoading && (
-              <Sparkles size={14} className="text-blue-500 animate-pulse" />
+        {/* AI status indicator and autosave status */}
+        {isEditingContent && (aiEnabled || isAutoSaving || hasUnsavedChanges) && (
+          <div className="ai-indicator absolute top-2 right-2 flex items-center gap-1">
+            {isAutoSaving && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Autosaving..."></div>
+                <span className="text-xs text-green-600" title="Autosaving...">💾</span>
+              </div>
             )}
-            {error && (
+            {!isAutoSaving && hasUnsavedChanges && (
+              <div className="w-2 h-2 bg-orange-400 rounded-full" title="Unsaved changes (will autosave in a few seconds)"></div>
+            )}
+            {aiEnabled && isLoading && (
+              <Sparkles size={14} className="sparkles-icon text-blue-500 animate-pulse" />
+            )}
+            {aiEnabled && error && (
               <span className="text-xs text-red-500" title={error}>⚠</span>
             )}
           </div>
         )}
       </div>
+
+      {/* Last edited section with dividing line (only show when not editing) */}
+      {!isEditingContent && updatedAt && (
+        <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${noteColor}33` }}>
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              Last edited: {formatRelativeTime(updatedAt)}
+            </div>
+            {aiEnabled && (
+              <div title="AI-powered suggestions enabled">
+                <Sparkles 
+                  className="h-3 w-3" 
+                  style={{ color: noteColor }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* GitHub Copilot-style only - no suggestion box UI */}
     </div>
