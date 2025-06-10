@@ -16,13 +16,13 @@ const Home: React.FC = () => {
     alreadyNavigated: navigatedRef.current 
   });
 
-  // If user is already authenticated, redirect to user-home
+  // If user is already authenticated, redirect to canvas
   React.useEffect(() => {
     if (isAuthenticated && !navigatedRef.current) {
-      console.log('Navigating to /lists due to authenticated user:', { user: currentUser, token });
+      console.log('Navigating to /canvas due to authenticated user:', { user: currentUser, token });
       navigatedRef.current = true;
       // Ensure the navigation happens in the next tick to allow React to complete rendering
-      setTimeout(() => navigate('/lists'), 0);
+      setTimeout(() => navigate('/canvas'), 0);
     }
   }, [currentUser, navigate, isAuthenticated, token]);
 
@@ -31,7 +31,7 @@ const Home: React.FC = () => {
       console.log('Starting login process');
       navigatedRef.current = false; // Reset navigation flag
       await login();
-      console.log('Login process completed, will navigate to /lists after auth context updates');
+      console.log('Login process completed, will navigate to /canvas after auth context updates');
       
       // The useEffect will handle navigation once auth state is updated
     } catch (error) {

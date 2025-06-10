@@ -16,6 +16,7 @@ import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import CanvasPage from "./pages/canvas";  // Import the new Canvas page
 
 const queryClient = new QueryClient();
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -30,7 +31,7 @@ const RootRedirect = () => {
     </div>;
   }
   
-  return currentUser ? <Navigate to="/lists" replace /> : <Navigate to="/home" replace />;
+  return currentUser ? <Navigate to="/canvas" replace /> : <Navigate to="/home" replace />;
 };
 
 const App = () => (
@@ -56,6 +57,7 @@ const App = () => (
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/lists" element={<UserHome />} />
+                  <Route path="/canvas" element={<CanvasPage />} />
                   {/* Add other protected routes here */}
                 </Route>
                 

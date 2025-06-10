@@ -70,12 +70,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
   return (
     <div className="flex flex-col p-2 border-t">
       <div className="flex items-center gap-2">
-        {/* Add helper text above the input */}
-        {aiEnabled && (
-          <div className="absolute -top-5 right-3 text-xs text-blue-600 font-medium">
-            Press Tab to accept suggestions
-          </div>
-        )}
+        {/* AI helper text removed as requested */}
         <div className="relative flex-1 rounded-md border">
           <Input
             ref={inputRef}

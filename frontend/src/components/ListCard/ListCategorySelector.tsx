@@ -102,7 +102,7 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
           className="cursor-pointer" 
           onClick={() => setIsEditingCategory(true)}
         >
-          {currentCategory}
+          {currentCategory && currentCategory !== '' ? currentCategory : 'Select a category'}
         </Badge>
       )}
     </div>

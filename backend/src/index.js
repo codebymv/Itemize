@@ -199,6 +199,57 @@ setTimeout(async () => {
         }
       });
       
+      // Get all lists for canvas view with positions
+      app.get('/api/canvas/lists', global.authenticateJWT, async (req, res) => {
+        try {
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+          );
+          client.release();
+          
+          // Map database field 'category' to frontend field 'type'
+          const mappedLists = result.rows.map(list => ({
+            ...list,
+            type: list.category // Map category to type for frontend
+          }));
+          
+          res.json(mappedLists);
+        } catch (error) {
+          console.error('Error fetching lists for canvas:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+      
+      // Update list position for canvas view
+      app.put('/api/lists/:id/position', global.authenticateJWT, async (req, res) => {
+        try {
+          const { id } = req.params;
+          const { x, y } = req.body;
+          
+          if (typeof x !== 'number' || typeof y !== 'number') {
+            return res.status(400).json({ error: 'Invalid position coordinates' });
+          }
+          
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'UPDATE lists SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+            [x, y, id, req.user.id]
+          );
+          client.release();
+          
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'List not found' });
+          }
+          
+          res.json(result.rows[0]);
+        } catch (error) {
+          console.error('Error updating list position:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+      
       console.log('✅ Lists API routes initialized');
       
       // Try to initialize AI suggestion service

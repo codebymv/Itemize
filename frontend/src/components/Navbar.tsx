@@ -59,7 +59,7 @@ const Navbar: React.FC = () => {
   const handleNavigate = (path: string) => {
     // For logo clicks, direct to appropriate home page based on auth status
     if (path === '/') {
-      navigate(currentUser ? '/lists' : '/home');
+      navigate(currentUser ? '/canvas' : '/home');
     } else {
       navigate(path);
     }

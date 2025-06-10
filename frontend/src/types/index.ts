@@ -12,6 +12,8 @@ export interface List {
   items: ListItem[];
   createdAt?: Date; // Made optional as it might not always be present or needed by frontend
   color_value?: string | null; // Changed from 'color' to 'color_value', stores hex, can be null or undefined
+  position_x?: number; // X coordinate for canvas view
+  position_y?: number; // Y coordinate for canvas view
 }
 
 // Props for ListCard component

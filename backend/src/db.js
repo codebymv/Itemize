@@ -1,5 +1,8 @@
 const { Pool } = require('pg');
 
+// Import database migrations
+const { runCanvasMigration } = require('./db_migrations');
+
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
 const inMemoryLists = [];
@@ -121,6 +124,8 @@ const initializeDatabase = async (pool) => {
     
     // Add missing columns to users table if they don't exist
     try {
+      // Run canvas feature migration
+      await runCanvasMigration(pool);
       await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
       // console.log('Ensured google_id column exists in public.users table.');
     } catch (e) {
@@ -337,6 +342,40 @@ const listOperations = {
     } catch (error) {
       console.error('Error deleting list:', error);
       return false;
+    }
+  },
+  
+  // Update list position (for canvas view)
+  updatePosition: async (pool, listId, userId, position) => {
+    try {
+      const result = await pool.query(
+        `UPDATE public.lists SET 
+          position_x = $1, 
+          position_y = $2,
+          updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND user_id = $4
+         RETURNING *`,
+        [position.x, position.y, listId, userId]
+      );
+      
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error updating list position:', error);
+      return null;
+    }
+  },
+  
+  // Get all lists for canvas view with positions
+  findAllForCanvas: async (pool, userId) => {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM public.lists WHERE user_id = $1 ORDER BY created_at DESC',
+        [userId]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error finding lists for canvas:', error);
+      return [];
     }
   }
 };
