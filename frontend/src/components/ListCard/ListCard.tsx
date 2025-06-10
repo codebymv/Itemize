@@ -9,6 +9,21 @@ import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
 import { ListAISuggestionButton } from './ListAISuggestionButton';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 const ListCard: React.FC<ListCardProps> = ({ 
   list, 
@@ -50,6 +65,30 @@ const ListCard: React.FC<ListCardProps> = ({
     // Refs
     titleEditRef, newItemInputRef
   } = useListCardLogic({ list, onUpdate, onDelete });
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = list.items.findIndex((item) => item.id === active.id);
+      const newIndex = list.items.findIndex((item) => item.id === over.id);
+
+      const reorderedItems = arrayMove(list.items, oldIndex, newIndex);
+      
+      // Update the list with reordered items
+      const updatedList = { ...list, items: reorderedItems };
+      onUpdate(updatedList);
+    }
+  };
 
   // Implement click outside handler for title editing
   useEffect(() => {
@@ -125,19 +164,30 @@ const ListCard: React.FC<ListCardProps> = ({
             )}
             
             <div className="px-6 py-2 space-y-0.5">
-              {list.items.map((item) => (
-                <ListItemRow
-                  key={item.id}
-                  item={item}
-                  editingItemId={editingItemId}
-                  editingItemText={editingItemText}
-                  setEditingItemText={setEditingItemText}
-                  toggleItemCompleted={toggleItemCompleted}
-                  startEditingItem={startEditingItem}
-                  handleEditItem={handleEditItem}
-                  removeItem={removeItem}
-                />
-              ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={list.items.map(item => item.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {list.items.map((item) => (
+                    <ListItemRow
+                      key={item.id}
+                      item={item}
+                      editingItemId={editingItemId}
+                      editingItemText={editingItemText}
+                      setEditingItemText={setEditingItemText}
+                      toggleItemCompleted={toggleItemCompleted}
+                      startEditingItem={startEditingItem}
+                      handleEditItem={handleEditItem}
+                      removeItem={removeItem}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
               {list.items.length === 0 && (
                 <div className="text-gray-400 text-sm py-2 italic">
                   No items yet. Add one below or use AI suggestions.

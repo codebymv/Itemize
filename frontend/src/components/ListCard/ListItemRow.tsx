@@ -1,8 +1,10 @@
 import React from 'react';
-import { Trash2, Edit3, Check, X } from 'lucide-react';
+import { Trash2, Edit3, Check, X, GripVertical } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ListItem } from '@/types';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ListItemRowProps {
   item: ListItem;
@@ -27,8 +29,31 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
 }) => {
   const isEditing = editingItemId === item.id;
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: item.id,
+    disabled: isEditing, // Disable dragging when editing
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className="flex items-center py-1 group">
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center py-1 group"
+      data-sortable-item
+    >
       {isEditing ? (
         <div className="flex items-center gap-1 w-full">
           <Input
@@ -61,6 +86,16 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
         </div>
       ) : (
         <>
+          {/* Drag Handle - appears on hover */}
+          <div 
+            {...attributes}
+            {...listeners}
+            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mr-2 p-1"
+            data-sortable-handle
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" data-lucide="grip-vertical" />
+          </div>
+          
           <div 
             className="flex items-center flex-grow cursor-pointer"
             onClick={() => toggleItemCompleted(item.id)}

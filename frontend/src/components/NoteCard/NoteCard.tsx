@@ -3,8 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
-import { NoteCardHeader } from './NoteCardHeader';
-import { NoteCategorySelector } from './NoteCategorySelector';
 import { NoteContent } from './NoteContent';
 
 interface NoteCardProps {
@@ -85,33 +83,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
       style={{ '--note-color': noteDisplayColor } as React.CSSProperties}
     >
       <Card className="w-full border shadow-sm h-full flex flex-col">
-        <NoteCardHeader
-          title={noteTitle}
-          noteColor={note.color_value}
-          isEditing={isEditing}
-          editTitle={editTitle}
-          isCollapsibleOpen={isCollapsibleOpen}
-          setEditTitle={setEditTitle}
-          setIsEditing={setIsEditing}
-          handleEditTitle={handleEditTitle}
-          handleDeleteNote={handleDeleteNote}
-          titleEditRef={titleEditRef}
-          onColorSave={handleSaveNoteColor}
-          isSavingColor={isSavingColor}
-        />
+        <div className="p-4 border-b">
+          <h3 className="font-semibold">{noteTitle}</h3>
+        </div>
 
-        <NoteCategorySelector
-          currentCategory={note.category || 'General'}
-          existingCategories={existingCategories}
-          isEditingCategory={isEditingCategory}
-          showNewCategoryInput={showNewCategoryInput}
-          newCategory={newCategory}
-          setNewCategory={setNewCategory}
-          setIsEditingCategory={setIsEditingCategory}
-          setShowNewCategoryInput={setShowNewCategoryInput}
-          handleEditCategory={handleEditCategory}
-          handleAddCustomCategory={handleAddCustomCategory}
-        />
+        <div className="p-2 border-b text-sm text-gray-600">
+          Category: {note.category || 'General'}
+        </div>
 
         <CollapsibleContent className="flex-1">
           <div 
