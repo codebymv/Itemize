@@ -124,6 +124,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
               </ColorPicker>
               <CardTitle
                 className="text-lg font-medium cursor-pointer"
+                style={{ fontFamily: '"Raleway", sans-serif' }}
                 onClick={() => setIsEditing(true)}
               >
                 {title}
@@ -145,11 +146,11 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                  <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
                     <Edit3 className="mr-2 h-4 w-4" />
                     Edit Title
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDeleteList} className="text-red-600">
+                  <DropdownMenuItem onClick={handleDeleteList} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete List
                   </DropdownMenuItem>

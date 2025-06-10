@@ -78,6 +78,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
             onChange={(e) => setNewItemText(e.target.value)}
             placeholder="Add new item..."
             className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            style={{ fontFamily: '"Raleway", sans-serif' }}
             onKeyDown={handleKeyDown}
           />
           
@@ -105,7 +106,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
                 <span className="text-transparent">{newItemText}</span>
                 <span
                   className="text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap font-medium"
-                  style={{ pointerEvents: 'none' }} 
+                  style={{ pointerEvents: 'none', fontFamily: '"Raleway", sans-serif' }} 
                   title="Press Tab or Right Arrow to accept"
                 >
                   {currentInputSuggestion.substring(newItemText.length)}
@@ -141,6 +142,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
         <button
           onClick={handleGetSuggestion}
           className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+          style={{ fontFamily: '"Raleway", sans-serif' }}
           disabled={isLoadingSuggestions}
         >
           <Sparkles className="w-4 h-4" style={{ color: 'var(--list-color)' }} />

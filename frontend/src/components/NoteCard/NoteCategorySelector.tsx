@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-interface ListCategorySelectorProps {
+interface NoteCategorySelectorProps {
   currentCategory: string;
   existingCategories: string[];
   isEditingCategory: boolean;
@@ -18,7 +18,7 @@ interface ListCategorySelectorProps {
   handleAddCustomCategory: () => void;
 }
 
-export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
+export const NoteCategorySelector: React.FC<NoteCategorySelectorProps> = ({
   currentCategory,
   existingCategories,
   isEditingCategory,
@@ -109,4 +109,4 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
       )}
     </div>
   );
-};
+}; 

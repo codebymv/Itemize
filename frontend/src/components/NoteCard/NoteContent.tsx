@@ -189,7 +189,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
           className="flex-1 resize-none border-none focus:ring-0 bg-transparent p-3 text-sm w-full cursor-text whitespace-pre-wrap"
           placeholder={isEditingContent ? "Type your note content..." : "Click anywhere to add content..."}
           readOnly={!isEditingContent}
-          style={{ height: '100%' }}
+          style={{ height: '100%', fontFamily: '"Raleway", sans-serif' }}
         />
 
         {/* GitHub Copilot-style autocomplete overlay */}
@@ -202,6 +202,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               <span className="text-transparent">{editContent}</span>
               <span 
                 className="text-gray-400 font-medium"
+                style={{ fontFamily: '"Raleway", sans-serif' }}
                 title="Press Tab or Right Arrow to accept, Ctrl+Space for more suggestions"
               >
                 {currentAutocomplete.substring(editContent.length)}
@@ -231,6 +232,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               onClick={triggerSuggestions}
               disabled={isLoading}
               className="flex items-center gap-1 px-2 py-1 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               <Sparkles size={12} className={isLoading ? 'animate-pulse' : ''} />
               <span>AI Suggest</span>
@@ -241,6 +243,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               <button
                 onClick={() => acceptSuggestion(currentSuggestion)}
                 className="flex-1 text-left px-2 py-1 rounded bg-white border text-gray-700 hover:bg-gray-50 transition-colors truncate"
+                style={{ fontFamily: '"Raleway", sans-serif' }}
                 title={currentSuggestion}
               >
                 "{currentSuggestion}"
@@ -248,7 +251,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
             )}
 
             {/* Keyboard shortcuts hint */}
-            <span className="text-gray-500 ml-auto">
+            <span className="text-gray-500 ml-auto" style={{ fontFamily: '"Raleway", sans-serif' }}>
               Ctrl+Space
             </span>
           </div>

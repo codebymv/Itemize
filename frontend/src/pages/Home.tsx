@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles } from 'lucide-react';
+import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles, Layers, StickyNote, ChevronDown } from 'lucide-react';
 
 const Home: React.FC = () => {
   const { login, currentUser, isAuthenticated, token } = useAuth();
@@ -63,21 +63,21 @@ const Home: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Hero Section */}
-        <div className="text-center mb-20">
-          <div className="mb-6">
+        <div className="text-center mb-12">
+          <div className="mb-2">
             <img 
               src="/icon.png" 
               alt="Itemize" 
-              className="h-24 md:h-32 w-auto mx-auto"
+              className="h-20 md:h-24 w-auto mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+          <h1 className="text-4xl font-light italic tracking-tight text-gray-900 sm:text-5xl md:text-6xl" style={{ fontFamily: '"Raleway", sans-serif' }}>
             {/* Mobile layout (stack text and image) */}
             <div className="flex flex-col items-center md:hidden gap-1 pb-2">
               <div className="text-center w-full">
-                <div className="text-2xl md:text-xl inline-block whitespace-nowrap font-semibold">
+                <div className="text-2xl md:text-xl inline-block whitespace-nowrap font-light">
                   Organize your life with
                 </div>
               </div>
@@ -95,43 +95,43 @@ const Home: React.FC = () => {
               <img src="/profile.png" alt="Itemize" className="h-64 inline-block" />
             </div>
           </h1>
-          <p className="mt-3 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-            The simple, elegant way to create and manage lists for any purpose.
+          <p className="mt-2 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-3 md:text-xl md:max-w-3xl" style={{ fontFamily: '"Raleway", sans-serif' }}>
+            The complete organizational ecosystem with lists, notes, and intelligent tools to streamline your workflow.
           </p>
           
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={handleGetStarted}
-              className="rounded-md px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-medium text-white"
+              className="rounded-md px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-light text-white"
               size="lg"
             >
-              Get Started
+              Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
 
         {/* Features Section */}
-        <div className="mt-24 mb-20">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Everything you need to stay organized</h2>
+        <div className="mt-16 mb-12">
+          <h2 className="text-3xl font-light italic text-center text-gray-900 mb-8" style={{ fontFamily: '"Raleway", sans-serif' }}>Everything you need to stay organized</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 transform transition-all duration-300 hover:shadow-md hover:-translate-y-1">
               <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
-                <ListChecks className="h-7 w-7 text-blue-600" />
+                <Layers className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Create Custom Lists</h3>
-              <p className="text-gray-600">
-                Create different types of lists for shopping, todos, notes, or any category you need to organize.
+              <h3 className="text-xl font-semibold text-gray-900 mb-3" style={{ fontFamily: '"Raleway", sans-serif' }}>Organizational Tools</h3>
+              <p className="text-gray-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                Create and manage lists, notes, and any organizational content you need. From shopping lists to project notes, everything in one place.
               </p>
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <div className="flex items-center text-sm text-blue-600">
+                <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Unlimited list categories</span>
+                  <span>Lists & Notes ecosystem</span>
                 </div>
-                <div className="flex items-center text-sm text-blue-600 mt-2">
+                <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Custom color coding</span>
+                  <span>Unlimited categories & colors</span>
                 </div>
               </div>
             </div>
@@ -140,16 +140,16 @@ const Home: React.FC = () => {
               <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
                 <Sparkles className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Smart Suggestions</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3" style={{ fontFamily: '"Raleway", sans-serif' }}>Smart Suggestions</h3>
+              <p className="text-gray-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                 Let AI help you build lists faster with intelligent item suggestions and effortless autocomplete.
               </p>
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <div className="flex items-center text-sm text-blue-600">
+                <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>AI-powered item suggestions</span>
                 </div>
-                <div className="flex items-center text-sm text-blue-600 mt-2">
+                <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>Effortless autocomplete</span>
                 </div>
@@ -160,16 +160,16 @@ const Home: React.FC = () => {
               <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
                 <Clock className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Access Anywhere</h3>
-              <p className="text-gray-600">
-                Your lists are synced and available across all your devices whenever and wherever you need them.
+              <h3 className="text-xl font-semibold text-gray-900 mb-3" style={{ fontFamily: '"Raleway", sans-serif' }}>Access Anywhere</h3>
+              <p className="text-gray-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                Your organizational tools are synced and available across all your devices whenever and wherever you need them.
               </p>
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <div className="flex items-center text-sm text-blue-600">
+                <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>Real-time synchronization</span>
                 </div>
-                <div className="flex items-center text-sm text-blue-600 mt-2">
+                <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>Works offline too</span>
                 </div>
@@ -178,20 +178,240 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Call to Action Section */}
-        <div className="mt-24 mb-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-10 lg:p-16 text-center text-white">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to get organized?</h2>
-          <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Join thousands of users who have simplified their lives with Itemize.
-          </p>
-          <Button
-            onClick={handleGetStarted}
-            className="rounded-md px-8 py-3 bg-white text-blue-600 hover:bg-blue-50 font-medium"
-            size="lg"
-          >
-            Start Now - It's Free
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+        {/* Live Preview Section - Replacing the blue CTA */}
+        <div className="mt-16 mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-light italic text-gray-900 mb-4" style={{ fontFamily: '"Raleway", sans-serif' }}>See it in action</h2>
+            {/* <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Get a preview of how Itemize helps you stay organized with real interface components.
+            </p> */}
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+            {/* Mock List Component */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {/* Header */}
+              <div className="p-4 pb-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="inline-block w-3 h-3 rounded-full border border-gray-400"
+                      style={{ backgroundColor: '#4F46E5' }}
+                    />
+                    <h3 className="text-lg font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize Features</h3>
+                  </div>
+                  <div className="flex items-center">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <button className="ml-2 p-1">
+                      <div className="h-4 w-4 flex flex-col justify-center items-center">
+                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
+                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
+                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="mb-2 px-6">
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  Productivity
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="px-6 py-2">
+                <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
+                  <div
+                    className="h-2 rounded-full transition-all duration-300"
+                    style={{ width: '75%', backgroundColor: '#4F46E5' }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  6 of 8 completed
+                </div>
+              </div>
+              
+              {/* List Items */}
+              <div className="px-6 py-2 space-y-0.5">
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div 
+                      className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                    >
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Custom color coding</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div 
+                      className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                    >
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Cloud synchronization</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div 
+                      className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                    >
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Category assignment</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div 
+                      className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                    >
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Real-time collaboration</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div 
+                      className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                    >
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Drag & drop reordering</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 border-gray-300">
+                    </div>
+                    <span style={{ fontFamily: '"Raleway", sans-serif' }}>AI-powered suggestions</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 border-gray-300">
+                    </div>
+                    <span style={{ fontFamily: '"Raleway", sans-serif' }}>Cross-device access</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Item Section */}
+              <div className="px-6 py-4 border-t border-gray-100">
+                <div className="flex items-center space-x-2 text-gray-400">
+                  <PenLine className="h-4 w-4" />
+                  <span className="text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>Add new item...</span>
+                  <div className="ml-auto flex items-center space-x-1">
+                                              <Sparkles className="h-4 w-4 text-blue-600" />
+                                          <span className="text-xs text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>AI</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mock Note Component */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+              {/* Note Header */}
+              <div className="p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="inline-block w-3 h-3 rounded-full border border-gray-400"
+                      style={{ backgroundColor: '#F59E0B' }}
+                    />
+                    <h3 className="font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>Why Choose Itemize?</h3>
+                  </div>
+                  <div className="flex items-center">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <button className="ml-2 p-1">
+                      <div className="h-4 w-4 flex flex-col justify-center items-center">
+                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
+                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
+                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="mb-2 px-6">
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  Marketing
+                </div>
+              </div>
+
+              {/* Note Content Area */}
+              <div className="flex-1 mx-6 mb-6 mt-4">
+                <div 
+                  className="bg-white border-2 rounded-lg p-3 h-full flex flex-col"
+                  style={{ borderColor: '#F59E0B' }}
+                >
+                  <div className="text-sm text-gray-700 flex-1" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <div className="space-y-3">
+                      <p>Why choose Itemize for your organizational needs?</p>
+                      
+                      <p>Itemize offers a complete organizational ecosystem that combines the simplicity of lists with the flexibility of notes. Whether you're planning your daily tasks or brainstorming your next big project, our platform adapts to your workflow.</p>
+                      
+                      <p>Key benefits include custom color coding for visual organization, real-time cloud synchronization across all your devices, intelligent AI suggestions to boost productivity, and seamless category management to keep everything organized.</p>
+                      
+                      <p>Join thousands of users who have transformed their productivity with Itemize's intuitive dual approach to organization.</p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-amber-200">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                          Last edited: Just now
+                        </div>
+                        <div className="flex items-center gap-1 text-xs">
+                          <Sparkles className="h-3 w-3 text-amber-500" />
+                          <span className="text-amber-600" style={{ fontFamily: '"Raleway", sans-serif' }}>AI</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content editing hint */}
+                  <div className="mt-2 pt-2 border-t border-amber-100">
+                    <div className="text-xs text-gray-400 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      Click anywhere to edit content...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA below the preview */}
+          <div className="text-center mt-8">
+            <Button
+              onClick={handleGetStarted}
+              className="rounded-md px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-light text-white text-lg"
+              size="lg"
+            >
+              Start Organizing Today
+              <ArrowRight className="ml-2 h-6 w-6" />
+            </Button>
+            {/* <p className="mt-4 text-sm text-gray-500">
+              Join thousands of users who have simplified their lives with Itemize.
+            </p> */}
+          </div>
         </div>
         
         {/* Footer */}

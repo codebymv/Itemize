@@ -19,7 +19,7 @@ export const ListProgressBar: React.FC<ListProgressBarProps> = ({
           style={{ width: `${progress}%`, backgroundColor: 'var(--list-color)' }}
         ></div>
       </div>
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
         {completedItems} of {totalItems} completed
       </div>
     </div>

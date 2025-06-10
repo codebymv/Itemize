@@ -107,7 +107,7 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
             }`}>
               {item.completed && <Check className="h-3 w-3 text-white" />}
             </div>
-            <span className={`${item.completed ? 'line-through text-gray-400' : ''}`}>
+            <span className={`${item.completed ? 'line-through text-gray-400' : ''}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
               {item.text}
             </span>
           </div>

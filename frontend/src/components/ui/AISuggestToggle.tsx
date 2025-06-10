@@ -40,8 +40,8 @@ export const AISuggestToggle: React.FC<AISuggestToggleProps> = ({
               />
               <Label htmlFor="ai-suggest-toggle" className="text-sm font-medium cursor-pointer flex items-center">
                 <Sparkles size={14} className="mr-1 text-blue-500" />
-                <span className="hidden sm:inline">AI Suggest</span>
-                <span className="sm:hidden">AI</span>
+                <span className="hidden sm:inline" style={{ fontFamily: '"Raleway", sans-serif' }}>AI Suggest</span>
+                <span className="sm:hidden" style={{ fontFamily: '"Raleway", sans-serif' }}>AI</span>
               </Label>
             </div>
           </TooltipTrigger>

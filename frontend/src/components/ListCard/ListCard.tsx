@@ -189,7 +189,7 @@ const ListCard: React.FC<ListCardProps> = ({
                 </SortableContext>
               </DndContext>
               {list.items.length === 0 && (
-                <div className="text-gray-400 text-sm py-2 italic">
+                <div className="text-gray-400 text-sm py-2 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   No items yet. Add one below or use AI suggestions.
                 </div>
               )}
