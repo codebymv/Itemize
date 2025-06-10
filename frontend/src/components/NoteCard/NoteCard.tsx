@@ -85,6 +85,17 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
   const noteDisplayColor = currentColorPreview;
 
+  // Debug logging for note colors
+  React.useEffect(() => {
+    console.log('🎨 Note Color Debug:', {
+      noteId: note.id,
+      noteColorValue: note.color_value,
+      currentColorPreview,
+      noteDisplayColor,
+      isEditingContent
+    });
+  }, [note.id, note.color_value, currentColorPreview, noteDisplayColor, isEditingContent]);
+
   return (
     <Collapsible
       open={isCollapsibleOpen}
@@ -95,7 +106,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
       className="w-full"
       style={{ '--note-color': noteDisplayColor } as React.CSSProperties}
     >
-      <Card className="w-full border shadow-sm h-full flex flex-col">
+      <Card className="w-full shadow-sm h-full flex flex-col" style={{ border: 'none' }}>
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -171,9 +182,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
         <CollapsibleContent className="flex-1">
           <div 
-            className="bg-white border-2 rounded-lg mx-6 mb-6 flex-1 flex flex-col" 
+            className="bg-white rounded-lg mx-6 mb-6 flex-1 flex flex-col" 
             style={{ 
-              borderColor: 'var(--note-color)',
+              border: `2px solid ${noteDisplayColor} !important`,
+              borderColor: `${noteDisplayColor} !important`,
               height: `${Math.max(100, (note.height || 200) - 120)}px` // Fixed height calculation
             }}
           >
@@ -186,6 +198,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               handleEditContent={handleEditContent}
               contentEditRef={contentEditRef}
               noteCategory={note.category}
+              noteColor={noteDisplayColor}
             />
           </div>
         </CollapsibleContent>

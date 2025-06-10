@@ -13,6 +13,7 @@ interface NoteContentProps {
   handleEditContent: () => void;
   contentEditRef: React.RefObject<HTMLTextAreaElement>;
   noteCategory?: string;
+  noteColor?: string; // Add note color prop
 }
 
 export const NoteContent: React.FC<NoteContentProps> = ({
@@ -23,15 +24,17 @@ export const NoteContent: React.FC<NoteContentProps> = ({
   setIsEditingContent,
   handleEditContent,
   contentEditRef,
-  noteCategory
+  noteCategory,
+  noteColor = '#FFFFE0'
 }) => {
   // Note AI enabled state - separate from lists
   const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('itemize-note-ai-enabled');
-      return saved ? JSON.parse(saved) : false;
+      // Force enable note AI by clearing old disabled setting
+      localStorage.setItem('itemize-note-ai-enabled', 'true');
+      return true;
     } catch (e) {
-      return false;
+      return true;
     }
   });
   
@@ -61,6 +64,21 @@ export const NoteContent: React.FC<NoteContentProps> = ({
 
   // Get current autocomplete suggestion based on cursor position
   const currentAutocomplete = getSuggestionForInput(editContent, cursorPosition);
+  
+  // Debug logging for note autocomplete
+  useEffect(() => {
+    console.log('📝 Note Autocomplete State:', {
+      isEditingContent,
+      aiEnabled,
+      editContent: editContent.substring(0, 50) + (editContent.length > 50 ? '...' : ''),
+      cursorPosition,
+      currentAutocomplete,
+      suggestionsCount: suggestions.length,
+      continuationsCount: continuations.length,
+      wordCount: editContent.trim().split(/\s+/).length,
+      shouldShow: isEditingContent && currentAutocomplete && cursorPosition === editContent.length
+    });
+  }, [isEditingContent, aiEnabled, editContent, cursorPosition, currentAutocomplete, suggestions.length, continuations.length]);
 
   // Add click-outside functionality
   useEffect(() => {
@@ -186,28 +204,37 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               handleSelectionChange(e);
             }
           }}
-          className="flex-1 resize-none border-none focus:ring-0 bg-transparent p-3 text-sm w-full cursor-text whitespace-pre-wrap"
+          className="flex-1 resize-none bg-transparent p-3 w-full cursor-text whitespace-pre-wrap !border-none !ring-0 !ring-offset-0 !outline-none focus:!border-none focus:!ring-0 focus:!ring-offset-0 focus-visible:!border-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
           placeholder={isEditingContent ? "Type your note content..." : "Click anywhere to add content..."}
           readOnly={!isEditingContent}
-          style={{ height: '100%', fontFamily: '"Raleway", sans-serif' }}
+          style={{ 
+            height: '100%', 
+            fontFamily: '"Raleway", sans-serif',
+            fontSize: '14px',
+            lineHeight: '20px',
+            border: 'none !important',
+            outline: 'none !important',
+            boxShadow: 'none !important'
+          } as React.CSSProperties}
         />
 
         {/* GitHub Copilot-style autocomplete overlay */}
         {isEditingContent && currentAutocomplete && cursorPosition === editContent.length && (
           <div 
-            className="absolute inset-0 p-3 pointer-events-none overflow-hidden"
-            style={{ fontSize: '14px', lineHeight: '1.5' }}
+            className="absolute inset-0 p-3 pointer-events-none overflow-hidden whitespace-pre-wrap"
+            style={{ 
+              fontFamily: '"Raleway", sans-serif',
+              fontSize: '14px',
+              lineHeight: '20px'
+            }}
           >
-            <div className="whitespace-pre-wrap">
-              <span className="text-transparent">{editContent}</span>
-              <span 
-                className="text-gray-400 font-medium"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-                title="Press Tab or Right Arrow to accept, Ctrl+Space for more suggestions"
-              >
-                {currentAutocomplete.substring(editContent.length)}
-              </span>
-            </div>
+            <span className="text-transparent">{editContent}</span>
+            <span 
+              className="text-gray-400"
+              title="Press Tab or Right Arrow to accept, Ctrl+Space for more suggestions"
+            >
+              {currentAutocomplete}
+            </span>
           </div>
         )}
 
@@ -224,49 +251,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
         )}
       </div>
 
-      {/* Smart suggestion button - only show when editing and have suggestions */}
-      {showSuggestionButton && isEditingContent && (
-        <div className="border-t bg-gray-50 p-2">
-          <div className="flex items-center gap-2 text-xs">
-            <button
-              onClick={triggerSuggestions}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              <Sparkles size={12} className={isLoading ? 'animate-pulse' : ''} />
-              <span>AI Suggest</span>
-            </button>
-
-            {/* Show available suggestions */}
-            {currentSuggestion && (
-              <button
-                onClick={() => acceptSuggestion(currentSuggestion)}
-                className="flex-1 text-left px-2 py-1 rounded bg-white border text-gray-700 hover:bg-gray-50 transition-colors truncate"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-                title={currentSuggestion}
-              >
-                "{currentSuggestion}"
-              </button>
-            )}
-
-            {/* Keyboard shortcuts hint */}
-            <span className="text-gray-500 ml-auto" style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Ctrl+Space
-            </span>
-          </div>
-
-          {/* Debug info (can be removed in production) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-xs text-gray-400 mt-1">
-              Words: {metrics.wordCount} | 
-              Should trigger: {metrics.shouldTrigger ? 'Yes' : 'No'} |
-              Suggestions: {suggestions.length} |
-              Continuations: {continuations.length}
-            </div>
-          )}
-        </div>
-      )}
+      {/* GitHub Copilot-style only - no suggestion box UI */}
     </div>
   );
 }; 

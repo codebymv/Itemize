@@ -479,6 +479,7 @@ const CanvasPage: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 w-48 h-9"
+                  style={{ fontFamily: '"Raleway", sans-serif' }}
                 />
               </div>
             </div>
@@ -535,6 +536,7 @@ const CanvasPage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 placeholder:font-light placeholder:text-slate-400"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
             />
           </div>
         </div>

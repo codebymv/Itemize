@@ -400,14 +400,14 @@ const Home: React.FC = () => {
 
           {/* CTA below the preview */}
           <div className="text-center mt-8">
-            <Button
-              onClick={handleGetStarted}
+          <Button
+            onClick={handleGetStarted}
               className="rounded-md px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-light text-white text-lg"
-              size="lg"
-            >
+            size="lg"
+          >
               Start Organizing Today
               <ArrowRight className="ml-2 h-6 w-6" />
-            </Button>
+          </Button>
             {/* <p className="mt-4 text-sm text-gray-500">
               Join thousands of users who have simplified their lives with Itemize.
             </p> */}
