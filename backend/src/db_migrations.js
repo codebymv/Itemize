@@ -35,7 +35,9 @@ const runCreateNotesTableMigration = async (pool) => {
       CREATE TABLE IF NOT EXISTS notes (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT DEFAULT 'Untitled Note',
           content TEXT DEFAULT '',
+          category TEXT DEFAULT 'General',
           color_value TEXT DEFAULT '#FFFFE0', -- Default light yellow
           position_x FLOAT8 NOT NULL DEFAULT 0,
           position_y FLOAT8 NOT NULL DEFAULT 0,
@@ -90,7 +92,45 @@ const runCreateNotesTableMigration = async (pool) => {
   }
 };
 
+// Migration to add title and category columns to existing notes table
+const runAddTitleAndCategoryToNotesMigration = async (pool) => {
+  console.log('Running add title and category to notes migration...');
+  try {
+    // Add title column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE notes 
+      ADD COLUMN IF NOT EXISTS title TEXT DEFAULT 'Untitled Note';
+    `);
+    console.log('✅ title column added to notes table (if not exists)');
+
+    // Add category column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE notes 
+      ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'General';
+    `);
+    console.log('✅ category column added to notes table (if not exists)');
+
+    // Migrate existing notes: extract first line of content as title
+    await pool.query(`
+      UPDATE notes 
+      SET title = CASE 
+        WHEN content IS NULL OR content = '' THEN 'Untitled Note'
+        ELSE LEFT(TRIM(SPLIT_PART(content, E'\n', 1)), 100)
+      END
+      WHERE title IS NULL OR title = 'Untitled Note';
+    `);
+    console.log('✅ Migrated existing notes content to populate title field');
+
+    console.log('✅ Add title and category to notes migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Add title and category to notes migration failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = {
   runCanvasMigration,
-  runCreateNotesTableMigration // Add the new migration function here
+  runCreateNotesTableMigration,
+  runAddTitleAndCategoryToNotesMigration
 };

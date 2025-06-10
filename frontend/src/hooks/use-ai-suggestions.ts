@@ -170,14 +170,9 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         setError(err instanceof Error ? err.message : 'Failed to get suggestions');
       }
       
-      // Provide some default suggestions for common list types
-      if (listTitle.toLowerCase().includes('shop') || listTitle.toLowerCase().includes('grocery')) {
-        setSuggestions(['milk', 'eggs', 'bread', 'cheese', 'apples']);
-        setCurrentSuggestion('milk');
-      } else {
-        setSuggestions([]);
-        setCurrentSuggestion(null);
-      }
+      // No hardcoded fallback suggestions - keep clean UI
+      setSuggestions([]);
+      setCurrentSuggestion(null);
     } finally {
       setIsLoading(false);
     }
@@ -243,99 +238,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       }
     }
     
-    // If no API suggestions or no matches, generate context-aware suggestions
-    console.log('Generating context-aware suggestions based on list title:', listTitle);
-    
-    // Generate context-specific suggestions based on the list title
-    let contextSuggestions: string[] = [];
-    
-    // Add context-specific suggestions based on list title
-    const titleLower = listTitle.toLowerCase();
-    
-    if (titleLower.includes('christmas') || titleLower.includes('holiday')) {
-      contextSuggestions = [
-        'ornaments', 'lights', 'tree', 'candy canes', 'wreath',
-        'stockings', 'presents', 'cookies', 'garland', 'mistletoe',
-        'gift wrap', 'cards', 'tinsel', 'santa figure', 'reindeer decoration'
-      ];
-    } else if (titleLower.includes('grocery') || titleLower.includes('shopping')) {
-      contextSuggestions = [
-        'milk', 'eggs', 'bread', 'coffee', 'sugar',
-        'apples', 'bananas', 'oranges', 'chicken', 'beef',
-        'pasta', 'rice', 'cereal', 'cheese', 'yogurt'
-      ];
-    } else if (titleLower.includes('todo') || titleLower.includes('task')) {
-      contextSuggestions = [
-        'send email', 'call client', 'schedule meeting', 'finish report',
-        'review document', 'update website', 'pay bills', 'order supplies',
-        'backup data', 'clean office'
-      ];
-    } else {
-      // Generic suggestions as fallback
-      contextSuggestions = [
-        'milk', 'eggs', 'bread', 'coffee', 'sugar',
-        'apples', 'bananas', 'paper towels', 'toilet paper',
-        'notebook', 'pen', 'batteries', 'water'
-      ];
-      
-      // Also add some of the existing items as context clues
-      if (existingItems.length > 0) {
-        // Use existing items to infer the context
-        const existingWords = existingItems.flatMap(item => 
-          item.toLowerCase().split(' ')
-        );
-        
-        if (existingWords.some(w => ['cake', 'sugar', 'flour', 'baking'].includes(w))) {
-          contextSuggestions = [
-            'flour', 'sugar', 'eggs', 'butter', 'vanilla extract',
-            'baking powder', 'chocolate chips', 'frosting', 'cake pan',
-            'measuring cups', 'mixing bowl'
-          ];
-        } else if (existingWords.some(w => ['coding', 'program', 'software', 'bug'].includes(w))) {
-          contextSuggestions = [
-            'fix bug', 'update documentation', 'refactor code',
-            'write tests', 'deploy to production', 'code review',
-            'optimize performance', 'add feature'
-          ];
-        }
-      }
-    }
-    
-    // Look for matches in context-specific suggestions
-    const inputLower = input.toLowerCase().trim();
-    
-    // Try exact prefix match first
-    for (const suggestion of contextSuggestions) {
-      if (suggestion.toLowerCase().startsWith(inputLower) && 
-          suggestion.toLowerCase() !== inputLower) {
-        console.log('Using contextual suggestion (prefix match):', suggestion);
-        return suggestion;
-      }
-    }
-    
-    // If no exact prefix match, try contains match
-    for (const suggestion of contextSuggestions) {
-      if (suggestion.toLowerCase().includes(inputLower) && 
-          suggestion.toLowerCase() !== inputLower) {
-        console.log('Using contextual suggestion (contains match):', suggestion);
-        return suggestion;
-      }
-    }
-    
-    // If we still don't have a match, just return a relevant suggestion based on first character
-    if (inputLower.length > 0) {
-      const firstChar = inputLower[0];
-      for (const suggestion of contextSuggestions) {
-        if (suggestion.toLowerCase().includes(firstChar)) {
-          console.log('Using contextual suggestion (first char match):', suggestion);
-          return suggestion;
-        }
-      }
-    }
-    
-    // We've already handled all matching algorithms above
-    // No need for additional matching code here
-    
+    // No hardcoded fallback suggestions - only use actual API suggestions
     return null;
   }, [enabled, suggestions]);
 
@@ -368,76 +271,14 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
 
   // Generate a context-aware suggestion without needing user input
   const generateContextSuggestion = useCallback((): string | null => {
-    // If backend API provided suggestions, use those first
+    // Only use actual API suggestions if available
     if (suggestions.length > 0) {
       return suggestions[0];
     }
     
-    // Otherwise, generate context-specific suggestions based on the list title
-    const titleLower = listTitle.toLowerCase();
-    let contextualSuggestions: string[] = [];
-    
-    // Add suggestions based on list title keywords
-    if (titleLower.includes('christmas') || titleLower.includes('holiday')) {
-      contextualSuggestions = [
-        'ornaments', 'lights', 'tree', 'candy canes', 'garland',
-        'stockings', 'presents', 'cookies', 'wreath', 'mistletoe'
-      ];
-    } else if (titleLower.includes('grocery') || titleLower.includes('shopping')) {
-      contextualSuggestions = [
-        'milk', 'eggs', 'bread', 'coffee', 'sugar',
-        'apples', 'bananas', 'chicken', 'pasta', 'rice'
-      ];
-    } else if (titleLower.includes('todo') || titleLower.includes('task')) {
-      contextualSuggestions = [
-        'send email', 'call client', 'schedule meeting', 'finish report',
-        'write documentation', 'update website', 'pay bills'
-      ];
-    } else {
-      // Default suggestions based on common list items
-      contextualSuggestions = [
-        'important note', 'follow up', 'check status',
-        'review document', 'schedule appointment', 'buy supplies'
-      ];
-    }
-    
-    // Also infer context from existing items
-    if (existingItems.length > 0) {
-      const existingWords = existingItems.flatMap(item => 
-        item.toLowerCase().split(' ')
-      );
-      
-      if (existingWords.some(w => ['cake', 'sugar', 'flour', 'baking'].includes(w))) {
-        contextualSuggestions = [
-          'flour', 'sugar', 'eggs', 'butter', 'vanilla extract',
-          'baking powder', 'chocolate chips', 'frosting'
-        ];
-      } else if (existingWords.some(w => ['coding', 'program', 'software', 'bug'].includes(w))) {
-        contextualSuggestions = [
-          'fix bug', 'update documentation', 'refactor code',
-          'write tests', 'deploy to production', 'code review'
-        ];
-      } else if (existingWords.some(w => ['milk', 'eggs', 'bread'].includes(w))) {
-        contextualSuggestions = [
-          'cheese', 'yogurt', 'butter', 'cereal', 'coffee',
-          'orange juice', 'apples', 'bananas'
-        ];
-      } else if (existingWords.some(w => ['books', 'read', 'novel', 'author'].includes(w))) {
-        contextualSuggestions = [
-          'fiction novels', 'biography', 'science fiction',
-          'mystery', 'poetry', 'history books', 'magazines'
-        ];
-      }
-    }
-    
-    // Select a random suggestion from the list
-    if (contextualSuggestions.length > 0) {
-      const randomIndex = Math.floor(Math.random() * contextualSuggestions.length);
-      return contextualSuggestions[randomIndex];
-    }
-    
+    // No hardcoded fallback suggestions - return null for clean UI
     return null;
-  }, [listTitle, existingItems, suggestions]);
+  }, [suggestions]);
   
   // Generate an initial suggestion when the hook mounts
   useEffect(() => {

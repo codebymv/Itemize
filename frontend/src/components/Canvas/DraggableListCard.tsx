@@ -9,6 +9,7 @@ interface DraggableListCardProps {
   onUpdate: (list: List) => void;
   onDelete: (listId: string) => void;
   existingCategories: string[];
+  canvasTransform: { x: number, y: number, scale: number };
 }
 
 export const DraggableListCard: React.FC<DraggableListCardProps> = ({ 
@@ -17,7 +18,8 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   onPositionUpdate,
   onUpdate,
   onDelete,
-  existingCategories
+  existingCategories,
+  canvasTransform
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -33,26 +35,29 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   
   // Drag start handler
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only start dragging if we're clicking on the card header (not the content)
+    // Don't start drag if clicking on interactive elements
     const target = e.target as HTMLElement;
-    console.log('Mouse down on:', target.className);
-    
-    // Allow dragging from the entire list card for better UX
-    // We can uncomment the header-only restriction if needed
-    // if (!target.closest('.list-card-header')) {
-    //   return;
-    // }
+    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"]')) {
+      return;
+    }
     
     e.preventDefault();
     if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
-      console.log('Starting drag at:', { x: e.clientX, y: e.clientY });
-      console.log('Drag offset:', { x: e.clientX - rect.left, y: e.clientY - rect.top });
-      setIsDragging(true);
+      // Calculate drag offset in canvas coordinates
+      const containerRect = cardRef.current.parentElement?.getBoundingClientRect();
+      if (containerRect) {
+        const mouseXInCanvas = (e.clientX - containerRect.left - canvasTransform.x) / canvasTransform.scale;
+        const mouseYInCanvas = (e.clientY - containerRect.top - canvasTransform.y) / canvasTransform.scale;
+        
+        const currentLeft = parseFloat(cardRef.current.style.left) || 0;
+        const currentTop = parseFloat(cardRef.current.style.top) || 0;
+        
+        setDragOffset({
+          x: (mouseXInCanvas - currentLeft) * canvasTransform.scale,
+          y: (mouseYInCanvas - currentTop) * canvasTransform.scale
+        });
+        setIsDragging(true);
+      }
     }
   };
   
@@ -62,49 +67,36 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
       const containerRect = cardRef.current.parentElement?.getBoundingClientRect();
       if (!containerRect) return;
       
-      // Calculate new position relative to container
-      const newX = e.clientX - containerRect.left - dragOffset.x;
-      const newY = e.clientY - containerRect.top - dragOffset.y;
+      // Calculate mouse position relative to canvas before transform
+      const mouseXInCanvas = (e.clientX - containerRect.left - canvasTransform.x) / canvasTransform.scale;
+      const mouseYInCanvas = (e.clientY - containerRect.top - canvasTransform.y) / canvasTransform.scale;
       
-      // Apply constraints to keep the card within the container
-      const maxX = containerRect.width - cardRef.current.offsetWidth;
-      const maxY = containerRect.height - cardRef.current.offsetHeight;
+      // Calculate new position relative to canvas coordinates
+      const newX = mouseXInCanvas - dragOffset.x / canvasTransform.scale;
+      const newY = mouseYInCanvas - dragOffset.y / canvasTransform.scale;
       
-      const constrainedX = Math.max(0, Math.min(newX, maxX));
-      const constrainedY = Math.max(0, Math.min(newY, maxY));
-      
-      // Log coordinates for debugging (only occasionally to avoid flooding console)
-      if (Math.random() < 0.05) {
-        console.log('Dragging to:', { constrainedX, constrainedY });
-      }
-      
-      // Apply the new position to the element
-      cardRef.current.style.left = `${constrainedX}px`;
-      cardRef.current.style.top = `${constrainedY}px`;
+      // Apply the new position to the element (in canvas coordinates)
+      cardRef.current.style.left = `${newX}px`;
+      cardRef.current.style.top = `${newY}px`;
     }
   };
   
   // Drag end handler with debounce to prevent too many API calls
   const handleMouseUp = () => {
     if (isDragging && cardRef.current) {
-      console.log('Ending drag');
       setIsDragging(false);
       
-      const rect = cardRef.current.getBoundingClientRect();
-      const containerRect = cardRef.current.parentElement?.getBoundingClientRect();
+      // Get the current position from the style (which is in canvas coordinates)
+      const currentLeft = parseFloat(cardRef.current.style.left) || 0;
+      const currentTop = parseFloat(cardRef.current.style.top) || 0;
       
-      if (containerRect) {
-        // Calculate position relative to the container
-        const newPosition = {
-          x: rect.left - containerRect.left,
-          y: rect.top - containerRect.top
-        };
-        
-        console.log('New position:', newPosition);
-        
-        // Update position in the database
-        onPositionUpdate(list.id, newPosition);
-      }
+      const newPosition = {
+        x: Math.round(currentLeft),
+        y: Math.round(currentTop)
+      };
+      
+      // Update position in the database
+      onPositionUpdate(list.id, newPosition);
     }
   };
   
@@ -131,10 +123,9 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
         zIndex: isDragging ? 1000 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
         width: '320px',
-        transition: isDragging ? 'none' : 'box-shadow 0.2s, transform 0.1s',
-        // Remove the extra shadow when not dragging to match the Lists page style
-        boxShadow: isDragging ? '0 8px 16px rgba(0,0,0,0.2)' : 'none',
-        transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+        transition: isDragging ? 'none' : 'opacity 0.2s ease',
+        // Minimal drag feedback - just slight opacity change
+        opacity: isDragging ? 0.9 : 1,
         userSelect: 'none',  // Prevent text selection during drag
         touchAction: 'none',  // Improve touch interactions
         // Remove extra padding that might be causing inconsistency

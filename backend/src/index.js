@@ -249,8 +249,137 @@ setTimeout(async () => {
           res.status(500).json({ error: 'Internal server error' });
         }
       });
+      // --- Notes API Endpoints ---
+
+      // Get all notes for the current user
+      app.get('/api/notes', global.authenticateJWT, async (req, res) => {
+        try {
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'SELECT id, user_id, title, content, category, color_value, position_x, position_y, width, height, z_index, created_at, updated_at FROM notes WHERE user_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+          );
+          client.release();
+          res.json(result.rows);
+        } catch (error) {
+          console.error('Error fetching notes:', error);
+          res.status(500).json({ error: 'Internal server error while fetching notes' });
+        }
+      });
+
+      // Create a new note
+      app.post('/api/notes', global.authenticateJWT, async (req, res) => {
+        try {
+          const { 
+            title = 'Untitled Note', // Default title if not provided
+            content = '', // Default to empty string if not provided
+            category = 'General', // Default category
+            color_value, // Will use DB default if null/undefined
+            position_x, 
+            position_y, 
+            width,      // Will use DB default if null/undefined
+            height,     // Will use DB default if null/undefined
+            z_index     // Will use DB default if null/undefined
+          } = req.body;
+
+          // Basic validation for required canvas positions
+          if (typeof position_x !== 'number' || typeof position_y !== 'number') {
+            return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
+          }
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            `INSERT INTO notes (user_id, title, content, category, color_value, position_x, position_y, width, height, z_index) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+            [
+              req.user.id, 
+              title,
+              content, 
+              category,
+              color_value, // Let DB handle default if undefined
+              position_x, 
+              position_y, 
+              width,       // Let DB handle default if undefined
+              height,      // Let DB handle default if undefined
+              z_index      // Let DB handle default if undefined
+            ]
+          );
+          client.release();
+          res.status(201).json(result.rows[0]);
+        } catch (error) {
+          console.error('Error creating note:', error);
+          res.status(500).json({ error: 'Internal server error while creating note' });
+        }
+      });
+
+      // Update an existing note
+      app.put('/api/notes/:noteId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { noteId } = req.params;
+          const { title, content, category, color_value, position_x, position_y, width, height, z_index } = req.body;
+
+          // Fetch the current note to get existing values for fields not being updated
+          const client = await actualPool.connect();
+          const currentNoteResult = await client.query('SELECT * FROM notes WHERE id = $1 AND user_id = $2', [noteId, req.user.id]);
+
+          if (currentNoteResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'Note not found or access denied' });
+          }
+          
+          const currentNote = currentNoteResult.rows[0];
+
+          // Prepare new values, using current values as fallback if not provided in request
+          const newTitle = title !== undefined ? title : currentNote.title;
+          const newContent = content !== undefined ? content : currentNote.content;
+          const newCategory = category !== undefined ? category : currentNote.category;
+          const newColorValue = color_value !== undefined ? color_value : currentNote.color_value;
+          const newPositionX = position_x !== undefined ? position_x : currentNote.position_x;
+          const newPositionY = position_y !== undefined ? position_y : currentNote.position_y;
+          const newWidth = width !== undefined ? width : currentNote.width;
+          const newHeight = height !== undefined ? height : currentNote.height;
+          const newZIndex = z_index !== undefined ? z_index : currentNote.z_index;
+
+          const updateResult = await client.query(
+            `UPDATE notes 
+             SET title = $1, content = $2, category = $3, color_value = $4, position_x = $5, position_y = $6, width = $7, height = $8, z_index = $9 
+             WHERE id = $10 AND user_id = $11 RETURNING *`,
+            [newTitle, newContent, newCategory, newColorValue, newPositionX, newPositionY, newWidth, newHeight, newZIndex, noteId, req.user.id]
+          );
+          client.release();
+          
+          // The updated_at field is handled automatically by the database trigger.
+          res.json(updateResult.rows[0]);
+        } catch (error) {
+          console.error('Error updating note:', error);
+          res.status(500).json({ error: 'Internal server error while updating note' });
+        }
+      });
+
+      // Delete a note
+      app.delete('/api/notes/:noteId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { noteId } = req.params;
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING id',
+            [noteId, req.user.id]
+          );
+          client.release();
+          
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found or access denied' });
+          }
+          res.status(200).json({ message: 'Note deleted successfully' });
+        } catch (error) {
+          console.error('Error deleting note:', error);
+          res.status(500).json({ error: 'Internal server error while deleting note' });
+        }
+      });
       
-      console.log('✅ Lists API routes initialized');
+      console.log('✅ Notes API routes initialized');
+
+      console.log('✅ Lists API routes initialized'); // This line might be redundant now or could be moved after notes init log
       
       // Try to initialize AI suggestion service
       try {

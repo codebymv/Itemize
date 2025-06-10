@@ -145,10 +145,11 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
         >
           <Sparkles className="w-4 h-4" style={{ color: 'var(--list-color)' }} />
           <span className="font-medium">Suggest:</span>
-          <span style={{ color: 'var(--list-color)' }} className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
-            {currentSuggestion || ''}
-          </span>
-          {isLoadingSuggestions && <span className="ml-2 animate-pulse">·</span>}
+          {currentSuggestion && (
+            <span style={{ color: 'var(--list-color)' }} className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+              {currentSuggestion}
+            </span>
+          )}
         </button>
       )}
     </div>

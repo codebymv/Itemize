@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 // Import database migrations
-const { runCanvasMigration } = require('./db_migrations');
+const { runCanvasMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration } = require('./db_migrations');
 
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
@@ -126,6 +126,13 @@ const initializeDatabase = async (pool) => {
     try {
       // Run canvas feature migration
       await runCanvasMigration(pool);
+      
+      // Run notes table migration
+      await runCreateNotesTableMigration(pool);
+      
+      // Run notes name and category migration
+      await runAddTitleAndCategoryToNotesMigration(pool);
+      
       await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
       // console.log('Ensured google_id column exists in public.users table.');
     } catch (e) {

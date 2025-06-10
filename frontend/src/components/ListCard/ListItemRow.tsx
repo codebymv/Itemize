@@ -67,7 +67,7 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
           >
             <div 
               style={item.completed ? { backgroundColor: 'var(--list-color)', borderColor: 'var(--list-color)' } : {}}
-              className={`w-4 h-4 rounded-sm border mr-2 flex items-center justify-center ${
+              className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 ${
               item.completed ? '' : 'border-gray-300 hover:border-[var(--list-color)]'
             }`}>
               {item.completed && <Check className="h-3 w-3 text-white" />}

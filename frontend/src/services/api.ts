@@ -1,114 +1,82 @@
-// API functions for Itemize app
+import api from '../lib/api';
 
-import { List, ListItem } from '@/types';
-import api from '@/lib/api';
+// Types for API requests
+export interface CreateNotePayload {
+  content: string;
+  color_value: string;
+  position_x: number;
+  position_y: number;
+  width?: number;
+  height?: number;
+  z_index?: number;
+}
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Helper function to get auth headers with token
+const getAuthHeaders = (token?: string) => {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
-// Helper function for API requests
-const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('itemize_token');
-  
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-    ...(token && { Authorization: `Bearer ${token}` })
-  };
-  
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers
+// List API functions
+export const fetchCanvasLists = async (token?: string) => {
+  const response = await api.get('/api/canvas/lists', {
+    headers: getAuthHeaders(token)
   });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'An error occurred' }));
-    throw new Error(error.error || 'An error occurred');
-  }
-  
-  return response.json();
+  return response.data;
 };
 
-// Authentication APIs
-export const loginUser = async (email: string, password: string) => {
-  return fetchWithAuth('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password })
+export const createList = async (listData: any, token?: string) => {
+  const response = await api.post('/api/lists', listData, {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-export const registerUser = async (email: string, password: string) => {
-  return fetchWithAuth('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify({ email, password })
+export const updateList = async (listData: any, token?: string) => {
+  const response = await api.put(`/api/lists/${listData.id}`, listData, {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-export const requestPasswordReset = async (email: string) => {
-  return fetchWithAuth('/auth/request-reset', {
-    method: 'POST',
-    body: JSON.stringify({ email })
+export const deleteList = async (listId: string, token?: string) => {
+  const response = await api.delete(`/api/lists/${listId}`, {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-// Lists APIs
-export const fetchLists = async (): Promise<List[]> => {
-  return fetchWithAuth('/api/lists');
-};
-
-export const fetchCanvasLists = async (): Promise<List[]> => {
-  return fetchWithAuth('/api/canvas/lists');
-};
-
-export const createList = async (list: Omit<List, 'id'>, position?: { x: number, y: number }): Promise<List> => {
-  const listData = { ...list };
-  
-  // If position is provided, add it to the list data
-  if (position) {
-    listData.position_x = position.x;
-    listData.position_y = position.y;
-  }
-  
-  return fetchWithAuth('/api/lists', {
-    method: 'POST',
-    body: JSON.stringify(listData)
+export const updateListPosition = async (listId: string, x: number, y: number, token?: string) => {
+  const response = await api.put(`/api/lists/${listId}/position`, { x, y }, {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-export const updateList = async (list: List): Promise<List> => {
-  return fetchWithAuth(`/api/lists/${list.id}`, {
-    method: 'PUT',
-    body: JSON.stringify(list)
+// Note API functions
+export const getNotes = async (token?: string) => {
+  const response = await api.get('/api/notes', {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-export const updateListPosition = async (listId: string, x: number, y: number): Promise<List> => {
-  return fetchWithAuth(`/api/lists/${listId}/position`, {
-    method: 'PUT',
-    body: JSON.stringify({ x, y })
+export const createNote = async (noteData: CreateNotePayload, token?: string) => {
+  const response = await api.post('/api/notes', noteData, {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-export const deleteList = async (listId: string): Promise<void> => {
-  return fetchWithAuth(`/api/lists/${listId}`, {
-    method: 'DELETE'
+export const updateNote = async (noteId: number, noteData: any, token?: string) => {
+  const response = await api.put(`/api/notes/${noteId}`, noteData, {
+    headers: getAuthHeaders(token)
   });
+  return response.data;
 };
 
-// AI suggestion APIs
-export const getSuggestions = async (listId: string): Promise<string[]> => {
-  return fetchWithAuth(`/api/lists/${listId}/suggestions`);
-};
-
-// Export all API functions
-export default {
-  loginUser,
-  registerUser,
-  requestPasswordReset,
-  fetchLists,
-  fetchCanvasLists,
-  createList,
-  updateList,
-  updateListPosition,
-  deleteList,
-  getSuggestions
+export const deleteNote = async (noteId: number, token?: string) => {
+  const response = await api.delete(`/api/notes/${noteId}`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
 };

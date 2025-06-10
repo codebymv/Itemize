@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { List, ListItem } from '@/types';
 import { createList } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NewListModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const NewListModal: React.FC<NewListModalProps> = ({
   existingCategories,
   position
 }) => {
+  const { token } = useAuth();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -53,10 +55,12 @@ export const NewListModal: React.FC<NewListModalProps> = ({
         title,
         type: selectedCategory,
         items: [],
+        // Add position if provided
+        ...(position && { position_x: position.x, position_y: position.y }),
       };
       
-      // Call API to create the list with position if provided
-      const createdList = await createList(newList, position);
+      // Call API to create the list with token
+      const createdList = await createList(newList, token);
       
       // Notify parent component
       onListCreated(createdList);

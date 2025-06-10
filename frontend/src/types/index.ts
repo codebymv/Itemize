@@ -23,3 +23,19 @@ export interface ListCardProps {
   onDelete: (listId: string) => void;
   existingCategories: string[];
 }
+
+export interface Note {
+  id: number;
+  user_id: number;
+  title: string;
+  content: string;
+  category?: string; // Optional category field, defaults to "General" (null)
+  color_value: string;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  z_index: number;
+  created_at: string;
+  updated_at: string;
+}

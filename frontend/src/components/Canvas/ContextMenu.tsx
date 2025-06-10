@@ -1,9 +1,11 @@
 import React from 'react';
+import { CheckSquare, StickyNote } from 'lucide-react';
 import { List } from '../../types';
 
 interface ContextMenuProps {
   position: { x: number, y: number };
   onAddList: () => void;
+  onAddNote?: () => void; // Optional for now, will make required as we implement
   onClose: () => void;
   isFromButton?: boolean;
   absolutePosition?: { x: number, y: number };
@@ -12,6 +14,7 @@ interface ContextMenuProps {
 export const ContextMenu: React.FC<ContextMenuProps> = ({ 
   position, 
   onAddList,
+  onAddNote,
   onClose,
   isFromButton = false,
   absolutePosition
@@ -30,13 +33,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         top: isFromButton && absolutePosition ? `${absolutePosition.y}px` : `${position.y}px`,
         left: isFromButton && absolutePosition ? `${absolutePosition.x}px` : `${position.x}px`,
         transform: 'translateX(-50%)',
-        zIndex: 1000,
+        zIndex: 2000, // Higher z-index to ensure it's above everything
         backgroundColor: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: '0.375rem',
         boxShadow: isFromButton 
-          ? '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' 
-          : '0 2px 10px rgba(0,0,0,0.1)',
+          ? '0 4px 12px rgba(0,0,0,0.15)'
+          : '0 4px 15px rgba(0,0,0,0.3)',
         padding: '0.5rem 0',
         minWidth: '180px',
         marginTop: isFromButton ? '0' : '10px'
@@ -50,21 +53,46 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '0.5rem 1rem',
+            padding: '0.75rem 1rem',
             cursor: 'pointer',
             backgroundColor: 'transparent',
             border: 'none',
             width: '100%',
             textAlign: 'left',
-            fontWeight: '500',
-            fontSize: '0.875rem'
+            fontWeight: '300',
+            fontSize: '0.875rem',
+            transition: 'background-color 0.15s ease'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-1)'}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          <span className="icon" style={{ marginRight: '0.5rem' }}>+</span>
+          <CheckSquare className="h-4 w-4 mr-3 text-slate-500" />
           <span>Add List</span>
         </button>
+        {onAddNote && (
+          <button 
+            className="menu-item"
+            onClick={(e) => handleClickItem(e, onAddNote)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0.75rem 1rem',
+              cursor: 'pointer',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              fontWeight: '300',
+              fontSize: '0.875rem',
+              transition: 'background-color 0.15s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <StickyNote className="h-4 w-4 mr-3 text-slate-500" />
+            <span>Add Note</span>
+          </button>
+        )}
       </div>
     </div>
   );
