@@ -580,27 +580,23 @@ const CanvasPage: React.FC = () => {
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Plus className="h-8 w-8 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-light text-slate-900 mb-2">
-                    Create your first content
+                  <h3 className="text-lg font-light text-slate-900 mb-6">
+                    No content on your canvas<br/>(for now!)
                   </h3>
-                  <p className="text-slate-600 mb-6">
-                    Get organized with custom lists for any purpose, or create notes for quick thoughts and reminders.
-                  </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button 
                       onClick={() => setShowCreateModal(true)}
                       className="bg-blue-600 hover:bg-blue-700 font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Create List
+                      Add List
                     </Button>
                     <Button 
                       onClick={() => setShowCreateNoteModal(true)}
-                      variant="outline"
-                      className="border-blue-600 text-blue-600 hover:bg-blue-50 font-normal"
+                      className="bg-blue-600 hover:bg-blue-700 font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Note
+                      Add Note
                     </Button>
                   </div>
                 </div>

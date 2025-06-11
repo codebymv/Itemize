@@ -94,16 +94,8 @@ const Navbar: React.FC = () => {
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <Avatar className="h-9 w-9 border-2 border-primary/10">
-                      <AvatarImage 
-                        src={currentUser.photoURL || ''} 
-                        alt={currentUser.name || 'User'} 
-                      />
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                        {getUserInitials(currentUser)}
-                      </AvatarFallback>
-                    </Avatar>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 bg-blue-600 hover:bg-blue-700 border-0">
+                    <User className="h-5 w-5 text-white" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
