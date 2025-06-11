@@ -388,8 +388,8 @@ const CanvasPage: React.FC = () => {
                   
                   {/* Loading indicator */}
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary mr-2"></div>
-                    <span>Loading...</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-black">Loading...</span>
                   </div>
                 </div>
               </div>
