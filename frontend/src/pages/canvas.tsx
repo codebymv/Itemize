@@ -15,6 +15,7 @@ import { ListCard } from "../components/ListCard";
 import { useAuth } from "../contexts/AuthContext";
 import { NoteCard } from '../components/NoteCard';
 import { NewNoteModal } from '../components/NewNoteModal';
+import { NewListModal } from '../components/NewListModal';
 import { useUnifiedCategories } from '../hooks/useUnifiedCategories';
 
 const CanvasPage: React.FC = () => {
@@ -29,6 +30,7 @@ const CanvasPage: React.FC = () => {
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteInitialPosition, setNewNoteInitialPosition] = useState<{ x: number, y: number } | null>(null);
+  const [showNewListModal, setShowNewListModal] = useState(false);
   const { toast } = useToast();
   const { token } = useAuth();
 
@@ -58,6 +60,51 @@ const CanvasPage: React.FC = () => {
   // Collapsible state management - persists across filter changes
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
   const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
+  
+  // Utility function for intelligent positioning of mobile-created items
+  const getIntelligentPosition = () => {
+    const centerX = 2000; // Canvas center X coordinate
+    const centerY = 2000; // Canvas center Y coordinate  
+    const baseSpreadRadius = 300; // Base random spread area around center
+    const itemWidth = 350; // Approximate width of list/note cards
+    const itemHeight = 250; // Approximate height of list/note cards
+    const minDistance = 50; // Minimum distance between items
+    
+    // Get all existing positions from lists and notes
+    const existingPositions: Array<{ x: number; y: number }> = [
+      ...lists.map(list => ({ x: list.position_x || 0, y: list.position_y || 0 })),
+      ...notes.map(note => ({ x: note.position_x, y: note.position_y }))
+    ];
+    
+    // Function to check if a position overlaps with existing items
+    const hasOverlap = (newX: number, newY: number): boolean => {
+      return existingPositions.some(pos => {
+        const distanceX = Math.abs(newX - pos.x);
+        const distanceY = Math.abs(newY - pos.y);
+        return distanceX < (itemWidth + minDistance) && distanceY < (itemHeight + minDistance);
+      });
+    };
+    
+    // Try to find a non-overlapping position
+    let attempts = 0;
+    const maxAttempts = 20;
+    let position;
+    
+    do {
+      const spreadRadius = baseSpreadRadius + (attempts * 50); // Increase spread radius with each attempt
+      const randomX = (Math.random() - 0.5) * spreadRadius * 2;
+      const randomY = (Math.random() - 0.5) * spreadRadius * 2;
+      
+      position = {
+        x: centerX + randomX,
+        y: centerY + randomY
+      };
+      
+      attempts++;
+    } while (hasOverlap(position.x, position.y) && attempts < maxAttempts);
+    
+    return position;
+  };
   
   // Helper functions for managing collapsible state
   const isListCollapsed = (listId: string) => collapsedListIds.has(listId);
@@ -229,7 +276,15 @@ const CanvasPage: React.FC = () => {
   // CRUD operations for lists (used by mobile view)
   const createList = async (title: string, type: string, color: string) => {
     try {
-      const response = await apiCreateList({ title, type, items: [] }, token);
+      const position = getIntelligentPosition();
+      
+      const response = await apiCreateList({ 
+        title, 
+        type, 
+        items: [], 
+        position_x: position.x,
+        position_y: position.y
+      }, token);
       
       // Handle the response properly based on the API response structure
       const newList: List = {
@@ -238,6 +293,8 @@ const CanvasPage: React.FC = () => {
         type: response.type || 'General', // Use the type field directly
         items: response.items || [], // Ensure items is an array
         createdAt: new Date(response.createdAt),
+        position_x: response.position_x || position.x, // Ensure position is set
+        position_y: response.position_y || position.y,
         // Add any other required List properties
       };
       
@@ -300,6 +357,12 @@ const CanvasPage: React.FC = () => {
     }
   };
 
+  // Handler for NewListModal list creation
+  const handleNewListCreated = (newList: List) => {
+    setLists(prev => [newList, ...prev]);
+    setShowNewListModal(false);
+  };
+
   const handleOpenNewNoteModal = (position: { x: number, y: number }) => {
     setNewNoteInitialPosition(position);
     setShowNewNoteModal(true);
@@ -309,15 +372,8 @@ const CanvasPage: React.FC = () => {
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
     
-    if (isMobileView) {
-      // On mobile, use the mobile CreateListModal
-      setShowCreateModal(true);
-    } else {
-      // On desktop, use the canvas NewListModal
-      if (canvasMethodsRef.current) {
-        canvasMethodsRef.current.showNewListModal();
-      }
-    }
+    // Use the same NewListModal for both mobile and desktop for consistency
+    setShowNewListModal(true);
   };
 
   const handleButtonAddNote = () => {
@@ -329,14 +385,13 @@ const CanvasPage: React.FC = () => {
   // Mobile note creation function (mirrors createList)
   const createNote = async (title: string, category: string, color: string) => {
     try {
-      // For mobile, create note at a default position
-      const defaultPosition = { x: 50, y: 50 };
+      const position = getIntelligentPosition();
       
       const response = await apiCreateNote({
         content: title, // Just use the title as content
         color_value: color, // Use selected color
-        position_x: defaultPosition.x,
-        position_y: defaultPosition.y,
+        position_x: position.x,
+        position_y: position.y,
         width: 200,
         height: 200,
         z_index: 0,
@@ -512,7 +567,7 @@ const CanvasPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-shrink-0">
               <Palette className="h-5 w-5 text-slate-600" />
-              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
+              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
               
               {/* Desktop search - next to My Canvas */}
               <div className="relative hidden sm:block ml-4">
@@ -618,7 +673,7 @@ const CanvasPage: React.FC = () => {
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button 
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={() => setShowNewListModal(true)}
                       className="bg-blue-600 hover:bg-blue-700 font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -753,6 +808,17 @@ const CanvasPage: React.FC = () => {
           onCreateNote={handleCreateNote} 
           initialPosition={newNoteInitialPosition}
           existingCategories={categoryNames}
+        />
+      )}
+
+      {/* Unified New List Modal - used by both mobile and desktop */}
+      {showNewListModal && (
+        <NewListModal
+          isOpen={showNewListModal}
+          onClose={() => setShowNewListModal(false)}
+          onListCreated={handleNewListCreated}
+          existingCategories={categoryNames}
+          position={getIntelligentPosition()} // Use intelligent positioning for mobile-created lists
         />
       )}
 

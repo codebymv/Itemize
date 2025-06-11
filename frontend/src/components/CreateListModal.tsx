@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { List, Plus, ChevronsUpDown, Check } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ColorPicker } from "@/components/ui/color-picker";
 
 interface CreateListModalProps {
   isOpen: boolean;
@@ -21,6 +21,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
   const [customType, setCustomType] = useState('');
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [color, setColor] = useState('#3B82F6'); // Default blue color
 
   useEffect(() => {
     // If a category is selected from the dropdown, update customType
@@ -41,15 +42,17 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
     e.preventDefault();
     if (title.trim()) {
       const listType = customType.trim() || 'General';
-      onCreateList(title.trim(), listType, '#3B82F6'); // Default blue color
+      onCreateList(title.trim(), listType, color); // Use selected color
       setTitle('');
       setCustomType('');
+      setColor('#3B82F6'); // Reset color to default
     }
   };
 
   const handleClose = () => {
     setTitle('');
     setCustomType('');
+    setColor('#3B82F6'); // Reset color to default
     onClose();
   };
 

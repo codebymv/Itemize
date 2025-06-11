@@ -152,7 +152,7 @@ setTimeout(async () => {
       // Create a new list
       app.post('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
-          const { title, category, items, color_value } = req.body;
+          const { title, category, items, color_value, position_x, position_y } = req.body;
           
           if (!title) {
             return res.status(400).json({ error: 'Title is required' });
@@ -160,8 +160,16 @@ setTimeout(async () => {
 
           const client = await actualPool.connect();
           const result = await client.query(
-            'INSERT INTO lists (title, category, items, user_id, color_value) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title, category || 'General', JSON.stringify(items || []), req.user.id, color_value || null]
+            'INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [
+              title, 
+              category || 'General', 
+              JSON.stringify(items || []), 
+              req.user.id, 
+              color_value || null,
+              position_x || 0, // Default to 0 if not provided
+              position_y || 0  // Default to 0 if not provided
+            ]
           );
           client.release();
           

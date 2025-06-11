@@ -129,9 +129,6 @@ const ListCard: React.FC<ListCardProps> = ({
           if (currentlyOpen !== open) {
             onToggleCollapsed();
           }
-        } else {
-          // Use internal state management
-          setIsCollapsibleOpen(open);
         }
       }}
       className="w-full mb-4"
