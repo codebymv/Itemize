@@ -180,10 +180,6 @@ const CanvasPage: React.FC = () => {
       
       // Category is now managed by unified category system
       
-      toast({
-        title: "Note created!",
-        description: `Your note "${title}" has been created on the canvas.`,
-      });
       setShowNewNoteModal(false);
     } catch (error) {
       console.error('Failed to create note:', error);
