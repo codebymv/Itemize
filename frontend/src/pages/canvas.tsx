@@ -25,7 +25,7 @@ const CanvasPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
@@ -508,16 +508,14 @@ const CanvasPage: React.FC = () => {
 
   // Utility functions for filtering lists and notes with unified categories
   const getUniqueTypes = () => {
-    const types = ['all', ...categoryNames];
-    // Ensure there are no duplicates or empty values
-    return Array.from(new Set(types.filter(Boolean)));
+    // Return only actual categories, no "all" filter
+    return Array.from(new Set(categoryNames.filter(Boolean)));
   };
 
   const getFilteredContent = () => {
     // Use unified category filtering for both lists and notes
-    const { filteredLists, filteredNotes } = filterByCategory(
-      selectedFilter !== 'all' ? selectedFilter : null
-    );
+    // null selectedFilter means show all content (no filtering)
+    const { filteredLists, filteredNotes } = filterByCategory(selectedFilter);
     
     // Apply search filter to lists
     let searchFilteredLists = [...filteredLists];
@@ -547,7 +545,7 @@ const CanvasPage: React.FC = () => {
   
   // Get count of lists and notes per category for filter tabs
   const getFilterCounts = () => {
-    const counts: Record<string, number> = { all: lists.length + notes.length };
+    const counts: Record<string, number> = {};
     
     // Use unified category data for counts
     categories.forEach(category => {
@@ -641,22 +639,35 @@ const CanvasPage: React.FC = () => {
   const MobileListView = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8 overflow-x-auto pb-2">
-          {getUniqueTypes().map((filter) => {
-            const count = getFilterCounts()[filter] || 0;
-            return (
-              <Button
-                key={filter}
-                variant={selectedFilter === filter ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedFilter(filter)}
-                className={`capitalize font-light ${selectedFilter === filter ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-              >
-                {filter} ({count})
-              </Button>
-            );
-          })}
+        {/* Categories Section */}
+        <div className="flex items-center gap-4 mb-8">
+          <h3 className="text-lg font-light text-slate-900 flex-shrink-0">Categories</h3>
+          
+          {/* Filter Tabs - Horizontal scrolling */}
+          <div className="flex gap-2 overflow-x-auto flex-1 pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {getUniqueTypes().map((filter) => {
+              const count = getFilterCounts()[filter] || 0;
+              const isActive = selectedFilter === filter;
+              return (
+                <Button
+                  key={filter}
+                  variant={isActive ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    // Toggle filter - if clicking active filter, turn it off (show all)
+                    if (isActive) {
+                      setSelectedFilter(null);
+                    } else {
+                      setSelectedFilter(filter);
+                    }
+                  }}
+                  className={`capitalize font-light whitespace-nowrap flex-shrink-0 ${isActive ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                >
+                  {filter} ({count})
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Content section - Lists and Notes */}
@@ -756,6 +767,15 @@ const CanvasPage: React.FC = () => {
           body { overflow: hidden !important; }
           html { overflow: hidden !important; }
         ` : ''}
+        
+        /* Hide scrollbar for horizontal category scrolling */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
       `}</style>
       <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
         <HeaderSection />

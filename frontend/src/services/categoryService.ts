@@ -25,34 +25,32 @@ export class CategoryService {
 
     // Process list categories (lists use 'type' field for category)
     lists.forEach(list => {
-      if (list.type && list.type.trim()) {
-        const category = list.type.trim();
-        const existing = categoryMap.get(category) || {
-          name: category,
-          listCount: 0,
-          noteCount: 0,
-          totalCount: 0
-        };
-        existing.listCount++;
-        existing.totalCount++;
-        categoryMap.set(category, existing);
-      }
+      // Treat empty/null/undefined categories as "General"
+      const category = (list.type && list.type.trim()) ? list.type.trim() : 'General';
+      const existing = categoryMap.get(category) || {
+        name: category,
+        listCount: 0,
+        noteCount: 0,
+        totalCount: 0
+      };
+      existing.listCount++;
+      existing.totalCount++;
+      categoryMap.set(category, existing);
     });
 
     // Process note categories
     notes.forEach(note => {
-      if (note.category && note.category.trim()) {
-        const category = note.category.trim();
-        const existing = categoryMap.get(category) || {
-          name: category,
-          listCount: 0,
-          noteCount: 0,
-          totalCount: 0
-        };
-        existing.noteCount++;
-        existing.totalCount++;
-        categoryMap.set(category, existing);
-      }
+      // Treat empty/null/undefined categories as "General"
+      const category = (note.category && note.category.trim()) ? note.category.trim() : 'General';
+      const existing = categoryMap.get(category) || {
+        name: category,
+        listCount: 0,
+        noteCount: 0,
+        totalCount: 0
+      };
+      existing.noteCount++;
+      existing.totalCount++;
+      categoryMap.set(category, existing);
     });
 
     const categories = Array.from(categoryMap.values())
@@ -80,13 +78,15 @@ export class CategoryService {
       return { filteredLists: lists, filteredNotes: notes };
     }
 
-    const filteredLists = lists.filter(list => 
-      list.type?.trim().toLowerCase() === categoryFilter.toLowerCase()
-    );
+    const filteredLists = lists.filter(list => {
+      const listCategory = (list.type && list.type.trim()) ? list.type.trim() : 'General';
+      return listCategory.toLowerCase() === categoryFilter.toLowerCase();
+    });
 
-    const filteredNotes = notes.filter(note => 
-      note.category?.trim().toLowerCase() === categoryFilter.toLowerCase()
-    );
+    const filteredNotes = notes.filter(note => {
+      const noteCategory = (note.category && note.category.trim()) ? note.category.trim() : 'General';
+      return noteCategory.toLowerCase() === categoryFilter.toLowerCase();
+    });
 
     return { filteredLists, filteredNotes };
   }
@@ -117,13 +117,15 @@ export class CategoryService {
   static isCategoryInUse(lists: List[], notes: Note[], categoryName: string): boolean {
     const normalizedName = categoryName.trim().toLowerCase();
     
-    const inLists = lists.some(list => 
-      list.type?.trim().toLowerCase() === normalizedName
-    );
+    const inLists = lists.some(list => {
+      const listCategory = (list.type && list.type.trim()) ? list.type.trim() : 'General';
+      return listCategory.toLowerCase() === normalizedName;
+    });
     
-    const inNotes = notes.some(note => 
-      note.category?.trim().toLowerCase() === normalizedName
-    );
+    const inNotes = notes.some(note => {
+      const noteCategory = (note.category && note.category.trim()) ? note.category.trim() : 'General';
+      return noteCategory.toLowerCase() === normalizedName;
+    });
 
     return inLists || inNotes;
   }

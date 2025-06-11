@@ -152,18 +152,21 @@ setTimeout(async () => {
       // Create a new list
       app.post('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
-          const { title, category, items, color_value, position_x, position_y } = req.body;
+          const { title, category, type, items, color_value, position_x, position_y } = req.body;
           
           if (!title) {
             return res.status(400).json({ error: 'Title is required' });
           }
+
+          // Handle both 'category' and 'type' field names for compatibility
+          const categoryValue = category || type || 'General';
 
           const client = await actualPool.connect();
           const result = await client.query(
             'INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [
               title, 
-              category || 'General', 
+              categoryValue, 
               JSON.stringify(items || []), 
               req.user.id, 
               color_value || null,
@@ -173,7 +176,13 @@ setTimeout(async () => {
           );
           client.release();
           
-          res.status(201).json(result.rows[0]);
+          // Map database field 'category' to frontend field 'type' for consistency
+          const mappedResult = {
+            ...result.rows[0],
+            type: result.rows[0].category
+          };
+          
+          res.status(201).json(mappedResult);
         } catch (error) {
           console.error('Error creating list:', error);
           res.status(500).json({ error: 'Internal server error' });
@@ -184,12 +193,15 @@ setTimeout(async () => {
       app.put('/api/lists/:id', global.authenticateJWT, async (req, res) => {
         try {
           const { id } = req.params;
-          const { title, category, items, color_value } = req.body;
+          const { title, category, type, items, color_value } = req.body;
+          
+          // Handle both 'category' and 'type' field names for compatibility
+          const categoryValue = category || type || 'General';
           
           const client = await actualPool.connect();
           const result = await client.query(
             'UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4 WHERE id = $5 AND user_id = $6 RETURNING *',
-            [title, category, JSON.stringify(items), color_value, id, req.user.id]
+            [title, categoryValue, JSON.stringify(items), color_value, id, req.user.id]
           );
           client.release();
           
@@ -197,7 +209,13 @@ setTimeout(async () => {
             return res.status(404).json({ error: 'List not found' });
           }
           
-          res.json(result.rows[0]);
+          // Map database field 'category' to frontend field 'type' for consistency
+          const mappedResult = {
+            ...result.rows[0],
+            type: result.rows[0].category
+          };
+          
+          res.json(mappedResult);
         } catch (error) {
           console.error('Error updating list:', error);
           res.status(500).json({ error: 'Internal server error' });
