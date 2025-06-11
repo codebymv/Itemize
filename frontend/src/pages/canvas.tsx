@@ -422,7 +422,7 @@ const CanvasPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-slate-600" />
+                    <Palette className="h-5 w-5" style={{ color: '#306ce4' }} />
                     <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
                   </div>
                   
@@ -467,7 +467,7 @@ const CanvasPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-slate-600" />
+                    <Palette className="h-5 w-5" style={{ color: '#306ce4' }} />
                     <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
                   </div>
                   
@@ -564,7 +564,7 @@ const CanvasPage: React.FC = () => {
         <div className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Palette className="h-5 w-5 text-slate-600" />
+              <Palette className="h-5 w-5" style={{ color: '#306ce4' }} />
               <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
               
               {/* Desktop search - next to My Canvas */}
