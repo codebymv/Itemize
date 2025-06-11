@@ -29,7 +29,9 @@ const ListCard: React.FC<ListCardProps> = ({
   list, 
   onUpdate, 
   onDelete, 
-  existingCategories 
+  existingCategories,
+  isCollapsed,
+  onToggleCollapsed
 }) => {
   const {
     // Collapsible
@@ -64,7 +66,7 @@ const ListCard: React.FC<ListCardProps> = ({
     
     // Refs
     titleEditRef, newItemInputRef
-  } = useListCardLogic({ list, onUpdate, onDelete });
+  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -119,7 +121,16 @@ const ListCard: React.FC<ListCardProps> = ({
   return (
     <Collapsible
       open={isCollapsibleOpen}
-      onOpenChange={setIsCollapsibleOpen}
+      onOpenChange={(open) => {
+        // If using external collapsible state, call the toggle function when state should change
+        if (onToggleCollapsed && isCollapsed !== undefined) {
+          // Only toggle if the current state is different from desired state
+          const currentlyOpen = !isCollapsed;
+          if (currentlyOpen !== open) {
+            onToggleCollapsed();
+          }
+        }
+      }}
       className="w-full mb-4"
       style={{ '--list-color': listDisplayColor } as React.CSSProperties}
     >

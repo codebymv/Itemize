@@ -8,9 +8,11 @@ interface UseListCardLogicProps {
   list: List;
   onUpdate: (list: List) => void;
   onDelete: (listId: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
-export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicProps) => {
+export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed }: UseListCardLogicProps) => {
   // Use the global AI suggestions context
   const { aiEnabled, setAiEnabled } = useAISuggest();
 
@@ -47,8 +49,9 @@ export const useListCardLogic = ({ list, onUpdate, onDelete }: UseListCardLogicP
   
   const { toast } = useToast();
   
-  // Component state
-  const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true);
+  // Component state - use external collapsible state if provided, otherwise default to true (open)
+  const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : true;
+  const setIsCollapsibleOpen = onToggleCollapsed || (() => {});
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(list.title);
   const [isEditingCategory, setIsEditingCategory] = useState(false);

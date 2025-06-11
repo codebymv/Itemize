@@ -55,6 +55,37 @@ const CanvasPage: React.FC = () => {
   const [showButtonContextMenu, setShowButtonContextMenu] = useState(false);
   const [buttonMenuPosition, setButtonMenuPosition] = useState({ x: 0, y: 0 });
   
+  // Collapsible state management - persists across filter changes
+  const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
+  const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
+  
+  // Helper functions for managing collapsible state
+  const isListCollapsed = (listId: string) => collapsedListIds.has(listId);
+  const toggleListCollapsed = (listId: string) => {
+    setCollapsedListIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(listId)) {
+        newSet.delete(listId);
+      } else {
+        newSet.add(listId);
+      }
+      return newSet;
+    });
+  };
+  
+  const isNoteCollapsed = (noteId: number) => collapsedNoteIds.has(noteId);
+  const toggleNoteCollapsed = (noteId: number) => {
+    setCollapsedNoteIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(noteId)) {
+        newSet.delete(noteId);
+      } else {
+        newSet.add(noteId);
+      }
+      return newSet;
+    });
+  };
+  
   // Check viewport size for responsive layout
   useEffect(() => {
     const checkMobileView = () => {
@@ -281,9 +312,15 @@ const CanvasPage: React.FC = () => {
   // Handler for button context menu actions
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
-    // Open the NewListModal directly
-    if (canvasMethodsRef.current) {
-      canvasMethodsRef.current.showNewListModal();
+    
+    if (isMobileView) {
+      // On mobile, use the mobile CreateListModal
+      setShowCreateModal(true);
+    } else {
+      // On desktop, use the canvas NewListModal
+      if (canvasMethodsRef.current) {
+        canvasMethodsRef.current.showNewListModal();
+      }
     }
   };
 
@@ -622,6 +659,8 @@ const CanvasPage: React.FC = () => {
                       onUpdate={updateList}
                       onDelete={deleteList}
                       existingCategories={categoryNames}
+                      isCollapsed={isListCollapsed(list.id)}
+                      onToggleCollapsed={() => toggleListCollapsed(list.id)}
                     />
                   ))}
                 </div>
@@ -644,6 +683,8 @@ const CanvasPage: React.FC = () => {
                         await handleDeleteNote(noteId);
                       }}
                       existingCategories={categoryNames}
+                      isCollapsed={isNoteCollapsed(note.id)}
+                      onToggleCollapsed={() => toggleNoteCollapsed(note.id)}
                     />
                   ))}
                 </div>

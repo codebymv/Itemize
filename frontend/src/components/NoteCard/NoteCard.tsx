@@ -19,6 +19,8 @@ interface NoteCardProps {
   onDelete: (noteId: number) => Promise<void>;
   existingCategories: string[];
   onCollapsibleChange?: (isOpen: boolean) => void;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 const NoteCard: React.FC<NoteCardProps> = ({ 
@@ -26,7 +28,9 @@ const NoteCard: React.FC<NoteCardProps> = ({
   onUpdate, 
   onDelete, 
   existingCategories,
-  onCollapsibleChange
+  onCollapsibleChange,
+  isCollapsed,
+  onToggleCollapsed
 }) => {
   const {
     // Title for display
@@ -57,7 +61,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
     
     // Refs
     titleEditRef, contentEditRef
-  } = useNoteCardLogic({ note, onUpdate, onDelete });
+  } = useNoteCardLogic({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed });
 
   // Implement click outside handler for title editing
   useEffect(() => {
@@ -102,7 +106,14 @@ const NoteCard: React.FC<NoteCardProps> = ({
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={(open) => {
-        setIsCollapsibleOpen(open);
+        // If using external collapsible state, call the toggle function when state should change
+        if (onToggleCollapsed && isCollapsed !== undefined) {
+          // Only toggle if the current state is different from desired state
+          const currentlyOpen = !isCollapsed;
+          if (currentlyOpen !== open) {
+            onToggleCollapsed();
+          }
+        }
         onCollapsibleChange?.(open);
       }}
       className="w-full"

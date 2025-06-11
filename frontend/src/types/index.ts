@@ -22,6 +22,8 @@ export interface ListCardProps {
   onUpdate: (list: List) => void;
   onDelete: (listId: string) => void;
   existingCategories: string[];
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 export interface Note {
