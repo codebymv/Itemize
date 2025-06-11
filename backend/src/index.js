@@ -21,9 +21,14 @@ app.use(express.json());
 app.use(helmet());
 app.use(morgan('combined'));
 
-// Force HTTPS in production
+// Force HTTPS in production (but exclude health checks)
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
+    // Skip HTTPS redirect for health check endpoints
+    if (req.path === '/health' || req.path === '/api/health') {
+      return next();
+    }
+    
     if (req.header('x-forwarded-proto') !== 'https') {
       return res.redirect(301, `https://${req.header('host')}${req.url}`);
     }
