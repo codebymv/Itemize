@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
@@ -109,61 +111,116 @@ const NoteCard: React.FC<NoteCardProps> = ({
       <Card className="w-full shadow-sm h-full flex flex-col" style={{ border: 'none' }}>
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <ColorPicker
-                color={noteDisplayColor}
-                onChange={(newColor) => {
-                  setCurrentColorPreview(newColor);
-                }}
-                onSave={async (finalColor) => { 
-                  // Only save if color actually changed from original note color
-                  if (finalColor !== (note.color_value || '#FFFFE0')) {
-                    try {
-                      await handleSaveNoteColor(finalColor);
-                    } catch (error) {
-                      toast({
-                        title: 'Error',
-                        description: 'Could not save color. Reverting preview.',
-                        variant: 'destructive',
-                      });
-                      setCurrentColorPreview(note.color_value || '#FFFFE0'); // Revert preview on save error
+            {isEditing ? (
+              <div className="flex gap-1 w-full">
+                <Input
+                  ref={titleEditRef}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="h-8"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleEditTitle();
                     }
-                  }
-                }}
-              >
+                  }}
+                />
                 <Button
+                  size="sm"
                   variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 p-0 rounded-full flex items-center justify-center relative"
-                  aria-label="Change note color"
-                  disabled={isSavingColor}
+                  onClick={handleEditTitle}
+                  className="h-8 w-8 p-0"
                 >
-                  <span
-                    className="inline-block w-3 h-3 rounded-full border border-gray-400 transition-colors duration-150"
-                    style={{ backgroundColor: noteDisplayColor }}
-                  />
-                  {isSavingColor && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
-                      <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
-                    </div>
-                  )}
+                  <Check className="h-4 w-4" />
                 </Button>
-              </ColorPicker>
-              <CardTitle 
-                className="text-lg font-medium cursor-pointer"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              >
-                {noteTitle}
-              </CardTitle>
-            </div>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <ChevronDown className={cn(
-                  "h-4 w-4 transition-transform",
-                  isCollapsibleOpen ? "" : "transform rotate-180"
-                )}/>
-              </Button>
-            </CollapsibleTrigger>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsEditing(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <ColorPicker
+                    color={noteDisplayColor}
+                    onChange={(newColor) => {
+                      setCurrentColorPreview(newColor);
+                    }}
+                    onSave={async (finalColor) => { 
+                      // Only save if color actually changed from original note color
+                      if (finalColor !== (note.color_value || '#FFFFE0')) {
+                        try {
+                          await handleSaveNoteColor(finalColor);
+                        } catch (error) {
+                          toast({
+                            title: 'Error',
+                            description: 'Could not save color. Reverting preview.',
+                            variant: 'destructive',
+                          });
+                          setCurrentColorPreview(note.color_value || '#FFFFE0'); // Revert preview on save error
+                        }
+                      }
+                    }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 p-0 rounded-full flex items-center justify-center relative"
+                      aria-label="Change note color"
+                      disabled={isSavingColor}
+                    >
+                      <span
+                        className="inline-block w-3 h-3 rounded-full border border-gray-400 transition-colors duration-150"
+                        style={{ backgroundColor: noteDisplayColor }}
+                      />
+                      {isSavingColor && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
+                          <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+                        </div>
+                      )}
+                    </Button>
+                  </ColorPicker>
+                  <CardTitle 
+                    className="text-lg font-medium cursor-pointer"
+                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    onClick={() => setIsEditing(true)}
+                  >
+                    {noteTitle}
+                  </CardTitle>
+                </div>
+                <div className="flex">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        isCollapsibleOpen ? "" : "transform rotate-180"
+                      )}/>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Edit Title
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDeleteNote} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Note
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </>
+            )}
           </div>
         </CardHeader>
 
