@@ -195,7 +195,11 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       lastApiCall.current = now;
       setLastTriggerContext(context);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.VITE_API_URL || (
+        import.meta.env.MODE === 'production' 
+          ? 'https://itemize.cloud' 
+          : 'http://localhost:3001'
+      );
       
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
         context,

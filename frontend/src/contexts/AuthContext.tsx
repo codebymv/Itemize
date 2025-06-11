@@ -129,7 +129,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Received user info from Google:', googleUser);
         
         // Now authenticate with your backend using the Google user info
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const apiUrl = import.meta.env.VITE_API_URL || (
+          import.meta.env.MODE === 'production' 
+            ? 'https://itemize.cloud' 
+            : 'http://localhost:3001'
+        );
         console.log('Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
         
         // Make API request with proper data
@@ -223,7 +227,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Call backend logout if needed
     if (backendLogoutFailures.current < 3) {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const apiUrl = import.meta.env.VITE_API_URL || (
+          import.meta.env.MODE === 'production' 
+            ? 'https://itemize.cloud' 
+            : 'http://localhost:3001'
+        );
         api.post(`/api/auth/logout`).catch((error) => {
           console.error('Backend logout failed:', error);
           backendLogoutFailures.current++;
@@ -242,7 +250,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Google One Tap login successful');
       
       // Send the credential to your backend
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.VITE_API_URL || (
+        import.meta.env.MODE === 'production' 
+          ? 'https://itemize.cloud' 
+          : 'http://localhost:3001'
+      );
       const response = await axios.post(`${apiUrl}/api/auth/google-credential`, {
         credential: credentialResponse.credential
       });

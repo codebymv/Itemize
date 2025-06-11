@@ -7,7 +7,11 @@ const BLOCKED_ENDPOINTS = [
 ];
 
 // Create axios instance with base URL
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const apiUrl = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'production' 
+    ? 'https://itemize.cloud' // Use your production domain
+    : 'http://localhost:3001'  // Use HTTP only in development
+);
 const api = axios.create({
   baseURL: apiUrl
 });

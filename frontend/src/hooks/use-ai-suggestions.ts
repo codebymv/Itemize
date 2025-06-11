@@ -136,7 +136,11 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       lastRequestTime.current = Date.now();
       
       // Get the API URL from environment or use default
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.VITE_API_URL || (
+        import.meta.env.MODE === 'production' 
+          ? 'https://itemize.cloud' 
+          : 'http://localhost:3001'
+      );
       
       const response = await axios.post<SuggestionResponse>(`${apiUrl}/api/suggestions`, {
         listTitle,
