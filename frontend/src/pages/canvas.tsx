@@ -423,10 +423,10 @@ const CanvasPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <Palette className="h-6 w-6 text-slate-600" />
-                    <h1 className="text-2xl font-light italic" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
+                    <h1 className="text-2xl font-light italic" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
                   </div>
                   
-                  {/* Desktop search - next to My Canvas */}
+                  {/* Desktop search - next to Canvas */}
                   <div className="relative hidden sm:block ml-4">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <div className="animate-pulse bg-slate-200 rounded-md w-48 h-9"></div>
@@ -468,10 +468,10 @@ const CanvasPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <Palette className="h-6 w-6 text-slate-600" />
-                    <h1 className="text-2xl font-light italic" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
+                    <h1 className="text-2xl font-light italic" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
                   </div>
                   
-                  {/* Desktop search - next to My Canvas */}
+                  {/* Desktop search - next to Canvas */}
                   <div className="relative hidden sm:block ml-4">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <Input
