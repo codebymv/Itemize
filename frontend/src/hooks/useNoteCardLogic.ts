@@ -14,9 +14,11 @@ interface UseNoteCardLogicProps {
 export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed }: UseNoteCardLogicProps) => {
   const { toast } = useToast();
   
-  // Collapsible state - use external collapsible state if provided, otherwise default to true (open)
-  const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : true;
-  const setIsCollapsibleOpen = onToggleCollapsed || (() => {});
+  // Collapsible state - use external collapsible state if provided, otherwise use internal state
+  const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
+  
+  const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
+  const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
   
   // Title editing state - now uses note.title directly
   const [isEditing, setIsEditing] = useState(false);

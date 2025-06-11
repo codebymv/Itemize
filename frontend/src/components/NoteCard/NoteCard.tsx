@@ -4,7 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check } from 'lucide-react';
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, StickyNote } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
@@ -113,6 +113,9 @@ const NoteCard: React.FC<NoteCardProps> = ({
           if (currentlyOpen !== open) {
             onToggleCollapsed();
           }
+        } else {
+          // Use internal state management
+          setIsCollapsibleOpen(open);
         }
         onCollapsibleChange?.(open);
       }}
@@ -195,6 +198,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       )}
                     </Button>
                   </ColorPicker>
+                  <StickyNote className="h-4 w-4 text-slate-500" />
                   <CardTitle 
                     className="text-lg font-medium cursor-pointer"
                     style={{ fontFamily: '"Raleway", sans-serif' }}

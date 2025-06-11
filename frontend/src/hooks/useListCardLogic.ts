@@ -49,9 +49,11 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   
   const { toast } = useToast();
   
-  // Component state - use external collapsible state if provided, otherwise default to true (open)
-  const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : true;
-  const setIsCollapsibleOpen = onToggleCollapsed || (() => {});
+  // Component state - use external collapsible state if provided, otherwise use internal state
+  const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
+  
+  const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
+  const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(list.title);
   const [isEditingCategory, setIsEditingCategory] = useState(false);
