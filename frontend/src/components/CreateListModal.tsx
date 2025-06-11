@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 interface CreateListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateList: (title: string, type: string) => void;
+  onCreateList: (title: string, type: string, color: string) => void;
   existingCategories: string[];
 }
 
@@ -41,7 +41,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
     e.preventDefault();
     if (title.trim()) {
       const listType = customType.trim() || 'General';
-      onCreateList(title.trim(), listType);
+      onCreateList(title.trim(), listType, '#3B82F6'); // Default blue color
       setTitle('');
       setCustomType('');
     }
@@ -102,6 +102,26 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
                       {customType.trim() ? `Create "${customType}"` : "No category found."}
                     </CommandEmpty>
                     <CommandGroup>
+                      {/* Always show General as first option */}
+                      {!existingCategories.includes('General') && (
+                        <CommandItem
+                          key="General"
+                          value="General"
+                          onSelect={(currentValue) => {
+                            setSelectedCategory(currentValue === selectedCategory ? "" : currentValue);
+                            setCustomType(currentValue === customType ? "" : currentValue);
+                            setPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              customType === "General" ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          General
+                        </CommandItem>
+                      )}
                       {existingCategories.map((category) => (
                         <CommandItem
                           key={category}
@@ -143,6 +163,11 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
             <p className="text-xs text-gray-500 mt-1">
               Select an existing category, type a new one, or leave empty for "General".
             </p>
+            {existingCategories.length === 0 && (
+              <p className="text-xs text-blue-600 mt-1">
+                No categories available yet. You can create your first category or use "General".
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">

@@ -132,11 +132,11 @@ const CanvasPage: React.FC = () => {
   }, [showButtonContextMenu]);
 
   // CRUD operations for Notes
-  const handleCreateNote = async (title: string, category: string, position: { x: number; y: number }) => {
+  const handleCreateNote = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
     try {
       const payloadWithDefaults: CreateNotePayload = {
         content: title, // Just use the title as content
-        color_value: '#FFFFE0', // Default yellow color
+        color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
         width: 200,
@@ -200,7 +200,7 @@ const CanvasPage: React.FC = () => {
   };
 
   // CRUD operations for lists (used by mobile view)
-  const createList = async (title: string, type: string) => {
+  const createList = async (title: string, type: string, color: string) => {
     try {
       const response = await apiCreateList({ title, type, items: [] }, token);
       
@@ -281,23 +281,27 @@ const CanvasPage: React.FC = () => {
   // Handler for button context menu actions
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
-    setShowCreateModal(true);
+    // Open the NewListModal directly
+    if (canvasMethodsRef.current) {
+      canvasMethodsRef.current.showNewListModal();
+    }
   };
 
   const handleButtonAddNote = () => {
     setShowButtonContextMenu(false);
-    setShowCreateNoteModal(true);
+    setNewNoteInitialPosition({ x: 100, y: 100 }); // Default position for button creation
+    setShowNewNoteModal(true);
   };
 
   // Mobile note creation function (mirrors createList)
-  const createNote = async (title: string, category: string) => {
+  const createNote = async (title: string, category: string, color: string) => {
     try {
       // For mobile, create note at a default position
       const defaultPosition = { x: 50, y: 50 };
       
       const response = await apiCreateNote({
         content: title, // Just use the title as content
-        color_value: '#FFFFE0', // Default yellow color
+        color_value: color, // Use selected color
         position_x: defaultPosition.x,
         position_y: defaultPosition.y,
         width: 200,
@@ -721,7 +725,10 @@ const CanvasPage: React.FC = () => {
 
       {/* Button Context Menu - rendered outside canvas transform */}
       {showButtonContextMenu && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'none' }}>
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'auto' }}
+          onClick={() => setShowButtonContextMenu(false)} // Close menu when clicking outside
+        >
           <ContextMenu
             position={{ x: 0, y: 0 }} // Not used for button context menu
             absolutePosition={buttonMenuPosition}

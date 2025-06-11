@@ -24,6 +24,7 @@ export interface CanvasContainerMethods {
   showAddNoteMenu: (position: { x: number, y: number }, isFromButton?: boolean, absolutePosition?: { x: number, y: number }) => void;
   hideContextMenu: () => void;
   isMenuOpenFromButton: () => boolean;
+  showNewListModal: () => void;
 }
 
 export const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -103,6 +104,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         },
         isMenuOpenFromButton: () => {
           return showContextMenu && menuIsFromButton;
+        },
+        showNewListModal: () => {
+          setShowNewListModal(true);
         }
       });
     }
@@ -508,6 +512,27 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           </div>
         ) : (
           <>
+            {/* Empty state when no content exists */}
+            {lists.length === 0 && notes.length === 0 && (
+              <div 
+                className="flex items-center justify-center h-full"
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  fontFamily: '"Raleway", sans-serif',
+                  fontSize: '18px',
+                  fontWeight: '300',
+                  zIndex: 10
+                }}
+              >
+                No content on your canvas (for now!)
+              </div>
+            )}
+
             {/* Draggable list cards */}
             {filteredLists.map(list => (
               <DraggableListCard

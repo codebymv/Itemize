@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 interface CreateNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateNote: (title: string, category: string) => void;
+  onCreateNote: (title: string, category: string, color: string) => void;
   existingCategories: string[];
 }
 
@@ -36,7 +36,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
       return;
     }
     
-    onCreateNote(title.trim(), selectedCategory);
+    onCreateNote(title.trim(), selectedCategory, '#FFFFE0');
     handleClose();
   };
 

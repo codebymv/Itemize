@@ -70,11 +70,17 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
             </div>
           ) : (
             <div className="flex flex-col space-y-1">
-              <Select onValueChange={handleEditCategory} defaultValue={currentCategory}>
+              <Select onValueChange={handleEditCategory} defaultValue={currentCategory || 'General'}>
                 <SelectTrigger className="h-8" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* Always include General as an option */}
+                  {!existingCategories.includes('General') && (
+                    <SelectItem value="General" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      General
+                    </SelectItem>
+                  )}
                   {existingCategories.map((category) => (
                     <SelectItem key={category} value={category} style={{ fontFamily: '"Raleway", sans-serif' }}>
                       {category}
@@ -104,7 +110,7 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
           style={{ fontFamily: '"Raleway", sans-serif' }}
           onClick={() => setIsEditingCategory(true)}
         >
-          {currentCategory && currentCategory !== '' ? currentCategory : 'Select a category'}
+          {currentCategory && currentCategory !== '' ? currentCategory : 'General'}
         </Badge>
       )}
     </div>
