@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plus, Filter, Palette } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
-import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload } from '../services/api';
+import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload, updateListPosition } from '../services/api';
 import { List, Note } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
@@ -16,7 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { NoteCard } from '../components/NoteCard';
 import { NewNoteModal } from '../components/NewNoteModal';
 import { NewListModal } from '../components/NewListModal';
-import { useUnifiedCategories } from '../hooks/useUnifiedCategories';
+import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 
 const CanvasPage: React.FC = () => {
   const [lists, setLists] = useState<List[]>([]);
@@ -39,16 +39,35 @@ const CanvasPage: React.FC = () => {
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [errorNotes, setErrorNotes] = useState<string | null>(null);
 
-  // Unified category management for both lists and notes
+  // Database-backed category management
   const {
-    categories,
+    categories: dbCategories,
     categoryNames,
-    totalCategories,
-    filterByCategory,
-    getCategorySuggestions,
+    loading: categoriesLoading,
+    addCategory,
     isCategoryInUse,
-    getCategoryDisplayText
-  } = useUnifiedCategories(lists, notes);
+    getCategoryByName
+  } = useDatabaseCategories();
+  
+  // Convert database categories to old format for compatibility
+  const categories = dbCategories.map(cat => ({
+    name: cat.name,
+    listCount: 0,
+    noteCount: 0,
+    totalCount: 0
+  }));
+  
+  // Filter function for backward compatibility
+  const filterByCategory = (categoryFilter: string | null) => {
+    if (!categoryFilter) {
+      return { filteredLists: lists, filteredNotes: notes };
+    }
+    
+    const filteredLists = lists.filter(list => list.type === categoryFilter);
+    const filteredNotes = notes.filter(note => note.category === categoryFilter);
+    
+    return { filteredLists, filteredNotes };
+  };
   
   // Reference to canvas container methods
   const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
@@ -212,6 +231,11 @@ const CanvasPage: React.FC = () => {
   // CRUD operations for Notes
   const handleCreateNote = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
     try {
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(category) && category !== 'General') {
+        await addCategory({ name: category, color_value: color });
+      }
+      
       const payloadWithDefaults: CreateNotePayload = {
         title: title, // Set the note title properly
         content: '', // Initialize with empty content
@@ -278,6 +302,11 @@ const CanvasPage: React.FC = () => {
   const createList = async (title: string, type: string, color: string) => {
     try {
       const position = getIntelligentPosition();
+      
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(type) && type !== 'General') {
+        await addCategory({ name: type, color_value: color });
+      }
       
       const response = await apiCreateList({ 
         title, 
@@ -364,6 +393,23 @@ const CanvasPage: React.FC = () => {
     setShowNewListModal(false);
   };
 
+  const handleListPositionUpdate = async (listId: string, position: { x: number, y: number }) => {
+    try {
+      await updateListPosition(listId, position.x, position.y, token);
+      // Update local state
+      setLists(prev => prev.map(list => 
+        list.id === listId ? { ...list, position_x: position.x, position_y: position.y } : list
+      ));
+    } catch (error) {
+      console.error('Failed to update list position:', error);
+      toast({
+        title: "Error updating position",
+        description: "Could not update list position. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleOpenNewNoteModal = (position: { x: number, y: number }) => {
     setNewNoteInitialPosition(position);
     setShowNewNoteModal(true);
@@ -386,6 +432,11 @@ const CanvasPage: React.FC = () => {
   // Mobile note creation function (mirrors createList)
   const createNote = async (title: string, category: string, color: string) => {
     try {
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(category) && category !== 'General') {
+        await addCategory({ name: category, color_value: color });
+      }
+      
       const position = getIntelligentPosition();
       
       const response = await apiCreateNote({
@@ -402,9 +453,7 @@ const CanvasPage: React.FC = () => {
       setNotes(prev => [response, ...prev]);
       setShowCreateNoteModal(false);
       
-      // Categories are now managed by unified category system
-      
-      // Removed success toast - no need to distract user for routine note creation
+      // Categories are now managed by database category system
     } catch (error) {
       console.error('Failed to create note:', error);
       toast({
@@ -549,9 +598,16 @@ const CanvasPage: React.FC = () => {
   const getFilterCounts = () => {
     const counts: Record<string, number> = {};
     
-    // Use unified category data for counts
-    categories.forEach(category => {
-      counts[category.name] = category.totalCount;
+    // Count lists by category (lists use 'type' field)
+    lists.forEach(list => {
+      const category = list.type || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
+    // Count notes by category (notes use 'category' field)
+    notes.forEach(note => {
+      const category = note.category || 'General';
+      counts[category] = (counts[category] || 0) + 1;
     });
     
     return counts;
@@ -798,6 +854,10 @@ const CanvasPage: React.FC = () => {
             notes={notes} // Pass notes state
             onNoteUpdate={handleUpdateNote} // Pass update handler
             onNoteDelete={handleDeleteNote} // Pass delete handler
+            lists={lists} // Pass lists state
+            onListUpdate={updateList} // Pass list update handler
+            onListDelete={deleteList} // Pass list delete handler
+            onListPositionUpdate={handleListPositionUpdate} // Pass position update handler
             onReady={(methods) => {
               canvasMethodsRef.current = methods;
               console.log('Canvas methods ready:', methods);

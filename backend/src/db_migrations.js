@@ -159,16 +159,32 @@ const runCategoriesTableMigration = async (pool) => {
     console.log('✅ categories table indexes created');
 
     // Add category_id foreign key to lists table
-    await pool.query(`
-      ALTER TABLE lists ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL;
-    `);
-    console.log('✅ category_id column added to lists table');
+    try {
+      await pool.query(`
+        ALTER TABLE lists ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL;
+      `);
+      console.log('✅ category_id column added to lists table');
+    } catch (error) {
+      if (error.code === '42701') { // Column already exists
+        console.log('✅ category_id column already exists in lists table');
+      } else {
+        throw error;
+      }
+    }
 
     // Add category_id foreign key to notes table
-    await pool.query(`
-      ALTER TABLE notes ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL;
-    `);
-    console.log('✅ category_id column added to notes table');
+    try {
+      await pool.query(`
+        ALTER TABLE notes ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL;
+      `);
+      console.log('✅ category_id column added to notes table');
+    } catch (error) {
+      if (error.code === '42701') { // Column already exists
+        console.log('✅ category_id column already exists in notes table');
+      } else {
+        throw error;
+      }
+    }
 
     // Create indexes for the foreign keys
     await pool.query(`
@@ -206,7 +222,8 @@ const runCategoriesTableMigration = async (pool) => {
     return true;
   } catch (error) {
     console.error('❌ Categories table migration failed:', error.message);
-    return false;
+    console.log('⚠️ Continuing without categories migration - app will still work with legacy categories');
+    return false; // Don't crash the app, just continue without categories
   }
 };
 
@@ -214,6 +231,20 @@ const runCategoriesTableMigration = async (pool) => {
 const runCategoriesDataMigration = async (pool) => {
   console.log('Running categories data migration...');
   try {
+    // Check if categories table exists first
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'categories'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('⚠️ Categories table does not exist, skipping data migration');
+      return false;
+    }
+
     // Get all users to process their categories
     const usersResult = await pool.query('SELECT DISTINCT id FROM users');
     const users = usersResult.rows;
@@ -223,111 +254,178 @@ const runCategoriesDataMigration = async (pool) => {
     for (const user of users) {
       const userId = user.id;
       
-      // Create "General" category for each user
-      await pool.query(`
-        INSERT INTO categories (user_id, name, color_value)
-        VALUES ($1, 'General', '#6B7280')
-        ON CONFLICT (user_id, name) DO NOTHING;
-      `, [userId]);
+      try {
+        // Create "General" category for each user
+        await pool.query(`
+          INSERT INTO categories (user_id, name, color_value)
+          VALUES ($1, 'General', '#6B7280')
+          ON CONFLICT (user_id, name) DO NOTHING;
+        `, [userId]);
 
-      // Create categories from existing list categories
-      await pool.query(`
-        INSERT INTO categories (user_id, name, color_value)
-        SELECT DISTINCT $1, category, '#3B82F6'
-        FROM lists 
-        WHERE user_id = $1 
-        AND category IS NOT NULL 
-        AND category != '' 
-        AND category != 'General'
-        ON CONFLICT (user_id, name) DO NOTHING;
-      `, [userId]);
+        // Create categories from existing list categories
+        await pool.query(`
+          INSERT INTO categories (user_id, name, color_value)
+          SELECT DISTINCT $1, category, '#3B82F6'
+          FROM lists 
+          WHERE user_id = $1 
+          AND category IS NOT NULL 
+          AND category != '' 
+          AND category != 'General'
+          ON CONFLICT (user_id, name) DO NOTHING;
+        `, [userId]);
 
-      // Create categories from existing note categories  
-      await pool.query(`
-        INSERT INTO categories (user_id, name, color_value)
-        SELECT DISTINCT $1, category, '#10B981'
-        FROM notes 
-        WHERE user_id = $1 
-        AND category IS NOT NULL 
-        AND category != '' 
-        AND category != 'General'
-        ON CONFLICT (user_id, name) DO NOTHING;
-      `, [userId]);
+        // Create categories from existing note categories  
+        await pool.query(`
+          INSERT INTO categories (user_id, name, color_value)
+          SELECT DISTINCT $1, category, '#10B981'
+          FROM notes 
+          WHERE user_id = $1 
+          AND category IS NOT NULL 
+          AND category != '' 
+          AND category != 'General'
+          ON CONFLICT (user_id, name) DO NOTHING;
+        `, [userId]);
 
-      // Link lists to their categories
-      await pool.query(`
-        UPDATE lists 
-        SET category_id = c.id
-        FROM categories c
-        WHERE lists.user_id = $1 
-        AND lists.category = c.name 
-        AND c.user_id = $1
-        AND lists.category_id IS NULL;
-      `, [userId]);
-
-      // Link notes to their categories
-      await pool.query(`
-        UPDATE notes 
-        SET category_id = c.id
-        FROM categories c
-        WHERE notes.user_id = $1 
-        AND notes.category = c.name 
-        AND c.user_id = $1
-        AND notes.category_id IS NULL;
-      `, [userId]);
-
-      // Set remaining lists without category to General
-      const generalCategoryResult = await pool.query(`
-        SELECT id FROM categories WHERE user_id = $1 AND name = 'General';
-      `, [userId]);
-      
-      if (generalCategoryResult.rows.length > 0) {
-        const generalCategoryId = generalCategoryResult.rows[0].id;
+        // Link lists to their categories
         await pool.query(`
           UPDATE lists 
-          SET category_id = $1
-          WHERE user_id = $2 AND category_id IS NULL;
-        `, [generalCategoryId, userId]);
+          SET category_id = c.id
+          FROM categories c
+          WHERE lists.user_id = $1 
+          AND lists.category = c.name 
+          AND c.user_id = $1
+          AND lists.category_id IS NULL;
+        `, [userId]);
 
+        // Link notes to their categories
         await pool.query(`
           UPDATE notes 
-          SET category_id = $1
-          WHERE user_id = $2 AND category_id IS NULL;
-        `, [generalCategoryId, userId]);
-      }
+          SET category_id = c.id
+          FROM categories c
+          WHERE notes.user_id = $1 
+          AND notes.category = c.name 
+          AND c.user_id = $1
+          AND notes.category_id IS NULL;
+        `, [userId]);
 
-      console.log(`✅ Processed categories for user ${userId}`);
+        // Set remaining lists without category to General
+        const generalCategoryResult = await pool.query(`
+          SELECT id FROM categories WHERE user_id = $1 AND name = 'General';
+        `, [userId]);
+        
+        if (generalCategoryResult.rows.length > 0) {
+          const generalCategoryId = generalCategoryResult.rows[0].id;
+          await pool.query(`
+            UPDATE lists 
+            SET category_id = $1
+            WHERE user_id = $2 AND category_id IS NULL;
+          `, [generalCategoryId, userId]);
+
+          await pool.query(`
+            UPDATE notes 
+            SET category_id = $1
+            WHERE user_id = $2 AND category_id IS NULL;
+          `, [generalCategoryId, userId]);
+        }
+
+        console.log(`✅ Processed categories for user ${userId}`);
+      } catch (userError) {
+        console.error(`⚠️ Error processing categories for user ${userId}:`, userError.message);
+        // Continue with other users
+      }
     }
 
-    // Insert some default categories for all users
-    await pool.query(`
-      INSERT INTO categories (user_id, name, color_value) 
-      SELECT u.id, 'Work', '#EF4444'
-      FROM users u
-      WHERE NOT EXISTS (SELECT 1 FROM categories WHERE user_id = u.id AND name = 'Work')
-      ON CONFLICT (user_id, name) DO NOTHING;
-    `);
-
-    await pool.query(`
-      INSERT INTO categories (user_id, name, color_value) 
-      SELECT u.id, 'Personal', '#8B5CF6'
-      FROM users u
-      WHERE NOT EXISTS (SELECT 1 FROM categories WHERE user_id = u.id AND name = 'Personal')
-      ON CONFLICT (user_id, name) DO NOTHING;
-    `);
-
-    await pool.query(`
-      INSERT INTO categories (user_id, name, color_value) 
-      SELECT u.id, 'Shopping', '#F59E0B'
-      FROM users u
-      WHERE NOT EXISTS (SELECT 1 FROM categories WHERE user_id = u.id AND name = 'Shopping')
-      ON CONFLICT (user_id, name) DO NOTHING;
-    `);
+    // Only General category is created by default (already handled above)
+    console.log('✅ Default categories setup completed (General only)');
 
     console.log('✅ Categories data migration completed successfully');
     return true;
   } catch (error) {
     console.error('❌ Categories data migration failed:', error.message);
+    console.log('⚠️ Continuing without categories data migration - app will still work with legacy categories');
+    return false; // Don't crash the app, just continue without categories
+  }
+};
+
+// Migration to clean up unwanted default categories
+const runCleanupDefaultCategories = async (pool) => {
+  console.log('Running cleanup of default categories migration...');
+  try {
+    // Check if categories table exists first
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'categories'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('⚠️ Categories table does not exist, skipping cleanup');
+      return false;
+    }
+
+    // Get all users to process
+    const usersResult = await pool.query('SELECT DISTINCT id FROM users');
+    const users = usersResult.rows;
+
+    console.log(`Cleaning up default categories for ${users.length} users...`);
+
+    for (const user of users) {
+      const userId = user.id;
+      
+      try {
+        // Get General category ID for this user
+        const generalCategoryResult = await pool.query(`
+          SELECT id FROM categories WHERE user_id = $1 AND name = 'General';
+        `, [userId]);
+        
+        if (generalCategoryResult.rows.length === 0) {
+          console.log(`⚠️ No General category found for user ${userId}, skipping cleanup`);
+          continue;
+        }
+        
+        const generalCategoryId = generalCategoryResult.rows[0].id;
+        
+        // Move lists from Work, Personal, Shopping back to General
+        await pool.query(`
+          UPDATE lists 
+          SET category_id = $1
+          FROM categories c
+          WHERE lists.category_id = c.id 
+          AND c.user_id = $2 
+          AND c.name IN ('Work', 'Personal', 'Shopping');
+        `, [generalCategoryId, userId]);
+
+        // Move notes from Work, Personal, Shopping back to General
+        await pool.query(`
+          UPDATE notes 
+          SET category_id = $1
+          FROM categories c
+          WHERE notes.category_id = c.id 
+          AND c.user_id = $2 
+          AND c.name IN ('Work', 'Personal', 'Shopping');
+        `, [generalCategoryId, userId]);
+
+        // Delete the unwanted default categories
+        await pool.query(`
+          DELETE FROM categories 
+          WHERE user_id = $1 
+          AND name IN ('Work', 'Personal', 'Shopping');
+        `, [userId]);
+
+        console.log(`✅ Cleaned up default categories for user ${userId}`);
+      } catch (userError) {
+        console.error(`⚠️ Error cleaning up categories for user ${userId}:`, userError.message);
+        // Continue with other users
+      }
+    }
+
+    console.log('✅ Default categories cleanup completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Default categories cleanup failed:', error.message);
+    console.log('⚠️ Continuing without cleanup - existing categories will remain');
     return false;
   }
 };
@@ -337,5 +435,6 @@ module.exports = {
   runCreateNotesTableMigration,
   runAddTitleAndCategoryToNotesMigration,
   runCategoriesTableMigration,
-  runCategoriesDataMigration
+  runCategoriesDataMigration,
+  runCleanupDefaultCategories
 };

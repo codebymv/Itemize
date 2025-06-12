@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 // Import database migrations
-const { runCanvasMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration } = require('./db_migrations');
+const { runCanvasMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories } = require('./db_migrations');
 
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
@@ -133,11 +133,26 @@ const initializeDatabase = async (pool) => {
       // Run notes name and category migration
       await runAddTitleAndCategoryToNotesMigration(pool);
       
-      // Run categories table migration
-      await runCategoriesTableMigration(pool);
+      // Run categories table migration (safe)
+      try {
+        await runCategoriesTableMigration(pool);
+      } catch (categoriesTableError) {
+        console.error('⚠️ Categories table migration failed, continuing with legacy categories:', categoriesTableError.message);
+      }
       
-      // Run categories data migration
-      await runCategoriesDataMigration(pool);
+      // Run categories data migration (safe)
+      try {
+        await runCategoriesDataMigration(pool);
+      } catch (categoriesDataError) {
+        console.error('⚠️ Categories data migration failed, continuing with legacy categories:', categoriesDataError.message);
+      }
+      
+      // Run cleanup of default categories (safe)
+      try {
+        await runCleanupDefaultCategories(pool);
+      } catch (cleanupError) {
+        console.error('⚠️ Categories cleanup failed, continuing with existing categories:', cleanupError.message);
+      }
       
       await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
       // console.log('Ensured google_id column exists in public.users table.');

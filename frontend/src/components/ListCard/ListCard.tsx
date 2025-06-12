@@ -66,7 +66,7 @@ const ListCard: React.FC<ListCardProps> = ({
     
     // Refs
     titleEditRef, newItemInputRef
-  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed });
+  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories });
 
   // Drag and drop sensors
   const sensors = useSensors(

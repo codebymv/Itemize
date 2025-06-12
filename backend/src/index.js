@@ -431,6 +431,26 @@ setTimeout(async () => {
       app.get('/api/categories', global.authenticateJWT, async (req, res) => {
         try {
           const client = await actualPool.connect();
+          
+          // Check if categories table exists
+          const tableExists = await client.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'categories'
+            );
+          `);
+          
+          if (!tableExists.rows[0].exists) {
+            client.release();
+            // Return legacy categories if new table doesn't exist
+            return res.json([
+              { id: 'general', name: 'General', color_value: '#6B7280' },
+              { id: 'work', name: 'Work', color_value: '#EF4444' },
+              { id: 'personal', name: 'Personal', color_value: '#8B5CF6' }
+            ]);
+          }
+          
           const result = await client.query(
             'SELECT id, name, color_value, created_at, updated_at FROM categories WHERE user_id = $1 ORDER BY name ASC',
             [req.user.id]
@@ -439,7 +459,12 @@ setTimeout(async () => {
           res.json(result.rows);
         } catch (error) {
           console.error('Error fetching categories:', error);
-          res.status(500).json({ error: 'Internal server error while fetching categories' });
+          // Fallback to basic categories if there's an error
+          res.json([
+            { id: 'general', name: 'General', color_value: '#6B7280' },
+            { id: 'work', name: 'Work', color_value: '#EF4444' },
+            { id: 'personal', name: 'Personal', color_value: '#8B5CF6' }
+          ]);
         }
       });
 

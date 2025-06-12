@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAISuggest } from "@/context/AISuggestContext";
 import { useAISuggestions } from "@/hooks/use-ai-suggestions";
 import { List, ListItem } from '@/types';
+import { useDatabaseCategories } from './useDatabaseCategories';
 
 interface UseListCardLogicProps {
   list: List;
@@ -10,9 +11,10 @@ interface UseListCardLogicProps {
   onDelete: (listId: string) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  existingCategories?: string[];
 }
 
-export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed }: UseListCardLogicProps) => {
+export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories = [] }: UseListCardLogicProps) => {
   // Use the global AI suggestions context
   const { aiEnabled, setAiEnabled } = useAISuggest();
 
@@ -48,6 +50,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
 
   
   const { toast } = useToast();
+  const { addCategory } = useDatabaseCategories();
   
   // Component state - use external collapsible state if provided, otherwise use internal state
   const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
@@ -106,23 +109,59 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   };
   
   // Handle updating the list category/type
-  const handleEditCategory = (category: string) => {
+  const handleEditCategory = async (category: string) => {
     if (category === '__custom__') {
       setShowNewCategoryInput(true);
       return;
     }
+    
+    // If it's a new category name that doesn't exist yet, create it in the database
+    if (category.trim() && !existingCategories.includes(category)) {
+      try {
+        await addCategory({ 
+          name: category.trim(), 
+          color_value: '#3B82F6' // Default blue color
+        });
+        // addCategory already triggers global refresh, so other components will update
+      } catch (error) {
+        console.error('Failed to create category in database:', error);
+        // Continue anyway to update the list locally
+      }
+    }
+    
     onUpdate({ ...list, type: category });
     setIsEditingCategory(false);
     setShowNewCategoryInput(false);
   };
   
   // Handle creating a new custom category
-  const handleAddCustomCategory = () => {
+  const handleAddCustomCategory = async () => {
     if (newCategory.trim() !== '') {
-      onUpdate({ ...list, type: newCategory.trim() });
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-      setNewCategory('');
+      try {
+        // First create the category in the database
+        await addCategory({ 
+          name: newCategory.trim(), 
+          color_value: '#3B82F6' // Default blue color
+        });
+        
+        // Then update the list to use this category
+        onUpdate({ ...list, type: newCategory.trim() });
+        setIsEditingCategory(false);
+        setShowNewCategoryInput(false);
+        setNewCategory('');
+        
+        toast({
+          title: "Category created",
+          description: `"${newCategory.trim()}" category has been created and assigned to this list.`
+        });
+      } catch (error) {
+        console.error('Failed to create category:', error);
+        toast({
+          title: "Error creating category",
+          description: "Could not create the category. Please try again.",
+          variant: "destructive"
+        });
+      }
     } else {
       toast({
         title: "Category cannot be empty",
