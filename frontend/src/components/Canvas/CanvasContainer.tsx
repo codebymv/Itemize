@@ -17,6 +17,10 @@ interface CanvasContainerProps {
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
+  lists: List[];
+  onListUpdate: (list: List) => Promise<void>;
+  onListDelete: (listId: string) => Promise<void>;
+  onListPositionUpdate: (listId: string, position: { x: number, y: number }) => Promise<void>;
 }
 
 export interface CanvasContainerMethods {
@@ -60,8 +64,25 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   
+  // Collapsible state management for lists
+  const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
+  
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
+
+  // Helper functions for managing collapsible state
+  const isListCollapsed = (listId: string) => collapsedListIds.has(listId);
+  const toggleListCollapsed = (listId: string) => {
+    setCollapsedListIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(listId)) {
+        newSet.delete(listId);
+      } else {
+        newSet.add(listId);
+      }
+      return newSet;
+    });
+  };
 
   // Handler for when 'Add Note' is clicked in the context menu
   const handleRequestAddNote = () => {
@@ -544,6 +565,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onDelete={handleListDelete}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
+                isCollapsed={isListCollapsed(list.id)}
+                onToggleCollapsed={() => toggleListCollapsed(list.id)}
               />
             ))}
 

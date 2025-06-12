@@ -10,6 +10,8 @@ interface DraggableListCardProps {
   onDelete: (listId: string) => void;
   existingCategories: string[];
   canvasTransform: { x: number, y: number, scale: number };
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 export const DraggableListCard: React.FC<DraggableListCardProps> = ({ 
@@ -19,7 +21,9 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   onUpdate,
   onDelete,
   existingCategories,
-  canvasTransform
+  canvasTransform,
+  isCollapsed,
+  onToggleCollapsed
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -152,6 +156,8 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
         onUpdate={onUpdate}
         onDelete={onDelete}
         existingCategories={existingCategories}
+        isCollapsed={isCollapsed}
+        onToggleCollapsed={onToggleCollapsed}
       />
     </div>
   );
