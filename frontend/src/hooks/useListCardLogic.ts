@@ -150,10 +150,6 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
         setShowNewCategoryInput(false);
         setNewCategory('');
         
-        toast({
-          title: "Category created",
-          description: `"${newCategory.trim()}" category has been created and assigned to this list.`
-        });
       } catch (error) {
         console.error('Failed to create category:', error);
         toast({

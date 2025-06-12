@@ -70,11 +70,6 @@ export const useDatabaseCategories = () => {
       console.log('📢 Triggering global category refresh after creating:', newCategory.name);
       triggerGlobalCategoryRefresh();
       
-      toast({
-        title: "Category created",
-        description: `"${newCategory.name}" category has been created.`
-      });
-      
       return newCategory;
     } catch (err) {
       console.error('Error creating category:', err);
@@ -104,11 +99,6 @@ export const useDatabaseCategories = () => {
       // Trigger global refresh so all components update
       triggerGlobalCategoryRefresh();
       
-      toast({
-        title: "Category updated",
-        description: `Category has been updated to "${updatedCategory.name}".`
-      });
-      
       return updatedCategory;
     } catch (err) {
       console.error('Error updating category:', err);
@@ -134,11 +124,6 @@ export const useDatabaseCategories = () => {
       
       // Trigger global refresh so all components update
       triggerGlobalCategoryRefresh();
-      
-      toast({
-        title: "Category deleted",
-        description: "Category has been deleted and items moved to General."
-      });
       
       return true;
     } catch (err) {
