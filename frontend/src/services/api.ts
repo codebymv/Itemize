@@ -2,7 +2,8 @@ import api from '../lib/api';
 
 // Types for API requests
 export interface CreateNotePayload {
-  content: string;
+  title?: string;
+  content?: string;
   color_value: string;
   position_x: number;
   position_y: number;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, Edit3, Trash2, X, Check, ChevronDown, Palette, CheckSquare } from 'lucide-react';
+import { MoreVertical, Edit3, Trash2, X, Check, ChevronDown, Palette } from 'lucide-react';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,7 +122,6 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                   )}
                 </Button>
               </ColorPicker>
-              <CheckSquare className="h-4 w-4 text-slate-500" />
               <CardTitle
                 className="text-lg font-medium cursor-pointer"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
