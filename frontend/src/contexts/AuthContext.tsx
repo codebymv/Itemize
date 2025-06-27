@@ -57,20 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hasExpiry: !!expiryTime 
         });
         
-        // Safely check localStorage values
-        if (savedToken && 
-            typeof savedToken === 'string' && 
-            savedUser && 
-            typeof savedUser === 'string' && 
-            savedUser !== 'undefined' && 
-            expiryTime && 
-            !isNaN(parseInt(expiryTime)) && 
-            parseInt(expiryTime) > Date.now()) {
-          
+        // Safely check localStorage values - only clear if clearly invalid
+        if (savedToken && savedUser) {
           try {
             const userData = JSON.parse(savedUser);
             
-            // Validate user data has the expected structure
+            // Only validate that we have a user object with a uid
             if (userData && typeof userData === 'object' && userData.uid) {
               console.log('Restoring authentication with user:', userData);
               setToken(savedToken);
@@ -104,10 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Reset state on error
         setToken(null);
         setCurrentUser(null);
-      } finally {
-        console.log('Authentication initialization complete');
-        setLoading(false);
       }
+      console.log('Authentication initialization complete');
+      setLoading(false);
     };
     
     initializeAuth();

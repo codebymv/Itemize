@@ -18,32 +18,21 @@ const debugConfig = {
 
 console.log('API Configuration Debug:', debugConfig);
 
-// Determine API URL with better fallback logic
-const determineApiUrl = () => {
-  // If we're in production and on itemize.cloud, force the API URL
+// Determine the base URL based on environment and hostname
+const getBaseUrl = () => {
+  // If we're in a browser and on the production domain, use the current origin
   if (typeof window !== 'undefined' && window.location.hostname === 'itemize.cloud') {
-    console.log('Production domain detected, forcing itemize.cloud API');
     return window.location.origin;
   }
-
-  // If we have a configured API URL, use it
-  if (import.meta.env.VITE_API_URL) {
-    console.log('Using configured API URL:', import.meta.env.VITE_API_URL);
-    return import.meta.env.VITE_API_URL;
-  }
-
-  // Development fallback
-  console.log('Falling back to development API URL');
-  return 'http://localhost:3001';
+  
+  // Otherwise use the environment variable or localhost fallback
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
 };
-
-const apiUrl = determineApiUrl();
-console.log('Final API URL:', apiUrl);
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: apiUrl,
-  withCredentials: true // Enable sending cookies
+  baseURL: getBaseUrl(),
+  withCredentials: true
 });
 
 // Add a request interceptor to block specific endpoints and add debugging
