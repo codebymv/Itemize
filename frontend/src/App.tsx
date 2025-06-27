@@ -16,39 +16,11 @@ import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import CanvasPage from "./pages/canvas";
-
-// Debug environment variables
-const debugEnv = {
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-  MODE: import.meta.env.MODE,
-  DEV: import.meta.env.DEV,
-  PROD: import.meta.env.PROD,
-  origin: typeof window !== 'undefined' ? window.location.origin : '',
-  hostname: typeof window !== 'undefined' ? window.location.hostname : ''
-};
-
-console.log('App Environment Debug:', debugEnv);
+import CanvasPage from "./pages/canvas";  // Import the new Canvas page
 
 const queryClient = new QueryClient();
+const googleClientId = "761425672348-63ncpr61i8hv48l94ljju4uloahreohs.apps.googleusercontent.com";
 
-// Get Google Client ID with fallback logic
-const getGoogleClientId = () => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  console.log('Google Client ID:', {
-    fromEnv: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    origin: window.location.origin,
-    hostname: window.location.hostname,
-    final: clientId
-  });
-  if (!clientId) {
-    console.error('No Google Client ID found!');
-  }
-  return clientId || '';
-};
-
-const googleClientId = getGoogleClientId();
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
