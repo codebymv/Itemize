@@ -44,17 +44,28 @@ export const useDatabaseCategories = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Listen for global category refresh events
+  // Listen for global category refresh events with throttling
   useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    
     const handleGlobalRefresh = () => {
+      // Throttle category refreshes to prevent spam
+      if (refreshTimeout) return;
+      
       console.log('🔄 Global category refresh triggered - refreshing categories list');
-      fetchCategories();
+      refreshTimeout = setTimeout(() => {
+        fetchCategories();
+        refreshTimeout = null;
+      }, 1000); // 1 second throttle
     };
 
     window.addEventListener(CATEGORY_REFRESH_EVENT, handleGlobalRefresh);
     
     return () => {
       window.removeEventListener(CATEGORY_REFRESH_EVENT, handleGlobalRefresh);
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
     };
   }, [fetchCategories]);
 
@@ -96,7 +107,8 @@ export const useDatabaseCategories = () => {
            .sort((a, b) => a.name.localeCompare(b.name))
       );
       
-      // Trigger global refresh so all components update
+      // Trigger global refresh so all components update (only for category changes)
+      console.log('📢 Triggering global category refresh after updating:', updatedCategory.name);
       triggerGlobalCategoryRefresh();
       
       return updatedCategory;
@@ -119,10 +131,12 @@ export const useDatabaseCategories = () => {
     if (!token) return false;
     
     try {
+      const categoryToDelete = categories.find(cat => cat.id === categoryId);
       await deleteCategory(categoryId, token);
       setCategories(prev => prev.filter(cat => cat.id !== categoryId));
       
-      // Trigger global refresh so all components update
+      // Trigger global refresh so all components update (only for category changes)
+      console.log('📢 Triggering global category refresh after deleting:', categoryToDelete?.name);
       triggerGlobalCategoryRefresh();
       
       return true;
@@ -138,7 +152,7 @@ export const useDatabaseCategories = () => {
       
       return false;
     }
-  }, [token, toast]);
+  }, [token, toast, categories]);
 
   // Helper functions for compatibility with existing code
   const categoryNames = categories.map(cat => cat.name);

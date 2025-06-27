@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication</title>
+</head>
+<body>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h2>Authenticating...</h2>
+        <p>Please wait while we complete your authentication.</p>
+    </div>
+    
+    <script>
+        // Extract the authorization code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        
+        if (error) {
+            // Send error to parent window
+            window.opener?.postMessage({
+                type: 'GOOGLE_AUTH_ERROR',
+                error: error
+            }, window.location.origin);
+            window.close();
+        } else if (code) {
+            // Send the authorization code to your backend
+            fetch('/api/auth/google-login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.token) {
+                    // Store tokens in localStorage
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    if (data.refreshToken) {
+                        localStorage.setItem('refresh_token', data.refreshToken);
+                    }
+                    
+                    if (data.expiresIn) {
+                        const expiryTime = Date.now() + (data.expiresIn * 1000);
+                        localStorage.setItem('token_expiry', expiryTime.toString());
+                    }
+                    
+                    // Notify parent window of success
+                    window.opener?.postMessage({
+                        type: 'GOOGLE_AUTH_SUCCESS'
+                    }, window.location.origin);
+                } else {
+                    // Notify parent window of error
+                    window.opener?.postMessage({
+                        type: 'GOOGLE_AUTH_ERROR',
+                        error: data.message || 'Authentication failed'
+                    }, window.location.origin);
+                }
+                window.close();
+            })
+            .catch(error => {
+                console.error('Authentication error:', error);
+                window.opener?.postMessage({
+                    type: 'GOOGLE_AUTH_ERROR',
+                    error: 'Network error during authentication'
+                }, window.location.origin);
+                window.close();
+            });
+        } else {
+            // No code or error, something went wrong
+            window.opener?.postMessage({
+                type: 'GOOGLE_AUTH_ERROR',
+                error: 'No authorization code received'
+            }, window.location.origin);
+            window.close();
+        }
+    </script>
+</body>
+</html>

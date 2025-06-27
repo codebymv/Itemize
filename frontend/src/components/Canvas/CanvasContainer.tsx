@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
-import { List, Note } from '../../types'; // Add Note type
+import { List, Note, Whiteboard } from '../../types'; // Add Note and Whiteboard types
 import { fetchCanvasLists, updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { NewListModal } from '../../components/NewListModal';
 import Spinner from '../../components/ui/Spinner';
 import { DraggableNoteCard } from './DraggableNoteCard'; // Import the new component
+import { DraggableWhiteboardCard } from './DraggableWhiteboardCard'; // Import the whiteboard component
 import { Plus, Minus, RotateCcw, Search } from 'lucide-react';
 
 interface CanvasContainerProps {
@@ -17,15 +18,17 @@ interface CanvasContainerProps {
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
-  lists: List[];
-  onListUpdate: (list: List) => Promise<void>;
-  onListDelete: (listId: string) => Promise<void>;
-  onListPositionUpdate: (listId: string, position: { x: number, y: number }) => Promise<void>;
+  whiteboards: Whiteboard[];
+  onWhiteboardUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
+  onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
+  onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
 }
 
 export interface CanvasContainerMethods {
   showAddListMenu: (position: { x: number, y: number }, isFromButton?: boolean, absolutePosition?: { x: number, y: number }) => void;
   showAddNoteMenu: (position: { x: number, y: number }, isFromButton?: boolean, absolutePosition?: { x: number, y: number }) => void;
+  showAddWhiteboardMenu: (position: { x: number, y: number }, isFromButton?: boolean, absolutePosition?: { x: number, y: number }) => void;
   hideContextMenu: () => void;
   isMenuOpenFromButton: () => boolean;
   showNewListModal: () => void;
@@ -38,7 +41,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onOpenNewNoteModal,
   notes,
   onNoteUpdate,
-  onNoteDelete
+  onNoteDelete,
+  whiteboards,
+  onWhiteboardUpdate,
+  onWhiteboardDelete,
+  onOpenNewWhiteboardModal,
+  addCategory
 }) => {
   const { token } = useAuth();
   const [lists, setLists] = useState<List[]>([]);
@@ -64,30 +72,23 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   
-  // Collapsible state management for lists
-  const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
-  
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
-
-  // Helper functions for managing collapsible state
-  const isListCollapsed = (listId: string) => collapsedListIds.has(listId);
-  const toggleListCollapsed = (listId: string) => {
-    setCollapsedListIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(listId)) {
-        newSet.delete(listId);
-      } else {
-        newSet.add(listId);
-      }
-      return newSet;
-    });
-  };
 
   // Handler for when 'Add Note' is clicked in the context menu
   const handleRequestAddNote = () => {
     setShowContextMenu(false); 
     onOpenNewNoteModal && onOpenNewNoteModal(menuPosition); 
+  };
+
+  // Handler for when 'Add Whiteboard' is clicked in the context menu
+  const handleRequestAddWhiteboard = () => {
+    setShowContextMenu(false); 
+    // Use the stored menuPosition which is already in canvas coordinates
+    if (onOpenNewWhiteboardModal) {
+      console.log('Opening whiteboard modal at position:', menuPosition);
+      onOpenNewWhiteboardModal(menuPosition);
+    }
   };
 
   // Expose methods to parent component
@@ -118,6 +119,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           // Directly open note modal instead of context menu for notes
           if (onOpenNewNoteModal) {
             onOpenNewNoteModal(position);
+          }
+        },
+        showAddWhiteboardMenu: (position, isFromButton = false, absolutePosition) => {
+          // Directly open whiteboard modal instead of context menu for whiteboards
+          if (onOpenNewWhiteboardModal) {
+            onOpenNewWhiteboardModal(position);
           }
         },
         hideContextMenu: () => {
@@ -387,7 +394,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   const getFilterCounts = () => {
     const counts: Record<string, number> = { 
-      all: lists.length + notes.length 
+      all: lists.length + notes.length + whiteboards.length 
     };
     
     lists.forEach(list => {
@@ -400,12 +407,18 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       counts[category] = (counts[category] || 0) + 1;
     });
     
+    whiteboards.forEach(whiteboard => {
+      const category = whiteboard.category || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
     return counts;
   };
 
   const getFilteredContent = () => {
     let filteredLists = lists;
     let filteredNotes = notes;
+    let filteredWhiteboards = whiteboards;
 
     // Apply search filter
     if (searchQuery) {
@@ -422,18 +435,23 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         return (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
                (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()));
       });
+
+      filteredWhiteboards = whiteboards.filter(whiteboard => {
+        return whiteboard.title && whiteboard.title.toLowerCase().includes(searchQuery.toLowerCase());
+      });
     }
 
     // Apply category filter
     if (selectedFilter !== 'all') {
       filteredLists = filteredLists.filter(list => (list.type || 'General') === selectedFilter);
       filteredNotes = filteredNotes.filter(note => (note.category || 'General') === selectedFilter);
+      filteredWhiteboards = filteredWhiteboards.filter(whiteboard => (whiteboard.category || 'General') === selectedFilter);
     }
 
-    return { filteredLists, filteredNotes };
+    return { filteredLists, filteredNotes, filteredWhiteboards };
   };
 
-  const { filteredLists, filteredNotes } = getFilteredContent();
+  const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
 
   // Global event listeners for mouse interaction outside canvas
   useEffect(() => {
@@ -534,7 +552,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ) : (
           <>
             {/* Empty state when no content exists */}
-            {lists.length === 0 && notes.length === 0 && (
+            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && (
               <div 
                 className="flex items-center justify-center h-full"
                 style={{
@@ -565,8 +583,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onDelete={handleListDelete}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
-                isCollapsed={isListCollapsed(list.id)}
-                onToggleCollapsed={() => toggleListCollapsed(list.id)}
+                addCategory={addCategory}
               />
             ))}
 
@@ -589,6 +606,21 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 canvasTransform={canvasTransform}
               />
             ))}
+
+            {/* Render whiteboards */}
+            {filteredWhiteboards.map(whiteboard => (
+              <DraggableWhiteboardCard
+                key={whiteboard.id}
+                whiteboard={whiteboard}
+                onUpdate={onWhiteboardUpdate}
+                onDelete={onWhiteboardDelete}
+                existingCategories={existingCategories}
+                canvasTransform={canvasTransform}
+                onPositionChange={(whiteboardId, newPosition) => {
+                  onWhiteboardUpdate(whiteboardId, { position_x: newPosition.x, position_y: newPosition.y });
+                }}
+              />
+            ))}
             
             {/* Context menu */}
             {showContextMenu && (() => {
@@ -599,6 +631,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   absolutePosition={menuAbsolutePosition}
                   onAddList={handleAddList}
                   onAddNote={handleRequestAddNote} // Pass the new handler
+                  onAddWhiteboard={handleRequestAddWhiteboard} // Pass the whiteboard handler
                   onClose={() => setShowContextMenu(false)}
                   isFromButton={menuIsFromButton}
                 />

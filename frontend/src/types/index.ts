@@ -24,6 +24,7 @@ export interface ListCardProps {
   existingCategories: string[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
 }
 
 export interface Note {
@@ -40,4 +41,31 @@ export interface Note {
   z_index: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Whiteboard {
+  id: number;
+  user_id: number;
+  title: string;
+  category?: string; // Optional category field, defaults to "General" (null)
+  canvas_data: any; // Raw library data - react-sketch-canvas format
+  canvas_width: number;
+  canvas_height: number;
+  background_color: string;
+  position_x: number;
+  position_y: number;
+  z_index: number;
+  color_value: string; // Border/theme color
+  created_at: string;
+  updated_at: string;
+}
+
+// Props for WhiteboardCard component  
+export interface WhiteboardCardProps {
+  whiteboard: Whiteboard;
+  onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
+  onDelete: (whiteboardId: number) => Promise<boolean>;
+  existingCategories: string[];
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
