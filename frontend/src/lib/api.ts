@@ -6,39 +6,58 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
+// Debug environment and configuration
+const debugConfig = {
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  MODE: import.meta.env.MODE,
+  PROD: import.meta.env.PROD,
+  DEV: import.meta.env.DEV,
+  origin: typeof window !== 'undefined' ? window.location.origin : 'no-window',
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'no-window'
+};
+
+console.log('API Configuration Debug:', debugConfig);
+
 // Determine API URL with better fallback logic
 const determineApiUrl = () => {
-  const configuredUrl = import.meta.env.VITE_API_URL;
-  const isProd = import.meta.env.PROD;
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-  
-  console.log('API Configuration:', {
-    configuredUrl,
-    isProd,
-    currentOrigin,
-    mode: import.meta.env.MODE
-  });
-
-  // In production, if no URL is configured, try to use the same origin
-  if (isProd && !configuredUrl && currentOrigin && !currentOrigin.includes('localhost')) {
-    console.log('Using current origin as API URL:', currentOrigin);
-    return currentOrigin;
+  // If we're in production and on itemize.cloud, force the API URL
+  if (typeof window !== 'undefined' && window.location.hostname === 'itemize.cloud') {
+    console.log('Production domain detected, using itemize.cloud API');
+    return 'https://itemize.cloud';
   }
 
-  // Use configured URL or fallback to localhost only in development
-  const apiUrl = configuredUrl || (isProd ? currentOrigin : 'http://localhost:3001');
-  console.log('Final API URL:', apiUrl);
-  return apiUrl;
+  // If we have a configured API URL, use it
+  if (import.meta.env.VITE_API_URL) {
+    console.log('Using configured API URL:', import.meta.env.VITE_API_URL);
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Development fallback
+  console.log('Falling back to development API URL');
+  return 'http://localhost:3001';
 };
+
+const apiUrl = determineApiUrl();
+console.log('Final API URL:', apiUrl);
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: determineApiUrl()
+  baseURL: apiUrl
 });
 
-// Add a request interceptor to block specific endpoints
+// Add a request interceptor to block specific endpoints and add debugging
 api.interceptors.request.use(
   (config) => {
+    // Log request details
+    console.log('API Request:', {
+      url: config.url,
+      baseURL: config.baseURL,
+      fullUrl: config.baseURL + config.url,
+      method: config.method,
+      headers: config.headers
+    });
+
     // Check if the request URL matches any blocked endpoint
     const requestPath = config.url || '';
     const isBlocked = BLOCKED_ENDPOINTS.some(endpoint => 
@@ -47,18 +66,38 @@ api.interceptors.request.use(
 
     // If this is a blocked endpoint, cancel the request
     if (isBlocked) {
-      // Create a canceled request
       const cancelToken = axios.CancelToken;
       const source = cancelToken.source();
       config.cancelToken = source.token;
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
-      
       console.log(`Blocked request to: ${requestPath}`);
     }
 
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', {
+      url: response.config.url,
+      status: response.status,
+      statusText: response.statusText
+    });
+    return response;
+  },
+  (error) => {
+    console.error('API Response Error:', {
+      url: error.config?.url,
+      message: error.message,
+      code: error.code,
+      response: error.response?.data
+    });
     return Promise.reject(error);
   }
 );
