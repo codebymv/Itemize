@@ -855,7 +855,7 @@ setTimeout(async () => {
         console.log('Initializing AI suggestion service...');
         const aiSuggestionService = require('./services/aiSuggestionService');
         
-        // AI suggestions endpoint
+        // AI suggestions endpoint for lists
         app.post('/api/suggestions', global.authenticateJWT, async (req, res) => {
           try {
             const { listTitle, existingItems } = req.body;
@@ -869,6 +869,24 @@ setTimeout(async () => {
           } catch (error) {
             console.error('Error generating suggestions:', error);
             res.status(500).json({ error: 'Failed to generate suggestions' });
+          }
+        });
+
+        // AI suggestions endpoint for notes
+        app.post('/api/note-suggestions', global.authenticateJWT, async (req, res) => {
+          try {
+            const { context, category, requestTypes } = req.body;
+            
+            if (!context || typeof context !== 'string') {
+              return res.status(400).json({ error: 'Context is required' });
+            }
+
+            // Generate AI suggestions for note content
+            const result = await aiSuggestionService.suggestNoteContent(context, category, requestTypes);
+            res.json(result);
+          } catch (error) {
+            console.error('Error generating note suggestions:', error);
+            res.status(500).json({ error: 'Failed to generate note suggestions' });
           }
         });
         

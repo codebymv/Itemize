@@ -26,6 +26,68 @@ class AISuggestionService {
   }
 
   /**
+   * Generate suggestions for note content based on context
+   */
+  async suggestNoteContent(context, category = '', requestTypes = ['completion', 'continuation']) {
+    try {
+      // Check if we have enough context
+      if (!context || context.length < 10) {
+        return { suggestions: [], continuations: [] };
+      }
+
+      // Generate cache key for note content
+      const cacheKey = `note-${this.generateCacheKey(context)}-${category}`;
+      
+      // Check cache first
+      const cached = this.getFromCache(cacheKey);
+      if (cached) {
+        console.log('📦 Using cached note suggestions for context:', context.substring(0, 50));
+        return { 
+          suggestions: cached.suggestions || [], 
+          continuations: cached.continuations || [], 
+          cached: true 
+        };
+      }
+
+      // If no Gemini API access, return empty results
+      if (!this.model) {
+        console.warn('⚠️ Cannot generate note suggestions: Missing Gemini API key');
+        return { suggestions: [], continuations: [], error: 'Missing API key' };
+      }
+
+      // Create prompt for note content suggestions
+      const prompt = this.createNotePrompt(context, category, requestTypes);
+      
+      // Call Gemini API
+      console.log('🤖 Generating note suggestions for context:', context.substring(0, 50));
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 300,
+          temperature: 0.8,
+          topK: 40,
+          topP: 0.95,
+        }
+      });
+
+      // Parse the response
+      const text = result.response.text().trim();
+      const parsed = this.parseNoteResponse(text, requestTypes);
+      
+      // Only cache if we got valid suggestions
+      if (parsed.suggestions.length > 0 || parsed.continuations.length > 0) {
+        this.setInCache(cacheKey, parsed);
+      }
+      
+      return parsed;
+      
+    } catch (error) {
+      console.error('❌ Error generating note suggestions:', error);
+      return { suggestions: [], continuations: [], error: error.message };
+    }
+  }
+
+  /**
    * Generate suggestions for list items based on list title and existing items
    */
   async suggestListItems(listTitle, existingItems = []) {
@@ -271,6 +333,146 @@ class AISuggestionService {
         .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
       this.cache.delete(oldestKey);
     }
+  }
+
+  /**
+   * Generate a cache key from context using last 20 words for better uniqueness
+   */
+  generateCacheKey(context) {
+    const words = context.split(/\s+/).filter(word => word.length > 0);
+    const lastWords = words.slice(-20).join(' ');
+    return Buffer.from(lastWords).toString('base64').substring(0, 50);
+  }
+
+  /**
+   * Create a prompt for note content suggestions
+   */
+  createNotePrompt(context, category, requestTypes) {
+    const hasCompletion = requestTypes.includes('completion');
+    const hasContinuation = requestTypes.includes('continuation');
+    
+    let prompt = `You are helping with smart autocomplete for note-taking. The user is writing a note`;
+    
+    if (category) {
+      prompt += ` in the "${category}" category`;
+    }
+    
+    prompt += `.\n\nCurrent context:\n"${context}"\n\n`;
+    
+    if (hasCompletion && hasContinuation) {
+      prompt += `Please provide:
+1. COMPLETIONS: 4 short phrase completions (3-8 words) that could finish the current sentence naturally
+2. CONTINUATIONS: 2 longer continuations (10-20 words) that could start the next sentence or paragraph
+
+Focus on:
+- Natural, contextually relevant suggestions
+- Maintaining the writing style and tone
+- Providing helpful, intelligent continuations
+- Avoiding generic or repetitive phrases
+
+Format your response exactly as:
+COMPLETIONS:
+[completion 1]
+[completion 2]
+[completion 3]
+[completion 4]
+
+CONTINUATIONS:
+[continuation 1]
+[continuation 2]`;
+    } else if (hasCompletion) {
+      prompt += `Please provide 4 short phrase completions (3-8 words) that could finish the current sentence naturally. Focus on contextually relevant and intelligent suggestions.
+
+Return only the completions, one per line, with no additional formatting.`;
+    } else if (hasContinuation) {
+      prompt += `Please provide 2 longer continuations (10-20 words) that could start the next sentence or paragraph. Focus on natural flow and helpful content.
+
+Return only the continuations, one per line, with no additional formatting.`;
+    }
+    
+    return prompt;
+  }
+
+  /**
+   * Parse the note AI response into suggestions and continuations
+   */
+  parseNoteResponse(text, requestTypes) {
+    const hasCompletion = requestTypes.includes('completion');
+    const hasContinuation = requestTypes.includes('continuation');
+    
+    let suggestions = [];
+    let continuations = [];
+    
+    if (hasCompletion && hasContinuation && text.includes('COMPLETIONS:') && text.includes('CONTINUATIONS:')) {
+      // Parse structured response
+      const parts = text.split('CONTINUATIONS:');
+      const completionsSection = parts[0].replace('COMPLETIONS:', '').trim();
+      const continuationsSection = parts[1] ? parts[1].trim() : '';
+      
+      suggestions = completionsSection.split('\n')
+        .map(line => line.trim())
+        .filter(line => this.isValidSuggestion(line))
+        .slice(0, 4);
+        
+      continuations = continuationsSection.split('\n')
+        .map(line => line.trim())
+        .filter(line => this.isValidSuggestion(line))
+        .slice(0, 2);
+    } else {
+      // Parse simple response - treat as completions or continuations based on length
+      const lines = text.split('\n')
+        .map(line => line.trim())
+        .filter(line => this.isValidSuggestion(line));
+        
+      for (const line of lines) {
+        if (line.length <= 50 && suggestions.length < 4) {
+          suggestions.push(line);
+        } else if (line.length > 50 && continuations.length < 2) {
+          continuations.push(line);
+        }
+      }
+    }
+    
+    // Ensure suggestions start with space if they don't already
+    suggestions = suggestions.map(s => s.startsWith(' ') ? s : ` ${s}`);
+    continuations = continuations.map(c => c.startsWith(' ') ? c : ` ${c}`);
+    
+    return { suggestions, continuations };
+  }
+
+  /**
+   * Check if a suggestion is valid and should be included
+   */
+  isValidSuggestion(line) {
+    if (!line || line.length === 0 || line.length > 200) {
+      return false;
+    }
+    
+    // Filter out structured markers and labels
+    const invalidPatterns = [
+      /^\d+\.\s/,           // "1. " numbered lists
+      /^-\s/,               // "- " bullet points
+      /^[A-Z]+:/,           // "COMPLETIONS:", "CONTINUATIONS:", etc.
+      /^:\w+/,              // ":timeline", ":note", ":section", etc.
+      /^\[.*\]$/,           // "[completion 1]", "[example]", etc.
+      /^#{1,6}\s/,          // Markdown headers "# ", "## ", etc.
+      /^\*\*.*\*\*$/,       // Bold markdown "**text**"
+      /^_.*_$/,             // Italic markdown "_text_"
+      /^`.*`$/,             // Code markdown "`code`"
+      /^here\s+(are|is)/i,  // "Here are some suggestions..."
+      /^suggestions?:/i,    // "Suggestions:", "Suggestion:"
+      /^examples?:/i,       // "Examples:", "Example:"
+    ];
+    
+    // Check if line matches any invalid pattern
+    const isInvalid = invalidPatterns.some(pattern => pattern.test(line));
+    
+    if (isInvalid) {
+      console.log('🚫 Filtered out invalid suggestion:', line);
+      return false;
+    }
+    
+    return true;
   }
 }
 

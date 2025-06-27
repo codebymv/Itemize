@@ -19,10 +19,10 @@ interface WhiteboardCanvasProps {
 
 // Pre-defined color palette for easy selection
 const COLOR_PALETTE = [
+  '#2563eb', // Blue (default theme color)
   '#000000', // Black
   '#FF0000', // Red
   '#00FF00', // Green
-  '#0000FF', // Blue
   '#FFFF00', // Yellow
   '#FF00FF', // Magenta
   '#00FFFF', // Cyan
@@ -44,7 +44,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   
   // Drawing tool state
   const [currentTool, setCurrentTool] = useState<'pen' | 'eraser'>('pen');
-  const [strokeColor, setStrokeColor] = useState('#000000');
+  const [strokeColor, setStrokeColor] = useState('#2563eb'); // Default to theme blue
   const [strokeWidth, setStrokeWidth] = useState(isMobile ? 3 : 2); // Slightly thicker for mobile
   const [isDrawing, setIsDrawing] = useState(false);
   
@@ -128,7 +128,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             console.log('🎨 Reconstructing missing metadata for canvas paths');
             dataToLoad = dataToLoad.map((pathData: any, index: number) => ({
               drawMode: true,
-              strokeColor: pathData.strokeColor || '#000000',
+              strokeColor: pathData.strokeColor || '#2563eb', // Default to theme blue
               strokeWidth: pathData.strokeWidth || 2,
               paths: pathData.paths || pathData || []
             }));
@@ -531,18 +531,24 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               {/* Pen/Eraser toggle */}
               <div className="flex items-center gap-1 p-1 bg-white rounded-md border">
                 <Button
-                  variant={currentTool === 'pen' ? 'default' : 'ghost'}
+                  variant="ghost"
                   size="default"
                   onClick={() => handleToolChange('pen')}
-                  className="h-9 w-9 p-0"
+                  className={cn(
+                    "h-9 w-9 p-0",
+                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                  )}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={currentTool === 'eraser' ? 'default' : 'ghost'}
+                  variant="ghost"
                   size="default"
                   onClick={() => handleToolChange('eraser')}
-                  className="h-9 w-9 p-0"
+                  className={cn(
+                    "h-9 w-9 p-0",
+                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                  )}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
@@ -550,14 +556,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
               {/* Brush size control */}
               <div className="flex items-center gap-2 p-2 bg-white rounded-md border">
-                <span className="text-xs text-gray-600 min-w-[15px]">{strokeWidth}</span>
+                <span className="text-xs text-gray-700 font-medium min-w-[15px]">{strokeWidth}</span>
                 <Slider
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
                   max={20}
                   min={1}
                   step={1}
-                  className="w-12"
+                  className="w-12 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
                 />
               </div>
 
@@ -618,18 +624,24 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               {/* Pen/Eraser toggle */}
               <div className="flex items-center gap-1 p-1 bg-white rounded-md border">
                 <Button
-                  variant={currentTool === 'pen' ? 'default' : 'ghost'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('pen')}
-                  className="h-8 w-8 p-0"
+                  className={cn(
+                    "h-8 w-8 p-0",
+                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                  )}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={currentTool === 'eraser' ? 'default' : 'ghost'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('eraser')}
-                  className="h-8 w-8 p-0"
+                  className={cn(
+                    "h-8 w-8 p-0",
+                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                  )}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
@@ -654,14 +666,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
               {/* Brush size slider */}
               <div className="flex items-center gap-2 p-2 bg-white rounded-md border">
-                <span className="text-xs text-gray-600 min-w-[20px]">{strokeWidth}</span>
+                <span className="text-xs text-gray-700 font-medium min-w-[20px]">{strokeWidth}</span>
                 <Slider
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
                   max={20}
                   min={1}
                   step={1}
-                  className="w-16"
+                  className="w-16 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
                 />
               </div>
             </div>

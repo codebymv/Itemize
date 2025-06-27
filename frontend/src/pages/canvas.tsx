@@ -290,8 +290,8 @@ const CanvasPage: React.FC = () => {
         color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
-        width: 200,
-        height: 200,
+        width: 520, // Wider to accommodate rich text toolbar
+        height: 300, // Taller for better content editing
         z_index: 0,
       };
 
@@ -584,17 +584,17 @@ const CanvasPage: React.FC = () => {
       
       const position = getIntelligentPosition();
       
-      const response = await apiCreateNote({
+            const response = await apiCreateNote({
         title: title, // Set the note title properly
         content: '', // Initialize with empty content
         color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
-        width: 200,
-        height: 200,
+        width: 520, // Wider to accommodate rich text toolbar
+        height: 300, // Taller for better content editing
         z_index: 0,
       }, token);
-      
+
       setNotes(prev => [response, ...prev]);
       setShowCreateNoteModal(false);
       
@@ -776,8 +776,7 @@ const CanvasPage: React.FC = () => {
         <div className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Palette className="h-5 w-5 text-slate-600" />
-              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
+              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
               
               {/* Desktop search - next to My Canvas */}
               <div className="relative hidden sm:block ml-4">

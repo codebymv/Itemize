@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles, Layers, StickyNote, ChevronDown } from 'lucide-react';
+import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles, Layers, StickyNote, ChevronDown, Bold, Italic, Underline, Strikethrough, Type, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Palette, Eraser, Brush, Undo, Redo } from 'lucide-react';
 
 const Home: React.FC = () => {
   const { login, currentUser, isAuthenticated, token } = useAuth();
@@ -113,7 +113,7 @@ const Home: React.FC = () => {
 
         {/* Features Section */}
         <div className="mt-16 mb-12">
-          <h2 className="text-3xl font-light italic text-center text-gray-900 mb-8" style={{ fontFamily: '"Raleway", sans-serif' }}>Everything you need to stay organized</h2>
+          <h2 className="text-3xl font-light italic text-center text-gray-900 mb-8" style={{ fontFamily: '"Raleway", sans-serif' }}>Tools to stay organized</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 transform transition-all duration-300 hover:shadow-md hover:-translate-y-1">
@@ -127,11 +127,11 @@ const Home: React.FC = () => {
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Lists & Notes ecosystem</span>
+                  <span>Lists, Notes, & Whiteboards</span>
                 </div>
                 <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Unlimited categories & colors</span>
+                  <span>Easy categories & color groupings</span>
                 </div>
               </div>
             </div>
@@ -152,6 +152,10 @@ const Home: React.FC = () => {
                 <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>Effortless autocomplete</span>
+                </div>
+                <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <span>Context-aware suggestions</span>
                 </div>
               </div>
             </div>
@@ -181,13 +185,13 @@ const Home: React.FC = () => {
         {/* Live Preview Section - Replacing the blue CTA */}
         <div className="mt-16 mb-12">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-light italic text-gray-900 mb-4" style={{ fontFamily: '"Raleway", sans-serif' }}>See it in action</h2>
+            <h2 className="text-3xl font-light italic text-gray-900 mb-4" style={{ fontFamily: '"Raleway", sans-serif' }}>See them in action</h2>
             {/* <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Get a preview of how Itemize helps you stay organized with real interface components.
             </p> */}
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {/* Mock List Component */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {/* Header */}
@@ -198,6 +202,7 @@ const Home: React.FC = () => {
                       className="inline-block w-3 h-3 rounded-full border border-gray-400"
                       style={{ backgroundColor: '#4F46E5' }}
                     />
+                    <ListChecks className="h-4 w-4 text-slate-500" />
                     <h3 className="text-lg font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize Features</h3>
                   </div>
                   <div className="flex items-center">
@@ -334,6 +339,7 @@ const Home: React.FC = () => {
                       className="inline-block w-3 h-3 rounded-full border border-gray-400"
                       style={{ backgroundColor: '#F59E0B' }}
                     />
+                    <StickyNote className="h-4 w-4 text-slate-500" />
                     <h3 className="font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>Why Choose Itemize?</h3>
                   </div>
                   <div className="flex items-center">
@@ -356,35 +362,192 @@ const Home: React.FC = () => {
                 </div>
               </div>
 
-              {/* Note Content Area */}
-              <div className="flex-1 mx-6 mb-6 mt-4">
-                <div 
-                  className="bg-white rounded-lg p-3 h-full flex flex-col"
-                >
-                  <div className="text-sm text-gray-700 flex-1" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                    <div className="space-y-3">
-                      <p>Why choose Itemize for your organizational needs?</p>
-                      
-                      <p>Itemize offers a complete organizational ecosystem that combines the simplicity of lists with the flexibility of notes. Whether you're planning your daily tasks or brainstorming your next big project, our platform adapts to your workflow.</p>
-                      
-                      <p>Key benefits include custom color coding for visual organization, real-time cloud synchronization across all your devices, intelligent AI suggestions to boost productivity, and seamless category management to keep everything organized.</p>
-                      
-                      <p>Join thousands of users who have transformed their productivity with Itemize's intuitive dual approach to organization.</p>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                          Last edited: Just now
-                        </div>
-                        <div title="AI-powered suggestions">
-                          <Sparkles className="h-3 w-3 text-amber-500" />
-                        </div>
-                      </div>
-                    </div>
+              {/* Rich Text Toolbar Demo */}
+              <div className="mx-6 mb-3">
+                <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50">
+                  {/* Heading Dropdown */}
+                  <div className="w-16 h-7 text-xs bg-white border border-gray-300 rounded px-1 flex items-center justify-between">
+                    <Type className="h-3 w-3" />
+                    <ChevronDown className="h-2 w-2" />
                   </div>
 
+                  {/* Formatting Buttons */}
+                  <div className="flex">
+                    <button className="h-7 w-7 p-0 bg-accent text-accent-foreground rounded flex items-center justify-center">
+                      <Bold className="h-3 w-3" />
+                    </button>
+                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <Italic className="h-3 w-3" />
+                    </button>
+                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <Underline className="h-3 w-3" />
+                    </button>
+                  </div>
 
+                  {/* Divider */}
+                  <div className="h-5 w-px bg-gray-300" />
+
+                  {/* Alignment Controls */}
+                  <div className="flex">
+                    <button className="h-7 w-7 p-0 bg-accent text-accent-foreground rounded flex items-center justify-center">
+                      <AlignLeft className="h-3 w-3" />
+                    </button>
+                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <AlignCenter className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-5 w-px bg-gray-300" />
+
+                  {/* List Controls */}
+                  <div className="flex">
+                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <List className="h-3 w-3" />
+                    </button>
+                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <ListOrdered className="h-3 w-3" />
+                    </button>
+                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <Quote className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Note Content Area */}
+              <div className="flex-1 px-6 py-2 space-y-3">
+                <h2 className="text-lg font-semibold text-gray-900">Why Choose Itemize?</h2>
+                
+                <p className="text-sm text-gray-700" style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize combines <strong>lists</strong> and <em>notes</em> into one platform. Planning tasks or brainstorming projects? We adapt to your workflow.</p>
+                
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-700" style={{ fontFamily: '"Raleway", sans-serif' }}>Key benefits include custom color coding for visual organization, real-time cloud synchr<span className="text-gray-400">onization across all your devices, intelligent AI suggestions to boost productivity, and seamless category management to keep everything organized.</span></p>
+                </div>
+              </div>
+
+              {/* Note Footer Section - matches list component structure */}
+              <div className="px-6 py-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    Last edited: Just now
+                  </div>
+                  <div title="AI-powered suggestions">
+                    <Sparkles className="h-4 w-4 text-amber-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mock Whiteboard Component */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+              {/* Whiteboard Header */}
+              <div className="p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="inline-block w-3 h-3 rounded-full border border-gray-400"
+                      style={{ backgroundColor: '#10B981' }}
+                    />
+                    <Palette className="h-4 w-4 text-slate-500" />
+                    <h3 className="font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>Project Brainstorm</h3>
+                  </div>
+                  <div className="flex items-center">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <button className="ml-2 p-1">
+                      <div className="h-4 w-4 flex flex-col justify-center items-center">
+                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
+                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
+                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="mb-3 px-6">
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  Design
+                </div>
+              </div>
+
+              {/* Whiteboard Toolbar Demo */}
+              <div className="mx-6 mb-3">
+                <div className="flex items-center gap-2 p-2 border border-gray-200 bg-gray-50 rounded-t-lg">
+                  {/* Pen/Eraser toggle */}
+                  <div className="flex gap-1">
+                    <button className="h-6 w-6 p-0 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center">
+                      <Brush className="h-3 w-3" />
+                    </button>
+                    <button className="h-6 w-6 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                      <Eraser className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Color Palette - reduced to 4 colors */}
+                  <div className="flex gap-1">
+                    <button 
+                      className="w-5 h-5 rounded border-2 border-blue-700 shadow-sm"
+                      style={{ backgroundColor: '#2563eb' }}
+                    />
+                    <button 
+                      className="w-5 h-5 rounded border border-gray-300 hover:border-gray-400 shadow-sm"
+                      style={{ backgroundColor: '#000000' }}
+                    />
+                    <button 
+                      className="w-5 h-5 rounded border border-gray-300 hover:border-gray-400 shadow-sm"
+                      style={{ backgroundColor: '#FF0000' }}
+                    />
+                    <button 
+                      className="w-5 h-5 rounded border border-gray-300 hover:border-gray-400 shadow-sm"
+                      style={{ backgroundColor: '#00FF00' }}
+                    />
+                  </div>
+
+                  {/* Simplified brush size indicator */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-600">Size:</span>
+                    <div className="w-8 h-1.5 bg-gray-200 rounded-full relative">
+                      <div className="absolute left-1/3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-blue-600 rounded-full border border-white shadow"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Whiteboard Canvas Area */}
+              <div className="flex-1 mx-6 mb-3">
+                <div 
+                  className="bg-white rounded-b-lg h-full flex flex-col relative border border-gray-200 border-t-0"
+                  style={{ 
+                    minHeight: '280px'
+                  }}
+                >
+                  {/* Hand-drawn logo */}
+                  <div className="p-4 flex-1 flex flex-col justify-center items-center">
+                    <img 
+                      src="/icon_handdrawn.png" 
+                      alt="Hand-drawn Itemize logo"
+                      className="w-32 h-32 object-contain"
+                    />
+                  </div>
+                  
+                  {/* Resize handle indicator */}
+                  <div className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center border-t border-gray-200">
+                    <div className="w-12 h-1 rounded-full bg-gray-400"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Whiteboard Footer Section - matches other components */}
+              <div className="px-6 py-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    Last edited: Just now
+                  </div>
+                  <div title="AI-powered suggestions">
+                    <Sparkles className="h-4 w-4 text-green-500" />
+                  </div>
                 </div>
               </div>
             </div>
