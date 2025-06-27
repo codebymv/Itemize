@@ -9,7 +9,6 @@ const BLOCKED_ENDPOINTS = [
 // Debug environment and configuration
 const debugConfig = {
   VITE_API_URL: import.meta.env.VITE_API_URL,
-  VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   MODE: import.meta.env.MODE,
   PROD: import.meta.env.PROD,
   DEV: import.meta.env.DEV,
@@ -23,8 +22,8 @@ console.log('API Configuration Debug:', debugConfig);
 const determineApiUrl = () => {
   // If we're in production and on itemize.cloud, force the API URL
   if (typeof window !== 'undefined' && window.location.hostname === 'itemize.cloud') {
-    console.log('Production domain detected, using itemize.cloud API');
-    return 'https://itemize.cloud';
+    console.log('Production domain detected, forcing itemize.cloud API');
+    return window.location.origin;
   }
 
   // If we have a configured API URL, use it
@@ -43,7 +42,8 @@ console.log('Final API URL:', apiUrl);
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: apiUrl
+  baseURL: apiUrl,
+  withCredentials: true // Enable sending cookies
 });
 
 // Add a request interceptor to block specific endpoints and add debugging
@@ -53,9 +53,10 @@ api.interceptors.request.use(
     console.log('API Request:', {
       url: config.url,
       baseURL: config.baseURL,
-      fullUrl: config.baseURL + config.url,
+      fullUrl: `${config.baseURL}${config.url}`,
       method: config.method,
-      headers: config.headers
+      headers: config.headers,
+      withCredentials: config.withCredentials
     });
 
     // Check if the request URL matches any blocked endpoint
@@ -87,7 +88,8 @@ api.interceptors.response.use(
     console.log('API Response:', {
       url: response.config.url,
       status: response.status,
-      statusText: response.statusText
+      statusText: response.statusText,
+      headers: response.headers
     });
     return response;
   },
@@ -96,7 +98,8 @@ api.interceptors.response.use(
       url: error.config?.url,
       message: error.message,
       code: error.code,
-      response: error.response?.data
+      response: error.response?.data,
+      status: error.response?.status
     });
     return Promise.reject(error);
   }

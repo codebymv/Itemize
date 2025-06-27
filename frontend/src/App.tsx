@@ -16,18 +16,39 @@ import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import CanvasPage from "./pages/canvas";  // Import the new Canvas page
+import CanvasPage from "./pages/canvas";
 
 // Debug environment variables
-console.log('Environment Variables:', {
+const debugEnv = {
   VITE_API_URL: import.meta.env.VITE_API_URL,
+  VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   MODE: import.meta.env.MODE,
   DEV: import.meta.env.DEV,
   PROD: import.meta.env.PROD,
-});
+  origin: typeof window !== 'undefined' ? window.location.origin : '',
+  hostname: typeof window !== 'undefined' ? window.location.hostname : ''
+};
+
+console.log('App Environment Debug:', debugEnv);
 
 const queryClient = new QueryClient();
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+// Get Google Client ID with fallback logic
+const getGoogleClientId = () => {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  console.log('Google Client ID:', {
+    fromEnv: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    origin: window.location.origin,
+    hostname: window.location.hostname,
+    final: clientId
+  });
+  if (!clientId) {
+    console.error('No Google Client ID found!');
+  }
+  return clientId || '';
+};
+
+const googleClientId = getGoogleClientId();
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
@@ -56,30 +77,30 @@ const App = () => (
                 v7_relativeSplatPath: true
               }}
             >
-          <div className="min-h-screen bg-background">
-            <Navbar />
-            <main>
-              <Routes>
-                {/* Root path redirects based on authentication */}
-                <Route path="/" element={<RootRedirect />} />
-                
-                {/* Public routes */}
-                <Route path="/home" element={<Home />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                
-                {/* Protected routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/lists" element={<UserHome />} />
-                  <Route path="/canvas" element={<CanvasPage />} />
-                  {/* Add other protected routes here */}
-                </Route>
-                
-                {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-          </div>
-        </BrowserRouter>
+              <div className="min-h-screen bg-background">
+                <Navbar />
+                <main>
+                  <Routes>
+                    {/* Root path redirects based on authentication */}
+                    <Route path="/" element={<RootRedirect />} />
+                    
+                    {/* Public routes */}
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
+                    
+                    {/* Protected routes */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/lists" element={<UserHome />} />
+                      <Route path="/canvas" element={<CanvasPage />} />
+                      {/* Add other protected routes here */}
+                    </Route>
+                    
+                    {/* Catch-all route */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+              </div>
+            </BrowserRouter>
           </AISuggestProvider>
         </AuthProvider>
       </GoogleOAuthProvider>
