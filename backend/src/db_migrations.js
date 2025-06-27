@@ -430,11 +430,109 @@ const runCleanupDefaultCategories = async (pool) => {
   }
 };
 
+// Migration for creating whiteboards table with proper constraints for infinite canvas
+const runCreateWhiteboardsTableMigration = async (pool) => {
+  console.log('Running create whiteboards table migration...');
+  try {
+    // Create the whiteboards table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS whiteboards (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT DEFAULT 'Untitled Whiteboard',
+          category TEXT DEFAULT 'General',
+          canvas_data JSONB DEFAULT '{"paths": [], "shapes": []}',
+          canvas_width INTEGER DEFAULT 700 CHECK (canvas_width >= 300 AND canvas_width <= 2400),
+          canvas_height INTEGER DEFAULT 400 CHECK (canvas_height >= 250 AND canvas_height <= 2400),
+          background_color TEXT DEFAULT '#FFFFFF',
+          position_x FLOAT8 NOT NULL DEFAULT 0,
+          position_y FLOAT8 NOT NULL DEFAULT 0,
+          z_index INTEGER DEFAULT 0,
+          color_value TEXT DEFAULT '#3B82F6',
+          created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('✅ whiteboards table created (if not exists)');
+
+    // Create index on user_id for whiteboards table
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_whiteboards_user_id ON whiteboards(user_id);
+    `);
+    console.log('✅ index idx_whiteboards_user_id on whiteboards table created (if not exists)');
+
+    // Create trigger for whiteboards table to automatically update updated_at
+    await pool.query(`
+      DROP TRIGGER IF EXISTS trigger_whiteboards_updated_at ON whiteboards;
+    `);
+    await pool.query(`
+      CREATE TRIGGER trigger_whiteboards_updated_at
+      BEFORE UPDATE ON whiteboards
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+    `);
+    console.log('✅ trigger_whiteboards_updated_at on whiteboards table created');
+
+    console.log('✅ Create whiteboards table migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Create whiteboards table migration failed:', error.message);
+    return false;
+  }
+};
+
+// Migration to update canvas dimension constraints for existing whiteboards table
+const runUpdateCanvasDimensionConstraints = async (pool) => {
+  console.log('Running update canvas dimension constraints migration...');
+  try {
+    // Check if whiteboards table exists
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'whiteboards'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('⚠️ Whiteboards table does not exist, skipping constraint update');
+      return false;
+    }
+
+    // Drop existing check constraint if it exists
+    await pool.query(`
+      ALTER TABLE whiteboards DROP CONSTRAINT IF EXISTS check_canvas_dimensions;
+    `);
+    console.log('✅ Dropped existing check_canvas_dimensions constraint');
+
+    // Add new check constraints with higher limits for infinite canvas
+    await pool.query(`
+      ALTER TABLE whiteboards 
+      ADD CONSTRAINT check_canvas_width CHECK (canvas_width >= 300 AND canvas_width <= 2400);
+    `);
+    console.log('✅ Added new canvas_width constraint (300-2400px)');
+
+    await pool.query(`
+      ALTER TABLE whiteboards 
+      ADD CONSTRAINT check_canvas_height CHECK (canvas_height >= 250 AND canvas_height <= 2400);
+    `);
+    console.log('✅ Added new canvas_height constraint (250-2400px)');
+
+    console.log('✅ Canvas dimension constraints updated successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Canvas dimension constraints update failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = {
   runCanvasMigration,
   runCreateNotesTableMigration,
   runAddTitleAndCategoryToNotesMigration,
   runCategoriesTableMigration,
   runCategoriesDataMigration,
-  runCleanupDefaultCategories
+  runCleanupDefaultCategories,
+  runCreateWhiteboardsTableMigration,
+  runUpdateCanvasDimensionConstraints
 };

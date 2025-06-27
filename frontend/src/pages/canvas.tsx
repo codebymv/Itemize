@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Filter, Palette } from 'lucide-react';
+import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
-import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload, updateListPosition } from '../services/api';
-import { List, Note } from '../types';
+import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload, updateListPosition, getWhiteboards, createWhiteboard as apiCreateWhiteboard, updateWhiteboard as apiUpdateWhiteboard, deleteWhiteboard as apiDeleteWhiteboard, CreateWhiteboardPayload } from '../services/api';
+import { List, Note, Whiteboard } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -14,8 +14,10 @@ import CreateNoteModal from "../components/CreateNoteModal";
 import { ListCard } from "../components/ListCard";
 import { useAuth } from "../contexts/AuthContext";
 import { NoteCard } from '../components/NoteCard';
+import { WhiteboardCard } from '../components/WhiteboardCard';
 import { NewNoteModal } from '../components/NewNoteModal';
 import { NewListModal } from '../components/NewListModal';
+import { NewWhiteboardModal } from '../components/NewWhiteboardModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 
 const CanvasPage: React.FC = () => {
@@ -31,6 +33,8 @@ const CanvasPage: React.FC = () => {
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteInitialPosition, setNewNoteInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const [showNewListModal, setShowNewListModal] = useState(false);
+  const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
+  const [newWhiteboardInitialPosition, setNewWhiteboardInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const { toast } = useToast();
   const { token } = useAuth();
 
@@ -38,6 +42,11 @@ const CanvasPage: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [errorNotes, setErrorNotes] = useState<string | null>(null);
+
+  // State for Whiteboards
+  const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
+  const [loadingWhiteboards, setLoadingWhiteboards] = useState(true);
+  const [errorWhiteboards, setErrorWhiteboards] = useState<string | null>(null);
 
   // Database-backed category management
   const {
@@ -60,13 +69,14 @@ const CanvasPage: React.FC = () => {
   // Filter function for backward compatibility
   const filterByCategory = (categoryFilter: string | null) => {
     if (!categoryFilter) {
-      return { filteredLists: lists, filteredNotes: notes };
+      return { filteredLists: lists, filteredNotes: notes, filteredWhiteboards: whiteboards };
     }
     
     const filteredLists = lists.filter(list => list.type === categoryFilter);
     const filteredNotes = notes.filter(note => note.category === categoryFilter);
+    const filteredWhiteboards = whiteboards.filter(whiteboard => whiteboard.category === categoryFilter);
     
-    return { filteredLists, filteredNotes };
+    return { filteredLists, filteredNotes, filteredWhiteboards };
   };
   
   // Reference to canvas container methods
@@ -79,6 +89,7 @@ const CanvasPage: React.FC = () => {
   // Collapsible state management - persists across filter changes
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
   const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
+  const [collapsedWhiteboardIds, setCollapsedWhiteboardIds] = useState<Set<number>>(new Set());
   
   // Utility function for intelligent positioning of mobile-created items
   const getIntelligentPosition = () => {
@@ -89,10 +100,11 @@ const CanvasPage: React.FC = () => {
     const itemHeight = 250; // Approximate height of list/note cards
     const minDistance = 50; // Minimum distance between items
     
-    // Get all existing positions from lists and notes
+    // Get all existing positions from lists, notes, and whiteboards
     const existingPositions: Array<{ x: number; y: number }> = [
       ...lists.map(list => ({ x: list.position_x || 0, y: list.position_y || 0 })),
-      ...notes.map(note => ({ x: note.position_x, y: note.position_y }))
+      ...notes.map(note => ({ x: note.position_x, y: note.position_y })),
+      ...whiteboards.map(whiteboard => ({ x: whiteboard.position_x, y: whiteboard.position_y }))
     ];
     
     // Function to check if a position overlaps with existing items
@@ -147,6 +159,19 @@ const CanvasPage: React.FC = () => {
         newSet.delete(noteId);
       } else {
         newSet.add(noteId);
+      }
+      return newSet;
+    });
+  };
+  
+  const isWhiteboardCollapsed = (whiteboardId: number) => collapsedWhiteboardIds.has(whiteboardId);
+  const toggleWhiteboardCollapsed = (whiteboardId: number) => {
+    setCollapsedWhiteboardIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(whiteboardId)) {
+        newSet.delete(whiteboardId);
+      } else {
+        newSet.add(whiteboardId);
       }
       return newSet;
     });
@@ -212,6 +237,29 @@ const CanvasPage: React.FC = () => {
     }
   }, [token, toast]); // Re-fetch if token changes, include toast in dependencies
 
+  // Fetch whiteboards on component mount
+  useEffect(() => {
+    const fetchWhiteboardsData = async () => {
+      try {
+        setLoadingWhiteboards(true);
+        setErrorWhiteboards(null);
+        const fetchedWhiteboards = await getWhiteboards(token);
+        setWhiteboards(fetchedWhiteboards);
+      } catch (err) {
+        console.error('Error fetching whiteboards:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load whiteboards. Please try again.';
+        setErrorWhiteboards(errorMessage);
+        toast({ title: "Error fetching whiteboards", description: errorMessage, variant: "destructive" });
+      } finally {
+        setLoadingWhiteboards(false);
+      }
+    };
+
+    if (token) { // Only fetch if authenticated
+      fetchWhiteboardsData();
+    }
+  }, [token, toast]); // Re-fetch if token changes, include toast in dependencies
+
   // Handle clicking outside button context menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -242,8 +290,8 @@ const CanvasPage: React.FC = () => {
         color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
-        width: 200,
-        height: 200,
+        width: 520, // Wider to accommodate rich text toolbar
+        height: 300, // Taller for better content editing
         z_index: 0,
       };
 
@@ -291,6 +339,92 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your note. Please try again.';
       toast({
         title: "Error deleting note",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // CRUD operations for Whiteboards
+  const handleCreateWhiteboard = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    try {
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(category) && category !== 'General') {
+        await addCategory({ name: category, color_value: color });
+      }
+      
+      const payloadWithDefaults: CreateWhiteboardPayload = {
+        title: title, // Set the whiteboard title
+        category: category, // Use selected category
+        canvas_data: '{"paths": [], "shapes": []}', // Empty canvas
+        canvas_width: 700, // Wide enough to show all toolbar controls with extra room
+        canvas_height: 400, // Default size (2x notes)
+        background_color: '#FFFFFF', // White background
+        position_x: position.x,
+        position_y: position.y,
+        z_index: 0,
+        color_value: color, // Border color
+      };
+
+      const newWhiteboard = await apiCreateWhiteboard(payloadWithDefaults, token);
+      setWhiteboards(prev => [newWhiteboard, ...prev]);
+      
+      // Removed success toast - no need to distract user for routine whiteboard creation
+    } catch (error) {
+      console.error('Failed to create whiteboard:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not create your whiteboard. Please try again.';
+      toast({
+        title: "Error creating whiteboard",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateWhiteboard = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    try {
+      console.log('🎨 CanvasPage: Updating whiteboard:', {
+        whiteboardId,
+        updatedFields: Object.keys(updatedData),
+        hasCanvasData: !!updatedData.canvas_data,
+        canvasDataType: typeof updatedData.canvas_data,
+        canvasDataPreview: updatedData.canvas_data ? JSON.stringify(updatedData.canvas_data).substring(0, 200) : 'N/A'
+      });
+      
+      const updatedWhiteboard = await apiUpdateWhiteboard(whiteboardId, updatedData, token);
+      
+      console.log('🎨 CanvasPage: Whiteboard update response:', {
+        whiteboardId: updatedWhiteboard.id,
+        hasCanvasData: !!updatedWhiteboard.canvas_data,
+        canvasDataType: typeof updatedWhiteboard.canvas_data,
+        updatedAt: updatedWhiteboard.updated_at
+      });
+      
+      setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? updatedWhiteboard : w));
+      return updatedWhiteboard;
+    } catch (error) {
+      console.error('Failed to update whiteboard:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
+      toast({
+        title: "Error updating whiteboard",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+
+  const handleDeleteWhiteboard = async (whiteboardId: number) => {
+    try {
+      await apiDeleteWhiteboard(whiteboardId, token);
+      setWhiteboards(prev => prev.filter(w => w.id !== whiteboardId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete whiteboard:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not delete your whiteboard. Please try again.';
+      toast({
+        title: "Error deleting whiteboard",
         description: errorMessage,
         variant: "destructive"
       });
@@ -415,6 +549,11 @@ const CanvasPage: React.FC = () => {
     setShowNewNoteModal(true);
   };
 
+  const handleOpenNewWhiteboardModal = (position: { x: number, y: number }) => {
+    setNewWhiteboardInitialPosition(position);
+    setShowNewWhiteboardModal(true);
+  };
+
   // Handler for button context menu actions
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
@@ -429,6 +568,12 @@ const CanvasPage: React.FC = () => {
     setShowNewNoteModal(true);
   };
 
+  const handleButtonAddWhiteboard = () => {
+    setShowButtonContextMenu(false);
+    setNewWhiteboardInitialPosition({ x: 100, y: 100 }); // Default position for button creation
+    setShowNewWhiteboardModal(true);
+  };
+
   // Mobile note creation function (mirrors createList)
   const createNote = async (title: string, category: string, color: string) => {
     try {
@@ -439,17 +584,17 @@ const CanvasPage: React.FC = () => {
       
       const position = getIntelligentPosition();
       
-      const response = await apiCreateNote({
+            const response = await apiCreateNote({
         title: title, // Set the note title properly
         content: '', // Initialize with empty content
         color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
-        width: 200,
-        height: 200,
+        width: 520, // Wider to accommodate rich text toolbar
+        height: 300, // Taller for better content editing
         z_index: 0,
       }, token);
-      
+
       setNotes(prev => [response, ...prev]);
       setShowCreateNoteModal(false);
       
@@ -564,9 +709,9 @@ const CanvasPage: React.FC = () => {
   };
 
   const getFilteredContent = () => {
-    // Use unified category filtering for both lists and notes
+    // Use unified category filtering for lists, notes, and whiteboards
     // null selectedFilter means show all content (no filtering)
-    const { filteredLists, filteredNotes } = filterByCategory(selectedFilter);
+    const { filteredLists, filteredNotes, filteredWhiteboards } = filterByCategory(selectedFilter);
     
     // Apply search filter to lists
     let searchFilteredLists = [...filteredLists];
@@ -587,10 +732,19 @@ const CanvasPage: React.FC = () => {
                note.content?.toLowerCase().includes(searchQuery.toLowerCase());
       });
     }
+
+    // Apply search filter to whiteboards
+    let searchFilteredWhiteboards = [...filteredWhiteboards];
+    if (searchQuery) {
+      searchFilteredWhiteboards = searchFilteredWhiteboards.filter(whiteboard => {
+        return whiteboard.title?.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
     
     return { 
       filteredLists: searchFilteredLists, 
-      filteredNotes: searchFilteredNotes 
+      filteredNotes: searchFilteredNotes,
+      filteredWhiteboards: searchFilteredWhiteboards
     };
   };
   
@@ -613,7 +767,7 @@ const CanvasPage: React.FC = () => {
     return counts;
   };
 
-  const { filteredLists, filteredNotes } = getFilteredContent();
+  const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
 
   // Header component shared by both views
   const HeaderSection = () => (
@@ -622,8 +776,7 @@ const CanvasPage: React.FC = () => {
         <div className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Palette className="h-5 w-5 text-slate-600" />
-              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
+              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
               
               {/* Desktop search - next to My Canvas */}
               <div className="relative hidden sm:block ml-4">
@@ -695,6 +848,8 @@ const CanvasPage: React.FC = () => {
 
   // Mobile List View Component (similar to UserHome.tsx)
   const MobileListView = () => {
+    const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
+    
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Categories Section */}
@@ -728,10 +883,10 @@ const CanvasPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Content section - Lists and Notes */}
-        {filteredLists.length === 0 && filteredNotes.length === 0 ? (
+        {/* Content section - Lists, Notes, and Whiteboards */}
+        {filteredLists.length === 0 && filteredNotes.length === 0 && filteredWhiteboards.length === 0 ? (
           <div className="text-center py-12">
-            {lists.length === 0 && notes.length === 0 ? (
+            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 ? (
               <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-lg shadow-sm border p-8">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -755,6 +910,17 @@ const CanvasPage: React.FC = () => {
                       <Plus className="h-4 w-4 mr-2" />
                       Add Note
                     </Button>
+                    <Button 
+                      onClick={() => {
+                        const position = getIntelligentPosition();
+                        setNewWhiteboardInitialPosition(position);
+                        setShowNewWhiteboardModal(true);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 font-normal"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Whiteboard
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -770,7 +936,10 @@ const CanvasPage: React.FC = () => {
             {/* My Lists section */}
             {filteredLists.length > 0 && (
               <>
-                <h2 className="text-xl font-light text-slate-900 mb-6">My Lists</h2>
+                <h2 className="text-xl font-light text-slate-900 mb-6 flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5 text-slate-500" />
+                  My Lists
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredLists.map((list) => (
                     <ListCard
@@ -781,6 +950,7 @@ const CanvasPage: React.FC = () => {
                       existingCategories={categoryNames}
                       isCollapsed={isListCollapsed(list.id)}
                       onToggleCollapsed={() => toggleListCollapsed(list.id)}
+                      addCategory={addCategory}
                     />
                   ))}
                 </div>
@@ -790,7 +960,10 @@ const CanvasPage: React.FC = () => {
             {/* My Notes section */}
             {filteredNotes.length > 0 && (
               <div className={filteredLists.length > 0 ? "mt-12" : ""}>
-                <h2 className="text-xl font-light text-slate-900 mb-6">My Notes</h2>
+                <h2 className="text-xl font-light text-slate-900 mb-6 flex items-center gap-2">
+                  <StickyNote className="h-5 w-5 text-slate-500" />
+                  My Notes
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredNotes.map((note) => (
                     <NoteCard
@@ -805,6 +978,33 @@ const CanvasPage: React.FC = () => {
                       existingCategories={categoryNames}
                       isCollapsed={isNoteCollapsed(note.id)}
                       onToggleCollapsed={() => toggleNoteCollapsed(note.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* My Whiteboards section */}
+            {filteredWhiteboards.length > 0 && (
+              <div className={(filteredLists.length > 0 || filteredNotes.length > 0) ? "mt-12" : ""}>
+                <h2 className="text-xl font-light text-slate-900 mb-6 flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-slate-500" />
+                  My Whiteboards
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredWhiteboards.map((whiteboard) => (
+                    <WhiteboardCard
+                      key={whiteboard.id}
+                      whiteboard={whiteboard}
+                      onUpdate={async (whiteboardId, updatedData) => {
+                        await handleUpdateWhiteboard(whiteboardId, updatedData);
+                      }}
+                      onDelete={async (whiteboardId) => {
+                        await handleDeleteWhiteboard(whiteboardId);
+                      }}
+                      existingCategories={categoryNames}
+                      isCollapsed={isWhiteboardCollapsed(whiteboard.id)}
+                      onToggleCollapsed={() => toggleWhiteboardCollapsed(whiteboard.id)}
                     />
                   ))}
                 </div>
@@ -851,16 +1051,19 @@ const CanvasPage: React.FC = () => {
             existingCategories={categoryNames} 
             searchQuery={searchQuery}
             onOpenNewNoteModal={handleOpenNewNoteModal} 
-            notes={notes} // Pass notes state
+            notes={filteredNotes} // Pass filtered notes state
             onNoteUpdate={handleUpdateNote} // Pass update handler
             onNoteDelete={handleDeleteNote} // Pass delete handler
-            lists={lists} // Pass lists state
-            onListUpdate={updateList} // Pass list update handler
-            onListDelete={deleteList} // Pass list delete handler
-            onListPositionUpdate={handleListPositionUpdate} // Pass position update handler
+            whiteboards={filteredWhiteboards} // Pass filtered whiteboards state
+            onWhiteboardUpdate={handleUpdateWhiteboard} // Pass whiteboard update handler
+            onWhiteboardDelete={handleDeleteWhiteboard} // Pass whiteboard delete handler
+            onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
+            addCategory={addCategory} // Pass the centralized addCategory function
             onReady={(methods) => {
-              canvasMethodsRef.current = methods;
-              console.log('Canvas methods ready:', methods);
+              if (!canvasMethodsRef.current) {
+                canvasMethodsRef.current = methods;
+                console.log('Canvas methods ready:', methods);
+              }
             }}
           />
         </div>
@@ -893,6 +1096,17 @@ const CanvasPage: React.FC = () => {
         />
       )}
 
+      {/* Desktop Canvas Whiteboard Modal */}
+      {showNewWhiteboardModal && newWhiteboardInitialPosition && (
+        <NewWhiteboardModal
+          isOpen={showNewWhiteboardModal}
+          onClose={() => setShowNewWhiteboardModal(false)}
+          onCreateWhiteboard={handleCreateWhiteboard} 
+          initialPosition={newWhiteboardInitialPosition}
+          existingCategories={categoryNames}
+        />
+      )}
+
       {/* Unified New List Modal - used by both mobile and desktop */}
       {showNewListModal && (
         <NewListModal
@@ -915,6 +1129,7 @@ const CanvasPage: React.FC = () => {
             absolutePosition={buttonMenuPosition}
             onAddList={handleButtonAddList}
             onAddNote={handleButtonAddNote}
+            onAddWhiteboard={handleButtonAddWhiteboard}
             onClose={() => setShowButtonContextMenu(false)}
             isFromButton={true}
           />

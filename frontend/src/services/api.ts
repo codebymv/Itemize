@@ -12,6 +12,19 @@ export interface CreateNotePayload {
   z_index?: number;
 }
 
+export interface CreateWhiteboardPayload {
+  title?: string;
+  category?: string;
+  canvas_data?: any;
+  canvas_width?: number;
+  canvas_height?: number;
+  background_color?: string;
+  position_x: number;
+  position_y: number;
+  z_index?: number;
+  color_value?: string;
+}
+
 export interface Category {
   id: number;
   name: string;
@@ -122,6 +135,35 @@ export const updateNote = async (noteId: number, noteData: any, token?: string) 
 
 export const deleteNote = async (noteId: number, token?: string) => {
   const response = await api.delete(`/api/notes/${noteId}`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Whiteboard API functions
+export const getWhiteboards = async (token?: string) => {
+  const response = await api.get('/api/whiteboards', {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, token?: string) => {
+  const response = await api.post('/api/whiteboards', whiteboardData, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const updateWhiteboard = async (whiteboardId: number, whiteboardData: any, token?: string) => {
+  const response = await api.put(`/api/whiteboards/${whiteboardId}`, whiteboardData, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const deleteWhiteboard = async (whiteboardId: number, token?: string) => {
+  const response = await api.delete(`/api/whiteboards/${whiteboardId}`, {
     headers: getAuthHeaders(token)
   });
   return response.data;

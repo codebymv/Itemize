@@ -30,19 +30,19 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
   isLoadingSuggestions
   } = props;
   
-  // Debug log for props
-  useEffect(() => {
-    console.log('ListItemAdd props:', {
-      newItemText,
-      currentInputSuggestion,
-      currentSuggestion, // Log this specifically 
-      aiEnabled,
-      shouldShowSuggestion: aiEnabled && 
-        currentInputSuggestion && 
-        newItemText && 
-        currentInputSuggestion.toLowerCase().startsWith(newItemText.toLowerCase())
-    });
-  }, [aiEnabled, currentInputSuggestion, currentSuggestion, newItemText]);
+  // Debug log for props (reduced logging)
+  // useEffect(() => {
+  //   console.log('ListItemAdd props:', {
+  //     newItemText,
+  //     currentInputSuggestion,
+  //     currentSuggestion, // Log this specifically 
+  //     aiEnabled,
+  //     shouldShowSuggestion: aiEnabled && 
+  //       currentInputSuggestion && 
+  //       newItemText && 
+  //       currentInputSuggestion.toLowerCase().startsWith(newItemText.toLowerCase())
+  //   });
+  // }, [aiEnabled, currentInputSuggestion, currentSuggestion, newItemText]);
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     // For debugging keyboard events
     console.log('Key pressed:', e.key, { currentInputSuggestion });

@@ -10,7 +10,7 @@ import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
 import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
-import { NoteContent } from './NoteContent';
+import { RichNoteContent } from './RichNoteContent';
 import { NoteCategorySelector } from './NoteCategorySelector';
 
 interface NoteCardProps {
@@ -258,10 +258,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
             style={{ 
               border: `2px solid ${noteDisplayColor} !important`,
               borderColor: `${noteDisplayColor} !important`,
-              height: `${Math.max(100, (note.height || 200) - 120)}px` // Fixed height calculation
+              height: `${Math.max(180, (note.height || 300) - 120)}px`, // Increased default height  
+              minWidth: '480px' // Ensure minimum width for toolbar
             }}
           >
-            <NoteContent
+            <RichNoteContent
               content={note.content}
               isEditingContent={isEditingContent}
               editContent={editContent}

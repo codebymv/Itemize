@@ -1,11 +1,12 @@
 import React from 'react';
-import { CheckSquare, StickyNote } from 'lucide-react';
+import { CheckSquare, StickyNote, Palette } from 'lucide-react';
 import { List } from '../../types';
 
 interface ContextMenuProps {
   position: { x: number, y: number };
   onAddList: () => void;
   onAddNote?: () => void; // Optional for now, will make required as we implement
+  onAddWhiteboard?: () => void; // Add whiteboard support
   onClose: () => void;
   isFromButton?: boolean;
   absolutePosition?: { x: number, y: number };
@@ -15,6 +16,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   position, 
   onAddList,
   onAddNote,
+  onAddWhiteboard,
   onClose,
   isFromButton = false,
   absolutePosition
@@ -91,6 +93,30 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           >
             <StickyNote className="h-4 w-4 mr-3 text-slate-500" />
             <span>Add Note</span>
+          </button>
+        )}
+        {onAddWhiteboard && (
+          <button 
+            className="menu-item"
+            onClick={(e) => handleClickItem(e, onAddWhiteboard)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0.75rem 1rem',
+              cursor: 'pointer',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              fontWeight: '300',
+              fontSize: '0.875rem',
+              transition: 'background-color 0.15s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <Palette className="h-4 w-4 mr-3 text-slate-500" />
+            <span>Add Whiteboard</span>
           </button>
         )}
       </div>
