@@ -6,10 +6,34 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
+// Determine API URL with better fallback logic
+const determineApiUrl = () => {
+  const configuredUrl = import.meta.env.VITE_API_URL;
+  const isProd = import.meta.env.PROD;
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  
+  console.log('API Configuration:', {
+    configuredUrl,
+    isProd,
+    currentOrigin,
+    mode: import.meta.env.MODE
+  });
+
+  // In production, if no URL is configured, try to use the same origin
+  if (isProd && !configuredUrl && currentOrigin && !currentOrigin.includes('localhost')) {
+    console.log('Using current origin as API URL:', currentOrigin);
+    return currentOrigin;
+  }
+
+  // Use configured URL or fallback to localhost only in development
+  const apiUrl = configuredUrl || (isProd ? currentOrigin : 'http://localhost:3001');
+  console.log('Final API URL:', apiUrl);
+  return apiUrl;
+};
+
 // Create axios instance with base URL
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const api = axios.create({
-  baseURL: apiUrl
+  baseURL: determineApiUrl()
 });
 
 // Add a request interceptor to block specific endpoints
