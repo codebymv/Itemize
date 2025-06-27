@@ -43,10 +43,10 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // Explicitly define environment variables
-      __API_URL__: JSON.stringify(process.env.VITE_API_URL || 'https://itemize.cloud'),
+      __API_URL__: JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3001'),
       __GOOGLE_CLIENT_ID__: JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID || ''),
       // Also define the regular env variables to ensure they're available
-      'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://itemize.cloud'),
+      'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3001'),
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID || ''),
       'import.meta.env.MODE': JSON.stringify(mode),
       'import.meta.env.DEV': mode === 'development',
