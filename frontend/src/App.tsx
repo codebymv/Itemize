@@ -16,10 +16,10 @@ import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import CanvasPage from "./pages/canvas";  // Import the new Canvas page
+import CanvasPage from "./pages/canvas";
 
 const queryClient = new QueryClient();
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const googleClientId = "761425672348-63ncpr61i8hv48l94ljju4uloahreohs.apps.googleusercontent.com";
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
@@ -42,31 +42,36 @@ const App = () => (
           <AISuggestProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-          <div className="min-h-screen bg-background">
-            <Navbar />
-            <main>
-              <Routes>
-                {/* Root path redirects based on authentication */}
-                <Route path="/" element={<RootRedirect />} />
-                
-                {/* Public routes */}
-                <Route path="/home" element={<Home />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                
-                {/* Protected routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/lists" element={<UserHome />} />
-                  <Route path="/canvas" element={<CanvasPage />} />
-                  {/* Add other protected routes here */}
-                </Route>
-                
-                {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-          </div>
-        </BrowserRouter>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <div className="min-h-screen bg-background">
+                <Navbar />
+                <main>
+                  <Routes>
+                    {/* Root path redirects based on authentication */}
+                    <Route path="/" element={<RootRedirect />} />
+                    
+                    {/* Public routes */}
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
+                    
+                    {/* Protected routes */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/lists" element={<UserHome />} />
+                      <Route path="/canvas" element={<CanvasPage />} />
+                      {/* Add other protected routes here */}
+                    </Route>
+                    
+                    {/* Catch-all route */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+              </div>
+            </BrowserRouter>
           </AISuggestProvider>
         </AuthProvider>
       </GoogleOAuthProvider>

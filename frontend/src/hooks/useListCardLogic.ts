@@ -3,7 +3,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAISuggest } from "@/context/AISuggestContext";
 import { useAISuggestions } from "@/hooks/use-ai-suggestions";
 import { List, ListItem } from '@/types';
-import { useDatabaseCategories } from './useDatabaseCategories';
 
 interface UseListCardLogicProps {
   list: List;
@@ -12,17 +11,18 @@ interface UseListCardLogicProps {
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   existingCategories?: string[];
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
 }
 
-export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories = [] }: UseListCardLogicProps) => {
+export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories = [], addCategory }: UseListCardLogicProps) => {
   // Use the global AI suggestions context
   const { aiEnabled, setAiEnabled } = useAISuggest();
 
   // Get items as simple text strings for AI suggestions
   const itemTexts = list.items.map(item => item.text);
 
-  // Setup AI suggestions
-  console.log('AI Suggestions setup:', { aiEnabled, listTitle: list.title, itemCount: itemTexts.length });
+  // Setup AI suggestions (reduce logging)
+  // console.log('AI Suggestions setup:', { aiEnabled, listTitle: list.title, itemCount: itemTexts.length });
   
   const { 
     currentSuggestion,
@@ -50,7 +50,6 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
 
   
   const { toast } = useToast();
-  const { addCategory } = useDatabaseCategories();
   
   // Component state - use external collapsible state if provided, otherwise use internal state
   const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
@@ -64,17 +63,17 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   const [newCategory, setNewCategory] = useState('');
   const [newItemText, setNewItemText] = useState<string>('');
 
-  // Debug AI suggestion state
-  useEffect(() => {
-    console.log('AI Suggestion state:', { 
-      aiEnabled, 
-      currentSuggestion, 
-      suggestions, 
-      isLoadingSuggestions,
-      newItemText,
-      inputSuggestion: getSuggestionForInput(newItemText || '')
-    });
-  }, [aiEnabled, currentSuggestion, suggestions, isLoadingSuggestions, newItemText, getSuggestionForInput]);
+  // Debug AI suggestion state (reduced logging)
+  // useEffect(() => {
+  //   console.log('AI Suggestion state:', { 
+  //     aiEnabled, 
+  //     currentSuggestion, 
+  //     suggestions, 
+  //     isLoadingSuggestions,
+  //     newItemText,
+  //     inputSuggestion: getSuggestionForInput(newItemText || '')
+  //   });
+  // }, [aiEnabled, currentSuggestion, suggestions, isLoadingSuggestions, newItemText, getSuggestionForInput]);
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemText, setEditingItemText] = useState('');
@@ -116,7 +115,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     }
     
     // If it's a new category name that doesn't exist yet, create it in the database
-    if (category.trim() && !existingCategories.includes(category)) {
+    if (category.trim() && !existingCategories.includes(category) && addCategory) {
       try {
         await addCategory({ 
           name: category.trim(), 
@@ -138,11 +137,13 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   const handleAddCustomCategory = async () => {
     if (newCategory.trim() !== '') {
       try {
-        // First create the category in the database
-        await addCategory({ 
-          name: newCategory.trim(), 
-          color_value: '#3B82F6' // Default blue color
-        });
+        // First create the category in the database (only if addCategory is provided)
+        if (addCategory) {
+          await addCategory({ 
+            name: newCategory.trim(), 
+            color_value: '#3B82F6' // Default blue color
+          });
+        }
         
         // Then update the list to use this category
         onUpdate({ ...list, type: newCategory.trim() });
@@ -235,15 +236,15 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     return suggestion;
   }, [aiEnabled, newItemText, getSuggestionForInput]);
   
-  // Debug log for input suggestion
-  useEffect(() => {
-    console.log('Input suggestion debug:', { 
-      newItemText, 
-      currentInputSuggestion, 
-      aiEnabled,
-      getSuggestionForInputExists: !!getSuggestionForInput
-    });
-  }, [newItemText, currentInputSuggestion, aiEnabled, getSuggestionForInput]);
+  // Debug log for input suggestion (reduced logging)
+  // useEffect(() => {
+  //   console.log('Input suggestion debug:', { 
+  //     newItemText, 
+  //     currentInputSuggestion, 
+  //     aiEnabled,
+  //     getSuggestionForInputExists: !!getSuggestionForInput
+  //   });
+  // }, [newItemText, currentInputSuggestion, aiEnabled, getSuggestionForInput]);
   
   // Handle accepting a suggestion with tab key
   const handleAcceptSuggestion = () => {

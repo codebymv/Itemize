@@ -425,6 +425,265 @@ setTimeout(async () => {
       
       console.log('✅ Notes API routes initialized');
 
+      // --- Whiteboards API Endpoints ---
+
+      // Get all whiteboards for the current user
+      app.get('/api/whiteboards', global.authenticateJWT, async (req, res) => {
+        try {
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at FROM whiteboards WHERE user_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+          );
+          client.release();
+          res.json(result.rows);
+        } catch (error) {
+          console.error('Error fetching whiteboards:', error);
+          res.status(500).json({ error: 'Internal server error while fetching whiteboards' });
+        }
+      });
+
+      // Create a new whiteboard
+      app.post('/api/whiteboards', global.authenticateJWT, async (req, res) => {
+        try {
+          const { 
+            title = 'Untitled Whiteboard', // Default title if not provided
+            category = 'General', // Default category
+            canvas_data = '{"paths": [], "shapes": []}', // Default empty canvas
+            canvas_width = 700, // Default width with extra room for all controls
+            canvas_height = 400, // Default height (2x notes default)
+            background_color = '#FFFFFF', // Default white background
+            position_x, 
+            position_y, 
+            z_index = 0, // Default z-index
+            color_value = '#3B82F6' // Default blue border color
+          } = req.body;
+
+          // Basic validation for required canvas positions
+          if (typeof position_x !== 'number' || typeof position_y !== 'number') {
+            return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
+          }
+
+          // Handle canvas_data properly for JSONB column
+          let processedCanvasData;
+          if (canvas_data !== undefined) {
+            // Ensure canvas data is stored as an object, not a raw array
+            if (Array.isArray(canvas_data)) {
+              // Wrap array in an object for consistent JSONB storage
+              processedCanvasData = JSON.stringify({ paths: canvas_data });
+              console.log('🎨 Backend: Wrapped array in object for JSONB storage');
+            } else if (typeof canvas_data === 'string') {
+              processedCanvasData = canvas_data;
+            } else if (typeof canvas_data === 'object') {
+              processedCanvasData = JSON.stringify(canvas_data);
+            } else {
+              processedCanvasData = JSON.stringify({ paths: [] });
+            }
+          } else {
+            // Default empty canvas for new whiteboards
+            processedCanvasData = JSON.stringify({ paths: [] });
+          }
+          
+          const newCanvasData = processedCanvasData;
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            `INSERT INTO whiteboards (user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [
+              req.user.id, 
+              title,
+              category,
+              newCanvasData,
+              canvas_width,
+              canvas_height,
+              background_color,
+              position_x, 
+              position_y, 
+              z_index,
+              color_value
+            ]
+          );
+          client.release();
+          res.status(201).json(result.rows[0]);
+        } catch (error) {
+          console.error('Error creating whiteboard:', error);
+          res.status(500).json({ error: 'Internal server error while creating whiteboard' });
+        }
+      });
+
+      // Update an existing whiteboard
+      app.put('/api/whiteboards/:whiteboardId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { whiteboardId } = req.params;
+          const { title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value } = req.body;
+
+          // Add detailed debugging for canvas_data
+          console.log('🎨 Backend: Received whiteboard update request:', {
+            whiteboardId,
+            hasCanvasData: canvas_data !== undefined,
+            canvasDataType: typeof canvas_data,
+            canvasDataIsArray: Array.isArray(canvas_data),
+            canvasDataLength: Array.isArray(canvas_data) ? canvas_data.length : 'N/A',
+            canvasDataPreview: canvas_data ? JSON.stringify(canvas_data).substring(0, 300) : 'undefined',
+            allFields: Object.keys(req.body)
+          });
+
+          // Fetch the current whiteboard to get existing values for fields not being updated
+          const client = await actualPool.connect();
+          const currentWhiteboardResult = await client.query('SELECT * FROM whiteboards WHERE id = $1 AND user_id = $2', [whiteboardId, req.user.id]);
+
+          if (currentWhiteboardResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+          }
+          
+          const currentWhiteboard = currentWhiteboardResult.rows[0];
+
+          // Handle canvas_data properly for JSONB column
+          let processedCanvasData;
+          if (canvas_data !== undefined) {
+            // Ensure canvas data is stored as an object, not a raw array
+            if (Array.isArray(canvas_data)) {
+              // Wrap array in an object for consistent JSONB storage
+              processedCanvasData = JSON.stringify({ paths: canvas_data });
+              console.log('🎨 Backend: Wrapped array in object for JSONB storage');
+            } else if (typeof canvas_data === 'string') {
+              processedCanvasData = canvas_data;
+            } else if (typeof canvas_data === 'object') {
+              processedCanvasData = JSON.stringify(canvas_data);
+            } else {
+              processedCanvasData = JSON.stringify({ paths: [] });
+            }
+          } else {
+            // Use existing data
+            processedCanvasData = typeof currentWhiteboard.canvas_data === 'string' ? 
+              currentWhiteboard.canvas_data : 
+              JSON.stringify(currentWhiteboard.canvas_data);
+          }
+          
+          const newCanvasData = processedCanvasData;
+
+          console.log('🎨 Backend: Processing canvas data:', {
+            originalCanvasData: canvas_data,
+            processedCanvasData: newCanvasData,
+            willUpdateCanvasData: canvas_data !== undefined,
+            processedDataPreview: newCanvasData ? newCanvasData.substring(0, 300) : 'N/A'
+          });
+
+          // Build dynamic update query to only update provided fields
+          const updateFields = [];
+          const updateValues = [];
+          let valueIndex = 1;
+
+          if (title !== undefined) {
+            updateFields.push(`title = $${valueIndex}`);
+            updateValues.push(title);
+            valueIndex++;
+          }
+          if (category !== undefined) {
+            updateFields.push(`category = $${valueIndex}`);
+            updateValues.push(category);
+            valueIndex++;
+          }
+          if (canvas_data !== undefined) {
+            updateFields.push(`canvas_data = $${valueIndex}`);
+            updateValues.push(newCanvasData);
+            valueIndex++;
+          }
+          if (canvas_width !== undefined) {
+            updateFields.push(`canvas_width = $${valueIndex}`);
+            updateValues.push(canvas_width);
+            valueIndex++;
+          }
+          if (canvas_height !== undefined) {
+            updateFields.push(`canvas_height = $${valueIndex}`);
+            updateValues.push(canvas_height);
+            valueIndex++;
+          }
+          if (background_color !== undefined) {
+            updateFields.push(`background_color = $${valueIndex}`);
+            updateValues.push(background_color);
+            valueIndex++;
+          }
+          if (position_x !== undefined) {
+            updateFields.push(`position_x = $${valueIndex}`);
+            updateValues.push(position_x);
+            valueIndex++;
+          }
+          if (position_y !== undefined) {
+            updateFields.push(`position_y = $${valueIndex}`);
+            updateValues.push(position_y);
+            valueIndex++;
+          }
+          if (z_index !== undefined) {
+            updateFields.push(`z_index = $${valueIndex}`);
+            updateValues.push(z_index);
+            valueIndex++;
+          }
+          if (color_value !== undefined) {
+            updateFields.push(`color_value = $${valueIndex}`);
+            updateValues.push(color_value);
+            valueIndex++;
+          }
+
+          if (updateFields.length === 0) {
+            client.release();
+            return res.status(400).json({ error: 'No fields to update provided' });
+          }
+
+          // Add WHERE clause parameters
+          updateValues.push(whiteboardId, req.user.id);
+          const whereClause = `WHERE id = $${valueIndex} AND user_id = $${valueIndex + 1}`;
+
+          const updateQuery = `UPDATE whiteboards SET ${updateFields.join(', ')} ${whereClause} RETURNING *`;
+
+          console.log('🎨 Backend: Dynamic update query:', {
+            updateFields: updateFields.length,
+            query: updateQuery,
+            valueCount: updateValues.length
+          });
+
+          const updateResult = await client.query(updateQuery, updateValues);
+          client.release();
+          
+          console.log('🎨 Backend: Update completed:', {
+            whiteboardId: updateResult.rows[0].id,
+            savedCanvasDataType: typeof updateResult.rows[0].canvas_data,
+            savedCanvasDataPreview: updateResult.rows[0].canvas_data ? JSON.stringify(updateResult.rows[0].canvas_data).substring(0, 300) : 'N/A'
+          });
+          
+          // The updated_at field is handled automatically by the database trigger.
+          res.json(updateResult.rows[0]);
+        } catch (error) {
+          console.error('Error updating whiteboard:', error);
+          res.status(500).json({ error: 'Internal server error while updating whiteboard' });
+        }
+      });
+
+      // Delete a whiteboard
+      app.delete('/api/whiteboards/:whiteboardId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { whiteboardId } = req.params;
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'DELETE FROM whiteboards WHERE id = $1 AND user_id = $2 RETURNING id',
+            [whiteboardId, req.user.id]
+          );
+          client.release();
+          
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+          }
+          res.status(200).json({ message: 'Whiteboard deleted successfully' });
+        } catch (error) {
+          console.error('Error deleting whiteboard:', error);
+          res.status(500).json({ error: 'Internal server error while deleting whiteboard' });
+        }
+      });
+      
+      console.log('✅ Whiteboards API routes initialized');
+
       // --- Categories API Endpoints ---
 
       // Get all categories for the current user
@@ -551,7 +810,7 @@ setTimeout(async () => {
             return res.status(400).json({ error: 'Cannot delete the General category' });
           }
           
-          // Reassign lists and notes to General category
+          // Reassign lists, notes, and whiteboards to General category
           await client.query(
             'UPDATE lists SET category_id = $1 WHERE category_id = $2 AND user_id = $3',
             [generalCategoryId, id, req.user.id]
@@ -560,6 +819,12 @@ setTimeout(async () => {
           await client.query(
             'UPDATE notes SET category_id = $1 WHERE category_id = $2 AND user_id = $3',
             [generalCategoryId, id, req.user.id]
+          );
+          
+          // Also reassign whiteboards to General category
+          await client.query(
+            'UPDATE whiteboards SET category = $1 WHERE category = (SELECT name FROM categories WHERE id = $2) AND user_id = $3',
+            ['General', id, req.user.id]
           );
           
           // Delete the category
@@ -590,7 +855,7 @@ setTimeout(async () => {
         console.log('Initializing AI suggestion service...');
         const aiSuggestionService = require('./services/aiSuggestionService');
         
-        // AI suggestions endpoint
+        // AI suggestions endpoint for lists
         app.post('/api/suggestions', global.authenticateJWT, async (req, res) => {
           try {
             const { listTitle, existingItems } = req.body;
@@ -604,6 +869,24 @@ setTimeout(async () => {
           } catch (error) {
             console.error('Error generating suggestions:', error);
             res.status(500).json({ error: 'Failed to generate suggestions' });
+          }
+        });
+
+        // AI suggestions endpoint for notes
+        app.post('/api/note-suggestions', global.authenticateJWT, async (req, res) => {
+          try {
+            const { context, category, requestTypes } = req.body;
+            
+            if (!context || typeof context !== 'string') {
+              return res.status(400).json({ error: 'Context is required' });
+            }
+
+            // Generate AI suggestions for note content
+            const result = await aiSuggestionService.suggestNoteContent(context, category, requestTypes);
+            res.json(result);
+          } catch (error) {
+            console.error('Error generating note suggestions:', error);
+            res.status(500).json({ error: 'Failed to generate note suggestions' });
           }
         });
         

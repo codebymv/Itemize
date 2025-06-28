@@ -15,6 +15,9 @@ const CONTEXT_SENTENCES = 3;
 // Cache duration for note suggestions (1 hour)
 const CACHE_DURATION = 60 * 60 * 1000;
 
+// Throttle AI API calls (minimum time between calls)
+const AI_CALL_THROTTLE = 2000; // 2 seconds
+
 interface UseNoteSuggestionsOptions {
   enabled: boolean;
   noteContent: string;
@@ -109,12 +112,15 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   // Get cached suggestions
   const getCachedSuggestions = useCallback((context: string) => {
     try {
-      const cacheKey = `note-suggestions-${context.slice(-50)}-${noteCategory || 'general'}`;
+      // Use hash of full context instead of just last 50 chars for better cache sensitivity
+      const contextHash = context.replace(/\s+/g, ' ').trim().split(' ').slice(-20).join(' ');
+      const cacheKey = `note-suggestions-${btoa(contextHash).slice(-50)}-${noteCategory || 'general'}`;
       const cachedData = localStorage.getItem(cacheKey);
       
       if (cachedData) {
         const { suggestions, continuations, timestamp } = JSON.parse(cachedData);
         if (Date.now() - timestamp < CACHE_DURATION) {
+          console.log('📦 Found cached suggestions for context:', contextHash.substring(0, 50));
           return { suggestions: suggestions || [], continuations: continuations || [] };
         }
       }
@@ -127,13 +133,16 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   // Cache suggestions
   const cacheSuggestions = useCallback((context: string, newSuggestions: string[], newContinuations: string[]) => {
     try {
-      const cacheKey = `note-suggestions-${context.slice(-50)}-${noteCategory || 'general'}`;
+      // Use same hash logic as getCachedSuggestions for consistency
+      const contextHash = context.replace(/\s+/g, ' ').trim().split(' ').slice(-20).join(' ');
+      const cacheKey = `note-suggestions-${btoa(contextHash).slice(-50)}-${noteCategory || 'general'}`;
       const cacheData = {
         suggestions: newSuggestions,
         continuations: newContinuations,
         timestamp: Date.now()
       };
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log('💾 Cached suggestions for context:', contextHash.substring(0, 50));
     } catch (err) {
       console.warn('Failed to cache note suggestions:', err);
     }
@@ -164,7 +173,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   }, [noteCategory]);
 
   // Fetch AI suggestions (cost-controlled)
-  const fetchAISuggestions = useCallback(async () => {
+  const fetchAISuggestions = useCallback(async (forceRefresh = false) => {
     if (!token || !enabled) return;
     
     const context = getContextWindow(noteContent);
@@ -178,27 +187,32 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     
     // Check cache first
     const cached = getCachedSuggestions(context);
-    if (cached) {
-      console.log('Using cached note suggestions');
+    if (cached && !forceRefresh) {
+      console.log('📦 Using cached note suggestions for context:', context.substring(0, 50));
       setSuggestions(cached.suggestions);
       setContinuations(cached.continuations);
-      setCurrentSuggestion(cached.suggestions[0] || null);
+      setCurrentSuggestion(cached.suggestions[0] || cached.continuations[0] || null);
       return;
     }
     
-    // Throttle API calls (reduced from 10 seconds to 2 seconds for responsiveness)
+    // Throttle API calls to avoid hitting rate limits
     const now = Date.now();
-    if (now - lastApiCall.current < 2000) {
-      console.log('⏱️ Throttling note AI request (wait 2s)');
+    if (!forceRefresh && lastApiCall.current && (now - lastApiCall.current) < AI_CALL_THROTTLE) {
+      console.log('⏰ Throttling AI call - too soon since last request');
       return;
+    }
+    
+    if (forceRefresh) {
+      console.log('🚀 Force refreshing AI suggestions (bypassing throttle and cache)');
     }
     
     try {
       setIsLoading(true);
       setError(null);
-      lastApiCall.current = now;
+      lastApiCall.current = Date.now();
       setLastTriggerContext(context);
       
+      const apiUrl = getApiUrl();
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
         context,
         category: noteCategory,
@@ -219,30 +233,12 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
           apiResponse: response.data
         });
         
-        // Temporary fallback for testing - add mock suggestions if API returns empty
-        let finalSuggestions = suggestions;
-        let finalContinuations = continuations;
-        
-        if (suggestions.length === 0 && continuations.length === 0) {
-          console.log('🎭 Using mock suggestions for testing');
-          finalSuggestions = [
-            ' and provides an intuitive interface for task management.',
-            ' that helps users organize their work efficiently.',
-            ' designed for seamless collaboration and productivity.',
-            ' with a focus on simplicity and user experience.'
-          ];
-          finalContinuations = [
-            ' It features drag-and-drop functionality and real-time updates.',
-            ' The app supports both individual and team workflows.'
-          ];
-        }
-        
-        setSuggestions(finalSuggestions);
-        setContinuations(finalContinuations);
-        setCurrentSuggestion(finalSuggestions[0] || finalContinuations[0] || null);
+        setSuggestions(suggestions);
+        setContinuations(continuations);
+        setCurrentSuggestion(suggestions[0] || continuations[0] || null);
         
         // Cache the results
-        cacheSuggestions(context, finalSuggestions, finalContinuations);
+        cacheSuggestions(context, suggestions, continuations);
       }
     } catch (err: any) {
       console.error('Failed to fetch note AI suggestions:', err);
@@ -280,6 +276,22 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     }
     fetchAISuggestions();
   }, [fetchAISuggestions]);
+
+  // Force refresh suggestions (bypasses cache and throttle)
+  const forceRefreshSuggestions = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    fetchAISuggestions(true);
+  }, [fetchAISuggestions]);
+
+  // Clear all suggestions from React state
+  const clearSuggestions = useCallback(() => {
+    console.log('🧹 Clearing suggestions from React state');
+    setSuggestions([]);
+    setContinuations([]);
+    setCurrentSuggestion(null);
+  }, []);
 
   // Get suggestion for current typing position (GitHub Copilot style)
   const getSuggestionForInput = useCallback((content: string, cursorPosition: number): string | null => {
@@ -326,6 +338,8 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     isLoading,
     error,
     triggerSuggestions,
+    forceRefreshSuggestions,
+    clearSuggestions,
     getSuggestionForInput,
     // Metrics for debugging/optimization
     metrics: {
