@@ -135,9 +135,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setIsLoading(true);
       setError(null);
       lastRequestTime.current = Date.now();
-      
       const apiUrl = getApiUrl();
-      
       const response = await axios.post<SuggestionResponse>(`${apiUrl}/api/suggestions`, {
         listTitle,
         existingItems: existingItems.filter(item => item.trim() !== '')

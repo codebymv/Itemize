@@ -6,13 +6,6 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
-// Force production URL if we're on itemize.cloud domain
-const isProductionDomain = window.location.hostname === 'itemize.cloud';
-const PRODUCTION_URL = 'https://itemize-backend-production-92ad.up.railway.app';
-
-// Determine the base URL based on domain
-const baseURL = isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
-
 // Create axios instance with base URL
 const api = axios.create({
   baseURL,

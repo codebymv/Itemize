@@ -210,7 +210,6 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       setLastTriggerContext(context);
       
       const apiUrl = getApiUrl();
-      
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
         context,
         category: noteCategory,
