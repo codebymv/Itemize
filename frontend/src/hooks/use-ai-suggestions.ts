@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext'; // Import auth context
+import { getApiUrl } from '@/lib/api';
 
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
@@ -135,20 +136,15 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setError(null);
       lastRequestTime.current = Date.now();
       
-      // Get the API URL from environment or use default
-      const apiUrl = import.meta.env.VITE_API_URL || (
-        import.meta.env.MODE === 'production' 
-          ? 'https://itemize.cloud' 
-          : 'http://localhost:3001'
-      );
+      const apiUrl = getApiUrl();
       
       const response = await axios.post<SuggestionResponse>(`${apiUrl}/api/suggestions`, {
         listTitle,
-        existingItems: existingItems.filter(item => item.trim() !== '') // Filter out empty items
+        existingItems: existingItems.filter(item => item.trim() !== '')
       }, {
-        withCredentials: true, // Include credentials for authenticated requests
+        withCredentials: true,
         headers: {
-          'Authorization': `Bearer ${token}` // Include the JWT token in the header
+          'Authorization': `Bearer ${token}`
         }
       });
 

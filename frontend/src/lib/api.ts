@@ -6,26 +6,27 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
+// Centralized API URL configuration
+export const getApiUrl = () => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) return apiUrl;
+
+  return import.meta.env.MODE === 'production'
+    ? 'https://itemize-backend-production-92ad.up.railway.app'
+    : 'http://localhost:3001';
+};
+
 // Log environment configuration
 console.log('API Configuration:', {
   MODE: import.meta.env.MODE,
   VITE_API_URL: import.meta.env.VITE_API_URL,
-  isProd: import.meta.env.MODE === 'production'
+  isProd: import.meta.env.MODE === 'production',
+  apiUrl: getApiUrl()
 });
-
-// Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'production' 
-    ? 'https://itemize-backend-production-92ad.up.railway.app' 
-    : 'http://localhost:3001'
-);
-
-// Log the selected base URL
-console.log('Selected API base URL:', baseURL);
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL,
+  baseURL: getApiUrl(),
   withCredentials: true
 });
 
