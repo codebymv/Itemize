@@ -83,6 +83,9 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     }
   }, [listTitle, existingItems]);
 
+  // Get the API URL from environment or use default
+  const apiUrl = getApiUrl();
+
   // Fetch suggestions from API
   const fetchSuggestions = useCallback(async () => {
     // Cancel any pending debounced calls
@@ -135,9 +138,8 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setIsLoading(true);
       setError(null);
       lastRequestTime.current = Date.now();
-      
+     
       const apiUrl = getApiUrl();
-      
       const response = await axios.post<SuggestionResponse>(`${apiUrl}/api/suggestions`, {
         listTitle,
         existingItems: existingItems.filter(item => item.trim() !== '')

@@ -31,6 +31,9 @@ interface NoteSuggestionResponse {
   error?: string;
 }
 
+// Get the API URL from environment or use default
+const apiUrl = getApiUrl();
+
 export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNoteSuggestionsOptions) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [continuations, setContinuations] = useState<string[]>([]);
@@ -210,7 +213,6 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       setLastTriggerContext(context);
       
       const apiUrl = getApiUrl();
-      
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
         context,
         category: noteCategory,

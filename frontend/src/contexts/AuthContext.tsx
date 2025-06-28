@@ -224,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Call backend logout if needed
     if (backendLogoutFailures.current < 3) {
       try {
+        const apiUrl = getApiUrl();
         api.post(`/api/auth/logout`).catch((error) => {
           console.error('Backend logout failed:', error);
           backendLogoutFailures.current++;
