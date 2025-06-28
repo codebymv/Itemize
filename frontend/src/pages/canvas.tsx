@@ -290,8 +290,8 @@ const CanvasPage: React.FC = () => {
         color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
-        width: 520, // Wider to accommodate rich text toolbar
-        height: 300, // Taller for better content editing
+        width: 570, // Wider to accommodate rich text toolbar
+        height: 350, // Taller for better content editing
         z_index: 0,
       };
 
@@ -590,8 +590,8 @@ const CanvasPage: React.FC = () => {
         color_value: color, // Use selected color
         position_x: position.x,
         position_y: position.y,
-        width: 520, // Wider to accommodate rich text toolbar
-        height: 300, // Taller for better content editing
+        width: 570, // Wider to accommodate rich text toolbar
+        height: 350, // Taller for better content editing
         z_index: 0,
       }, token);
 
