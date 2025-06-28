@@ -6,12 +6,22 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
+// Log environment configuration
+console.log('API Configuration:', {
+  MODE: import.meta.env.MODE,
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  isProd: import.meta.env.MODE === 'production'
+});
+
 // Determine the base URL based on environment
 const baseURL = import.meta.env.VITE_API_URL || (
   import.meta.env.MODE === 'production' 
     ? 'https://itemize-backend-production-92ad.up.railway.app' 
     : 'http://localhost:3001'
 );
+
+// Log the selected base URL
+console.log('Selected API base URL:', baseURL);
 
 // Create axios instance with base URL
 const api = axios.create({
