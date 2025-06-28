@@ -22,6 +22,8 @@ const baseURL = import.meta.env.VITE_API_URL || (
     : 'http://localhost:3001'
 );
 
+console.log('DEBUG: Deployed API URL Resolution - VITE_API_URL:', import.meta.env.VITE_API_URL, 'MODE:', import.meta.env.MODE, 'Final BaseURL:', baseURL);
+
 // Log the selected base URL and decision factors
 console.log('API URL Resolution:', {
   final_baseURL: baseURL,
