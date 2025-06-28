@@ -6,38 +6,10 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
-// Log detailed environment configuration
-console.log('Detailed API Configuration:', {
-  MODE: import.meta.env.MODE,
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  isProd: import.meta.env.MODE === 'production',
-  window_location: window.location.href,
-  import_meta_env: import.meta.env
-});
-
-if (import.meta.env.PROD) { // Only show in production
-  alert(`API Config: MODE=${import.meta.env.MODE}, VITE_API_URL=${import.meta.env.VITE_API_URL}`);
-}
-
-// Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'production' 
-    ? 'https://itemize-backend-production-92ad.up.railway.app' 
-    : 'http://localhost:3001'
-);
-
-// Log the selected base URL and decision factors
-console.log('API URL Resolution:', {
-  final_baseURL: baseURL,
-  env_VITE_API_URL: import.meta.env.VITE_API_URL,
-  env_MODE: import.meta.env.MODE,
-  using_fallback: !import.meta.env.VITE_API_URL
-});
-
 // Create axios instance with base URL
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const api = axios.create({
-  baseURL,
-  withCredentials: true
+  baseURL: apiUrl
 });
 
 // Add a request interceptor to block specific endpoints
@@ -51,10 +23,13 @@ api.interceptors.request.use(
 
     // If this is a blocked endpoint, cancel the request
     if (isBlocked) {
+      // Create a canceled request
       const cancelToken = axios.CancelToken;
       const source = cancelToken.source();
       config.cancelToken = source.token;
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
+      
+      console.log(`Blocked request to: ${requestPath}`);
     }
 
     return config;
@@ -63,21 +38,5 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
-// Add a response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear auth data on unauthorized
-      localStorage.removeItem('itemize_token');
-      localStorage.removeItem('itemize_user');
-      localStorage.removeItem('itemize_expiry');
-    }
-    return Promise.reject(error);
-  }
-);
-
-export const getApiUrl = () => baseURL;
 
 export default api;
