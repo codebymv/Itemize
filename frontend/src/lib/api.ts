@@ -7,7 +7,11 @@ const BLOCKED_ENDPOINTS = [
 ];
 
 // Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const baseURL = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'production' 
+    ? 'https://itemize-backend-production-92ad.up.railway.app' 
+    : 'http://localhost:3001'
+);
 
 // Create axios instance with base URL
 const api = axios.create({
