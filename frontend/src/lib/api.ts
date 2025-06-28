@@ -6,22 +6,22 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
-// Force production URL if we're on itemize.cloud domain
-const isProductionDomain = window.location.hostname === 'itemize.cloud';
+// Production URL for the backend
 const PRODUCTION_URL = 'https://itemize-backend-production-92ad.up.railway.app';
 
-// Determine the base URL based on domain
-const baseURL = isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
-
-// Create axios instance with base URL
+// Create axios instance with dynamic baseURL
 const api = axios.create({
-  baseURL,
+  baseURL: 'http://localhost:3001', // Default to localhost
   withCredentials: true
 });
 
-// Add a request interceptor to block specific endpoints
+// Add a request interceptor to handle dynamic baseURL and blocked endpoints
 api.interceptors.request.use(
   (config) => {
+    // Update baseURL based on current hostname
+    const isProductionDomain = window.location.hostname === 'itemize.cloud';
+    config.baseURL = isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
+
     // Check if the request URL matches any blocked endpoint
     const requestPath = config.url || '';
     const isBlocked = BLOCKED_ENDPOINTS.some(endpoint => 
@@ -57,6 +57,10 @@ api.interceptors.response.use(
   }
 );
 
-export const getApiUrl = () => baseURL;
+// Export a function to get the current API URL
+export const getApiUrl = () => {
+  const isProductionDomain = window.location.hostname === 'itemize.cloud';
+  return isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
+};
 
 export default api;
