@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrl } from '@/lib/api';
 
 // Shorter debounce for better responsiveness (was 3000ms)
 const NOTES_DEBOUNCE_DELAY = 1000;
@@ -26,6 +27,9 @@ interface NoteSuggestionResponse {
   cached?: boolean;
   error?: string;
 }
+
+// Get the API URL from environment or use default
+const apiUrl = getApiUrl();
 
 export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNoteSuggestionsOptions) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -194,12 +198,6 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       setError(null);
       lastApiCall.current = now;
       setLastTriggerContext(context);
-      
-      const apiUrl = import.meta.env.VITE_API_URL || (
-        import.meta.env.MODE === 'production' 
-          ? 'https://itemize.cloud' 
-          : 'http://localhost:3001'
-      );
       
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
         context,
