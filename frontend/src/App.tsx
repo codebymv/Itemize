@@ -16,11 +16,10 @@ import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import CanvasPage from "./pages/canvas";  // Import the new Canvas page
+import CanvasPage from "./pages/canvas";
 
 const queryClient = new QueryClient();
 const googleClientId = "761425672348-63ncpr61i8hv48l94ljju4uloahreohs.apps.googleusercontent.com";
-
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {

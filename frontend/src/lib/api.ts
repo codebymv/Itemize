@@ -6,13 +6,13 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
-// Log environment configuration
-console.log('API Configuration:', {
+// Log detailed environment configuration
+console.log('Detailed API Configuration:', {
   MODE: import.meta.env.MODE,
   VITE_API_URL: import.meta.env.VITE_API_URL,
   isProd: import.meta.env.MODE === 'production',
-  DEV: import.meta.env.DEV,
-  PROD: import.meta.env.PROD
+  window_location: window.location.href,
+  import_meta_env: import.meta.env
 });
 
 // Determine the base URL based on environment
@@ -23,11 +23,11 @@ const baseURL = import.meta.env.VITE_API_URL || (
 );
 
 // Log the selected base URL and decision factors
-console.log('API URL Decision:', {
-  selectedBaseURL: baseURL,
-  modeIsProduction: import.meta.env.MODE === 'production',
-  hasViteApiUrl: !!import.meta.env.VITE_API_URL,
-  viteApiUrlValue: import.meta.env.VITE_API_URL || 'not set'
+console.log('API URL Resolution:', {
+  final_baseURL: baseURL,
+  env_VITE_API_URL: import.meta.env.VITE_API_URL,
+  env_MODE: import.meta.env.MODE,
+  using_fallback: !import.meta.env.VITE_API_URL
 });
 
 // Create axios instance with base URL
@@ -73,5 +73,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const getApiUrl = () => baseURL;
 
 export default api;
