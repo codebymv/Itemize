@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Make API request with proper data
         try {
           const response = await axios.post(`${apiUrl}/api/auth/google-login`, {
-            googleId: googleUser.sub,  // Ensure we send the correct Google ID
+            googleId: googleUser.sub,
             email: googleUser.email,
             name: googleUser.name,
             picture: googleUser.picture
@@ -195,6 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Google login failed');
       setLoading(false);
     },
+    scope: 'email profile'
   });
 
   const login = () => {
@@ -223,7 +224,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Call backend logout if needed
     if (backendLogoutFailures.current < 3) {
       try {
-        const apiUrl = getApiUrl();
         api.post(`/api/auth/logout`).catch((error) => {
           console.error('Backend logout failed:', error);
           backendLogoutFailures.current++;

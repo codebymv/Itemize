@@ -31,7 +31,8 @@ const ListCard: React.FC<ListCardProps> = ({
   onDelete, 
   existingCategories,
   isCollapsed,
-  onToggleCollapsed
+  onToggleCollapsed,
+  addCategory
 }) => {
   const {
     // Collapsible
@@ -66,7 +67,7 @@ const ListCard: React.FC<ListCardProps> = ({
     
     // Refs
     titleEditRef, newItemInputRef
-  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories });
+  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory });
 
   // Drag and drop sensors
   const sensors = useSensors(

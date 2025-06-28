@@ -83,9 +83,6 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     }
   }, [listTitle, existingItems]);
 
-  // Get the API URL from environment or use default
-  const apiUrl = getApiUrl();
-
   // Fetch suggestions from API
   const fetchSuggestions = useCallback(async () => {
     // Cancel any pending debounced calls
@@ -139,13 +136,15 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setError(null);
       lastRequestTime.current = Date.now();
       
+      const apiUrl = getApiUrl();
+      
       const response = await axios.post<SuggestionResponse>(`${apiUrl}/api/suggestions`, {
         listTitle,
-        existingItems: existingItems.filter(item => item.trim() !== '') // Filter out empty items
+        existingItems: existingItems.filter(item => item.trim() !== '')
       }, {
-        withCredentials: true, // Include credentials for authenticated requests
+        withCredentials: true,
         headers: {
-          'Authorization': `Bearer ${token}` // Include the JWT token in the header
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -193,22 +192,22 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
 
   // Get a suggestion for the current input
   const getSuggestionForInput = useCallback((input: string): string | null => {
-    // Debug input state
-    console.log('getSuggestionForInput called with:', { 
-      input, 
-      enabled, 
-      suggestionCount: suggestions.length, 
-      currentSuggestion,
-      listTitle
-    });
+    // Debug input state (reduced logging)
+    // console.log('getSuggestionForInput called with:', { 
+    //   input, 
+    //   enabled, 
+    //   suggestionCount: suggestions.length, 
+    //   currentSuggestion,
+    //   listTitle
+    // });
     
     if (!enabled) {
-      console.log('AI suggestions not enabled');
+      // console.log('AI suggestions not enabled');
       return null;
     }
     
     if (!input.trim()) {
-      console.log('Input is empty');
+      // console.log('Input is empty');
       return null;
     }
     

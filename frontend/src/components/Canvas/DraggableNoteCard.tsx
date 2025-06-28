@@ -43,7 +43,7 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
   const handleMouseDown = (e: React.MouseEvent) => {
     // Don't start drag if clicking on interactive elements or resize handle
     const target = e.target as HTMLElement;
-    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle')) {
+    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle, .ProseMirror, [data-rich-text-editor], [data-rich-text-toolbar]')) {
       return;
     }
     
@@ -94,8 +94,8 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
       const scaledDeltaX = deltaX / canvasTransform.scale;
       const scaledDeltaY = deltaY / canvasTransform.scale;
       
-      const newWidth = Math.max(150, resizeStartData.startWidth + scaledDeltaX); // Min width 150px
-      const newHeight = Math.max(100, resizeStartData.startHeight + scaledDeltaY); // Min height 100px
+      const newWidth = Math.max(480, resizeStartData.startWidth + scaledDeltaX); // Min width 480px for toolbar
+      const newHeight = Math.max(200, resizeStartData.startHeight + scaledDeltaY); // Min height 200px
       
       cardRef.current.style.width = `${newWidth}px`;
       cardRef.current.style.height = `${newHeight}px`;
@@ -199,8 +199,8 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
       className="draggable-note-card shadow-lg rounded-lg flex flex-col overflow-hidden border border-gray-300 relative"
       style={{
         position: 'absolute',
-        width: `${note.width || 200}px`,
-        height: isCollapsed ? 'auto' : `${note.height || 200}px`,
+                  width: `${note.width || 520}px`,
+        height: isCollapsed ? 'auto' : `${note.height || 300}px`,
         zIndex: (isDragging || isResizing) ? 1000 : (note.z_index || 1),
         cursor: isDragging ? 'grabbing' : (isResizing ? 'nw-resize' : 'grab'),
         transition: (isDragging || isResizing) ? 'none' : 'box-shadow 0.2s, transform 0.1s',
