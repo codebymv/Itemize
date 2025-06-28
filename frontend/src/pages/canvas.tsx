@@ -358,7 +358,7 @@ const CanvasPage: React.FC = () => {
         title: title, // Set the whiteboard title
         category: category, // Use selected category
         canvas_data: '{"paths": [], "shapes": []}', // Empty canvas
-        canvas_width: 700, // Wide enough to show all toolbar controls with extra room
+        canvas_width: 750, // Wide enough to show all toolbar controls with extra room
         canvas_height: 400, // Default size (2x notes)
         background_color: '#FFFFFF', // White background
         position_x: position.x,
@@ -366,6 +366,7 @@ const CanvasPage: React.FC = () => {
         z_index: 0,
         color_value: color, // Border color
       };
+      console.log('handleCreateWhiteboard payload:', payloadWithDefaults);
 
       const newWhiteboard = await apiCreateWhiteboard(payloadWithDefaults, token);
       setWhiteboards(prev => [newWhiteboard, ...prev]);
@@ -550,6 +551,7 @@ const CanvasPage: React.FC = () => {
   };
 
   const handleOpenNewWhiteboardModal = (position: { x: number, y: number }) => {
+    console.log('handleOpenNewWhiteboardModal called with position:', position);
     setNewWhiteboardInitialPosition(position);
     setShowNewWhiteboardModal(true);
   };
@@ -570,7 +572,7 @@ const CanvasPage: React.FC = () => {
 
   const handleButtonAddWhiteboard = () => {
     setShowButtonContextMenu(false);
-    setNewWhiteboardInitialPosition({ x: 100, y: 100 }); // Default position for button creation
+    setNewWhiteboardInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
     setShowNewWhiteboardModal(true);
   };
 

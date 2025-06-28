@@ -317,15 +317,16 @@ setTimeout(async () => {
       app.post('/api/notes', global.authenticateJWT, async (req, res) => {
         try {
           const { 
-            title = 'Untitled Note', // Default title if not provided
-            content = '', // Default to empty string if not provided
+            title, 
             category = 'General', // Default category
-            color_value, // Will use DB default if null/undefined
+            canvas_data = '{"paths": [], "shapes": []}', // Empty canvas
+            canvas_width, 
+            canvas_height, 
+            background_color = '#FFFFFF', // Default background color
             position_x, 
             position_y, 
-            width,      // Will use DB default if null/undefined
-            height,     // Will use DB default if null/undefined
-            z_index     // Will use DB default if null/undefined
+            z_index = 0, 
+            color_value = '#3B82F6' // Default border color
           } = req.body;
 
           // Basic validation for required canvas positions
@@ -424,6 +425,133 @@ setTimeout(async () => {
       });
       
       console.log('✅ Notes API routes initialized');
+
+      // --- Whiteboards API Endpoints ---
+
+      // Get all whiteboards for the current user
+      app.get('/api/whiteboards', global.authenticateJWT, async (req, res) => {
+        try {
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at FROM whiteboards WHERE user_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+          );
+          client.release();
+          res.json(result.rows);
+        } catch (error) {
+          console.error('Error fetching whiteboards:', error);
+          res.status(500).json({ error: 'Internal server error while fetching whiteboards' });
+        }
+      });
+
+      // Create a new whiteboard
+      app.post('/api/whiteboards', global.authenticateJWT, async (req, res) => {
+        try {
+          const {
+            title,
+            category = 'General',
+            canvas_data = '{"paths": [], "shapes": []}',
+            canvas_width,
+            canvas_height,
+            background_color = '#FFFFFF',
+            position_x,
+            position_y,
+            z_index = 0,
+            color_value = '#3B82F6'
+          } = req.body;
+
+          if (typeof position_x !== 'number' || typeof position_y !== 'number') {
+            return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
+          }
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            `INSERT INTO whiteboards (user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [
+              req.user.id,
+              title,
+              category,
+              JSON.stringify(canvas_data),
+              canvas_width,
+              canvas_height,
+              background_color,
+              position_x,
+              position_y,
+              z_index,
+              color_value
+            ]
+          );
+          client.release();
+          res.status(201).json(result.rows[0]);
+        } catch (error) {
+          console.error('Error creating whiteboard:', error);
+          res.status(500).json({ error: 'Internal server error while creating whiteboard' });
+        }
+      });
+
+      // Update an existing whiteboard
+      app.put('/api/whiteboards/:whiteboardId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { whiteboardId } = req.params;
+          const { title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value } = req.body;
+
+          const client = await actualPool.connect();
+          const currentWhiteboardResult = await client.query('SELECT * FROM whiteboards WHERE id = $1 AND user_id = $2', [whiteboardId, req.user.id]);
+
+          if (currentWhiteboardResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+          }
+
+          const currentWhiteboard = currentWhiteboardResult.rows[0];
+
+          const newTitle = title !== undefined ? title : currentWhiteboard.title;
+          const newCategory = category !== undefined ? category : currentWhiteboard.category;
+          const newCanvasData = canvas_data !== undefined ? JSON.stringify(canvas_data) : currentWhiteboard.canvas_data;
+          const newCanvasWidth = canvas_width !== undefined ? canvas_width : currentWhiteboard.canvas_width;
+          const newCanvasHeight = canvas_height !== undefined ? canvas_height : currentWhiteboard.canvas_height;
+          const newBackgroundColor = background_color !== undefined ? background_color : currentWhiteboard.background_color;
+          const newPositionX = position_x !== undefined ? position_x : currentWhiteboard.position_x;
+          const newPositionY = position_y !== undefined ? position_y : currentWhiteboard.position_y;
+          const newZIndex = z_index !== undefined ? z_index : currentWhiteboard.z_index;
+          const newColorValue = color_value !== undefined ? color_value : currentWhiteboard.color_value;
+
+          const updateResult = await client.query(
+            `UPDATE whiteboards
+             SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10
+             WHERE id = $11 AND user_id = $12 RETURNING *`,
+            [newTitle, newCategory, newCanvasData, newCanvasWidth, newCanvasHeight, newBackgroundColor, newPositionX, newPositionY, newZIndex, newColorValue, whiteboardId, req.user.id]
+          );
+          client.release();
+          res.json(updateResult.rows[0]);
+        } catch (error) {
+          console.error('Error updating whiteboard:', error);
+          res.status(500).json({ error: 'Internal server error while updating whiteboard' });
+        }
+      });
+
+      // Delete a whiteboard
+      app.delete('/api/whiteboards/:whiteboardId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { whiteboardId } = req.params;
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'DELETE FROM whiteboards WHERE id = $1 AND user_id = $2 RETURNING id',
+            [whiteboardId, req.user.id]
+          );
+          client.release();
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+          }
+          res.status(200).json({ message: 'Whiteboard deleted successfully' });
+        } catch (error) {
+          console.error('Error deleting whiteboard:', error);
+          res.status(500).json({ error: 'Internal server error while deleting whiteboard' });
+        }
+      });
+
+      console.log('✅ Whiteboards API routes initialized');
 
       // --- Categories API Endpoints ---
 

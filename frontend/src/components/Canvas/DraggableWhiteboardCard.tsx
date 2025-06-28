@@ -3,7 +3,7 @@ import { WhiteboardCard } from '../WhiteboardCard';
 import { Whiteboard } from '../../types';
 
 // Whiteboard dimension constraints to match database limits
-const MIN_WHITEBOARD_WIDTH = 300;
+const MIN_WHITEBOARD_WIDTH = 750;
 const MIN_WHITEBOARD_HEIGHT = 250;
 const MAX_WHITEBOARD_WIDTH = 2400;
 const MAX_WHITEBOARD_HEIGHT = 2400;
@@ -51,8 +51,10 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
     if (whiteboardRef.current) {
       whiteboardRef.current.style.left = `${whiteboard.position_x}px`;
       whiteboardRef.current.style.top = `${whiteboard.position_y}px`;
+      console.log(`DraggableWhiteboardCard: Initial position for whiteboard ${whiteboard.id}: x=${whiteboard.position_x}, y=${whiteboard.position_y}`);
+      console.log(`DraggableWhiteboardCard: Initial dimensions for whiteboard ${whiteboard.id}: width=${whiteboard.canvas_width}, height=${whiteboard.canvas_height}`);
     }
-  }, [whiteboard.position_x, whiteboard.position_y]);
+  }, [whiteboard.position_x, whiteboard.position_y, whiteboard.canvas_width, whiteboard.canvas_height]);
 
   // Drag start handler
   const handleMouseDown = (e: React.MouseEvent) => {
