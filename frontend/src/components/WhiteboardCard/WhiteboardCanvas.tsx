@@ -404,13 +404,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     };
   };
 
-  // Mobile touch event handlers
+  // Mobile touch event handlers - enhanced for proper multi-touch detection
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!isMobile) return;
+
+    console.log(`Touch start: ${e.touches.length} fingers`);
 
     if (e.touches.length === 2) {
       // Two-finger gesture - prevent drawing and enable pan/zoom
       e.preventDefault();
+      e.stopPropagation(); // Stop event from reaching canvas
       setIsMultiTouch(true);
       setIsDrawing(false);
       
@@ -419,28 +422,45 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       
       const center = getTouchCenter(e.touches[0], e.touches[1]);
       setPanStart(center);
+      
+      console.log('Multi-touch enabled for pan/zoom');
     } else if (e.touches.length === 1) {
-      // Single finger - drawing mode
-      setIsMultiTouch(false);
+      // Single finger - allow drawing mode only if not coming from multi-touch
+      if (!isMultiTouch) {
+        console.log('Single finger - drawing mode');
+      }
+      // Don't immediately set isMultiTouch to false here, wait for touchend
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isMobile || !isMultiTouch) return;
+    if (!isMobile) return;
 
-    e.preventDefault(); // Prevent scrolling
-
+    // Always handle multi-touch gestures, regardless of current state
     if (e.touches.length === 2) {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent canvas from receiving this event
+      
+      // Enable multi-touch if not already enabled
+      if (!isMultiTouch) {
+        setIsMultiTouch(true);
+        setIsDrawing(false);
+        const distance = getTouchDistance(e.touches[0], e.touches[1]);
+        setInitialPinchDistance(distance);
+        const center = getTouchCenter(e.touches[0], e.touches[1]);
+        setPanStart(center);
+        console.log('Multi-touch enabled during move');
+        return;
+      }
+
       const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
       const currentCenter = getTouchCenter(e.touches[0], e.touches[1]);
       
       // Handle pinch-to-zoom
       if (initialPinchDistance > 0) {
         const scaleChange = currentDistance / initialPinchDistance;
-        const newScale = Math.min(2, Math.max(0.5, canvasScale * scaleChange));
-        
-        // Use direct DOM manipulation to prevent flashing
-        updateVisualStateWithoutRerender({ scale: newScale });
+        const newScale = Math.min(3, Math.max(0.25, canvasScale * scaleChange));
+        setCanvasScale(newScale);
         setInitialPinchDistance(currentDistance);
       }
       
@@ -448,25 +468,31 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       const deltaX = currentCenter.x - panStart.x;
       const deltaY = currentCenter.y - panStart.y;
       const newPan = {
-        x: canvasPan.x + deltaX * 0.5, // Dampen pan movement
-        y: canvasPan.y + deltaY * 0.5
+        x: canvasPan.x + deltaX * 0.8, // Less dampening for more responsive feel
+        y: canvasPan.y + deltaY * 0.8
       };
-      
-      // Use direct DOM manipulation to prevent flashing
-      updateVisualStateWithoutRerender({ pan: newPan });
+      setCanvasPan(newPan);
       setPanStart(currentCenter);
+    } else if (isMultiTouch && e.touches.length === 1) {
+      // One finger remains after multi-touch - prevent drawing until touch end
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isMobile) return;
 
+    console.log(`Touch end: ${e.touches.length} fingers remaining`);
+
+    // Reset multi-touch when no fingers or only one finger remains
     if (e.touches.length < 2) {
-      setIsMultiTouch(false);
-      setInitialPinchDistance(0);
-      
-      // Force immediate React state update when gesture ends to sync with DOM
-      updateVisualStateWithoutRerender({ immediate: true });
+      if (isMultiTouch) {
+        console.log('Exiting multi-touch mode');
+        setIsMultiTouch(false);
+        setInitialPinchDistance(0);
+        setIsDrawing(false);
+      }
     }
   };
 
@@ -484,37 +510,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     return () => document.removeEventListener('touchmove', preventScroll);
   }, [isDrawing, isMultiTouch, isMobile]);
 
-  // Mobile visual update without React re-render (prevents flashing)
-  const updateVisualStateWithoutRerender = useCallback((updates: {
-    scale?: number;
-    pan?: { x: number; y: number };
-    immediate?: boolean;
-  }) => {
-    if (!isMobile || !canvasContainerRef.current) return;
 
-    const container = canvasContainerRef.current;
-    const canvas = container.querySelector('.react-sketch-canvas');
-    
-    if (canvas) {
-      // Clear any pending visual update
-      if (visualUpdateTimeoutRef.current) {
-        clearTimeout(visualUpdateTimeoutRef.current);
-      }
-
-      // Apply immediate visual changes via CSS transform
-      const transform = `scale(${updates.scale || canvasScale}) translate(${updates.pan?.x || canvasPan.x}px, ${updates.pan?.y || canvasPan.y}px)`;
-      (canvas as HTMLElement).style.transform = transform;
-      (canvas as HTMLElement).style.transformOrigin = 'center';
-
-      // Only update React state after touch ends to prevent flashing
-      if (!updates.immediate) {
-        visualUpdateTimeoutRef.current = setTimeout(() => {
-          if (updates.scale !== undefined) setCanvasScale(updates.scale);
-          if (updates.pan !== undefined) setCanvasPan(updates.pan);
-        }, 50);
-      }
-    }
-  }, [isMobile, canvasScale, canvasPan]);
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -528,18 +524,18 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         borderBottomColor: '#e5e7eb' 
       }}>
         {isMobile ? (
-          // Mobile: Stacked layout for better fit
+          // Mobile: Responsive stacked layout optimized for small screens
           <>
-            {/* Top row: Tool selection and actions */}
-            <div className="flex items-center justify-between">
-              {/* Pen/Eraser toggle */}
+            {/* Top row: Tool selection and brush size */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Pen/Eraser toggle - compact for small screens */}
               <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                 <Button
                   variant="ghost"
-                  size="default"
+                  size="sm"
                   onClick={() => handleToolChange('pen')}
                   className={cn(
-                    "h-9 w-9 p-0",
+                    "h-8 w-8 p-0",
                     currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
                   )}
                   style={currentTool !== 'pen' ? { 
@@ -557,14 +553,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                     }
                   }}
                 >
-                  <Brush className="h-4 w-4" />
+                  <Brush className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="default"
+                  size="sm"
                   onClick={() => handleToolChange('eraser')}
                   className={cn(
-                    "h-9 w-9 p-0",
+                    "h-8 w-8 p-0",
                     currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
                   )}
                   style={currentTool !== 'eraser' ? { 
@@ -582,30 +578,30 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                     }
                   }}
                 >
-                  <Eraser className="h-4 w-4" />
+                  <Eraser className="h-3.5 w-3.5" />
                 </Button>
               </div>
 
-              {/* Brush size control */}
-              <div className="flex items-center gap-2 p-2 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-                <span className="text-xs font-medium min-w-[15px]" style={{ color: '#374151' }}>{strokeWidth}</span>
+              {/* Brush size control - responsive */}
+              <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-md border min-w-0 flex-shrink" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
+                <span className="text-xs font-medium min-w-[12px] text-center" style={{ color: '#374151' }}>{strokeWidth}</span>
                 <Slider
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
                   max={20}
                   min={1}
                   step={1}
-                  className="w-12 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
+                  className="w-10 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
                 />
               </div>
 
-              {/* Action buttons */}
-              <div className="flex items-center gap-1">
+              {/* Action buttons - compact layout */}
+              <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleUndo}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                   style={{ backgroundColor: 'transparent', color: '#374151' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -616,7 +612,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={handleRedo}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                   style={{ backgroundColor: 'transparent', color: '#374151' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -627,7 +623,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handleClear}
-                  className="text-xs px-2 h-8"
+                  className="text-xs px-1.5 h-7 min-w-0"
                   style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
@@ -637,22 +633,36 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               </div>
             </div>
 
-            {/* Bottom row: Color palette (only when pen is selected) */}
+            {/* Bottom row: Color palette (only when pen is selected) - scrollable */}
             {currentTool === 'pen' && (
-              <div className="flex items-center justify-center">
-                <div className="flex items-center gap-1 p-1 bg-white rounded-md border overflow-x-auto max-w-full" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-                  {COLOR_PALETTE.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => handleColorChange(color)}
-                      className={cn(
-                        "w-7 h-7 rounded-sm border-2 flex-shrink-0 transition-transform",
-                        strokeColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
-                      )}
-                      style={{ backgroundColor: color }}
-                      aria-label={`Select ${color} color`}
-                    />
-                  ))}
+              <div className="w-full overflow-hidden">
+                <div className="flex items-center">
+                  <div 
+                    className="flex items-center gap-1 p-1.5 bg-white rounded-md border overflow-x-auto scrollbar-hide" 
+                    style={{ 
+                      backgroundColor: 'white', 
+                      borderColor: '#d1d5db',
+                      maxWidth: '100%',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none'
+                    }}
+                  >
+                    <style>
+                      {`.scrollbar-hide::-webkit-scrollbar { display: none; }`}
+                    </style>
+                    {COLOR_PALETTE.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => handleColorChange(color)}
+                        className={cn(
+                          "w-6 h-6 rounded-sm border-2 flex-shrink-0 transition-transform touch-manipulation",
+                          strokeColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
+                        )}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Select ${color} color`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -843,8 +853,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             style={{
               border: 'none',
               borderRadius: '0 0 8px 8px',
-              cursor: currentTool === 'pen' ? 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTIgMTMgNy41LTcuNSAxLjUgMS41LTcuNSA3LjUtMS41LTEuNXoiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJtOCAxMy41IDQuNSA0LjUtNC41LTEtMC41LTAuNVYxMy41WiIgZmlsbD0iIzAwMCIvPjwvc3ZnPg==") 2 22, auto' : 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+") 12 12, auto',
-              touchAction: isMobile ? 'none' : 'auto'
+              cursor: isMultiTouch ? 'grab' : (currentTool === 'pen' ? 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTIgMTMgNy41LTcuNSAxLjUgMS41LTcuNSA3LjUtMS41LTEuNXoiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJtOCAxMy41IDQuNSA0LjUtNC41LTEtMC41LTAuNVYxMy41WiIgZmlsbD0iIzAwMCIvPjwvc3ZnPg==") 2 22, auto' : 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+") 12 12, auto'),
+              touchAction: isMobile ? (isMultiTouch ? 'pan-x pan-y pinch-zoom' : 'none') : 'auto',
+              pointerEvents: isMobile && isMultiTouch ? 'none' : 'auto'
             }}
           width={`${whiteboard.canvas_width}px`}
           height={`${whiteboard.canvas_height - (isMobile ? 50 : 60)}px`} // Adjust for mobile toolbar
@@ -852,7 +863,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           strokeColor={currentTool === 'pen' ? strokeColor : '#FFFFFF'}
           canvasColor={whiteboard.background_color}
           onChange={handleDrawingEnd}
-          allowOnlyPointerType="all" // Allow mouse, touch, and pen
+          allowOnlyPointerType={isMultiTouch ? "none" : "all"} // Disable canvas during multi-touch
           preserveBackgroundImageAspectRatio="none"
         />
         

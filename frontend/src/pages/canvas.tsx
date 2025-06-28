@@ -338,6 +338,10 @@ const CanvasPage: React.FC = () => {
     try {
       await apiDeleteNote(noteId, token);
       setNotes(prev => prev.filter(n => n.id !== noteId));
+      toast({
+        title: "Note deleted",
+        description: "Your note has been successfully removed.",
+      });
       return true;
     } catch (error) {
       console.error('Failed to delete note:', error);
@@ -425,6 +429,10 @@ const CanvasPage: React.FC = () => {
     try {
       await apiDeleteWhiteboard(whiteboardId, token);
       setWhiteboards(prev => prev.filter(w => w.id !== whiteboardId));
+      toast({
+        title: "Whiteboard deleted",
+        description: "Your whiteboard has been successfully removed.",
+      });
       return true;
     } catch (error) {
       console.error('Failed to delete whiteboard:', error);
@@ -516,7 +524,10 @@ const CanvasPage: React.FC = () => {
       // Update local state
       setLists(prev => prev.filter(list => list.id !== listId));
       
-      // Removed success toast - no need to distract user for routine deletions
+      toast({
+        title: "List deleted",
+        description: "Your list has been successfully removed.",
+      });
     } catch (error) {
       console.error('Failed to delete list:', error);
       toast({
@@ -996,10 +1007,10 @@ const CanvasPage: React.FC = () => {
                       key={whiteboard.id}
                       whiteboard={whiteboard}
                       onUpdate={async (whiteboardId, updatedData) => {
-                        await handleUpdateWhiteboard(whiteboardId, updatedData);
+                        return await handleUpdateWhiteboard(whiteboardId, updatedData);
                       }}
                       onDelete={async (whiteboardId) => {
-                        await handleDeleteWhiteboard(whiteboardId);
+                        return await handleDeleteWhiteboard(whiteboardId);
                       }}
                       existingCategories={categoryNames}
                       isCollapsed={isWhiteboardCollapsed(whiteboard.id)}

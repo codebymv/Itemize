@@ -145,7 +145,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
       {aiEnabled && (
         <button
           onClick={handleGetSuggestion}
-          className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+          className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
           style={{ fontFamily: '"Raleway", sans-serif' }}
           disabled={isLoadingSuggestions}
         >
