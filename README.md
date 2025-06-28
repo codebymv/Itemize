@@ -1,4 +1,16 @@
-# Listify - Full Stack Todo List Application
+# Listify full-stack application
+
+## 📚 Documentation
+
+This project's documentation has been organized into separate files for better readability and maintenance.
+
+### Core Documentation
+
+- [Getting Started](./!docs/getting-started.md) - Setup instructions for local development
+
+## 🚀 Quick Start
+
+For a quick start guide, see the [Getting Started](./!docs/getting-started.md) documentation.
 
 A modern, responsive todo list application built with React (frontend) and Node.js/Express (backend), designed for deployment on Railway with PostgreSQL.
 

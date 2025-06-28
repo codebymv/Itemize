@@ -15,6 +15,7 @@ import Home from "./pages/Home";
 import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
+import DocsPage from "./pages/DocsPage"; // Added this line
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CanvasPage from "./pages/canvas";
 
@@ -58,6 +59,7 @@ const App = () => (
                     {/* Public routes */}
                     <Route path="/home" element={<Home />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
+                    <Route path="/help/*" element={<DocsPage />} />
                     
                     {/* Protected routes */}
                     <Route element={<ProtectedRoute />}>

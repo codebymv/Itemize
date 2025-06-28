@@ -4,21 +4,25 @@
   "description": "Listify full-stack application",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run docs:watch\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "start": "cd backend && npm start",
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm run preview",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build": "npm run build:backend && npm run build:frontend",
+    "build": "npm run docs:check && npm run docs:sync && npm run build:backend && npm run build:frontend",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "railway:build": "npm run build:frontend",
-    "railway:start": "npm run start:backend"
+    "railway:start": "npm run start:backend",
+    "docs:sync": "node sync-docs.js sync",
+    "docs:watch": "node sync-docs.js watch",
+    "docs:check": "node sync-docs.js check"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "chokidar": "^3.5.3"
   },
   "workspaces": [
     "frontend",

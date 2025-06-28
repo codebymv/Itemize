@@ -22,8 +22,13 @@ import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 
 const CanvasPage: React.FC = () => {
   const [lists, setLists] = useState<List[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Unified loading states
+  const [loadingLists, setLoadingLists] = useState(true);
+  const [loadingNotes, setLoadingNotes] = useState(true);
+  const [loadingWhiteboards, setLoadingWhiteboards] = useState(true);
+  const isLoading = loadingLists || loadingNotes || loadingWhiteboards;
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
@@ -40,12 +45,10 @@ const CanvasPage: React.FC = () => {
 
   // State for Notes
   const [notes, setNotes] = useState<Note[]>([]);
-  const [loadingNotes, setLoadingNotes] = useState(true);
   const [errorNotes, setErrorNotes] = useState<string | null>(null);
 
   // State for Whiteboards
   const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
-  const [loadingWhiteboards, setLoadingWhiteboards] = useState(true);
   const [errorWhiteboards, setErrorWhiteboards] = useState<string | null>(null);
 
   // Database-backed category management
@@ -197,7 +200,7 @@ const CanvasPage: React.FC = () => {
   useEffect(() => {
     const getLists = async () => {
       try {
-        setLoading(true);
+        setLoadingLists(true);
         setError(null);
         const fetchedLists = await fetchCanvasLists(token);
         setLists(fetchedLists);
@@ -207,7 +210,7 @@ const CanvasPage: React.FC = () => {
         console.error('Error fetching lists:', error);
         setError('Failed to load lists. Please try again.');
       } finally {
-        setLoading(false);
+        setLoadingLists(false);
       }
     };
     
@@ -611,46 +614,47 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="">
-        <div className="bg-white border-b border-slate-200">
+      <div className="flex flex-col h-screen">
+        <div className="bg-white border-b border-slate-200 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-slate-600" />
-                    <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
-                  </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
                   
-                  {/* Desktop search - next to Canvas */}
+                  {/* Desktop search - next to My Canvas */}
                   <div className="relative hidden sm:block ml-4">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <div className="animate-pulse bg-slate-200 rounded-md w-48 h-9"></div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   {/* AI Suggest Toggle (placeholder) */}
                   <div className="animate-pulse bg-slate-200 rounded-md w-12 h-6"></div>
                   
-                  {/* Loading indicator */}
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-600 mr-2"></div>
-                    <span className="text-black">Loading...</span>
-                  </div>
+                  {/* New Button (placeholder) */}
+                  <div className="animate-pulse bg-slate-200 rounded-md w-20 h-9"></div>
                 </div>
+              </div>
+            </div>
+            
+            {/* Mobile search (placeholder) */}
+            <div className="sm:hidden pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <div className="animate-pulse bg-slate-200 rounded-md w-full h-9"></div>
               </div>
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-40 rounded-lg">
-              <Skeleton className="h-full w-full" />
-            </div>
-          ))}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+            <span className="text-lg text-black">Loading Canvas...</span>
+          </div>
         </div>
       </div>
     );
@@ -663,11 +667,8 @@ const CanvasPage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-slate-600" />
-                    <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>Canvas</h1>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
                   
                   {/* Desktop search - next to Canvas */}
                   <div className="relative hidden sm:block ml-4">
@@ -1040,35 +1041,54 @@ const CanvasPage: React.FC = () => {
       <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
         <HeaderSection />
       
-      {/* Conditional Rendering based on viewport size */}
-      {isMobileView ? (
-        // Mobile: Stacked List View with scrolling
-        <div className="flex-1 overflow-y-auto">
-          <MobileListView />
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+            <span className="text-lg text-black">Loading Canvas...</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <div className="text-destructive text-lg mb-4">⚠️ {error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
         </div>
       ) : (
-        // Desktop: Full-width Canvas View with drag and drop
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
-          <CanvasContainer 
-            existingCategories={categoryNames} 
-            searchQuery={searchQuery}
-            onOpenNewNoteModal={handleOpenNewNoteModal} 
-            notes={filteredNotes} // Pass filtered notes state
-            onNoteUpdate={handleUpdateNote} // Pass update handler
-            onNoteDelete={handleDeleteNote} // Pass delete handler
-            whiteboards={filteredWhiteboards} // Pass filtered whiteboards state
-            onWhiteboardUpdate={handleUpdateWhiteboard} // Pass whiteboard update handler
-            onWhiteboardDelete={handleDeleteWhiteboard} // Pass whiteboard delete handler
-            onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
-            addCategory={addCategory} // Pass the centralized addCategory function
-            onReady={(methods) => {
-              if (!canvasMethodsRef.current) {
-                canvasMethodsRef.current = methods;
-                console.log('Canvas methods ready:', methods);
-              }
-            }}
-          />
-        </div>
+        // Conditional Rendering based on viewport size
+        isMobileView ? (
+          // Mobile: Stacked List View with scrolling
+          <div className="flex-1 overflow-y-auto">
+            <MobileListView />
+          </div>
+        ) : (
+          // Desktop: Full-width Canvas View with drag and drop
+          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
+            <CanvasContainer 
+              existingCategories={categoryNames} 
+              searchQuery={searchQuery}
+              onOpenNewNoteModal={handleOpenNewNoteModal} 
+              notes={notes} // Pass filtered notes state
+              onNoteUpdate={handleUpdateNote} // Pass update handler
+              onNoteDelete={handleDeleteNote} // Pass delete handler
+              whiteboards={whiteboards} // Pass filtered whiteboards state
+              onWhiteboardUpdate={handleUpdateWhiteboard} // Pass whiteboard update handler
+              onWhiteboardDelete={handleDeleteWhiteboard} // Pass whiteboard delete handler
+              onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
+              addCategory={addCategory} // Pass the centralized addCategory function
+              onReady={(methods) => {
+                if (!canvasMethodsRef.current) {
+                  canvasMethodsRef.current = methods;
+                  console.log('Canvas methods ready:', methods);
+                }
+              }}
+            />
+          </div>
+        )
       )}
       
       {/* Create List Modal - used by mobile view */}

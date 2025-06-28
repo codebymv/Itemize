@@ -61,6 +61,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Docs routes
+const docsRoutes = require('./routes/docs');
+app.use('/docs', docsRoutes); // Mounted at /docs
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);
@@ -119,7 +123,6 @@ setTimeout(async () => {
             console.log('✅ Auth routes initialized and mounted on /api/auth');
             
             // Make authenticateJWT available for other routes
-            // Ensure this doesn't conflict if authenticateJWT was already defined globally
             // For clarity, we'll use the imported authMiddleware for list routes
             global.authenticateJWT = authMiddleware; // Or pass it around as needed
 
@@ -131,7 +134,6 @@ setTimeout(async () => {
     }
       
       // Get all lists
-      // Ensure authenticateJWT is correctly referenced. If it's now global.authenticateJWT or authMiddleware
       app.get('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
           const client = await actualPool.connect();
@@ -518,8 +520,8 @@ setTimeout(async () => {
           const newColorValue = color_value !== undefined ? color_value : currentWhiteboard.color_value;
 
           const updateResult = await client.query(
-            `UPDATE whiteboards
-             SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10
+            `UPDATE whiteboards 
+             SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10 
              WHERE id = $11 AND user_id = $12 RETURNING *`,
             [newTitle, newCategory, newCanvasData, newCanvasWidth, newCanvasHeight, newBackgroundColor, newPositionX, newPositionY, newZIndex, newColorValue, whiteboardId, req.user.id]
           );
