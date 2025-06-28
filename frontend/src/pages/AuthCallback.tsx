@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '@/lib/api';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -48,11 +49,12 @@ const AuthCallback = () => {
           return;
         }
 
+        const apiUrl = getApiUrl();
         console.log('Authorization code found, length:', code.length);
-        console.log('Sending request to backend at:', `${import.meta.env.VITE_API_URL}/api/auth/google-login`);
+        console.log('Sending request to backend at:', `${apiUrl}/api/auth/google-login`);
 
         // Send the authorization code to the backend
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
+        const response = await fetch(`${apiUrl}/api/auth/google-login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
