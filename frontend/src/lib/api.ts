@@ -15,19 +15,21 @@ console.log('Detailed API Configuration:', {
   import_meta_env: import.meta.env
 });
 
+// Force production URL if we're on itemize.cloud domain
+const isProductionDomain = window.location.hostname === 'itemize.cloud';
+
 // Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'production' 
-    ? 'https://itemize-backend-production-92ad.up.railway.app' 
-    : 'http://localhost:3001'
-);
+const baseURL = isProductionDomain
+  ? 'https://itemize-backend-production-92ad.up.railway.app'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 // Log the selected base URL and decision factors
 console.log('API URL Resolution:', {
   final_baseURL: baseURL,
   env_VITE_API_URL: import.meta.env.VITE_API_URL,
   env_MODE: import.meta.env.MODE,
-  using_fallback: !import.meta.env.VITE_API_URL
+  isProductionDomain,
+  window_hostname: window.location.hostname
 });
 
 // Create axios instance with base URL
