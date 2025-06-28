@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => {
       __API_URL__: JSON.stringify(process.env.VITE_API_URL || defaultApiUrl),
       __GOOGLE_CLIENT_ID__: JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID || ''),
       // Also define the regular env variables to ensure they're available
-      'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || defaultApiUrl),
+      'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL),
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID || ''),
       'import.meta.env.MODE': JSON.stringify(mode),
       'import.meta.env.DEV': mode === 'development',
