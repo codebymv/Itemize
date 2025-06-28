@@ -6,33 +6,12 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
-// Log detailed environment configuration
-console.log('Detailed API Configuration:', {
-  MODE: import.meta.env.MODE,
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  isProd: import.meta.env.MODE === 'production',
-  window_location: window.location.href,
-  import_meta_env: import.meta.env
-});
+// Force production URL if we're on itemize.cloud domain
+const isProductionDomain = window.location.hostname === 'itemize.cloud';
+const PRODUCTION_URL = 'https://itemize-backend-production-92ad.up.railway.app';
 
-if (import.meta.env.PROD) { // Only show in production
-  alert(`API Config: MODE=${import.meta.env.MODE}, VITE_API_URL=${import.meta.env.VITE_API_URL}`);
-}
-
-// Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'production' 
-    ? 'https://itemize-backend-production-92ad.up.railway.app' 
-    : 'http://localhost:3001'
-);
-
-// Log the selected base URL and decision factors
-console.log('API URL Resolution:', {
-  final_baseURL: baseURL,
-  env_VITE_API_URL: import.meta.env.VITE_API_URL,
-  env_MODE: import.meta.env.MODE,
-  using_fallback: !import.meta.env.VITE_API_URL
-});
+// Determine the base URL based on domain
+const baseURL = isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
 
 // Create axios instance with base URL
 const api = axios.create({
