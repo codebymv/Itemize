@@ -196,8 +196,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
     >
       <Card 
         ref={mobileCardRef}
-        className="w-full shadow-sm h-full flex flex-col" 
-        style={{ border: 'none' }}
+        className="w-full border shadow-sm h-full flex flex-col" 
       >
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
@@ -264,17 +263,17 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                       disabled={isSavingColor}
                     >
                       <span
-                        className="inline-block w-3 h-3 rounded-full border border-gray-400 transition-colors duration-150"
+                        className="inline-block w-3 h-3 rounded-full border border-border transition-colors duration-150"
                         style={{ backgroundColor: whiteboardDisplayColor }}
                       />
                       {isSavingColor && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-full">
                           <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
                         </div>
                       )}
                     </Button>
                   </ColorPicker>
-                  <Palette className="h-4 w-4 text-slate-500" />
+                  <Palette className="h-4 w-4 text-muted-foreground" />
                   <CardTitle 
                     className="text-lg font-medium cursor-pointer"
                     style={{ fontFamily: '"Raleway", sans-serif' }}
@@ -330,7 +329,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
 
         <CollapsibleContent className="flex-1">
           <div 
-            className="bg-white rounded-lg mx-6 mb-6 flex-1 flex flex-col relative" 
+            className="bg-background rounded-lg mx-6 mb-6 flex-1 flex flex-col relative" 
             style={{ 
               border: `2px solid ${whiteboardDisplayColor} !important`,
               borderColor: `${whiteboardDisplayColor} !important`,
@@ -353,7 +352,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                 className={cn(
                   "absolute bottom-0 left-0 right-0 h-6 cursor-ns-resize flex items-center justify-center",
                   "touch-manipulation select-none transition-colors duration-200",
-                  isResizing ? "bg-blue-100 border-t-2 border-blue-300" : "hover:bg-gray-100 border-t border-gray-300"
+                  isResizing ? "bg-blue-100 border-t-2 border-blue-300" : "hover:bg-muted border-t border-border"
                 )}
                 onTouchStart={handleMobileResizeStart}
                 onMouseDown={handleMobileResizeStart}
@@ -366,7 +365,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                 {/* Visual resize indicator */}
                 <div className={cn(
                   "w-16 h-1.5 rounded-full transition-all duration-200",
-                  isResizing ? "bg-blue-500 scale-110" : "bg-gray-400"
+                  isResizing ? "bg-blue-500 scale-110" : "bg-muted-foreground"
                 )} />
                 
                 {/* Resize instruction text */}

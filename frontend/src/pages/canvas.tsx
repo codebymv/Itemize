@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
@@ -7,7 +8,7 @@ import { List, Note, Whiteboard } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
-import AISuggestToggle from '../components/ui/AISuggestToggle';
+
 import { useToast } from "../hooks/use-toast";
 import CreateListModal from "../components/CreateListModal";
 import CreateNoteModal from "../components/CreateNoteModal";
@@ -21,6 +22,7 @@ import { NewWhiteboardModal } from '../components/NewWhiteboardModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 
 const CanvasPage: React.FC = () => {
+  const { theme } = useTheme();
   const [lists, setLists] = useState<List[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,8 +101,8 @@ const CanvasPage: React.FC = () => {
     const centerX = 2000; // Canvas center X coordinate
     const centerY = 2000; // Canvas center Y coordinate  
     const baseSpreadRadius = 300; // Base random spread area around center
-    const itemWidth = 350; // Approximate width of list/note cards
-    const itemHeight = 250; // Approximate height of list/note cards
+    const itemWidth = 390; // Approximate width of list/note cards
+    const itemHeight = 295; // Approximate height of list/note cards (accounting for headers)
     const minDistance = 50; // Minimum distance between items
     
     // Get all existing positions from lists, notes, and whiteboards
@@ -617,14 +619,14 @@ const CanvasPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col h-screen">
-        <div className="bg-white border-b border-slate-200 relative z-10">
+        <div className="bg-background border-b border-border relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
+                  <h1 className="text-xl font-semibold italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>MY CANVAS</h1>
                   
-                  {/* Desktop search - next to My Canvas */}
+                  {/* Desktop search - next to MY CANVAS */}
                   <div className="relative hidden sm:block ml-4">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <div className="animate-pulse bg-slate-200 rounded-md w-48 h-9"></div>
@@ -663,12 +665,12 @@ const CanvasPage: React.FC = () => {
   if (error) {
     return (
       <div className="">
-        <div className="bg-white border-b border-slate-200">
+        <div className="bg-background border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
+                  <h1 className="text-xl font-semibold italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>MY CANVAS</h1>
                   
                   {/* Desktop search - next to Canvas */}
                   <div className="relative hidden sm:block ml-4">
@@ -683,10 +685,7 @@ const CanvasPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                  {/* AI Suggest Toggle */}
-                  <AISuggestToggle />
-                </div>
+
               </div>
             </div>
           </div>
@@ -774,16 +773,16 @@ const CanvasPage: React.FC = () => {
 
   // Header component shared by both views
   const HeaderSection = () => (
-    <div className="bg-white border-b border-slate-200 relative z-10">
+    <div className="bg-background border-b border-border relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-shrink-0">
-              <h1 className="text-xl font-light italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif' }}>My Canvas</h1>
+              <h1 className="text-xl font-semibold italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>MY CANVAS</h1>
               
-              {/* Desktop search - next to My Canvas */}
+              {/* Desktop search - next to MY CANVAS */}
               <div className="relative hidden sm:block ml-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search canvas..."
                   value={searchQuery}
@@ -795,9 +794,6 @@ const CanvasPage: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {/* AI Suggest Toggle */}
-              <AISuggestToggle />
-              
               {/* New Button (for both lists and notes) */}
               <Button 
                 id="new-canvas-button"
@@ -823,7 +819,7 @@ const CanvasPage: React.FC = () => {
                   }
                 }}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap font-light"
+                className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 New
@@ -835,12 +831,12 @@ const CanvasPage: React.FC = () => {
         {/* Mobile search */}
         <div className="sm:hidden pb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search canvas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 placeholder:font-light placeholder:text-slate-400"
+              className="pl-10 placeholder:font-light"
               style={{ fontFamily: '"Raleway", sans-serif' }}
             />
           </div>
@@ -857,7 +853,7 @@ const CanvasPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Categories Section */}
         <div className="flex items-center gap-4 mb-8">
-          <h3 className="text-lg font-light text-slate-900 flex-shrink-0">Categories</h3>
+          <h3 className="text-lg font-light text-foreground flex-shrink-0">Categories</h3>
           
           {/* Filter Tabs - Horizontal scrolling */}
           <div className="flex gap-2 overflow-x-auto flex-1 pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
@@ -877,7 +873,7 @@ const CanvasPage: React.FC = () => {
                       setSelectedFilter(filter);
                     }
                   }}
-                  className={`capitalize font-light whitespace-nowrap flex-shrink-0 ${isActive ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                  className={`capitalize font-light whitespace-nowrap flex-shrink-0 ${isActive ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
                 >
                   {filter} ({count})
                 </Button>
@@ -891,24 +887,24 @@ const CanvasPage: React.FC = () => {
           <div className="text-center py-12">
             {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 ? (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-lg shadow-sm border p-8">
+                <div className="bg-card rounded-lg shadow-sm border border-border p-8">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Plus className="h-8 w-8 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-light text-slate-900 mb-6">
+                  <h3 className="text-lg font-light text-foreground mb-6">
                     No content on your canvas<br/>(for now!)
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button 
                       onClick={() => setShowNewListModal(true)}
-                      className="bg-blue-600 hover:bg-blue-700 font-normal"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add List
                     </Button>
                     <Button 
                       onClick={() => setShowCreateNoteModal(true)}
-                      className="bg-blue-600 hover:bg-blue-700 font-normal"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Note
@@ -919,7 +915,7 @@ const CanvasPage: React.FC = () => {
                         setNewWhiteboardInitialPosition(position);
                         setShowNewWhiteboardModal(true);
                       }}
-                      className="bg-blue-600 hover:bg-blue-700 font-normal"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Whiteboard
@@ -928,7 +924,7 @@ const CanvasPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-slate-500">
+              <div className="text-muted-foreground">
                 <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No content matches your search criteria.</p>
               </div>
@@ -939,8 +935,8 @@ const CanvasPage: React.FC = () => {
             {/* My Lists section */}
             {filteredLists.length > 0 && (
               <>
-                <h2 className="text-xl font-light text-slate-900 mb-6 flex items-center gap-2">
-                  <CheckSquare className="h-5 w-5 text-slate-500" />
+                <h2 className="text-xl font-light text-foreground mb-6 flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5 text-muted-foreground" />
                   My Lists
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -963,8 +959,8 @@ const CanvasPage: React.FC = () => {
             {/* My Notes section */}
             {filteredNotes.length > 0 && (
               <div className={filteredLists.length > 0 ? "mt-12" : ""}>
-                <h2 className="text-xl font-light text-slate-900 mb-6 flex items-center gap-2">
-                  <StickyNote className="h-5 w-5 text-slate-500" />
+                <h2 className="text-xl font-light text-foreground mb-6 flex items-center gap-2">
+                  <StickyNote className="h-5 w-5 text-muted-foreground" />
                   My Notes
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -990,8 +986,8 @@ const CanvasPage: React.FC = () => {
             {/* My Whiteboards section */}
             {filteredWhiteboards.length > 0 && (
               <div className={(filteredLists.length > 0 || filteredNotes.length > 0) ? "mt-12" : ""}>
-                <h2 className="text-xl font-light text-slate-900 mb-6 flex items-center gap-2">
-                  <Palette className="h-5 w-5 text-slate-500" />
+                <h2 className="text-xl font-light text-foreground mb-6 flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-muted-foreground" />
                   My Whiteboards
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

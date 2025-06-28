@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
@@ -38,45 +39,52 @@ const RootRedirect = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <AuthProvider>
-          <AISuggestProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true
-              }}
-            >
-              <div className="min-h-screen bg-background">
-                <Navbar />
-                <main>
-                  <Routes>
-                    {/* Root path redirects based on authentication */}
-                    <Route path="/" element={<RootRedirect />} />
-                    
-                    {/* Public routes */}
-                    <Route path="/home" element={<Home />} />
-                    <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="/help/*" element={<DocsPage />} />
-                    
-                    {/* Protected routes */}
-                    <Route element={<ProtectedRoute />}>
-                      <Route path="/lists" element={<UserHome />} />
-                      <Route path="/canvas" element={<CanvasPage />} />
-                      {/* Add other protected routes here */}
-                    </Route>
-                    
-                    {/* Catch-all route */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
-              </div>
-            </BrowserRouter>
-          </AISuggestProvider>
-        </AuthProvider>
-      </GoogleOAuthProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        enableSystem={false}
+        themes={['light', 'dark']}
+      >
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <AuthProvider>
+            <AISuggestProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true
+                }}
+              >
+                <div className="min-h-screen bg-background">
+                  <Navbar />
+                  <main>
+                    <Routes>
+                      {/* Root path redirects based on authentication */}
+                      <Route path="/" element={<RootRedirect />} />
+                      
+                      {/* Public routes */}
+                      <Route path="/home" element={<Home />} />
+                      <Route path="/auth/callback" element={<AuthCallback />} />
+                      <Route path="/help/*" element={<DocsPage />} />
+                      
+                      {/* Protected routes */}
+                      <Route element={<ProtectedRoute />}>
+                        <Route path="/lists" element={<UserHome />} />
+                        <Route path="/canvas" element={<CanvasPage />} />
+                        {/* Add other protected routes here */}
+                      </Route>
+                      
+                      {/* Catch-all route */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </main>
+                </div>
+              </BrowserRouter>
+            </AISuggestProvider>
+          </AuthProvider>
+        </GoogleOAuthProvider>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

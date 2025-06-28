@@ -226,7 +226,7 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
     <div 
       ref={whiteboardRef}
       onMouseDown={handleMouseDown}
-      className="draggable-whiteboard-card shadow-lg rounded-lg flex flex-col overflow-hidden border border-gray-300 relative"
+      className="draggable-whiteboard-card shadow-lg rounded-lg flex flex-col overflow-hidden border relative"
       style={{
         position: 'absolute',
         width: `${whiteboard.canvas_width || 400}px`,

@@ -520,24 +520,42 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     <div className="w-full h-full flex flex-col">
       {/* Mobile-responsive Toolbar */}
       <div className={cn(
-        "border-b border-gray-200 bg-gray-50",
+        "border-b bg-gray-50 border-gray-200",
         isMobile ? "p-2 space-y-2" : "p-3 flex items-center justify-between"
-      )}>
+      )}
+      style={{ 
+        backgroundColor: '#f9fafb', 
+        borderBottomColor: '#e5e7eb' 
+      }}>
         {isMobile ? (
           // Mobile: Stacked layout for better fit
           <>
             {/* Top row: Tool selection and actions */}
             <div className="flex items-center justify-between">
               {/* Pen/Eraser toggle */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-md border">
+              <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                 <Button
                   variant="ghost"
                   size="default"
                   onClick={() => handleToolChange('pen')}
                   className={cn(
                     "h-9 w-9 p-0",
-                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
                   )}
+                  style={currentTool !== 'pen' ? { 
+                    backgroundColor: 'transparent', 
+                    color: '#374151'
+                  } : {}}
+                  onMouseEnter={(e) => {
+                    if (currentTool !== 'pen') {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentTool !== 'pen') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
@@ -547,16 +565,30 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   onClick={() => handleToolChange('eraser')}
                   className={cn(
                     "h-9 w-9 p-0",
-                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
                   )}
+                  style={currentTool !== 'eraser' ? { 
+                    backgroundColor: 'transparent', 
+                    color: '#374151'
+                  } : {}}
+                  onMouseEnter={(e) => {
+                    if (currentTool !== 'eraser') {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentTool !== 'eraser') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Brush size control */}
-              <div className="flex items-center gap-2 p-2 bg-white rounded-md border">
-                <span className="text-xs text-gray-700 font-medium min-w-[15px]">{strokeWidth}</span>
+              <div className="flex items-center gap-2 p-2 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
+                <span className="text-xs font-medium min-w-[15px]" style={{ color: '#374151' }}>{strokeWidth}</span>
                 <Slider
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
@@ -574,6 +606,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   size="sm"
                   onClick={handleUndo}
                   className="h-8 w-8 p-0"
+                  style={{ backgroundColor: 'transparent', color: '#374151' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <Undo className="h-3 w-3" />
                 </Button>
@@ -582,6 +617,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   size="sm"
                   onClick={handleRedo}
                   className="h-8 w-8 p-0"
+                  style={{ backgroundColor: 'transparent', color: '#374151' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <Redo className="h-3 w-3" />
                 </Button>
@@ -590,6 +628,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   size="sm"
                   onClick={handleClear}
                   className="text-xs px-2 h-8"
+                  style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                 >
                   Clear
                 </Button>
@@ -599,7 +640,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             {/* Bottom row: Color palette (only when pen is selected) */}
             {currentTool === 'pen' && (
               <div className="flex items-center justify-center">
-                <div className="flex items-center gap-1 p-1 bg-white rounded-md border overflow-x-auto max-w-full">
+                <div className="flex items-center gap-1 p-1 bg-white rounded-md border overflow-x-auto max-w-full" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                   {COLOR_PALETTE.map((color) => (
                     <button
                       key={color}
@@ -622,15 +663,29 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             {/* Drawing tools */}
             <div className="flex items-center gap-2">
               {/* Pen/Eraser toggle */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-md border">
+              <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('pen')}
                   className={cn(
                     "h-8 w-8 p-0",
-                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
                   )}
+                  style={currentTool !== 'pen' ? { 
+                    backgroundColor: 'transparent', 
+                    color: '#374151'
+                  } : {}}
+                  onMouseEnter={(e) => {
+                    if (currentTool !== 'pen') {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentTool !== 'pen') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
@@ -640,8 +695,22 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   onClick={() => handleToolChange('eraser')}
                   className={cn(
                     "h-8 w-8 p-0",
-                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-100'
+                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
                   )}
+                  style={currentTool !== 'eraser' ? { 
+                    backgroundColor: 'transparent', 
+                    color: '#374151'
+                  } : {}}
+                  onMouseEnter={(e) => {
+                    if (currentTool !== 'eraser') {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentTool !== 'eraser') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
@@ -649,7 +718,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
               {/* Color palette */}
               {currentTool === 'pen' && (
-                <div className="flex items-center gap-1 p-1 bg-white rounded-md border">
+                <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                   {COLOR_PALETTE.map((color) => (
                     <button
                       key={color}
@@ -665,8 +734,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               )}
 
               {/* Brush size slider */}
-              <div className="flex items-center gap-2 p-2 bg-white rounded-md border">
-                <span className="text-xs text-gray-700 font-medium min-w-[20px]">{strokeWidth}</span>
+              <div className="flex items-center gap-2 p-2 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
+                <span className="text-xs font-medium min-w-[20px]" style={{ color: '#374151' }}>{strokeWidth}</span>
                 <Slider
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
@@ -685,6 +754,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 size="sm"
                 onClick={handleUndo}
                 className="h-8 w-8 p-0"
+                style={{ backgroundColor: 'transparent', color: '#374151' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <Undo className="h-4 w-4" />
               </Button>
@@ -693,6 +765,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 size="sm"
                 onClick={handleRedo}
                 className="h-8 w-8 p-0"
+                style={{ backgroundColor: 'transparent', color: '#374151' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <Redo className="h-4 w-4" />
               </Button>
@@ -701,6 +776,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 size="sm"
                 onClick={handleClear}
                 className="text-xs"
+                style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
               >
                 Clear
               </Button>
@@ -765,7 +843,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             style={{
               border: 'none',
               borderRadius: '0 0 8px 8px',
-              cursor: currentTool === 'pen' ? 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0ibTEyIDEzIDcuNS03LjUgMS41IDEuNS03LjUgNy41LTEuNS0xLjV6IiBmaWxsPSIjMDAwIi8+CjxwYXRoIGQ9Im04IDEzLjUgNC41IDQuNS00LjUtMS0wLjUtMC41VjEzLjVaIiBmaWxsPSIjMDAwIi8+Cjwvc3ZnPgo=") 2 22, auto' : 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iOSIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8L3N2Zz4K") 12 12, auto',
+              cursor: currentTool === 'pen' ? 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTIgMTMgNy41LTcuNSAxLjUgMS41LTcuNSA3LjUtMS41LTEuNXoiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJtOCAxMy41IDQuNSA0LjUtNC41LTEtMC41LTAuNVYxMy41WiIgZmlsbD0iIzAwMCIvPjwvc3ZnPg==") 2 22, auto' : 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+") 12 12, auto',
               touchAction: isMobile ? 'none' : 'auto'
             }}
           width={`${whiteboard.canvas_width}px`}

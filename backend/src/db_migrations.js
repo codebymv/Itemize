@@ -30,6 +30,27 @@ const runCanvasMigration = async (pool) => {
   }
 };
 
+// Migration to add width and height columns to lists table for resizing functionality
+const runListResizeMigration = async (pool) => {
+  console.log('Running list resize feature migration...');
+  
+  try {
+    // Add width and height columns to lists table
+    await pool.query(`
+      ALTER TABLE lists 
+      ADD COLUMN IF NOT EXISTS width INTEGER DEFAULT 340,
+      ADD COLUMN IF NOT EXISTS height INTEGER DEFAULT 265;
+    `);
+    console.log('✅ width and height columns added to lists table');
+    
+    console.log('✅ List resize feature migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ List resize feature migration failed:', error.message);
+    return false;
+  }
+};
+
 // New migration for creating the 'notes' table
 const runCreateNotesTableMigration = async (pool) => {
   console.log('Running create notes table migration...');
@@ -432,6 +453,7 @@ const runCleanupDefaultCategories = async (pool) => {
 
 module.exports = {
   runCanvasMigration,
+  runListResizeMigration,
   runCreateNotesTableMigration,
   runAddTitleAndCategoryToNotesMigration,
   runCategoriesTableMigration,

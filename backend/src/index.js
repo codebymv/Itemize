@@ -154,7 +154,7 @@ setTimeout(async () => {
       // Create a new list
       app.post('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
-          const { title, category, type, items, color_value, position_x, position_y } = req.body;
+          const { title, category, type, items, color_value, position_x, position_y, width, height } = req.body;
           
           if (!title) {
             return res.status(400).json({ error: 'Title is required' });
@@ -165,7 +165,7 @@ setTimeout(async () => {
 
           const client = await actualPool.connect();
           const result = await client.query(
-            'INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            'INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y, width, height) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
             [
               title, 
               categoryValue, 
@@ -173,7 +173,9 @@ setTimeout(async () => {
               req.user.id, 
               color_value || null,
               position_x || 0, // Default to 0 if not provided
-              position_y || 0  // Default to 0 if not provided
+              position_y || 0, // Default to 0 if not provided
+              width || 340,    // Default width
+              height || 265    // Default height
             ]
           );
           client.release();
@@ -195,15 +197,15 @@ setTimeout(async () => {
       app.put('/api/lists/:id', global.authenticateJWT, async (req, res) => {
         try {
           const { id } = req.params;
-          const { title, category, type, items, color_value } = req.body;
+          const { title, category, type, items, color_value, width, height } = req.body;
           
           // Handle both 'category' and 'type' field names for compatibility
           const categoryValue = category || type || 'General';
           
           const client = await actualPool.connect();
           const result = await client.query(
-            'UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4 WHERE id = $5 AND user_id = $6 RETURNING *',
-            [title, categoryValue, JSON.stringify(items), color_value, id, req.user.id]
+            'UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4, width = $5, height = $6 WHERE id = $7 AND user_id = $8 RETURNING *',
+            [title, categoryValue, JSON.stringify(items), color_value, width, height, id, req.user.id]
           );
           client.release();
           
@@ -320,13 +322,12 @@ setTimeout(async () => {
         try {
           const { 
             title, 
+            content = '', // Default empty content
             category = 'General', // Default category
-            canvas_data = '{"paths": [], "shapes": []}', // Empty canvas
-            canvas_width, 
-            canvas_height, 
-            background_color = '#FFFFFF', // Default background color
             position_x, 
             position_y, 
+            width, 
+            height,
             z_index = 0, 
             color_value = '#3B82F6' // Default border color
           } = req.body;

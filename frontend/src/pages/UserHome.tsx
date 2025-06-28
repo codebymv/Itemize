@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
 import { ListCard } from "@/components/ListCard";
-import AISuggestToggle from "@/components/ui/AISuggestToggle";
+
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -217,18 +217,18 @@ const UserHome = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <div className="bg-background border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-slate-900">My Lists</h1>
+                <h1 className="text-2xl font-bold text-foreground">My Lists</h1>
                 
                 {/* Desktop search - moved next to My Lists */}
                 <div className="relative hidden sm:block ml-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Search lists..."
                     value={searchQuery}
@@ -240,8 +240,7 @@ const UserHome = () => {
               
               <div className="flex items-center gap-3">
                 
-                {/* AI Suggest Toggle */}
-                <AISuggestToggle />
+                
 
                 <Button 
                   onClick={() => setShowCreateModal(true)}
@@ -259,7 +258,7 @@ const UserHome = () => {
           {/* Mobile search */}
           <div className="sm:hidden pb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search lists..."
                 value={searchQuery}
@@ -304,14 +303,14 @@ const UserHome = () => {
           <div className="text-center py-12">
             {lists.length === 0 ? (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-lg shadow-sm border p-8">
+                <div className="bg-card rounded-lg shadow-sm border border-border p-8">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Plus className="h-8 w-8 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     Create your first list
                   </h3>
-                  <p className="text-slate-600 mb-6">
+                  <p className="text-muted-foreground mb-6">
                     Get organized with custom lists for any purpose - shopping, notes, tasks, and more.
                   </p>
                   <Button 
@@ -324,7 +323,7 @@ const UserHome = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-slate-500">
+              <div className="text-muted-foreground">
                 <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No lists match your search criteria.</p>
               </div>

@@ -196,7 +196,7 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
     <div 
       ref={cardRef}
       onMouseDown={handleMouseDown}
-      className="draggable-note-card shadow-lg rounded-lg flex flex-col overflow-hidden border border-gray-300 relative"
+      className="draggable-note-card shadow-lg rounded-lg flex flex-col overflow-hidden border relative"
       style={{
         position: 'absolute',
                   width: `${note.width || 520}px`,

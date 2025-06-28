@@ -1,6 +1,9 @@
 import React from 'react';
+import { useTheme } from 'next-themes';
+import { useAISuggest } from '@/context/AISuggestContext';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,13 +13,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, User, Settings } from 'lucide-react';
+import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
 
   const { currentUser, login, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { aiEnabled, setAiEnabled } = useAISuggest();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -54,8 +59,6 @@ const Navbar: React.FC = () => {
     }
   };
 
-
-
   const handleNavigate = (path: string) => {
     // For logo clicks, direct to appropriate home page based on auth status
     if (path === '/') {
@@ -65,15 +68,6 @@ const Navbar: React.FC = () => {
     }
   };
 
-  // Helper function to get user initials
-  const getUserInitials = (user: any) => {
-    if (user.name) {
-      return user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
-    }
-    return user.email?.charAt(0).toUpperCase() || 'U';
-  };
-
-
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -81,14 +75,12 @@ const Navbar: React.FC = () => {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <img 
-              src="/cover.png" 
+              src={theme === 'dark' ? '/cover_whitetext.png' : '/cover.png'} 
               alt="Itemize" 
               className="h-16 w-auto cursor-pointer" 
               onClick={() => handleNavigate('/')}
             />
           </div>
-
-
 
           <div className="flex items-center md:space-x-4">
             {currentUser ? (
@@ -98,7 +90,7 @@ const Navbar: React.FC = () => {
                     <User className="h-5 w-5 text-white" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-64" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
@@ -110,14 +102,61 @@ const Navbar: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {/* <DropdownMenuItem onClick={() => handleNavigate('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem> */}
-                  {/* <DropdownMenuItem onClick={() => handleNavigate('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem> */}
+                  
+                  {/* Theme Section */}
+                  <div className="px-2 py-2">
+                    <div className="flex items-center mb-2">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span className="text-sm font-medium">Theme</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 ml-6">
+                      <button
+                        onClick={() => setTheme('light')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                          theme === 'light' 
+                            ? 'bg-accent text-accent-foreground' 
+                            : 'hover:bg-accent/80 hover:text-accent-foreground'
+                        }`}
+                      >
+                        <Sun className="h-4 w-4" />
+                        Light
+                      </button>
+                      <button
+                        onClick={() => setTheme('dark')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                          theme === 'dark' 
+                            ? 'bg-accent text-accent-foreground' 
+                            : 'hover:bg-accent/80 hover:text-accent-foreground'
+                        }`}
+                      >
+                        <Moon className="h-4 w-4" />
+                        Dark
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* AI Suggestions Section */}
+                  <div className="px-2 py-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        <Label htmlFor="ai-suggest-toggle" className="text-sm font-medium">
+                          AI Enhancements
+                        </Label>
+                      </div>
+                      <Switch
+                        id="ai-suggest-toggle"
+                        checked={aiEnabled}
+                        onCheckedChange={setAiEnabled}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 ml-6">
+                      Get AI-powered suggestions
+                    </p>
+                  </div>
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -134,8 +173,6 @@ const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
-
-
     </nav>
   );
 };

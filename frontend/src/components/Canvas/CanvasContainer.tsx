@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
 import { List, Note, Whiteboard } from '../../types'; // Add Note and Whiteboard types
@@ -48,6 +49,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onOpenNewWhiteboardModal,
   addCategory
 }) => {
+  const { theme } = useTheme();
   const { token } = useAuth();
   const [lists, setLists] = useState<List[]>([]);
   const [loading, setLoading] = useState(true);
@@ -529,7 +531,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
             transform: `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`,
             transformOrigin: '0 0',
             padding: '1rem',
-            backgroundImage: `
+            backgroundImage: theme === 'dark' ? `
+              radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+              radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+              linear-gradient(135deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.01) 100%)
+            ` : `
               radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
               radial-gradient(circle, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
               linear-gradient(135deg, rgba(0, 0, 0, 0.01) 0%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.01) 100%)
