@@ -15,6 +15,10 @@ console.log('Detailed API Configuration:', {
   import_meta_env: import.meta.env
 });
 
+if (import.meta.env.PROD) { // Only show in production
+  alert(`API Config: MODE=${import.meta.env.MODE}, VITE_API_URL=${import.meta.env.VITE_API_URL}`);
+}
+
 // Determine the base URL based on environment
 const baseURL = import.meta.env.VITE_API_URL || (
   import.meta.env.MODE === 'production' 
