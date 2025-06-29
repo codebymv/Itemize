@@ -3,8 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import { common } from 'lowlight';
 import axios from 'axios';
 import { Menu, X, FileText, Folder } from 'lucide-react';
 
@@ -317,7 +315,6 @@ const DocsPage: React.FC = () => {
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={[[rehypeHighlight, { languages: common }]]}
               >
                 {markdownContent}
               </ReactMarkdown>

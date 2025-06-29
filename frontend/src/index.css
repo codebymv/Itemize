@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import highlight.js styles */
-@import 'highlight.js/styles/default.css';
-
 /* TipTap Editor Styles */
 .ProseMirror {
   outline: none;
