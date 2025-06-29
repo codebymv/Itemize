@@ -19,6 +19,7 @@ import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import DocsPage from "./pages/DocsPage";
+import StatusPage from "./pages/StatusPage";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CanvasPage from "./pages/canvas";
@@ -52,6 +53,23 @@ const AppContent = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Disable browser scroll restoration to prevent interference with manual scroll control
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'scrollRestoration' in history) {
+      const originalScrollRestoration = history.scrollRestoration;
+      history.scrollRestoration = 'manual';
+
+      return () => {
+        history.scrollRestoration = originalScrollRestoration;
+      };
+    }
+  }, []);
+
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   const isCanvasPage = location.pathname === '/canvas';
   const showFooter = !isCanvasPage || !isDesktop;
 
@@ -67,6 +85,7 @@ const AppContent = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/help/*" element={<DocsPage />} />
+          <Route path="/status" element={<StatusPage />} />
           
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>

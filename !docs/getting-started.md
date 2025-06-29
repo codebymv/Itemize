@@ -2,6 +2,8 @@
 
 Welcome to **Itemize.cloud** – your personal space for organizing thoughts, tasks, and ideas!
 
+
+> 📋 **New to v0.8.2?** Check out the [Version 0.8.2 Release Notes](/help/Version/0.8.2-overview) to see the latest improvements.
 ## 🚀 Quick Start:
 
 ### 1. **Your Canvas**

@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles, Layers, StickyNote, ChevronDown, Bold, Italic, Underline, Strikethrough, Type, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Palette, Eraser, Brush, Undo, Redo } from 'lucide-react';
+import { CheckCircle, ArrowRight, PenLine, CheckSquare, Clock, Sparkles, Layers, StickyNote, ChevronDown, Bold, Italic, Underline, Strikethrough, Type, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Palette, Eraser, Brush, Undo, Redo } from 'lucide-react';
+import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
 const Home: React.FC = () => {
   const { login, currentUser, isAuthenticated, token } = useAuth();
@@ -57,6 +58,9 @@ const Home: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${bgGradient} overflow-hidden relative`}>
+      {/* Background Clouds */}
+      <BackgroundClouds opacity={isLight ? 0.2 : 0.15} cloudCount={15} isLight={isLight} />
+
       {/* Background Pattern */}
       <div className="absolute inset-0 z-0 opacity-20">
         <div className="absolute top-0 left-0 w-full h-full">
@@ -94,7 +98,7 @@ const Home: React.FC = () => {
             <div className="flex flex-col items-center md:hidden gap-1 pb-2">
               <div className="text-center w-full">
                 <div className="text-2xl md:text-xl inline-block whitespace-nowrap font-light">
-                  Organize your life with
+                  Organize confidently with
                 </div>
               </div>
               <div className="mt-1">
@@ -223,8 +227,8 @@ const Home: React.FC = () => {
                       className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
                       style={{ backgroundColor: '#4F46E5' }}
                     />
-                    <ListChecks className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
-                    <h3 className={`text-lg font-medium ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize Features</h3>
+                    <CheckSquare className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <h3 className={`text-lg font-medium ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Features</h3>
                   </div>
                   <div className="flex items-center">
                     <ChevronDown className={`h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
@@ -323,7 +327,8 @@ const Home: React.FC = () => {
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 ${isLight ? 'border-gray-300' : 'border-slate-600'}`}>
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}>
+                      <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                     <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>AI-powered suggestions</span>
                   </div>
@@ -331,7 +336,8 @@ const Home: React.FC = () => {
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 ${isLight ? 'border-gray-300' : 'border-slate-600'}`}>
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}>
+                    <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                     <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>Cross-device access</span>
                   </div>
@@ -361,7 +367,7 @@ const Home: React.FC = () => {
                       style={{ backgroundColor: '#F59E0B' }}
                     />
                     <StickyNote className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
-                    <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Why Choose Itemize?</h3>
+                    <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Combined Approach</h3>
                   </div>
                   <div className="flex items-center">
                     <ChevronDown className={`h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
@@ -379,7 +385,7 @@ const Home: React.FC = () => {
               {/* Category */}
               <div className="mb-2 px-6">
                 <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  Marketing
+                  Strategy
                 </div>
               </div>
 
@@ -439,9 +445,9 @@ const Home: React.FC = () => {
               {/* Note Content Area - Theme-aware background */}
               <div className="flex-1 mx-6 mb-3">
                 <div className={`${isLight ? 'bg-white' : 'bg-slate-800'} rounded-lg p-4 space-y-3 min-h-[200px]`}>
-                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Why Choose Itemize?</h2>
+                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>An Easy Choice</h2>
 
-                  <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize combines <strong>lists</strong> and <em>notes</em> into one platform. Planning tasks or brainstorming projects? We adapt to your workflow.</p>
+                  <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Intelligently combining <strong>lists,</strong> <u>notes</u> and <em>whiteboards</em> into one platform. Planning tasks or brainstorming projects? We got your ticket to an easy productivity boost.</p>
 
                   <div className="space-y-1">
                     <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Key benefits include custom color coding for visual organization, real-time cloud synchr<span className={isLight ? 'text-gray-400' : 'text-slate-500'}>onization across all your devices, intelligent AI suggestions to boost productivity, and seamless category management to keep everything organized.</span></p>
@@ -473,7 +479,7 @@ const Home: React.FC = () => {
                       style={{ backgroundColor: '#10B981' }}
                     />
                     <Palette className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
-                    <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Project Brainstorm</h3>
+                    <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Project Brainstorming</h3>
                   </div>
                   <div className="flex items-center">
                     <ChevronDown className={`h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
@@ -591,19 +597,19 @@ const Home: React.FC = () => {
         <div className="max-w-6xl mx-auto mt-20">
           <div className="text-center mb-12">
             <h2 className={`text-3xl font-light italic ${textColor} mb-4`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Roadmap to 1.0!
+              Roadmap to 1.0
             </h2>
 
             {/* Version Notes Link */}
-            <div className="mb-8">
-              <a
-                href="/help/Version/0.8.2-overview"
-                className="text-sm text-blue-500 hover:text-blue-600 flex items-center justify-center"
+            <div className="mb-8 flex justify-center">
+              <button
+                onClick={() => navigate('/help/Version/0.8.2-overview')}
+                className="text-sm text-blue-500 hover:text-blue-600 flex items-center transition-colors"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 Version 0.8.2 Notes
                 <ArrowRight className="w-4 h-4 ml-1" />
-              </a>
+              </button>
             </div>
           </div>
 

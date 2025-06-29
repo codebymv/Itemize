@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book } from 'lucide-react';
+import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -41,6 +41,19 @@ const Navbar: React.FC = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  // Function to get user initials
+  const getUserInitials = (name: string, email: string): string => {
+    if (name && name.trim()) {
+      const nameParts = name.trim().split(' ');
+      if (nameParts.length >= 2) {
+        return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+      }
+      return nameParts[0][0].toUpperCase();
+    }
+    // Fallback to email if no name
+    return email ? email[0].toUpperCase() : 'U';
   };
 
   const handleLogout = async () => {
@@ -92,13 +105,18 @@ const Navbar: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser.name || 'User'}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser.email}
-                      </p>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm">
+                        {getUserInitials(currentUser.name || '', currentUser.email || '')}
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {currentUser.name || 'User'}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {currentUser.email}
+                        </p>
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -162,6 +180,13 @@ const Navbar: React.FC = () => {
                     <Book className="mr-2 h-4 w-4 text-blue-600" />
                     <span>Help</span>
                   </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleNavigate('/status')}>
+                    <Activity className="mr-2 h-4 w-4 text-blue-600" />
+                    <span>Status</span>
+                  </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4 text-red-600" />

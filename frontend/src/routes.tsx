@@ -8,6 +8,7 @@ import CanvasPage from './pages/canvas';
 import Home from './pages/Home'; // Home page with login functionality
 import NotFoundPage from './pages/NotFound';
 import DocsPage from './pages/DocsPage';
+import StatusPage from './pages/StatusPage';
 
 // Import layout
 import Layout from './components/Layout';
@@ -27,6 +28,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<Home />} />
       <Route path="/home" element={<Home />} />
       <Route path="/help" element={<DocsPage />} />
+      <Route path="/status" element={<StatusPage />} />
       
       {/* Protected routes */}
       <Route path="/lists" element={withAuth(UserHome)({})} />

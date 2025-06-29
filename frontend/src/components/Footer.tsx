@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Book, MessageSquare, Twitter, Github, Mail, ArrowUp, Palette } from 'lucide-react';
+import { Home, Book, MessageSquare, Twitter, Github, Mail, ArrowUp, Palette, Activity, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -71,7 +71,7 @@ const Footer: React.FC = () => {
                 <li>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground"
+                    className="w-full justify-start pl-2 text-muted-foreground hover:text-foreground"
                     onClick={() => handleNavigate('/canvas')}
                   >
                     <Palette className="mr-2 h-4 w-4" />
@@ -80,13 +80,23 @@ const Footer: React.FC = () => {
                 </li>
               )}
               <li>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground"
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start pl-2 text-muted-foreground hover:text-foreground"
                   onClick={() => handleNavigate('/help')}
                 >
                   <Book className="mr-2 h-4 w-4" />
                   Help
+                </Button>
+              </li>
+              <li>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start pl-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => handleNavigate('/status')}
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  Status
                 </Button>
               </li>
             </ul>
@@ -96,14 +106,17 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-sm font-medium mb-4">Connect</h3>
             <div className="flex space-x-4 mb-4">
-              <Button variant="outline" size="icon" onClick={() => window.open('https://twitter.com/itemize', '_blank')}>
+              <Button variant="outline" size="icon" onClick={() => window.open('https://twitter.com/codebymv', '_blank')}>
                 <Twitter className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => window.open('https://github.com/yourusername/itemize', '_blank')}>
+              <Button variant="outline" size="icon" onClick={() => window.open('https://github.com/codebymv/itemize', '_blank')}>
                 <Github className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={handleContact}>
+              {/* <Button variant="outline" size="icon" onClick={handleContact}>
                 <Mail className="h-4 w-4" />
+              </Button> */}
+              <Button variant="outline" size="icon" onClick={() => window.open('https://codebymv.com', '_blank')}>
+                <Globe className="h-4 w-4" />
               </Button>
             </div>
           </div>

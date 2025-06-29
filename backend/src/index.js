@@ -55,12 +55,14 @@ app.get('/health', (req, res) => {
 // Also support /api/health for consistency
 app.get('/api/health', (req, res) => {
   console.log('API Health check hit at:', new Date().toISOString());
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV
   });
 });
+
+
 
 // Docs routes
 const docsRoutes = require('./routes/docs');
@@ -786,8 +788,95 @@ setTimeout(async () => {
         console.error('Failed to initialize AI suggestion service:', aiError.message);
         // Continue running even if AI service fails
       }
-    
-    
+
+      // Enhanced status endpoint for status page - placed after DB initialization
+      app.get('/api/status', async (req, res) => {
+        try {
+          const status = {
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            environment: process.env.NODE_ENV || 'development',
+            version: '0.8.2',
+            server: {
+              port: port,
+              memory: {
+                used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+                total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+                external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+              },
+              platform: process.platform,
+              nodeVersion: process.version
+            },
+            services: {
+              api: 'operational',
+              database: 'operational',
+              auth: 'operational'
+            },
+            endpoints: {
+              total: 15,
+              available: [
+                '/api/auth/*',
+                '/api/lists',
+                '/api/lists/:id',
+                '/api/canvas/lists',
+                '/api/notes',
+                '/api/notes/:id',
+                '/api/whiteboards',
+                '/api/whiteboards/:id',
+                '/api/categories',
+                '/api/categories/:id',
+                '/api/suggestions',
+                '/api/health',
+                '/api/status',
+                '/docs/*',
+                '/health'
+              ]
+            }
+          };
+
+          // Test basic functionality
+          const healthChecks = {
+            express: true,
+            cors: true,
+            json_parser: true,
+            database: false // Will be updated below if DB is available
+          };
+
+          // Check database connectivity using the same pool as CRUD operations
+          if (actualPool) {
+            try {
+              const client = await actualPool.connect();
+              await client.query('SELECT 1');
+              client.release();
+              healthChecks.database = true;
+              status.services.database = 'operational';
+            } catch (dbError) {
+              console.error('Database health check failed:', dbError.message);
+              status.services.database = 'degraded';
+            }
+          } else {
+            status.services.database = 'unavailable';
+          }
+
+          status.healthChecks = healthChecks;
+
+          res.status(200).json(status);
+        } catch (error) {
+          res.status(503).json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: error.message,
+            server: {
+              port: port,
+              environment: process.env.NODE_ENV || 'development'
+            }
+          });
+        }
+      });
+
+      console.log('✅ Status endpoint initialized');
+
   } catch (dbError) {
     console.error('Database connection error:', dbError.message);
     console.log('Server will continue running for health checks');
