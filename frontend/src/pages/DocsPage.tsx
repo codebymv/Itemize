@@ -79,6 +79,11 @@ const DocsPage: React.FC = () => {
 
   // Function to recursively render the document tree (sidebar)
   const renderDocTree = (items: DocStructure[], level = 0) => {
+    // Safety check to ensure items is an array
+    if (!Array.isArray(items)) {
+      console.warn('renderDocTree received non-array items:', items);
+      return [];
+    }
     return items.map((item) => (
       <div key={item.path} style={{ paddingLeft: `${level * 16}px` }}>
         <Link
@@ -135,9 +140,13 @@ const DocsPage: React.FC = () => {
     const fetchDocStructure = async () => {
       try {
         const response = await axios.get(`/api/docs/structure`);
-        setDocStructure(response.data);
+        // Ensure the response data is an array
+        const structureData = Array.isArray(response.data) ? response.data : [];
+        setDocStructure(structureData);
       } catch (err) {
         console.error('Error fetching documentation structure:', err);
+        // Set empty array on error to prevent .map() issues
+        setDocStructure([]);
       }
     };
 
