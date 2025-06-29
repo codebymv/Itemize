@@ -11,6 +11,7 @@ import { RichTextToolbar } from './RichTextToolbar';
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useAISuggest } from '@/context/AISuggestContext';
+import { useTheme } from 'next-themes';
 
 // Global storage for autocomplete suggestions (persists across editor recreations)
 let globalAutocompleteStorage: {
@@ -166,6 +167,10 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   
   // Use global AI enabled state from context
   const { aiEnabled } = useAISuggest();
+
+  // Get theme for styling
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   // Initialize editor with extensions
   const editor = useEditor({
@@ -655,12 +660,15 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       >
         {/* Editor Content - Always editable */}
         <div className="relative h-full">
-          <EditorContent 
+          <EditorContent
             editor={editor}
-            className="prose prose-sm max-w-none h-full p-3 focus-within:outline-none cursor-text overflow-y-auto"
-            style={{ 
+            className={`prose prose-sm max-w-none h-full p-3 focus-within:outline-none cursor-text overflow-y-auto ${
+              isLight ? 'prose-gray' : 'prose-invert'
+            }`}
+            style={{
               borderColor: noteColor,
-              minHeight: '120px'
+              minHeight: '120px',
+              color: isLight ? '#374151' : '#e5e7eb'
             }}
           />
 
@@ -700,18 +708,18 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
       {/* Footer with Last edited and AI sparkle - Always visible at bottom */}
       {updatedAt && (
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0 flex-shrink-0 px-2 md:px-3 py-1 md:py-2"
-          style={{ 
+          style={{
             borderTop: `1px solid ${noteColor}33`,
-            backgroundColor: '#ffffff',
+            backgroundColor: isLight ? '#ffffff' : '#1e293b',
             fontSize: '10px'
           }}
         >
           <div className="flex items-center justify-between">
-            <div 
-              className="text-gray-500 truncate text-xs md:text-xs" 
-              style={{ 
+            <div
+              className={`${isLight ? 'text-gray-500' : 'text-gray-400'} truncate text-xs md:text-xs`}
+              style={{
                 fontFamily: '"Raleway", sans-serif',
                 fontSize: 'inherit'
               }}

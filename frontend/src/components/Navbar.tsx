@@ -69,7 +69,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="border-b backdrop-blur supports-[backdrop-filter]:bg-background/60" style={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff', borderBottomColor: theme === 'dark' ? '#475569' : '#e5e7eb' }}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Whiteboard } from '@/types';
 import { cn } from '@/lib/utils';
 import { debounce } from 'lodash';
+import { useTheme } from 'next-themes';
 
 interface WhiteboardCanvasProps {
   whiteboard: Whiteboard;
@@ -48,7 +49,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 }) => {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const { toast } = useToast();
-  
+
+  // Get theme for styling
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
   // Drawing tool state
   const [currentTool, setCurrentTool] = useState<'pen' | 'eraser'>('pen');
   const [strokeColor, setStrokeColor] = useState('#2563eb'); // Default to theme blue
@@ -666,21 +671,21 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       </style>
 
       {/* Toolbar - always visible */}
-      <div className="flex items-center justify-between p-2 border-b" style={{ backgroundColor: '#f9fafb', borderBottomColor: '#e5e7eb' }}>
+      <div className="flex items-center justify-between p-2 border-b" style={{ backgroundColor: isLight ? '#f9fafb' : '#334155', borderBottomColor: isLight ? '#e5e7eb' : '#475569' }}>
         <div className="flex flex-col gap-2 w-full">
-          {/* Top Row */}
-          <div className="flex items-center gap-2">
+          {/* Main Row - responsive layout */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Left side: Tool, Brush Size */}
             <div className="flex-shrink-0 flex items-center gap-2">
               {/* Tool selection */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
+              <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: isLight ? 'white' : '#475569', borderColor: isLight ? '#d1d5db' : '#64748b' }}>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('pen')}
                   className={cn("h-8 w-8 p-0", currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : '')}
-                  style={currentTool !== 'pen' ? { backgroundColor: 'transparent', color: '#374151'} : {}}
-                  onMouseEnter={(e) => { if (currentTool !== 'pen') { e.currentTarget.style.backgroundColor = '#f3f4f6'; } }}
+                  style={currentTool !== 'pen' ? { backgroundColor: 'transparent', color: isLight ? '#374151' : '#e5e7eb'} : {}}
+                  onMouseEnter={(e) => { if (currentTool !== 'pen') { e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#64748b'; } }}
                   onMouseLeave={(e) => { if (currentTool !== 'pen') { e.currentTarget.style.backgroundColor = 'transparent'; } }}
                 >
                   <Brush className="h-4 w-4" />
@@ -690,29 +695,51 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   size="sm"
                   onClick={() => handleToolChange('eraser')}
                   className={cn("h-8 w-8 p-0", currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : '')}
-                  style={currentTool !== 'eraser' ? { backgroundColor: 'transparent', color: '#374151'} : {}}
-                  onMouseEnter={(e) => { if (currentTool !== 'eraser') { e.currentTarget.style.backgroundColor = '#f3f4f6'; } }}
+                  style={currentTool !== 'eraser' ? { backgroundColor: 'transparent', color: isLight ? '#374151' : '#e5e7eb'} : {}}
+                  onMouseEnter={(e) => { if (currentTool !== 'eraser') { e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#64748b'; } }}
                   onMouseLeave={(e) => { if (currentTool !== 'eraser') { e.currentTarget.style.backgroundColor = 'transparent'; } }}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
               </div>
               {/* Brush size slider */}
-              <div className="flex items-center gap-2 p-2 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-                <span className="text-xs font-medium min-w-[20px]" style={{ color: '#374151' }}>{strokeWidth}</span>
+              <div className="flex items-center gap-2 p-2 bg-white rounded-md border" style={{ backgroundColor: isLight ? 'white' : '#475569', borderColor: isLight ? '#d1d5db' : '#64748b' }}>
+                <span className="text-xs font-medium min-w-[20px]" style={{ color: isLight ? '#374151' : '#e5e7eb' }}>{strokeWidth}</span>
                 <Slider
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
                   max={20}
                   min={1}
                   step={1}
-                  className="w-12 sm:w-24 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
+                  style={{
+                    // Custom CSS to override slider thumb background to match container
+                    '--slider-thumb-bg': isLight ? '#ffffff' : '#475569'
+                  } as React.CSSProperties}
+                  className={`w-12 sm:w-24 ${isLight
+                    ? '[&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600'
+                    : '[&>*]:bg-gray-600 [&>*>*]:bg-blue-500 [&>*:last-child]:border-blue-500'
+                  } [&>*:last-child]:bg-[var(--slider-thumb-bg)]`}
                 />
               </div>
             </div>
 
-            {/* Spacer */}
-            <div className="flex-grow" />
+            {/* Color palette - shows inline on desktop, wraps on mobile */}
+            {currentTool === 'pen' && (
+              <div className="flex items-center gap-1 p-1 bg-white rounded-md border order-last sm:order-none" style={{ backgroundColor: isLight ? 'white' : '#475569', borderColor: isLight ? '#d1d5db' : '#64748b' }}>
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => handleColorChange(color)}
+                    className={`w-6 h-6 rounded-sm border-2 ${strokeColor === color ? (isLight ? 'border-gray-800' : 'border-gray-200') : (isLight ? 'border-gray-300' : 'border-gray-600')}`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Select ${color} color`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Spacer - only on desktop */}
+            <div className="flex-grow hidden sm:block" />
 
             {/* Right side: Actions */}
             <div className="flex-shrink-0 flex items-center gap-1">
@@ -721,8 +748,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 size="sm"
                 onClick={handleUndo}
                 className="h-8 w-8 p-0"
-                style={{ backgroundColor: 'transparent', color: '#374151' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                style={{ backgroundColor: 'transparent', color: isLight ? '#374151' : '#e5e7eb' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#64748b'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <Undo className="h-4 w-4" />
@@ -732,8 +759,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 size="sm"
                 onClick={handleRedo}
                 className="h-8 w-8 p-0"
-                style={{ backgroundColor: 'transparent', color: '#374151' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                style={{ backgroundColor: 'transparent', color: isLight ? '#374151' : '#e5e7eb' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#64748b'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <Redo className="h-4 w-4" />
@@ -743,28 +770,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 size="sm"
                 onClick={handleClear}
                 className="h-8 w-8 p-0"
-                style={{ backgroundColor: 'transparent', color: '#374151' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                style={{ backgroundColor: 'transparent', color: isLight ? '#374151' : '#e5e7eb' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#64748b'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
-          {/* Bottom Row (Conditional) */}
-          {currentTool === 'pen' && (
-            <div className="flex justify-center items-center gap-1 p-1 bg-white rounded-md border flex-wrap" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-              {COLOR_PALETTE.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => handleColorChange(color)}
-                  className={`w-6 h-6 rounded-sm border-2 ${strokeColor === color ? 'border-gray-800' : 'border-gray-300'}`}
-                  style={{ backgroundColor: color }}
-                  aria-label={`Select ${color} color`}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -806,28 +819,22 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             ref={canvasRef}
             onStroke={() => setIsDrawing(true)}
           />
-          
-          {/* Drawing indicator */}
-          {isDrawing && !isMultiTouch && (
-            <div className="absolute top-2 right-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md z-20">
-              Drawing...
-            </div>
-          )}
+
         </div>
 
         {/* Footer - positioned absolutely at bottom of this container */}
         {updatedAt && (
           <div 
             className="absolute bottom-0 left-0 right-0 px-2 md:px-3 py-1 md:py-2 z-10 border-t"
-            style={{ 
-              borderTopColor: '#e5e7eb',
-              backgroundColor: '#ffffff',
+            style={{
+              borderTopColor: isLight ? '#e5e7eb' : '#475569',
+              backgroundColor: isLight ? '#ffffff' : '#1e293b',
               fontSize: '10px'
             }}
           >
             <div className="flex items-center justify-between">
-              <div 
-                className="text-gray-500 truncate text-xs md:text-xs"
+              <div
+                className={`${isLight ? 'text-gray-500' : 'text-gray-400'} truncate text-xs md:text-xs`}
                 style={{ 
                   fontFamily: '"Raleway", sans-serif',
                   fontSize: 'inherit'

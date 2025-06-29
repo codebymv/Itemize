@@ -2,12 +2,28 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { CheckCircle, ArrowRight, PenLine, ListChecks, Clock, Sparkles, Layers, StickyNote, ChevronDown, Bold, Italic, Underline, Strikethrough, Type, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Palette, Eraser, Brush, Undo, Redo } from 'lucide-react';
 
 const Home: React.FC = () => {
   const { login, currentUser, isAuthenticated, token } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
+
+  // Theme-aware styling
+  const isLight = theme === 'light';
+  const bgGradient = isLight
+    ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
+    : 'bg-gradient-to-br from-slate-900 to-slate-800';
+  const textColor = isLight ? 'text-gray-900' : 'text-slate-100';
+  const secondaryTextColor = isLight ? 'text-gray-600' : 'text-slate-400';
+  const cardBgColor = isLight ? 'bg-white' : 'bg-slate-800';
+  const cardBorderColor = isLight ? 'border-gray-100' : 'border-slate-700';
+  const patternColor = isLight ? 'bg-blue-400' : 'bg-slate-600';
+
+  // Logo filter for theme switching (invert colors in dark mode)
+  const logoFilter = isLight ? 'none' : 'invert(1) brightness(1.2)';
 
   console.log('Home component rendered:', { 
     hasUser: !!currentUser, 
@@ -40,14 +56,14 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 overflow-hidden relative">
+    <div className={`min-h-screen ${bgGradient} overflow-hidden relative`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 z-0 opacity-20">
         <div className="absolute top-0 left-0 w-full h-full">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div 
-              key={`pattern-${i}`} 
-              className="absolute rounded-full bg-blue-400" 
+            <div
+              key={`pattern-${i}`}
+              className={`absolute rounded-full ${patternColor}`}
               style={{
                 width: `${Math.random() * 300 + 50}px`,
                 height: `${Math.random() * 300 + 50}px`,
@@ -73,7 +89,7 @@ const Home: React.FC = () => {
               className="h-20 md:h-24 w-auto mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-light italic tracking-tight text-gray-900 sm:text-5xl md:text-6xl" style={{ fontFamily: '"Raleway", sans-serif' }}>
+          <h1 className={`text-4xl font-light italic tracking-tight ${textColor} sm:text-5xl md:text-6xl`} style={{ fontFamily: '"Raleway", sans-serif' }}>
             {/* Mobile layout (stack text and image) */}
             <div className="flex flex-col items-center md:hidden gap-1 pb-2">
               <div className="text-center w-full">
@@ -82,20 +98,25 @@ const Home: React.FC = () => {
                 </div>
               </div>
               <div className="mt-1">
-                <div className="text-2xl md:text-2xl font-light italic tracking-wide text-gray-600">
+                <div className={`text-2xl md:text-2xl font-light italic tracking-wide ${secondaryTextColor}`}>
                   ITEMIZE
                 </div>
               </div>
             </div>
-            
+
             {/* Desktop layout (text and image in row) */}
             <div className="hidden md:flex flex-row items-center justify-center gap-3">
               <span>Organize your life</span>
               <span>with</span>
-              <img src="/profile.png" alt="Itemize" className="h-64 inline-block" />
+              <img
+                src="/profile.png"
+                alt="Itemize"
+                className="h-64 inline-block"
+                style={{ filter: logoFilter }}
+              />
             </div>
           </h1>
-          <p className="mt-2 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-3 md:text-xl md:max-w-3xl" style={{ fontFamily: '"Raleway", sans-serif' }}>
+          <p className={`mt-2 max-w-md mx-auto text-base ${secondaryTextColor} sm:text-lg md:mt-3 md:text-xl md:max-w-3xl`} style={{ fontFamily: '"Raleway", sans-serif' }}>
             The complete organizational ecosystem with lists, notes, and intelligent tools to streamline your workflow.
           </p>
           
@@ -113,18 +134,18 @@ const Home: React.FC = () => {
 
         {/* Features Section */}
         <div className="mt-16 mb-12">
-          <h2 className="text-3xl font-light italic text-center text-gray-900 mb-8" style={{ fontFamily: '"Raleway", sans-serif' }}>Tools to stay organized</h2>
-          
+          <h2 className={`text-3xl font-light italic text-center ${textColor} mb-8`} style={{ fontFamily: '"Raleway", sans-serif' }}>Tools to stay organized</h2>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 transform transition-all duration-300 hover:shadow-md hover:-translate-y-1">
-              <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
+            <div className={`${cardBgColor} p-8 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
                 <Layers className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3" style={{ fontFamily: '"Raleway", sans-serif' }}>Organizational Tools</h3>
-              <p className="text-gray-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Organizational Tools</h3>
+              <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
                 Create and manage lists, notes, and any organizational content you need. From shopping lists to project notes, everything in one place.
               </p>
-              <div className="mt-6 pt-4 border-t border-gray-100">
+              <div className={`mt-6 pt-4 border-t ${cardBorderColor}`}>
                 <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>Lists, Notes, & Whiteboards</span>
@@ -135,16 +156,16 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 transform transition-all duration-300 hover:shadow-md hover:-translate-y-1">
-              <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
+
+            <div className={`${cardBgColor} p-8 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
                 <Sparkles className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3" style={{ fontFamily: '"Raleway", sans-serif' }}>Smart Suggestions</h3>
-              <p className="text-gray-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Smart Suggestions</h3>
+              <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
                 Let AI help you build lists faster with intelligent item suggestions and effortless autocomplete.
               </p>
-              <div className="mt-6 pt-4 border-t border-gray-100">
+              <div className={`mt-6 pt-4 border-t ${cardBorderColor}`}>
                 <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>AI-powered item suggestions</span>
@@ -159,16 +180,16 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 transform transition-all duration-300 hover:shadow-md hover:-translate-y-1">
-              <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-5">
+
+            <div className={`${cardBgColor} p-8 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
                 <Clock className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3" style={{ fontFamily: '"Raleway", sans-serif' }}>Access Anywhere</h3>
-              <p className="text-gray-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Access Anywhere</h3>
+              <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
                 Your organizational tools are synced and available across all your devices whenever and wherever you need them.
               </p>
-              <div className="mt-6 pt-4 border-t border-gray-100">
+              <div className={`mt-6 pt-4 border-t ${cardBorderColor}`}>
                 <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   <span>Real-time synchronization</span>
@@ -185,33 +206,33 @@ const Home: React.FC = () => {
         {/* Live Preview Section - Replacing the blue CTA */}
         <div className="mt-16 mb-12">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-light italic text-gray-900 mb-4" style={{ fontFamily: '"Raleway", sans-serif' }}>See them in action</h2>
+            <h2 className={`text-3xl font-light italic ${textColor} mb-4`} style={{ fontFamily: '"Raleway", sans-serif' }}>See them in action</h2>
             {/* <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Get a preview of how Itemize helps you stay organized with real interface components.
             </p> */}
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {/* Mock List Component */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className={`${cardBgColor} rounded-xl shadow-sm border ${cardBorderColor} overflow-hidden`}>
               {/* Header */}
               <div className="p-4 pb-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div
-                      className="inline-block w-3 h-3 rounded-full border border-gray-400"
+                      className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
                       style={{ backgroundColor: '#4F46E5' }}
                     />
-                    <ListChecks className="h-4 w-4 text-slate-500" />
-                    <h3 className="text-lg font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize Features</h3>
+                    <ListChecks className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <h3 className={`text-lg font-medium ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize Features</h3>
                   </div>
                   <div className="flex items-center">
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className={`h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
                     <button className="ml-2 p-1">
                       <div className="h-4 w-4 flex flex-col justify-center items-center">
-                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
-                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
-                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full mb-0.5`}></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full mb-0.5`}></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full`}></div>
                       </div>
                     </button>
                   </div>
@@ -220,20 +241,20 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-2 px-6">
-                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                   Productivity
                 </div>
               </div>
 
               {/* Progress Bar */}
               <div className="px-6 py-2">
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
+                <div className={`w-full ${isLight ? 'bg-gray-100' : 'bg-slate-700'} rounded-full h-2 mb-1`}>
                   <div
                     className="h-2 rounded-full transition-all duration-300"
                     style={{ width: '75%', backgroundColor: '#4F46E5' }}
                   ></div>
                 </div>
-                <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                   6 of 8 completed
                 </div>
               </div>
@@ -248,78 +269,78 @@ const Home: React.FC = () => {
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
-                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Custom color coding</span>
+                    <span className={`line-through ${isLight ? 'text-gray-400' : 'text-slate-500'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Custom color coding</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div 
+                    <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
-                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Cloud synchronization</span>
+                    <span className={`line-through ${isLight ? 'text-gray-400' : 'text-slate-500'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Cloud synchronization</span>
                   </div>
                 </div>
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div 
+                    <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
-                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Category assignment</span>
+                    <span className={`line-through ${isLight ? 'text-gray-400' : 'text-slate-500'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Category assignment</span>
                   </div>
                 </div>
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div 
+                    <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
-                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Real-time collaboration</span>
+                    <span className={`line-through ${isLight ? 'text-gray-400' : 'text-slate-500'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Real-time collaboration</span>
                   </div>
                 </div>
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div 
+                    <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
-                    <span className="line-through text-gray-400" style={{ fontFamily: '"Raleway", sans-serif' }}>Drag & drop reordering</span>
+                    <span className={`line-through ${isLight ? 'text-gray-400' : 'text-slate-500'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Drag & drop reordering</span>
                   </div>
                 </div>
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 border-gray-300">
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 ${isLight ? 'border-gray-300' : 'border-slate-600'}`}>
                     </div>
-                    <span style={{ fontFamily: '"Raleway", sans-serif' }}>AI-powered suggestions</span>
+                    <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>AI-powered suggestions</span>
                   </div>
                 </div>
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 border-gray-300">
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0 ${isLight ? 'border-gray-300' : 'border-slate-600'}`}>
                     </div>
-                    <span style={{ fontFamily: '"Raleway", sans-serif' }}>Cross-device access</span>
+                    <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>Cross-device access</span>
                   </div>
                 </div>
               </div>
 
               {/* Add Item Section */}
-              <div className="px-6 py-4 border-t border-gray-100">
-                <div className="flex items-center space-x-2 text-gray-400">
+              <div className={`px-6 py-4 border-t ${cardBorderColor}`}>
+                <div className={`flex items-center space-x-2 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
                   <PenLine className="h-4 w-4" />
                   <span className="text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>Add new item...</span>
                   <div className="ml-auto">
@@ -330,25 +351,25 @@ const Home: React.FC = () => {
             </div>
 
             {/* Mock Note Component */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+            <div className={`${cardBgColor} rounded-xl shadow-sm border ${cardBorderColor} overflow-hidden h-full flex flex-col`}>
               {/* Note Header */}
               <div className="p-4 pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className="inline-block w-3 h-3 rounded-full border border-gray-400"
+                      className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
                       style={{ backgroundColor: '#F59E0B' }}
                     />
-                    <StickyNote className="h-4 w-4 text-slate-500" />
-                    <h3 className="font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>Why Choose Itemize?</h3>
+                    <StickyNote className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Why Choose Itemize?</h3>
                   </div>
                   <div className="flex items-center">
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className={`h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
                     <button className="ml-2 p-1">
                       <div className="h-4 w-4 flex flex-col justify-center items-center">
-                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
-                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
-                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full mb-0.5`}></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full mb-0.5`}></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full`}></div>
                       </div>
                     </button>
                   </div>
@@ -357,16 +378,16 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-2 px-6">
-                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                   Marketing
                 </div>
               </div>
 
               {/* Rich Text Toolbar Demo */}
               <div className="mx-6 mb-3">
-                <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50">
+                <div className={`flex items-center gap-1 p-2 border-b ${cardBorderColor} ${isLight ? 'bg-gray-50' : 'bg-slate-700'}`}>
                   {/* Heading Dropdown */}
-                  <div className="w-16 h-7 text-xs bg-white border border-gray-300 rounded px-1 flex items-center justify-between">
+                  <div className={`w-16 h-7 text-xs ${cardBgColor} border ${cardBorderColor} rounded px-1 flex items-center justify-between`}>
                     <Type className="h-3 w-3" />
                     <ChevronDown className="h-2 w-2" />
                   </div>
@@ -376,60 +397,62 @@ const Home: React.FC = () => {
                     <button className="h-7 w-7 p-0 bg-accent text-accent-foreground rounded flex items-center justify-center">
                       <Bold className="h-3 w-3" />
                     </button>
-                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-7 w-7 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <Italic className="h-3 w-3" />
                     </button>
-                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-7 w-7 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <Underline className="h-3 w-3" />
                     </button>
                   </div>
 
                   {/* Divider */}
-                  <div className="h-5 w-px bg-gray-300" />
+                  <div className={`h-5 w-px ${isLight ? 'bg-gray-300' : 'bg-slate-600'}`} />
 
                   {/* Alignment Controls */}
                   <div className="flex">
                     <button className="h-7 w-7 p-0 bg-accent text-accent-foreground rounded flex items-center justify-center">
                       <AlignLeft className="h-3 w-3" />
                     </button>
-                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-7 w-7 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <AlignCenter className="h-3 w-3" />
                     </button>
                   </div>
 
                   {/* Divider */}
-                  <div className="h-5 w-px bg-gray-300" />
+                  <div className={`h-5 w-px ${isLight ? 'bg-gray-300' : 'bg-slate-600'}`} />
 
                   {/* List Controls */}
                   <div className="flex">
-                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-7 w-7 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <List className="h-3 w-3" />
                     </button>
-                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-7 w-7 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <ListOrdered className="h-3 w-3" />
                     </button>
-                    <button className="h-7 w-7 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-7 w-7 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <Quote className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Note Content Area */}
-              <div className="flex-1 px-6 py-2 space-y-3">
-                <h2 className="text-lg font-semibold text-gray-900">Why Choose Itemize?</h2>
-                
-                <p className="text-sm text-gray-700" style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize combines <strong>lists</strong> and <em>notes</em> into one platform. Planning tasks or brainstorming projects? We adapt to your workflow.</p>
-                
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-700" style={{ fontFamily: '"Raleway", sans-serif' }}>Key benefits include custom color coding for visual organization, real-time cloud synchr<span className="text-gray-400">onization across all your devices, intelligent AI suggestions to boost productivity, and seamless category management to keep everything organized.</span></p>
+              {/* Note Content Area - Theme-aware background */}
+              <div className="flex-1 mx-6 mb-3">
+                <div className={`${isLight ? 'bg-white' : 'bg-slate-800'} rounded-lg p-4 space-y-3 min-h-[200px]`}>
+                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Why Choose Itemize?</h2>
+
+                  <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Itemize combines <strong>lists</strong> and <em>notes</em> into one platform. Planning tasks or brainstorming projects? We adapt to your workflow.</p>
+
+                  <div className="space-y-1">
+                    <p className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-300'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Key benefits include custom color coding for visual organization, real-time cloud synchr<span className={isLight ? 'text-gray-400' : 'text-slate-500'}>onization across all your devices, intelligent AI suggestions to boost productivity, and seamless category management to keep everything organized.</span></p>
+                  </div>
                 </div>
               </div>
 
               {/* Note Footer Section - matches list component structure */}
-              <div className="px-6 py-4 border-t border-gray-100">
+              <div className={`px-6 py-4 border-t ${cardBorderColor}`}>
                 <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                     Last edited: Just now
                   </div>
                   <div title="AI-powered suggestions">
@@ -440,25 +463,25 @@ const Home: React.FC = () => {
             </div>
 
             {/* Mock Whiteboard Component */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+            <div className={`${cardBgColor} rounded-xl shadow-sm border ${cardBorderColor} overflow-hidden h-full flex flex-col`}>
               {/* Whiteboard Header */}
               <div className="p-4 pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className="inline-block w-3 h-3 rounded-full border border-gray-400"
+                      className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
                       style={{ backgroundColor: '#10B981' }}
                     />
-                    <Palette className="h-4 w-4 text-slate-500" />
-                    <h3 className="font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>Project Brainstorm</h3>
+                    <Palette className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Project Brainstorm</h3>
                   </div>
                   <div className="flex items-center">
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className={`h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
                     <button className="ml-2 p-1">
                       <div className="h-4 w-4 flex flex-col justify-center items-center">
-                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
-                        <div className="w-1 h-1 bg-gray-400 rounded-full mb-0.5"></div>
-                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full mb-0.5`}></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full mb-0.5`}></div>
+                        <div className={`w-1 h-1 ${isLight ? 'bg-gray-400' : 'bg-slate-500'} rounded-full`}></div>
                       </div>
                     </button>
                   </div>
@@ -467,48 +490,48 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-3 px-6">
-                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                   Design
                 </div>
               </div>
 
               {/* Whiteboard Toolbar Demo */}
               <div className="mx-6 mb-3">
-                <div className="flex items-center gap-2 p-2 border border-gray-200 bg-gray-50 rounded-t-lg">
+                <div className={`flex items-center gap-2 p-2 border ${cardBorderColor} ${isLight ? 'bg-gray-50' : 'bg-slate-700'} rounded-t-lg`}>
                   {/* Pen/Eraser toggle */}
                   <div className="flex gap-1">
                     <button className="h-6 w-6 p-0 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center">
                       <Brush className="h-3 w-3" />
                     </button>
-                    <button className="h-6 w-6 p-0 hover:bg-gray-100 rounded flex items-center justify-center">
+                    <button className={`h-6 w-6 p-0 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'} rounded flex items-center justify-center`}>
                       <Eraser className="h-3 w-3" />
                     </button>
                   </div>
 
                   {/* Color Palette - reduced to 4 colors */}
                   <div className="flex gap-1">
-                    <button 
+                    <button
                       className="w-5 h-5 rounded border-2 border-blue-700 shadow-sm"
                       style={{ backgroundColor: '#2563eb' }}
                     />
-                    <button 
-                      className="w-5 h-5 rounded border border-gray-300 hover:border-gray-400 shadow-sm"
+                    <button
+                      className={`w-5 h-5 rounded border ${isLight ? 'border-gray-300 hover:border-gray-400' : 'border-slate-600 hover:border-slate-500'} shadow-sm`}
                       style={{ backgroundColor: '#000000' }}
                     />
-                    <button 
-                      className="w-5 h-5 rounded border border-gray-300 hover:border-gray-400 shadow-sm"
+                    <button
+                      className={`w-5 h-5 rounded border ${isLight ? 'border-gray-300 hover:border-gray-400' : 'border-slate-600 hover:border-slate-500'} shadow-sm`}
                       style={{ backgroundColor: '#FF0000' }}
                     />
-                    <button 
-                      className="w-5 h-5 rounded border border-gray-300 hover:border-gray-400 shadow-sm"
+                    <button
+                      className={`w-5 h-5 rounded border ${isLight ? 'border-gray-300 hover:border-gray-400' : 'border-slate-600 hover:border-slate-500'} shadow-sm`}
                       style={{ backgroundColor: '#00FF00' }}
                     />
                   </div>
 
                   {/* Simplified brush size indicator */}
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-600">Size:</span>
-                    <div className="w-8 h-1.5 bg-gray-200 rounded-full relative">
+                    <span className={`text-xs ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Size:</span>
+                    <div className={`w-8 h-1.5 ${isLight ? 'bg-gray-200' : 'bg-slate-600'} rounded-full relative`}>
                       <div className="absolute left-1/3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-blue-600 rounded-full border border-white shadow"></div>
                     </div>
                   </div>
@@ -517,32 +540,27 @@ const Home: React.FC = () => {
 
               {/* Whiteboard Canvas Area */}
               <div className="flex-1 mx-6 mb-3">
-                <div 
+                <div
                   className="bg-white rounded-b-lg h-full flex flex-col relative border border-gray-200 border-t-0"
-                  style={{ 
+                  style={{
                     minHeight: '280px'
                   }}
                 >
-                  {/* Hand-drawn logo */}
+                  {/* Itemize logo */}
                   <div className="p-4 flex-1 flex flex-col justify-center items-center">
-                    <img 
-                      src="/icon_handdrawn.png" 
-                      alt="Hand-drawn Itemize logo"
+                    <img
+                      src="/icon.png"
+                      alt="Itemize logo"
                       className="w-32 h-32 object-contain"
                     />
-                  </div>
-                  
-                  {/* Resize handle indicator */}
-                  <div className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center border-t border-gray-200">
-                    <div className="w-12 h-1 rounded-full bg-gray-400"></div>
                   </div>
                 </div>
               </div>
 
               {/* Whiteboard Footer Section - matches other components */}
-              <div className="px-6 py-4 border-t border-gray-100">
+              <div className={`px-6 py-4 border-t ${cardBorderColor}`}>
                 <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                     Last edited: Just now
                   </div>
                   <div title="AI-powered suggestions">
@@ -567,11 +585,6 @@ const Home: React.FC = () => {
               Join thousands of users who have simplified their lives with Itemize.
             </p> */}
           </div>
-        </div>
-        
-        {/* Footer */}
-        <div className="mt-20 text-center text-gray-500 pt-8 border-t border-gray-200">
-          <p>© {new Date().getFullYear()} Itemize. All rights reserved.</p>
         </div>
       </div>
     </div>

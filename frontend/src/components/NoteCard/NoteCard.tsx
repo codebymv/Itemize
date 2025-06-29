@@ -12,6 +12,7 @@ import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
 import { RichNoteContent } from './RichNoteContent';
 import { NoteCategorySelector } from './NoteCategorySelector';
+import { useTheme } from 'next-themes';
 
 import { Category } from '@/types';
 
@@ -66,6 +67,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
     // Refs
     titleEditRef, contentEditRef
   } = useNoteCardLogic({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
+
+  // Get theme for styling
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   // Implement click outside handler for title editing
   useEffect(() => {
@@ -266,10 +271,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
         />
 
         <CollapsibleContent className="flex-1">
-          <div 
-            className="rounded-lg mx-2 md:mx-6 mb-6 flex-1 flex flex-col" 
-            style={{ 
-              backgroundColor: '#ffffff',
+          <div
+            className="rounded-lg mx-2 md:mx-6 mb-6 flex-1 flex flex-col"
+            style={{
+              backgroundColor: isLight ? '#ffffff' : '#1e293b',
               border: `2px solid ${noteDisplayColor} !important`,
               borderColor: `${noteDisplayColor} !important`,
               height: `${Math.max(180, (note.height || 300) - 120)}px` // Increased default height

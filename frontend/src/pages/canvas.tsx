@@ -1122,7 +1122,7 @@ const CanvasPage: React.FC = () => {
           display: none;
         }
       `}</style>
-      <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
+      <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-[calc(100vh-4rem)] overflow-hidden'}`}>
         <HeaderSection />
       
       {isLoading ? (
