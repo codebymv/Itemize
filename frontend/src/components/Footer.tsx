@@ -5,11 +5,14 @@ import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Book, MessageSquare, Twitter, Github, Mail, ArrowUp, Palette } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Footer: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   const currentYear = new Date().getFullYear();
 
@@ -64,16 +67,18 @@ const Footer: React.FC = () => {
                   Home
                 </Button> */}
               </li>
-              <li>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground"
-                  onClick={() => handleNavigate('/canvas')}
-                >
-                  <Palette className="mr-2 h-4 w-4" />
-                  Canvas
-                </Button>
-              </li>
+              {currentUser && (
+                <li>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleNavigate('/canvas')}
+                  >
+                    <Palette className="mr-2 h-4 w-4" />
+                    Canvas
+                  </Button>
+                </li>
+              )}
               <li>
                 <Button 
                   variant="ghost" 

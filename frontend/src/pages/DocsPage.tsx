@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import axios from 'axios';
-import { Menu, X, FileText, Folder } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import api from '../lib/api';
+import { Menu, X, FileText, Folder, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Define DocStructure interface (similar to hrvstr.us)
 interface DocStructure {
@@ -15,6 +18,7 @@ interface DocStructure {
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const [markdownContent, setMarkdownContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [docStructure, setDocStructure] = useState<DocStructure[]>([]);
@@ -126,7 +130,7 @@ const DocsPage: React.FC = () => {
       try {
         setError(null);
         const effectivePath = (!docPath || docPath === '/') ? 'getting-started' : docPath;
-        const response = await axios.get(`/api/docs/content?path=${effectivePath}`);
+        const response = await api.get(`/docs/content?path=${effectivePath}`);
         setMarkdownContent(response.data.content);
       } catch (err) {
         console.error('Error fetching documentation content:', err);
@@ -139,7 +143,7 @@ const DocsPage: React.FC = () => {
 
     const fetchDocStructure = async () => {
       try {
-        const response = await axios.get(`/api/docs/structure`);
+        const response = await api.get(`/docs/structure`);
         // Ensure the response data is an array
         const structureData = Array.isArray(response.data) ? response.data : [];
         setDocStructure(structureData);
@@ -277,18 +281,51 @@ const DocsPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Mobile menu button */}
-          <div className="lg:hidden mb-6">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className={`flex items-center px-4 py-3 rounded-lg ${buttonBg} ${textColor} transition-colors shadow-sm`}
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              <Menu className="h-5 w-5 mr-3" />
-              <span className="text-sm font-medium">Documentation Menu</span>
-            </button>
+        {/* Back button and Mobile menu - responsive layout */}
+        <div className="py-4">
+          {/* Desktop: Back button aligned with logo using container positioning */}
+          <div className="hidden lg:block">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center">
+                {/* Spacer to match logo position - using estimated logo width */}
+                <div className="w-24 sm:w-28 lg:w-32"></div>
+                <Button
+                  onClick={() => navigate('/')}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              </div>
+            </div>
           </div>
+
+          {/* Mobile/Tablet: Back and Documentation Menu in same row */}
+          <div className="lg:hidden px-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => navigate('/')}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className={`flex items-center px-4 py-3 rounded-lg ${buttonBg} ${textColor} transition-colors shadow-sm`}
+                style={{ fontFamily: '"Raleway", sans-serif' }}
+              >
+                <Menu className="h-5 w-5 mr-3" />
+                <span className="text-sm font-medium">Documentation Menu</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
 
           {loading && !markdownContent ? (
             <div className={`text-center py-12 ${mutedTextColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -320,10 +357,14 @@ const DocsPage: React.FC = () => {
                 '--tw-prose-th-borders': '"Raleway", sans-serif'
               } as React.CSSProperties}
             >
-              <div className="prose prose-lg max-w-none">
-                <pre style={{ whiteSpace: 'pre-wrap' }}>
+              <div className={`prose prose-lg max-w-none ${
+                theme === 'dark'
+                  ? 'prose-invert prose-headings:text-white prose-p:text-gray-200 prose-li:text-gray-200 prose-strong:text-white'
+                  : 'prose-gray'
+              }`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {markdownContent}
-                </pre>
+                </ReactMarkdown>
               </div>
             </div>
           )}

@@ -10,6 +10,11 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/api/docs': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        // Don't rewrite the path for docs routes since backend expects /api/docs
+      },
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
