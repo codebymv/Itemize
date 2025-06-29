@@ -7,6 +7,9 @@ import rehypeHighlight from 'rehype-highlight';
 import axios from 'axios';
 import { Menu, X, FileText, Folder } from 'lucide-react';
 
+// Import highlight.js to ensure it's available
+import hljs from 'highlight.js';
+
 // Define DocStructure interface (similar to hrvstr.us)
 interface DocStructure {
   name: string;
@@ -36,6 +39,14 @@ const DocsPage: React.FC = () => {
   const activeBg = theme === 'dark' ? 'bg-blue-900 text-blue-300' : 'bg-blue-200 text-blue-800';
   const buttonBg = theme === 'dark' ? 'bg-slate-600 hover:bg-slate-500' : 'bg-gray-200 hover:bg-gray-300';
   const shadowClass = theme === 'dark' ? 'shadow-slate-900/50' : 'shadow-md';
+
+  // Initialize highlight.js
+  useEffect(() => {
+    // Ensure highlight.js is available globally for rehype-highlight
+    if (typeof window !== 'undefined') {
+      (window as any).hljs = hljs;
+    }
+  }, []);
 
 
 
