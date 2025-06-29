@@ -10,6 +10,7 @@ import { Sparkles } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
 import { formatRelativeTime } from '../../utils/timeUtils';
+import { useAISuggest } from '@/context/AISuggestContext';
 
 // Global storage for autocomplete suggestions (persists across editor recreations)
 let globalAutocompleteStorage: {
@@ -163,8 +164,8 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   // Show suggestion button state
   const [showSuggestionButton, setShowSuggestionButton] = useState(false);
   
-  // AI enabled state (you can get this from AISuggestContext if available)
-  const aiEnabled = true;
+  // Use global AI enabled state from context
+  const { aiEnabled } = useAISuggest();
 
   // Initialize editor with extensions
   const editor = useEditor({

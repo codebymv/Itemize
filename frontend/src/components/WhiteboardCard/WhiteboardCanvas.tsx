@@ -943,6 +943,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 <span className="sm:hidden">Edited: </span>
                 {formatRelativeTime(updatedAt)}
               </div>
+              {/* TODO: Re-enable when adding AI functionality to whiteboards
               {aiEnabled && (
                 <div title="AI-powered suggestions enabled" className="flex-shrink-0 ml-1 md:ml-2">
                   <Sparkles 
@@ -951,6 +952,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   />
                 </div>
               )}
+              */}
             </div>
           </div>
         )}
