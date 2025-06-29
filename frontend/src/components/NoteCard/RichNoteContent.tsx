@@ -635,25 +635,28 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
   return (
     <div 
-      className="flex flex-col h-full"
+      className="flex flex-col h-full relative"
       data-rich-text-editor
       tabIndex={-1}
     >
       {/* Toolbar - always visible for better UX */}
-      <div data-rich-text-toolbar>
+      <div data-rich-text-toolbar className="flex-shrink-0">
         <RichTextToolbar editor={editor} />
       </div>
 
-      {/* Main Editor Content */}
+      {/* Main Editor Content - takes remaining space but leaves room for footer */}
       <div 
-        className="flex-1 relative cursor-text"
+        className="flex-1 relative cursor-text overflow-hidden"
         onClick={handleEditorClick}
+        style={{ 
+          paddingBottom: updatedAt ? '36px' : '8px' // Reserve space for footer (responsive)
+        }}
       >
         {/* Editor Content - Always editable */}
-        <div className="relative">
+        <div className="relative h-full">
           <EditorContent 
             editor={editor}
-            className="prose prose-sm max-w-none h-full p-3 focus-within:outline-none cursor-text"
+            className="prose prose-sm max-w-none h-full p-3 focus-within:outline-none cursor-text overflow-y-auto"
             style={{ 
               borderColor: noteColor,
               minHeight: '120px'
@@ -694,17 +697,32 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         </div>
       </div>
 
-      {/* Footer with Last edited and AI sparkle - Always visible */}
+      {/* Footer with Last edited and AI sparkle - Always visible at bottom */}
       {updatedAt && (
-        <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${noteColor}33` }}>
+        <div 
+          className="absolute bottom-0 left-0 right-0 flex-shrink-0 px-2 md:px-3 py-1 md:py-2"
+          style={{ 
+            borderTop: `1px solid ${noteColor}33`,
+            backgroundColor: '#ffffff',
+            fontSize: '10px'
+          }}
+        >
           <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Last edited: {formatRelativeTime(updatedAt)}
+            <div 
+              className="text-gray-500 truncate text-xs md:text-xs" 
+              style={{ 
+                fontFamily: '"Raleway", sans-serif',
+                fontSize: 'inherit'
+              }}
+            >
+              <span className="hidden sm:inline">Last edited: </span>
+              <span className="sm:hidden">Edited: </span>
+              {formatRelativeTime(updatedAt)}
             </div>
             {aiEnabled && (
-              <div title="AI-powered suggestions enabled">
+              <div title="AI-powered suggestions enabled" className="flex-shrink-0 ml-1 md:ml-2">
                 <Sparkles 
-                  className="h-4 w-4" 
+                  className="h-2.5 w-2.5 md:h-3 md:w-3" 
                   style={{ color: noteColor }}
                 />
               </div>

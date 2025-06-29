@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Note } from '../../types';
+import { Note, Category } from '../../types';
 import NoteCard from '../NoteCard/NoteCard';
 
 interface DraggableNoteCardProps {
@@ -7,8 +7,9 @@ interface DraggableNoteCardProps {
   onPositionUpdate: (noteId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => void;
   onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onDelete: (noteId: number) => Promise<boolean>;
-  existingCategories: string[];
+  existingCategories: Category[];
   canvasTransform: { x: number, y: number, scale: number };
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
 export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({ 
@@ -17,7 +18,8 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
   onUpdate, 
   onDelete,
   existingCategories,
-  canvasTransform
+  canvasTransform,
+  updateCategory
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -94,8 +96,8 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
       const scaledDeltaX = deltaX / canvasTransform.scale;
       const scaledDeltaY = deltaY / canvasTransform.scale;
       
-      const newWidth = Math.max(480, resizeStartData.startWidth + scaledDeltaX); // Min width 480px for toolbar
-      const newHeight = Math.max(200, resizeStartData.startHeight + scaledDeltaY); // Min height 200px
+      const newWidth = Math.max(570, resizeStartData.startWidth + scaledDeltaX); // Min width 570px (50px above default) to absolutely prevent any shrinking below optimal size
+      const newHeight = Math.max(350, resizeStartData.startHeight + scaledDeltaY); // Min height 350px (50px above default) to guarantee toolbar + content + footer always fit perfectly
       
       cardRef.current.style.width = `${newWidth}px`;
       cardRef.current.style.height = `${newHeight}px`;
@@ -216,6 +218,7 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
         onDelete={handleDelete}
         existingCategories={existingCategories}
         onCollapsibleChange={(isOpen) => setIsCollapsed(!isOpen)}
+        updateCategory={updateCategory}
       />
       
       {/* Resize handle - bottom right corner - only show when expanded */}

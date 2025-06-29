@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Whiteboard } from '@/types';
+import { Whiteboard, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 
@@ -9,9 +9,11 @@ interface UseWhiteboardCardLogicProps {
   onDelete: (whiteboardId: number) => Promise<void>;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
 }
 
-export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed }: UseWhiteboardCardLogicProps) => {
+export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseWhiteboardCardLogicProps) => {
   const { toast } = useToast();
   
   // Collapsible state - use external collapsible state if provided, otherwise use internal state

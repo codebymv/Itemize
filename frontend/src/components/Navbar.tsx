@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings } from 'lucide-react';
+import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -106,7 +106,7 @@ const Navbar: React.FC = () => {
                   {/* Theme Section */}
                   <div className="px-2 py-2">
                     <div className="flex items-center mb-2">
-                      <Settings className="mr-2 h-4 w-4" />
+                      <Settings className="mr-2 h-4 w-4 text-blue-600" />
                       <span className="text-sm font-medium">Theme</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 ml-6">
@@ -141,7 +141,7 @@ const Navbar: React.FC = () => {
                   <div className="px-2 py-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <Sparkles className="mr-2 h-4 w-4" />
+                        <Sparkles className="mr-2 h-4 w-4 text-blue-600" />
                         <Label htmlFor="ai-suggest-toggle" className="text-sm font-medium">
                           AI Enhancements
                         </Label>
@@ -158,8 +158,13 @@ const Navbar: React.FC = () => {
                   </div>
                   
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleNavigate('/help')}>
+                    <Book className="mr-2 h-4 w-4 text-blue-600" />
+                    <span>Help</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="mr-2 h-4 w-4 text-red-600" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

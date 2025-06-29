@@ -9,14 +9,13 @@ import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
 import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
-import { WhiteboardCardProps } from '../../types';
+import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
 import { WhiteboardCategorySelector } from './WhiteboardCategorySelector';
 
-// Mobile constants
-const MIN_MOBILE_HEIGHT = 250;
-const MAX_MOBILE_HEIGHT = 800;
-const DEFAULT_MOBILE_HEIGHT = 400;
+
+
+const MIN_MOBILE_WHITEBOARD_HEIGHT = 400;
 
 const WhiteboardCard: React.FC<WhiteboardCardProps> = ({ 
   whiteboard, 
@@ -24,18 +23,16 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   onDelete, 
   existingCategories,
   isCollapsed,
-  onToggleCollapsed
+  onToggleCollapsed,
+  updateCategory
 }) => {
+  const categoryColor = existingCategories.find(c => c.name === whiteboard.category)?.color_value;
+  const whiteboardDisplayColor = whiteboard.color_value || categoryColor || '#3B82F6'; // Default to blue if no color is set
+
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileHeight, setMobileHeight] = useState(whiteboard.canvas_height || DEFAULT_MOBILE_HEIGHT);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeStartY, setResizeStartY] = useState(0);
-  const [resizeStartHeight, setResizeStartHeight] = useState(0);
+  const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
   
-  // Mobile resize refs
-  const mobileCardRef = useRef<HTMLDivElement>(null);
-  const resizeTimeoutRef = useRef<NodeJS.Timeout>();
   const whiteboardContainerRef = useRef<HTMLDivElement>(null);
 
   // Check if mobile on mount and resize
@@ -49,12 +46,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Update mobile height when whiteboard canvas_height changes
-  useEffect(() => {
-    if (isMobile) {
-      setMobileHeight(Math.min(MAX_MOBILE_HEIGHT, Math.max(MIN_MOBILE_HEIGHT, whiteboard.canvas_height || DEFAULT_MOBILE_HEIGHT)));
-    }
-  }, [whiteboard.canvas_height, isMobile]);
+  
 
   const {
     // Title for display
@@ -85,95 +77,9 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
     
     // Refs
     titleEditRef
-  } = useWhiteboardCardLogic({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed });
+  } = useWhiteboardCardLogic({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
 
-  // Implement click outside handler for title editing
-  useEffect(() => {
-    if (!isEditing) return;
-    
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        titleEditRef.current && 
-        !titleEditRef.current.contains(event.target as Node)
-      ) {
-        handleEditTitle();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isEditing, handleEditTitle]);
-
-  const { toast } = useToast();
-  const [currentColorPreview, setCurrentColorPreview] = React.useState(whiteboard.color_value || '#3B82F6');
-
-  React.useEffect(() => {
-    setCurrentColorPreview(whiteboard.color_value || '#3B82F6');
-  }, [whiteboard.color_value]);
-
-  const whiteboardDisplayColor = currentColorPreview;
-
-  // Mobile resize handlers
-  const handleMobileResizeStart = (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setIsResizing(true);
-    setResizeStartY(clientY);
-    setResizeStartHeight(mobileHeight);
-    
-    let currentPreviewHeight = mobileHeight;
-    
-    // Add global listeners
-    const handleMove = (e: TouchEvent | MouseEvent) => {
-      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      const deltaY = currentY - resizeStartY;
-      const newHeight = Math.min(MAX_MOBILE_HEIGHT, Math.max(MIN_MOBILE_HEIGHT, resizeStartHeight + deltaY));
-      
-      currentPreviewHeight = newHeight;
-      
-      // Direct DOM manipulation to avoid React re-renders
-      if (whiteboardContainerRef.current) {
-        whiteboardContainerRef.current.style.height = `${newHeight}px`;
-      }
-    };
-    
-    const handleEnd = () => {
-      // Update actual React state when resize ends
-      setMobileHeight(currentPreviewHeight);
-      setIsResizing(false);
-      
-      // Clear direct DOM style to let React take over
-      if (whiteboardContainerRef.current) {
-        whiteboardContainerRef.current.style.height = '';
-      }
-      
-      // Debounced save to database
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-      
-      resizeTimeoutRef.current = setTimeout(async () => {
-        await onUpdate(whiteboard.id, {
-          canvas_height: Math.round(currentPreviewHeight)
-        });
-      }, 1500); // Increased debounce time from 500ms to 1.5s to reduce excessive API calls
-      
-      // Remove listeners
-      document.removeEventListener('touchmove', handleMove);
-      document.removeEventListener('mousemove', handleMove);
-      document.removeEventListener('touchend', handleEnd);
-      document.removeEventListener('mouseup', handleEnd);
-    };
-    
-    document.addEventListener('touchmove', handleMove, { passive: false });
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('touchend', handleEnd);
-    document.addEventListener('mouseup', handleEnd);
-  };
+  
 
   return (
     <Collapsible
@@ -195,8 +101,8 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
       style={{ '--whiteboard-color': whiteboardDisplayColor } as React.CSSProperties}
     >
       <Card 
-        ref={mobileCardRef}
-        className="w-full border shadow-sm h-full flex flex-col" 
+        className="w-full shadow-sm h-full flex flex-col" 
+        style={{ border: 'none' }}
       >
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
@@ -316,6 +222,8 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
 
         <WhiteboardCategorySelector
           currentCategory={whiteboard.category || ''}
+          categoryColor={categoryColor}
+          itemColor={whiteboard.color_value}
           existingCategories={existingCategories}
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
@@ -325,15 +233,17 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           setShowNewCategoryInput={setShowNewCategoryInput}
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
+          handleUpdateCategoryColor={updateCategory}
         />
 
         <CollapsibleContent className="flex-1">
           <div 
-            className="bg-background rounded-lg mx-6 mb-6 flex-1 flex flex-col relative" 
+            className="rounded-lg mx-6 mb-6 flex-1 flex flex-col relative" 
             style={{ 
+              backgroundColor: '#ffffff',
               border: `2px solid ${whiteboardDisplayColor} !important`,
               borderColor: `${whiteboardDisplayColor} !important`,
-              height: isMobile ? `${mobileHeight}px` : `${Math.max(300, whiteboard.canvas_height)}px`
+              height: isMobile && scaledCanvasHeight !== undefined ? `${Math.max(MIN_MOBILE_WHITEBOARD_HEIGHT, scaledCanvasHeight - 120)}px` : `${Math.max(530, (whiteboard.canvas_height || 620) - 120)}px`
             }}
             ref={whiteboardContainerRef}
           >
@@ -344,59 +254,12 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
               whiteboardColor={whiteboardDisplayColor}
               onAutoSave={handleCanvasSave}
               isMobile={isMobile}
+              onScaledHeightChange={setScaledCanvasHeight}
+              updatedAt={whiteboard.updated_at}
+              aiEnabled={true} // Placeholder for now, assuming AI is enabled for whiteboards
             />
             
-            {/* Mobile Vertical Resize Handle */}
-            {isMobile && !isCollapsed && (
-              <div
-                className={cn(
-                  "absolute bottom-0 left-0 right-0 h-6 cursor-ns-resize flex items-center justify-center",
-                  "touch-manipulation select-none transition-colors duration-200",
-                  isResizing ? "bg-blue-100 border-t-2 border-blue-300" : "hover:bg-muted border-t border-border"
-                )}
-                onTouchStart={handleMobileResizeStart}
-                onMouseDown={handleMobileResizeStart}
-                style={{ 
-                  zIndex: 20,
-                  borderBottomLeftRadius: '6px',
-                  borderBottomRightRadius: '6px'
-                }}
-              >
-                {/* Visual resize indicator */}
-                <div className={cn(
-                  "w-16 h-1.5 rounded-full transition-all duration-200",
-                  isResizing ? "bg-blue-500 scale-110" : "bg-muted-foreground"
-                )} />
-                
-                {/* Resize instruction text */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className={cn(
-                    "text-xs font-medium transition-all duration-200 pointer-events-none",
-                    isResizing ? "text-blue-600 opacity-100" : "text-gray-500 opacity-0"
-                  )}>
-                    {isResizing ? "Resizing..." : "Drag to resize"}
-                  </div>
-                </div>
-                
-                {/* Touch target expansion */}
-                <div className="absolute -inset-2" />
-              </div>
-            )}
             
-            {/* Mobile gesture hint overlay - positioned at bottom */}
-            {isMobile && !isCollapsed && mobileHeight > MIN_MOBILE_HEIGHT + 50 && (
-              <div className="absolute bottom-8 left-2 right-2 pointer-events-none z-10">
-                <div className="bg-black/70 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm shadow-lg">
-                  <div className="flex items-center justify-center gap-2">
-                    <span>✌️</span>
-                    <span>Two fingers: Pan & Zoom</span>
-                    <span className="mx-2">•</span>
-                    <span>☝️</span>
-                    <span>One finger: Draw</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </CollapsibleContent>
       </Card>

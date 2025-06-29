@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
-import { List, Note, Whiteboard } from '../../types'; // Add Note and Whiteboard types
+import { List, Note, Whiteboard, Category } from '../../types'; // Add Note and Whiteboard types
 import { fetchCanvasLists, updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { NewListModal } from '../../components/NewListModal';
@@ -12,7 +12,7 @@ import { DraggableWhiteboardCard } from './DraggableWhiteboardCard'; // Import t
 import { Plus, Minus, RotateCcw, Search } from 'lucide-react';
 
 interface CanvasContainerProps {
-  existingCategories: string[];
+  existingCategories: Category[];
   searchQuery?: string;
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
@@ -24,6 +24,7 @@ interface CanvasContainerProps {
   onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
   onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
 export interface CanvasContainerMethods {
@@ -47,7 +48,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onWhiteboardUpdate,
   onWhiteboardDelete,
   onOpenNewWhiteboardModal,
-  addCategory
+  addCategory,
+  updateCategory
 }) => {
   const { theme } = useTheme();
   const { token } = useAuth();
@@ -583,13 +585,13 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
               <DraggableListCard
                 key={list.id}
                 list={list}
-                position={{ x: list.position_x ?? 0, y: list.position_y ?? 0 }}
-                onPositionUpdate={handleListPositionChange}
                 onUpdate={handleListUpdate}
                 onDelete={handleListDelete}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
+                onPositionChange={handleListPositionChange}
                 addCategory={addCategory}
+                updateCategory={updateCategory}
               />
             ))}
 
@@ -610,6 +612,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onDelete={onNoteDelete} 
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
+                updateCategory={updateCategory}
               />
             ))}
 
@@ -625,6 +628,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onPositionChange={(whiteboardId, newPosition) => {
                   onWhiteboardUpdate(whiteboardId, { position_x: newPosition.x, position_y: newPosition.y });
                 }}
+                updateCategory={updateCategory}
               />
             ))}
             
@@ -882,7 +886,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           isOpen={showNewListModal}
           onClose={() => setShowNewListModal(false)}
           onListCreated={handleNewListCreated}
-          existingCategories={existingCategories}
+          existingCategories={existingCategories.map(cat => cat.name)}
         />
       )}
     </div>

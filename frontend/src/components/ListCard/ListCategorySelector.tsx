@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ColorPicker } from '@/components/ui/color-picker';
+import { Category } from '@/types';
 
 interface ListCategorySelectorProps {
   currentCategory: string;
-  existingCategories: string[];
+  categoryColor?: string;
+  itemColor?: string; // The list's own color as fallback
+  existingCategories: Category[];
   isEditingCategory: boolean;
   showNewCategoryInput: boolean;
   newCategory: string;
@@ -16,10 +20,13 @@ interface ListCategorySelectorProps {
   setShowNewCategoryInput: (value: boolean) => void;
   handleEditCategory: (category: string) => void;
   handleAddCustomCategory: () => void;
+  handleUpdateCategoryColor: (categoryName: string, newColor: string) => void;
 }
 
 export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
   currentCategory,
+  categoryColor,
+  itemColor,
   existingCategories,
   isEditingCategory,
   showNewCategoryInput,
@@ -28,12 +35,20 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
   setIsEditingCategory,
   setShowNewCategoryInput,
   handleEditCategory,
-  handleAddCustomCategory
+  handleAddCustomCategory,
+  handleUpdateCategoryColor,
 }) => {
+  const displayCategory = currentCategory && currentCategory !== '' ? currentCategory : 'General';
+  // Use category color if available, otherwise fall back to item color, then default
+  const displayColor = categoryColor || itemColor || '#808080';
+  
+  // Always use white text for consistency with other badges
+  const getContrastColor = () => '#ffffff';
+
   return (
-    <div className="mb-2 px-6">
+    <div className="mb-2 px-6 flex items-center gap-2">
       {isEditingCategory ? (
-        <div className="mb-2">
+        <div className="mb-2 w-full">
           {showNewCategoryInput ? (
             <div className="flex items-center gap-1">
               <Input
@@ -69,21 +84,21 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col space-y-1">
-              <Select onValueChange={handleEditCategory} defaultValue={currentCategory || 'General'}>
+            <div className="flex flex-col space-y-2">
+              <Select onValueChange={handleEditCategory} defaultValue={displayCategory}>
                 <SelectTrigger className="h-8" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Always include General as an option */}
-                  {!existingCategories.includes('General') && (
-                    <SelectItem value="General" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                      General
-                    </SelectItem>
-                  )}
-                  {existingCategories.map((category) => (
-                    <SelectItem key={category} value={category} style={{ fontFamily: '"Raleway", sans-serif' }}>
-                      {category}
+                  {existingCategories.map((cat) => (
+                    <SelectItem key={cat.name} value={cat.name} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: cat.color_value }}
+                        />
+                        {cat.name}
+                      </div>
                     </SelectItem>
                   ))}
                   <SelectItem value="__custom__" className="text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -91,6 +106,30 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
                   </SelectItem>
                 </SelectContent>
               </Select>
+              
+              {/* Category Color Picker - only show for existing categories */}
+              {displayCategory !== '__custom__' && (
+                <div className="flex items-center gap-2 ml-2">
+                  <ColorPicker
+                    color={displayColor}
+                    onChange={(newColor) => handleUpdateCategoryColor(displayCategory, newColor)}
+                    onSave={(newColor) => handleUpdateCategoryColor(displayCategory, newColor)}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 flex items-center gap-2"
+                    >
+                      <span
+                        className="inline-block w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: displayColor }}
+                      />
+                      Category Color
+                    </Button>
+                  </ColorPicker>
+                </div>
+              )}
+              
               <Button
                 size="sm"
                 variant="ghost"
@@ -104,13 +143,17 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
           )}
         </div>
       ) : (
-        <Badge 
-          variant="outline" 
-          className="cursor-pointer" 
-          style={{ fontFamily: '"Raleway", sans-serif' }}
+        <Badge
+          variant="outline"
+          className="cursor-pointer hover:opacity-80 transition-opacity border-none"
+          style={{ 
+            fontFamily: '"Raleway", sans-serif', 
+            backgroundColor: displayColor,
+            color: getContrastColor()
+          }}
           onClick={() => setIsEditingCategory(true)}
         >
-          {currentCategory && currentCategory !== '' ? currentCategory : 'General'}
+          {displayCategory}
         </Badge>
       )}
     </div>

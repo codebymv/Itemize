@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
-import { ListCardProps } from '@/types';
+import { ListCardProps, Category } from '@/types';
 import { ListCardHeader } from './ListCardHeader';
 import { ListCategorySelector } from './ListCategorySelector';
 import { ListItemRow } from './ListItemRow';
@@ -32,7 +32,8 @@ const ListCard: React.FC<ListCardProps> = ({
   existingCategories,
   isCollapsed,
   onToggleCollapsed,
-  addCategory
+  addCategory,
+  updateCategory
 }) => {
   const {
     // Collapsible
@@ -52,7 +53,7 @@ const ListCard: React.FC<ListCardProps> = ({
     isEditingCategory, setIsEditingCategory,
     showNewCategoryInput, setShowNewCategoryInput,
     newCategory, setNewCategory, 
-    handleEditCategory, handleAddCustomCategory,
+    handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
     
     // Items
     newItemText, setNewItemText,
@@ -67,7 +68,7 @@ const ListCard: React.FC<ListCardProps> = ({
     
     // Refs
     titleEditRef, newItemInputRef
-  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory });
+  } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory, updateCategory });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -117,7 +118,8 @@ const ListCard: React.FC<ListCardProps> = ({
   const completedItems = list.items.filter(item => item.completed).length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
-  const listDisplayColor = list.color_value || '#808080'; // Default to grey if no color is set
+  const categoryColor = existingCategories.find(c => c.name === list.type)?.color_value;
+  const listDisplayColor = list.color_value || categoryColor || '#808080'; // Default to grey if no color is set
 
   return (
     <Collapsible
@@ -132,7 +134,7 @@ const ListCard: React.FC<ListCardProps> = ({
           }
         }
       }}
-      className="w-full mb-4"
+      className="w-full"
       style={{ '--list-color': listDisplayColor } as React.CSSProperties}
     >
       <Card className="w-full border shadow-sm">
@@ -153,6 +155,8 @@ const ListCard: React.FC<ListCardProps> = ({
 
         <ListCategorySelector
           currentCategory={list.type}
+          categoryColor={categoryColor}
+          itemColor={list.color_value}
           existingCategories={existingCategories}
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
@@ -162,6 +166,7 @@ const ListCard: React.FC<ListCardProps> = ({
           setShowNewCategoryInput={setShowNewCategoryInput}
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
+          handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
 
         <CollapsibleContent>
@@ -201,7 +206,7 @@ const ListCard: React.FC<ListCardProps> = ({
                 </SortableContext>
               </DndContext>
               {list.items.length === 0 && (
-                <div className="text-gray-400 text-sm py-2 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className="text-gray-400 dark:text-gray-300 text-sm py-2 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   No items yet. Add one below or use AI suggestions.
                 </div>
               )}

@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
-import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload, updateListPosition, getWhiteboards, createWhiteboard as apiCreateWhiteboard, updateWhiteboard as apiUpdateWhiteboard, deleteWhiteboard as apiDeleteWhiteboard, CreateWhiteboardPayload } from '../services/api';
+import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload, updateListPosition, getWhiteboards, createWhiteboard as apiCreateWhiteboard, updateWhiteboard as apiUpdateWhiteboard, deleteWhiteboard as apiDeleteWhiteboard, CreateWhiteboardPayload, updateCategory as apiUpdateCategory } from '../services/api';
 import { List, Note, Whiteboard } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
@@ -23,6 +23,8 @@ import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
+  
+
   const [lists, setLists] = useState<List[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,9 +61,82 @@ const CanvasPage: React.FC = () => {
     categoryNames,
     loading: categoriesLoading,
     addCategory,
+    editCategory: updateCategoryInDB,
+    refreshCategories,
     isCategoryInUse,
     getCategoryByName
   } = useDatabaseCategories();
+  
+  // Create editCategory function for updating existing categories
+  const editCategory = async (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => {
+    try {
+      const existingCategory = getCategoryByName(categoryName);
+      if (!existingCategory) {
+        throw new Error(`Category "${categoryName}" not found`);
+      }
+      
+      // Use the hook's editCategory method which properly manages state and triggers refreshes
+      const updatedCategory = await updateCategoryInDB(existingCategory.id, {
+        name: updatedData.name || existingCategory.name,
+        color_value: updatedData.color_value || existingCategory.color_value
+      });
+      
+      if (!updatedCategory) {
+        throw new Error('Failed to update category');
+      }
+      
+      console.log('Category updated successfully:', updatedCategory);
+      
+      // If color was updated, cascade the change to all linked items
+      if (updatedData.color_value) {
+        const newColor = updatedData.color_value;
+        
+        // Update all lists that belong to this category
+        const listsToUpdate = lists.filter(list => (list.type || 'General') === categoryName);
+        for (const list of listsToUpdate) {
+          try {
+            await updateList({ ...list, color_value: newColor });
+          } catch (error) {
+            console.error(`Failed to update list ${list.id} color:`, error);
+          }
+        }
+        
+        // Update all notes that belong to this category
+        const notesToUpdate = notes.filter(note => (note.category || 'General') === categoryName);
+        for (const note of notesToUpdate) {
+          try {
+            await handleUpdateNote(note.id, { color_value: newColor });
+          } catch (error) {
+            console.error(`Failed to update note ${note.id} color:`, error);
+          }
+        }
+        
+        // Update all whiteboards that belong to this category
+        const whiteboardsToUpdate = whiteboards.filter(whiteboard => (whiteboard.category || 'General') === categoryName);
+        for (const whiteboard of whiteboardsToUpdate) {
+          try {
+            await handleUpdateWhiteboard(whiteboard.id, { color_value: newColor });
+          } catch (error) {
+            console.error(`Failed to update whiteboard ${whiteboard.id} color:`, error);
+          }
+        }
+        
+        // Color change completed silently - no toast needed
+        console.log(`Category "${categoryName}" and ${listsToUpdate.length + notesToUpdate.length + whiteboardsToUpdate.length} linked items updated successfully.`);
+      }
+      
+      // The useDatabaseCategories hook should automatically refresh its state
+      // If it doesn't, we may need to implement a refresh mechanism in the hook
+      
+    } catch (error) {
+      console.error('Error updating category:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to update category "${categoryName}". Please try again.`,
+        variant: 'destructive',
+      });
+    }
+  };
   
   // Convert database categories to old format for compatibility
   const categories = dbCategories.map(cat => ({
@@ -368,7 +443,7 @@ const CanvasPage: React.FC = () => {
         category: category, // Use selected category
         canvas_data: '{"paths": [], "shapes": []}', // Empty canvas
         canvas_width: 750, // Wide enough to show all toolbar controls with extra room
-        canvas_height: 400, // Default size (2x notes)
+        canvas_height: 620, // Default size - accounts for header/footer space (620-120=500 usable)
         background_color: '#FFFFFF', // White background
         position_x: position.x,
         position_y: position.y,
@@ -666,7 +741,7 @@ const CanvasPage: React.FC = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-            <span className="text-lg text-black">Loading Canvas...</span>
+            <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>Loading Canvas...</span>
           </div>
         </div>
       </div>
@@ -957,10 +1032,11 @@ const CanvasPage: React.FC = () => {
                       list={list}
                       onUpdate={updateList}
                       onDelete={deleteList}
-                      existingCategories={categoryNames}
+                      existingCategories={dbCategories}
                       isCollapsed={isListCollapsed(list.id)}
                       onToggleCollapsed={() => toggleListCollapsed(list.id)}
                       addCategory={addCategory}
+                      updateCategory={editCategory}
                     />
                   ))}
                 </div>
@@ -985,9 +1061,10 @@ const CanvasPage: React.FC = () => {
                       onDelete={async (noteId) => {
                         await handleDeleteNote(noteId);
                       }}
-                      existingCategories={categoryNames}
+                      existingCategories={dbCategories}
                       isCollapsed={isNoteCollapsed(note.id)}
                       onToggleCollapsed={() => toggleNoteCollapsed(note.id)}
+                      updateCategory={editCategory}
                     />
                   ))}
                 </div>
@@ -1012,9 +1089,10 @@ const CanvasPage: React.FC = () => {
                       onDelete={async (whiteboardId) => {
                         return await handleDeleteWhiteboard(whiteboardId);
                       }}
-                      existingCategories={categoryNames}
+                      existingCategories={dbCategories}
                       isCollapsed={isWhiteboardCollapsed(whiteboard.id)}
                       onToggleCollapsed={() => toggleWhiteboardCollapsed(whiteboard.id)}
+                      updateCategory={editCategory}
                     />
                   ))}
                 </div>
@@ -1052,7 +1130,9 @@ const CanvasPage: React.FC = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-            <span className="text-lg text-black">Loading Canvas...</span>
+            <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>
+              Loading Canvas...
+            </span>
           </div>
         </div>
       ) : error ? (
@@ -1076,7 +1156,7 @@ const CanvasPage: React.FC = () => {
           // Desktop: Full-width Canvas View with drag and drop
           <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
             <CanvasContainer 
-              existingCategories={categoryNames} 
+              existingCategories={dbCategories} 
               searchQuery={searchQuery}
               onOpenNewNoteModal={handleOpenNewNoteModal} 
               notes={notes} // Pass filtered notes state
@@ -1087,6 +1167,7 @@ const CanvasPage: React.FC = () => {
               onWhiteboardDelete={handleDeleteWhiteboard} // Pass whiteboard delete handler
               onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
               addCategory={addCategory} // Pass the centralized addCategory function
+              updateCategory={editCategory} // Pass the editCategory function
               onReady={(methods) => {
                 if (!canvasMethodsRef.current) {
                   canvasMethodsRef.current = methods;

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Note } from '@/types';
+import { Note, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 
@@ -9,9 +9,11 @@ interface UseNoteCardLogicProps {
   onDelete: (noteId: number) => Promise<void>;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
 }
 
-export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed }: UseNoteCardLogicProps) => {
+export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseNoteCardLogicProps) => {
   const { toast } = useToast();
   
   // Collapsible state - use external collapsible state if provided, otherwise use internal state

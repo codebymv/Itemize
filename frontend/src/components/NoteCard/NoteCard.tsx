@@ -13,14 +13,17 @@ import { Note } from '@/types';
 import { RichNoteContent } from './RichNoteContent';
 import { NoteCategorySelector } from './NoteCategorySelector';
 
+import { Category } from '@/types';
+
 interface NoteCardProps {
   note: Note;
   onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   onDelete: (noteId: number) => Promise<void>;
-  existingCategories: string[];
+  existingCategories: Category[];
   onCollapsibleChange?: (isOpen: boolean) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
 }
 
 const NoteCard: React.FC<NoteCardProps> = ({ 
@@ -30,7 +33,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
   existingCategories,
   onCollapsibleChange,
   isCollapsed,
-  onToggleCollapsed
+  onToggleCollapsed,
+  updateCategory
 }) => {
   const {
     // Title for display
@@ -61,7 +65,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
     
     // Refs
     titleEditRef, contentEditRef
-  } = useNoteCardLogic({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed });
+  } = useNoteCardLogic({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
 
   // Implement click outside handler for title editing
   useEffect(() => {
@@ -89,7 +93,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
     setCurrentColorPreview(note.color_value || '#FFFFE0');
   }, [note.color_value]);
 
-  const noteDisplayColor = currentColorPreview;
+  const categoryColor = existingCategories.find(c => c.name === note.category)?.color_value;
+  const noteDisplayColor = note.color_value || categoryColor || '#FFFFE0'; // Default to light yellow if no color is set
+
+  // Wrapper function to adapt updateCategory interface for the selector
+  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
+    await updateCategory(categoryName, { color_value: newColor });
+  };
 
   // Debug logging for note colors
   React.useEffect(() => {
@@ -188,11 +198,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       disabled={isSavingColor}
                     >
                       <span
-                        className="inline-block w-3 h-3 rounded-full border border-gray-400 transition-colors duration-150"
-                        style={{ backgroundColor: noteDisplayColor }}
+                        className="inline-block w-3 h-3 rounded-full border transition-colors duration-150"
+                        style={{ backgroundColor: noteDisplayColor, borderColor: '#d1d5db' }}
                       />
                       {isSavingColor && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
+                        <div className="absolute inset-0 flex items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
                           <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
                         </div>
                       )}
@@ -241,6 +251,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
         <NoteCategorySelector
           currentCategory={note.category || ''}
+          categoryColor={categoryColor}
+          itemColor={note.color_value}
           existingCategories={existingCategories}
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
@@ -250,12 +262,14 @@ const NoteCard: React.FC<NoteCardProps> = ({
           setShowNewCategoryInput={setShowNewCategoryInput}
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
+          handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
 
         <CollapsibleContent className="flex-1">
           <div 
-            className="bg-white rounded-lg mx-6 mb-6 flex-1 flex flex-col" 
+            className="rounded-lg mx-6 mb-6 flex-1 flex flex-col" 
             style={{ 
+              backgroundColor: '#ffffff',
               border: `2px solid ${noteDisplayColor} !important`,
               borderColor: `${noteDisplayColor} !important`,
               height: `${Math.max(180, (note.height || 300) - 120)}px`, // Increased default height  

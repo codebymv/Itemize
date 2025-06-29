@@ -1,17 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ListCard } from '../../components/ListCard';
-import { List } from '../../types';
+import { List, Category } from '../../types';
 
 interface DraggableListCardProps {
   list: List;
   onUpdate: (listData: any) => Promise<any>;
   onDelete: (listId: string) => Promise<boolean>;
-  existingCategories: string[];
+  existingCategories: Category[];
   canvasTransform: { x: number; y: number; scale: number };
   onPositionChange: (listId: string, newPosition: { x: number; y: number }) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
 export const DraggableListCard: React.FC<DraggableListCardProps> = ({
@@ -23,7 +24,8 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   onPositionChange,
   isCollapsed,
   onToggleCollapsed,
-  addCategory
+  addCategory,
+  updateCategory
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
   
@@ -94,17 +96,14 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
 
     if (isResizing && listRef.current) {
       const deltaX = e.clientX - resizeStartData.startX;
-      const deltaY = e.clientY - resizeStartData.startY;
       
       // Account for canvas scale in the resize delta
       const scaledDeltaX = deltaX / canvasTransform.scale;
-      const scaledDeltaY = deltaY / canvasTransform.scale;
       
-      const newWidth = Math.max(280, resizeStartData.startWidth + scaledDeltaX); // Min width 280px
-      const newHeight = Math.max(200, resizeStartData.startHeight + scaledDeltaY); // Min height 200px
+      const newWidth = Math.max(320, resizeStartData.startWidth + scaledDeltaX); // Min width 320px
       
       listRef.current.style.width = `${newWidth}px`;
-      listRef.current.style.height = `${newHeight}px`;
+      // Height is automatically determined by content - no manual height setting
     }
   };
   
@@ -129,19 +128,18 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
     if (isResizing && listRef.current) {
       setIsResizing(false);
       
-      // Get current position and size from the style (in canvas coordinates)
+      // Get current position and width from the style (in canvas coordinates)
       const currentLeft = parseFloat(listRef.current.style.left) || 0;
       const currentTop = parseFloat(listRef.current.style.top) || 0;
       const currentWidth = parseFloat(listRef.current.style.width) || list.width || 340;
-      const currentHeight = parseFloat(listRef.current.style.height) || list.height || 265;
       
-      // Update both position and size in the database
+      // Update only position and width in the database - height is auto-determined by content
       onUpdate({
         ...list,
         position_x: Math.round(currentLeft),
         position_y: Math.round(currentTop),
         width: Math.round(currentWidth),
-        height: Math.round(currentHeight)
+        // Remove height from update - let content determine height
       });
     }
   };
@@ -166,13 +164,12 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
     
     if (listRef.current) {
       const currentWidth = parseFloat(listRef.current.style.width) || list.width || 340;
-      const currentHeight = parseFloat(listRef.current.style.height) || list.height || 265;
       
       setResizeStartData({
         startX: e.clientX,
-        startY: e.clientY,
+        startY: e.clientY, // Keep for consistency but not used
         startWidth: currentWidth,
-        startHeight: currentHeight
+        startHeight: 0 // Not used since height is auto
       });
       setIsResizing(true);
     }
@@ -186,9 +183,10 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
       style={{
         position: 'absolute',
         width: `${list.width || 340}px`,
-        height: isCollapsed ? 'auto' : `${list.height || 265}px`,
+        height: 'auto', // Let content determine height
+        minHeight: '150px', // Reduced minimum height for better fit
         zIndex: (isDragging || isResizing) ? 1000 : 1,
-        cursor: isDragging ? 'grabbing' : (isResizing ? 'nw-resize' : 'grab'),
+        cursor: isDragging ? 'grabbing' : (isResizing ? 'ew-resize' : 'grab'),
         transition: (isDragging || isResizing) ? 'none' : 'box-shadow 0.2s, transform 0.1s',
         boxShadow: (isDragging || isResizing) ? '0 8px 16px rgba(0,0,0,0.2)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
         transform: (isDragging || isResizing) ? 'scale(1.01)' : 'scale(1)',
@@ -204,15 +202,16 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
         isCollapsed={isCollapsed}
         onToggleCollapsed={onToggleCollapsed}
         addCategory={addCategory}
+        updateCategory={updateCategory}
       />
       
       {/* Resize handle - bottom right corner - only show when expanded */}
       {!isCollapsed && (
         <div
-          className="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-nw-resize"
+          className="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-ew-resize"
           onMouseDown={handleResizeMouseDown}
           style={{
-            background: 'linear-gradient(-45deg, transparent 40%, #ccc 40%, #ccc 60%, transparent 60%)',
+            background: 'linear-gradient(90deg, transparent 40%, #ccc 40%, #ccc 60%, transparent 60%)',
             opacity: 0.6,
             zIndex: 10,
           }}

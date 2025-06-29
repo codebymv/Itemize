@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Palette, Eraser, Brush, Undo, Redo } from 'lucide-react';
+import { Palette, Eraser, Brush, Undo, Redo, Sparkles } from 'lucide-react';
+import { formatRelativeTime } from '../../utils/timeUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Whiteboard } from '@/types';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,9 @@ interface WhiteboardCanvasProps {
   whiteboardColor: string;
   onAutoSave: (canvasData: any) => Promise<void>;
   isMobile?: boolean;
+  onScaledHeightChange?: (height: number) => void;
+  updatedAt?: string;
+  aiEnabled: boolean;
 }
 
 // Pre-defined color palette for easy selection
@@ -37,7 +41,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onSave,
   whiteboardColor,
   onAutoSave,
-  isMobile = false
+  isMobile = false,
+  onScaledHeightChange,
+  updatedAt,
+  aiEnabled
 }) => {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const { toast } = useToast();
@@ -47,6 +54,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [strokeColor, setStrokeColor] = useState('#2563eb'); // Default to theme blue
   const [strokeWidth, setStrokeWidth] = useState(isMobile ? 3 : 2); // Slightly thicker for mobile
   const [isDrawing, setIsDrawing] = useState(false);
+  const [contentScale, setContentScale] = useState(1);
   
   // Auto-save state
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -63,15 +71,15 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [initialPinchDistance, setInitialPinchDistance] = useState(0);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // Mobile UI state (to prevent flashing)
-  const [isResizing, setIsResizing] = useState(false);
-  const [gestureScale, setGestureScale] = useState(1);
-  const [isGestureActive, setIsGestureActive] = useState(false);
-  const [showGestureHint, setShowGestureHint] = useState(false);
+  // Dynamic canvas sizing - track actual container dimensions
+  const [canvasDimensions, setCanvasDimensions] = useState({
+    width: whiteboard.canvas_width || 500,
+    height: whiteboard.canvas_height || 500
+  });
 
   // References for direct DOM manipulation to prevent flashing
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const visualUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
 
   // Load existing canvas data on mount
   useEffect(() => {
@@ -108,7 +116,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             }
           } catch (e) {
             console.warn('🎨 Failed to parse string canvas data:', e);
+            console.warn('🎨 Corrupted data preview:', dataToLoad?.substring?.(0, 200) || 'N/A');
             dataToLoad = [];
+            
+            // Auto-fix corrupted data by saving empty array
+            console.log('🎨 Auto-fixing corrupted canvas data...');
+            try {
+              onSave([]);
+            } catch (saveError) {
+              console.error('🎨 Failed to auto-fix corrupted data:', saveError);
+            }
           }
         } else {
           console.warn('🎨 Unknown data format, using empty array');
@@ -119,6 +136,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         if (!Array.isArray(dataToLoad)) {
           console.warn('🎨 Data is not an array after processing:', typeof dataToLoad);
           dataToLoad = [];
+        }
+
+        // Additional validation: ensure the array can be JSON serialized
+        try {
+          const testSerialization = JSON.stringify(dataToLoad);
+          JSON.parse(testSerialization);
+        } catch (jsonError) {
+          console.error('🎨 Canvas data fails JSON validation, using empty array:', jsonError);
+          dataToLoad = [];
+          
+          // Auto-fix corrupted data
+          console.log('🎨 Auto-fixing corrupted canvas data...');
+          try {
+            onSave([]);
+          } catch (saveError) {
+            console.error('🎨 Failed to auto-fix corrupted data:', saveError);
+          }
         }
         
         // If we have data but it's missing required metadata, reconstruct it
@@ -204,6 +238,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             clearTimeout(autoSaveTimeout);
             setAutoSaveTimeout(null);
           }
+          
+          // Auto-fix corrupted data
+          console.log('🎨 Auto-fixing corrupted canvas data after load error...');
+          try {
+            onSave([]);
+          } catch (saveError) {
+            console.error('🎨 Failed to auto-fix corrupted data:', saveError);
+          }
         } catch (fallbackError) {
           console.error('🎨 Failed to load empty canvas:', fallbackError);
         }
@@ -211,19 +253,97 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
   }, [whiteboard.canvas_data, isCanvasLoaded, autoSaveTimeout]);
 
+  // Calculate content scale for mobile responsiveness
+  useEffect(() => {
+    if (isMobile && canvasContainerRef.current) {
+      const observer = new ResizeObserver(entries => {
+        for (let entry of entries) {
+          const renderedWidth = entry.contentRect.width;
+          if (whiteboard.canvas_width && renderedWidth > 0) {
+            const scale = renderedWidth / whiteboard.canvas_width;
+            setContentScale(scale);
+            if (onScaledHeightChange) {
+              onScaledHeightChange(whiteboard.canvas_height * scale);
+            }
+          }
+        }
+      });
+
+      observer.observe(canvasContainerRef.current);
+
+      return () => observer.disconnect();
+    } else if (!isMobile) {
+      setContentScale(1); // Reset scale for desktop
+    }
+  }, [isMobile, whiteboard.canvas_width]);
+
+  // Dynamic canvas sizing - measure container and adjust canvas dimensions
+  useEffect(() => {
+    if (!canvasContainerRef.current) return;
+
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          console.log('🎨 Container dimensions changed:', { width, height });
+          // Inner container already accounts for footer space via paddingBottom
+          setCanvasDimensions({
+            width: Math.floor(width),
+            height: Math.floor(height)
+          });
+        }
+      }
+    });
+
+    observer.observe(canvasContainerRef.current);
+    
+    // Also trigger immediate measurement in case ResizeObserver doesn't fire right away
+    const rect = canvasContainerRef.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      console.log('🎨 Initial container dimensions:', { width: rect.width, height: rect.height });
+      // Inner container already accounts for footer space via paddingBottom
+      setCanvasDimensions({
+        width: Math.floor(rect.width),
+        height: Math.floor(rect.height)
+      });
+    }
+    
+    return () => observer.disconnect();
+  }, [updatedAt]);
+
+  // Debug canvas dimensions changes
+  useEffect(() => {
+    console.log('🎨 Canvas dimensions updated:', canvasDimensions);
+  }, [canvasDimensions]);
+
   // Debounced auto-save function (reduced delay for faster saves)
   const debouncedAutoSave = useCallback(
     debounce(async (canvasData: any[], whiteboardId: number) => {
       try {
+        // Validate canvas data before saving
+        if (!Array.isArray(canvasData)) {
+          console.warn('🎨 Invalid canvas data format - not an array:', typeof canvasData);
+          return;
+        }
+
+        // Test JSON serialization to catch malformed data early
+        const testSerialization = JSON.stringify(canvasData);
+        JSON.parse(testSerialization); // This will throw if the JSON is malformed
+        
         console.log('🎨 Auto-saving canvas data:', {
           pathCount: canvasData.length,
-          dataPreview: JSON.stringify(canvasData).substring(0, 100),
+          dataPreview: testSerialization.substring(0, 100),
           whiteboardId
         });
         await onSave(canvasData);
         console.log('🎨 Canvas auto-save completed successfully');
       } catch (error) {
         console.error('🎨 Canvas auto-save failed:', error);
+        
+        // If it's a JSON serialization error, show a user-friendly message
+        if (error instanceof Error && (error.message.includes('JSON') || error.message.includes('stringify'))) {
+          console.error('🎨 Canvas data is corrupted and cannot be saved. This may be due to a drawing library error.');
+        }
       }
     }, 500), // Reduced from 2000ms to 500ms for faster saves
     [onSave]
@@ -250,6 +370,21 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     
     try {
       const currentCanvasData = await canvasRef.current.exportPaths();
+      
+      // Validate canvas data before processing
+      if (!Array.isArray(currentCanvasData)) {
+        console.warn('🎨 Invalid canvas data format from exportPaths - not an array:', typeof currentCanvasData);
+        return;
+      }
+
+      // Test JSON serialization to catch malformed data early
+      try {
+        const testSerialization = JSON.stringify(currentCanvasData);
+        JSON.parse(testSerialization); // This will throw if the JSON is malformed
+      } catch (jsonError) {
+        console.error('🎨 Canvas data is corrupted and cannot be processed:', jsonError);
+        return;
+      }
       
       // Normalize the saved data for comparison (handle different storage formats)
       let normalizedSavedData = [];
@@ -513,166 +648,115 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* Mobile-responsive Toolbar */}
-      <div className={cn(
-        "border-b bg-gray-50 border-gray-200",
-        isMobile ? "p-2 space-y-2" : "p-3 flex items-center justify-between"
-      )}
-      style={{ 
-        backgroundColor: '#f9fafb', 
-        borderBottomColor: '#e5e7eb' 
-      }}>
+    <div 
+      className="flex flex-col h-full relative"
+      data-whiteboard-canvas
+      tabIndex={-1}
+    >
+      {/* Global CSS override to eliminate ReactSketchCanvas borders */}
+      <style>
+        {`
+          .react-sketch-canvas {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          .react-sketch-canvas canvas {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+        `}
+      </style>
+
+      {/* Toolbar - always visible */}
+      <div className="flex-shrink-0 px-4 py-3 border-b" style={{ backgroundColor: '#f9fafb', borderBottomColor: '#e5e7eb' }}>
         {isMobile ? (
-          // Mobile: Responsive stacked layout optimized for small screens
-          <>
-            {/* Top row: Tool selection and brush size */}
-            <div className="flex items-center justify-between gap-2">
-              {/* Pen/Eraser toggle - compact for small screens */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleToolChange('pen')}
-                  className={cn(
-                    "h-8 w-8 p-0",
-                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
-                  )}
-                  style={currentTool !== 'pen' ? { 
-                    backgroundColor: 'transparent', 
-                    color: '#374151'
-                  } : {}}
-                  onMouseEnter={(e) => {
-                    if (currentTool !== 'pen') {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentTool !== 'pen') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <Brush className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleToolChange('eraser')}
-                  className={cn(
-                    "h-8 w-8 p-0",
-                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
-                  )}
-                  style={currentTool !== 'eraser' ? { 
-                    backgroundColor: 'transparent', 
-                    color: '#374151'
-                  } : {}}
-                  onMouseEnter={(e) => {
-                    if (currentTool !== 'eraser') {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentTool !== 'eraser') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <Eraser className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-
-              {/* Brush size control - responsive */}
-              <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-md border min-w-0 flex-shrink" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-                <span className="text-xs font-medium min-w-[12px] text-center" style={{ color: '#374151' }}>{strokeWidth}</span>
-                <Slider
-                  value={[strokeWidth]}
-                  onValueChange={handleStrokeWidthChange}
-                  max={20}
-                  min={1}
-                  step={1}
-                  className="w-10 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
-                />
-              </div>
-
-              {/* Action buttons - compact layout */}
-              <div className="flex items-center gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleUndo}
-                  className="h-7 w-7 p-0"
-                  style={{ backgroundColor: 'transparent', color: '#374151' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  <Undo className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRedo}
-                  className="h-7 w-7 p-0"
-                  style={{ backgroundColor: 'transparent', color: '#374151' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  <Redo className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClear}
-                  className="text-xs px-1.5 h-7 min-w-0"
-                  style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                >
-                  Clear
-                </Button>
-              </div>
+          // Mobile toolbar (simplified)
+          <div className="flex items-center justify-between w-full gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleToolChange('pen')}
+                className={cn(
+                  "h-8 w-8 p-0",
+                  currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+                )}
+                style={currentTool !== 'pen' ? { 
+                  backgroundColor: 'transparent', 
+                  color: '#374151'
+                } : {}}
+                onMouseEnter={(e) => {
+                  if (currentTool !== 'pen') {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentTool !== 'pen') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <Brush className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleToolChange('eraser')}
+                className={cn(
+                  "h-8 w-8 p-0",
+                  currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+                )}
+                style={currentTool !== 'eraser' ? { 
+                  backgroundColor: 'transparent', 
+                  color: '#374151'
+                } : {}}
+                onMouseEnter={(e) => {
+                  if (currentTool !== 'eraser') {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentTool !== 'eraser') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <Eraser className="h-4 w-4" />
+              </Button>
             </div>
-
-            {/* Bottom row: Color palette (only when pen is selected) - scrollable */}
-            {currentTool === 'pen' && (
-              <div className="w-full overflow-hidden">
-                <div className="flex items-center">
-                  <div 
-                    className="flex items-center gap-1 p-1.5 bg-white rounded-md border overflow-x-auto scrollbar-hide" 
-                    style={{ 
-                      backgroundColor: 'white', 
-                      borderColor: '#d1d5db',
-                      maxWidth: '100%',
-                      scrollbarWidth: 'none',
-                      msOverflowStyle: 'none'
-                    }}
-                  >
-                    <style>
-                      {`.scrollbar-hide::-webkit-scrollbar { display: none; }`}
-                    </style>
-                    {COLOR_PALETTE.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => handleColorChange(color)}
-                        className={cn(
-                          "w-6 h-6 rounded-sm border-2 flex-shrink-0 transition-transform touch-manipulation",
-                          strokeColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
-                        )}
-                        style={{ backgroundColor: color }}
-                        aria-label={`Select ${color} color`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleUndo}
+                className="h-8 w-8 p-0"
+                style={{ backgroundColor: 'transparent', color: '#374151' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClear}
+                className="text-xs h-8"
+                style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
         ) : (
-          // Desktop: Original horizontal layout
-          <>
-            {/* Drawing tools */}
-            <div className="flex items-center gap-2">
-              {/* Pen/Eraser toggle */}
+          // Desktop toolbar (full) - Single flex container to prevent wrapping
+          <div className="flex items-center justify-between w-full">
+            {/* Drawing tools and settings */}
+            <div className="flex items-center gap-3">
+              {/* Tool selection */}
               <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                 <Button
                   variant="ghost"
@@ -793,87 +877,83 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 Clear
               </Button>
             </div>
-          </>
+          </div>
         )}
       </div>
 
-      {/* Canvas area with mobile touch support */}
-      <div 
-        ref={canvasContainerRef}
-        className="flex-1 relative overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          transform: isMobile ? `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasScale})` : 'none',
-          transformOrigin: 'center',
-          transition: isMultiTouch ? 'none' : 'transform 0.1s ease-out'
-        }}
-      >
-        {/* Mobile gesture indicators */}
-        {isMobile && canvasScale !== 1 && (
-          <div className="absolute top-2 left-2 z-30 bg-black/70 text-white text-xs px-2 py-1 rounded">
-            {Math.round(canvasScale * 100)}%
-          </div>
-        )}
-        
-        {isMobile && isMultiTouch && (
-          <div className="absolute top-2 right-2 z-30 bg-blue-500/70 text-white text-xs px-2 py-1 rounded">
-            Two fingers: Pan & Zoom
-          </div>
-        )}
-        
-        {/* Canvas reset button for mobile */}
-        {isMobile && (canvasPan.x !== 0 || canvasPan.y !== 0 || canvasScale !== 1) && (
-          <Button
-            onClick={() => {
-              setCanvasPan({ x: 0, y: 0 });
-              setCanvasScale(1);
-            }}
-            size="sm"
-            variant="secondary"
-            className="absolute bottom-2 right-2 z-30 h-8 w-auto px-2 text-xs"
-          >
-            Reset View
-          </Button>
-        )}
-        
-        <div
-          className="whiteboard-drawing-area"
-          onMouseDown={(e) => {
-            // Only prevent propagation if actually starting to draw on the canvas
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'CANVAS') {
-              e.stopPropagation();
-            }
+      {/* Canvas Area - flex-1 takes remaining space, like textarea in note cards */}
+      <div className="flex-1 relative overflow-hidden" style={{ paddingBottom: updatedAt ? '36px' : '8px' }}>
+        <div 
+          ref={canvasContainerRef}
+          className="w-full h-full relative whiteboard-drawing-area"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ 
+            transform: isMobile ? `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasScale})` : 'none',
+            transformOrigin: 'center',
+            transition: isMultiTouch ? 'none' : 'transform 0.1s ease-out',
+            cursor: 'crosshair'
           }}
         >
           <ReactSketchCanvas
-            ref={canvasRef}
             style={{
+              width: '100%',
+              height: '100%',
               border: 'none',
-              borderRadius: '0 0 8px 8px',
-              cursor: isMultiTouch ? 'grab' : (currentTool === 'pen' ? 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTIgMTMgNy41LTcuNSAxLjUgMS41LTcuNSA3LjUtMS41LTEuNXoiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJtOCAxMy41IDQuNSA0LjUtNC41LTEtMC41LTAuNVYxMy41WiIgZmlsbD0iIzAwMCIvPjwvc3ZnPg==") 2 22, auto' : 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+") 12 12, auto'),
-              touchAction: isMobile ? (isMultiTouch ? 'pan-x pan-y pinch-zoom' : 'none') : 'auto',
-              pointerEvents: isMobile && isMultiTouch ? 'none' : 'auto'
+              outline: 'none',
+              boxShadow: 'none',
+              backgroundColor: '#ffffff'
             }}
-          width={`${whiteboard.canvas_width}px`}
-          height={`${whiteboard.canvas_height - (isMobile ? 50 : 60)}px`} // Adjust for mobile toolbar
-          strokeWidth={strokeWidth}
-          strokeColor={currentTool === 'pen' ? strokeColor : '#FFFFFF'}
-          canvasColor={whiteboard.background_color}
-          onChange={handleDrawingEnd}
-          allowOnlyPointerType={isMultiTouch ? "none" : "all"} // Disable canvas during multi-touch
-          preserveBackgroundImageAspectRatio="none"
-        />
-        
-        {/* Drawing indicator */}
-        {isDrawing && !isMultiTouch && (
-          <div className="absolute top-2 right-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md z-20">
-            Drawing...
+            width={`${canvasDimensions.width}px`}
+            height={`${canvasDimensions.height}px`}
+            strokeWidth={strokeWidth}
+            strokeColor={strokeColor}
+            canvasColor="#ffffff"
+            ref={canvasRef}
+          />
+          
+          {/* Drawing indicator */}
+          {isDrawing && !isMultiTouch && (
+            <div className="absolute top-2 right-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md z-20">
+              Drawing...
+            </div>
+          )}
+        </div>
+
+        {/* Footer - positioned absolutely at bottom of this container */}
+        {updatedAt && (
+          <div 
+            className="absolute bottom-0 left-0 right-0 px-2 md:px-3 py-1 md:py-2 z-10 border-t"
+            style={{ 
+              borderTopColor: '#e5e7eb',
+              backgroundColor: '#ffffff',
+              fontSize: '10px'
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div 
+                className="text-gray-500 truncate text-xs md:text-xs"
+                style={{ 
+                  fontFamily: '"Raleway", sans-serif',
+                  fontSize: 'inherit'
+                }}
+              >
+                <span className="hidden sm:inline">Last edited: </span>
+                <span className="sm:hidden">Edited: </span>
+                {formatRelativeTime(updatedAt)}
+              </div>
+              {aiEnabled && (
+                <div title="AI-powered suggestions enabled" className="flex-shrink-0 ml-1 md:ml-2">
+                  <Sparkles 
+                    className="h-2.5 w-2.5 md:h-3 md:w-3" 
+                    style={{ color: whiteboardColor }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
-        </div>
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { WhiteboardCard } from '../WhiteboardCard';
-import { Whiteboard } from '../../types';
+import { Whiteboard, Category } from '../../types';
 
 // Whiteboard dimension constraints to match database limits
 const MIN_WHITEBOARD_WIDTH = 750;
-const MIN_WHITEBOARD_HEIGHT = 250;
+const MIN_WHITEBOARD_HEIGHT = 650; // Absolutely ensures header + toolbar + canvas + footer always visible with buffer
 const MAX_WHITEBOARD_WIDTH = 2400;
 const MAX_WHITEBOARD_HEIGHT = 2400;
 
@@ -12,11 +12,12 @@ interface DraggableWhiteboardCardProps {
   whiteboard: Whiteboard;
   onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onDelete: (whiteboardId: number) => Promise<boolean>;
-  existingCategories: string[];
+  existingCategories: Category[];
   canvasTransform: { x: number; y: number; scale: number };
   onPositionChange: (whiteboardId: number, newPosition: { x: number; y: number }) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
 export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = ({
@@ -27,7 +28,8 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
   canvasTransform,
   onPositionChange,
   isCollapsed,
-  onToggleCollapsed
+  onToggleCollapsed,
+  updateCategory
 }) => {
   const whiteboardRef = useRef<HTMLDivElement>(null);
   
@@ -208,17 +210,19 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
   // Wrapper functions to handle the async nature
   const handleUpdate = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
-      await onUpdate(whiteboardId, updatedData);
+      return await onUpdate(whiteboardId, updatedData);
     } catch (error) {
       console.error('Failed to update whiteboard:', error);
+      return null;
     }
   };
 
   const handleDelete = async (whiteboardId: number) => {
     try {
-      await onDelete(whiteboardId);
+      return await onDelete(whiteboardId);
     } catch (error) {
       console.error('Failed to delete whiteboard:', error);
+      return false;
     }
   };
 
@@ -247,6 +251,7 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
         existingCategories={existingCategories}
         isCollapsed={isCollapsed}
         onToggleCollapsed={onToggleCollapsed}
+        updateCategory={updateCategory}
       />
       
       {/* Resize handle - bottom right corner - only show when expanded */}

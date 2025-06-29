@@ -261,9 +261,12 @@ export const NoteContent: React.FC<NoteContentProps> = ({
           }, 100);
         }
       }}
+      style={{
+        paddingBottom: updatedAt ? '36px' : '8px' // Reserve space for footer (responsive)
+      }}
     >
       {/* Main textarea with autocomplete overlay */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 overflow-hidden">
         <Textarea
           ref={contentEditRef}
           value={isEditingContent ? editContent : content}
@@ -286,7 +289,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               e.stopPropagation();
             }
           }}
-          className={`flex-1 resize-none bg-transparent w-full cursor-text whitespace-pre-wrap !border-none !ring-0 !ring-offset-0 !outline-none focus:!border-none focus:!ring-0 focus:!ring-offset-0 focus-visible:!border-none focus-visible:!ring-0 focus-visible:!ring-offset-0 ${
+          className={`flex-1 resize-none bg-transparent w-full cursor-text whitespace-pre-wrap !border-none !ring-0 !ring-offset-0 !outline-none focus:!border-none focus:!ring-0 focus:!ring-offset-0 focus-visible:!border-none focus-visible:!ring-0 focus-visible:!ring-offset-0 overflow-y-auto ${
             aiEnabled && isEditingContent ? 'p-3 pr-8' : 'p-3'
           }`}
           placeholder={isEditingContent ? "Type your note content..." : (window.innerWidth < 768 ? "Tap to edit content..." : "Click anywhere to add content...")}
@@ -346,17 +349,32 @@ export const NoteContent: React.FC<NoteContentProps> = ({
         )}
       </div>
 
-      {/* Last edited section with dividing line (only show when not editing) */}
-      {!isEditingContent && updatedAt && (
-        <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${noteColor}33` }}>
+      {/* Last edited section with dividing line - Always visible at bottom */}
+      {updatedAt && (
+        <div 
+          className="absolute bottom-0 left-0 right-0 flex-shrink-0 px-2 md:px-3 py-1 md:py-2"
+          style={{ 
+            borderTop: `1px solid ${noteColor}33`,
+            backgroundColor: '#ffffff',
+            fontSize: '10px'
+          }}
+        >
           <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Last edited: {formatRelativeTime(updatedAt)}
+            <div 
+              className="text-gray-500 truncate text-xs md:text-xs" 
+              style={{ 
+                fontFamily: '"Raleway", sans-serif',
+                fontSize: 'inherit'
+              }}
+            >
+              <span className="hidden sm:inline">Last edited: </span>
+              <span className="sm:hidden">Edited: </span>
+              {formatRelativeTime(updatedAt)}
             </div>
             {aiEnabled && (
-              <div title="AI-powered suggestions enabled">
+              <div title="AI-powered suggestions enabled" className="flex-shrink-0 ml-1 md:ml-2">
                 <Sparkles 
-                  className="h-3 w-3" 
+                  className="h-2.5 w-2.5 md:h-3 md:w-3" 
                   style={{ color: noteColor }}
                 />
               </div>

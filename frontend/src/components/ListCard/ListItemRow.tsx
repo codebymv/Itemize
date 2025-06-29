@@ -93,7 +93,7 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
             className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mr-2 p-1"
             data-sortable-handle
           >
-            <GripVertical className="h-4 w-4 text-gray-400" data-lucide="grip-vertical" />
+            <GripVertical className="h-4 w-4 text-gray-400 dark:text-gray-300" data-lucide="grip-vertical" />
           </div>
           
           <div 
@@ -107,7 +107,7 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
             }`}>
               {item.completed && <Check className="h-3 w-3 text-white" />}
             </div>
-            <span className={`${item.completed ? 'line-through text-gray-400' : ''}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <span className={`${item.completed ? 'line-through text-gray-400 dark:text-gray-300' : ''}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
               {item.text}
             </span>
           </div>

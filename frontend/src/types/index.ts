@@ -18,15 +18,25 @@ export interface List {
   height?: number; // Height for resizing
 }
 
+// Category type for API responses
+export interface Category {
+  id: number;
+  name: string;
+  color_value: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Props for ListCard component
 export interface ListCardProps {
   list: List;
   onUpdate: (list: List) => void;
   onDelete: (listId: string) => void;
-  existingCategories: string[];
+  existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
 export interface Note {
@@ -62,12 +72,24 @@ export interface Whiteboard {
   updated_at: string;
 }
 
+// Props for NoteCard component
+export interface NoteCardProps {
+  note: Note;
+  onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  onDelete: (noteId: number) => Promise<void>;
+  existingCategories: Category[];
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+}
+
 // Props for WhiteboardCard component  
 export interface WhiteboardCardProps {
   whiteboard: Whiteboard;
   onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onDelete: (whiteboardId: number) => Promise<boolean>;
-  existingCategories: string[];
+  existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }

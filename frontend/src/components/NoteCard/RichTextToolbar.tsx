@@ -53,15 +53,21 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
   };
 
   return (
-    <div className={cn(
-      "flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 overflow-x-auto",
-      "md:gap-2", // Larger gaps on desktop
-      className
-    )}>
+    <div 
+      className={cn(
+        "flex items-center gap-1 p-2 border-b overflow-x-auto",
+        "md:gap-2", // Larger gaps on desktop
+        className
+      )}
+      style={{ 
+        backgroundColor: '#f9fafb', 
+        borderBottomColor: '#e5e7eb' 
+      }}
+    >
       {/* Heading Dropdown */}
       <Select
         value={getCurrentHeading()}
-                onValueChange={(value) => {
+        onValueChange={(value) => {
           const { from, to } = editor.state.selection;
           const hasSelection = from !== to;
           
@@ -106,7 +112,14 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           }
         }}
       >
-        <SelectTrigger className="w-20 md:w-24 h-8 text-xs">
+        <SelectTrigger 
+          className="w-20 md:w-24 h-8 text-xs"
+          style={{ 
+            backgroundColor: 'white', 
+            borderColor: '#d1d5db',
+            color: '#374151'
+          }}
+        >
           <Type className="h-3 w-3 md:hidden" />
           <SelectValue className="hidden md:inline" />
         </SelectTrigger>
@@ -126,8 +139,22 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('bold') && "bg-accent text-accent-foreground"
+            editor.isActive('bold') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('bold') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('bold')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('bold')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <Bold className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
@@ -138,8 +165,22 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('italic') && "bg-accent text-accent-foreground"
+            editor.isActive('italic') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('italic') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('italic')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('italic')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <Italic className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
@@ -150,8 +191,22 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('underline') && "bg-accent text-accent-foreground"
+            editor.isActive('underline') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('underline') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('underline')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('underline')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <Underline className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
@@ -162,15 +217,29 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleStrike().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('strike') && "bg-accent text-accent-foreground"
+            editor.isActive('strike') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('strike') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('strike')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('strike')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <Strikethrough className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
       </div>
 
       {/* Divider */}
-      <div className="h-6 w-px bg-gray-300 mx-1" />
+      <div className="h-6 w-px mx-1" style={{ backgroundColor: '#d1d5db' }} />
 
       {/* Alignment Controls */}
       <ToggleGroup 
@@ -187,6 +256,20 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           value="left"
           size="sm"
           className="h-8 w-8 p-0"
+          style={{ 
+            backgroundColor: getCurrentAlignment() === 'left' ? '#2563eb' : 'transparent',
+            color: getCurrentAlignment() === 'left' ? 'white' : '#374151'
+          }}
+          onMouseEnter={(e) => {
+            if (getCurrentAlignment() !== 'left') {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (getCurrentAlignment() !== 'left') {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <AlignLeft className="h-3 w-3 md:h-4 md:w-4" />
         </ToggleGroupItem>
@@ -195,6 +278,20 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           value="center"
           size="sm"
           className="h-8 w-8 p-0"
+          style={{ 
+            backgroundColor: getCurrentAlignment() === 'center' ? '#2563eb' : 'transparent',
+            color: getCurrentAlignment() === 'center' ? 'white' : '#374151'
+          }}
+          onMouseEnter={(e) => {
+            if (getCurrentAlignment() !== 'center') {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (getCurrentAlignment() !== 'center') {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <AlignCenter className="h-3 w-3 md:h-4 md:w-4" />
         </ToggleGroupItem>
@@ -203,13 +300,27 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           value="right"
           size="sm"
           className="h-8 w-8 p-0"
+          style={{ 
+            backgroundColor: getCurrentAlignment() === 'right' ? '#2563eb' : 'transparent',
+            color: getCurrentAlignment() === 'right' ? 'white' : '#374151'
+          }}
+          onMouseEnter={(e) => {
+            if (getCurrentAlignment() !== 'right') {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (getCurrentAlignment() !== 'right') {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <AlignRight className="h-3 w-3 md:h-4 md:w-4" />
         </ToggleGroupItem>
       </ToggleGroup>
 
       {/* Divider */}
-      <div className="h-6 w-px bg-gray-300 mx-1" />
+      <div className="h-6 w-px mx-1" style={{ backgroundColor: '#d1d5db' }} />
 
       {/* List Controls */}
       <div className="flex gap-0 md:gap-1">
@@ -219,8 +330,22 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('bulletList') && "bg-accent text-accent-foreground"
+            editor.isActive('bulletList') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('bulletList') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('bulletList')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('bulletList')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <List className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
@@ -231,8 +356,22 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('orderedList') && "bg-accent text-accent-foreground"
+            editor.isActive('orderedList') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('orderedList') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('orderedList')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('orderedList')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <ListOrdered className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
@@ -243,8 +382,22 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           className={cn(
             "h-8 w-8 p-0",
-            editor.isActive('blockquote') && "bg-accent text-accent-foreground"
+            editor.isActive('blockquote') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
           )}
+          style={!editor.isActive('blockquote') ? { 
+            backgroundColor: 'transparent', 
+            color: '#374151'
+          } : {}}
+          onMouseEnter={(e) => {
+            if (!editor.isActive('blockquote')) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!editor.isActive('blockquote')) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
         >
           <Quote className="h-3 w-3 md:h-4 md:w-4" />
         </Button>

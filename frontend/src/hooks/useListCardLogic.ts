@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useAISuggest } from "@/context/AISuggestContext";
 import { useAISuggestions } from "@/hooks/use-ai-suggestions";
-import { List, ListItem } from '@/types';
+import { List, ListItem, Category } from '@/types';
 
 interface UseListCardLogicProps {
   list: List;
@@ -10,11 +10,12 @@ interface UseListCardLogicProps {
   onDelete: (listId: string) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  existingCategories?: string[];
+  existingCategories?: Category[];
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
 }
 
-export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories = [], addCategory }: UseListCardLogicProps) => {
+export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories = [], addCategory, updateCategory }: UseListCardLogicProps) => {
   // Use the global AI suggestions context
   const { aiEnabled, setAiEnabled } = useAISuggest();
 
@@ -115,7 +116,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     }
     
     // If it's a new category name that doesn't exist yet, create it in the database
-    if (category.trim() && !existingCategories.includes(category) && addCategory) {
+    if (category.trim() && !existingCategories.find(c => c.name === category) && addCategory) {
       try {
         await addCategory({ 
           name: category.trim(), 
@@ -164,6 +165,19 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
         title: "Category cannot be empty",
         description: "Please enter a valid category name",
         variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
+    try {
+      await updateCategory(categoryName, { color_value: newColor });
+    } catch (error) {
+      console.error('Failed to update category color:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not update category color.',
+        variant: 'destructive'
       });
     }
   };
@@ -350,6 +364,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     setNewCategory,
     handleEditCategory,
     handleAddCustomCategory,
+    handleUpdateCategoryColor,
     
     // Items
     newItemText,

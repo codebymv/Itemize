@@ -467,6 +467,25 @@ setTimeout(async () => {
             return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
           }
 
+          // Validate and process canvas_data
+          let processedCanvasData;
+          try {
+            if (typeof canvas_data === 'string') {
+              // Validate that it's valid JSON
+              JSON.parse(canvas_data);
+              processedCanvasData = canvas_data;
+            } else {
+              // If it's an object/array, stringify it
+              const jsonString = JSON.stringify(canvas_data);
+              // Validate the result
+              JSON.parse(jsonString);
+              processedCanvasData = jsonString;
+            }
+          } catch (jsonError) {
+            console.error('Invalid canvas data JSON on create:', jsonError, { canvas_data });
+            return res.status(400).json({ error: 'Invalid canvas data format' });
+          }
+
           const client = await actualPool.connect();
           const result = await client.query(
             `INSERT INTO whiteboards (user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value)
@@ -475,7 +494,7 @@ setTimeout(async () => {
               req.user.id,
               title,
               category,
-              JSON.stringify(canvas_data),
+              processedCanvasData,
               canvas_width,
               canvas_height,
               background_color,
@@ -511,7 +530,30 @@ setTimeout(async () => {
 
           const newTitle = title !== undefined ? title : currentWhiteboard.title;
           const newCategory = category !== undefined ? category : currentWhiteboard.category;
-          const newCanvasData = canvas_data !== undefined ? JSON.stringify(canvas_data) : currentWhiteboard.canvas_data;
+          
+          // Properly handle canvas_data with validation
+          let newCanvasData = currentWhiteboard.canvas_data;
+          if (canvas_data !== undefined) {
+            try {
+              // If canvas_data is already a string, don't double-stringify
+              if (typeof canvas_data === 'string') {
+                // Validate that it's valid JSON
+                JSON.parse(canvas_data);
+                newCanvasData = canvas_data;
+              } else {
+                // If it's an object/array, stringify it
+                const jsonString = JSON.stringify(canvas_data);
+                // Validate the result
+                JSON.parse(jsonString);
+                newCanvasData = jsonString;
+              }
+            } catch (jsonError) {
+              console.error('Invalid canvas data JSON:', jsonError, { canvas_data });
+              client.release();
+              return res.status(400).json({ error: 'Invalid canvas data format' });
+            }
+          }
+          
           const newCanvasWidth = canvas_width !== undefined ? canvas_width : currentWhiteboard.canvas_width;
           const newCanvasHeight = canvas_height !== undefined ? canvas_height : currentWhiteboard.canvas_height;
           const newBackgroundColor = background_color !== undefined ? background_color : currentWhiteboard.background_color;
