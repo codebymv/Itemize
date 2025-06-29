@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 // Create Express app
 const app = express();
@@ -797,5 +798,13 @@ setTimeout(async () => {
     res.status(200).send('Server is running. Use /health or /api/health to check status.');
   });
   
+  // Serve static files from the frontend's dist directory
+  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+
+  // For any other route, serve the frontend's index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+  });
+
   console.log('✅ All routes registered, including catch-all handler');
 }, 500); // Wait a bit to ensure server is up first
