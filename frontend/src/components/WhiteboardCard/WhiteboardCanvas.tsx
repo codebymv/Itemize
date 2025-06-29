@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Palette, Eraser, Brush, Undo, Redo, Sparkles } from 'lucide-react';
+import { Palette, Eraser, Brush, Undo, Redo, Sparkles, X } from 'lucide-react';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Whiteboard } from '@/types';
@@ -12,7 +12,7 @@ import { debounce } from 'lodash';
 interface WhiteboardCanvasProps {
   whiteboard: Whiteboard;
   onCanvasChange: (canvasData: any) => void;
-  onSave: (canvasData: any) => void;
+  onSave: (data: { canvas_data: any; updated_at: string }) => void;
   whiteboardColor: string;
   onAutoSave: (canvasData: any) => Promise<void>;
   isMobile?: boolean;
@@ -89,22 +89,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           dataType: typeof whiteboard.canvas_data,
           isArray: Array.isArray(whiteboard.canvas_data),
           dataLength: Array.isArray(whiteboard.canvas_data) ? whiteboard.canvas_data.length : 'N/A',
-          dataPreview: JSON.stringify(whiteboard.canvas_data).substring(0, 300)
+          dataPreview: typeof whiteboard.canvas_data === 'string' ? whiteboard.canvas_data.substring(0, 300) : JSON.stringify(whiteboard.canvas_data).substring(0, 300)
         });
         
         // Validate canvas data format - should be an array of CanvasPath objects
         let dataToLoad = whiteboard.canvas_data;
         
         // Handle different data formats from database
-        if (Array.isArray(dataToLoad)) {
-          // Direct array format - already correct
-          console.log('🎨 Data is already in array format');
-        } else if (dataToLoad && typeof dataToLoad === 'object' && dataToLoad.paths) {
-          // Object format with paths property from backend
-          console.log('🎨 Data is in object format with paths, extracting array');
-          dataToLoad = dataToLoad.paths;
-        } else if (typeof dataToLoad === 'string') {
-          // String format - try to parse
+        if (typeof dataToLoad === 'string') {
           try {
             const parsed = JSON.parse(dataToLoad);
             if (Array.isArray(parsed)) {
@@ -116,25 +108,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             }
           } catch (e) {
             console.warn('🎨 Failed to parse string canvas data:', e);
-            console.warn('🎨 Corrupted data preview:', dataToLoad?.substring?.(0, 200) || 'N/A');
+            console.warn('🎨 Corrupted data preview:', (dataToLoad as string)?.substring?.(0, 200) || 'N/A');
             dataToLoad = [];
             
-            // Auto-fix corrupted data by saving empty array
-            console.log('🎨 Auto-fixing corrupted canvas data...');
-            try {
-              onSave([]);
-            } catch (saveError) {
-              console.error('🎨 Failed to auto-fix corrupted data:', saveError);
-            }
+            
           }
-        } else {
-          console.warn('🎨 Unknown data format, using empty array');
+        } else if (dataToLoad && typeof dataToLoad === 'object' && dataToLoad.paths) {
+          // Object format with paths property from backend
+          console.log('🎨 Data is in object format with paths, extracting array');
+          dataToLoad = dataToLoad.paths;
+        } else if (!Array.isArray(dataToLoad)) {
+          console.warn('🎨 Unknown data format or not an array, using empty array');
           dataToLoad = [];
         }
-        
-        // Validate that we have an array of path objects
+
+        // Ensure dataToLoad is an array before proceeding
         if (!Array.isArray(dataToLoad)) {
-          console.warn('🎨 Data is not an array after processing:', typeof dataToLoad);
+          console.warn('🎨 Data is not an array after processing, forcing empty array:', typeof dataToLoad);
           dataToLoad = [];
         }
 
@@ -146,13 +136,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           console.error('🎨 Canvas data fails JSON validation, using empty array:', jsonError);
           dataToLoad = [];
           
-          // Auto-fix corrupted data
-          console.log('🎨 Auto-fixing corrupted canvas data...');
-          try {
-            onSave([]);
-          } catch (saveError) {
-            console.error('🎨 Failed to auto-fix corrupted data:', saveError);
-          }
+          
         }
         
         // If we have data but it's missing required metadata, reconstruct it
@@ -335,7 +319,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           dataPreview: testSerialization.substring(0, 100),
           whiteboardId
         });
-        await onSave(canvasData);
+        await onSave({ canvas_data: canvasData, updated_at: new Date().toISOString() });
         console.log('🎨 Canvas auto-save completed successfully');
       } catch (error) {
         console.error('🎨 Canvas auto-save failed:', error);
@@ -356,6 +340,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Handle drawing end with auto-save trigger
   const handleDrawingEnd = useCallback(async () => {
+    console.log('🎨 handleDrawingEnd called.');
     setIsDrawing(false);
     
     // Only auto-save if there are actual changes
@@ -370,6 +355,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     
     try {
       const currentCanvasData = await canvasRef.current.exportPaths();
+      console.log('🎨 WhiteboardCanvas: Raw exported paths:', currentCanvasData);
       
       // Validate canvas data before processing
       if (!Array.isArray(currentCanvasData)) {
@@ -411,7 +397,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         savedPaths: normalizedSavedData?.length || 0,
         hasChanges: currentDataString !== savedDataString,
         currentDataPreview: currentDataString.substring(0, 100),
-        savedDataPreview: savedDataString.substring(0, 100)
+        savedDataPreview: savedDataString.substring(0, 100),
+        currentDataFull: currentDataString,
+        savedDataFull: savedDataString
       });
       
       // Only trigger auto-save if canvas data actually changed
@@ -513,7 +501,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       
       // Immediately save the cleared state
       try {
-        await onSave([]);
+        await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
         setLastLoadedData([]);
         console.log('🎨 Canvas cleared and saved successfully');
       } catch (error) {
@@ -660,126 +648,40 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+            pointer-events: all !important; /* Diagnostic: Ensure canvas receives pointer events */
+            z-index: 1000; /* Diagnostic: Bring canvas to front */
           }
           .react-sketch-canvas canvas {
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+            pointer-events: all !important; /* Diagnostic: Ensure canvas receives pointer events */
+            z-index: 1000; /* Diagnostic: Bring canvas to front */
+          }
+          .whiteboard-drawing-area {
+            pointer-events: all !important; /* Diagnostic: Ensure parent receives pointer events */
+            z-index: 999; /* Diagnostic: Bring parent to front */
           }
         `}
       </style>
 
       {/* Toolbar - always visible */}
-      <div className="flex-shrink-0 px-4 py-3 border-b" style={{ backgroundColor: '#f9fafb', borderBottomColor: '#e5e7eb' }}>
-        {isMobile ? (
-          // Mobile toolbar (simplified)
-          <div className="flex items-center justify-between w-full gap-2">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleToolChange('pen')}
-                className={cn(
-                  "h-8 w-8 p-0",
-                  currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
-                )}
-                style={currentTool !== 'pen' ? { 
-                  backgroundColor: 'transparent', 
-                  color: '#374151'
-                } : {}}
-                onMouseEnter={(e) => {
-                  if (currentTool !== 'pen') {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentTool !== 'pen') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <Brush className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleToolChange('eraser')}
-                className={cn(
-                  "h-8 w-8 p-0",
-                  currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
-                )}
-                style={currentTool !== 'eraser' ? { 
-                  backgroundColor: 'transparent', 
-                  color: '#374151'
-                } : {}}
-                onMouseEnter={(e) => {
-                  if (currentTool !== 'eraser') {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentTool !== 'eraser') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <Eraser className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleUndo}
-                className="h-8 w-8 p-0"
-                style={{ backgroundColor: 'transparent', color: '#374151' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <Undo className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClear}
-                className="text-xs h-8"
-                style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-              >
-                Clear
-              </Button>
-            </div>
-          </div>
-        ) : (
-          // Desktop toolbar (full) - Single flex container to prevent wrapping
-          <div className="flex items-center justify-between w-full">
-            {/* Drawing tools and settings */}
-            <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between p-2 border-b" style={{ backgroundColor: '#f9fafb', borderBottomColor: '#e5e7eb' }}>
+        <div className="flex flex-col gap-2 w-full">
+          {/* Top Row */}
+          <div className="flex items-center gap-2">
+            {/* Left side: Tool, Brush Size */}
+            <div className="flex-shrink-0 flex items-center gap-2">
               {/* Tool selection */}
               <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('pen')}
-                  className={cn(
-                    "h-8 w-8 p-0",
-                    currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
-                  )}
-                  style={currentTool !== 'pen' ? { 
-                    backgroundColor: 'transparent', 
-                    color: '#374151'
-                  } : {}}
-                  onMouseEnter={(e) => {
-                    if (currentTool !== 'pen') {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentTool !== 'pen') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
+                  className={cn("h-8 w-8 p-0", currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : '')}
+                  style={currentTool !== 'pen' ? { backgroundColor: 'transparent', color: '#374151'} : {}}
+                  onMouseEnter={(e) => { if (currentTool !== 'pen') { e.currentTarget.style.backgroundColor = '#f3f4f6'; } }}
+                  onMouseLeave={(e) => { if (currentTool !== 'pen') { e.currentTarget.style.backgroundColor = 'transparent'; } }}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
@@ -787,46 +689,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('eraser')}
-                  className={cn(
-                    "h-8 w-8 p-0",
-                    currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
-                  )}
-                  style={currentTool !== 'eraser' ? { 
-                    backgroundColor: 'transparent', 
-                    color: '#374151'
-                  } : {}}
-                  onMouseEnter={(e) => {
-                    if (currentTool !== 'eraser') {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentTool !== 'eraser') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
+                  className={cn("h-8 w-8 p-0", currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : '')}
+                  style={currentTool !== 'eraser' ? { backgroundColor: 'transparent', color: '#374151'} : {}}
+                  onMouseEnter={(e) => { if (currentTool !== 'eraser') { e.currentTarget.style.backgroundColor = '#f3f4f6'; } }}
+                  onMouseLeave={(e) => { if (currentTool !== 'eraser') { e.currentTarget.style.backgroundColor = 'transparent'; } }}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
               </div>
-
-              {/* Color palette */}
-              {currentTool === 'pen' && (
-                <div className="flex items-center gap-1 p-1 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
-                  {COLOR_PALETTE.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => handleColorChange(color)}
-                      className={`w-6 h-6 rounded-sm border-2 ${
-                        strokeColor === color ? 'border-gray-800' : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      aria-label={`Select ${color} color`}
-                    />
-                  ))}
-                </div>
-              )}
-
               {/* Brush size slider */}
               <div className="flex items-center gap-2 p-2 bg-white rounded-md border" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
                 <span className="text-xs font-medium min-w-[20px]" style={{ color: '#374151' }}>{strokeWidth}</span>
@@ -836,13 +706,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   max={20}
                   min={1}
                   step={1}
-                  className="w-16 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
+                  className="w-12 sm:w-24 [&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-white"
                 />
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-1">
+            {/* Spacer */}
+            <div className="flex-grow" />
+
+            {/* Right side: Actions */}
+            <div className="flex-shrink-0 flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
@@ -866,19 +739,33 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 <Redo className="h-4 w-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="text-xs"
-                style={{ backgroundColor: 'white', color: '#374151', borderColor: '#d1d5db' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                className="h-8 w-8 p-0"
+                style={{ backgroundColor: 'transparent', color: '#374151' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                Clear
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        )}
+          {/* Bottom Row (Conditional) */}
+          {currentTool === 'pen' && (
+            <div className="flex justify-center items-center gap-1 p-1 bg-white rounded-md border flex-wrap" style={{ backgroundColor: 'white', borderColor: '#d1d5db' }}>
+              {COLOR_PALETTE.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => handleColorChange(color)}
+                  className={`w-6 h-6 rounded-sm border-2 ${strokeColor === color ? 'border-gray-800' : 'border-gray-300'}`}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Select ${color} color`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Canvas Area - flex-1 takes remaining space, like textarea in note cards */}
@@ -888,7 +775,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           className="w-full h-full relative whiteboard-drawing-area"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onTouchEnd={(e) => {
+            handleTouchEnd(e);
+            // Explicitly call handleDrawingEnd if a single-finger drawing was in progress
+            if (isDrawing && !isMultiTouch) {
+              handleDrawingEnd();
+            }
+          }}
           style={{ 
             transform: isMobile ? `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasScale})` : 'none',
             transformOrigin: 'center',
@@ -911,6 +804,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             strokeColor={strokeColor}
             canvasColor="#ffffff"
             ref={canvasRef}
+            onStroke={() => setIsDrawing(true)}
           />
           
           {/* Drawing indicator */}

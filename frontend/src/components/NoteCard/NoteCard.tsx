@@ -17,7 +17,7 @@ import { Category } from '@/types';
 
 interface NoteCardProps {
   note: Note;
-  onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => Promise<void>;
   onDelete: (noteId: number) => Promise<void>;
   existingCategories: Category[];
   onCollapsibleChange?: (isOpen: boolean) => void;
@@ -267,13 +267,12 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
         <CollapsibleContent className="flex-1">
           <div 
-            className="rounded-lg mx-6 mb-6 flex-1 flex flex-col" 
+            className="rounded-lg mx-2 md:mx-6 mb-6 flex-1 flex flex-col" 
             style={{ 
               backgroundColor: '#ffffff',
               border: `2px solid ${noteDisplayColor} !important`,
               borderColor: `${noteDisplayColor} !important`,
-              height: `${Math.max(180, (note.height || 300) - 120)}px`, // Increased default height  
-              minWidth: '480px' // Ensure minimum width for toolbar
+              height: `${Math.max(180, (note.height || 300) - 120)}px` // Increased default height
             }}
           >
             <RichNoteContent
@@ -287,8 +286,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
               noteCategory={note.category}
               noteColor={noteDisplayColor}
               noteId={note.id}
-              onAutoSave={async (content: string) => {
-                await onUpdate(note.id, { content });
+              onAutoSave={async (data) => {
+                await onUpdate(note.id, { content: data.content, updated_at: data.updated_at });
               }}
               updatedAt={note.updated_at}
             />

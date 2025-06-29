@@ -5,7 +5,7 @@ import React from 'react';
 
 interface UseNoteCardLogicProps {
   note: Note;
-  onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => Promise<void>;
   onDelete: (noteId: number) => Promise<void>;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
@@ -63,7 +63,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
   // Content editing handlers - updates note.content
   const handleEditContent = useCallback(async () => {
     if (editContent.trim() !== note.content) {
-      await onUpdate(note.id, { content: editContent.trim() });
+      await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
     }
     setIsEditingContent(false);
   }, [editContent, note.content, note.id, onUpdate]);

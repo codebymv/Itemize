@@ -205,7 +205,7 @@ const DocsPage: React.FC = () => {
   }
 
   return (
-    <div className={`flex h-screen ${bgColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+    <div className={`flex min-h-screen ${bgColor} ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
       {/* Sidebar */}
       <div className={`w-80 ${sidebarBg} overflow-y-auto fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 z-30 border-r ${borderColor} ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
         <div className="p-6">
@@ -292,7 +292,7 @@ const DocsPage: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Mobile menu button */}
           <div className="lg:hidden mb-6">

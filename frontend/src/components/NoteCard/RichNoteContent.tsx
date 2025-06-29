@@ -134,7 +134,7 @@ interface RichNoteContentProps {
   noteCategory?: string;
   noteColor?: string;
   noteId: number;
-  onAutoSave: (content: string) => Promise<void>;
+  onAutoSave: (data: { content: string; updated_at: string }) => Promise<void>;
   updatedAt?: string;
 }
 
@@ -260,7 +260,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       
       autosaveTimeoutRef.current = setTimeout(() => {
         console.log('💾 Auto-saving rich note content...');
-        onAutoSave(htmlContent);
+        onAutoSave({ content: htmlContent, updated_at: new Date().toISOString() });
       }, 3000);
     },
   });

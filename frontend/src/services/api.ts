@@ -156,6 +156,7 @@ export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, 
 };
 
 export const updateWhiteboard = async (whiteboardId: number, whiteboardData: any, token?: string) => {
+  console.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
   const response = await api.put(`/api/whiteboards/${whiteboardId}`, whiteboardData, {
     headers: getAuthHeaders(token)
   });

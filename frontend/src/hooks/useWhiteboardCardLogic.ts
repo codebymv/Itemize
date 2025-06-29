@@ -123,17 +123,17 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     console.log('Canvas changed:', canvasData);
   }, []);
   
-  const handleCanvasSave = useCallback(async (canvasData: any) => {
+  const handleCanvasSave = useCallback(async (data: { canvas_data: any; updated_at: string }) => {
     try {
       console.log('🎨 WhiteboardCardLogic: Saving canvas data:', {
         whiteboardId: whiteboard.id,
-        pathCount: canvasData?.length || 0,
-        dataType: typeof canvasData,
-        isArray: Array.isArray(canvasData),
-        dataPreview: JSON.stringify(canvasData).substring(0, 200)
+        pathCount: data.canvas_data?.length || 0,
+        dataType: typeof data.canvas_data,
+        isArray: Array.isArray(data.canvas_data),
+        dataPreview: JSON.stringify(data.canvas_data).substring(0, 200)
       });
       
-      await onUpdate(whiteboard.id, { canvas_data: canvasData });
+      await onUpdate(whiteboard.id, { canvas_data: JSON.stringify(data.canvas_data), updated_at: data.updated_at });
       
       console.log('🎨 WhiteboardCardLogic: Canvas save completed successfully');
     } catch (error) {

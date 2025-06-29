@@ -5,18 +5,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import Home from "./pages/Home";
 import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
-import DocsPage from "./pages/DocsPage"; // Added this line
+import DocsPage from "./pages/DocsPage";
+
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CanvasPage from "./pages/canvas";
 
@@ -34,6 +37,51 @@ const RootRedirect = () => {
   }
   
   return currentUser ? <Navigate to="/canvas" replace /> : <Navigate to="/home" replace />;
+};
+
+const AppContent = () => {
+  const location = useLocation();
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isCanvasPage = location.pathname === '/canvas';
+  const showFooter = !isCanvasPage || !isDesktop;
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+      <main className="flex-grow">
+        <Routes>
+          {/* Root path redirects based on authentication */}
+          <Route path="/" element={<RootRedirect />} />
+          
+          {/* Public routes */}
+          <Route path="/home" element={<Home />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/help/*" element={<DocsPage />} />
+          
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/lists" element={<UserHome />} />
+            <Route path="/canvas" element={<CanvasPage />} />
+            {/* Add other protected routes here */}
+          </Route>
+          
+          {/* Catch-all route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      {showFooter && <Footer />}
+    </div>
+  );
 };
 
 const App = () => (
@@ -56,30 +104,7 @@ const App = () => (
                   v7_relativeSplatPath: true
                 }}
               >
-                <div className="min-h-screen bg-background">
-                  <Navbar />
-                  <main>
-                    <Routes>
-                      {/* Root path redirects based on authentication */}
-                      <Route path="/" element={<RootRedirect />} />
-                      
-                      {/* Public routes */}
-                      <Route path="/home" element={<Home />} />
-                      <Route path="/auth/callback" element={<AuthCallback />} />
-                      <Route path="/help/*" element={<DocsPage />} />
-                      
-                      {/* Protected routes */}
-                      <Route element={<ProtectedRoute />}>
-                        <Route path="/lists" element={<UserHome />} />
-                        <Route path="/canvas" element={<CanvasPage />} />
-                        {/* Add other protected routes here */}
-                      </Route>
-                      
-                      {/* Catch-all route */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                </div>
+                <AppContent />
               </BrowserRouter>
             </AISuggestProvider>
           </AuthProvider>

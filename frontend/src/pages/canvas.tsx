@@ -392,7 +392,7 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  const handleUpdateNote = async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+  const handleUpdateNote = async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
     try {
       const updatedNote = await apiUpdateNote(noteId, updatedData, token);
       setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
@@ -860,7 +860,7 @@ const CanvasPage: React.FC = () => {
   // Header component shared by both views
   const HeaderSection = () => (
     <div className="bg-background border-b border-border relative z-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -907,8 +907,7 @@ const CanvasPage: React.FC = () => {
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
               >
-                <Plus className="h-4 w-4 mr-1" />
-                New
+                <Plus className="h-4 w-4 mr-2" /> Add
               </Button>
             </div>
           </div>
@@ -936,7 +935,7 @@ const CanvasPage: React.FC = () => {
     const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
     
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8">
         {/* Categories Section */}
         <div className="flex items-center gap-4 mb-8">
           <h3 className="text-lg font-light text-foreground flex-shrink-0">Categories</h3>
