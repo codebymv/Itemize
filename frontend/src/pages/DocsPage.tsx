@@ -4,11 +4,9 @@ import { useTheme } from 'next-themes';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import { common } from 'lowlight';
 import axios from 'axios';
 import { Menu, X, FileText, Folder } from 'lucide-react';
-
-// Import highlight.js to ensure it's available
-import hljs from 'highlight.js';
 
 // Define DocStructure interface (similar to hrvstr.us)
 interface DocStructure {
@@ -40,13 +38,7 @@ const DocsPage: React.FC = () => {
   const buttonBg = theme === 'dark' ? 'bg-slate-600 hover:bg-slate-500' : 'bg-gray-200 hover:bg-gray-300';
   const shadowClass = theme === 'dark' ? 'shadow-slate-900/50' : 'shadow-md';
 
-  // Initialize highlight.js
-  useEffect(() => {
-    // Ensure highlight.js is available globally for rehype-highlight
-    if (typeof window !== 'undefined') {
-      (window as any).hljs = hljs;
-    }
-  }, []);
+
 
 
 
@@ -325,7 +317,7 @@ const DocsPage: React.FC = () => {
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
+                rehypePlugins={[[rehypeHighlight, { languages: common }]]}
               >
                 {markdownContent}
               </ReactMarkdown>
