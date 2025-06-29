@@ -117,7 +117,7 @@ const Home: React.FC = () => {
             </div>
           </h1>
           <p className={`mt-2 max-w-md mx-auto text-base ${secondaryTextColor} sm:text-lg md:mt-3 md:text-xl md:max-w-3xl`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-            The complete organizational ecosystem with lists, notes, and intelligent tools to streamline your workflow.
+            A complete organizational ecosystem with lists, notes, whiteboarding, and intelligent tools to streamline your workflow.
           </p>
           
           <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">

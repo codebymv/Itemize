@@ -5,31 +5,40 @@ const router = express.Router();
 
 // Function to find the docs folder in different deployment scenarios
 const findDocsPath = () => {
-  const docsPath = path.join(__dirname, '../../../!docs');
-  console.log(`[findDocsPath] Attempting to use docs path: ${docsPath}`);
-  try {
-    const stats = require('fs').statSync(docsPath);
-    if (stats.isDirectory()) {
-      console.log(`[findDocsPath] ✅ Found docs folder at: ${docsPath}`);
-      // List contents to verify
-      try {
-        const contents = require('fs').readdirSync(docsPath);
-        console.log(`[findDocsPath] Contents: ${contents.join(', ')}`);
-      } catch (e) {
-        console.log(`[findDocsPath] Could not list contents of ${docsPath}: ${e.message}`);
+  // Try multiple possible locations for the docs folder
+  const possiblePaths = [
+    path.join(__dirname, '../../../!docs'),  // Original path for other projects
+    path.join(__dirname, '../../docs'),      // Current project structure
+    path.join(__dirname, '../../../docs')    // Alternative structure
+  ];
+
+  for (const docsPath of possiblePaths) {
+    console.log(`[findDocsPath] Attempting to use docs path: ${docsPath}`);
+    try {
+      const stats = require('fs').statSync(docsPath);
+      if (stats.isDirectory()) {
+        console.log(`[findDocsPath] ✅ Found docs folder at: ${docsPath}`);
+        // List contents to verify
+        try {
+          const contents = require('fs').readdirSync(docsPath);
+          console.log(`[findDocsPath] Contents: ${contents.join(', ')}`);
+        } catch (e) {
+          console.log(`[findDocsPath] Could not list contents of ${docsPath}: ${e.message}`);
+        }
+        return docsPath;
       }
-      return docsPath;
+    } catch (error) {
+      console.log(`[findDocsPath] Path not found: ${docsPath} - ${error.message}`);
     }
   }
- catch (error) {
-    console.error(`[findDocsPath] ❌ Error finding docs folder at ${docsPath}: ${error.message}`);
-  }
-  console.error('[findDocsPath] !docs folder not found at the expected location.');
-  return docsPath; // Return the path even if not found, to allow subsequent errors to surface
+
+  console.error('[findDocsPath] No docs folder found at any expected location.');
+  return possiblePaths[0]; // Return the first path as fallback
 };
 
 // Base path to the docs folder
 const DOCS_BASE_PATH = findDocsPath();
+console.log(`[DOCS_INIT] Final docs base path: ${DOCS_BASE_PATH}`);
 
 /**
  * Get markdown content for a specific document path

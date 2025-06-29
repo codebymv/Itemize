@@ -8,8 +8,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --production
 
-# Copy source code
+# Copy source code and docs
 COPY src/ ./src/
+COPY docs/ ./docs/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
