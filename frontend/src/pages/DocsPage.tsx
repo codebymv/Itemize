@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import axios from 'axios';
 import { Menu, X, FileText, Folder } from 'lucide-react';
 
@@ -313,11 +311,11 @@ const DocsPage: React.FC = () => {
                 '--tw-prose-th-borders': '"Raleway", sans-serif'
               } as React.CSSProperties}
             >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-              >
-                {markdownContent}
-              </ReactMarkdown>
+              <div className="prose prose-lg max-w-none">
+                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                  {markdownContent}
+                </pre>
+              </div>
             </div>
           )}
         </div>
