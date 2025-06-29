@@ -586,6 +586,44 @@ const Home: React.FC = () => {
             </p> */}
           </div>
         </div>
+
+        {/* Progress Section */}
+        <div className="max-w-6xl mx-auto mt-20">
+          <div className="text-center mb-12">
+            <h2 className={`text-3xl font-light italic ${textColor} mb-4`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+              Roadmap to 1.0!
+            </h2>
+
+            {/* Version Notes Link */}
+            <div className="mb-8">
+              <a
+                href="/help/Version/0.8.2-overview"
+                className="text-sm text-blue-500 hover:text-blue-600 flex items-center justify-center"
+                style={{ fontFamily: '"Raleway", sans-serif' }}
+              >
+                Version 0.8.2 Notes
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </a>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className={`${cardBgColor} rounded-lg p-8 border ${cardBorderColor} max-w-4xl mx-auto mb-12`}>
+            <div className="space-y-6">
+              {/* Overall Progress */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className={`progress-bar-text text-lg font-medium italic ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>v0.8.2</span>
+                  <span className={`progress-bar-text text-lg font-medium italic ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>v1.0 Stable Release</span>
+                </div>
+                <div className={`w-full bg-gray-300 rounded-full h-3 ${isLight ? 'bg-gray-300' : 'bg-slate-700'}`}>
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500" style={{ width: '82%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

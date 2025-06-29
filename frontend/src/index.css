@@ -217,3 +217,14 @@
   line-height: inherit;
 }
 
+/* Force Raleway font for roadmap elements */
+.force-raleway {
+  font-family: "Raleway", sans-serif !important;
+}
+
+/* Force Raleway for progress bar specifically */
+.progress-bar-text {
+  font-family: "Raleway", sans-serif !important;
+  font-display: swap !important;
+}
+
