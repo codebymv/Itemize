@@ -216,3 +216,6 @@
   font-size: inherit;
   line-height: inherit;
 }
+
+/* Highlight.js base styles - using a neutral theme that works with both light and dark */
+@import 'highlight.js/styles/default.css';

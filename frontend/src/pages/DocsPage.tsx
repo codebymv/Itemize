@@ -7,9 +7,6 @@ import rehypeHighlight from 'rehype-highlight';
 import axios from 'axios';
 import { Menu, X, FileText, Folder } from 'lucide-react';
 
-// Dynamic syntax highlighting import based on theme
-// We'll handle this through CSS classes instead of multiple imports
-
 // Define DocStructure interface (similar to hrvstr.us)
 interface DocStructure {
   name: string;
@@ -40,28 +37,7 @@ const DocsPage: React.FC = () => {
   const buttonBg = theme === 'dark' ? 'bg-slate-600 hover:bg-slate-500' : 'bg-gray-200 hover:bg-gray-300';
   const shadowClass = theme === 'dark' ? 'shadow-slate-900/50' : 'shadow-md';
 
-  // Dynamically load theme-appropriate syntax highlighting
-  useEffect(() => {
-    const existingLink = document.querySelector('#highlight-theme');
-    if (existingLink) {
-      existingLink.remove();
-    }
 
-    const link = document.createElement('link');
-    link.id = 'highlight-theme';
-    link.rel = 'stylesheet';
-    link.href = theme === 'dark' 
-      ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
-      : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
-    document.head.appendChild(link);
-
-    return () => {
-      const linkToRemove = document.querySelector('#highlight-theme');
-      if (linkToRemove) {
-        linkToRemove.remove();
-      }
-    };
-  }, [theme]);
 
   // Function to format names for display
   const formatName = (name: string) => {
