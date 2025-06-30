@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
@@ -9,6 +9,7 @@ import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
 import { ListAISuggestionButton } from './ListAISuggestionButton';
+import { DeleteListModal } from '../DeleteListModal';
 import {
   DndContext,
   closestCenter,
@@ -36,13 +37,16 @@ const ListCard: React.FC<ListCardProps> = ({
   addCategory,
   updateCategory
 }) => {
+  // State for delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const {
     // Collapsible
     isCollapsibleOpen, setIsCollapsibleOpen,
-    
+
     // Title editing
     isEditing, setIsEditing, editTitle, setEditTitle, handleEditTitle,
-    
+
     // List operations
     handleDeleteList,
 
@@ -74,6 +78,16 @@ const ListCard: React.FC<ListCardProps> = ({
   // Handle sharing
   const handleShareList = () => {
     onShare(list.id);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirmation = () => {
+    setShowDeleteModal(true);
+  };
+
+  // Handle actual delete
+  const handleConfirmDelete = async (listId: string) => {
+    return await onDelete(listId);
   };
 
   // Drag and drop sensors
@@ -153,7 +167,7 @@ const ListCard: React.FC<ListCardProps> = ({
           setEditTitle={setEditTitle}
           setIsEditing={setIsEditing}
           handleEditTitle={handleEditTitle}
-          handleDeleteList={handleDeleteList}
+          handleDeleteList={handleDeleteConfirmation}
           handleShareList={handleShareList}
           titleEditRef={titleEditRef}
           onColorSave={handleSaveListColor} // New prop
@@ -234,6 +248,15 @@ const ListCard: React.FC<ListCardProps> = ({
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {/* Delete confirmation modal */}
+      <DeleteListModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        listId={list.id}
+        listTitle={list.title}
+        onDelete={handleConfirmDelete}
+      />
     </Collapsible>
   );
 };

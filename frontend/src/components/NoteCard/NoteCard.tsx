@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { NoteCategorySelector } from './NoteCategorySelector';
 import { useTheme } from 'next-themes';
 
 import { Category } from '@/types';
+import { DeleteNoteModal } from '../DeleteNoteModal';
 
 interface NoteCardProps {
   note: Note;
@@ -39,16 +40,19 @@ const NoteCard: React.FC<NoteCardProps> = ({
   onToggleCollapsed,
   updateCategory
 }) => {
+  // State for delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const {
     // Title for display
     noteTitle,
-    
+
     // Collapsible
     isCollapsibleOpen, setIsCollapsibleOpen,
-    
+
     // Title editing
     isEditing, setIsEditing, editTitle, setEditTitle, handleEditTitle,
-    
+
     // Note operations
     handleDeleteNote,
 
@@ -73,6 +77,17 @@ const NoteCard: React.FC<NoteCardProps> = ({
   // Handle sharing
   const handleShareNote = () => {
     onShare(note.id);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirmation = () => {
+    setShowDeleteModal(true);
+  };
+
+  // Handle actual delete
+  const handleConfirmDelete = async (noteId: string) => {
+    await onDelete(parseInt(noteId));
+    return true; // Return true to indicate success
   };
 
   // Get theme for styling
@@ -253,7 +268,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                         <Share2 className="mr-2 h-4 w-4" />
                         Share
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDeleteNote} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Note
                       </DropdownMenuItem>
@@ -310,8 +325,17 @@ const NoteCard: React.FC<NoteCardProps> = ({
           </div>
         </CollapsibleContent>
       </Card>
+
+      {/* Delete confirmation modal */}
+      <DeleteNoteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        noteId={note.id.toString()}
+        noteTitle={note.title}
+        onDelete={handleConfirmDelete}
+      />
     </Collapsible>
   );
 };
 
-export default NoteCard; 
+export default NoteCard;

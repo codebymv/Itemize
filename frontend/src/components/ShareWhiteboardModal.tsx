@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Copy, Check, ExternalLink } from 'lucide-react';
+import { Share2, Copy, Check, ExternalLink, Palette } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -128,8 +128,9 @@ export const ShareWhiteboardModal: React.FC<ShareWhiteboardModalProps> = ({
           {/* Whiteboard title display */}
           <div className="space-y-2">
             <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Sharing</Label>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-              <p className="font-medium text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
+              <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Palette className="h-4 w-4 text-slate-500" />
                 {whiteboardTitle}
               </p>
             </div>
@@ -177,19 +178,19 @@ export const ShareWhiteboardModal: React.FC<ShareWhiteboardModalProps> = ({
               </div>
 
               <div className="flex justify-between space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
                   onClick={handleUnshare}
                   disabled={isLoading}
-                  className="text-red-600 hover:text-red-700"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                   style={{ fontFamily: '"Raleway", sans-serif' }}
                 >
                   Revoke Sharing
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   onClick={onClose}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   style={{ fontFamily: '"Raleway", sans-serif' }}
                 >
                   Done

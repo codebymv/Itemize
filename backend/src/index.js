@@ -683,7 +683,7 @@ setTimeout(async () => {
 
           // Generate frontend URL for sharing
           const frontendHost = process.env.NODE_ENV === 'production'
-            ? req.get('host')
+            ? 'itemize.cloud' // Use the actual frontend domain in production
             : 'localhost:5173'; // Frontend dev server port
 
           res.json({
@@ -735,7 +735,7 @@ setTimeout(async () => {
 
           // Generate frontend URL for sharing
           const frontendHost = process.env.NODE_ENV === 'production'
-            ? req.get('host')
+            ? 'itemize.cloud' // Use the actual frontend domain in production
             : 'localhost:5173'; // Frontend dev server port
 
           res.json({
@@ -787,7 +787,7 @@ setTimeout(async () => {
 
           // Generate frontend URL for sharing
           const frontendHost = process.env.NODE_ENV === 'production'
-            ? req.get('host')
+            ? 'itemize.cloud' // Use the actual frontend domain in production
             : 'localhost:5173'; // Frontend dev server port
 
           res.json({

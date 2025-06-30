@@ -170,9 +170,6 @@ const Navbar: React.FC = () => {
                         onCheckedChange={setAiEnabled}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 ml-6">
-                      Get AI-powered suggestions
-                    </p>
                   </div>
                   
                   <DropdownMenuSeparator />

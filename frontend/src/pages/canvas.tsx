@@ -686,7 +686,7 @@ const CanvasPage: React.FC = () => {
     // Check if list already has share data
     const existingShareData = list.share_token && list.is_public ? {
       shareToken: list.share_token,
-      shareUrl: `${window.location.protocol}//${window.location.hostname}:5173/shared/list/${list.share_token}`
+      shareUrl: `${window.location.protocol}//${window.location.host}/shared/list/${list.share_token}`
     } : undefined;
 
     setCurrentShareItem({

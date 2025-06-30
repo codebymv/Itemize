@@ -12,6 +12,7 @@ import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
 import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
 import { WhiteboardCategorySelector } from './WhiteboardCategorySelector';
+import { DeleteWhiteboardModal } from '../DeleteWhiteboardModal';
 
 
 
@@ -33,7 +34,10 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
-  
+
+  // State for delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const whiteboardContainerRef = useRef<HTMLDivElement>(null);
 
   // Check if mobile on mount and resize
@@ -83,6 +87,17 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   // Handle sharing
   const handleShareWhiteboard = () => {
     onShare(whiteboard.id);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirmation = () => {
+    setShowDeleteModal(true);
+  };
+
+  // Handle actual delete
+  const handleConfirmDelete = async (whiteboardId: string) => {
+    await onDelete(parseInt(whiteboardId));
+    return true; // Return true to indicate success
   };
 
   return (
@@ -216,7 +231,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                         <Share2 className="mr-2 h-4 w-4" />
                         Share
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDeleteWhiteboard} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Whiteboard
                       </DropdownMenuItem>
@@ -271,8 +286,17 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           </div>
         </CollapsibleContent>
       </Card>
+
+      {/* Delete confirmation modal */}
+      <DeleteWhiteboardModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        whiteboardId={whiteboard.id.toString()}
+        whiteboardTitle={whiteboard.title}
+        onDelete={handleConfirmDelete}
+      />
     </Collapsible>
   );
 };
 
-export default WhiteboardCard; 
+export default WhiteboardCard;

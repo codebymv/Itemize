@@ -12,24 +12,44 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
   cloudCount = 4,
   isLight = false
 }) => {
-  const [dimensions, setDimensions] = useState({ 
-    width: typeof window !== 'undefined' ? window.innerWidth : 1000, 
-    height: typeof window !== 'undefined' ? window.innerHeight : 800 
+  const [dimensions, setDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1000,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800
   });
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Detect if device is mobile/tablet
+    const checkIfMobile = () => {
+      const userAgent = navigator.userAgent || '';
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+      const isSmallScreen = window.innerWidth <= 1024; // Disable on screens 1024px and below
+      return isMobileDevice || isSmallScreen;
+    };
+
     const handleResize = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
+      const mobile = checkIfMobile();
+      setIsMobile(mobile);
+
+      // Only update dimensions if not mobile to prevent jarring resets
+      if (!mobile) {
+        setDimensions({
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+      }
     };
 
     handleResize();
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Don't render clouds on mobile devices
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <div

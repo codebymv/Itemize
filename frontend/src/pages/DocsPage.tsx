@@ -3,17 +3,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import api from '../lib/api';
 import { Menu, X, FileText, Folder, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-// Define DocStructure interface (similar to hrvstr.us)
-interface DocStructure {
-  name: string;
-  path: string;
-  type: 'file' | 'folder';
-  children?: DocStructure[];
-}
+import { docsService, DocStructure } from '../services/docsService';
 
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
@@ -124,14 +116,39 @@ const DocsPage: React.FC = () => {
     ));
   };
 
+  // Helper function to find an item by path in the structure
+  const findItemByPath = (items: DocStructure[], path: string): DocStructure | null => {
+    for (const item of items) {
+      if (item.path === path) {
+        return item;
+      }
+      if (item.children) {
+        const found = findItemByPath(item.children, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     const fetchDocContent = async () => {
       setLoading(true);
       try {
         setError(null);
         const effectivePath = (!docPath || docPath === '/') ? 'getting-started' : docPath;
-        const response = await api.get(`/docs/content?path=${effectivePath}`);
-        setMarkdownContent(response.data.content);
+
+        // Check if this path is a folder in our structure
+        const structure = await docsService.getDocStructure();
+        const isFolder = findItemByPath(structure, effectivePath)?.type === 'folder';
+
+        let markdownContent: string;
+        if (isFolder) {
+          markdownContent = docsService.generateFolderContent(effectivePath);
+        } else {
+          markdownContent = await docsService.getDocContent(effectivePath);
+        }
+
+        setMarkdownContent(markdownContent);
       } catch (err) {
         console.error('Error fetching documentation content:', err);
         setError('Failed to load documentation content. Please try again later.');
@@ -143,9 +160,9 @@ const DocsPage: React.FC = () => {
 
     const fetchDocStructure = async () => {
       try {
-        const response = await api.get(`/docs/structure`);
+        const structure = await docsService.getDocStructure();
         // Ensure the response data is an array
-        const structureData = Array.isArray(response.data) ? response.data : [];
+        const structureData = Array.isArray(structure) ? structure : [];
         setDocStructure(structureData);
       } catch (err) {
         console.error('Error fetching documentation structure:', err);
