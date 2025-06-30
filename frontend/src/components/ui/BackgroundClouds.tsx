@@ -59,13 +59,13 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
         top: '80px', // Start below navbar (adjust based on your navbar height)
         left: 0,
         right: 0,
-        bottom: '150px', // End above footer with more margin
+        bottom: '0', // End at the bottom of the viewport
         overflow: 'hidden' // Clip any content that goes outside
       }}
     >
       <FallingClouds3D
         width={dimensions.width}
-        height={dimensions.height - 230} // Subtract navbar + footer height with more margin
+        height={dimensions.height - 80} // Subtract navbar height
         cloudCount={cloudCount}
         isLightTheme={isLight}
       />

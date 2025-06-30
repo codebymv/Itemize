@@ -345,7 +345,7 @@ const DocsPage: React.FC = () => {
                 {/* Spacer to match logo position - using estimated logo width */}
                 <div className="w-24 sm:w-28 lg:w-32"></div>
                 <Button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate(-1)}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                 >

@@ -172,7 +172,7 @@ const StatusPage: React.FC = () => {
 
   if (loading && !statusData) {
     return (
-      <div className="min-h-screen bg-background text-foreground p-6 relative overflow-hidden">
+      <div className="bg-background text-foreground p-6 relative overflow-hidden">
         {/* Background Clouds */}
         <BackgroundClouds opacity={isLight ? 0.2 : 0.15} cloudCount={12} isLight={isLight} />
 
@@ -189,11 +189,11 @@ const StatusPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 force-raleway relative overflow-hidden">
+    <div className="bg-background text-foreground p-6 force-raleway relative overflow-hidden flex flex-col">
       {/* Background Clouds */}
       <BackgroundClouds opacity={isLight ? 0.2 : 0.15} cloudCount={12} isLight={isLight} />
 
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-6xl mx-auto relative z-10 flex-1 min-h-0">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
