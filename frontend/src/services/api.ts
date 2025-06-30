@@ -134,9 +134,14 @@ export const updateNote = async (noteId: number, noteData: any, token?: string) 
 };
 
 export const deleteNote = async (noteId: number, token?: string) => {
+  console.log(`🌐 API: Making DELETE request to /api/notes/${noteId}`);
+  console.log(`🔑 API: Auth headers:`, getAuthHeaders(token));
+
   const response = await api.delete(`/api/notes/${noteId}`, {
     headers: getAuthHeaders(token)
   });
+
+  console.log(`✅ API: Delete response:`, response.data);
   return response.data;
 };
 

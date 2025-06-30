@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedNoteCard } from '../components/SharedNoteCard';
+import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
 import api from '../lib/api';
 
@@ -57,11 +58,7 @@ const SharedNotePage: React.FC = () => {
           setError('Failed to load shared content. Please try again later.');
         }
         
-        toast({
-          title: "Error loading shared note",
-          description: error || "The shared note could not be loaded.",
-          variant: "destructive",
-        });
+        // Note: Don't show toast for shared content errors - the main layout handles the error display
       } finally {
         setLoading(false);
       }
@@ -76,10 +73,11 @@ const SharedNotePage: React.FC = () => {
 
   if (loading) {
     return (
-      <SharedContentLayout 
-        title="Loading..." 
+      <SharedContentLayout
+        title="Loading..."
         contentType="note"
         onBackToHome={handleBackToHome}
+        showCTA={false}
       >
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
@@ -90,34 +88,18 @@ const SharedNotePage: React.FC = () => {
 
   if (error || !noteData) {
     return (
-      <SharedContentLayout 
-        title="Error" 
+      <SharedContentLayout
+        title="Error"
         contentType="note"
         onBackToHome={handleBackToHome}
+        showCTA={false}
+        isError={true}
       >
-        <div className="text-center py-12">
-          <div className="max-w-md mx-auto">
-            <h2 
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              Content Not Available
-            </h2>
-            <p 
-              className="text-gray-600 dark:text-gray-400 mb-6"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              {error || 'The shared note you\'re looking for could not be found.'}
-            </p>
-            <button
-              onClick={handleBackToHome}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              Go to Itemize.cloud
-            </button>
-          </div>
-        </div>
+        <NotAvailableCTA
+          contentType="note"
+          error={error}
+          onBackToHome={handleBackToHome}
+        />
       </SharedContentLayout>
     );
   }

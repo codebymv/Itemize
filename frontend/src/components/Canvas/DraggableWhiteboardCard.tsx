@@ -12,6 +12,7 @@ interface DraggableWhiteboardCardProps {
   whiteboard: Whiteboard;
   onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onDelete: (whiteboardId: number) => Promise<boolean>;
+  onShare: (whiteboardId: number) => void;
   existingCategories: Category[];
   canvasTransform: { x: number; y: number; scale: number };
   onPositionChange: (whiteboardId: number, newPosition: { x: number; y: number }) => void;
@@ -24,6 +25,7 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
   whiteboard,
   onUpdate,
   onDelete,
+  onShare,
   existingCategories,
   canvasTransform,
   onPositionChange,
@@ -248,6 +250,7 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
         whiteboard={whiteboard}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onShare={onShare}
         existingCategories={existingCategories}
         isCollapsed={isCollapsed}
         onToggleCollapsed={onToggleCollapsed}

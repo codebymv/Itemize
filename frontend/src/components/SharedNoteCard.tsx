@@ -56,12 +56,10 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData }) => {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <Card 
-        className="w-full shadow-lg border-2 transition-all duration-200"
-        style={{ 
-          backgroundColor: noteColor,
-          borderColor: noteColor,
-          filter: 'brightness(0.95)'
+      <Card
+        className="w-full shadow-lg border-2 transition-all duration-200 bg-white dark:bg-slate-800"
+        style={{
+          borderColor: noteColor
         }}
       >
         {/* Header */}
@@ -69,15 +67,15 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData }) => {
           <div className="flex items-center gap-2">
             <StickyNote className="h-5 w-5 text-gray-600" />
             <div className="flex-1">
-              <h3 
-                className="text-lg font-semibold text-gray-900 truncate"
+              <h3
+                className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {noteData.title}
               </h3>
               {noteData.category && (
-                <p 
-                  className="text-sm text-gray-600"
+                <p
+                  className="text-sm text-gray-600 dark:text-gray-400"
                   style={{ fontFamily: '"Raleway", sans-serif' }}
                 >
                   {noteData.category}

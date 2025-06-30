@@ -422,7 +422,12 @@ const CanvasPage: React.FC = () => {
 
   const handleDeleteNote = async (noteId: number) => {
     try {
-      await apiDeleteNote(noteId, token);
+      console.log(`🗑️ Frontend: Attempting to delete note ${noteId}`);
+      console.log(`🔑 Frontend: Using token: ${token ? 'Present' : 'Missing'}`);
+
+      const result = await apiDeleteNote(noteId, token);
+      console.log(`✅ Frontend: Delete API response:`, result);
+
       setNotes(prev => prev.filter(n => n.id !== noteId));
       toast({
         title: "Note deleted",
@@ -430,7 +435,13 @@ const CanvasPage: React.FC = () => {
       });
       return true;
     } catch (error) {
-      console.error('Failed to delete note:', error);
+      console.error('❌ Frontend: Failed to delete note:', error);
+      console.error('❌ Frontend: Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as any)?.response?.status,
+        data: (error as any)?.response?.data
+      });
+
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your note. Please try again.';
       toast({
         title: "Error deleting note",
@@ -701,7 +712,17 @@ const CanvasPage: React.FC = () => {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
 
-    setCurrentShareItem({ id: noteId, title: note.title });
+    // Check if note already has share data
+    const existingShareData = note.share_token && note.is_public ? {
+      shareToken: note.share_token,
+      shareUrl: `${window.location.protocol}//${window.location.host}/shared/note/${note.share_token}`
+    } : undefined;
+
+    setCurrentShareItem({
+      id: noteId,
+      title: note.title,
+      shareData: existingShareData
+    });
     setShowShareNoteModal(true);
   };
 
@@ -709,7 +730,17 @@ const CanvasPage: React.FC = () => {
     const whiteboard = whiteboards.find(w => w.id === whiteboardId);
     if (!whiteboard) return;
 
-    setCurrentShareItem({ id: whiteboardId, title: whiteboard.title });
+    // Check if whiteboard already has share data
+    const existingShareData = whiteboard.share_token && whiteboard.is_public ? {
+      shareToken: whiteboard.share_token,
+      shareUrl: `${window.location.protocol}//${window.location.host}/shared/whiteboard/${whiteboard.share_token}`
+    } : undefined;
+
+    setCurrentShareItem({
+      id: whiteboardId,
+      title: whiteboard.title,
+      shareData: existingShareData
+    });
     setShowShareWhiteboardModal(true);
   };
 
@@ -1280,9 +1311,11 @@ const CanvasPage: React.FC = () => {
               notes={notes} // Pass filtered notes state
               onNoteUpdate={handleUpdateNote} // Pass update handler
               onNoteDelete={handleDeleteNote} // Pass delete handler
+              onNoteShare={handleShareNote} // Pass note share handler
               whiteboards={whiteboards} // Pass filtered whiteboards state
               onWhiteboardUpdate={handleUpdateWhiteboard} // Pass whiteboard update handler
               onWhiteboardDelete={handleDeleteWhiteboard} // Pass whiteboard delete handler
+              onWhiteboardShare={handleShareWhiteboard} // Pass whiteboard share handler
               onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
               addCategory={addCategory} // Pass the centralized addCategory function
               updateCategory={editCategory} // Pass the editCategory function

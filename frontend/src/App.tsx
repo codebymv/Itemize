@@ -79,7 +79,7 @@ const AppContent = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      <main className="flex-grow">
+      <main className="flex-grow flex flex-col">
         <Routes>
           {/* Root path redirects based on authentication */}
           <Route path="/" element={<RootRedirect />} />

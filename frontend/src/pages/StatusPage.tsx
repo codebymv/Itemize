@@ -214,9 +214,9 @@ const StatusPage: React.FC = () => {
               Refresh
             </Button>
           </div>
-          <p className="text-muted-foreground">
+          {/* <p className="text-muted-foreground">
             Real-time status and health information for itemize.cloud services
-          </p>
+          </p> */}
           <p className="text-sm text-muted-foreground mt-2">
             Last updated: {lastUpdated.toLocaleTimeString()}
           </p>

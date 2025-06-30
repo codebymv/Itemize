@@ -130,16 +130,6 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
               style={{ zIndex: 10 }}
             />
           </div>
-
-          {/* Canvas info */}
-          <div className="mt-3 text-center">
-            <p 
-              className="text-xs text-gray-500 dark:text-gray-400"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              {whiteboardData.canvas_width} × {whiteboardData.canvas_height} pixels
-            </p>
-          </div>
         </CardContent>
       </Card>
 

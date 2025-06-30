@@ -130,7 +130,7 @@ export const ShareNoteModal: React.FC<ShareNoteModalProps> = ({
             <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Sharing</Label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
               <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                <CheckSquare className="h-4 w-4 text-slate-500" />
+                <StickyNote className="h-4 w-4 text-slate-500" />
                 {noteTitle}
               </p>
             </div>

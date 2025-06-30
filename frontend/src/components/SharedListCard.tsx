@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, CheckSquare } from 'lucide-react';
 
 interface SharedListItem {
   id: string;
@@ -43,9 +43,10 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData }) => {
       >
         {/* Header */}
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-gray-600" />
             <div className="flex-1">
-              <h3 
+              <h3
                 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >

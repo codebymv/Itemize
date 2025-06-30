@@ -18,6 +18,7 @@ export interface List {
   height?: number; // Height for resizing
   share_token?: string; // Share token for public sharing
   is_public?: boolean; // Whether the list is publicly shared
+  shared_at?: string; // Timestamp when sharing was enabled
 }
 
 // Category type for API responses
@@ -56,6 +57,10 @@ export interface Note {
   z_index: number;
   created_at: string;
   updated_at: string;
+  // Sharing fields
+  share_token?: string;
+  is_public?: boolean;
+  shared_at?: string;
 }
 
 export interface Whiteboard {
@@ -73,6 +78,10 @@ export interface Whiteboard {
   color_value: string; // Border/theme color
   created_at: string;
   updated_at: string;
+  // Sharing fields
+  share_token?: string;
+  is_public?: boolean;
+  shared_at?: string;
 }
 
 // Props for NoteCard component

@@ -158,7 +158,7 @@ setTimeout(async () => {
           const client = await actualPool.connect();
           // Make sure to include color_value in the results
           const result = await client.query(
-            'SELECT id, title, category, items, created_at, updated_at, user_id, color_value FROM lists WHERE user_id = $1 ORDER BY id DESC',
+            'SELECT id, title, category, items, created_at, updated_at, user_id, color_value, share_token, is_public, shared_at FROM lists WHERE user_id = $1 ORDER BY id DESC',
             [req.user.id]
           );
           client.release();
@@ -325,7 +325,7 @@ setTimeout(async () => {
         try {
           const client = await actualPool.connect();
           const result = await client.query(
-            'SELECT id, user_id, title, content, category, color_value, position_x, position_y, width, height, z_index, created_at, updated_at FROM notes WHERE user_id = $1 ORDER BY created_at DESC',
+            'SELECT id, user_id, title, content, category, color_value, position_x, position_y, width, height, z_index, created_at, updated_at, share_token, is_public, shared_at FROM notes WHERE user_id = $1 ORDER BY created_at DESC',
             [req.user.id]
           );
           client.release();
@@ -430,15 +430,34 @@ setTimeout(async () => {
         try {
           const { noteId } = req.params;
           const client = await actualPool.connect();
+
+          // First check if note exists and get sharing info for logging
+          const checkResult = await client.query(
+            'SELECT id, title, share_token, is_public FROM notes WHERE id = $1 AND user_id = $2',
+            [noteId, req.user.id]
+          );
+
+          if (checkResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'Note not found or access denied' });
+          }
+
+          const noteInfo = checkResult.rows[0];
+          console.log(`🗑️ Deleting note ${noteId} (${noteInfo.title}). Was shared: ${noteInfo.is_public}, Token: ${noteInfo.share_token}`);
+
+          // Delete the note
           const result = await client.query(
             'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING id',
             [noteId, req.user.id]
           );
           client.release();
-          
+
           if (result.rows.length === 0) {
+            console.error(`❌ Failed to delete note ${noteId} - no rows affected`);
             return res.status(404).json({ error: 'Note not found or access denied' });
           }
+
+          console.log(`✅ Note ${noteId} deleted successfully. Shared links with token ${noteInfo.share_token} are now invalid.`);
           res.status(200).json({ message: 'Note deleted successfully' });
         } catch (error) {
           console.error('Error deleting note:', error);
@@ -455,7 +474,7 @@ setTimeout(async () => {
         try {
           const client = await actualPool.connect();
           const result = await client.query(
-            'SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at FROM whiteboards WHERE user_id = $1 ORDER BY created_at DESC',
+            'SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at, share_token, is_public, shared_at FROM whiteboards WHERE user_id = $1 ORDER BY created_at DESC',
             [req.user.id]
           );
           client.release();
@@ -600,14 +619,34 @@ setTimeout(async () => {
         try {
           const { whiteboardId } = req.params;
           const client = await actualPool.connect();
+
+          // First check if whiteboard exists and get sharing info for logging
+          const checkResult = await client.query(
+            'SELECT id, title, share_token, is_public FROM whiteboards WHERE id = $1 AND user_id = $2',
+            [whiteboardId, req.user.id]
+          );
+
+          if (checkResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+          }
+
+          const whiteboardInfo = checkResult.rows[0];
+          console.log(`🗑️ Deleting whiteboard ${whiteboardId} (${whiteboardInfo.title}). Was shared: ${whiteboardInfo.is_public}, Token: ${whiteboardInfo.share_token}`);
+
+          // Delete the whiteboard
           const result = await client.query(
             'DELETE FROM whiteboards WHERE id = $1 AND user_id = $2 RETURNING id',
             [whiteboardId, req.user.id]
           );
           client.release();
+
           if (result.rows.length === 0) {
+            console.error(`❌ Failed to delete whiteboard ${whiteboardId} - no rows affected`);
             return res.status(404).json({ error: 'Whiteboard not found or access denied' });
           }
+
+          console.log(`✅ Whiteboard ${whiteboardId} deleted successfully. Shared links with token ${whiteboardInfo.share_token} are now invalid.`);
           res.status(200).json({ message: 'Whiteboard deleted successfully' });
         } catch (error) {
           console.error('Error deleting whiteboard:', error);
@@ -922,6 +961,8 @@ setTimeout(async () => {
       app.get('/api/shared/note/:token', publicRateLimit, async (req, res) => {
         try {
           const { token } = req.params;
+          console.log(`🔗 Shared note access attempt with token: ${token}`);
+
           const client = await actualPool.connect();
 
           const result = await client.query(`
@@ -935,8 +976,13 @@ setTimeout(async () => {
           client.release();
 
           if (result.rows.length === 0) {
+            console.log(`❌ Shared note not found for token: ${token}`);
             return res.status(404).json({ error: 'Shared content not found or no longer available' });
           }
+
+          console.log(`✅ Shared note found: ${result.rows[0].title} (ID: ${result.rows[0].id})`);
+          console.log(`📊 Note details: Created ${result.rows[0].created_at}, Updated ${result.rows[0].updated_at}`);
+          console.log(`👤 Creator: ${result.rows[0].creator_name}`);
 
           const note = result.rows[0];
 
@@ -964,6 +1010,8 @@ setTimeout(async () => {
       app.get('/api/shared/whiteboard/:token', publicRateLimit, async (req, res) => {
         try {
           const { token } = req.params;
+          console.log(`🔗 Shared whiteboard access attempt with token: ${token}`);
+
           const client = await actualPool.connect();
 
           const result = await client.query(`
@@ -978,8 +1026,13 @@ setTimeout(async () => {
           client.release();
 
           if (result.rows.length === 0) {
+            console.log(`❌ Shared whiteboard not found for token: ${token}`);
             return res.status(404).json({ error: 'Shared content not found or no longer available' });
           }
+
+          console.log(`✅ Shared whiteboard found: ${result.rows[0].title} (ID: ${result.rows[0].id})`);
+          console.log(`📊 Whiteboard details: Created ${result.rows[0].created_at}, Updated ${result.rows[0].updated_at}`);
+          console.log(`👤 Creator: ${result.rows[0].creator_name}`);
 
           const whiteboard = result.rows[0];
 

@@ -7,16 +7,18 @@ interface DraggableNoteCardProps {
   onPositionUpdate: (noteId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => void;
   onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onDelete: (noteId: number) => Promise<boolean>;
+  onShare: (noteId: number) => void;
   existingCategories: Category[];
   canvasTransform: { x: number, y: number, scale: number };
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
-export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({ 
-  note, 
-  onPositionUpdate, 
-  onUpdate, 
+export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
+  note,
+  onPositionUpdate,
+  onUpdate,
   onDelete,
+  onShare,
   existingCategories,
   canvasTransform,
   updateCategory
@@ -216,6 +218,7 @@ export const DraggableNoteCard: React.FC<DraggableNoteCardProps> = ({
         note={note}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onShare={onShare}
         existingCategories={existingCategories}
         onCollapsibleChange={(isOpen) => setIsCollapsed(!isOpen)}
         updateCategory={updateCategory}

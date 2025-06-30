@@ -18,6 +18,8 @@ const DocsPage: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Theme-aware color classes - matching canvas slate colors
   const bgColor = theme === 'dark' ? 'bg-slate-800' : 'bg-gray-50';
@@ -175,6 +177,37 @@ const DocsPage: React.FC = () => {
     fetchDocStructure();
   }, [docPath]);
 
+  // Sync sidebar height with main content
+  useEffect(() => {
+    const syncHeights = () => {
+      if (mainContentRef.current && sidebarRef.current) {
+        const mainContentHeight = mainContentRef.current.offsetHeight;
+        sidebarRef.current.style.height = `${mainContentHeight}px`;
+      }
+    };
+
+    // Initial sync
+    syncHeights();
+
+    // Sync on window resize
+    window.addEventListener('resize', syncHeights);
+
+    // Sync when content changes (using MutationObserver)
+    const observer = new MutationObserver(syncHeights);
+    if (mainContentRef.current) {
+      observer.observe(mainContentRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+    }
+
+    return () => {
+      window.removeEventListener('resize', syncHeights);
+      observer.disconnect();
+    };
+  }, [markdownContent]);
+
   // Keyboard shortcut to focus search (press "/" key)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -210,12 +243,14 @@ const DocsPage: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${bgColor} ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+    <div className={`min-h-screen flex ${bgColor} ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+      <div className="flex w-full">
       {/* Sidebar */}
-      <div className={`w-80 ${sidebarBg} overflow-y-auto fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 z-30 border-r ${borderColor} ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-        <div className="p-6">
+      <div ref={sidebarRef} className={`w-80 ${sidebarBg} fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:self-stretch z-30 border-r ${borderColor} ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+        {/* Fixed header area */}
+        <div className="p-6 border-b border-gray-200 dark:border-slate-600 bg-inherit">
           <h2 className={`text-xl font-bold mb-6 ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Documentation</h2>
-          
+
           {/* Search box */}
           <div className="mb-6">
             <div className="relative">
@@ -260,8 +295,11 @@ const DocsPage: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
 
-                     <nav className="space-y-1">
+        {/* Scrollable navigation area */}
+        <div className="flex-1 overflow-y-auto p-6 pt-0">
+          <nav className="space-y-1">
             {loading && docStructure.length === 0 ? (
               <div className={`text-center py-4 ${mutedTextColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
                 <div className="text-sm">Loading structure...</div>
@@ -297,7 +335,7 @@ const DocsPage: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div ref={mainContentRef} className="flex-1 min-h-0">
         {/* Back button and Mobile menu - responsive layout */}
         <div className="py-4">
           {/* Desktop: Back button aligned with logo using container positioning */}
@@ -386,6 +424,7 @@ const DocsPage: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

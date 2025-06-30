@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { CheckCircle, ArrowRight, PenLine, CheckSquare, Clock, Sparkles, Layers, StickyNote, ChevronDown, Bold, Italic, Underline, Strikethrough, Type, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Palette, Eraser, Brush, Undo, Redo } from 'lucide-react';
+import { CheckCircle, ArrowRight, Plus, CheckSquare, Clock, Sparkles, Layers, StickyNote, ChevronDown, Bold, Italic, Underline, Strikethrough, Type, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Quote, Palette, Eraser, Brush, Undo, Redo, Share } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
 const Home: React.FC = () => {
@@ -135,13 +135,15 @@ const Home: React.FC = () => {
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* Features Section */}
-        <div className="mt-16 mb-12">
+      {/* Features Section - Wider than other sections */}
+      <div className="relative z-10 mt-16 mb-12">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className={`text-3xl font-light italic text-center ${textColor} mb-8`} style={{ fontFamily: '"Raleway", sans-serif' }}>Tools to stay organized</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-            <div className={`${cardBgColor} p-8 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+            <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
               <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
                 <Layers className="h-7 w-7 text-blue-600" />
               </div>
@@ -161,7 +163,7 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            <div className={`${cardBgColor} p-8 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+            <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
               <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
                 <Sparkles className="h-7 w-7 text-blue-600" />
               </div>
@@ -185,7 +187,7 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            <div className={`${cardBgColor} p-8 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+            <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
               <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
                 <Clock className="h-7 w-7 text-blue-600" />
               </div>
@@ -204,10 +206,36 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
+              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
+                <Share className="h-7 w-7 text-blue-600" />
+              </div>
+              <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Share Freely</h3>
+              <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                Share your lists, notes, and whiteboards with anyone through secure, read-only links that work instantly.
+              </p>
+              <div className={`mt-6 pt-4 border-t ${cardBorderColor}`}>
+                <div className="flex items-center text-sm text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <span>Instant shareable links</span>
+                </div>
+                <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <span>Read-only public access</span>
+                </div>
+                <div className="flex items-center text-sm text-blue-600 mt-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <span>No account required to view</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Live Preview Section - Replacing the blue CTA */}
+      {/* Live Preview Section - Replacing the blue CTA */}
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mt-16 mb-12">
           <div className="text-center mb-8">
             <h2 className={`text-3xl font-light italic ${textColor} mb-4`} style={{ fontFamily: '"Raleway", sans-serif' }}>See them in action</h2>
@@ -225,7 +253,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div
                       className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
-                      style={{ backgroundColor: '#4F46E5' }}
+                      style={{ backgroundColor: '#8B5CF6' }}
                     />
                     <CheckSquare className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
                     <h3 className={`text-lg font-medium ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Features</h3>
@@ -245,7 +273,7 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-2 px-6">
-                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-violet-500 text-white cursor-pointer" style={{ backgroundColor: '#8B5CF6', fontFamily: '"Raleway", sans-serif' }}>
                   Productivity
                 </div>
               </div>
@@ -255,11 +283,11 @@ const Home: React.FC = () => {
                 <div className={`w-full ${isLight ? 'bg-gray-100' : 'bg-slate-700'} rounded-full h-2 mb-1`}>
                   <div
                     className="h-2 rounded-full transition-all duration-300"
-                    style={{ width: '75%', backgroundColor: '#4F46E5' }}
+                    style={{ width: '100%', backgroundColor: '#8B5CF6' }}
                   ></div>
                 </div>
                 <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  6 of 8 completed
+                  9 of 9 completed
                 </div>
               </div>
               
@@ -267,9 +295,9 @@ const Home: React.FC = () => {
               <div className="px-6 py-2 space-y-0.5">
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div 
+                    <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                      style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
@@ -281,7 +309,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center flex-grow">
                     <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                      style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
@@ -293,7 +321,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center flex-grow">
                     <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                      style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
@@ -305,7 +333,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center flex-grow">
                     <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                      style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
@@ -317,7 +345,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center flex-grow">
                     <div
                       className="w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}
+                      style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}
                     >
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
@@ -327,7 +355,25 @@ const Home: React.FC = () => {
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}>
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}>
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>Privacy control</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}>
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>Shareable content</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center py-1 group">
+                  <div className="flex items-center flex-grow">
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}>
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                     <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>AI-powered suggestions</span>
@@ -336,7 +382,7 @@ const Home: React.FC = () => {
 
                 <div className="flex items-center py-1 group">
                   <div className="flex items-center flex-grow">
-                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5' }}>
+                    <div className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border mr-2 flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }}>
                     <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                     <span className={textColor} style={{ fontFamily: '"Raleway", sans-serif' }}>Cross-device access</span>
@@ -345,13 +391,33 @@ const Home: React.FC = () => {
               </div>
 
               {/* Add Item Section */}
-              <div className={`px-6 py-4 border-t ${cardBorderColor}`}>
-                <div className={`flex items-center space-x-2 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
-                  <PenLine className="h-4 w-4" />
-                  <span className="text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>Add new item...</span>
-                  <div className="ml-auto">
-                    <Sparkles className="h-4 w-4 text-blue-600" />
+              <div className={`p-2 border-t ${cardBorderColor}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`relative flex-1 rounded-md border ${isLight ? 'border-gray-300' : 'border-slate-600'}`}>
+                    <div className={`h-8 px-3 flex items-center ${isLight ? 'bg-white' : 'bg-slate-700'} rounded-md`}>
+                      <span className={`text-sm ${isLight ? 'text-gray-400' : 'text-slate-500'}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Add new item...</span>
+                      <div className="absolute right-2">
+                        <Sparkles className="h-4 w-4" style={{ color: '#8B5CF6' }} />
+                      </div>
+                    </div>
                   </div>
+
+                  <button className={`h-8 w-8 rounded-md flex items-center justify-center ${isLight ? 'bg-gray-200 hover:bg-gray-300' : 'bg-slate-600 hover:bg-slate-500'} transition-colors`}>
+                    <Plus className="h-4 w-4" />
+                  </button>
+
+                  <button className={`h-8 w-8 rounded-md flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors`}>
+                    <span className="text-lg leading-none">×</span>
+                  </button>
+                </div>
+
+                {/* AI Suggestion */}
+                <div className="mt-2 flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted transition-colors">
+                  <Sparkles className="w-4 h-4" style={{ color: '#8B5CF6' }} />
+                  <span className="text-sm font-medium" style={{ color: '#8B5CF6', fontFamily: '"Raleway", sans-serif' }}>Suggest:</span>
+                  <span className="text-sm font-medium overflow-hidden text-ellipsis whitespace-nowrap" style={{ color: '#8B5CF6', fontFamily: '"Raleway", sans-serif' }}>
+                    Powerful Canvas
+                  </span>
                 </div>
               </div>
             </div>
@@ -364,7 +430,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div
                       className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
-                      style={{ backgroundColor: '#F59E0B' }}
+                      style={{ backgroundColor: '#EA580C' }}
                     />
                     <StickyNote className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
                     <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Combined Approach</h3>
@@ -384,7 +450,7 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-2 px-6">
-                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-orange-600 text-white cursor-pointer" style={{ backgroundColor: '#EA580C', fontFamily: '"Raleway", sans-serif' }}>
                   Strategy
                 </div>
               </div>
@@ -496,7 +562,7 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-3 px-6">
-                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'} cursor-pointer`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-green-500 text-white cursor-pointer" style={{ backgroundColor: '#10B981', fontFamily: '"Raleway", sans-serif' }}>
                   Design
                 </div>
               </div>

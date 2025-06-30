@@ -20,9 +20,11 @@ interface CanvasContainerProps {
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
+  onNoteShare: (noteId: number) => void;
   whiteboards: Whiteboard[];
   onWhiteboardUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
+  onWhiteboardShare: (whiteboardId: number) => void;
   onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
@@ -46,9 +48,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   notes,
   onNoteUpdate,
   onNoteDelete,
+  onNoteShare,
   whiteboards,
   onWhiteboardUpdate,
   onWhiteboardDelete,
+  onWhiteboardShare,
   onOpenNewWhiteboardModal,
   addCategory,
   updateCategory
@@ -611,8 +615,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   }
                   onNoteUpdate(noteId, updatePayload);
                 }}
-                onUpdate={onNoteUpdate} 
-                onDelete={onNoteDelete} 
+                onUpdate={onNoteUpdate}
+                onDelete={onNoteDelete}
+                onShare={onNoteShare}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
                 updateCategory={updateCategory}
@@ -626,6 +631,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 whiteboard={whiteboard}
                 onUpdate={onWhiteboardUpdate}
                 onDelete={onWhiteboardDelete}
+                onShare={onWhiteboardShare}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
                 onPositionChange={(whiteboardId, newPosition) => {
