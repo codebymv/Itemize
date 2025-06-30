@@ -1221,23 +1221,33 @@ setTimeout(async () => {
               auth: 'operational'
             },
             endpoints: {
-              total: 15,
+              total: 25,
               available: [
                 '/api/auth/*',
                 '/api/lists',
                 '/api/lists/:id',
+                '/api/lists/:id/share',
                 '/api/canvas/lists',
                 '/api/notes',
                 '/api/notes/:id',
+                '/api/notes/:id/share',
                 '/api/whiteboards',
                 '/api/whiteboards/:id',
+                '/api/whiteboards/:id/share',
+                '/api/shared/list/:token',
+                '/api/shared/note/:token',
+                '/api/shared/whiteboard/:token',
                 '/api/categories',
                 '/api/categories/:id',
                 '/api/suggestions',
+                '/api/docs/content',
+                '/api/docs/structure',
+                '/api/docs/search',
                 '/api/health',
                 '/api/status',
                 '/docs/*',
-                '/health'
+                '/health',
+                '/shared/*'
               ]
             }
           };

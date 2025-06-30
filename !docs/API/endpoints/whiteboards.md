@@ -98,3 +98,80 @@ DELETE /whiteboards/{whiteboardId}
   "message": "Whiteboard deleted successfully"
 }
 ```
+
+## Share a whiteboard
+
+Enables sharing for a whiteboard and returns the share URL.
+
+### Endpoint
+
+```
+POST /whiteboards/{whiteboardId}/share
+```
+
+### Authentication
+
+Required (JWT token)
+
+### Response
+
+```json
+{
+  "shareToken": "550e8400-e29b-41d4-a716-446655440002",
+  "shareUrl": "https://itemize.cloud/shared/whiteboard/550e8400-e29b-41d4-a716-446655440002"
+}
+```
+
+## Revoke whiteboard sharing
+
+Disables sharing for a whiteboard.
+
+### Endpoint
+
+```
+DELETE /whiteboards/{whiteboardId}/share
+```
+
+### Authentication
+
+Required (JWT token)
+
+### Response
+
+```json
+{
+  "message": "Whiteboard sharing revoked successfully"
+}
+```
+
+## Get shared whiteboard (public)
+
+Retrieves a shared whiteboard by its token. No authentication required.
+
+### Endpoint
+
+```
+GET /shared/whiteboard/{token}
+```
+
+### Rate Limiting
+
+Applied to prevent abuse
+
+### Response
+
+```json
+{
+  "id": "1",
+  "title": "My Shared Whiteboard",
+  "category": "Design",
+  "canvas_data": "...",
+  "canvas_width": 800,
+  "canvas_height": 600,
+  "background_color": "#FFFFFF",
+  "color_value": "#EF4444",
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T12:00:00Z",
+  "creator_name": "Bob Wilson"
+}
+```

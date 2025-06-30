@@ -176,3 +176,83 @@ PUT /lists/{listId}/position
   "updatedAt": "2025-06-29T12:00:00.000Z"
 }
 ```
+
+## Share a list
+
+Enables sharing for a list and returns the share URL.
+
+### Endpoint
+
+```
+POST /lists/{listId}/share
+```
+
+### Authentication
+
+Required (JWT token)
+
+### Response
+
+```json
+{
+  "shareToken": "550e8400-e29b-41d4-a716-446655440000",
+  "shareUrl": "https://itemize.cloud/shared/list/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Revoke list sharing
+
+Disables sharing for a list.
+
+### Endpoint
+
+```
+DELETE /lists/{listId}/share
+```
+
+### Authentication
+
+Required (JWT token)
+
+### Response
+
+```json
+{
+  "message": "List sharing revoked successfully"
+}
+```
+
+## Get shared list (public)
+
+Retrieves a shared list by its token. No authentication required.
+
+### Endpoint
+
+```
+GET /shared/list/{token}
+```
+
+### Rate Limiting
+
+Applied to prevent abuse
+
+### Response
+
+```json
+{
+  "id": "1",
+  "title": "My Shared List",
+  "category": "Work",
+  "items": [
+    {
+      "id": "1",
+      "text": "Task 1",
+      "completed": false
+    }
+  ],
+  "color_value": "#3B82F6",
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T12:00:00Z",
+  "creator_name": "John Doe"
+}
+```

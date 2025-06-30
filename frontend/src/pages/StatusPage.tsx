@@ -239,7 +239,10 @@ const StatusPage: React.FC = () => {
             {/* Overall Status */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">Overall Status</CardTitle>
+                <div className="flex items-center">
+                  <Server className="w-5 h-5 mr-2 text-blue-600" />
+                  <CardTitle className="text-lg font-semibold">Overall Status</CardTitle>
+                </div>
                 {getStatusIcon(statusData.status)}
               </CardHeader>
               <CardContent className="space-y-2">
@@ -263,7 +266,7 @@ const StatusPage: React.FC = () => {
             {/* Server Info */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <Cpu className="w-5 h-5 mr-2" />
+                <Cpu className="w-5 h-5 mr-2 text-blue-600" />
                 <CardTitle className="text-lg font-semibold">Server Info</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -289,7 +292,7 @@ const StatusPage: React.FC = () => {
             {/* Memory Usage */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <HardDrive className="w-5 h-5 mr-2" />
+                <HardDrive className="w-5 h-5 mr-2 text-blue-600" />
                 <CardTitle className="text-lg font-semibold">Memory Usage</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -311,7 +314,7 @@ const StatusPage: React.FC = () => {
             {/* Services Status */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <Network className="w-5 h-5 mr-2" />
+                <Network className="w-5 h-5 mr-2 text-blue-600" />
                 <CardTitle className="text-lg font-semibold">Services</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -332,7 +335,7 @@ const StatusPage: React.FC = () => {
             {/* Health Checks */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <CheckCircle className="w-5 h-5 mr-2" />
+                <CheckCircle className="w-5 h-5 mr-2 text-blue-600" />
                 <CardTitle className="text-lg font-semibold">Health Checks</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -357,7 +360,7 @@ const StatusPage: React.FC = () => {
             {/* API Endpoints */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <Database className="w-5 h-5 mr-2" />
+                <Database className="w-5 h-5 mr-2 text-blue-600" />
                 <CardTitle className="text-lg font-semibold">API Endpoints</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">

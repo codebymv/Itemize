@@ -17,10 +17,14 @@ The Itemize.cloud API is built on the following principles:
 
 The API provides the following core functionality:
 
-*   **List Management**: Create, read, update, and delete lists.
-*   **Item Management**: Add, remove, and update items in a list.
-*   **User Management**: Manage user accounts and permissions.
-*   **Sharing**: Share lists with other users.
+*   **List Management**: Create, read, update, and delete lists with full CRUD operations.
+*   **Note Management**: Create, edit, and organize rich text notes with categories.
+*   **Whiteboard Management**: Create and manage digital whiteboards with drawing capabilities.
+*   **Infinite Canvas**: Position and organize content on an infinite canvas workspace.
+*   **Sharing System**: Share lists, notes, and whiteboards via secure public links.
+*   **Documentation Service**: Access integrated API documentation and help resources.
+*   **User Management**: Manage user accounts, authentication, and permissions.
+*   **Category System**: Organize content with user-defined categories.
 
 ## Technical Details
 
@@ -39,14 +43,50 @@ To get started with the Itemize.cloud API, you will need to:
 
 ## API Endpoints
 
-The following is a list of the available API endpoints:
+The API is organized into several endpoint categories:
 
-*   `GET /lists`: Get a list of all your lists.
-*   `POST /lists`: Create a new list.
-*   `GET /lists/{listId}`: Get a specific list.
-*   `PUT /lists/{listId}`: Update a specific list.
-*   `DELETE /lists/{listId}`: Delete a specific list.
-*   `GET /lists/{listId}/items`: Get all the items in a list.
-*   `POST /lists/{listId}/items`: Add a new item to a list.
-*   `PUT /lists/{listId}/items/{itemId}`: Update an item in a list.
-*   `DELETE /lists/{listId}/items/{itemId}`: Delete an item from a list.
+### Content Management
+*   **[Lists API](./endpoints/lists.md)**: Complete CRUD operations for lists and items
+*   **[Notes API](./endpoints/notes.md)**: Create and manage rich text notes
+*   **[Whiteboards API](./endpoints/whiteboards.md)**: Digital whiteboard management
+*   **[Categories API](./endpoints/categories.md)**: Organize content with categories
+
+### Sharing & Collaboration
+*   **Sharing Endpoints**: Enable public sharing of lists, notes, and whiteboards
+    - `POST /api/lists/{id}/share` - Share a list
+    - `POST /api/notes/{id}/share` - Share a note
+    - `POST /api/whiteboards/{id}/share` - Share a whiteboard
+    - `DELETE /api/{type}/{id}/share` - Revoke sharing
+*   **Public Access**: View shared content without authentication
+    - `GET /api/shared/list/{token}` - View shared list
+    - `GET /api/shared/note/{token}` - View shared note
+    - `GET /api/shared/whiteboard/{token}` - View shared whiteboard
+
+### Documentation & Help
+*   **[Documentation API](./endpoints/docs.md)**: Access integrated documentation
+    - `GET /api/docs/content` - Get documentation content
+    - `GET /api/docs/structure` - Get documentation structure
+    - `GET /api/docs/search` - Search documentation
+
+### AI & Enhancement
+*   **[AI Suggestions API](./endpoints/ai-suggestions.md)**: AI-powered content suggestions
+
+## Quick Reference
+
+### Core List Operations
+*   `GET /api/lists` - Get all user lists
+*   `POST /api/lists` - Create a new list
+*   `PUT /api/lists/{listId}` - Update a list
+*   `DELETE /api/lists/{listId}` - Delete a list
+
+### Core Note Operations
+*   `GET /api/notes` - Get all user notes
+*   `POST /api/notes` - Create a new note
+*   `PUT /api/notes/{noteId}` - Update a note
+*   `DELETE /api/notes/{noteId}` - Delete a note
+
+### Core Whiteboard Operations
+*   `GET /api/whiteboards` - Get all user whiteboards
+*   `POST /api/whiteboards` - Create a new whiteboard
+*   `PUT /api/whiteboards/{whiteboardId}` - Update a whiteboard
+*   `DELETE /api/whiteboards/{whiteboardId}` - Delete a whiteboard
