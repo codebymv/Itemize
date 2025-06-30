@@ -5,6 +5,7 @@ import { SharedNoteCard } from '../components/SharedNoteCard';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
 import api from '../lib/api';
+import { io, Socket } from 'socket.io-client';
 
 interface SharedNoteData {
   id: number;
@@ -25,6 +26,11 @@ const SharedNotePage: React.FC = () => {
   const [noteData, setNoteData] = useState<SharedNoteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // WebSocket state
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [viewerCount, setViewerCount] = useState(0);
 
   useEffect(() => {
     const fetchSharedNote = async () => {
@@ -66,6 +72,79 @@ const SharedNotePage: React.FC = () => {
 
     fetchSharedNote();
   }, [token, toast, error]);
+
+  // WebSocket connection effect
+  useEffect(() => {
+    if (!token || !noteData) return;
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    console.log('Connecting to WebSocket at:', BACKEND_URL);
+
+    const newSocket = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('WebSocket connected, joining shared note:', token);
+      setIsConnected(true);
+      newSocket.emit('joinSharedNote', token);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('WebSocket disconnected');
+      setIsConnected(false);
+      setViewerCount(0);
+    });
+
+    newSocket.on('joinedSharedNote', (data) => {
+      console.log('Successfully joined shared note:', data);
+    });
+
+    newSocket.on('viewerCount', (count) => {
+      console.log('Viewer count updated:', count);
+      setViewerCount(count);
+    });
+
+    newSocket.on('noteUpdated', (update) => {
+      console.log('Note updated:', update);
+
+      if (update.type === 'noteUpdated' && update.data) {
+        setNoteData(prevData => {
+          if (!prevData) return prevData;
+
+          return {
+            ...prevData,
+            title: update.data.title || prevData.title,
+            content: update.data.content || prevData.content,
+            category: update.data.category || prevData.category,
+            color_value: update.data.color_value || prevData.color_value,
+            updated_at: update.data.updated_at || prevData.updated_at
+          };
+        });
+      } else if (update.type === 'noteDeleted') {
+        console.log('Note was deleted by owner');
+        setError('This note has been deleted by the owner.');
+        setNoteData(null);
+      }
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: error.message || "Failed to connect to real-time updates",
+        variant: "destructive",
+      });
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      console.log('Cleaning up WebSocket connection');
+      newSocket.disconnect();
+    };
+  }, [token, noteData?.id, toast]);
 
   const handleBackToHome = () => {
     navigate('/');
@@ -110,7 +189,7 @@ const SharedNotePage: React.FC = () => {
       contentType="note"
       onBackToHome={handleBackToHome}
     >
-      <SharedNoteCard noteData={noteData} />
+      <SharedNoteCard noteData={noteData} isLive={isConnected} />
     </SharedContentLayout>
   );
 };

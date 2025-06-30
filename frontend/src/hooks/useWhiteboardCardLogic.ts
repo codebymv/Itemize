@@ -132,9 +132,10 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
         isArray: Array.isArray(data.canvas_data),
         dataPreview: JSON.stringify(data.canvas_data).substring(0, 200)
       });
-      
-      await onUpdate(whiteboard.id, { canvas_data: JSON.stringify(data.canvas_data), updated_at: data.updated_at });
-      
+
+      // Send the raw canvas data array - let the backend handle stringification
+      await onUpdate(whiteboard.id, { canvas_data: data.canvas_data, updated_at: data.updated_at });
+
       console.log('🎨 WhiteboardCardLogic: Canvas save completed successfully');
     } catch (error) {
       console.error('Failed to save canvas data:', error);

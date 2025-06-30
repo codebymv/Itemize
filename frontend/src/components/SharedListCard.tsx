@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CheckCircle2, Circle, CheckSquare } from 'lucide-react';
+import { Check, CheckSquare } from 'lucide-react';
 
 interface SharedListItem {
   id: string;
@@ -22,9 +22,14 @@ interface SharedListData {
 
 interface SharedListCardProps {
   listData: SharedListData;
+  isLive?: boolean;
 }
 
-export const SharedListCard: React.FC<SharedListCardProps> = ({ listData }) => {
+export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive = false }) => {
+  const [animatingItems, setAnimatingItems] = useState<Set<string>>(new Set());
+  const [previousItems, setPreviousItems] = useState(listData.items);
+  const [titleChanged, setTitleChanged] = useState(false);
+
   const totalItems = listData.items.length;
   const completedItems = listData.items.filter(item => item.completed).length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
@@ -32,33 +37,82 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData }) => {
   // Use the list's color or default to blue
   const listColor = listData.color_value || '#3B82F6';
 
+  // Detect changes and animate them
+  useEffect(() => {
+    if (!isLive || !previousItems) return;
+
+    const newAnimatingItems = new Set<string>();
+
+    // Check for item changes (completion status or text)
+    listData.items.forEach(item => {
+      const previousItem = previousItems.find(prev => prev.id === item.id);
+      if (!previousItem ||
+          previousItem.completed !== item.completed ||
+          previousItem.text !== item.text) {
+        newAnimatingItems.add(item.id);
+      }
+    });
+
+    // Check for new items
+    listData.items.forEach(item => {
+      if (!previousItems.find(prev => prev.id === item.id)) {
+        newAnimatingItems.add(item.id);
+      }
+    });
+
+    setAnimatingItems(newAnimatingItems);
+    setPreviousItems(listData.items);
+
+    // Clear animations after delay
+    if (newAnimatingItems.size > 0) {
+      setTimeout(() => setAnimatingItems(new Set()), 1500);
+    }
+  }, [listData.items, isLive, previousItems]);
+
+  // Detect title changes
+  useEffect(() => {
+    if (isLive && previousItems.length > 0) {
+      // We can't easily track title changes without previous title state
+      // For now, we'll skip title change animations
+    }
+  }, [listData.title, isLive]);
+
   return (
     <div className="w-full max-w-md mx-auto">
-      <Card 
-        className="w-full shadow-lg border-2 transition-all duration-200"
-        style={{ 
-          borderColor: listColor,
-          '--list-color': listColor 
+      <Card
+        className="w-full shadow-lg border transition-all duration-200"
+        style={{
+          '--list-color': listColor
         } as React.CSSProperties}
       >
         {/* Header */}
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5 text-gray-600" />
+            <div className="flex items-center gap-2">
+              {/* Colored dot */}
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: listColor }}
+              />
+              <CheckSquare className="h-4 w-4 text-slate-500" />
+            </div>
             <div className="flex-1">
               <h3
-                className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
+                className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {listData.title}
               </h3>
               {listData.category && (
-                <p 
-                  className="text-sm text-gray-500 dark:text-gray-400"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                <div
+                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1"
+                  style={{
+                    backgroundColor: listColor,
+                    fontFamily: '"Raleway", sans-serif'
+                  }}
                 >
                   {listData.category}
-                </p>
+                </div>
               )}
             </div>
           </div>
@@ -99,20 +153,24 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData }) => {
             {listData.items.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center space-x-3 py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className={`flex items-center py-2 px-2 rounded-md transition-all duration-300 ${
+                  animatingItems.has(item.id)
+                    ? 'bg-blue-50 dark:bg-blue-900/20 scale-[1.02] shadow-sm'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
               >
-                <div className="flex-shrink-0">
-                  {item.completed ? (
-                    <CheckCircle2 
-                      className="h-5 w-5 text-green-500" 
-                      style={{ color: listColor }}
-                    />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-400" />
-                  )}
+                <div className="flex-shrink-0 mr-2">
+                  <div
+                    style={item.completed ? { backgroundColor: listColor, borderColor: listColor } : {}}
+                    className={`w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] rounded-sm border flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                      item.completed ? '' : 'border-gray-300'
+                    } ${animatingItems.has(item.id) ? 'scale-110' : ''}`}
+                  >
+                    {item.completed && <Check className="h-3 w-3 text-white" />}
+                  </div>
                 </div>
                 <span
-                  className={`flex-1 text-sm ${
+                  className={`flex-1 text-sm transition-all duration-200 ${
                     item.completed
                       ? 'line-through text-gray-500 dark:text-gray-400'
                       : 'text-gray-900 dark:text-gray-100'
@@ -121,6 +179,10 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData }) => {
                 >
                   {item.text}
                 </span>
+                {/* Change indicator */}
+                {animatingItems.has(item.id) && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                )}
               </div>
             ))}
             

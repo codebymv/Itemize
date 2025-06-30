@@ -44,34 +44,48 @@ const createDbConnection = () => {
       console.log('Could not parse host from connection string:', err.message);
     }
     
-    // Create a connection pool with more conservative settings
+    // Create a connection pool with more robust timeout settings
     const pool = new Pool({
       connectionString: dbUrl,
       ssl: {
         rejectUnauthorized: false // Required for Supabase connections
       },
-      // More conservative connection settings for Railway
-      max: 3,                     // Maximum number of clients (keeping it lower)
-      min: 0,                     // Minimum number of clients
-      idleTimeoutMillis: 10000,   // 10 seconds idle timeout
-      connectionTimeoutMillis: 10000, // 10 seconds connection timeout
-      statement_timeout: 10000,   // Statement timeout
-      query_timeout: 10000,      // Query timeout
+      // More robust connection settings to handle network latency
+      max: 5,                     // Increase max connections slightly
+      min: 1,                     // Keep at least 1 connection alive
+      idleTimeoutMillis: 30000,   // 30 seconds idle timeout (increased)
+      connectionTimeoutMillis: 30000, // 30 seconds connection timeout (increased from 10s)
+      statement_timeout: 30000,   // 30 seconds statement timeout (increased)
+      query_timeout: 30000,      // 30 seconds query timeout (increased)
+      acquireTimeoutMillis: 30000, // 30 seconds to acquire connection from pool
     });
 
     // Set up event handlers
     pool.on('connect', (client) => {
-      console.log('Connected to PostgreSQL database successfully');
+      console.log('✅ Connected to PostgreSQL database successfully');
+      console.log(`📊 Pool stats: Total=${pool.totalCount}, Idle=${pool.idleCount}, Waiting=${pool.waitingCount}`);
       useInMemory = false;
     });
 
     pool.on('error', (err, client) => {
-      console.error('Database pool error:', err.message);
+      console.error('❌ Database pool error:', err.message);
+      console.error('📊 Pool stats at error:', `Total=${pool.totalCount}, Idle=${pool.idleCount}, Waiting=${pool.waitingCount}`);
+
       // Don't crash the application on pool errors
       if (err.code === 'ENETUNREACH' || err.code === 'ENOTFOUND') {
-        console.warn('Network unreachable or host not found. Switching to in-memory storage.');
+        console.warn('🌐 Network unreachable or host not found. Switching to in-memory storage.');
         useInMemory = true;
+      } else if (err.message && err.message.includes('timeout')) {
+        console.warn('⏰ Database connection timeout detected. Pool may be exhausted.');
       }
+    });
+
+    pool.on('acquire', (client) => {
+      console.log('🔗 Client acquired from pool');
+    });
+
+    pool.on('release', (client) => {
+      console.log('🔓 Client released back to pool');
     });
     
     // Test the connection immediately

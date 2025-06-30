@@ -208,6 +208,18 @@ const DocsPage: React.FC = () => {
     };
   }, [markdownContent]);
 
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isSidebarOpen]);
+
   // Keyboard shortcut to focus search (press "/" key)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

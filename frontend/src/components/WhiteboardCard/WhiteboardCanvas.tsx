@@ -68,7 +68,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [lastLoadedData, setLastLoadedData] = useState<any[]>([]);
   const [canvasLoadTime, setCanvasLoadTime] = useState<number>(0);
   const [isIntentionalClear, setIsIntentionalClear] = useState(false);
-  
+
   // Mobile touch state
   const [isMultiTouch, setIsMultiTouch] = useState(false);
   const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 });
@@ -88,7 +88,19 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Load existing canvas data on mount
   useEffect(() => {
-    if (canvasRef.current && whiteboard.canvas_data && !isCanvasLoaded) {
+    if (canvasRef.current && !isCanvasLoaded) {
+      // Handle empty or null canvas data
+      if (!whiteboard.canvas_data || whiteboard.canvas_data === '' || whiteboard.canvas_data === 'null') {
+        console.log('🎨 No canvas data to load, initializing empty canvas');
+        try {
+          canvasRef.current.loadPaths([]);
+          setIsCanvasLoaded(true);
+          setCanvasLoadTime(Date.now());
+        } catch (error) {
+          console.error('🎨 Failed to initialize empty canvas:', error);
+        }
+        return;
+      }
       try {
         console.log('🎨 Loading canvas data:', {
           dataType: typeof whiteboard.canvas_data,
@@ -318,11 +330,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         // Test JSON serialization to catch malformed data early
         const testSerialization = JSON.stringify(canvasData);
         JSON.parse(testSerialization); // This will throw if the JSON is malformed
-        
+
         console.log('🎨 Auto-saving canvas data:', {
           pathCount: canvasData.length,
-          dataPreview: testSerialization.substring(0, 100),
-          whiteboardId
+          dataPreview: testSerialization.substring(0, 200),
+          whiteboardId,
+          fullDataSample: canvasData.length > 0 ? canvasData[0] : 'empty'
         });
         await onSave({ canvas_data: canvasData, updated_at: new Date().toISOString() });
         console.log('🎨 Canvas auto-save completed successfully');
@@ -353,7 +366,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     
     // Prevent auto-saves immediately after loading data (canvas library needs time to render)
     const timeSinceLoad = Date.now() - canvasLoadTime;
-    if (timeSinceLoad < 2000) { // Wait 2 seconds after loading before auto-saving
+    if (timeSinceLoad < 500) { // Wait 500ms after loading before auto-saving (reduced from 2000ms)
       console.log('🎨 Skipping auto-save - too soon after canvas load:', { timeSinceLoad });
       return;
     }
@@ -432,10 +445,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           clearTimeout(autoSaveTimeout);
         }
         
-        // Set new auto-save timeout for 3 seconds after drawing stops
+        // Set new auto-save timeout for 1 second after drawing stops (faster response)
         const timeout = setTimeout(() => {
           debouncedAutoSave(currentCanvasData, whiteboard.id);
-        }, 3000);
+        }, 1000);
         
         setAutoSaveTimeout(timeout);
       } else {
@@ -817,7 +830,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             strokeColor={strokeColor}
             canvasColor="#ffffff"
             ref={canvasRef}
-            onStroke={() => setIsDrawing(true)}
+            onStroke={(path) => {
+              console.log('🎨 onStroke triggered - stroke completed', path);
+              setIsDrawing(true);
+              // Trigger auto-save after each stroke completes
+              setTimeout(() => {
+                handleDrawingEnd();
+              }, 100); // Small delay to ensure canvas is updated
+            }}
           />
 
         </div>

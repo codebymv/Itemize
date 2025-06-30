@@ -16,17 +16,18 @@ interface SharedNoteData {
 
 interface SharedNoteCardProps {
   noteData: SharedNoteData;
+  isLive?: boolean;
 }
 
-export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData }) => {
+export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData, isLive = false }) => {
   // Use the note's color or default to light yellow
   const noteColor = noteData.color_value || '#FFFFE0';
 
-  // Function to render content with basic formatting
+  // Function to render content with HTML formatting
   const renderContent = (content: string) => {
-    if (!content) {
+    if (!content || content === '<p></p>' || content.trim() === '') {
       return (
-        <p 
+        <p
           className="text-gray-400 dark:text-gray-300 text-sm italic"
           style={{ fontFamily: '"Raleway", sans-serif' }}
         >
@@ -35,51 +36,73 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData }) => {
       );
     }
 
-    // Split content by lines and render with basic formatting
-    const lines = content.split('\n');
-    return lines.map((line, index) => {
-      if (line.trim() === '') {
-        return <br key={index} />;
-      }
-      
+    // Check if content is HTML or plain text
+    if (content.includes('<') && content.includes('>')) {
+      // Content is HTML - render it directly
       return (
-        <p 
-          key={index}
-          className="text-gray-900 dark:text-gray-100 text-sm mb-2 last:mb-0"
+        <div
+          className="prose prose-sm max-w-none dark:prose-invert text-gray-900 dark:text-gray-100"
           style={{ fontFamily: '"Raleway", sans-serif' }}
-        >
-          {line}
-        </p>
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
       );
-    });
+    } else {
+      // Content is plain text - convert to paragraphs
+      const lines = content.split('\n');
+      return lines.map((line, index) => {
+        if (line.trim() === '') {
+          return <br key={index} />;
+        }
+
+        return (
+          <p
+            key={index}
+            className="text-gray-900 dark:text-gray-100 text-sm mb-2 last:mb-0"
+            style={{ fontFamily: '"Raleway", sans-serif' }}
+          >
+            {line}
+          </p>
+        );
+      });
+    }
   };
 
   return (
     <div className="w-full max-w-md mx-auto">
       <Card
-        className="w-full shadow-lg border-2 transition-all duration-200 bg-white dark:bg-slate-800"
+        className="w-full shadow-lg border bg-white dark:bg-slate-800"
         style={{
-          borderColor: noteColor
-        }}
+          '--note-color': noteColor
+        } as React.CSSProperties}
       >
         {/* Header */}
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <StickyNote className="h-5 w-5 text-gray-600" />
+            <div className="flex items-center gap-2">
+              {/* Colored dot */}
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: noteColor }}
+              />
+              <StickyNote className="h-4 w-4 text-slate-500" />
+            </div>
             <div className="flex-1">
               <h3
-                className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
+                className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {noteData.title}
               </h3>
               {noteData.category && (
-                <p
-                  className="text-sm text-gray-600 dark:text-gray-400"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                <div
+                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1"
+                  style={{
+                    backgroundColor: noteColor,
+                    fontFamily: '"Raleway", sans-serif'
+                  }}
                 >
                   {noteData.category}
-                </p>
+                </div>
               )}
             </div>
           </div>
@@ -87,7 +110,7 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData }) => {
 
         {/* Content */}
         <CardContent className="pt-0">
-          <div className="prose prose-sm max-w-none">
+          <div className="relative">
             {renderContent(noteData.content)}
           </div>
         </CardContent>

@@ -10,6 +10,8 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const DOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 
 // Set up DOMPurify for server-side use
 const window = new JSDOM('').window;
@@ -90,9 +92,25 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Create HTTP server and integrate Socket.IO
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || (
+      process.env.NODE_ENV === 'production'
+        ? 'https://itemize.cloud'
+        : 'http://localhost:5173'
+    ),
+    methods: ['GET', 'POST']
+  }
+});
+
+// WebSocket setup will be initialized after database connection
+
 // Start the server - KEEP BINDING TO 0.0.0.0 for Railway
-const server = app.listen(port, '0.0.0.0', () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${port}`);
+  console.log(`✅ WebSocket server ready`);
   console.log('Health check endpoints available at:');
   console.log('  - /health');
   console.log('  - /api/health');
@@ -151,7 +169,312 @@ setTimeout(async () => {
     } else {
         console.warn('Skipping auth routes initialization due to missing pool.');
     }
-      
+
+    // Initialize WebSocket functionality after database is ready
+    if (actualPool) {
+      console.log('Initializing WebSocket functionality...');
+
+      // WebSocket connection management
+      const sharedListViewers = new Map(); // shareToken -> Set of socket IDs
+      const sharedNoteViewers = new Map(); // shareToken -> Set of socket IDs
+      const sharedWhiteboardViewers = new Map(); // shareToken -> Set of socket IDs
+
+      io.on('connection', (socket) => {
+        console.log(`WebSocket client connected: ${socket.id}`);
+
+        // Handle viewer joining a shared list
+        socket.on('joinSharedList', async (shareToken) => {
+          try {
+            console.log(`Attempting to join shared list with token: ${shareToken}`);
+
+            // Validate that the share token exists and is public
+            const client = await actualPool.connect();
+            const result = await client.query(
+              'SELECT id, title, is_public FROM lists WHERE share_token = $1',
+              [shareToken]
+            );
+
+            console.log(`Database query result:`, result.rows);
+
+            if (result.rows.length === 0) {
+              console.log(`No list found with token: ${shareToken}`);
+              client.release();
+              socket.emit('error', { message: 'Invalid or inactive share link' });
+              return;
+            }
+
+            const list = result.rows[0];
+            if (!list.is_public) {
+              console.log(`List found but not public: ${list.title}`);
+              client.release();
+              socket.emit('error', { message: 'This list is no longer shared' });
+              return;
+            }
+
+            client.release();
+            console.log(`Valid shared list found: ${list.title} (ID: ${list.id})`);
+
+            // Join the room for this shared list
+            const roomName = `shared-list-${shareToken}`;
+            socket.join(roomName);
+
+            // Track viewer count
+            if (!sharedListViewers.has(shareToken)) {
+              sharedListViewers.set(shareToken, new Set());
+            }
+            sharedListViewers.get(shareToken).add(socket.id);
+
+            console.log(`Viewer ${socket.id} joined shared list: ${shareToken}`);
+
+            // Emit success to the joining client
+            socket.emit('joinedSharedList', {
+              message: 'Successfully joined shared list',
+              listTitle: list.title
+            });
+
+            // Emit viewer count to room
+            const viewerCount = sharedListViewers.get(shareToken).size;
+            io.to(roomName).emit('viewerCount', viewerCount);
+
+            console.log(`Room ${roomName} now has ${viewerCount} viewers`);
+
+          } catch (error) {
+            console.error('Error joining shared list:', error);
+            socket.emit('error', { message: 'Failed to join shared list' });
+          }
+        });
+
+        // Handle viewer joining a shared note
+        socket.on('joinSharedNote', async (shareToken) => {
+          try {
+            console.log(`Attempting to join shared note with token: ${shareToken}`);
+
+            // Validate that the share token exists and is public
+            const client = await actualPool.connect();
+            const result = await client.query(
+              'SELECT id, title, is_public FROM notes WHERE share_token = $1',
+              [shareToken]
+            );
+
+            console.log(`Database query result:`, result.rows);
+
+            if (result.rows.length === 0) {
+              console.log(`No note found with token: ${shareToken}`);
+              client.release();
+              socket.emit('error', { message: 'Invalid or inactive share link' });
+              return;
+            }
+
+            const note = result.rows[0];
+            if (!note.is_public) {
+              console.log(`Note found but not public: ${note.title}`);
+              client.release();
+              socket.emit('error', { message: 'This note is no longer shared' });
+              return;
+            }
+
+            client.release();
+            console.log(`Valid shared note found: ${note.title} (ID: ${note.id})`);
+
+            // Join the room for this shared note
+            const roomName = `shared-note-${shareToken}`;
+            socket.join(roomName);
+
+            // Track viewer count
+            if (!sharedNoteViewers.has(shareToken)) {
+              sharedNoteViewers.set(shareToken, new Set());
+            }
+            sharedNoteViewers.get(shareToken).add(socket.id);
+
+            console.log(`Viewer ${socket.id} joined shared note: ${shareToken}`);
+
+            // Emit success to the joining client
+            socket.emit('joinedSharedNote', {
+              message: 'Successfully joined shared note',
+              noteTitle: note.title
+            });
+
+            // Emit viewer count to room
+            const viewerCount = sharedNoteViewers.get(shareToken).size;
+            io.to(roomName).emit('viewerCount', viewerCount);
+
+            console.log(`Room ${roomName} now has ${viewerCount} viewers`);
+
+          } catch (error) {
+            console.error('Error joining shared note:', error);
+            socket.emit('error', { message: 'Failed to join shared note' });
+          }
+        });
+
+        // Handle viewer joining a shared whiteboard
+        socket.on('joinSharedWhiteboard', async (shareToken) => {
+          try {
+            console.log(`Attempting to join shared whiteboard with token: ${shareToken}`);
+
+            // Validate that the share token exists and is public
+            const client = await actualPool.connect();
+            const result = await client.query(
+              'SELECT id, title, is_public FROM whiteboards WHERE share_token = $1',
+              [shareToken]
+            );
+
+            console.log(`Database query result:`, result.rows);
+
+            if (result.rows.length === 0) {
+              console.log(`No whiteboard found with token: ${shareToken}`);
+              client.release();
+              socket.emit('error', { message: 'Invalid or inactive share link' });
+              return;
+            }
+
+            const whiteboard = result.rows[0];
+            if (!whiteboard.is_public) {
+              console.log(`Whiteboard found but not public: ${whiteboard.title}`);
+              client.release();
+              socket.emit('error', { message: 'This whiteboard is no longer shared' });
+              return;
+            }
+
+            client.release();
+            console.log(`Valid shared whiteboard found: ${whiteboard.title} (ID: ${whiteboard.id})`);
+
+            // Join the room for this shared whiteboard
+            const roomName = `shared-whiteboard-${shareToken}`;
+            socket.join(roomName);
+
+            // Track viewer count
+            if (!sharedWhiteboardViewers.has(shareToken)) {
+              sharedWhiteboardViewers.set(shareToken, new Set());
+            }
+            sharedWhiteboardViewers.get(shareToken).add(socket.id);
+
+            console.log(`Viewer ${socket.id} joined shared whiteboard: ${shareToken}`);
+
+            // Emit success to the joining client
+            socket.emit('joinedSharedWhiteboard', {
+              message: 'Successfully joined shared whiteboard',
+              whiteboardTitle: whiteboard.title
+            });
+
+            // Emit viewer count to room
+            const viewerCount = sharedWhiteboardViewers.get(shareToken).size;
+            io.to(roomName).emit('viewerCount', viewerCount);
+
+            console.log(`Room ${roomName} now has ${viewerCount} viewers`);
+
+          } catch (error) {
+            console.error('Error joining shared whiteboard:', error);
+            socket.emit('error', { message: 'Failed to join shared whiteboard' });
+          }
+        });
+
+        // Handle disconnection
+        socket.on('disconnect', () => {
+          console.log(`WebSocket client disconnected: ${socket.id}`);
+
+          // Remove from all shared list viewer tracking
+          for (const [shareToken, viewers] of sharedListViewers.entries()) {
+            if (viewers.has(socket.id)) {
+              viewers.delete(socket.id);
+
+              // Clean up empty sets
+              if (viewers.size === 0) {
+                sharedListViewers.delete(shareToken);
+              } else {
+                // Update viewer count for remaining viewers
+                const roomName = `shared-list-${shareToken}`;
+                io.to(roomName).emit('viewerCount', viewers.size);
+              }
+            }
+          }
+
+          // Remove from all shared note viewer tracking
+          for (const [shareToken, viewers] of sharedNoteViewers.entries()) {
+            if (viewers.has(socket.id)) {
+              viewers.delete(socket.id);
+
+              // Clean up empty sets
+              if (viewers.size === 0) {
+                sharedNoteViewers.delete(shareToken);
+              } else {
+                // Update viewer count for remaining viewers
+                const roomName = `shared-note-${shareToken}`;
+                io.to(roomName).emit('viewerCount', viewers.size);
+              }
+            }
+          }
+
+          // Remove from all shared whiteboard viewer tracking
+          for (const [shareToken, viewers] of sharedWhiteboardViewers.entries()) {
+            if (viewers.has(socket.id)) {
+              viewers.delete(socket.id);
+
+              // Clean up empty sets
+              if (viewers.size === 0) {
+                sharedWhiteboardViewers.delete(shareToken);
+              } else {
+                // Update viewer count for remaining viewers
+                const roomName = `shared-whiteboard-${shareToken}`;
+                io.to(roomName).emit('viewerCount', viewers.size);
+              }
+            }
+          }
+        });
+      });
+
+      // Helper function to broadcast list changes to shared viewers
+      const broadcastListUpdate = (shareToken, eventType, data) => {
+        if (shareToken && io) {
+          const roomName = `shared-list-${shareToken}`;
+          io.to(roomName).emit('listUpdated', {
+            type: eventType,
+            data: data,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`Broadcasted ${eventType} to shared list: ${shareToken}`);
+        }
+      };
+
+      // Helper function to broadcast note changes to shared viewers
+      const broadcastNoteUpdate = (shareToken, eventType, data) => {
+        if (shareToken && io) {
+          const roomName = `shared-note-${shareToken}`;
+          io.to(roomName).emit('noteUpdated', {
+            type: eventType,
+            data: data,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`Broadcasted ${eventType} to shared note: ${shareToken}`);
+        }
+      };
+
+      // Helper function to broadcast whiteboard changes to shared viewers
+      const broadcastWhiteboardUpdate = (shareToken, eventType, data) => {
+        if (shareToken && io) {
+          const roomName = `shared-whiteboard-${shareToken}`;
+          io.to(roomName).emit('whiteboardUpdated', {
+            type: eventType,
+            data: data,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`Broadcasted ${eventType} to shared whiteboard: ${shareToken}`);
+        }
+      };
+
+      // Make WebSocket functionality available globally for API endpoints
+      global.io = io;
+      global.sharedListViewers = sharedListViewers;
+      global.sharedNoteViewers = sharedNoteViewers;
+      global.sharedWhiteboardViewers = sharedWhiteboardViewers;
+      global.broadcastListUpdate = broadcastListUpdate;
+      global.broadcastNoteUpdate = broadcastNoteUpdate;
+      global.broadcastWhiteboardUpdate = broadcastWhiteboardUpdate;
+
+      console.log('✅ WebSocket functionality initialized');
+    } else {
+      console.warn('Skipping WebSocket initialization due to missing database pool.');
+    }
+
       // Get all lists
       app.get('/api/lists', global.authenticateJWT, async (req, res) => {
         try {
@@ -237,7 +560,19 @@ setTimeout(async () => {
             ...result.rows[0],
             type: result.rows[0].category
           };
-          
+
+          // Broadcast to shared viewers if list is public
+          if (result.rows[0].is_public && result.rows[0].share_token && global.broadcastListUpdate) {
+            global.broadcastListUpdate(result.rows[0].share_token, 'LIST_UPDATE', {
+              id: result.rows[0].id,
+              title: result.rows[0].title,
+              category: result.rows[0].category,
+              items: result.rows[0].items,
+              color_value: result.rows[0].color_value,
+              updated_at: result.rows[0].updated_at
+            });
+          }
+
           res.json(mappedResult);
         } catch (error) {
           console.error('Error updating list:', error);
@@ -311,13 +646,247 @@ setTimeout(async () => {
           if (result.rows.length === 0) {
             return res.status(404).json({ error: 'List not found' });
           }
-          
+
+          // Broadcast position update to shared viewers if list is public
+          if (result.rows[0].is_public && result.rows[0].share_token && global.broadcastListUpdate) {
+            global.broadcastListUpdate(result.rows[0].share_token, 'POSITION_UPDATE', {
+              id: result.rows[0].id,
+              position_x: result.rows[0].position_x,
+              position_y: result.rows[0].position_y
+            });
+          }
+
           res.json(result.rows[0]);
         } catch (error) {
           console.error('Error updating list position:', error);
           res.status(500).json({ error: 'Internal server error' });
         }
       });
+
+      // --- Granular List API Endpoints for Real-time Updates ---
+
+      // Toggle item completion status
+      app.put('/api/lists/:id/items/:itemId/toggle', global.authenticateJWT, async (req, res) => {
+        try {
+          const { id, itemId } = req.params;
+
+          const client = await actualPool.connect();
+
+          // Get current list
+          const listResult = await client.query(
+            'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+            [id, req.user.id]
+          );
+
+          if (listResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'List not found' });
+          }
+
+          const list = listResult.rows[0];
+          const items = list.items || [];
+
+          // Find and toggle the item
+          const itemIndex = items.findIndex(item => item.id === itemId);
+          if (itemIndex === -1) {
+            client.release();
+            return res.status(404).json({ error: 'Item not found' });
+          }
+
+          items[itemIndex].completed = !items[itemIndex].completed;
+
+          // Update the list
+          const updateResult = await client.query(
+            'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [JSON.stringify(items), id, req.user.id]
+          );
+          client.release();
+
+          const updatedList = updateResult.rows[0];
+
+          // Broadcast to shared viewers if list is public
+          if (updatedList.is_public && updatedList.share_token && global.broadcastListUpdate) {
+            global.broadcastListUpdate(updatedList.share_token, 'ITEM_TOGGLED', {
+              id: updatedList.id,
+              itemId: itemId,
+              completed: items[itemIndex].completed,
+              items: updatedList.items
+            });
+          }
+
+          res.json({
+            ...updatedList,
+            type: updatedList.category
+          });
+        } catch (error) {
+          console.error('Error toggling item:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
+      // Add new item to list
+      app.post('/api/lists/:id/items', global.authenticateJWT, async (req, res) => {
+        try {
+          const { id } = req.params;
+          const { text, completed = false } = req.body;
+
+          if (!text || text.trim() === '') {
+            return res.status(400).json({ error: 'Item text is required' });
+          }
+
+          const client = await actualPool.connect();
+
+          // Get current list
+          const listResult = await client.query(
+            'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+            [id, req.user.id]
+          );
+
+          if (listResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'List not found' });
+          }
+
+          const list = listResult.rows[0];
+          const items = list.items || [];
+
+          // Create new item
+          const newItem = {
+            id: require('crypto').randomUUID(),
+            text: text.trim(),
+            completed: completed
+          };
+
+          items.push(newItem);
+
+          // Update the list
+          const updateResult = await client.query(
+            'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [JSON.stringify(items), id, req.user.id]
+          );
+          client.release();
+
+          const updatedList = updateResult.rows[0];
+
+          // Broadcast to shared viewers if list is public
+          if (updatedList.is_public && updatedList.share_token && global.broadcastListUpdate) {
+            global.broadcastListUpdate(updatedList.share_token, 'ITEM_ADDED', {
+              id: updatedList.id,
+              newItem: newItem,
+              items: updatedList.items
+            });
+          }
+
+          res.json({
+            ...updatedList,
+            type: updatedList.category
+          });
+        } catch (error) {
+          console.error('Error adding item:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
+      // Remove item from list
+      app.delete('/api/lists/:id/items/:itemId', global.authenticateJWT, async (req, res) => {
+        try {
+          const { id, itemId } = req.params;
+
+          const client = await actualPool.connect();
+
+          // Get current list
+          const listResult = await client.query(
+            'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+            [id, req.user.id]
+          );
+
+          if (listResult.rows.length === 0) {
+            client.release();
+            return res.status(404).json({ error: 'List not found' });
+          }
+
+          const list = listResult.rows[0];
+          const items = list.items || [];
+
+          // Find and remove the item
+          const itemIndex = items.findIndex(item => item.id === itemId);
+          if (itemIndex === -1) {
+            client.release();
+            return res.status(404).json({ error: 'Item not found' });
+          }
+
+          const removedItem = items[itemIndex];
+          items.splice(itemIndex, 1);
+
+          // Update the list
+          const updateResult = await client.query(
+            'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [JSON.stringify(items), id, req.user.id]
+          );
+          client.release();
+
+          const updatedList = updateResult.rows[0];
+
+          // Broadcast to shared viewers if list is public
+          if (updatedList.is_public && updatedList.share_token && global.broadcastListUpdate) {
+            global.broadcastListUpdate(updatedList.share_token, 'ITEM_REMOVED', {
+              id: updatedList.id,
+              removedItemId: itemId,
+              items: updatedList.items
+            });
+          }
+
+          res.json({
+            ...updatedList,
+            type: updatedList.category
+          });
+        } catch (error) {
+          console.error('Error removing item:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
+      // Update list title
+      app.put('/api/lists/:id/title', global.authenticateJWT, async (req, res) => {
+        try {
+          const { id } = req.params;
+          const { title } = req.body;
+
+          if (!title || title.trim() === '') {
+            return res.status(400).json({ error: 'Title is required' });
+          }
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'UPDATE lists SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [title.trim(), id, req.user.id]
+          );
+          client.release();
+
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'List not found' });
+          }
+
+          const updatedList = result.rows[0];
+
+          // Broadcast to shared viewers if list is public
+          if (updatedList.is_public && updatedList.share_token && global.broadcastListUpdate) {
+            global.broadcastListUpdate(updatedList.share_token, 'TITLE_CHANGED', {
+              id: updatedList.id,
+              title: updatedList.title
+            });
+          }
+
+          res.json({
+            ...updatedList,
+            type: updatedList.category
+          });
+        } catch (error) {
+          console.error('Error updating title:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
       // --- Notes API Endpoints ---
 
       // Get all notes for the current user
@@ -410,15 +979,29 @@ setTimeout(async () => {
           const newZIndex = z_index !== undefined ? z_index : currentNote.z_index;
 
           const updateResult = await client.query(
-            `UPDATE notes 
-             SET title = $1, content = $2, category = $3, color_value = $4, position_x = $5, position_y = $6, width = $7, height = $8, z_index = $9 
+            `UPDATE notes
+             SET title = $1, content = $2, category = $3, color_value = $4, position_x = $5, position_y = $6, width = $7, height = $8, z_index = $9
              WHERE id = $10 AND user_id = $11 RETURNING *`,
             [newTitle, newContent, newCategory, newColorValue, newPositionX, newPositionY, newWidth, newHeight, newZIndex, noteId, req.user.id]
           );
           client.release();
-          
+
+          const updatedNote = updateResult.rows[0];
+
+          // Broadcast update to shared note viewers if note is public
+          if (updatedNote.is_public && updatedNote.share_token && global.broadcastNoteUpdate) {
+            global.broadcastNoteUpdate(updatedNote.share_token, 'noteUpdated', {
+              id: updatedNote.id,
+              title: updatedNote.title,
+              content: updatedNote.content,
+              category: updatedNote.category,
+              color_value: updatedNote.color_value,
+              updated_at: updatedNote.updated_at
+            });
+          }
+
           // The updated_at field is handled automatically by the database trigger.
-          res.json(updateResult.rows[0]);
+          res.json(updatedNote);
         } catch (error) {
           console.error('Error updating note:', error);
           res.status(500).json({ error: 'Internal server error while updating note' });
@@ -455,6 +1038,14 @@ setTimeout(async () => {
           if (result.rows.length === 0) {
             console.error(`❌ Failed to delete note ${noteId} - no rows affected`);
             return res.status(404).json({ error: 'Note not found or access denied' });
+          }
+
+          // Broadcast deletion to shared note viewers if note was public
+          if (noteInfo.is_public && noteInfo.share_token && global.broadcastNoteUpdate) {
+            global.broadcastNoteUpdate(noteInfo.share_token, 'noteDeleted', {
+              id: noteId,
+              message: 'This note has been deleted by the owner'
+            });
           }
 
           console.log(`✅ Note ${noteId} deleted successfully. Shared links with token ${noteInfo.share_token} are now invalid.`);
@@ -601,13 +1192,31 @@ setTimeout(async () => {
           const newColorValue = color_value !== undefined ? color_value : currentWhiteboard.color_value;
 
           const updateResult = await client.query(
-            `UPDATE whiteboards 
-             SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10 
+            `UPDATE whiteboards
+             SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10
              WHERE id = $11 AND user_id = $12 RETURNING *`,
             [newTitle, newCategory, newCanvasData, newCanvasWidth, newCanvasHeight, newBackgroundColor, newPositionX, newPositionY, newZIndex, newColorValue, whiteboardId, req.user.id]
           );
           client.release();
-          res.json(updateResult.rows[0]);
+
+          const updatedWhiteboard = updateResult.rows[0];
+
+          // Broadcast to shared viewers if whiteboard is public
+          if (updatedWhiteboard.is_public && updatedWhiteboard.share_token && global.broadcastWhiteboardUpdate) {
+            global.broadcastWhiteboardUpdate(updatedWhiteboard.share_token, 'whiteboardUpdated', {
+              id: updatedWhiteboard.id,
+              title: updatedWhiteboard.title,
+              category: updatedWhiteboard.category,
+              canvas_data: updatedWhiteboard.canvas_data,
+              canvas_width: updatedWhiteboard.canvas_width,
+              canvas_height: updatedWhiteboard.canvas_height,
+              background_color: updatedWhiteboard.background_color,
+              color_value: updatedWhiteboard.color_value,
+              updated_at: updatedWhiteboard.updated_at
+            });
+          }
+
+          res.json(updatedWhiteboard);
         } catch (error) {
           console.error('Error updating whiteboard:', error);
           res.status(500).json({ error: 'Internal server error while updating whiteboard' });
@@ -644,6 +1253,14 @@ setTimeout(async () => {
           if (result.rows.length === 0) {
             console.error(`❌ Failed to delete whiteboard ${whiteboardId} - no rows affected`);
             return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+          }
+
+          // Broadcast deletion to shared viewers if whiteboard was public
+          if (whiteboardInfo.is_public && whiteboardInfo.share_token && global.broadcastWhiteboardUpdate) {
+            global.broadcastWhiteboardUpdate(whiteboardInfo.share_token, 'whiteboardDeleted', {
+              id: whiteboardInfo.id,
+              message: 'This whiteboard has been deleted by the owner.'
+            });
           }
 
           console.log(`✅ Whiteboard ${whiteboardId} deleted successfully. Shared links with token ${whiteboardInfo.share_token} are now invalid.`);
@@ -1012,7 +1629,9 @@ setTimeout(async () => {
           const { token } = req.params;
           console.log(`🔗 Shared whiteboard access attempt with token: ${token}`);
 
+          console.log('🔗 Attempting to connect to database...');
           const client = await actualPool.connect();
+          console.log('🔗 Database connection successful');
 
           const result = await client.query(`
             SELECT w.id, w.title, w.category, w.canvas_data, w.canvas_width, w.canvas_height,
@@ -1055,7 +1674,17 @@ setTimeout(async () => {
           res.json(sanitizedWhiteboard);
         } catch (error) {
           console.error('Error fetching shared whiteboard:', error);
-          res.status(500).json({ error: 'Internal server error while fetching shared content' });
+
+          // Provide more specific error messages for common issues
+          if (error.message && error.message.includes('timeout')) {
+            console.error('🔗 Database connection timeout - database may be overloaded');
+            res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
+          } else if (error.code === 'ECONNREFUSED') {
+            console.error('🔗 Database connection refused - database may be down');
+            res.status(503).json({ error: 'Database connection failed. Please try again later.' });
+          } else {
+            res.status(500).json({ error: 'Internal server error while fetching shared content' });
+          }
         }
       });
 

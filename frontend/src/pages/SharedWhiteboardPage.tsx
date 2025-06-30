@@ -5,6 +5,7 @@ import { SharedWhiteboardCard } from '../components/SharedWhiteboardCard';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
 import api from '../lib/api';
+import { io, Socket } from 'socket.io-client';
 
 interface SharedWhiteboardData {
   id: number;
@@ -28,6 +29,9 @@ const SharedWhiteboardPage: React.FC = () => {
   const [whiteboardData, setWhiteboardData] = useState<SharedWhiteboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [viewerCount, setViewerCount] = useState(0);
 
   useEffect(() => {
     const fetchSharedWhiteboard = async () => {
@@ -69,6 +73,82 @@ const SharedWhiteboardPage: React.FC = () => {
 
     fetchSharedWhiteboard();
   }, [token, toast, error]);
+
+  // WebSocket connection effect
+  useEffect(() => {
+    if (!token || !whiteboardData) return;
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    console.log('Connecting to WebSocket at:', BACKEND_URL);
+
+    const newSocket = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('WebSocket connected, joining shared whiteboard:', token);
+      setIsConnected(true);
+      newSocket.emit('joinSharedWhiteboard', token);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('WebSocket disconnected');
+      setIsConnected(false);
+      setViewerCount(0);
+    });
+
+    newSocket.on('joinedSharedWhiteboard', (data) => {
+      console.log('Successfully joined shared whiteboard:', data);
+    });
+
+    newSocket.on('viewerCount', (count) => {
+      console.log('Viewer count updated:', count);
+      setViewerCount(count);
+    });
+
+    newSocket.on('whiteboardUpdated', (update) => {
+      console.log('Whiteboard updated:', update);
+
+      if (update.type === 'whiteboardUpdated' && update.data) {
+        setWhiteboardData(prevData => {
+          if (!prevData) return prevData;
+
+          return {
+            ...prevData,
+            title: update.data.title || prevData.title,
+            category: update.data.category || prevData.category,
+            canvas_data: update.data.canvas_data || prevData.canvas_data,
+            canvas_width: update.data.canvas_width || prevData.canvas_width,
+            canvas_height: update.data.canvas_height || prevData.canvas_height,
+            background_color: update.data.background_color || prevData.background_color,
+            color_value: update.data.color_value || prevData.color_value,
+            updated_at: update.data.updated_at || prevData.updated_at
+          };
+        });
+      } else if (update.type === 'whiteboardDeleted') {
+        console.log('Whiteboard was deleted by owner');
+        setError('This whiteboard has been deleted by the owner.');
+        setWhiteboardData(null);
+      }
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: error.message || "Failed to connect to real-time updates",
+        variant: "destructive",
+      });
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      console.log('Cleaning up WebSocket connection');
+      newSocket.disconnect();
+    };
+  }, [token, whiteboardData?.id, toast]);
 
   const handleBackToHome = () => {
     navigate('/');
@@ -113,7 +193,7 @@ const SharedWhiteboardPage: React.FC = () => {
       contentType="whiteboard"
       onBackToHome={handleBackToHome}
     >
-      <SharedWhiteboardCard whiteboardData={whiteboardData} />
+      <SharedWhiteboardCard whiteboardData={whiteboardData} isLive={isConnected} />
     </SharedContentLayout>
   );
 };

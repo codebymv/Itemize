@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedListCard } from '../components/SharedListCard';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
 import api from '../lib/api';
+import { io, Socket } from 'socket.io-client';
 
 interface SharedListData {
   id: string;
@@ -29,6 +30,9 @@ const SharedListPage: React.FC = () => {
   const [listData, setListData] = useState<SharedListData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  const [viewerCount, setViewerCount] = useState<number>(0);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     const fetchSharedList = async () => {
@@ -41,17 +45,86 @@ const SharedListPage: React.FC = () => {
       try {
         const response = await api.get(`/api/shared/list/${token}`);
         setListData(response.data);
-        
+
         // Set page title
         document.title = `${response.data.title} on Itemize.cloud`;
-        
+
         // Set meta description
         const metaDescription = document.querySelector('meta[name="description"]');
         if (metaDescription) {
-          metaDescription.setAttribute('content', 
+          metaDescription.setAttribute('content',
             `View this list shared from Itemize.cloud. Created by ${response.data.creator_name} on ${new Date(response.data.created_at).toLocaleDateString()}.`
           );
         }
+
+        // Initialize WebSocket connection for real-time updates
+        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        console.log('Connecting to WebSocket at:', backendUrl);
+
+        const socket = io(backendUrl, {
+          transports: ['websocket', 'polling'], // Allow fallback to polling
+          timeout: 5000,
+          forceNew: true
+        });
+        socketRef.current = socket;
+
+        // Join the shared list room after connection is established
+        socket.on('connect', () => {
+          console.log('WebSocket connected, joining shared list:', token);
+          socket.emit('joinSharedList', token);
+        });
+
+        // Handle successful join
+        socket.on('joinedSharedList', (data) => {
+          console.log('Successfully joined shared list:', data);
+          setIsLive(true);
+        });
+
+        // Listen for real-time updates
+        socket.on('listUpdated', (update) => {
+          console.log('Received list update:', update);
+          setListData(prevData => {
+            if (!prevData) return prevData;
+
+            // Update the list data while preserving creator info
+            return {
+              ...prevData,
+              ...update.data,
+              creator_name: prevData.creator_name,
+              created_at: prevData.created_at,
+              type: 'list' as const
+            };
+          });
+        });
+
+        // Listen for viewer count updates
+        socket.on('viewerCount', (count: number) => {
+          console.log('Viewer count updated:', count);
+          setViewerCount(count);
+        });
+
+        // Handle disconnection
+        socket.on('disconnect', (reason) => {
+          console.log('WebSocket disconnected:', reason);
+          setIsLive(false);
+        });
+
+        // Handle connection errors
+        socket.on('connect_error', (error) => {
+          console.error('WebSocket connection error:', error);
+          toast({
+            title: "Connection Error",
+            description: "Live updates unavailable. Showing static content.",
+            variant: "destructive"
+          });
+          setIsLive(false);
+        });
+
+        // Handle general errors
+        socket.on('error', (error) => {
+          console.error('WebSocket error:', error);
+        });
+
       } catch (err: any) {
         console.error('Error fetching shared list:', err);
         if (err.response?.status === 404) {
@@ -61,7 +134,7 @@ const SharedListPage: React.FC = () => {
         } else {
           setError('Failed to load shared content. Please try again later.');
         }
-        
+
         // Note: Don't show toast for shared content errors - the main layout handles the error display
       } finally {
         setLoading(false);
@@ -69,7 +142,15 @@ const SharedListPage: React.FC = () => {
     };
 
     fetchSharedList();
-  }, [token, toast, error]);
+
+    // Cleanup WebSocket connection on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [token, toast]);
 
   const handleBackToHome = () => {
     navigate('/');
@@ -109,12 +190,17 @@ const SharedListPage: React.FC = () => {
   }
 
   return (
-    <SharedContentLayout 
-      title={listData.title} 
+    <SharedContentLayout
+      title={listData.title}
       contentType="list"
       onBackToHome={handleBackToHome}
     >
-      <SharedListCard listData={listData} />
+
+
+      <SharedListCard
+        listData={listData}
+        isLive={isLive}
+      />
     </SharedContentLayout>
   );
 };
