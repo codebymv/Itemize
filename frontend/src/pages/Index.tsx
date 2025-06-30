@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
 import { ListCard } from "@/components/ListCard";
+import { ShareListModal } from "@/components/ShareListModal";
 import QuickAddForm from "@/components/QuickAddForm";
+import api from '@/lib/api';
 
 interface ListItem {
   id: string;
@@ -29,6 +31,11 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+
+  // Sharing modal states
+  const [showShareListModal, setShowShareListModal] = useState(false);
+  const [currentShareItem, setCurrentShareItem] = useState<{ id: string; title: string; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
+
   const { toast } = useToast();
 
   const createList = (title: string, type: string) => {
@@ -114,6 +121,38 @@ const Index = () => {
     });
     
     return counts;
+  };
+
+  // Sharing functions
+  const handleShareList = async (listId: string) => {
+    const list = lists.find(l => l.id === listId);
+    if (!list) return;
+
+    setCurrentShareItem({ id: listId, title: list.title });
+    setShowShareListModal(true);
+  };
+
+  const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
+    try {
+      const response = await api.post(`/api/lists/${listId}/share`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sharing list:', error);
+      throw error;
+    }
+  };
+
+  const handleListUnshare = async (listId: string): Promise<void> => {
+    try {
+      await api.delete(`/api/lists/${listId}/share`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+    } catch (error) {
+      console.error('Error unsharing list:', error);
+      throw error;
+    }
   };
 
   return (
@@ -230,6 +269,7 @@ const Index = () => {
                 list={list}
                 onUpdate={updateList}
                 onDelete={deleteList}
+                onShare={handleShareList}
                 existingCategories={getActualUniqueCategories()}
               />
             ))}
@@ -244,6 +284,22 @@ const Index = () => {
         onCreateList={createList}
         existingCategories={getActualUniqueCategories()}
       />
+
+      {/* Share List Modal */}
+      {showShareListModal && currentShareItem && (
+        <ShareListModal
+          isOpen={showShareListModal}
+          onClose={() => {
+            setShowShareListModal(false);
+            setCurrentShareItem(null);
+          }}
+          listId={currentShareItem.id}
+          listTitle={currentShareItem.title}
+          onShare={handleListShare}
+          onUnshare={handleListUnshare}
+          existingShareData={currentShareItem.shareData}
+        />
+      )}
     </div>
   );
 };

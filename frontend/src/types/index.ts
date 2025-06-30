@@ -16,6 +16,8 @@ export interface List {
   position_y?: number; // Y coordinate for canvas view
   width?: number; // Width for resizing
   height?: number; // Height for resizing
+  share_token?: string; // Share token for public sharing
+  is_public?: boolean; // Whether the list is publicly shared
 }
 
 // Category type for API responses
@@ -32,6 +34,7 @@ export interface ListCardProps {
   list: List;
   onUpdate: (list: List) => void;
   onDelete: (listId: string) => void;
+  onShare: (listId: string) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
@@ -77,6 +80,7 @@ export interface NoteCardProps {
   note: Note;
   onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   onDelete: (noteId: number) => Promise<void>;
+  onShare: (noteId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
@@ -88,6 +92,7 @@ export interface WhiteboardCardProps {
   whiteboard: Whiteboard;
   onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onDelete: (whiteboardId: number) => Promise<boolean>;
+  onShare: (whiteboardId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;

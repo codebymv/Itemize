@@ -16,6 +16,7 @@ interface CanvasContainerProps {
   searchQuery?: string;
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
+  onShareList?: (listId: string) => void;
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
@@ -41,6 +42,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   searchQuery = '',
   onReady,
   onOpenNewNoteModal,
+  onShareList,
   notes,
   onNoteUpdate,
   onNoteDelete,
@@ -587,6 +589,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 list={list}
                 onUpdate={handleListUpdate}
                 onDelete={handleListDelete}
+                onShare={onShareList || (() => {})}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
                 onPositionChange={handleListPositionChange}

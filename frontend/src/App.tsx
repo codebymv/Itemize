@@ -20,6 +20,9 @@ import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import DocsPage from "./pages/DocsPage";
 import StatusPage from "./pages/StatusPage";
+import SharedListPage from "./pages/SharedListPage";
+import SharedNotePage from "./pages/SharedNotePage";
+import SharedWhiteboardPage from "./pages/SharedWhiteboardPage";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CanvasPage from "./pages/canvas";
@@ -86,6 +89,11 @@ const AppContent = () => {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/help/*" element={<DocsPage />} />
           <Route path="/status" element={<StatusPage />} />
+
+          {/* Shared content routes (public) */}
+          <Route path="/shared/list/:token" element={<SharedListPage />} />
+          <Route path="/shared/note/:token" element={<SharedNotePage />} />
+          <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
           
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>

@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 // Import database migrations
-const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories } = require('./db_migrations');
+const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration } = require('./db_migrations');
 
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
@@ -155,6 +155,13 @@ const initializeDatabase = async (pool) => {
         await runCleanupDefaultCategories(pool);
       } catch (cleanupError) {
         console.error('⚠️ Categories cleanup failed, continuing with existing categories:', cleanupError.message);
+      }
+
+      // Run sharing feature migration (safe)
+      try {
+        await runSharingMigration(pool);
+      } catch (sharingError) {
+        console.error('⚠️ Sharing migration failed, continuing without sharing feature:', sharingError.message);
       }
       
       await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);

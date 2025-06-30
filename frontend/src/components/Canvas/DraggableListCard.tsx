@@ -6,6 +6,7 @@ interface DraggableListCardProps {
   list: List;
   onUpdate: (listData: any) => Promise<any>;
   onDelete: (listId: string) => Promise<boolean>;
+  onShare: (listId: string) => void;
   existingCategories: Category[];
   canvasTransform: { x: number; y: number; scale: number };
   onPositionChange: (listId: string, newPosition: { x: number; y: number }) => void;
@@ -19,6 +20,7 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   list,
   onUpdate,
   onDelete,
+  onShare,
   existingCategories,
   canvasTransform,
   onPositionChange,
@@ -198,6 +200,7 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
         list={list}
         onUpdate={onUpdate}
         onDelete={onDelete}
+        onShare={onShare}
         existingCategories={existingCategories}
         isCollapsed={isCollapsed}
         onToggleCollapsed={onToggleCollapsed}

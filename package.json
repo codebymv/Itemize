@@ -21,11 +21,15 @@
     "docs:check": "node sync-docs.js check"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "chokidar": "^3.5.3"
+    "chokidar": "^3.5.3",
+    "concurrently": "^8.2.2"
   },
   "workspaces": [
     "frontend",
     "backend"
-  ]
+  ],
+  "dependencies": {
+    "dompurify": "^3.2.6",
+    "express-rate-limit": "^7.5.1"
+  }
 }

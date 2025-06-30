@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, Edit3, Trash2, X, Check, ChevronDown, Palette, CheckSquare } from 'lucide-react';
+import { MoreVertical, Edit3, Trash2, X, Check, ChevronDown, Palette, CheckSquare, Share2 } from 'lucide-react';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ interface ListCardHeaderProps {
   setIsEditing: (value: boolean) => void;
   handleEditTitle: () => void;
   handleDeleteList: () => void;
+  handleShareList: () => void;
   titleEditRef: React.RefObject<HTMLInputElement>;
   onColorSave: (newColor: string) => Promise<void>;
   isSavingColor?: boolean;
@@ -34,6 +35,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
   setIsEditing,
   handleEditTitle,
   handleDeleteList,
+  handleShareList,
   titleEditRef,
   onColorSave,
   isSavingColor
@@ -150,6 +152,10 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                   <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
                     <Edit3 className="mr-2 h-4 w-4" />
                     Edit Title
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleShareList} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDeleteList} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                     <Trash2 className="mr-2 h-4 w-4" />

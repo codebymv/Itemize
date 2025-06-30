@@ -19,7 +19,11 @@ import { WhiteboardCard } from '../components/WhiteboardCard';
 import { NewNoteModal } from '../components/NewNoteModal';
 import { NewListModal } from '../components/NewListModal';
 import { NewWhiteboardModal } from '../components/NewWhiteboardModal';
+import { ShareListModal } from '../components/ShareListModal';
+import { ShareNoteModal } from '../components/ShareNoteModal';
+import { ShareWhiteboardModal } from '../components/ShareWhiteboardModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
+import api from '../lib/api';
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
@@ -44,6 +48,13 @@ const CanvasPage: React.FC = () => {
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
   const [newWhiteboardInitialPosition, setNewWhiteboardInitialPosition] = useState<{ x: number, y: number } | null>(null);
+
+  // Sharing modal states
+  const [showShareListModal, setShowShareListModal] = useState(false);
+  const [showShareNoteModal, setShowShareNoteModal] = useState(false);
+  const [showShareWhiteboardModal, setShowShareWhiteboardModal] = useState(false);
+  const [currentShareItem, setCurrentShareItem] = useState<{ id: string | number; title: string; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
+
   const { toast } = useToast();
   const { token } = useAuth();
 
@@ -667,6 +678,110 @@ const CanvasPage: React.FC = () => {
     setShowNewWhiteboardModal(true);
   };
 
+  // Sharing functions
+  const handleShareList = async (listId: string) => {
+    const list = lists.find(l => l.id === listId);
+    if (!list) return;
+
+    // Check if list already has share data
+    const existingShareData = list.share_token && list.is_public ? {
+      shareToken: list.share_token,
+      shareUrl: `${window.location.protocol}//${window.location.hostname}:5173/shared/list/${list.share_token}`
+    } : undefined;
+
+    setCurrentShareItem({
+      id: listId,
+      title: list.title,
+      shareData: existingShareData
+    });
+    setShowShareListModal(true);
+  };
+
+  const handleShareNote = async (noteId: number) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    setCurrentShareItem({ id: noteId, title: note.title });
+    setShowShareNoteModal(true);
+  };
+
+  const handleShareWhiteboard = async (whiteboardId: number) => {
+    const whiteboard = whiteboards.find(w => w.id === whiteboardId);
+    if (!whiteboard) return;
+
+    setCurrentShareItem({ id: whiteboardId, title: whiteboard.title });
+    setShowShareWhiteboardModal(true);
+  };
+
+  const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
+    try {
+      const response = await api.post(`/api/lists/${listId}/share`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sharing list:', error);
+      throw error;
+    }
+  };
+
+  const handleListUnshare = async (listId: string): Promise<void> => {
+    try {
+      await api.delete(`/api/lists/${listId}/share`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('Error unsharing list:', error);
+      throw error;
+    }
+  };
+
+  const handleNoteShare = async (noteId: number): Promise<{ shareToken: string; shareUrl: string }> => {
+    try {
+      const response = await api.post(`/api/notes/${noteId}/share`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sharing note:', error);
+      throw error;
+    }
+  };
+
+  const handleNoteUnshare = async (noteId: number): Promise<void> => {
+    try {
+      await api.delete(`/api/notes/${noteId}/share`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('Error unsharing note:', error);
+      throw error;
+    }
+  };
+
+  const handleWhiteboardShare = async (whiteboardId: number): Promise<{ shareToken: string; shareUrl: string }> => {
+    try {
+      const response = await api.post(`/api/whiteboards/${whiteboardId}/share`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sharing whiteboard:', error);
+      throw error;
+    }
+  };
+
+  const handleWhiteboardUnshare = async (whiteboardId: number): Promise<void> => {
+    try {
+      await api.delete(`/api/whiteboards/${whiteboardId}/share`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('Error unsharing whiteboard:', error);
+      throw error;
+    }
+  };
+
   // Mobile note creation function (mirrors createList)
   const createNote = async (title: string, category: string, color: string) => {
     try {
@@ -1031,6 +1146,7 @@ const CanvasPage: React.FC = () => {
                       list={list}
                       onUpdate={updateList}
                       onDelete={deleteList}
+                      onShare={handleShareList}
                       existingCategories={dbCategories}
                       isCollapsed={isListCollapsed(list.id)}
                       onToggleCollapsed={() => toggleListCollapsed(list.id)}
@@ -1060,6 +1176,7 @@ const CanvasPage: React.FC = () => {
                       onDelete={async (noteId) => {
                         await handleDeleteNote(noteId);
                       }}
+                      onShare={handleShareNote}
                       existingCategories={dbCategories}
                       isCollapsed={isNoteCollapsed(note.id)}
                       onToggleCollapsed={() => toggleNoteCollapsed(note.id)}
@@ -1088,6 +1205,7 @@ const CanvasPage: React.FC = () => {
                       onDelete={async (whiteboardId) => {
                         return await handleDeleteWhiteboard(whiteboardId);
                       }}
+                      onShare={handleShareWhiteboard}
                       existingCategories={dbCategories}
                       isCollapsed={isWhiteboardCollapsed(whiteboard.id)}
                       onToggleCollapsed={() => toggleWhiteboardCollapsed(whiteboard.id)}
@@ -1154,10 +1272,11 @@ const CanvasPage: React.FC = () => {
         ) : (
           // Desktop: Full-width Canvas View with drag and drop
           <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
-            <CanvasContainer 
-              existingCategories={dbCategories} 
+            <CanvasContainer
+              existingCategories={dbCategories}
               searchQuery={searchQuery}
-              onOpenNewNoteModal={handleOpenNewNoteModal} 
+              onOpenNewNoteModal={handleOpenNewNoteModal}
+              onShareList={handleShareList}
               notes={notes} // Pass filtered notes state
               onNoteUpdate={handleUpdateNote} // Pass update handler
               onNoteDelete={handleDeleteNote} // Pass delete handler
@@ -1224,6 +1343,52 @@ const CanvasPage: React.FC = () => {
           onListCreated={handleNewListCreated}
           existingCategories={categoryNames}
           position={getIntelligentPosition()} // Use intelligent positioning for mobile-created lists
+        />
+      )}
+
+      {/* Share Modals */}
+      {showShareListModal && currentShareItem && (
+        <ShareListModal
+          isOpen={showShareListModal}
+          onClose={() => {
+            setShowShareListModal(false);
+            setCurrentShareItem(null);
+          }}
+          listId={currentShareItem.id as string}
+          listTitle={currentShareItem.title}
+          onShare={handleListShare}
+          onUnshare={handleListUnshare}
+          existingShareData={currentShareItem.shareData}
+        />
+      )}
+
+      {showShareNoteModal && currentShareItem && (
+        <ShareNoteModal
+          isOpen={showShareNoteModal}
+          onClose={() => {
+            setShowShareNoteModal(false);
+            setCurrentShareItem(null);
+          }}
+          noteId={currentShareItem.id as number}
+          noteTitle={currentShareItem.title}
+          onShare={handleNoteShare}
+          onUnshare={handleNoteUnshare}
+          existingShareData={currentShareItem.shareData}
+        />
+      )}
+
+      {showShareWhiteboardModal && currentShareItem && (
+        <ShareWhiteboardModal
+          isOpen={showShareWhiteboardModal}
+          onClose={() => {
+            setShowShareWhiteboardModal(false);
+            setCurrentShareItem(null);
+          }}
+          whiteboardId={currentShareItem.id as number}
+          whiteboardTitle={currentShareItem.title}
+          onShare={handleWhiteboardShare}
+          onUnshare={handleWhiteboardUnshare}
+          existingShareData={currentShareItem.shareData}
         />
       )}
 

@@ -4,7 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, StickyNote } from 'lucide-react';
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, StickyNote, Share2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ interface NoteCardProps {
   note: Note;
   onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => Promise<void>;
   onDelete: (noteId: number) => Promise<void>;
+  onShare: (noteId: number) => void;
   existingCategories: Category[];
   onCollapsibleChange?: (isOpen: boolean) => void;
   isCollapsed?: boolean;
@@ -27,10 +28,11 @@ interface NoteCardProps {
   updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ 
-  note, 
-  onUpdate, 
-  onDelete, 
+const NoteCard: React.FC<NoteCardProps> = ({
+  note,
+  onUpdate,
+  onDelete,
+  onShare,
   existingCategories,
   onCollapsibleChange,
   isCollapsed,
@@ -67,6 +69,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
     // Refs
     titleEditRef, contentEditRef
   } = useNoteCardLogic({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
+
+  // Handle sharing
+  const handleShareNote = () => {
+    onShare(note.id);
+  };
 
   // Get theme for styling
   const { theme } = useTheme();
@@ -241,6 +248,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Edit Title
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareNote} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleDeleteNote} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Trash2 className="mr-2 h-4 w-4" />

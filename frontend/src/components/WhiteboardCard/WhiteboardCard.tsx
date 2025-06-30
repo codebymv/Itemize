@@ -4,7 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Palette } from 'lucide-react';
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Palette, Share2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
@@ -17,10 +17,11 @@ import { WhiteboardCategorySelector } from './WhiteboardCategorySelector';
 
 const MIN_MOBILE_WHITEBOARD_HEIGHT = 400;
 
-const WhiteboardCard: React.FC<WhiteboardCardProps> = ({ 
-  whiteboard, 
-  onUpdate, 
-  onDelete, 
+const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
+  whiteboard,
+  onUpdate,
+  onDelete,
+  onShare,
   existingCategories,
   isCollapsed,
   onToggleCollapsed,
@@ -79,7 +80,10 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
     titleEditRef
   } = useWhiteboardCardLogic({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
 
-  
+  // Handle sharing
+  const handleShareWhiteboard = () => {
+    onShare(whiteboard.id);
+  };
 
   return (
     <Collapsible
@@ -207,6 +211,10 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                       <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Edit Title
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareWhiteboard} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleDeleteWhiteboard} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Trash2 className="mr-2 h-4 w-4" />

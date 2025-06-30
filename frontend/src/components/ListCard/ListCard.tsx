@@ -25,10 +25,11 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-const ListCard: React.FC<ListCardProps> = ({ 
-  list, 
-  onUpdate, 
-  onDelete, 
+const ListCard: React.FC<ListCardProps> = ({
+  list,
+  onUpdate,
+  onDelete,
+  onShare,
   existingCategories,
   isCollapsed,
   onToggleCollapsed,
@@ -69,6 +70,11 @@ const ListCard: React.FC<ListCardProps> = ({
     // Refs
     titleEditRef, newItemInputRef
   } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory, updateCategory });
+
+  // Handle sharing
+  const handleShareList = () => {
+    onShare(list.id);
+  };
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -148,6 +154,7 @@ const ListCard: React.FC<ListCardProps> = ({
           setIsEditing={setIsEditing}
           handleEditTitle={handleEditTitle}
           handleDeleteList={handleDeleteList}
+          handleShareList={handleShareList}
           titleEditRef={titleEditRef}
           onColorSave={handleSaveListColor} // New prop
           isSavingColor={isSavingColor}     // New prop

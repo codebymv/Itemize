@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => ({
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
+    // Enable history API fallback for client-side routing
+    historyApiFallback: true,
   },
   plugins: [
     react(),

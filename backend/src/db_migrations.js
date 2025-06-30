@@ -375,12 +375,12 @@ const runCleanupDefaultCategories = async (pool) => {
     // Check if categories table exists first
     const tableCheck = await pool.query(`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
         AND table_name = 'categories'
       );
     `);
-    
+
     if (!tableCheck.rows[0].exists) {
       console.log('⚠️ Categories table does not exist, skipping cleanup');
       return false;
@@ -394,44 +394,44 @@ const runCleanupDefaultCategories = async (pool) => {
 
     for (const user of users) {
       const userId = user.id;
-      
+
       try {
         // Get General category ID for this user
         const generalCategoryResult = await pool.query(`
           SELECT id FROM categories WHERE user_id = $1 AND name = 'General';
         `, [userId]);
-        
+
         if (generalCategoryResult.rows.length === 0) {
           console.log(`⚠️ No General category found for user ${userId}, skipping cleanup`);
           continue;
         }
-        
+
         const generalCategoryId = generalCategoryResult.rows[0].id;
-        
+
         // Move lists from Work, Personal, Shopping back to General
         await pool.query(`
-          UPDATE lists 
+          UPDATE lists
           SET category_id = $1
           FROM categories c
-          WHERE lists.category_id = c.id 
-          AND c.user_id = $2 
+          WHERE lists.category_id = c.id
+          AND c.user_id = $2
           AND c.name IN ('Work', 'Personal', 'Shopping');
         `, [generalCategoryId, userId]);
 
         // Move notes from Work, Personal, Shopping back to General
         await pool.query(`
-          UPDATE notes 
+          UPDATE notes
           SET category_id = $1
           FROM categories c
-          WHERE notes.category_id = c.id 
-          AND c.user_id = $2 
+          WHERE notes.category_id = c.id
+          AND c.user_id = $2
           AND c.name IN ('Work', 'Personal', 'Shopping');
         `, [generalCategoryId, userId]);
 
         // Delete the unwanted default categories
         await pool.query(`
-          DELETE FROM categories 
-          WHERE user_id = $1 
+          DELETE FROM categories
+          WHERE user_id = $1
           AND name IN ('Work', 'Personal', 'Shopping');
         `, [userId]);
 
@@ -451,6 +451,70 @@ const runCleanupDefaultCategories = async (pool) => {
   }
 };
 
+// Migration to add sharing functionality to lists, notes, and whiteboards
+const runSharingMigration = async (pool) => {
+  console.log('Running sharing feature migration...');
+
+  try {
+    // Add sharing columns to lists table
+    await pool.query(`
+      ALTER TABLE lists
+      ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS share_token UUID,
+      ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE;
+    `);
+    console.log('✅ Sharing columns added to lists table');
+
+    // Add sharing columns to notes table
+    await pool.query(`
+      ALTER TABLE notes
+      ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS share_token UUID,
+      ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE;
+    `);
+    console.log('✅ Sharing columns added to notes table');
+
+    // Add sharing columns to whiteboards table
+    await pool.query(`
+      ALTER TABLE whiteboards
+      ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS share_token UUID,
+      ADD COLUMN IF NOT EXISTS shared_at TIMESTAMP WITH TIME ZONE;
+    `);
+    console.log('✅ Sharing columns added to whiteboards table');
+
+    // Create indexes for better performance on share tokens
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_lists_share_token ON lists(share_token) WHERE share_token IS NOT NULL;
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_notes_share_token ON notes(share_token) WHERE share_token IS NOT NULL;
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_whiteboards_share_token ON whiteboards(share_token) WHERE share_token IS NOT NULL;
+    `);
+    console.log('✅ Share token indexes created');
+
+    // Create indexes for public content queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_lists_is_public ON lists(is_public) WHERE is_public = TRUE;
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_notes_is_public ON notes(is_public) WHERE is_public = TRUE;
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_whiteboards_is_public ON whiteboards(is_public) WHERE is_public = TRUE;
+    `);
+    console.log('✅ Public content indexes created');
+
+    console.log('✅ Sharing feature migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Sharing feature migration failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = {
   runCanvasMigration,
   runListResizeMigration,
@@ -458,5 +522,6 @@ module.exports = {
   runAddTitleAndCategoryToNotesMigration,
   runCategoriesTableMigration,
   runCategoriesDataMigration,
-  runCleanupDefaultCategories
+  runCleanupDefaultCategories,
+  runSharingMigration
 };
