@@ -4,7 +4,7 @@ import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedListCard } from '../components/SharedListCard';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
-import api from '../lib/api';
+import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
 interface SharedListData {
@@ -58,7 +58,7 @@ const SharedListPage: React.FC = () => {
         }
 
         // Initialize WebSocket connection for real-time updates
-        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const backendUrl = getApiUrl();
         console.log('Connecting to WebSocket at:', backendUrl);
 
         const socket = io(backendUrl, {

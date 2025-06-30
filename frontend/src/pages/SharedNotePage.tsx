@@ -4,7 +4,7 @@ import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedNoteCard } from '../components/SharedNoteCard';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
-import api from '../lib/api';
+import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
 interface SharedNoteData {
@@ -77,7 +77,7 @@ const SharedNotePage: React.FC = () => {
   useEffect(() => {
     if (!token || !noteData) return;
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const BACKEND_URL = getApiUrl();
     console.log('Connecting to WebSocket at:', BACKEND_URL);
 
     const newSocket = io(BACKEND_URL, {
