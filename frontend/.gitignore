@@ -50,6 +50,9 @@ jspm_packages/
 *.swo
 *~
 
+# Build output
+dist/
+
 # OS
 .DS_Store
 .DS_Store?
