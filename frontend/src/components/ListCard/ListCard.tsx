@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
@@ -37,6 +37,9 @@ const ListCard: React.FC<ListCardProps> = ({
   addCategory,
   updateCategory
 }) => {
+  // Debug: Check if ListCard is re-rendering
+  console.log('📋 ListCard render:', list.id, list.title);
+
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -261,4 +264,17 @@ const ListCard: React.FC<ListCardProps> = ({
   );
 };
 
-export default ListCard;
+// Memoize the ListCard to prevent unnecessary re-renders when props haven't changed
+export default memo(ListCard, (prevProps, nextProps) => {
+  // Custom comparison function to prevent re-renders when only non-essential props change
+  return (
+    prevProps.list.id === nextProps.list.id &&
+    prevProps.list.title === nextProps.list.title &&
+    prevProps.list.items.length === nextProps.list.items.length &&
+    prevProps.list.type === nextProps.list.type &&
+    prevProps.isCollapsed === nextProps.isCollapsed &&
+    // Deep compare items for changes that matter to AI suggestions
+    JSON.stringify(prevProps.list.items.map(item => ({ id: item.id, text: item.text, completed: item.completed }))) ===
+    JSON.stringify(nextProps.list.items.map(item => ({ id: item.id, text: item.text, completed: item.completed })))
+  );
+});

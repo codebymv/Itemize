@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext'; // Import auth context
 import { getApiUrl } from '@/lib/api';
@@ -33,10 +33,17 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
   const [currentSuggestion, setCurrentSuggestion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Memoize the items string to prevent unnecessary re-runs
+  const itemsKey = useMemo(() => existingItems.join('|'), [existingItems.join('|')]);
+
+  // Track the last content we had suggestions for to prevent unnecessary clearing
+  const lastSuggestedContent = useRef<string>('');
   
   // For debouncing and throttling
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const lastRequestTime = useRef<number>(0);
+  const lastInitializedKey = useRef<string>('');
   
   const { token } = useAuth(); // Get the authentication token
 
@@ -90,11 +97,23 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
-    
+
+    const currentContentKey = `${listTitle}-${itemsKey}`;
+
     // Only fetch if enabled and we have at least one item
     if (!enabled || !listTitle || existingItems.length === 0) {
-      setSuggestions([]);
-      setCurrentSuggestion(null);
+      // Only clear suggestions if they're not already empty to prevent unnecessary re-renders
+      if (suggestions.length > 0 || currentSuggestion !== null) {
+        setSuggestions([]);
+        setCurrentSuggestion(null);
+        lastSuggestedContent.current = '';
+      }
+      return;
+    }
+
+    // If we already have suggestions for this exact content, don't clear them
+    if (lastSuggestedContent.current === currentContentKey && currentSuggestion !== null) {
+      console.log('🔒 Skipping fetch - already have suggestions for this content');
       return;
     }
 
@@ -107,9 +126,16 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     // Check if we have cached suggestions first
     const cachedSuggestions = getCachedSuggestions();
     if (cachedSuggestions) {
-      console.log('Using cached suggestions for:', listTitle);
-      setSuggestions(cachedSuggestions);
-      setCurrentSuggestion(cachedSuggestions[0] || null);
+      // Only update if suggestions actually changed to prevent unnecessary re-renders
+      const currentFirstSuggestion = suggestions[0];
+      const cachedFirstSuggestion = cachedSuggestions[0];
+
+      if (suggestions.length === 0 || currentFirstSuggestion !== cachedFirstSuggestion) {
+        console.log('Using cached suggestions for:', listTitle);
+        setSuggestions(cachedSuggestions);
+        setCurrentSuggestion(cachedFirstSuggestion || null);
+        lastSuggestedContent.current = currentContentKey;
+      }
       setIsLoading(false);
       return;
     }
@@ -280,9 +306,14 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     return null;
   }, [suggestions]);
   
-  // Generate an initial suggestion when the hook mounts
+  // Generate an initial suggestion when the hook mounts or when key dependencies change
   useEffect(() => {
-    if (enabled && !currentSuggestion) {
+    const currentKey = `${enabled}-${listTitle}-${itemsKey}`;
+
+    // Only initialize if we haven't already done so for this configuration
+    if (enabled && !currentSuggestion && lastInitializedKey.current !== currentKey) {
+      lastInitializedKey.current = currentKey;
+
       // Try to use a generated suggestion immediately
       const initialSuggestion = generateContextSuggestion();
       if (initialSuggestion) {
@@ -292,7 +323,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         debouncedFetchSuggestions();
       }
     }
-  }, [enabled, currentSuggestion, generateContextSuggestion, debouncedFetchSuggestions]);
+  }, [enabled, listTitle, itemsKey]); // Use memoized itemsKey to prevent unnecessary re-runs
   
   return {
     currentSuggestion,

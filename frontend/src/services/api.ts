@@ -133,6 +133,28 @@ export const updateNote = async (noteId: number, noteData: any, token?: string) 
   return response.data;
 };
 
+// Granular note update functions for real-time updates
+export const updateNoteContent = async (noteId: number, content: string, token?: string) => {
+  const response = await api.put(`/api/notes/${noteId}/content`, { content }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const updateNoteTitle = async (noteId: number, title: string, token?: string) => {
+  const response = await api.put(`/api/notes/${noteId}/title`, { title }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const updateNoteCategory = async (noteId: number, category: string, token?: string) => {
+  const response = await api.put(`/api/notes/${noteId}/category`, { category }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
 export const deleteNote = async (noteId: number, token?: string) => {
   console.log(`🌐 API: Making DELETE request to /api/notes/${noteId}`);
   console.log(`🔑 API: Auth headers:`, getAuthHeaders(token));

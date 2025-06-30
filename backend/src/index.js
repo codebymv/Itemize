@@ -178,9 +178,53 @@ setTimeout(async () => {
       const sharedListViewers = new Map(); // shareToken -> Set of socket IDs
       const sharedNoteViewers = new Map(); // shareToken -> Set of socket IDs
       const sharedWhiteboardViewers = new Map(); // shareToken -> Set of socket IDs
+      const userCanvasConnections = new Map(); // userId -> Set of socket IDs
 
       io.on('connection', (socket) => {
         console.log(`WebSocket client connected: ${socket.id}`);
+
+        // Handle user joining their own canvas for real-time updates
+        socket.on('joinUserCanvas', async (data) => {
+          try {
+            const { token } = data;
+            console.log(`Attempting to join user canvas with token`);
+
+            // Verify the token and get user ID
+            const jwt = require('jsonwebtoken');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+
+            console.log(`User ${userId} joining their canvas`);
+
+            // Join user-specific room
+            const roomName = `user-canvas-${userId}`;
+            socket.join(roomName);
+
+            // Track user canvas connections
+            if (!userCanvasConnections.has(userId)) {
+              userCanvasConnections.set(userId, new Set());
+            }
+            userCanvasConnections.get(userId).add(socket.id);
+
+            console.log(`User ${userId} joined their canvas room: ${roomName}`);
+
+            // Emit success to the joining client
+            socket.emit('joinedUserCanvas', {
+              message: 'Successfully joined user canvas',
+              userId: userId
+            });
+
+          } catch (error) {
+            console.error('Error joining user canvas:', error);
+            socket.emit('error', { message: 'Failed to join user canvas' });
+          }
+        });
+
+        // Test ping/pong for debugging
+        socket.on('testPing', (data) => {
+          console.log('Backend: Received test ping:', data);
+          socket.emit('testPong', { message: 'Pong from backend', originalData: data });
+        });
 
         // Handle viewer joining a shared list
         socket.on('joinSharedList', async (shareToken) => {
@@ -419,6 +463,20 @@ setTimeout(async () => {
               }
             }
           }
+
+          // Remove from user canvas connections
+          for (const [userId, connections] of userCanvasConnections.entries()) {
+            if (connections.has(socket.id)) {
+              connections.delete(socket.id);
+              console.log(`Removed user ${userId} canvas connection: ${socket.id}`);
+
+              // Clean up empty sets
+              if (connections.size === 0) {
+                userCanvasConnections.delete(userId);
+                console.log(`Cleaned up empty user canvas connections for user: ${userId}`);
+              }
+            }
+          }
         });
       });
 
@@ -461,14 +519,57 @@ setTimeout(async () => {
         }
       };
 
+      // Helper function to broadcast list changes to user's own canvas
+      const broadcastUserListUpdate = (userId, eventType, data) => {
+        if (userId && io) {
+          const roomName = `user-canvas-${userId}`;
+          io.to(roomName).emit('userListUpdated', {
+            type: eventType,
+            data: data,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`Broadcasted ${eventType} to user ${userId} canvas`);
+        }
+      };
+
+      // Helper function to broadcast list creation to user's own canvas
+      const broadcastUserListCreated = (userId, data) => {
+        if (userId && io) {
+          const roomName = `user-canvas-${userId}`;
+          io.to(roomName).emit('userListCreated', {
+            type: 'LIST_CREATED',
+            data: data,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`Broadcasted LIST_CREATED to user ${userId} canvas`);
+        }
+      };
+
+      // Helper function to broadcast list deletion to user's own canvas
+      const broadcastUserListDeleted = (userId, data) => {
+        if (userId && io) {
+          const roomName = `user-canvas-${userId}`;
+          io.to(roomName).emit('userListDeleted', {
+            type: 'LIST_DELETED',
+            data: data,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`Broadcasted LIST_DELETED to user ${userId} canvas`);
+        }
+      };
+
       // Make WebSocket functionality available globally for API endpoints
       global.io = io;
       global.sharedListViewers = sharedListViewers;
       global.sharedNoteViewers = sharedNoteViewers;
       global.sharedWhiteboardViewers = sharedWhiteboardViewers;
+      global.userCanvasConnections = userCanvasConnections;
       global.broadcastListUpdate = broadcastListUpdate;
       global.broadcastNoteUpdate = broadcastNoteUpdate;
       global.broadcastWhiteboardUpdate = broadcastWhiteboardUpdate;
+      global.broadcastUserListUpdate = broadcastUserListUpdate;
+      global.broadcastUserListCreated = broadcastUserListCreated;
+      global.broadcastUserListDeleted = broadcastUserListDeleted;
 
       console.log('✅ WebSocket functionality initialized');
     } else {
@@ -527,7 +628,12 @@ setTimeout(async () => {
             ...result.rows[0],
             type: result.rows[0].category
           };
-          
+
+          // Broadcast to user's own canvas for real-time updates
+          if (global.broadcastUserListCreated) {
+            global.broadcastUserListCreated(req.user.id, mappedResult);
+          }
+
           res.status(201).json(mappedResult);
         } catch (error) {
           console.error('Error creating list:', error);
@@ -573,6 +679,11 @@ setTimeout(async () => {
             });
           }
 
+          // Broadcast to user's own canvas for real-time updates
+          if (global.broadcastUserListUpdate) {
+            global.broadcastUserListUpdate(req.user.id, 'LIST_UPDATE', mappedResult);
+          }
+
           res.json(mappedResult);
         } catch (error) {
           console.error('Error updating list:', error);
@@ -595,7 +706,12 @@ setTimeout(async () => {
           if (result.rows.length === 0) {
             return res.status(404).json({ error: 'List not found' });
           }
-          
+
+          // Broadcast to user's own canvas for real-time updates
+          if (global.broadcastUserListDeleted) {
+            global.broadcastUserListDeleted(req.user.id, { id: result.rows[0].id });
+          }
+
           res.json({ message: 'List deleted successfully' });
         } catch (error) {
           console.error('Error deleting list:', error);
@@ -714,10 +830,16 @@ setTimeout(async () => {
             });
           }
 
-          res.json({
+          // Broadcast to user's own canvas for real-time updates
+          const mappedResult = {
             ...updatedList,
             type: updatedList.category
-          });
+          };
+          if (global.broadcastUserListUpdate) {
+            global.broadcastUserListUpdate(req.user.id, 'ITEM_TOGGLED', mappedResult);
+          }
+
+          res.json(mappedResult);
         } catch (error) {
           console.error('Error toggling item:', error);
           res.status(500).json({ error: 'Internal server error' });
@@ -775,6 +897,15 @@ setTimeout(async () => {
               newItem: newItem,
               items: updatedList.items
             });
+          }
+
+          // Broadcast to user's own canvas for real-time updates
+          const mappedResult = {
+            ...updatedList,
+            type: updatedList.category
+          };
+          if (global.broadcastUserListUpdate) {
+            global.broadcastUserListUpdate(req.user.id, 'ITEM_ADDED', mappedResult);
           }
 
           res.json({
@@ -1056,6 +1187,125 @@ setTimeout(async () => {
         }
       });
       
+      // --- Granular Note API Endpoints for Real-time Updates ---
+
+      // Update note content only
+      app.put('/api/notes/:noteId/content', global.authenticateJWT, async (req, res) => {
+        try {
+          const { noteId } = req.params;
+          const { content } = req.body;
+
+          if (content === undefined) {
+            return res.status(400).json({ error: 'Content is required' });
+          }
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'UPDATE notes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [content, noteId, req.user.id]
+          );
+          client.release();
+
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found' });
+          }
+
+          const updatedNote = result.rows[0];
+
+          // Broadcast to shared viewers if note is public
+          if (updatedNote.is_public && updatedNote.share_token && global.broadcastNoteUpdate) {
+            global.broadcastNoteUpdate(updatedNote.share_token, 'CONTENT_CHANGED', {
+              id: updatedNote.id,
+              content: updatedNote.content,
+              updated_at: updatedNote.updated_at
+            });
+          }
+
+          res.json(updatedNote);
+        } catch (error) {
+          console.error('Error updating note content:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
+      // Update note title only
+      app.put('/api/notes/:noteId/title', global.authenticateJWT, async (req, res) => {
+        try {
+          const { noteId } = req.params;
+          const { title } = req.body;
+
+          if (!title || title.trim() === '') {
+            return res.status(400).json({ error: 'Title is required' });
+          }
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'UPDATE notes SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [title.trim(), noteId, req.user.id]
+          );
+          client.release();
+
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found' });
+          }
+
+          const updatedNote = result.rows[0];
+
+          // Broadcast to shared viewers if note is public
+          if (updatedNote.is_public && updatedNote.share_token && global.broadcastNoteUpdate) {
+            global.broadcastNoteUpdate(updatedNote.share_token, 'TITLE_CHANGED', {
+              id: updatedNote.id,
+              title: updatedNote.title,
+              updated_at: updatedNote.updated_at
+            });
+          }
+
+          res.json(updatedNote);
+        } catch (error) {
+          console.error('Error updating note title:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
+      // Update note category only
+      app.put('/api/notes/:noteId/category', global.authenticateJWT, async (req, res) => {
+        try {
+          const { noteId } = req.params;
+          const { category } = req.body;
+
+          if (!category || category.trim() === '') {
+            return res.status(400).json({ error: 'Category is required' });
+          }
+
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'UPDATE notes SET category = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+            [category.trim(), noteId, req.user.id]
+          );
+          client.release();
+
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found' });
+          }
+
+          const updatedNote = result.rows[0];
+
+          // Broadcast to shared viewers if note is public
+          if (updatedNote.is_public && updatedNote.share_token && global.broadcastNoteUpdate) {
+            global.broadcastNoteUpdate(updatedNote.share_token, 'CATEGORY_CHANGED', {
+              id: updatedNote.id,
+              category: updatedNote.category,
+              updated_at: updatedNote.updated_at
+            });
+          }
+
+          res.json(updatedNote);
+        } catch (error) {
+          console.error('Error updating note category:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
       console.log('✅ Notes API routes initialized');
 
       // --- Whiteboards API Endpoints ---

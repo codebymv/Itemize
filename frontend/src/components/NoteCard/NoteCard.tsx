@@ -16,6 +16,7 @@ import { useTheme } from 'next-themes';
 
 import { Category } from '@/types';
 import { DeleteNoteModal } from '../DeleteNoteModal';
+import { updateNoteContent } from '@/services/api';
 
 interface NoteCardProps {
   note: Note;
@@ -317,8 +318,16 @@ const NoteCard: React.FC<NoteCardProps> = ({
               noteCategory={note.category}
               noteColor={noteDisplayColor}
               noteId={note.id}
-              onAutoSave={async (data) => {
-                await onUpdate(note.id, { content: data.content, updated_at: data.updated_at });
+              onAutoSave={async (content: string) => {
+                // Use granular content update for real-time updates
+                try {
+                  await updateNoteContent(note.id, content);
+                  console.log('✅ Granular content update successful');
+                } catch (error) {
+                  console.error('❌ Granular content update failed:', error);
+                  // Fallback to full update if granular fails
+                  await onUpdate(note.id, { content, updated_at: new Date().toISOString() });
+                }
               }}
               updatedAt={note.updated_at}
             />

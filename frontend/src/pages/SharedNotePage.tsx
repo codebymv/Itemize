@@ -32,6 +32,9 @@ const SharedNotePage: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
 
+  // Store original title for cleanup
+  const [originalTitle] = useState(document.title);
+
   useEffect(() => {
     const fetchSharedNote = async () => {
       if (!token) {
@@ -45,7 +48,7 @@ const SharedNotePage: React.FC = () => {
         setNoteData(response.data);
         
         // Set page title
-        document.title = `${response.data.title} on Itemize.cloud`;
+        document.title = `${response.data.title} on Itemize`;
         
         // Set meta description
         const metaDescription = document.querySelector('meta[name="description"]');
@@ -110,6 +113,7 @@ const SharedNotePage: React.FC = () => {
       console.log('Note updated:', update);
 
       if (update.type === 'noteUpdated' && update.data) {
+        // Handle full note updates (legacy)
         setNoteData(prevData => {
           if (!prevData) return prevData;
 
@@ -120,6 +124,36 @@ const SharedNotePage: React.FC = () => {
             category: update.data.category || prevData.category,
             color_value: update.data.color_value || prevData.color_value,
             updated_at: update.data.updated_at || prevData.updated_at
+          };
+        });
+      } else if (update.type === 'CONTENT_CHANGED' && update.data) {
+        // Handle granular content updates
+        setNoteData(prevData => {
+          if (!prevData) return prevData;
+          return {
+            ...prevData,
+            content: update.data.content,
+            updated_at: update.data.updated_at
+          };
+        });
+      } else if (update.type === 'TITLE_CHANGED' && update.data) {
+        // Handle granular title updates
+        setNoteData(prevData => {
+          if (!prevData) return prevData;
+          return {
+            ...prevData,
+            title: update.data.title,
+            updated_at: update.data.updated_at
+          };
+        });
+      } else if (update.type === 'CATEGORY_CHANGED' && update.data) {
+        // Handle granular category updates
+        setNoteData(prevData => {
+          if (!prevData) return prevData;
+          return {
+            ...prevData,
+            category: update.data.category,
+            updated_at: update.data.updated_at
           };
         });
       } else if (update.type === 'noteDeleted') {
@@ -145,6 +179,13 @@ const SharedNotePage: React.FC = () => {
       newSocket.disconnect();
     };
   }, [token, noteData?.id, toast]);
+
+  // Cleanup title on unmount
+  useEffect(() => {
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [originalTitle]);
 
   const handleBackToHome = () => {
     navigate('/');

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Note, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { updateNoteTitle, updateNoteCategory, updateNoteContent } from '@/services/api';
 import React from 'react';
 
 interface UseNoteCardLogicProps {
@@ -52,18 +53,32 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     setEditContent(note.content || '');
   }, [note.content]);
   
-  // Title editing handlers - updates note.title
+  // Title editing handlers - updates note.title using granular API
   const handleEditTitle = useCallback(async () => {
     if (editTitle.trim() !== note.title) {
-      await onUpdate(note.id, { title: editTitle.trim() });
+      try {
+        await updateNoteTitle(note.id, editTitle.trim());
+        console.log('✅ Granular title update successful');
+      } catch (error) {
+        console.error('❌ Granular title update failed, falling back:', error);
+        // Fallback to full update if granular fails
+        await onUpdate(note.id, { title: editTitle.trim() });
+      }
     }
     setIsEditing(false);
   }, [editTitle, note.title, note.id, onUpdate]);
   
-  // Content editing handlers - updates note.content
+  // Content editing handlers - updates note.content using granular API
   const handleEditContent = useCallback(async () => {
     if (editContent.trim() !== note.content) {
-      await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
+      try {
+        await updateNoteContent(note.id, editContent.trim());
+        console.log('✅ Granular content update successful');
+      } catch (error) {
+        console.error('❌ Granular content update failed, falling back:', error);
+        // Fallback to full update if granular fails
+        await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
+      }
     }
     setIsEditingContent(false);
   }, [editContent, note.content, note.id, onUpdate]);
@@ -98,33 +113,52 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       return;
     }
     try {
-      await onUpdate(note.id, { category: category });
+      await updateNoteCategory(note.id, category);
+      console.log('✅ Granular category update successful');
       setIsEditingCategory(false);
       setShowNewCategoryInput(false);
     } catch (error) {
-      console.error('Failed to update note category:', error);
-      toast({
-        title: "Error updating category",
-        description: "Could not update note category. Please try again.",
-        variant: "destructive"
-      });
+      console.error('❌ Granular category update failed, falling back:', error);
+      try {
+        // Fallback to full update if granular fails
+        await onUpdate(note.id, { category: category });
+        setIsEditingCategory(false);
+        setShowNewCategoryInput(false);
+      } catch (fallbackError) {
+        console.error('Failed to update note category:', fallbackError);
+        toast({
+          title: "Error updating category",
+          description: "Could not update note category. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   }, [note.id, onUpdate, toast]);
   
   const handleAddCustomCategory = useCallback(async () => {
     if (newCategory.trim() !== '') {
       try {
-        await onUpdate(note.id, { category: newCategory.trim() });
+        await updateNoteCategory(note.id, newCategory.trim());
+        console.log('✅ Granular custom category update successful');
         setIsEditingCategory(false);
         setShowNewCategoryInput(false);
         setNewCategory('');
       } catch (error) {
-        console.error('Failed to add custom category:', error);
-        toast({
-          title: "Error adding category",
-          description: "Could not add custom category. Please try again.",
-          variant: "destructive"
-        });
+        console.error('❌ Granular custom category update failed, falling back:', error);
+        try {
+          // Fallback to full update if granular fails
+          await onUpdate(note.id, { category: newCategory.trim() });
+          setIsEditingCategory(false);
+          setShowNewCategoryInput(false);
+          setNewCategory('');
+        } catch (fallbackError) {
+          console.error('Failed to add custom category:', fallbackError);
+          toast({
+            title: "Error adding category",
+            description: "Could not add custom category. Please try again.",
+            variant: "destructive"
+          });
+        }
       }
     } else {
       toast({

@@ -33,6 +33,9 @@ const SharedWhiteboardPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
 
+  // Store original title for cleanup
+  const [originalTitle] = useState(document.title);
+
   useEffect(() => {
     const fetchSharedWhiteboard = async () => {
       if (!token) {
@@ -46,7 +49,7 @@ const SharedWhiteboardPage: React.FC = () => {
         setWhiteboardData(response.data);
         
         // Set page title
-        document.title = `${response.data.title} on Itemize.cloud`;
+        document.title = `${response.data.title} on Itemize`;
         
         // Set meta description
         const metaDescription = document.querySelector('meta[name="description"]');
@@ -149,6 +152,13 @@ const SharedWhiteboardPage: React.FC = () => {
       newSocket.disconnect();
     };
   }, [token, whiteboardData?.id, toast]);
+
+  // Cleanup title on unmount
+  useEffect(() => {
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [originalTitle]);
 
   const handleBackToHome = () => {
     navigate('/');

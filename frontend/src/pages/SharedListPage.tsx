@@ -34,6 +34,9 @@ const SharedListPage: React.FC = () => {
   const [viewerCount, setViewerCount] = useState<number>(0);
   const socketRef = useRef<Socket | null>(null);
 
+  // Store original title for cleanup
+  const [originalTitle] = useState(document.title);
+
   useEffect(() => {
     const fetchSharedList = async () => {
       if (!token) {
@@ -47,7 +50,7 @@ const SharedListPage: React.FC = () => {
         setListData(response.data);
 
         // Set page title
-        document.title = `${response.data.title} on Itemize.cloud`;
+        document.title = `${response.data.title} on Itemize`;
 
         // Set meta description
         const metaDescription = document.querySelector('meta[name="description"]');
@@ -151,6 +154,13 @@ const SharedListPage: React.FC = () => {
       }
     };
   }, [token, toast]);
+
+  // Cleanup title on unmount
+  useEffect(() => {
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [originalTitle]);
 
   const handleBackToHome = () => {
     navigate('/');

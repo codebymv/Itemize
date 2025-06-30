@@ -46,7 +46,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
   const [lastSavedContent, setLastSavedContent] = useState<string>(content);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const AUTOSAVE_DELAY = 3000; // 3 seconds
+  const AUTOSAVE_DELAY = 1000; // 1 second with granular updates for optimal real-time performance
 
   // Smart note suggestions hook
   const {
@@ -67,18 +67,19 @@ export const NoteContent: React.FC<NoteContentProps> = ({
   // Get current autocomplete suggestion based on cursor position
   const currentAutocomplete = getSuggestionForInput(editContent, cursorPosition);
   
-  // Autosave function
+  // Granular autosave function for content only
   const performAutosave = useCallback(async (content: string) => {
     if (content.trim() === lastSavedContent.trim()) {
       return; // No changes to save
     }
-    
+
     try {
       setIsAutoSaving(true);
+      // Use granular content update instead of full note update
       await onAutoSave(content);
       setLastSavedContent(content);
       setHasUnsavedChanges(false);
-      console.log('📝 Autosaved note:', noteId);
+      console.log('📝 Granular autosaved note content:', noteId);
     } catch (error) {
       console.error('❌ Autosave failed:', error);
     } finally {

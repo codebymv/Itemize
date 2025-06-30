@@ -1,4 +1,4 @@
-import React, { KeyboardEvent, useEffect } from 'react';
+import React, { KeyboardEvent, useEffect, memo } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,43 @@ interface ListItemAddProps {
   aiEnabled: boolean;
   isLoadingSuggestions: boolean;
 }
+
+// Memoized suggestion button to prevent unnecessary re-renders
+const SuggestionButton = memo(({
+  aiEnabled,
+  handleGetSuggestion,
+  isLoadingSuggestions,
+  currentSuggestion
+}: {
+  aiEnabled: boolean;
+  handleGetSuggestion: () => void;
+  isLoadingSuggestions: boolean;
+  currentSuggestion: string | null;
+}) => {
+  // Debug logging disabled
+  // console.log('SuggestionButton render');
+
+  if (!aiEnabled) return null;
+
+  return (
+    <button
+      onClick={handleGetSuggestion}
+      className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+      style={{ fontFamily: '"Raleway", sans-serif' }}
+      disabled={isLoadingSuggestions}
+    >
+      <Sparkles className="w-4 h-4" style={{ color: 'var(--list-color)' }} />
+      <span className="font-medium">Suggest:</span>
+      {currentSuggestion && (
+        <span style={{ color: 'var(--list-color)' }} className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+          {currentSuggestion}
+        </span>
+      )}
+    </button>
+  );
+});
+
+SuggestionButton.displayName = 'SuggestionButton';
 
 export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
   const {
@@ -142,22 +179,12 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
       </div>
       
       {/* Always show suggestion button when AI is enabled */}
-      {aiEnabled && (
-        <button
-          onClick={handleGetSuggestion}
-          className="mt-2 w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
-          style={{ fontFamily: '"Raleway", sans-serif' }}
-          disabled={isLoadingSuggestions}
-        >
-          <Sparkles className="w-4 h-4" style={{ color: 'var(--list-color)' }} />
-          <span className="font-medium">Suggest:</span>
-          {currentSuggestion && (
-            <span style={{ color: 'var(--list-color)' }} className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
-              {currentSuggestion}
-            </span>
-          )}
-        </button>
-      )}
+      <SuggestionButton
+        aiEnabled={aiEnabled}
+        handleGetSuggestion={handleGetSuggestion}
+        isLoadingSuggestions={isLoadingSuggestions}
+        currentSuggestion={currentSuggestion}
+      />
     </div>
   );
 };

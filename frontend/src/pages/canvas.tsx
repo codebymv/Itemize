@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
@@ -23,7 +23,8 @@ import { ShareListModal } from '../components/ShareListModal';
 import { ShareNoteModal } from '../components/ShareNoteModal';
 import { ShareWhiteboardModal } from '../components/ShareWhiteboardModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
-import api from '../lib/api';
+import api, { getApiUrl } from '../lib/api';
+import { io, Socket } from 'socket.io-client';
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
@@ -57,6 +58,10 @@ const CanvasPage: React.FC = () => {
 
   const { toast } = useToast();
   const { token } = useAuth();
+
+  // WebSocket state for real-time updates
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   // State for Notes
   const [notes, setNotes] = useState<Note[]>([]);
@@ -230,7 +235,7 @@ const CanvasPage: React.FC = () => {
   
   // Helper functions for managing collapsible state
   const isListCollapsed = (listId: string) => collapsedListIds.has(listId);
-  const toggleListCollapsed = (listId: string) => {
+  const toggleListCollapsed = useCallback((listId: string) => {
     setCollapsedListIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(listId)) {
@@ -240,7 +245,16 @@ const CanvasPage: React.FC = () => {
       }
       return newSet;
     });
-  };
+  }, []);
+
+  // Create stable toggle callbacks for each list to prevent unnecessary re-renders
+  const listToggleCallbacks = useMemo(() => {
+    const callbacks: Record<string, () => void> = {};
+    lists.forEach(list => {
+      callbacks[list.id] = () => toggleListCollapsed(list.id);
+    });
+    return callbacks;
+  }, [lists.map(l => l.id).join(','), toggleListCollapsed]);
   
   const isNoteCollapsed = (noteId: number) => collapsedNoteIds.has(noteId);
   const toggleNoteCollapsed = (noteId: number) => {
@@ -350,6 +364,86 @@ const CanvasPage: React.FC = () => {
       fetchWhiteboardsData();
     }
   }, [token, toast]); // Re-fetch if token changes, include toast in dependencies
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!token) return;
+
+    const BACKEND_URL = getApiUrl();
+    console.log('Canvas: Connecting to WebSocket at:', BACKEND_URL);
+
+    const newSocket = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Canvas: WebSocket connected, joining user canvas');
+      setIsConnected(true);
+      newSocket.emit('joinUserCanvas', { token });
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Canvas: WebSocket disconnected');
+      setIsConnected(false);
+    });
+
+    newSocket.on('joinedUserCanvas', (data) => {
+      console.log('Canvas: Successfully joined user canvas:', data);
+
+      // Send a test ping to verify connection
+      console.log('Canvas: Sending test ping');
+      newSocket.emit('testPing', { message: 'Hello from canvas' });
+    });
+
+    // Add debugging for all WebSocket events
+    newSocket.onAny((eventName, ...args) => {
+      console.log('Canvas: Received WebSocket event:', eventName, args);
+    });
+
+    // Listen for test pong
+    newSocket.on('testPong', (data) => {
+      console.log('Canvas: Received test pong:', data);
+    });
+
+    // Listen for real-time list updates
+    newSocket.on('userListUpdated', (update) => {
+      console.log('Canvas: Received list update:', update);
+      setLists(prevLists => {
+        return prevLists.map(list =>
+          String(list.id) === String(update.data.id) ? { ...list, ...update.data } : list
+        );
+      });
+    });
+
+    // Listen for real-time list creation
+    newSocket.on('userListCreated', (update) => {
+      console.log('Canvas: Received list creation:', update);
+      setLists(prevLists => [update.data, ...prevLists]);
+    });
+
+    // Listen for real-time list deletion
+    newSocket.on('userListDeleted', (update) => {
+      console.log('Canvas: Received list deletion:', update);
+      setLists(prevLists => prevLists.filter(list => String(list.id) !== String(update.data.id)));
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('Canvas: WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: error.message || "Failed to connect to real-time updates",
+        variant: "destructive",
+      });
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      console.log('Canvas: Cleaning up WebSocket connection');
+      newSocket.disconnect();
+    };
+  }, [token, toast]);
 
   // Handle clicking outside button context menu
   useEffect(() => {
@@ -1180,7 +1274,7 @@ const CanvasPage: React.FC = () => {
                       onShare={handleShareList}
                       existingCategories={dbCategories}
                       isCollapsed={isListCollapsed(list.id)}
-                      onToggleCollapsed={() => toggleListCollapsed(list.id)}
+                      onToggleCollapsed={listToggleCallbacks[list.id]}
                       addCategory={addCategory}
                       updateCategory={editCategory}
                     />
@@ -1308,6 +1402,10 @@ const CanvasPage: React.FC = () => {
               searchQuery={searchQuery}
               onOpenNewNoteModal={handleOpenNewNoteModal}
               onShareList={handleShareList}
+              lists={lists} // Pass lists state
+              onListUpdate={updateList} // Pass list update handler
+              onListDelete={deleteList} // Pass list delete handler
+              onListPositionUpdate={handleListPositionUpdate} // Pass position update handler
               notes={notes} // Pass filtered notes state
               onNoteUpdate={handleUpdateNote} // Pass update handler
               onNoteDelete={handleDeleteNote} // Pass delete handler

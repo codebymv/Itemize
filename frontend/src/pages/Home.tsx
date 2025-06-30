@@ -144,8 +144,8 @@ const Home: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
             <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
-              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
-                <Layers className="h-7 w-7 text-blue-600" />
+              <div className={`w-14 h-14 ${isLight ? 'bg-slate-100' : 'bg-slate-800'} rounded-full flex items-center justify-center mb-5`}>
+                <Layers className="h-7 w-7 text-slate-500" />
               </div>
               <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Organizational Tools</h3>
               <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -164,8 +164,8 @@ const Home: React.FC = () => {
             </div>
 
             <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
-              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
-                <Sparkles className="h-7 w-7 text-blue-600" />
+              <div className={`w-14 h-14 ${isLight ? 'bg-slate-100' : 'bg-slate-800'} rounded-full flex items-center justify-center mb-5`}>
+                <Sparkles className="h-7 w-7 text-slate-500" />
               </div>
               <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Smart Suggestions</h3>
               <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -188,8 +188,8 @@ const Home: React.FC = () => {
             </div>
 
             <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
-              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
-                <Clock className="h-7 w-7 text-blue-600" />
+              <div className={`w-14 h-14 ${isLight ? 'bg-slate-100' : 'bg-slate-800'} rounded-full flex items-center justify-center mb-5`}>
+                <Clock className="h-7 w-7 text-slate-500" />
               </div>
               <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Access Anywhere</h3>
               <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -208,8 +208,8 @@ const Home: React.FC = () => {
             </div>
 
             <div className={`${cardBgColor} p-10 rounded-xl shadow-sm border ${cardBorderColor} transform transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
-              <div className={`w-14 h-14 ${isLight ? 'bg-blue-100' : 'bg-blue-900'} rounded-full flex items-center justify-center mb-5`}>
-                <Share className="h-7 w-7 text-blue-600" />
+              <div className={`w-14 h-14 ${isLight ? 'bg-slate-100' : 'bg-slate-800'} rounded-full flex items-center justify-center mb-5`}>
+                <Share className="h-7 w-7 text-slate-500" />
               </div>
               <h3 className={`text-xl font-semibold ${textColor} mb-3`} style={{ fontFamily: '"Raleway", sans-serif' }}>Share Freely</h3>
               <p className={secondaryTextColor} style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -430,7 +430,7 @@ const Home: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div
                       className={`inline-block w-3 h-3 rounded-full border ${isLight ? 'border-gray-400' : 'border-slate-500'}`}
-                      style={{ backgroundColor: '#EA580C' }}
+                      style={{ backgroundColor: '#06B6D4' }}
                     />
                     <StickyNote className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
                     <h3 className={`font-semibold ${textColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>Combined Approach</h3>
@@ -450,7 +450,7 @@ const Home: React.FC = () => {
 
               {/* Category */}
               <div className="mb-2 px-6">
-                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-orange-600 text-white cursor-pointer" style={{ backgroundColor: '#EA580C', fontFamily: '"Raleway", sans-serif' }}>
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-cyan-500 text-white cursor-pointer" style={{ backgroundColor: '#06B6D4', fontFamily: '"Raleway", sans-serif' }}>
                   Strategy
                 </div>
               </div>
@@ -528,7 +528,7 @@ const Home: React.FC = () => {
                     Last edited: Just now
                   </div>
                   <div title="AI-powered suggestions">
-                    <Sparkles className="h-4 w-4 text-amber-500" />
+                    <Sparkles className="h-4 w-4" style={{ color: '#06B6D4' }} />
                   </div>
                 </div>
               </div>

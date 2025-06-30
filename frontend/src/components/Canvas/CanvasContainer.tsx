@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
 import { List, Note, Whiteboard, Category } from '../../types'; // Add Note and Whiteboard types
-import { fetchCanvasLists, updateListPosition, updateList, deleteList } from '../../services/api';
+import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { NewListModal } from '../../components/NewListModal';
 import Spinner from '../../components/ui/Spinner';
@@ -17,6 +17,10 @@ interface CanvasContainerProps {
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
   onShareList?: (listId: string) => void;
+  lists: List[];
+  onListUpdate: (updatedList: List) => Promise<void>;
+  onListDelete: (listId: string) => Promise<void>;
+  onListPositionUpdate: (listId: string, position: { x: number; y: number }) => Promise<void>;
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
@@ -45,6 +49,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onReady,
   onOpenNewNoteModal,
   onShareList,
+  lists,
+  onListUpdate,
+  onListDelete,
+  onListPositionUpdate,
   notes,
   onNoteUpdate,
   onNoteDelete,
@@ -59,8 +67,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 }) => {
   const { theme } = useTheme();
   const { token } = useAuth();
-  const [lists, setLists] = useState<List[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // No longer need to load lists
   const [error, setError] = useState('');
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -150,26 +157,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   }, [onReady, showContextMenu, menuIsFromButton]);
 
-  // Load lists on initial render
+  // Set up event listeners
   useEffect(() => {
-    const loadLists = async () => {
-      try {
-        setLoading(true);
-        fetchCanvasLists(token)
-        .then(data => {
-          setLists(data);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error("Failed to fetch lists:", err);
-          setError("Could not load lists.");
-          setLoading(false);
-        }); 
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const handleShowContextMenu = (event: CustomEvent) => {
       const { position, isFromButton = false, absolutePosition } = event.detail;
       setMenuPosition(position);
@@ -182,8 +171,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
     document.addEventListener('showCanvasContextMenu', handleShowContextMenu as EventListener);
 
-    loadLists();
-    
     return () => {
       document.removeEventListener('showCanvasContextMenu', handleShowContextMenu as EventListener);
     };
@@ -314,60 +301,35 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   const handleListUpdate = async (updatedList: List) => {
-    // Optimistically update the UI
-    const originalLists = [...lists];
-    setLists(prevLists => 
-      prevLists.map(list => list.id === updatedList.id ? updatedList : list)
-    );
-
     try {
-      // Save to database
-      await updateList(updatedList, token);
+      // Use the passed handler from parent
+      await onListUpdate(updatedList);
     } catch (error) {
       console.error('Failed to update list:', error);
-      // Revert to original state on error
-      setLists(originalLists);
     }
   };
 
   const handleListDelete = async (listId: string) => {
-    // Optimistically update UI first
-    const originalLists = [...lists];
-    setLists(prevLists => 
-      prevLists.filter(list => list.id !== listId)
-    );
-
     try {
-      // Call API to delete from database
-      await deleteList(listId, token);
+      // Use the passed handler from parent
+      await onListDelete(listId);
     } catch (error) {
       console.error('Failed to delete list:', error);
-      // Revert to original state on error
-      setLists(originalLists);
     }
   };
 
-  const handleListPositionChange = (listId: string, newPosition: { x: number, y: number }) => {
-    const originalLists = [...lists];
-    setLists(prevLists => 
-      prevLists.map(list => list.id === listId ? { ...list, position_x: newPosition.x, position_y: newPosition.y } : list)
-    );
-
-    updateListPosition(listId, newPosition.x, newPosition.y, token)
-      .catch(error => {
-        console.error('Failed to update list position:', error);
-        setLists(originalLists); 
-      });
+  const handleListPositionChange = async (listId: string, newPosition: { x: number, y: number }) => {
+    try {
+      // Use the passed handler from parent
+      await onListPositionUpdate(listId, newPosition);
+    } catch (error) {
+      console.error('Failed to update list position:', error);
+    }
   };
 
   const handleNewListCreated = (newList: List) => {
-    const listWithPosition = {
-      ...newList,
-      position_x: newListPosition.x,
-      position_y: newListPosition.y
-    };
-    
-    setLists(prevLists => [...prevLists, listWithPosition]);
+    // The parent component will handle adding the new list to state
+    // through the WebSocket or direct state update
     setShowNewListModal(false);
   };
 

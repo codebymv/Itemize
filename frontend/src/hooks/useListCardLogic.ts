@@ -19,13 +19,23 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   // Use the global AI suggestions context
   const { aiEnabled, setAiEnabled } = useAISuggest();
 
-  // Get items as simple text strings for AI suggestions
-  const itemTexts = list.items.map(item => item.text);
+  // Get items as simple text strings for AI suggestions (memoized to prevent unnecessary re-renders)
+  const itemTexts = useMemo(() =>
+    list.items.map(item => item.text),
+    [list.items.map(item => item.text).join('|')]
+  );
+
+  // Memoize the AI suggestions options to prevent unnecessary hook re-runs
+  const aiSuggestionsOptions = useMemo(() => ({
+    enabled: aiEnabled,
+    listTitle: list.title,
+    existingItems: itemTexts
+  }), [aiEnabled, list.title, itemTexts]);
 
   // Setup AI suggestions (reduce logging)
   // console.log('AI Suggestions setup:', { aiEnabled, listTitle: list.title, itemCount: itemTexts.length });
-  
-  const { 
+
+  const {
     currentSuggestion,
     suggestions,
     isLoading: isLoadingSuggestions,
@@ -35,12 +45,11 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     getSuggestionForInput,
     acceptSuggestion,
     generateContextSuggestion
-  } = useAISuggestions({
-    enabled: aiEnabled,
-    listTitle: list.title,
-    existingItems: itemTexts
-  });
-  
+  } = useAISuggestions(aiSuggestionsOptions);
+
+  // Debug AI suggestions results (disabled)
+  // console.log('AI Suggestions results:', { currentSuggestion, suggestionsCount: suggestions.length });
+
   // Generate initial suggestion on mount
   useEffect(() => {
     if (aiEnabled && !currentSuggestion) {
