@@ -405,6 +405,23 @@ class DocsService {
             ]
           },
           {
+            name: 'Sessions',
+            path: 'Implementations/Sessions',
+            type: 'folder',
+            children: [
+              { name: 'Sessions Overview', path: 'Implementations/Sessions/sessions-overview', type: 'file' },
+            ]
+          },
+          {
+            name: 'Sharing',
+            path: 'Implementations/Sharing',
+            type: 'folder',
+            children: [
+              { name: 'Sharing API', path: 'Implementations/Sharing/sharing-api', type: 'file' },
+              { name: 'Sharing Overview', path: 'Implementations/Sharing/sharing-overview', type: 'file' },
+            ]
+          },
+          {
             name: 'Toast',
             path: 'Implementations/Toast',
             type: 'folder',
