@@ -177,12 +177,20 @@ const DocsPage: React.FC = () => {
     fetchDocStructure();
   }, [docPath]);
 
-  // Sync sidebar height with main content
+  // Sync sidebar height with main content (desktop only)
   useEffect(() => {
     const syncHeights = () => {
       if (mainContentRef.current && sidebarRef.current) {
-        const mainContentHeight = mainContentRef.current.offsetHeight;
-        sidebarRef.current.style.height = `${mainContentHeight}px`;
+        const isDesktop = window.innerWidth >= 1024; // lg breakpoint
+        
+        if (isDesktop) {
+          // On desktop, sync height with main content
+          const mainContentHeight = mainContentRef.current.offsetHeight;
+          sidebarRef.current.style.height = `${mainContentHeight}px`;
+        } else {
+          // On mobile, clear any explicit height to let CSS take over
+          sidebarRef.current.style.height = '';
+        }
       }
     };
 
