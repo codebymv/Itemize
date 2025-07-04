@@ -168,6 +168,19 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       });
     }
   }, [newCategory, note.id, onUpdate, toast]);
+
+  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
+    try {
+      await updateCategory(categoryName, { color_value: newColor });
+    } catch (error) {
+      console.error('Failed to update category color:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not update category color.',
+        variant: 'destructive'
+      });
+    }
+  };
   
   return {
     // Title for display
@@ -207,9 +220,10 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     setNewCategory,
     handleEditCategory,
     handleAddCustomCategory,
+    handleUpdateCategoryColor,
     
     // Refs
     titleEditRef,
     contentEditRef,
   };
-}; 
+};

@@ -39,8 +39,8 @@ export const NoteCategorySelector: React.FC<NoteCategorySelectorProps> = ({
   handleUpdateCategoryColor
 }) => {
   const displayCategory = currentCategory && currentCategory !== '' ? currentCategory : 'General';
-  // Use category color if available, otherwise fall back to item color, then default
-  const displayColor = categoryColor || itemColor || '#808080';
+  // For General category, always use grey. For other categories, use category color if available, otherwise fall back to item color, then default
+  const displayColor = displayCategory === 'General' ? '#808080' : (categoryColor || itemColor || '#808080');
   
   // Always use white text for consistency with other badges
   const getContrastColor = () => '#ffffff';
@@ -163,4 +163,4 @@ export const NoteCategorySelector: React.FC<NoteCategorySelectorProps> = ({
       )}
     </div>
   );
-}; 
+};

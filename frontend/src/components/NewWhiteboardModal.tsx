@@ -6,13 +6,20 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ColorPicker } from './ui/color-picker';
+import { Category } from '@/types';
+
+interface LocalCategory {
+  name: string;
+  color_value?: string;
+}
 
 interface NewWhiteboardModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateWhiteboard: (title: string, category: string, color: string, position: { x: number; y: number }) => void;
   initialPosition: { x: number; y: number };
-  existingCategories: string[];
+  existingCategories: LocalCategory[];
+  updateCategory?: (categoryName: string, newColor: string) => void;
 }
 
 export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({ 
@@ -20,13 +27,15 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
   onClose, 
   onCreateWhiteboard, 
   initialPosition,
-  existingCategories
+  existingCategories,
+  updateCategory
 }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [color, setColor] = useState('#3B82F6'); // Default blue color
+  const [categoryColor, setCategoryColor] = useState('#808080'); // Default category color
 
   useEffect(() => {
     // Reset form when modal is reopened
@@ -36,8 +45,36 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
       setNewCategory('');
       setIsAddingNewCategory(false);
       setColor('#3B82F6');
+      setCategoryColor('#808080');
     }
   }, [isOpen]);
+
+  // Get the selected category's current color
+  const getSelectedCategoryColor = () => {
+    if (isAddingNewCategory) {
+      return categoryColor;
+    }
+    // If a category is selected, use the current categoryColor state (which reflects picker changes)
+    if (category) {
+      return categoryColor;
+    }
+    return '#808080';
+  };
+
+  // Handle category color change
+  const handleCategoryColorChange = (newColor: string) => {
+    setCategoryColor(newColor);
+    // Only synchronize whiteboard color with category color for non-General categories
+    // General category whiteboards should maintain their default blue color
+    if (category !== 'General') {
+      setColor(newColor);
+    }
+    
+    // Update the existing category's color and propagate to canvas items if it's an existing category
+    if (category && !isAddingNewCategory && updateCategory) {
+      updateCategory(category, newColor);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,21 +128,63 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
                     setCategory(''); // Clear category when switching to add new mode
                   } else {
                     setCategory(value);
+                    // Update category color when selecting existing category
+                    const selectedCat = existingCategories.find(cat => cat.name === value);
+                    const categoryColorValue = value === 'General' ? '#808080' : (selectedCat?.color_value || '#808080');
+                    setCategoryColor(categoryColorValue);
+                    // Only synchronize whiteboard color with category color for non-General categories
+                    // General category whiteboards should maintain their default blue color
+                    if (value === 'General') {
+                      setColor('#3B82F6'); // Default blue for General category whiteboards
+                    } else {
+                      setColor(categoryColorValue);
+                    }
                   }
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    {category ? (
+                      <div className="flex items-center gap-2">
+                        {category !== 'General' && (
+                          <span
+                            className="inline-block w-3 h-3 rounded-full border"
+                            style={{ backgroundColor: getSelectedCategoryColor() }}
+                          />
+                        )}
+                        {category}
+                      </div>
+                    ) : (
+                      <SelectValue placeholder="Select a category" />
+                    )}
                   </SelectTrigger>
                   <SelectContent>
                     {/* Always include General as an option */}
-                    {!existingCategories.includes('General') && (
-                      <SelectItem value="General">General</SelectItem>
-                    )}
-                    {existingCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
+                    {!existingCategories.some(cat => cat.name === 'General') && (
+                      <SelectItem value="General">
+                        <div className="flex items-center gap-2">
+                          General
+                        </div>
                       </SelectItem>
-                    ))}
+                    )}
+                    {existingCategories.map((cat) => {
+                      // Use current categoryColor if this is the selected category, otherwise use original color
+                      const displayColor = (category === cat.name && !isAddingNewCategory) 
+                        ? categoryColor 
+                        : (cat.color_value || '#808080');
+                      
+                      return (
+                        <SelectItem key={cat.name} value={cat.name}>
+                          <div className="flex items-center gap-2">
+                            {cat.name !== 'General' && (
+                              <span
+                                className="inline-block w-3 h-3 rounded-full border"
+                                style={{ backgroundColor: displayColor }}
+                              />
+                            )}
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                     <SelectItem value="__add_new__" className="text-blue-600">
                       + Add new category
                     </SelectItem>
@@ -117,6 +196,30 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
                     : 'Select a category or leave empty to use "General".'
                   }
                 </p>
+                
+                {/* Category Color Picker - only show when a category is selected and it's not General */}
+                {category && category !== 'General' && (
+                  <div className="mt-2">
+                    <ColorPicker
+                      color={getSelectedCategoryColor()}
+                      onChange={handleCategoryColorChange}
+                      onSave={handleCategoryColorChange}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 flex items-center gap-2"
+                      >
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: getSelectedCategoryColor() }}
+                        />
+                        Category Color
+                      </Button>
+                    </ColorPicker>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
@@ -132,6 +235,8 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
                       if (e.key === 'Enter' && newCategory.trim()) {
                         setCategory(newCategory.trim());
                         setIsAddingNewCategory(false);
+                        // Synchronize whiteboard color with category color for new category (non-General)
+                        setColor(categoryColor);
                       }
                     }}
                   />
@@ -142,6 +247,8 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
                       if (newCategory.trim()) {
                         setCategory(newCategory.trim());
                         setIsAddingNewCategory(false);
+                        // Synchronize whiteboard color with category color for new category (non-General)
+                        setColor(categoryColor);
                       }
                     }}
                     disabled={!newCategory.trim()}
@@ -161,6 +268,30 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
                     Cancel
                   </Button>
                 </div>
+                
+                {/* Category Color Picker for new category */}
+                {newCategory.trim() && (
+                  <div className="mt-2">
+                    <ColorPicker
+                      color={categoryColor}
+                      onChange={handleCategoryColorChange}
+                      onSave={handleCategoryColorChange}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 flex items-center gap-2"
+                      >
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: categoryColor }}
+                        />
+                        Category Color
+                      </Button>
+                    </ColorPicker>
+                  </div>
+                )}
               </div>
             )}
 
@@ -205,4 +336,4 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

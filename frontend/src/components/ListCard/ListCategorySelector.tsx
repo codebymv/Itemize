@@ -39,8 +39,9 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
   handleUpdateCategoryColor,
 }) => {
   const displayCategory = currentCategory && currentCategory !== '' ? currentCategory : 'General';
-  // Use category color if available, otherwise fall back to item color, then default
-  const displayColor = categoryColor || itemColor || '#808080';
+  // For General category, always use grey. For other categories, use category color if available, otherwise fall back to item color, then default
+  // Always use grey for General category badge, regardless of the list's color
+  const displayColor = displayCategory === 'General' ? '#808080' : (categoryColor || itemColor || '#808080');
   
   // Always use white text for consistency with other badges
   const getContrastColor = () => '#ffffff';

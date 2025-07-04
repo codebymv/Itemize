@@ -116,6 +116,19 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
       });
     }
   }, [newCategory, whiteboard.id, onUpdate, toast]);
+
+  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
+    try {
+      await updateCategory(categoryName, { color_value: newColor });
+    } catch (error) {
+      console.error('Failed to update category color:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not update category color.',
+        variant: 'destructive'
+      });
+    }
+  };
   
   // Canvas operations
   const handleCanvasChange = useCallback((canvasData: any) => {
@@ -134,7 +147,7 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
       });
 
       // Send the raw canvas data array - let the backend handle stringification
-      await onUpdate(whiteboard.id, { canvas_data: data.canvas_data, updated_at: data.updated_at });
+      await onUpdate(whiteboard.id, { canvas_data: data.canvas_data });
 
       console.log('🎨 WhiteboardCardLogic: Canvas save completed successfully');
     } catch (error) {
@@ -178,6 +191,7 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     setNewCategory,
     handleEditCategory,
     handleAddCustomCategory,
+    handleUpdateCategoryColor,
     
     // Canvas operations
     handleCanvasChange,
@@ -186,4 +200,4 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     // Refs
     titleEditRef,
   };
-}; 
+};

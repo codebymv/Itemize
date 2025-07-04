@@ -9,6 +9,7 @@ import CreateListModal from "@/components/CreateListModal";
 import { ListCard } from "@/components/ListCard";
 import { ShareListModal } from "@/components/ShareListModal";
 import QuickAddForm from "@/components/QuickAddForm";
+import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import api from '@/lib/api';
 
 interface ListItem {
@@ -37,6 +38,7 @@ const Index = () => {
   const [currentShareItem, setCurrentShareItem] = useState<{ id: string; title: string; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
 
   const { toast } = useToast();
+  const { categories } = useDatabaseCategories();
 
   const createList = (title: string, type: string) => {
     const newList: List = {
@@ -57,12 +59,23 @@ const Index = () => {
     });
   };
 
-  const deleteList = (listId: string) => {
-    setLists(prev => prev.filter(list => list.id !== listId));
-    toast({
-      title: "List deleted",
-      description: "Your list has been removed.",
-    });
+  const deleteList = async (listId: string): Promise<boolean> => {
+    try {
+      setLists(prev => prev.filter(list => list.id !== listId));
+      toast({
+        title: "List deleted",
+        description: "Your list has been removed.",
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to delete list:', error);
+      toast({
+        title: "Error deleting list",
+        description: "Could not delete your list. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
   };
 
   const updateList = (updatedList: List) => {
@@ -270,7 +283,7 @@ const Index = () => {
                 onUpdate={updateList}
                 onDelete={deleteList}
                 onShare={handleShareList}
-                existingCategories={getActualUniqueCategories()}
+                existingCategories={categories}
               />
             ))}
           </div>
@@ -282,7 +295,7 @@ const Index = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateList={createList}
-        existingCategories={getActualUniqueCategories()}
+        existingCategories={categories}
       />
 
       {/* Share List Modal */}

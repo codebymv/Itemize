@@ -48,30 +48,68 @@ export const fetchCanvasLists = async (token?: string) => {
   const response = await api.get('/api/canvas/lists', {
     headers: getAuthHeaders(token)
   });
-  return response.data;
+  
+  // Transform backend response to match frontend List interface
+  const transformedLists = response.data.map((listFromBackend: any) => ({
+    id: listFromBackend.id,
+    title: listFromBackend.title,
+    type: listFromBackend.category || listFromBackend.type || 'General',
+    items: listFromBackend.items || [],
+    createdAt: listFromBackend.created_at ? new Date(listFromBackend.created_at) : undefined,
+    color_value: listFromBackend.color_value,
+    position_x: listFromBackend.position_x,
+    position_y: listFromBackend.position_y,
+    width: listFromBackend.width,
+    height: listFromBackend.height,
+    share_token: listFromBackend.share_token,
+    is_public: listFromBackend.is_public,
+    shared_at: listFromBackend.shared_at ? new Date(listFromBackend.shared_at).toISOString() : undefined
+  }));
+  
+  return transformedLists;
 };
 
 export const createList = async (listData: any, token?: string) => {
-  // Transform frontend 'type' field to backend 'category' field
-  const backendData = {
-    ...listData,
-    category: listData.type || listData.category || 'General', // Map type to category for backend
-  };
-  
-  // Remove 'type' field to avoid confusion on backend
-  delete backendData.type;
-  
-  const response = await api.post('/api/lists', backendData, {
-    headers: getAuthHeaders(token)
-  });
-  
-  // Transform backend response back to frontend format
-  const responseData = {
-    ...response.data,
-    type: response.data.category // Map category back to type for frontend
-  };
-  
-  return responseData;
+  try {
+    // Transform frontend 'type' field to backend 'category' field
+    const backendData = {
+      ...listData,
+      category: listData.type || listData.category || 'General', // Map type to category for backend
+    };
+    
+    // Remove 'type' field to avoid confusion on backend
+    delete backendData.type;
+    
+    const response = await api.post('/api/lists', backendData, {
+      headers: getAuthHeaders(token)
+    });
+    
+    if (!response.data || !response.data.id) {
+      throw new Error('Invalid response from server');
+    }
+    
+    // Transform backend response to match frontend List interface
+    const transformedList = {
+      id: response.data.id,
+      title: response.data.title,
+      type: response.data.category || response.data.type || 'General',
+      items: response.data.items || [],
+      createdAt: response.data.created_at ? new Date(response.data.created_at) : undefined,
+      color_value: response.data.color_value,
+      position_x: response.data.position_x,
+      position_y: response.data.position_y,
+      width: response.data.width,
+      height: response.data.height,
+      share_token: response.data.share_token,
+      is_public: response.data.is_public,
+      shared_at: response.data.shared_at ? new Date(response.data.shared_at) : undefined
+    };
+    
+    return transformedList;
+  } catch (error) {
+    console.error('Failed to create list:', error);
+    throw error;
+  }
 };
 
 export const updateList = async (listData: any, token?: string) => {
@@ -88,13 +126,24 @@ export const updateList = async (listData: any, token?: string) => {
     headers: getAuthHeaders(token)
   });
   
-  // Transform backend response back to frontend format
-  const responseData = {
-    ...response.data,
-    type: response.data.category // Map category back to type for frontend
+  // Transform backend response to match frontend List interface
+  const transformedList = {
+    id: response.data.id,
+    title: response.data.title,
+    type: response.data.category || response.data.type || 'General',
+    items: response.data.items || [],
+    createdAt: response.data.created_at ? new Date(response.data.created_at) : undefined,
+    color_value: response.data.color_value,
+    position_x: response.data.position_x,
+    position_y: response.data.position_y,
+    width: response.data.width,
+    height: response.data.height,
+    share_token: response.data.share_token,
+    is_public: response.data.is_public,
+    shared_at: response.data.shared_at ? new Date(response.data.shared_at) : undefined
   };
   
-  return responseData;
+  return transformedList;
 };
 
 export const deleteList = async (listId: string, token?: string) => {

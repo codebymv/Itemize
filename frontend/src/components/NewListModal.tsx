@@ -5,24 +5,31 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ColorPicker } from './ui/color-picker';
-import { List, ListItem } from '@/types';
+import { List, ListItem, Category } from '@/types';
 import { createList } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
+
+interface LocalCategory {
+  name: string;
+  color_value?: string;
+}
 
 interface NewListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onListCreated: (list: List) => void;
-  existingCategories: string[];
+  onCreateList: (title: string, type: string, color: string, position: { x: number; y: number }) => Promise<List | undefined>;
+  existingCategories: LocalCategory[];
   position?: { x: number; y: number };
+  updateCategory?: (categoryName: string, newColor: string) => void;
 }
 
 export const NewListModal: React.FC<NewListModalProps> = ({
   isOpen,
   onClose,
-  onListCreated,
+  onCreateList,
   existingCategories,
-  position
+  position,
+  updateCategory
 }) => {
   const { token } = useAuth();
   const [title, setTitle] = useState('');
@@ -30,12 +37,43 @@ export const NewListModal: React.FC<NewListModalProps> = ({
   const [newCategory, setNewCategory] = useState('');
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [color, setColor] = useState('#3B82F6'); // Default blue color
+  const [categoryColor, setCategoryColor] = useState('#808080'); // Default category color
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Get the selected category's current color
+  const getSelectedCategoryColor = () => {
+    if (isAddingNewCategory) {
+      return categoryColor;
+    }
+    // If a category is selected, use the current categoryColor state (which reflects picker changes)
+    if (category) {
+      return categoryColor;
+    }
+    return '#808080';
+  };
+
+  // Handle category color change
+  const handleCategoryColorChange = (newColor: string) => {
+    setCategoryColor(newColor);
+    // Only synchronize list color with category color for non-General categories
+    // General category lists should maintain their default blue color
+    if (category !== 'General') {
+      setColor(newColor);
+    }
+    
+    // Update the existing category's color and propagate to canvas items if it's an existing category
+    if (category && !isAddingNewCategory && updateCategory) {
+      updateCategory(category, newColor);
+    }
+  };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear any existing error first
+    setError('');
     
     if (!title.trim()) {
       setError('Please enter a title');
@@ -51,6 +89,12 @@ export const NewListModal: React.FC<NewListModalProps> = ({
     setError('');
     
     try {
+      // Determine the appropriate color for the list
+      // If creating a new category, use the selected color for the category
+      // Otherwise, use the selected color for the list
+      const isCreatingNewCategory = isAddingNewCategory && newCategory.trim() && 
+        !existingCategories.some(cat => cat.name === newCategory.trim());
+      
       // Create a new list object
       const newList: Omit<List, 'id'> = {
         title,
@@ -59,23 +103,30 @@ export const NewListModal: React.FC<NewListModalProps> = ({
         items: [],
         // Add position if provided
         ...(position && { position_x: position.x, position_y: position.y }),
+        // If creating a new category, also include category color info
+        ...(isCreatingNewCategory && { category_color: categoryColor }),
       };
       
-      // Call API to create the list with token
-      const createdList = await createList(newList, token);
+      // Call the parent's create function
+      const result = await onCreateList(title, finalCategory, color, position || { x: 0, y: 0 });
       
-      // Notify parent component
-      onListCreated(createdList);
-      
-      // Reset form
-      setTitle('');
-      setCategory('');
-      setNewCategory('');
-      setIsAddingNewCategory(false);
-      setColor('#3B82F6');
-      
-      // Close modal
+      // Only reset and close if successful
+      if (result) {
+        setTitle('');
+        setCategory('');
+        setNewCategory('');
+        setIsAddingNewCategory(false);
+        const defaultColor = '#808080';
+        setColor(defaultColor);
+        setCategoryColor('#808080');
+        setError(''); // Clear any existing error
+        
+              // Clear error and close modal
+      setError('');
       onClose();
+      } else {
+        setError('Failed to create list. Please try again.');
+      }
     } catch (err) {
       console.error('Failed to create list:', err);
       setError('Failed to create list. Please try again.');
@@ -85,7 +136,12 @@ export const NewListModal: React.FC<NewListModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        setError('');
+        onClose();
+      }
+    }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -114,31 +170,71 @@ export const NewListModal: React.FC<NewListModalProps> = ({
             {/* Category selection */}
             {!isAddingNewCategory ? (
               <div className="space-y-2">
-                <label htmlFor="category" className="text-sm font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  Category
-                </label>
+                <label htmlFor="category" className="text-sm font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>Category</label>
                 <Select value={category} onValueChange={(value) => {
                   if (value === '__add_new__') {
                     setIsAddingNewCategory(true);
                     setCategory(''); // Clear category when switching to add new mode
                   } else {
                     setCategory(value);
+                    // Update category color when selecting existing category
+                    const selectedCat = existingCategories.find(cat => cat.name === value);
+                    const categoryColorValue = value === 'General' ? '#808080' : (selectedCat?.color_value || '#808080');
+                    setCategoryColor(categoryColorValue);
+                    // Only use grey for General category badge, keep blue for list color
+                    if (value === 'General') {
+                      setColor('#3B82F6'); // Keep blue for General category lists
+                      setCategoryColor('#808080'); // Grey for badge only
+                    } else {
+                      setColor(categoryColorValue);
+                    }
                     setError(''); // Clear error when selection is made
                   }
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    {category ? (
+                      <div className="flex items-center gap-2">
+                        {category !== 'General' && (
+                          <span
+                            className="inline-block w-3 h-3 rounded-full border"
+                            style={{ backgroundColor: getSelectedCategoryColor() }}
+                          />
+                        )}
+                        {category}
+                      </div>
+                    ) : (
+                      <SelectValue placeholder="Select a category" />
+                    )}
                   </SelectTrigger>
                   <SelectContent>
                     {/* Always include General as an option */}
-                    {!existingCategories.includes('General') && (
-                      <SelectItem value="General">General</SelectItem>
-                    )}
-                    {existingCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
+                    {!existingCategories.some(cat => cat.name === 'General') && (
+                      <SelectItem value="General">
+                        <div className="flex items-center gap-2">
+                          General
+                        </div>
                       </SelectItem>
-                    ))}
+                    )}
+                    {existingCategories.map((cat) => {
+                      // Use current categoryColor if this is the selected category, otherwise use original color
+                      const displayColor = (category === cat.name && !isAddingNewCategory) 
+                        ? categoryColor 
+                        : (cat.color_value || '#808080');
+                      
+                      return (
+                        <SelectItem key={cat.name} value={cat.name}>
+                          <div className="flex items-center gap-2">
+                            {cat.name !== 'General' && (
+                              <span
+                                className="inline-block w-3 h-3 rounded-full border"
+                                style={{ backgroundColor: displayColor }}
+                              />
+                            )}
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                     <SelectItem value="__add_new__" className="text-blue-600">
                       + Add new category
                     </SelectItem>
@@ -147,15 +243,36 @@ export const NewListModal: React.FC<NewListModalProps> = ({
                 <p className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   {existingCategories.length === 0 
                     ? 'No categories yet. Leave empty to use "General" or create a new one from the dropdown.'
-                    : 'Select a category or leave empty to use "General".'
-                  }
+                    : 'Select a category or leave empty to use "General".'}
                 </p>
+                
+                {/* Category Color Picker - only show when a category is selected and it's not General */}
+                {category && category !== 'General' && (
+                  <div className="mt-2">
+                    <ColorPicker
+                      color={getSelectedCategoryColor()}
+                      onChange={handleCategoryColorChange}
+                      onSave={handleCategoryColorChange}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 flex items-center gap-2"
+                      >
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: getSelectedCategoryColor() }}
+                        />
+                        Category Color
+                      </Button>
+                    </ColorPicker>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="newCategory" className="text-sm font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  New Category
-                </label>
+                <label htmlFor="newCategory" className="text-sm font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>New Category</label>
                 <div className="flex space-x-2">
                   <Input
                     id="newCategory"
@@ -167,6 +284,8 @@ export const NewListModal: React.FC<NewListModalProps> = ({
                       if (e.key === 'Enter' && newCategory.trim()) {
                         setCategory(newCategory.trim());
                         setIsAddingNewCategory(false);
+                        // Synchronize list color with category color for new category (non-General)
+                        setColor(categoryColor);
                         setError(''); // Clear error when adding new category
                       }
                     }}
@@ -178,6 +297,8 @@ export const NewListModal: React.FC<NewListModalProps> = ({
                       if (newCategory.trim()) {
                         setCategory(newCategory.trim());
                         setIsAddingNewCategory(false);
+                        // Synchronize list color with category color for new category (non-General)
+                        setColor(categoryColor);
                         setError(''); // Clear error when adding new category
                       }
                     }}
@@ -198,6 +319,30 @@ export const NewListModal: React.FC<NewListModalProps> = ({
                     Cancel
                   </Button>
                 </div>
+                
+                {/* Category Color Picker for new category */}
+                {newCategory.trim() && (
+                  <div className="mt-2">
+                    <ColorPicker
+                      color={categoryColor}
+                      onChange={handleCategoryColorChange}
+                      onSave={handleCategoryColorChange}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 flex items-center gap-2"
+                      >
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: categoryColor }}
+                        />
+                        Category Color
+                      </Button>
+                    </ColorPicker>
+                  </div>
+                )}
               </div>
             )}
 
@@ -224,6 +369,8 @@ export const NewListModal: React.FC<NewListModalProps> = ({
               </ColorPicker>
             </div>
           </div>
+
+
           
           {/* Error message */}
           {error && <p className="text-red-500 text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>{error}</p>}
@@ -233,7 +380,12 @@ export const NewListModal: React.FC<NewListModalProps> = ({
             <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !title.trim()} 
+              className="bg-blue-600 hover:bg-blue-700 text-white" 
+              style={{ fontFamily: '"Raleway", sans-serif' }}
+            >
               {isLoading ? 'Creating...' : 'Create List'}
             </Button>
           </div>

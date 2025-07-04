@@ -532,18 +532,8 @@ setTimeout(async () => {
         }
       };
 
-      // Helper function to broadcast list creation to user's own canvas
-      const broadcastUserListCreated = (userId, data) => {
-        if (userId && io) {
-          const roomName = `user-canvas-${userId}`;
-          io.to(roomName).emit('userListCreated', {
-            type: 'LIST_CREATED',
-            data: data,
-            timestamp: new Date().toISOString()
-          });
-          console.log(`Broadcasted LIST_CREATED to user ${userId} canvas`);
-        }
-      };
+      // Note: List creation broadcasts removed to match notes/whiteboards pattern
+      // This prevents duplicate creation issues while maintaining real-time updates for other operations
 
       // Helper function to broadcast list deletion to user's own canvas
       const broadcastUserListDeleted = (userId, data) => {
@@ -568,7 +558,7 @@ setTimeout(async () => {
       global.broadcastNoteUpdate = broadcastNoteUpdate;
       global.broadcastWhiteboardUpdate = broadcastWhiteboardUpdate;
       global.broadcastUserListUpdate = broadcastUserListUpdate;
-      global.broadcastUserListCreated = broadcastUserListCreated;
+      // global.broadcastUserListCreated = broadcastUserListCreated; // Removed to prevent duplicates
       global.broadcastUserListDeleted = broadcastUserListDeleted;
 
       console.log('✅ WebSocket functionality initialized');
@@ -629,10 +619,8 @@ setTimeout(async () => {
             type: result.rows[0].category
           };
 
-          // Broadcast to user's own canvas for real-time updates
-          if (global.broadcastUserListCreated) {
-            global.broadcastUserListCreated(req.user.id, mappedResult);
-          }
+          // Note: List creation broadcast removed to match notes/whiteboards pattern
+          // This prevents duplicate creation issues in the frontend
 
           res.status(201).json(mappedResult);
         } catch (error) {

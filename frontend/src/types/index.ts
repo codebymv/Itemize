@@ -18,23 +18,26 @@ export interface List {
   height?: number; // Height for resizing
   share_token?: string; // Share token for public sharing
   is_public?: boolean; // Whether the list is publicly shared
-  shared_at?: string; // Timestamp when sharing was enabled
+  shared_at?: Date | string; // Timestamp when sharing was enabled
 }
 
 // Category type for API responses
 export interface Category {
-  id: number;
   name: string;
-  color_value: string;
-  created_at: string;
-  updated_at: string;
+  listCount?: number;
+  noteCount?: number;
+  totalCount?: number;
+  color_value?: string;
+  id?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Props for ListCard component
 export interface ListCardProps {
   list: List;
   onUpdate: (list: List) => void;
-  onDelete: (listId: string) => void;
+  onDelete: (listId: string) => Promise<boolean>;
   onShare: (listId: string) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;

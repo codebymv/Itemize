@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
 import { ListCard } from "@/components/ListCard";
+import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ const UserHome = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
   const { isAuthenticated, token } = useAuth();
+  const { categories } = useDatabaseCategories();
 
   // Fetch all lists from the API
   useEffect(() => {
@@ -109,8 +111,8 @@ const UserHome = () => {
       });
     }
   };
-
-  const deleteList = async (listId: string) => {
+ 
+  const deleteList = async (listId: string): Promise<boolean> => {
     try {
       await api.delete(`/api/lists/${listId}`, {
         headers: {
@@ -123,6 +125,7 @@ const UserHome = () => {
         title: "List deleted",
         description: "Your list has been removed.",
       });
+      return true;
     } catch (error) {
       console.error('Failed to delete list:', error);
       toast({
@@ -130,6 +133,7 @@ const UserHome = () => {
         description: "Could not delete your list. Please try again.",
         variant: "destructive"
       });
+      return false;
     }
   };
 
@@ -214,6 +218,19 @@ const UserHome = () => {
     });
     
     return counts;
+  };
+
+  // Handle sharing a list
+  const handleShare = async (listId: string) => {
+    const list = lists.find(l => l.id === listId);
+    if (!list) return;
+
+    // For now, just show a toast notification
+    // This can be expanded to show a share modal or copy share link
+    toast({
+      title: "Share feature",
+      description: `Sharing functionality for "${list.title}" will be implemented soon.`,
+    });
   };
 
   return (
@@ -337,7 +354,8 @@ const UserHome = () => {
                 list={list}
                 onUpdate={updateList}
                 onDelete={deleteList}
-                existingCategories={getActualUniqueCategories()}
+                onShare={handleShare}
+                existingCategories={categories}
               />
             ))}
           </div>
@@ -349,7 +367,7 @@ const UserHome = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateList={createList}
-        existingCategories={getActualUniqueCategories()}
+        existingCategories={categories}
       />
     </div>
   );

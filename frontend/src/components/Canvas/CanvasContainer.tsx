@@ -5,7 +5,7 @@ import { ContextMenu } from './ContextMenu';
 import { List, Note, Whiteboard, Category } from '../../types'; // Add Note and Whiteboard types
 import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { NewListModal } from '../../components/NewListModal';
+
 import Spinner from '../../components/ui/Spinner';
 import { DraggableNoteCard } from './DraggableNoteCard'; // Import the new component
 import { DraggableWhiteboardCard } from './DraggableWhiteboardCard'; // Import the whiteboard component
@@ -16,17 +16,19 @@ interface CanvasContainerProps {
   searchQuery?: string;
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
+  onOpenNewListModal?: (position: { x: number; y: number }) => void;
   onShareList?: (listId: string) => void;
   lists: List[];
-  onListUpdate: (updatedList: List) => Promise<void>;
-  onListDelete: (listId: string) => Promise<void>;
-  onListPositionUpdate: (listId: string, position: { x: number; y: number }) => Promise<void>;
+  onListUpdate: (listData: any) => Promise<any>;
+  onListPositionUpdate: (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
+  onListDelete: (listId: string) => Promise<boolean>;
+  onListShare: (listId: string) => void;
   notes: Note[];
-  onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
+  onNoteUpdate: (noteId: number, noteData: any) => Promise<any>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
   onNoteShare: (noteId: number) => void;
   whiteboards: Whiteboard[];
-  onWhiteboardUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
+  onWhiteboardUpdate: (whiteboardId: number, whiteboardData: any) => Promise<any>;
   onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
   onWhiteboardShare: (whiteboardId: number) => void;
   onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
@@ -40,7 +42,6 @@ export interface CanvasContainerMethods {
   showAddWhiteboardMenu: (position: { x: number, y: number }, isFromButton?: boolean, absolutePosition?: { x: number, y: number }) => void;
   hideContextMenu: () => void;
   isMenuOpenFromButton: () => boolean;
-  showNewListModal: () => void;
 }
 
 export const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -48,11 +49,13 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   searchQuery = '',
   onReady,
   onOpenNewNoteModal,
+  onOpenNewListModal,
   onShareList,
   lists,
   onListUpdate,
-  onListDelete,
   onListPositionUpdate,
+  onListDelete,
+  onListShare,
   notes,
   onNoteUpdate,
   onNoteDelete,
@@ -73,8 +76,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [menuAbsolutePosition, setMenuAbsolutePosition] = useState<{ x: number, y: number } | undefined>(undefined);
   const [menuIsFromButton, setMenuIsFromButton] = useState(false);
-  const [showNewListModal, setShowNewListModal] = useState(false);
-  const [newListPosition, setNewListPosition] = useState({ x: 0, y: 0 });
+
   
   // Canvas transform state - start centered for optimal panning
   const [canvasTransform, setCanvasTransform] = useState({
@@ -113,24 +115,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (onReady) {
       onReady({
         showAddListMenu: (position, isFromButton = false, absolutePosition) => {
-          console.log('showAddListMenu called:', { position, isFromButton, absolutePosition, currentMenuState: showContextMenu, currentMenuIsFromButton: menuIsFromButton });
-          
-          if (showContextMenu && menuIsFromButton && isFromButton) {
-            console.log('Closing existing button menu');
-            setShowContextMenu(false);
-            return;
+          // Directly open list modal instead of context menu for lists
+          if (onOpenNewListModal) {
+            onOpenNewListModal(position);
           }
-          
-          console.log('Setting menu state:', { position, isFromButton, absolutePosition });
-          setMenuPosition(position);
-          setMenuIsFromButton(isFromButton);
-          if (absolutePosition) {
-            setMenuAbsolutePosition(absolutePosition);
-          } else {
-            setMenuAbsolutePosition(undefined);
-          }
-          setShowContextMenu(true);
-          console.log('Context menu should now be visible');
         },
         showAddNoteMenu: (position, isFromButton = false, absolutePosition) => {
           // Directly open note modal instead of context menu for notes
@@ -149,9 +137,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         },
         isMenuOpenFromButton: () => {
           return showContextMenu && menuIsFromButton;
-        },
-        showNewListModal: () => {
-          setShowNewListModal(true);
         }
       });
     }
@@ -195,7 +180,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       console.log('Context menu position:', { canvasX, canvasY, screenX: x, screenY: y });
       
       setMenuPosition({ x: canvasX, y: canvasY });
-      setNewListPosition({ x: canvasX, y: canvasY });
       setMenuIsFromButton(false); // Right-click is not from button
       setMenuAbsolutePosition(undefined); // Clear absolute position for right-click
       setShowContextMenu(true);
@@ -297,7 +281,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   const handleAddList = () => {
     setShowContextMenu(false);
-    setShowNewListModal(true);
+    if (onOpenNewListModal) {
+      onOpenNewListModal(menuPosition);
+    }
   };
 
   const handleListUpdate = async (updatedList: List) => {
@@ -309,29 +295,19 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
 
-  const handleListDelete = async (listId: string) => {
+  const handleListDelete = async (listId: string): Promise<boolean> => {
     try {
       // Use the passed handler from parent
-      await onListDelete(listId);
+      return await onListDelete(listId);
     } catch (error) {
       console.error('Failed to delete list:', error);
+      return false;
     }
   };
 
-  const handleListPositionChange = async (listId: string, newPosition: { x: number, y: number }) => {
-    try {
-      // Use the passed handler from parent
-      await onListPositionUpdate(listId, newPosition);
-    } catch (error) {
-      console.error('Failed to update list position:', error);
-    }
-  };
 
-  const handleNewListCreated = (newList: List) => {
-    // The parent component will handle adding the new list to state
-    // through the WebSocket or direct state update
-    setShowNewListModal(false);
-  };
+
+
 
   // Canvas control functions
   const handleZoomIn = () => {
@@ -424,6 +400,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
+  
+  // Debug logging to track re-renders and list updates (can be removed after debugging)
+  // console.log('🎨 CanvasContainer render - lists:', lists.length, lists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
+  // console.log('🎨 CanvasContainer render - filteredLists:', filteredLists.length, filteredLists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
 
   // Global event listeners for mouse interaction outside canvas
   useEffect(() => {
@@ -553,12 +533,15 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
               <DraggableListCard
                 key={list.id}
                 list={list}
+                onPositionChange={(listId, newPosition, newSize) => {
+                  // Use synchronous position update like Prototype2
+                  onListPositionUpdate(listId, newPosition, newSize);
+                }}
                 onUpdate={handleListUpdate}
                 onDelete={handleListDelete}
                 onShare={onShareList || (() => {})}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
-                onPositionChange={handleListPositionChange}
                 addCategory={addCategory}
                 updateCategory={updateCategory}
               />
@@ -851,15 +834,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         </div>
       )}
 
-      {/* New list modal */}
-      {showNewListModal && (
-        <NewListModal
-          isOpen={showNewListModal}
-          onClose={() => setShowNewListModal(false)}
-          onListCreated={handleNewListCreated}
-          existingCategories={existingCategories.map(cat => cat.name)}
-        />
-      )}
+
     </div>
   );
 };

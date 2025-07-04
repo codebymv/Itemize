@@ -3,7 +3,24 @@ import { useTheme } from 'next-themes';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
-import { fetchCanvasLists, createList as apiCreateList, updateList as apiUpdateList, deleteList as apiDeleteList, getNotes, createNote as apiCreateNote, updateNote as apiUpdateNote, deleteNote as apiDeleteNote, CreateNotePayload, updateListPosition, getWhiteboards, createWhiteboard as apiCreateWhiteboard, updateWhiteboard as apiUpdateWhiteboard, deleteWhiteboard as apiDeleteWhiteboard, CreateWhiteboardPayload, updateCategory as apiUpdateCategory } from '../services/api';
+import { 
+  fetchCanvasLists, 
+  createList as apiCreateList, 
+  updateList as apiUpdateList,
+  updateListPosition as apiUpdateListPosition,
+  deleteList as apiDeleteList,
+  getNotes, 
+  createNote as apiCreateNote, 
+  updateNote as apiUpdateNote, 
+  deleteNote as apiDeleteNote, 
+  CreateNotePayload,
+  getWhiteboards, 
+  createWhiteboard as apiCreateWhiteboard, 
+  updateWhiteboard as apiUpdateWhiteboard, 
+  deleteWhiteboard as apiDeleteWhiteboard, 
+  CreateWhiteboardPayload,
+  updateCategory as apiUpdateCategory
+} from '../services/api';
 import { List, Note, Whiteboard } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
@@ -47,6 +64,7 @@ const CanvasPage: React.FC = () => {
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteInitialPosition, setNewNoteInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const [showNewListModal, setShowNewListModal] = useState(false);
+  const [newListInitialPosition, setNewListInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
   const [newWhiteboardInitialPosition, setNewWhiteboardInitialPosition] = useState<{ x: number, y: number } | null>(null);
 
@@ -109,12 +127,27 @@ const CanvasPage: React.FC = () => {
         
         // Update all lists that belong to this category
         const listsToUpdate = lists.filter(list => (list.type || 'General') === categoryName);
+        const failedListIds: string[] = [];
+        
         for (const list of listsToUpdate) {
           try {
             await updateList({ ...list, color_value: newColor });
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Failed to update list ${list.id} color:`, error);
+            
+            // If it's a 404 error, the list no longer exists in the backend
+            // Remove it from the frontend state to prevent future errors
+            if (error?.response?.status === 404 || error?.status === 404) {
+              console.warn(`List ${list.id} no longer exists in backend, removing from frontend state`);
+              failedListIds.push(list.id);
+            }
           }
+        }
+        
+        // Remove any lists that no longer exist in the backend
+        if (failedListIds.length > 0) {
+          setLists(prev => prev.filter(list => !failedListIds.includes(list.id)));
+          console.log(`Removed ${failedListIds.length} stale list(s) from frontend state:`, failedListIds);
         }
         
         // Update all notes that belong to this category
@@ -154,6 +187,11 @@ const CanvasPage: React.FC = () => {
     }
   };
   
+  // Wrapper function to match NewListModal's expected signature
+  const updateCategoryColor = (categoryName: string, newColor: string) => {
+    editCategory(categoryName, { color_value: newColor });
+  };
+
   // Convert database categories to old format for compatibility
   const categories = dbCategories.map(cat => ({
     name: cat.name,
@@ -186,6 +224,8 @@ const CanvasPage: React.FC = () => {
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
   const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
   const [collapsedWhiteboardIds, setCollapsedWhiteboardIds] = useState<Set<number>>(new Set());
+  
+  // Note: Race condition prevention refs removed since WebSocket creation events are disabled
   
   // Utility function for intelligent positioning of mobile-created items
   const getIntelligentPosition = () => {
@@ -410,17 +450,15 @@ const CanvasPage: React.FC = () => {
     newSocket.on('userListUpdated', (update) => {
       console.log('Canvas: Received list update:', update);
       setLists(prevLists => {
+        console.log('🔄 WebSocket: Applying list update for ID:', update.data.id);
         return prevLists.map(list =>
           String(list.id) === String(update.data.id) ? { ...list, ...update.data } : list
         );
       });
     });
 
-    // Listen for real-time list creation
-    newSocket.on('userListCreated', (update) => {
-      console.log('Canvas: Received list creation:', update);
-      setLists(prevLists => [update.data, ...prevLists]);
-    });
+    // Note: List creation WebSocket events removed to match notes/whiteboards pattern
+    // This prevents duplicate creation issues while maintaining real-time updates for other operations
 
     // Listen for real-time list deletion
     newSocket.on('userListDeleted', (update) => {
@@ -667,6 +705,16 @@ const CanvasPage: React.FC = () => {
         // Add any other required List properties
       };
       
+      // Track the created list ID to prevent WebSocket duplicates
+      recentlyCreatedListIds.current.add(newList.id);
+      console.log('📝 Mobile Creation: Tracking list ID to prevent duplicates:', newList.id);
+      
+      // Remove from tracking after a short delay
+      setTimeout(() => {
+        recentlyCreatedListIds.current.delete(newList.id);
+        console.log('📝 Mobile Creation: Stopped tracking list ID:', newList.id);
+      }, 2000);
+      
       setLists(prev => [newList, ...prev]);
       setShowCreateModal(false);
       
@@ -686,75 +734,158 @@ const CanvasPage: React.FC = () => {
 
   const updateList = async (updatedList: List) => {
     try {
-      // Make API call to update the list
-      await apiUpdateList(updatedList, token);
+      // Make API call to update the list and get the response
+      const updatedListFromAPI = await apiUpdateList(updatedList, token);
       
-      // Update local state
+      // Transform API response to match frontend List interface
+      const transformedList: List = {
+        id: updatedListFromAPI.id,
+        title: updatedListFromAPI.title,
+        type: updatedListFromAPI.type || 'General',
+        items: updatedListFromAPI.items || [],
+        createdAt: updatedListFromAPI.createdAt ? new Date(updatedListFromAPI.createdAt) : undefined,
+        position_x: updatedListFromAPI.position_x,
+        position_y: updatedListFromAPI.position_y,
+        width: updatedListFromAPI.width,
+        height: updatedListFromAPI.height,
+        color_value: updatedListFromAPI.color_value,
+        share_token: updatedListFromAPI.share_token,
+        is_public: updatedListFromAPI.is_public,
+        shared_at: updatedListFromAPI.shared_at ? new Date(updatedListFromAPI.shared_at).toISOString() : undefined,
+      };
+      
+      // Single state update with the full API response
       setLists(prev =>
-        prev.map(list => list.id === updatedList.id ? updatedList : list)
+        prev.map(list => list.id === updatedList.id ? transformedList : list)
       );
-      
-      // Update categories if this introduced a new category
-      // Categories are now managed by unified category system
-      
-      // Removed success toast - no need to distract user for routine list updates
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update list:', error);
-      toast({
-        title: "Error updating list",
-        description: "Could not update your list. Please try again.",
-        variant: "destructive"
-      });
+      
+      // If it's a 404 error, the list no longer exists in the backend
+      if (error?.response?.status === 404 || error?.status === 404) {
+        console.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
+        setLists(prev => prev.filter(list => list.id !== updatedList.id));
+        toast({
+          title: "List no longer exists",
+          description: "This list has been removed as it no longer exists.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error updating list",
+          description: "Could not update your list. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const deleteList = async (listId: string) => {
+  const deleteList = async (listId: string): Promise<boolean> => {
+    // console.log('🗑️ deleteList called for listId:', listId);
+    // console.log('🗑️ Current lists before delete:', lists.length, lists.map(l => l.id));
+    
+    // Save original state for rollback (optimistic update pattern from Prototype1)
+    const originalLists = [...lists];
+    
+    // Update local state immediately (optimistic update)
+    setLists(prev => {
+      const newLists = prev.filter(list => list.id !== listId);
+      // console.log('🗑️ Optimistic update - filtered lists:', newLists.length, newLists.map(l => l.id));
+      return newLists;
+    });
+    
     try {
       await apiDeleteList(listId, token);
-      
-      // Update local state
-      setLists(prev => prev.filter(list => list.id !== listId));
+      // console.log('🗑️ API delete successful');
       
       toast({
         title: "List deleted",
         description: "Your list has been successfully removed.",
       });
+      
+      return true;
     } catch (error) {
-      console.error('Failed to delete list:', error);
+      console.error('🗑️ Failed to delete list:', error);
+      // Rollback to original state on error
+      // console.log('🗑️ Rolling back to original state');
+      setLists(originalLists);
       toast({
         title: "Error deleting list",
         description: "Could not delete your list. Please try again.",
         variant: "destructive"
       });
+      
+      return false;
     }
   };
 
-  // Handler for NewListModal list creation
-  const handleNewListCreated = (newList: List) => {
-    setLists(prev => [newList, ...prev]);
-    setShowNewListModal(false);
-  };
-
-  const handleListPositionUpdate = async (listId: string, position: { x: number, y: number }) => {
+  // Desktop list creation function (matches notes/whiteboards pattern)
+  const handleCreateList = async (title: string, type: string, color: string, position: { x: number; y: number }) => {
     try {
-      await updateListPosition(listId, position.x, position.y, token);
-      // Update local state
-      setLists(prev => prev.map(list => 
-        list.id === listId ? { ...list, position_x: position.x, position_y: position.y } : list
-      ));
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(type) && type !== 'General') {
+        await addCategory({ name: type, color_value: color });
+      }
+      
+      const response = await apiCreateList({ 
+        title, 
+        type, 
+        items: [], 
+        position_x: position.x,
+        position_y: position.y,
+        color_value: color
+      }, token);
+      
+      // Handle the response properly based on the API response structure
+      const newList: List = {
+        id: response.id,
+        title: response.title,
+        type: response.type || 'General',
+        items: response.items || [],
+        createdAt: response.createdAt ? new Date(response.createdAt) : undefined,
+        position_x: response.position_x || position.x,
+        position_y: response.position_y || position.y,
+        width: response.width,
+        height: response.height,
+        color_value: response.color_value || color,
+        share_token: response.share_token,
+        is_public: response.is_public,
+        shared_at: response.shared_at ? new Date(response.shared_at).toISOString() : undefined,
+      };
+      
+      // Update UI state after successful API call
+      setLists(prev => [newList, ...prev]);
+      setShowNewListModal(false);
+      return newList; // Return the created list on success
+      
+      // Removed success toast - no need to distract user for routine list creation
     } catch (error) {
-      console.error('Failed to update list position:', error);
+      console.error('Failed to create list:', error);
       toast({
-        title: "Error updating position",
-        description: "Could not update list position. Please try again.",
+        title: "Error creating list",
+        description: "Could not create your list. Please try again.",
         variant: "destructive"
       });
+      return undefined; // Return undefined to indicate failure
     }
+  };
+
+  // Handler for NewListModal list creation (legacy - kept for compatibility)
+  const handleNewListCreated = (newList: List) => {
+    // The newList parameter is already the properly transformed API response from createList
+    // This ensures the list has the correct position data and structure
+    setLists(prev => [newList, ...prev]);
+    setShowNewListModal(false);
   };
 
   const handleOpenNewNoteModal = (position: { x: number, y: number }) => {
     setNewNoteInitialPosition(position);
     setShowNewNoteModal(true);
+  };
+
+  const handleOpenNewListModal = (position: { x: number, y: number }) => {
+    setNewListInitialPosition(position);
+    setShowNewListModal(true);
   };
 
   const handleOpenNewWhiteboardModal = (position: { x: number, y: number }) => {
@@ -766,14 +897,13 @@ const CanvasPage: React.FC = () => {
   // Handler for button context menu actions
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
-    
-    // Use the same NewListModal for both mobile and desktop for consistency
+    setNewListInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
     setShowNewListModal(true);
   };
 
   const handleButtonAddNote = () => {
     setShowButtonContextMenu(false);
-    setNewNoteInitialPosition({ x: 100, y: 100 }); // Default position for button creation
+    setNewNoteInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
     setShowNewNoteModal(true);
   };
 
@@ -942,6 +1072,44 @@ const CanvasPage: React.FC = () => {
     }
   };
 
+  // List position update (matches working Prototype2 pattern)
+  const handleListPositionUpdate = (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => {
+    // console.log('📍 handleListPositionUpdate called for listId:', listId, 'newPosition:', newPosition);
+    // console.log('📍 Current lists before position update:', lists.length, lists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
+    
+    // Save original state for rollback (optimistic update pattern from Prototype1)
+    const originalLists = [...lists];
+    
+    // Update local state immediately (optimistic update)
+    setLists(prev => {
+      const newLists = prev.map(list => list.id === listId ? {
+        ...list,
+        position_x: newPosition.x,
+        position_y: newPosition.y,
+        ...(newSize ? { width: newSize.width } : {})
+      } : list);
+      // console.log('📍 Optimistic update - updated lists:', newLists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
+      return newLists;
+    });
+
+    // Make API call and rollback on error
+    apiUpdateListPosition(listId, newPosition.x, newPosition.y, token)
+      .then(() => {
+        // console.log('📍 API position update successful');
+      })
+      .catch((error) => {
+        console.error('📍 Failed to update list position:', error);
+        // Rollback to original state on error
+        // console.log('📍 Rolling back to original state');
+        setLists(originalLists);
+        toast({
+          title: "Error updating position",
+          description: "Could not update list position. Please try again.",
+          variant: "destructive"
+        });
+      });
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-screen">
@@ -988,47 +1156,7 @@ const CanvasPage: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="">
-        <div className="bg-background border-b border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>MY CANVAS</h1>
-                  
-                  {/* Desktop search - next to Canvas */}
-                  <div className="relative hidden sm:block ml-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                    <Input
-                      placeholder="Search lists..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-48 h-9"
-                      disabled
-                    />
-                  </div>
-                </div>
-                
-
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <div className="text-destructive text-lg mb-4">⚠️ {error}</div>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Error handling is done in the main return statement
 
   // Utility functions for filtering lists and notes with unified categories
   const getUniqueTypes = () => {
@@ -1398,25 +1526,26 @@ const CanvasPage: React.FC = () => {
           // Desktop: Full-width Canvas View with drag and drop
           <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
             <CanvasContainer
+              lists={lists}
+              notes={notes}
+              whiteboards={whiteboards}
               existingCategories={dbCategories}
-              searchQuery={searchQuery}
+              onListUpdate={updateList}
+              onListPositionUpdate={handleListPositionUpdate}
+              onListDelete={deleteList}
+              onListShare={handleShareList}
+              onNoteUpdate={handleUpdateNote}
+              onNoteDelete={handleDeleteNote}
+              onNoteShare={handleShareNote}
+              onWhiteboardUpdate={handleUpdateWhiteboard}
+              onWhiteboardDelete={handleDeleteWhiteboard}
+              onWhiteboardShare={handleShareWhiteboard}
+              addCategory={addCategory}
+              updateCategory={editCategory}
               onOpenNewNoteModal={handleOpenNewNoteModal}
-              onShareList={handleShareList}
-              lists={lists} // Pass lists state
-              onListUpdate={updateList} // Pass list update handler
-              onListDelete={deleteList} // Pass list delete handler
-              onListPositionUpdate={handleListPositionUpdate} // Pass position update handler
-              notes={notes} // Pass filtered notes state
-              onNoteUpdate={handleUpdateNote} // Pass update handler
-              onNoteDelete={handleDeleteNote} // Pass delete handler
-              onNoteShare={handleShareNote} // Pass note share handler
-              whiteboards={whiteboards} // Pass filtered whiteboards state
-              onWhiteboardUpdate={handleUpdateWhiteboard} // Pass whiteboard update handler
-              onWhiteboardDelete={handleDeleteWhiteboard} // Pass whiteboard delete handler
-              onWhiteboardShare={handleShareWhiteboard} // Pass whiteboard share handler
+              onOpenNewListModal={handleOpenNewListModal}
               onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
-              addCategory={addCategory} // Pass the centralized addCategory function
-              updateCategory={editCategory} // Pass the editCategory function
+              searchQuery={searchQuery}
               onReady={(methods) => {
                 if (!canvasMethodsRef.current) {
                   canvasMethodsRef.current = methods;
@@ -1428,53 +1557,63 @@ const CanvasPage: React.FC = () => {
         )
       )}
       
-      {/* Create List Modal - used by mobile view */}
-      <CreateListModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreateList={createList}
-        existingCategories={categoryNames}
-      />
-      
-      {/* Create Note Modal - used by mobile view */}
-      <CreateNoteModal
-        isOpen={showCreateNoteModal}
-        onClose={() => setShowCreateNoteModal(false)}
-        onCreateNote={createNote}
-        existingCategories={categoryNames}
-      />
-      
-      {/* Desktop Canvas Note Modal */}
-      {showNewNoteModal && newNoteInitialPosition && (
-        <NewNoteModal
-          isOpen={showNewNoteModal}
-          onClose={() => setShowNewNoteModal(false)}
-          onCreateNote={handleCreateNote} 
-          initialPosition={newNoteInitialPosition}
-          existingCategories={categoryNames}
-        />
-      )}
+      {/* Mobile View Modals */}
+      {isMobileView ? (
+        <>
+          {/* Create List Modal - used by mobile view */}
+          <CreateListModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onCreateList={createList}
+            existingCategories={dbCategories}
+          />
+          
+          {/* Create Note Modal - used by mobile view */}
+          <CreateNoteModal
+            isOpen={showCreateNoteModal}
+            onClose={() => setShowCreateNoteModal(false)}
+            onCreateNote={createNote}
+            existingCategories={categoryNames}
+          />
+        </>
+      ) : (
+        <>
+          {/* Desktop Canvas Note Modal */}
+          {showNewNoteModal && newNoteInitialPosition && (
+            <NewNoteModal
+              isOpen={showNewNoteModal}
+              onClose={() => setShowNewNoteModal(false)}
+              onCreateNote={handleCreateNote} 
+              initialPosition={newNoteInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
+            />
+          )}
 
-      {/* Desktop Canvas Whiteboard Modal */}
-      {showNewWhiteboardModal && newWhiteboardInitialPosition && (
-        <NewWhiteboardModal
-          isOpen={showNewWhiteboardModal}
-          onClose={() => setShowNewWhiteboardModal(false)}
-          onCreateWhiteboard={handleCreateWhiteboard} 
-          initialPosition={newWhiteboardInitialPosition}
-          existingCategories={categoryNames}
-        />
-      )}
+          {/* Desktop Canvas Whiteboard Modal */}
+          {showNewWhiteboardModal && newWhiteboardInitialPosition && (
+            <NewWhiteboardModal
+              isOpen={showNewWhiteboardModal}
+              onClose={() => setShowNewWhiteboardModal(false)}
+              onCreateWhiteboard={handleCreateWhiteboard} 
+              initialPosition={newWhiteboardInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
+            />
+          )}
 
-      {/* Unified New List Modal - used by both mobile and desktop */}
-      {showNewListModal && (
-        <NewListModal
-          isOpen={showNewListModal}
-          onClose={() => setShowNewListModal(false)}
-          onListCreated={handleNewListCreated}
-          existingCategories={categoryNames}
-          position={getIntelligentPosition()} // Use intelligent positioning for mobile-created lists
-        />
+          {/* Desktop Canvas List Modal */}
+          {showNewListModal && newListInitialPosition && (
+            <NewListModal
+              isOpen={showNewListModal}
+              onClose={() => setShowNewListModal(false)}
+              onCreateList={handleCreateList}
+              existingCategories={dbCategories}
+              position={newListInitialPosition}
+              updateCategory={updateCategoryColor}
+            />
+          )}
+        </>
       )}
 
       {/* Share Modals */}

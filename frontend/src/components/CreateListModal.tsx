@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { Category } from '@/types';
 
 interface CreateListModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateList: (title: string, type: string, color: string) => void;
-  existingCategories: string[];
+  existingCategories: Category[];
 }
 
 const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCreateList, existingCategories }) => {
@@ -106,7 +107,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
                     </CommandEmpty>
                     <CommandGroup>
                       {/* Always show General as first option */}
-                      {!existingCategories.includes('General') && (
+                      {!existingCategories.some(cat => cat.name === 'General') && (
                         <CommandItem
                           key="General"
                           value="General"
@@ -122,13 +123,17 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
                               customType === "General" ? "opacity-100" : "opacity-0"
                             )}
                           />
+                          <span
+                            className="inline-block w-3 h-3 rounded-full border mr-2"
+                            style={{ backgroundColor: '#808080' }}
+                          />
                           General
                         </CommandItem>
                       )}
                       {existingCategories.map((category) => (
                         <CommandItem
-                          key={category}
-                          value={category}
+                          key={category.name}
+                          value={category.name}
                           onSelect={(currentValue) => {
                             setSelectedCategory(currentValue === selectedCategory ? "" : currentValue);
                             setCustomType(currentValue === customType ? "" : currentValue); // Also set customType here
@@ -138,14 +143,18 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              customType === category ? "opacity-100" : "opacity-0"
+                              customType === category.name ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          {category}
+                          <span
+                            className="inline-block w-3 h-3 rounded-full border mr-2"
+                            style={{ backgroundColor: category.color_value }}
+                          />
+                          {category.name}
                         </CommandItem>
                       ))}
                     </CommandGroup>
-                    {customType.trim() && !existingCategories.includes(customType.trim()) && (
+                    {customType.trim() && !existingCategories.some(cat => cat.name === customType.trim()) && (
                       <CommandItem
                         key={customType.trim()}
                         value={customType.trim()}
@@ -156,6 +165,10 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
                         }}
                       >
                         <Plus className="mr-2 h-4 w-4" />
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border mr-2"
+                          style={{ backgroundColor: color }}
+                        />
                         Create "{customType.trim()}"
                       </CommandItem>
                     )}
@@ -171,6 +184,35 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
                 No categories available yet. You can create your first category or use "General".
               </p>
             )}
+          </div>
+
+          <div>
+            <Label htmlFor="color">Color</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <ColorPicker
+                color={color}
+                onChange={setColor}
+                onSave={setColor}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 px-3 flex items-center gap-2"
+                >
+                  <span
+                    className="inline-block w-4 h-4 rounded-full border"
+                    style={{ backgroundColor: color }}
+                  />
+                  Choose Color
+                </Button>
+              </ColorPicker>
+              <span className="text-xs text-gray-500">
+                {customType.trim() && !existingCategories.some(cat => cat.name === customType.trim()) 
+                  ? 'Color for new category' 
+                  : 'List color'}
+              </span>
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">

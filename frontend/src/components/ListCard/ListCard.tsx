@@ -272,6 +272,7 @@ export default memo(ListCard, (prevProps, nextProps) => {
     prevProps.list.title === nextProps.list.title &&
     prevProps.list.items.length === nextProps.list.items.length &&
     prevProps.list.type === nextProps.list.type &&
+    prevProps.list.color_value === nextProps.list.color_value && // Include color_value in comparison
     prevProps.isCollapsed === nextProps.isCollapsed &&
     // Deep compare items for changes that matter to AI suggestions
     JSON.stringify(prevProps.list.items.map(item => ({ id: item.id, text: item.text, completed: item.completed }))) ===

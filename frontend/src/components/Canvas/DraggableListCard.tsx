@@ -1,15 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ListCard } from '../../components/ListCard';
 import { List, Category } from '../../types';
 
 interface DraggableListCardProps {
   list: List;
+  onPositionChange: (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
   onUpdate: (listData: any) => Promise<any>;
   onDelete: (listId: string) => Promise<boolean>;
   onShare: (listId: string) => void;
   existingCategories: Category[];
   canvasTransform: { x: number; y: number; scale: number };
-  onPositionChange: (listId: string, newPosition: { x: number; y: number }) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
@@ -18,12 +18,12 @@ interface DraggableListCardProps {
 
 export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   list,
+  onPositionChange,
   onUpdate,
   onDelete,
   onShare,
   existingCategories,
   canvasTransform,
-  onPositionChange,
   isCollapsed,
   onToggleCollapsed,
   addCategory,
@@ -135,14 +135,16 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
       const currentTop = parseFloat(listRef.current.style.top) || 0;
       const currentWidth = parseFloat(listRef.current.style.width) || list.width || 340;
       
-      // Update only position and width in the database - height is auto-determined by content
-      onUpdate({
-        ...list,
-        position_x: Math.round(currentLeft),
-        position_y: Math.round(currentTop),
-        width: Math.round(currentWidth),
-        // Remove height from update - let content determine height
-      });
+      const newPosition = {
+        x: Math.round(currentLeft),
+        y: Math.round(currentTop)
+      };
+      const newSize = {
+        width: Math.round(currentWidth)
+      };
+      
+      // Update both position and size in the database
+      onPositionChange(list.id, newPosition, newSize);
     }
   };
   
