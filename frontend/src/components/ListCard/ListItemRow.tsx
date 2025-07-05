@@ -17,7 +17,7 @@ interface ListItemRowProps {
   removeItem: (itemId: string) => void;
 }
 
-export const ListItemRow: React.FC<ListItemRowProps> = ({
+const ListItemRow: React.FC<ListItemRowProps> = ({
   item,
   editingItemId,
   editingItemText,
@@ -134,3 +134,5 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
     </div>
   );
 };
+
+export { ListItemRow };

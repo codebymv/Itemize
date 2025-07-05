@@ -44,8 +44,18 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   // Set up initial position and size
   useEffect(() => {
     if (listRef.current) {
-      listRef.current.style.left = `${list.position_x || 0}px`;
-      listRef.current.style.top = `${list.position_y || 0}px`;
+      const currentLeft = parseFloat(listRef.current.style.left) || 0;
+      const currentTop = parseFloat(listRef.current.style.top) || 0;
+      const newLeft = list.position_x || 0;
+      const newTop = list.position_y || 0;
+      
+      // Only update DOM if position actually changed to prevent flashing
+      if (currentLeft !== newLeft) {
+        listRef.current.style.left = `${newLeft}px`;
+      }
+      if (currentTop !== newTop) {
+        listRef.current.style.top = `${newTop}px`;
+      }
     }
   }, [list.position_x, list.position_y]);
 

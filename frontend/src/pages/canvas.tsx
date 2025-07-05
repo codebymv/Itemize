@@ -43,6 +43,19 @@ import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  return function(...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
   
@@ -450,24 +463,9 @@ const CanvasPage: React.FC = () => {
     });
 
     // Listen for real-time list updates
-    newSocket.on('userListUpdated', (update) => {
-      console.log('Canvas: Received list update:', update);
-      setLists(prevLists => {
-        console.log('🔄 WebSocket: Applying list update for ID:', update.data.id);
-        return prevLists.map(list =>
-          String(list.id) === String(update.data.id) ? { ...list, ...update.data } : list
-        );
-      });
-    });
-
-    // Note: List creation WebSocket events removed to match notes/whiteboards pattern
-    // This prevents duplicate creation issues while maintaining real-time updates for other operations
-
-    // Listen for real-time list deletion
-    newSocket.on('userListDeleted', (update) => {
-      console.log('Canvas: Received list deletion:', update);
-      setLists(prevLists => prevLists.filter(list => String(list.id) !== String(update.data.id)));
-    });
+    // Note: WebSocket list update events removed to prevent conflicts with API-first approach
+    // This eliminates the double-update issue that was causing UI flashing
+    // Lists are now updated only through direct API calls for consistency
 
     newSocket.on('error', (error) => {
       console.error('Canvas: WebSocket error:', error);
@@ -754,16 +752,8 @@ const CanvasPage: React.FC = () => {
   };
 
   const updateList = async (updatedList: List) => {
-    // Save original state for potential rollback
-    const originalLists = [...lists];
-    
-    // Optimistic update - update UI immediately for smooth UX
-    setLists(prev =>
-      prev.map(list => list.id === updatedList.id ? updatedList : list)
-    );
-    
     try {
-      // Make API call to update the list in the background
+      // Make API call first (like Prototype2 approach)
       const updatedListFromAPI = await apiUpdateList(updatedList, token);
       
       // Transform API response to match frontend List interface
@@ -783,15 +773,13 @@ const CanvasPage: React.FC = () => {
         shared_at: updatedListFromAPI.shared_at ? new Date(updatedListFromAPI.shared_at).toISOString() : undefined,
       };
       
-      // Update with the authoritative API response (in case server made changes)
+      // Update local state only after successful API call
       setLists(prev =>
         prev.map(list => list.id === updatedList.id ? transformedList : list)
       );
+      
     } catch (error: any) {
       console.error('Failed to update list:', error);
-      
-      // Rollback to original state on error
-      setLists(originalLists);
       
       // If it's a 404 error, the list no longer exists in the backend
       if (error?.response?.status === 404 || error?.status === 404) {
@@ -813,22 +801,12 @@ const CanvasPage: React.FC = () => {
   };
 
   const deleteList = async (listId: string): Promise<boolean> => {
-    // console.log('🗑️ deleteList called for listId:', listId);
-    // console.log('🗑️ Current lists before delete:', lists.length, lists.map(l => l.id));
-    
-    // Save original state for rollback (optimistic update pattern from Prototype1)
-    const originalLists = [...lists];
-    
-    // Update local state immediately (optimistic update)
-    setLists(prev => {
-      const newLists = prev.filter(list => list.id !== listId);
-      // console.log('🗑️ Optimistic update - filtered lists:', newLists.length, newLists.map(l => l.id));
-      return newLists;
-    });
-    
     try {
+      // Make API call first (like Prototype2 approach)
       await apiDeleteList(listId, token);
-      // console.log('🗑️ API delete successful');
+      
+      // Update local state only after successful API call
+      setLists(prev => prev.filter(list => list.id !== listId));
       
       toast({
         title: "List deleted",
@@ -837,10 +815,7 @@ const CanvasPage: React.FC = () => {
       
       return true;
     } catch (error) {
-      console.error('🗑️ Failed to delete list:', error);
-      // Rollback to original state on error
-      // console.log('🗑️ Rolling back to original state');
-      setLists(originalLists);
+      console.error('Failed to delete list:', error);
       toast({
         title: "Error deleting list",
         description: "Could not delete your list. Please try again.",

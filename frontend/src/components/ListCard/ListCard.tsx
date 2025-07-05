@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
@@ -37,8 +37,7 @@ const ListCard: React.FC<ListCardProps> = ({
   addCategory,
   updateCategory
 }) => {
-  // Debug: Check if ListCard is re-rendering
-  console.log('📋 ListCard render:', list.id, list.title);
+  // Memoized component to prevent unnecessary re-renders
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -136,13 +135,29 @@ const ListCard: React.FC<ListCardProps> = ({
     };
   }, [isEditing, handleEditTitle]);
 
-  // Calculate progress for the progress bar
-  const totalItems = list.items.length;
-  const completedItems = list.items.filter(item => item.completed).length;
-  const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+  // Memoize calculations to prevent unnecessary re-renders and flashing
+  const { totalItems, completedItems, progress } = useMemo(() => {
+    const total = list.items.length;
+    const completed = list.items.filter(item => item.completed).length;
+    const progressPercent = total > 0 ? (completed / total) * 100 : 0;
+    return { totalItems: total, completedItems: completed, progress: progressPercent };
+  }, [list.items]);
 
-  const categoryColor = existingCategories.find(c => c.name === list.type)?.color_value;
-  const listDisplayColor = list.color_value || categoryColor || '#808080'; // Default to grey if no color is set
+  const categoryColor = useMemo(() => 
+    existingCategories.find(c => c.name === list.type)?.color_value,
+    [existingCategories, list.type]
+  );
+  
+  const listDisplayColor = useMemo(() => 
+    list.color_value || categoryColor || '#808080',
+    [list.color_value, categoryColor]
+  );
+
+  // Memoize the items array for SortableContext to prevent unnecessary re-renders during drag operations
+  const sortableItemIds = useMemo(() => 
+    list.items.map(item => item.id),
+    [list.items]
+  );
 
   return (
     <Collapsible
@@ -211,7 +226,7 @@ const ListCard: React.FC<ListCardProps> = ({
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={list.items.map(item => item.id)}
+                  items={sortableItemIds}
                   strategy={verticalListSortingStrategy}
                 >
                   {list.items.map((item) => (
@@ -264,18 +279,5 @@ const ListCard: React.FC<ListCardProps> = ({
   );
 };
 
-// Memoize the ListCard to prevent unnecessary re-renders when props haven't changed
-export default memo(ListCard, (prevProps, nextProps) => {
-  // Custom comparison function to prevent re-renders when only non-essential props change
-  return (
-    prevProps.list.id === nextProps.list.id &&
-    prevProps.list.title === nextProps.list.title &&
-    prevProps.list.items.length === nextProps.list.items.length &&
-    prevProps.list.type === nextProps.list.type &&
-    prevProps.list.color_value === nextProps.list.color_value && // Include color_value in comparison
-    prevProps.isCollapsed === nextProps.isCollapsed &&
-    // Deep compare items for changes that matter to AI suggestions
-    JSON.stringify(prevProps.list.items.map(item => ({ id: item.id, text: item.text, completed: item.completed }))) ===
-    JSON.stringify(nextProps.list.items.map(item => ({ id: item.id, text: item.text, completed: item.completed })))
-  );
-});
+// Export without memo to prevent shallow comparison issues with object references
+export default ListCard;

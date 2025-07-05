@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
@@ -398,6 +398,24 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
 
+  // Memoize the canvas transform string to prevent unnecessary recalculations
+  const canvasTransformStyle = useMemo(() => {
+    return `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`;
+  }, [canvasTransform.x, canvasTransform.y, canvasTransform.scale]);
+
+  // Memoize the background image to prevent recalculation on every render
+  const backgroundImageStyle = useMemo(() => {
+    return theme === 'dark' ? `
+      radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.01) 100%)
+    ` : `
+      radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+      radial-gradient(circle, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      linear-gradient(135deg, rgba(0, 0, 0, 0.01) 0%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.01) 100%)
+    `;
+  }, [theme]);
+
   // Global event listeners for mouse interaction outside canvas
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
@@ -465,27 +483,19 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         {/* Canvas content with transform applied */}
         <div
           ref={canvasContentRef}
-          style={{
+          style={useMemo(() => ({
             position: 'absolute',
             width: '100%',
             height: '100%',
             minWidth: '4000px', // Large canvas area
             minHeight: '4000px',
-            transform: `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`,
+            transform: canvasTransformStyle,
             transformOrigin: '0 0',
             padding: '1rem',
-            backgroundImage: theme === 'dark' ? `
-              radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-              radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-              linear-gradient(135deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.01) 100%)
-            ` : `
-              radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-              radial-gradient(circle, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-              linear-gradient(135deg, rgba(0, 0, 0, 0.01) 0%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.01) 100%)
-            `,
+            backgroundImage: backgroundImageStyle,
             backgroundSize: '32px 32px, 8px 8px, 100% 100%',
             backgroundPosition: '0 0, 0 0, 0 0'
-          }}
+          }), [canvasTransformStyle, backgroundImageStyle])}
         >
 
 

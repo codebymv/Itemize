@@ -208,7 +208,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   };
   
   // Handle toggling item completion status
-  const toggleItemCompleted = (itemId: string) => {
+  const toggleItemCompleted = useCallback((itemId: string) => {
     const updatedItems = list.items.map(item => {
       if (item.id === itemId) {
         return { ...item, completed: !item.completed };
@@ -216,7 +216,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       return item;
     });
     onUpdate({ ...list, items: updatedItems });
-  };
+  }, [list, onUpdate]);
   
   // Handle item removal
   const removeItem = (itemId: string) => {
