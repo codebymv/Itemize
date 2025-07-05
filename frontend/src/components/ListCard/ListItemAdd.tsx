@@ -1,4 +1,4 @@
-import React, { KeyboardEvent, useEffect } from 'react';
+import React, { KeyboardEvent, useEffect, memo } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,8 @@ interface ListItemAddProps {
   isLoadingSuggestions: boolean;
 }
 
-// Suggestion button component
-const SuggestionButton = ({
+// Memoized suggestion button to prevent unnecessary re-renders
+const SuggestionButton = memo(({
   aiEnabled,
   handleGetSuggestion,
   isLoadingSuggestions,
@@ -49,7 +49,9 @@ const SuggestionButton = ({
       )}
     </button>
   );
-};
+});
+
+SuggestionButton.displayName = 'SuggestionButton';
 
 export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
   const {
@@ -79,6 +81,9 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
   //   });
   // }, [aiEnabled, currentInputSuggestion, currentSuggestion, newItemText]);
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    // For debugging keyboard events
+    console.log('Key pressed:', e.key, { currentInputSuggestion });
+    
     if (e.key === 'Enter') {
       handleAddItem();
     } else if (e.key === 'Escape') {
@@ -87,12 +92,14 @@ export const ListItemAdd: React.FC<ListItemAddProps> = (props) => {
       // Tab key should always accept suggestions
       e.preventDefault(); // Prevent focus change
       handleAcceptSuggestion();
+      console.log('Accepting suggestion with Tab');
     } else if (e.key === 'ArrowRight' && currentInputSuggestion) {
       // Only accept with right arrow if cursor is at the end of input
       const input = e.currentTarget as HTMLInputElement;
       if (input.selectionStart === input.value.length) {
         e.preventDefault();
         handleAcceptSuggestion();
+        console.log('Accepting suggestion with ArrowRight');
       }
     }
   };
