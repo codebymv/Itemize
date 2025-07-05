@@ -52,6 +52,11 @@ api.interceptors.response.use(
       localStorage.removeItem('itemize_token');
       localStorage.removeItem('itemize_user');
       localStorage.removeItem('itemize_expiry');
+      
+      // Trigger a custom event to notify AuthContext
+      window.dispatchEvent(new CustomEvent('auth:logout', { 
+        detail: { reason: 'unauthorized' } 
+      }));
     }
     return Promise.reject(error);
   }

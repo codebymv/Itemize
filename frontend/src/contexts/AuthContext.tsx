@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             savedUser !== 'undefined' && 
             expiryTime && 
             !isNaN(parseInt(expiryTime)) && 
-            parseInt(expiryTime) > Date.now()) {
+            parseInt(expiryTime) > (Date.now() + EXPIRATION_BUFFER)) {
           
           try {
             const userData = JSON.parse(savedUser);
@@ -273,14 +273,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Listen for automatic logout events from API interceptor
+  useEffect(() => {
+    const handleAutoLogout = (event: CustomEvent) => {
+      console.log('Automatic logout triggered:', event.detail);
+      // Update context state to match cleared localStorage
+      setToken(null);
+      setCurrentUser(null);
+      
+      // Show a toast notification
+      toast({
+        title: 'Session Expired',
+        description: 'You have been signed out. Please sign in again.',
+        variant: 'destructive'
+      });
+    };
+
+    // Add event listener for auth logout events
+    window.addEventListener('auth:logout', handleAutoLogout as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('auth:logout', handleAutoLogout as EventListener);
+    };
+  }, []);
+
+  // Periodic token validation check
+  useEffect(() => {
+    if (!token || !currentUser) return;
+
+    const validateToken = () => {
+      const expiryTime = localStorage.getItem('itemize_expiry');
+      if (expiryTime && parseInt(expiryTime) <= (Date.now() + EXPIRATION_BUFFER)) {
+        console.log('Token expired during validation check');
+        logout();
+      }
+    };
+
+    // Check token validity every 5 minutes
+    const interval = setInterval(validateToken, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [token, currentUser]);
+
   // Add extra logging for debugging
   useEffect(() => {
+    const expiryTime = localStorage.getItem('itemize_expiry');
+    const timeUntilExpiry = expiryTime ? parseInt(expiryTime) - Date.now() : 0;
+    const hoursUntilExpiry = timeUntilExpiry > 0 ? Math.floor(timeUntilExpiry / (1000 * 60 * 60)) : 0;
+    
     console.log('Auth context changed:', { 
       isAuthenticated: !!currentUser && !!token,
       hasUser: !!currentUser,
       hasToken: !!token,
       lastAuthenticated,
-      userData: currentUser
+      hoursUntilExpiry,
+      userData: currentUser ? { uid: currentUser.uid, email: currentUser.email } : null
     });
   }, [currentUser, token, lastAuthenticated]);
 
