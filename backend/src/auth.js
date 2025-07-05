@@ -182,7 +182,7 @@ const authenticateJWT = (req, res, next) => {
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) {
-        return res.sendStatus(403);
+        return res.sendStatus(401); // Changed from 403 to 401 for consistency with frontend interceptor
       }
 
       req.user = user;
