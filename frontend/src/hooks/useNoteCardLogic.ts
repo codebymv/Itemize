@@ -60,9 +60,26 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
         await updateNoteTitle(note.id, editTitle.trim());
         console.log('✅ Granular title update successful');
       } catch (error) {
-        console.error('❌ Granular title update failed, falling back:', error);
-        // Fallback to full update if granular fails
-        await onUpdate(note.id, { title: editTitle.trim() });
+        console.error('❌ Granular title update failed:', error);
+        
+        // Check if it's an authentication error (401)
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as any;
+          if (axiosError.response?.status === 401) {
+            console.log('🔒 Authentication error during title update, user will be logged out by interceptor');
+            // Don't attempt fallback for auth errors - let the interceptor handle logout
+            setIsEditing(false);
+            return;
+          }
+        }
+        
+        // Fallback to full update for non-auth errors
+        try {
+          await onUpdate(note.id, { title: editTitle.trim() });
+          console.log('✅ Fallback title update successful');
+        } catch (fallbackError) {
+          console.error('❌ Fallback title update failed:', fallbackError);
+        }
       }
     }
     setIsEditing(false);
@@ -75,9 +92,26 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
         await updateNoteContent(note.id, editContent.trim());
         console.log('✅ Granular content update successful');
       } catch (error) {
-        console.error('❌ Granular content update failed, falling back:', error);
-        // Fallback to full update if granular fails
-        await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
+        console.error('❌ Granular content update failed:', error);
+        
+        // Check if it's an authentication error (401)
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as any;
+          if (axiosError.response?.status === 401) {
+            console.log('🔒 Authentication error during content update, user will be logged out by interceptor');
+            // Don't attempt fallback for auth errors - let the interceptor handle logout
+            setIsEditingContent(false);
+            return;
+          }
+        }
+        
+        // Fallback to full update for non-auth errors
+        try {
+          await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
+          console.log('✅ Fallback content update successful');
+        } catch (fallbackError) {
+          console.error('❌ Fallback content update failed:', fallbackError);
+        }
       }
     }
     setIsEditingContent(false);
@@ -118,10 +152,24 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       setIsEditingCategory(false);
       setShowNewCategoryInput(false);
     } catch (error) {
-      console.error('❌ Granular category update failed, falling back:', error);
+      console.error('❌ Granular category update failed:', error);
+      
+      // Check if it's an authentication error (401)
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        if (axiosError.response?.status === 401) {
+          console.log('🔒 Authentication error during category update, user will be logged out by interceptor');
+          // Don't attempt fallback for auth errors - let the interceptor handle logout
+          setIsEditingCategory(false);
+          setShowNewCategoryInput(false);
+          return;
+        }
+      }
+      
       try {
-        // Fallback to full update if granular fails
+        // Fallback to full update for non-auth errors
         await onUpdate(note.id, { category: category });
+        console.log('✅ Fallback category update successful');
         setIsEditingCategory(false);
         setShowNewCategoryInput(false);
       } catch (fallbackError) {
@@ -144,10 +192,25 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
         setShowNewCategoryInput(false);
         setNewCategory('');
       } catch (error) {
-        console.error('❌ Granular custom category update failed, falling back:', error);
+        console.error('❌ Granular custom category update failed:', error);
+        
+        // Check if it's an authentication error (401)
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as any;
+          if (axiosError.response?.status === 401) {
+            console.log('🔒 Authentication error during custom category update, user will be logged out by interceptor');
+            // Don't attempt fallback for auth errors - let the interceptor handle logout
+            setIsEditingCategory(false);
+            setShowNewCategoryInput(false);
+            setNewCategory('');
+            return;
+          }
+        }
+        
         try {
-          // Fallback to full update if granular fails
+          // Fallback to full update for non-auth errors
           await onUpdate(note.id, { category: newCategory.trim() });
+          console.log('✅ Fallback custom category update successful');
           setIsEditingCategory(false);
           setShowNewCategoryInput(false);
           setNewCategory('');

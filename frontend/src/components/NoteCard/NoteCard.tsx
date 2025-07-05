@@ -325,8 +325,24 @@ const NoteCard: React.FC<NoteCardProps> = ({
                   console.log('✅ Granular content update successful');
                 } catch (error) {
                   console.error('❌ Granular content update failed:', error);
-                  // Fallback to full update if granular fails
-                  await onUpdate(note.id, { content, updated_at: new Date().toISOString() });
+                  
+                  // Check if it's an authentication error (401)
+                  if (error && typeof error === 'object' && 'response' in error) {
+                    const axiosError = error as any;
+                    if (axiosError.response?.status === 401) {
+                      console.log('🔒 Authentication error during auto-save, user will be logged out by interceptor');
+                      // Don't attempt fallback for auth errors - let the interceptor handle logout
+                      return;
+                    }
+                  }
+                  
+                  // Only fallback to full update for non-auth errors
+                  try {
+                    await onUpdate(note.id, { content, updated_at: new Date().toISOString() });
+                    console.log('✅ Fallback full update successful');
+                  } catch (fallbackError) {
+                    console.error('❌ Fallback update also failed:', fallbackError);
+                  }
                 }
               }}
               updatedAt={note.updated_at}

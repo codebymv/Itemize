@@ -635,6 +635,16 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     };
   }, [isEditingContent, handleEditContent, editor]);
 
+  // Cleanup autosave timeout on component unmount to prevent stale calls
+  useEffect(() => {
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        console.log('🧹 Cleaning up autosave timeout on component unmount');
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (!editor) {
     return <div className="p-4">Loading editor...</div>;
   }
@@ -741,4 +751,4 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       )}
     </div>
   );
-}; 
+};
