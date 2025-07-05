@@ -23,8 +23,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Token expiration buffer (1 day)
-const EXPIRATION_BUFFER = 24 * 60 * 60 * 1000;
+// Token expiration buffer (1 hour) - reduced from 1 day to prevent premature logouts
+const EXPIRATION_BUFFER = 60 * 60 * 1000;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Note, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { updateNoteTitle, updateNoteCategory, updateNoteContent } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 import React from 'react';
 
 interface UseNoteCardLogicProps {
@@ -16,6 +17,7 @@ interface UseNoteCardLogicProps {
 
 export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseNoteCardLogicProps) => {
   const { toast } = useToast();
+  const { token } = useAuth();
   
   // Collapsible state - use external collapsible state if provided, otherwise use internal state
   const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
@@ -57,7 +59,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
   const handleEditTitle = useCallback(async () => {
     if (editTitle.trim() !== note.title) {
       try {
-        await updateNoteTitle(note.id, editTitle.trim());
+        await updateNoteTitle(note.id, editTitle.trim(), token);
         console.log('✅ Granular title update successful');
       } catch (error) {
         console.error('❌ Granular title update failed:', error);
@@ -83,13 +85,13 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       }
     }
     setIsEditing(false);
-  }, [editTitle, note.title, note.id, onUpdate]);
+  }, [editTitle, note.title, note.id, onUpdate, token]);
   
   // Content editing handlers - updates note.content using granular API
   const handleEditContent = useCallback(async () => {
     if (editContent.trim() !== note.content) {
       try {
-        await updateNoteContent(note.id, editContent.trim());
+        await updateNoteContent(note.id, editContent.trim(), token);
         console.log('✅ Granular content update successful');
       } catch (error) {
         console.error('❌ Granular content update failed:', error);
@@ -115,7 +117,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       }
     }
     setIsEditingContent(false);
-  }, [editContent, note.content, note.id, onUpdate]);
+  }, [editContent, note.content, note.id, onUpdate, token]);
   
   // Note operations
   const handleDeleteNote = useCallback(async () => {
@@ -138,7 +140,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     } finally {
       setIsSavingColor(false);
     }
-  }, [note.id, onUpdate, toast]);
+  }, [note.id, onUpdate, toast, token]);
   
   // Category operations
   const handleEditCategory = useCallback(async (category: string) => {
@@ -147,7 +149,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       return;
     }
     try {
-      await updateNoteCategory(note.id, category);
+      await updateNoteCategory(note.id, category, token);
       console.log('✅ Granular category update successful');
       setIsEditingCategory(false);
       setShowNewCategoryInput(false);
@@ -181,12 +183,12 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
         });
       }
     }
-  }, [note.id, onUpdate, toast]);
+  }, [note.id, onUpdate, toast, token]);
   
   const handleAddCustomCategory = useCallback(async () => {
     if (newCategory.trim() !== '') {
       try {
-        await updateNoteCategory(note.id, newCategory.trim());
+        await updateNoteCategory(note.id, newCategory.trim(), token);
         console.log('✅ Granular custom category update successful');
         setIsEditingCategory(false);
         setShowNewCategoryInput(false);
@@ -230,7 +232,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
         variant: "destructive"
       });
     }
-  }, [newCategory, note.id, onUpdate, toast]);
+  }, [newCategory, note.id, onUpdate, toast, token]);
 
   const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
     try {
