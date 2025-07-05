@@ -2116,6 +2116,17 @@ setTimeout(async () => {
         // Continue running even if AI service fails
       }
 
+      // Try to initialize Note AI suggestion service
+      try {
+        console.log('Initializing Note AI suggestion service...');
+        const noteSuggestionsRoutes = require('./routes/noteSuggestions');
+        app.use('/api/note-suggestions', noteSuggestionsRoutes);
+        console.log('✅ Note AI suggestion service initialized');
+      } catch (noteAiError) {
+        console.error('Failed to initialize Note AI suggestion service:', noteAiError.message);
+        // Continue running even if Note AI service fails
+      }
+
       // Enhanced status endpoint for status page - placed after DB initialization
       app.get('/api/status', async (req, res) => {
         try {
@@ -2141,7 +2152,7 @@ setTimeout(async () => {
               auth: 'operational'
             },
             endpoints: {
-              total: 25,
+              total: 26,
               available: [
                 '/api/auth/*',
                 '/api/lists',
@@ -2160,6 +2171,7 @@ setTimeout(async () => {
                 '/api/categories',
                 '/api/categories/:id',
                 '/api/suggestions',
+                '/api/note-suggestions',
                 '/api/docs/content',
                 '/api/docs/structure',
                 '/api/docs/search',

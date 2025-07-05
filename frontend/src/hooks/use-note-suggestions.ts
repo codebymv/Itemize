@@ -212,7 +212,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       const apiUrl = getApiUrl();
       
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
-        context,
+        content: context,
         category: noteCategory,
         // Request both sentence completions and paragraph continuations
         requestTypes: ['completion', 'continuation']
@@ -347,4 +347,4 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       contextWindow: getContextWindow(noteContent)
     }
   };
-}; 
+};
