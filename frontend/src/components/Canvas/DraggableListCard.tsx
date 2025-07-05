@@ -191,9 +191,8 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
         minHeight: '150px', // Reduced minimum height for better fit
         zIndex: (isDragging || isResizing) ? 1000 : 1,
         cursor: isDragging ? 'grabbing' : (isResizing ? 'ew-resize' : 'grab'),
-        transition: (isDragging || isResizing) ? 'none' : 'box-shadow 0.2s, transform 0.1s',
+        transition: (isDragging || isResizing) ? 'none' : 'box-shadow 0.2s',
         boxShadow: (isDragging || isResizing) ? '0 8px 16px rgba(0,0,0,0.2)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
-        transform: (isDragging || isResizing) ? 'scale(1.01)' : 'scale(1)',
         userSelect: 'none',
         touchAction: 'none',
       }}

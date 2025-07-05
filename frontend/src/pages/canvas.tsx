@@ -216,6 +216,9 @@ const CanvasPage: React.FC = () => {
   // Reference to canvas container methods
   const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
   
+  // Track recently created list IDs to prevent WebSocket duplicates
+  const recentlyCreatedListIds = useRef<Set<string>>(new Set());
+  
   // Button context menu state (separate from canvas context menu)
   const [showButtonContextMenu, setShowButtonContextMenu] = useState(false);
   const [buttonMenuPosition, setButtonMenuPosition] = useState({ x: 0, y: 0 });
@@ -536,12 +539,21 @@ const CanvasPage: React.FC = () => {
   };
 
   const handleUpdateNote = async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
+    // Save original state for potential rollback
+    const originalNotes = [...notes];
+    
+    // Optimistic update - update UI immediately for smooth UX
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...updatedData } : n));
+    
     try {
       const updatedNote = await apiUpdateNote(noteId, updatedData, token);
+      // Update with the authoritative API response (in case server made changes)
       setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
       return updatedNote;
     } catch (error) {
       console.error('Failed to update note:', error);
+      // Rollback to original state on error
+      setNotes(originalNotes);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your note. Please try again.';
       toast({
         title: "Error updating note",
@@ -622,6 +634,12 @@ const CanvasPage: React.FC = () => {
   };
 
   const handleUpdateWhiteboard = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    // Save original state for potential rollback
+    const originalWhiteboards = [...whiteboards];
+    
+    // Optimistic update - update UI immediately for smooth UX
+    setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? { ...w, ...updatedData } : w));
+    
     try {
       console.log('🎨 CanvasPage: Updating whiteboard:', {
         whiteboardId,
@@ -640,10 +658,13 @@ const CanvasPage: React.FC = () => {
         updatedAt: updatedWhiteboard.updated_at
       });
       
+      // Update with the authoritative API response (in case server made changes)
       setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? updatedWhiteboard : w));
       return updatedWhiteboard;
     } catch (error) {
       console.error('Failed to update whiteboard:', error);
+      // Rollback to original state on error
+      setWhiteboards(originalWhiteboards);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
       toast({
         title: "Error updating whiteboard",
@@ -733,8 +754,16 @@ const CanvasPage: React.FC = () => {
   };
 
   const updateList = async (updatedList: List) => {
+    // Save original state for potential rollback
+    const originalLists = [...lists];
+    
+    // Optimistic update - update UI immediately for smooth UX
+    setLists(prev =>
+      prev.map(list => list.id === updatedList.id ? updatedList : list)
+    );
+    
     try {
-      // Make API call to update the list and get the response
+      // Make API call to update the list in the background
       const updatedListFromAPI = await apiUpdateList(updatedList, token);
       
       // Transform API response to match frontend List interface
@@ -754,12 +783,15 @@ const CanvasPage: React.FC = () => {
         shared_at: updatedListFromAPI.shared_at ? new Date(updatedListFromAPI.shared_at).toISOString() : undefined,
       };
       
-      // Single state update with the full API response
+      // Update with the authoritative API response (in case server made changes)
       setLists(prev =>
         prev.map(list => list.id === updatedList.id ? transformedList : list)
       );
     } catch (error: any) {
       console.error('Failed to update list:', error);
+      
+      // Rollback to original state on error
+      setLists(originalLists);
       
       // If it's a 404 error, the list no longer exists in the backend
       if (error?.response?.status === 404 || error?.status === 404) {

@@ -17,18 +17,17 @@ interface CanvasContainerProps {
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
   onOpenNewListModal?: (position: { x: number; y: number }) => void;
-  onShareList?: (listId: string) => void;
+  onListShare?: (listId: string) => void;
   lists: List[];
-  onListUpdate: (listData: any) => Promise<any>;
+  onListUpdate: (updatedList: List) => Promise<void>;
   onListPositionUpdate: (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
   onListDelete: (listId: string) => Promise<boolean>;
-  onListShare: (listId: string) => void;
   notes: Note[];
-  onNoteUpdate: (noteId: number, noteData: any) => Promise<any>;
+  onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNoteDelete: (noteId: number) => Promise<boolean>;
   onNoteShare: (noteId: number) => void;
   whiteboards: Whiteboard[];
-  onWhiteboardUpdate: (whiteboardId: number, whiteboardData: any) => Promise<any>;
+  onWhiteboardUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
   onWhiteboardShare: (whiteboardId: number) => void;
   onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
@@ -50,12 +49,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onReady,
   onOpenNewNoteModal,
   onOpenNewListModal,
-  onShareList,
+  onListShare,
   lists,
   onListUpdate,
   onListPositionUpdate,
   onListDelete,
-  onListShare,
   notes,
   onNoteUpdate,
   onNoteDelete,
@@ -308,7 +306,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
 
 
-
   // Canvas control functions
   const handleZoomIn = () => {
     setCanvasTransform(prev => ({
@@ -400,10 +397,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
-  
-  // Debug logging to track re-renders and list updates (can be removed after debugging)
-  // console.log('🎨 CanvasContainer render - lists:', lists.length, lists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
-  // console.log('🎨 CanvasContainer render - filteredLists:', filteredLists.length, filteredLists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
 
   // Global event listeners for mouse interaction outside canvas
   useEffect(() => {
@@ -534,12 +527,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 key={list.id}
                 list={list}
                 onPositionChange={(listId, newPosition, newSize) => {
-                  // Use synchronous position update like Prototype2
                   onListPositionUpdate(listId, newPosition, newSize);
                 }}
                 onUpdate={handleListUpdate}
                 onDelete={handleListDelete}
-                onShare={onShareList || (() => {})}
+                onShare={onListShare || (() => {})}
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
                 addCategory={addCategory}

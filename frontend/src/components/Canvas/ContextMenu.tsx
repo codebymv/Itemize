@@ -27,14 +27,51 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     action();
   };
 
+  // Calculate responsive positioning for mobile
+  const getResponsivePosition = () => {
+    if (!isFromButton || !absolutePosition) {
+      return {
+        top: `${position.y}px`,
+        left: `${position.x}px`,
+        transform: 'translateX(-50%)'
+      };
+    }
+
+    const menuWidth = 180; // minWidth of the menu
+    const viewportWidth = window.innerWidth;
+    const padding = 16; // Safe padding from screen edges
+    
+    let left = absolutePosition.x;
+    let transform = 'translateX(-50%)';
+    
+    // Check if menu would overflow on the right
+    if (left + menuWidth / 2 > viewportWidth - padding) {
+      // Position menu to the left of the button
+      left = viewportWidth - menuWidth - padding;
+      transform = 'translateX(0)';
+    }
+    // Check if menu would overflow on the left
+    else if (left - menuWidth / 2 < padding) {
+      // Position menu to the right edge with padding
+      left = padding;
+      transform = 'translateX(0)';
+    }
+    
+    return {
+      top: `${absolutePosition.y}px`,
+      left: `${left}px`,
+      transform
+    };
+  };
+
+  const positionStyle = getResponsivePosition();
+
   return (
     <div 
       className={`context-menu ${isFromButton ? 'dropdown-menu' : ''} bg-background border border-border rounded-md shadow-lg`}
       style={{
         position: isFromButton ? 'fixed' : 'absolute',
-        top: isFromButton && absolutePosition ? `${absolutePosition.y}px` : `${position.y}px`,
-        left: isFromButton && absolutePosition ? `${absolutePosition.x}px` : `${position.x}px`,
-        transform: 'translateX(-50%)',
+        ...positionStyle,
         zIndex: 2000, // Higher z-index to ensure it's above everything
         padding: '0.5rem 0',
         minWidth: '180px',

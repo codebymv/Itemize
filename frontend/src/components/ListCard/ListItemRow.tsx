@@ -42,7 +42,7 @@ export const ListItemRow: React.FC<ListItemRowProps> = ({
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
