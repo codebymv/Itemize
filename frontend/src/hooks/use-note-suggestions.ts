@@ -79,7 +79,24 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     
     // Check if context has changed significantly since last call
     const currentContext = getContextWindow(content);
-    if (currentContext === lastTriggerContext) return false;
+    // Allow more frequent updates by checking for meaningful changes rather than exact equality
+    const contextChanged = currentContext !== lastTriggerContext;
+    const contentLengthChanged = Math.abs(content.length - lastTriggerContext.length) > 5;
+    
+    console.log('🔍 Context change check:', {
+      contextChanged,
+      contentLengthChanged,
+      currentLength: content.length,
+      lastLength: lastTriggerContext.length,
+      currentContext: currentContext.substring(0, 30),
+      lastContext: lastTriggerContext.substring(0, 30)
+    });
+    
+    // Don't block if content has changed meaningfully
+    if (!contextChanged && !contentLengthChanged) {
+      console.log('❌ Note AI: Context unchanged, skipping');
+      return false;
+    }
     
     // More responsive trigger points for better autocomplete experience:
     // 1. Ends with sentence completion
@@ -101,9 +118,21 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       return true;
     }
     
-    // 4. Always trigger for responsive autocomplete (like lists)
-    console.log('✅ Note AI trigger: Always responsive');
-    return true;
+    // 4. Trigger when user has typed enough new content for fresh suggestions
+    const wordsSinceLastTrigger = Math.abs(words.length - (lastTriggerContext.trim().split(/\s+/).length || 0));
+    if (wordsSinceLastTrigger >= 3) {
+      console.log('✅ Note AI trigger: Significant word count change', { wordsSinceLastTrigger });
+      return true;
+    }
+    
+    // 5. Trigger if we have context change but no recent suggestions
+    if (contextChanged) {
+      console.log('✅ Note AI trigger: Context changed');
+      return true;
+    }
+    
+    console.log('❌ Note AI: No trigger conditions met');
+    return false;
   }, [enabled, getContextWindow, lastTriggerContext]);
 
   // Get cached suggestions
@@ -212,7 +241,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       const apiUrl = getApiUrl();
       
       const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
-        context,
+        content: context,
         category: noteCategory,
         // Request both sentence completions and paragraph continuations
         requestTypes: ['completion', 'continuation']
@@ -298,23 +327,125 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       contentLength: content.length, 
       cursorPosition, 
       suggestionsCount: suggestions.length,
-      continuationsCount: continuations.length 
+      continuationsCount: continuations.length,
+      firstSuggestion: suggestions[0]?.substring(0, 30),
+      firstContinuation: continuations[0]?.substring(0, 30)
     });
     
-    if (!enabled || !content || cursorPosition < content.length) return null;
+    if (!enabled || !content) return null;
+    
+    // More permissive cursor position validation - allow suggestions in most cases
+    const isAtEnd = cursorPosition >= content.length;
+    const isAfterSpace = cursorPosition > 0 && /\s/.test(content[cursorPosition - 1]);
+    const isAtWordBoundary = cursorPosition === content.length || /\s/.test(content[cursorPosition] || ' ');
+    const isInMiddleOfWord = cursorPosition > 0 && cursorPosition < content.length && 
+                            !/\s/.test(content[cursorPosition - 1]) && !/\s/.test(content[cursorPosition]);
+    
+    // Only block suggestions if we're clearly in the middle of a word (not at end, not after space)
+    if (isInMiddleOfWord) {
+      console.log('❌ Cursor in middle of word, blocking suggestion:', {
+        isAtEnd,
+        isAfterSpace,
+        isAtWordBoundary,
+        isInMiddleOfWord,
+        charBefore: content[cursorPosition - 1],
+        charAfter: content[cursorPosition]
+      });
+      return null;
+    }
+    
+    console.log('✅ Cursor position valid for suggestions:', {
+      isAtEnd,
+      isAfterSpace,
+      isAtWordBoundary,
+      isInMiddleOfWord,
+      charBefore: content[cursorPosition - 1],
+      charAfter: content[cursorPosition]
+    });
     
     // GitHub Copilot style: suggest continuation from current position
     const allSuggestions = [...suggestions, ...continuations];
     
-    // Return first available suggestion if we have any
-    if (allSuggestions.length > 0) {
-      const suggestion = allSuggestions[0];
-      console.log('💡 Note autocomplete suggestion:', suggestion);
+    // Get content from cursor position to analyze context
+    const contentBeforeCursor = content.substring(0, cursorPosition);
+    const contentAfterCursor = content.substring(cursorPosition);
+    
+    // Simplified filtering to reduce flashing - only filter obvious duplicates
+    const filteredSuggestions = allSuggestions.filter(suggestion => {
+      if (!suggestion) return false;
+      
+      const suggestionTrimmed = suggestion.trim();
+      if (!suggestionTrimmed) return false;
+      
+      // Don't suggest if the suggestion already exists after the cursor
+      if (contentAfterCursor.toLowerCase().includes(suggestionTrimmed.toLowerCase())) {
+        console.log('🚫 Filtering suggestion already present after cursor:', {
+          suggestion: suggestion.substring(0, 30),
+          contentAfterCursor: contentAfterCursor.substring(0, 30)
+        });
+        return false;
+      }
+      
+      // Only filter if the suggestion exactly matches the end of content before cursor
+      const contentEnd = contentBeforeCursor.trim().slice(-suggestionTrimmed.length);
+      if (contentEnd.toLowerCase() === suggestionTrimmed.toLowerCase()) {
+        console.log('🚫 Filtering exact duplicate suggestion:', {
+          contentEnd: contentEnd.slice(-30),
+          suggestion: suggestion.substring(0, 30)
+        });
+        return false;
+      }
+      
+      // Filter if suggestion starts with the last few words before cursor (only very obvious cases)
+      const lastWords = contentBeforeCursor.trim().split(/\s+/).slice(-2).join(' ').toLowerCase();
+      const suggestionStart = suggestionTrimmed.toLowerCase().split(/\s+/).slice(0, 2).join(' ');
+      
+      if (lastWords.length > 3 && suggestionStart.length > 3 && lastWords === suggestionStart) {
+        console.log('🚫 Filtering suggestion starting with recent words:', {
+          lastWords,
+          suggestionStart,
+          suggestion: suggestion.substring(0, 30)
+        });
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log('🔍 Suggestion filtering results:', {
+      originalSuggestions: allSuggestions.length,
+      filteredSuggestions: filteredSuggestions.length,
+      originalFirst: allSuggestions[0]?.substring(0, 30),
+      filteredFirst: filteredSuggestions[0]?.substring(0, 30),
+      contentBeforeCursor: contentBeforeCursor.substring(-30),
+      contentAfterCursor: contentAfterCursor.substring(0, 30)
+    });
+    
+    // Return first non-duplicate suggestion if we have any
+    if (filteredSuggestions.length > 0) {
+      const suggestion = filteredSuggestions[0];
+      console.log('💡 Note autocomplete suggestion (filtered):', suggestion.substring(0, 50));
       return suggestion;
     }
     
+    console.log('❌ No non-duplicate suggestions available');
     return null;
   }, [enabled, suggestions, continuations]);
+  
+  // Helper function to calculate text similarity
+  const calculateSimilarity = useCallback((text1: string, text2: string): number => {
+    if (!text1 || !text2) return 0;
+    
+    const words1 = text1.toLowerCase().split(/\s+/);
+    const words2 = text2.toLowerCase().split(/\s+/);
+    
+    const commonWords = words1.filter(word => 
+      word.length > 2 && words2.includes(word)
+    ).length;
+    
+    const totalWords = Math.max(words1.length, words2.length);
+    return totalWords > 0 ? commonWords / totalWords : 0;
+  }, []);
 
   // Effect to trigger suggestions on content change
   useEffect(() => {
@@ -347,4 +478,4 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       contextWindow: getContextWindow(noteContent)
     }
   };
-}; 
+};

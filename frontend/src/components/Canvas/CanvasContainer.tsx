@@ -28,6 +28,7 @@ interface CanvasContainerProps {
   onNoteShare: (noteId: number) => void;
   whiteboards: Whiteboard[];
   onWhiteboardUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
+  onWhiteboardPositionUpdate?: (whiteboardId: number, newPosition: { x: number; y: number }) => void;
   onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
   onWhiteboardShare: (whiteboardId: number) => void;
   onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
@@ -60,6 +61,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onNoteShare,
   whiteboards,
   onWhiteboardUpdate,
+  onWhiteboardPositionUpdate,
   onWhiteboardDelete,
   onWhiteboardShare,
   onOpenNewWhiteboardModal,
@@ -161,6 +163,21 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Handle context menu
   const handleContextMenu = (e: React.MouseEvent) => {
+    // Check if the right-click is within a text editor or input field
+    const target = e.target as HTMLElement;
+    const isInTextEditor = target.closest('.ProseMirror') || 
+                          target.closest('textarea') || 
+                          target.closest('input') || 
+                          target.closest('[contenteditable="true"]') ||
+                          target.closest('.tiptap') ||
+                          target.closest('.rich-text-editor');
+    
+    // If right-clicking within a text editor, allow the default browser context menu
+    if (isInTextEditor) {
+      console.log('Right-click in text editor - allowing default context menu');
+      return;
+    }
+    
     e.preventDefault();
     e.stopPropagation();
     
@@ -193,7 +210,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
     
     // Only start panning on left click and if not clicking on a draggable item or interactive element
-    const isInteractiveElement = target.closest('.draggable-list-card, .draggable-note-card, .context-menu, button, input, textarea, select');
+    const isInteractiveElement = target.closest('.draggable-list-card, .draggable-note-card, .context-menu, button, input, textarea, select, .ProseMirror, .tiptap, .rich-text-editor, [contenteditable="true"]');
     
     if (e.button === 0 && !isInteractiveElement && (e.target === canvasRef.current || e.target === canvasContentRef.current)) {
       setIsPanning(true);
@@ -223,6 +240,19 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Canvas zooming handler
   const handleWheel = (e: React.WheelEvent) => {
+    // Check if the event target is within a text editor or input field
+    const target = e.target as HTMLElement;
+    const isInTextEditor = target.closest('.ProseMirror') || 
+                          target.closest('textarea') || 
+                          target.closest('input') || 
+                          target.closest('[contenteditable="true"]') ||
+                          target.closest('.tiptap');
+    
+    // If scrolling within a text editor, allow normal scroll behavior
+    if (isInTextEditor) {
+      return;
+    }
+    
     e.preventDefault();
     
     if (canvasRef.current) {

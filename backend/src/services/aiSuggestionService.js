@@ -84,6 +84,132 @@ class AISuggestionService {
   }
 
   /**
+   * Generate suggestions for note content based on existing content
+   */
+  async suggestNoteContent(content) {
+    try {
+      // Check if we have enough context
+      if (!content || content.trim().length < 10) {
+        return { suggestions: [] };
+      }
+
+      // Generate cache key based on content hash
+      const contentHash = this.generateContentHash(content);
+      const cacheKey = `note-content-${contentHash}`;
+      
+      // Check cache first
+      const cached = this.getFromCache(cacheKey);
+      if (cached) {
+        console.log('📦 Using cached note suggestions for content hash:', contentHash.slice(0, 8));
+        return { suggestions: cached, cached: true };
+      }
+
+      // If no Gemini API access, return empty results
+      if (!this.model) {
+        console.warn('⚠️ Cannot generate note suggestions: Missing Gemini API key');
+        return { suggestions: [], error: 'Missing API key' };
+      }
+
+      // Create prompt for note content suggestions
+      const prompt = this.createNotePrompt(content);
+      
+      // Call Gemini API
+      console.log('🤖 Generating note suggestions for content length:', content.length);
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 150,
+          temperature: 0.6,
+          topK: 30,
+          topP: 0.8,
+        }
+      });
+
+      // Parse the response
+      const text = result.response.text().trim();
+      const suggestions = this.parseNoteResponse(text);
+      
+      // Only cache if we got valid suggestions
+      if (suggestions.length > 0) {
+        this.setInCache(cacheKey, suggestions);
+      }
+      
+      return { suggestions };
+      
+    } catch (error) {
+      console.error('❌ Error generating note suggestions:', error);
+      return { suggestions: [], error: error.message };
+    }
+  }
+
+  /**
+   * Create a prompt for note content suggestions
+   */
+  createNotePrompt(content) {
+    // Analyze content to determine context
+    const contentLower = content.toLowerCase();
+    const contentLength = content.length;
+    
+    // Determine what type of suggestion would be most helpful
+    let suggestionType = 'continuation';
+    if (contentLength < 100) {
+      suggestionType = 'expansion';
+    } else if (content.includes('?') || contentLower.includes('how') || contentLower.includes('what') || contentLower.includes('why')) {
+      suggestionType = 'answer';
+    } else if (content.includes('TODO') || content.includes('- [ ]') || contentLower.includes('need to') || contentLower.includes('should')) {
+      suggestionType = 'action';
+    }
+
+    return `
+      Based on this note content, suggest a helpful continuation or addition that would naturally flow from what's already written:
+      
+      "${content}"
+      
+      Provide a single, concise suggestion (1-2 sentences) that would:
+      - Naturally continue the thought or topic
+      - Add valuable information or insight
+      - Help complete an incomplete thought
+      - Provide a logical next step if it's a task or process
+      
+      The suggestion should feel like a natural extension of the existing content and be immediately useful to the writer.
+      
+      Return ONLY the suggested text with no additional formatting, explanations, or quotation marks.
+    `;
+  }
+
+  /**
+   * Parse note content response
+   */
+  parseNoteResponse(text) {
+    // Clean up the response
+    const cleaned = text.trim()
+      .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+      .replace(/^Suggestion:\s*/i, '') // Remove "Suggestion:" prefix
+      .trim();
+    
+    // Return as single suggestion if valid
+    if (cleaned.length > 10 && cleaned.length < 300) {
+      return [cleaned];
+    }
+    
+    return [];
+  }
+
+  /**
+   * Generate a simple hash for content caching
+   */
+  generateContentHash(content) {
+    // Simple hash function for caching purposes
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
    * Create an optimized prompt for the Gemini API with enhanced context
    */
   createPrompt(listTitle, existingItems) {

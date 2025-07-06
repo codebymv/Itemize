@@ -17,6 +17,7 @@ import {
   getWhiteboards, 
   createWhiteboard as apiCreateWhiteboard, 
   updateWhiteboard as apiUpdateWhiteboard, 
+  updateWhiteboardPosition as apiUpdateWhiteboardPosition,
   deleteWhiteboard as apiDeleteWhiteboard, 
   CreateWhiteboardPayload,
   updateCategory as apiUpdateCategory
@@ -1112,6 +1113,35 @@ const CanvasPage: React.FC = () => {
         toast({
           title: "Error updating position",
           description: "Could not update list position. Please try again.",
+          variant: "destructive"
+        });
+      });
+  };
+
+  // Whiteboard position update (similar to list position update)
+  const handleWhiteboardPositionUpdate = (whiteboardId: number, newPosition: { x: number; y: number }) => {
+    // Save original state for rollback
+    const originalWhiteboards = [...whiteboards];
+    
+    // Update local state immediately (optimistic update)
+    setWhiteboards(prev => prev.map(whiteboard => whiteboard.id === whiteboardId ? {
+      ...whiteboard,
+      position_x: newPosition.x,
+      position_y: newPosition.y
+    } : whiteboard));
+
+    // Make API call and rollback on error
+    apiUpdateWhiteboardPosition(whiteboardId, newPosition.x, newPosition.y, token)
+      .then(() => {
+        console.log('📍 Whiteboard position update successful');
+      })
+      .catch((error) => {
+        console.error('📍 Failed to update whiteboard position:', error);
+        // Rollback to original state on error
+        setWhiteboards(originalWhiteboards);
+        toast({
+          title: "Error updating position",
+          description: "Could not update whiteboard position. Please try again.",
           variant: "destructive"
         });
       });

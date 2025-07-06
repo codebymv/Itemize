@@ -45,6 +45,40 @@ const AutocompleteExtension = Extension.create({
         if (suggestion) {
           console.log('✅ TipTap Extension: Accepting suggestion with Tab:', suggestion.substring(0, 30));
           
+          // Get current content to check for duplicates before insertion
+          const currentContent = this.editor.getText();
+          const suggestionTrimmed = suggestion.trim();
+          
+          // Enhanced duplicate checking for both single words and phrases
+          const lastWords = currentContent.trim().split(/\s+/).slice(-10);
+          const suggestionWords = suggestionTrimmed.toLowerCase().split(/\s+/);
+          
+          // Check for single word duplicates (like "the")
+          if (suggestionWords.length === 1) {
+            const singleWord = suggestionWords[0];
+            if (lastWords.some(word => word.toLowerCase() === singleWord)) {
+              console.log('🚫 TipTap Extension: Preventing single word duplicate:', {
+                duplicateWord: singleWord,
+                lastWords: lastWords.slice(-5)
+              });
+              globalAutocompleteStorage.suggestion = null;
+              return true; // Prevent default but don't insert
+            }
+          }
+          
+          // Check for phrase duplicates (3+ words)
+          const suggestionStart = suggestionWords.slice(0, 3).join(' ');
+          const lastWordsText = lastWords.join(' ').toLowerCase();
+          
+          if (suggestionStart.length > 3 && lastWordsText.includes(suggestionStart)) {
+            console.log('🚫 TipTap Extension: Preventing phrase duplicate:', {
+              suggestionStart,
+              lastWords: lastWords.slice(-5)
+            });
+            globalAutocompleteStorage.suggestion = null;
+            return true; // Prevent default but don't insert
+          }
+          
           // Clear the suggestion first to prevent immediate re-showing
           globalAutocompleteStorage.suggestion = null;
           
@@ -71,6 +105,40 @@ const AutocompleteExtension = Extension.create({
         const suggestion = globalAutocompleteStorage.suggestion;
         if (suggestion) {
           console.log('🔥 TipTap Extension: ArrowRight pressed with suggestion:', suggestion.substring(0, 30));
+          
+          // Get current content to check for duplicates before insertion
+          const currentContent = this.editor.getText();
+          const suggestionTrimmed = suggestion.trim();
+          
+          // Enhanced duplicate checking for both single words and phrases
+          const lastWords = currentContent.trim().split(/\s+/).slice(-10);
+          const suggestionWords = suggestionTrimmed.toLowerCase().split(/\s+/);
+          
+          // Check for single word duplicates (like "the")
+          if (suggestionWords.length === 1) {
+            const singleWord = suggestionWords[0];
+            if (lastWords.some(word => word.toLowerCase() === singleWord)) {
+              console.log('🚫 TipTap Extension: Preventing single word duplicate (ArrowRight):', {
+                duplicateWord: singleWord,
+                lastWords: lastWords.slice(-5)
+              });
+              globalAutocompleteStorage.suggestion = null;
+              return true; // Prevent default but don't insert
+            }
+          }
+          
+          // Check for phrase duplicates (3+ words)
+          const suggestionStart = suggestionWords.slice(0, 3).join(' ');
+          const lastWordsText = lastWords.join(' ').toLowerCase();
+          
+          if (suggestionStart.length > 3 && lastWordsText.includes(suggestionStart)) {
+            console.log('🚫 TipTap Extension: Preventing phrase duplicate (ArrowRight):', {
+              suggestionStart,
+              lastWords: lastWords.slice(-5)
+            });
+            globalAutocompleteStorage.suggestion = null;
+            return true; // Prevent default but don't insert
+          }
           
           // Clear the suggestion first to prevent immediate re-showing
           globalAutocompleteStorage.suggestion = null;
@@ -155,12 +223,8 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   
-  // State for suggestion debounce
+  // Simplified suggestion state - removed problematic debouncing that causes flashing
   const [lastAcceptedSuggestionLength, setLastAcceptedSuggestionLength] = useState<number>(0);
-  const [suggestionDebounceActive, setSuggestionDebounceActive] = useState<boolean>(false);
-  
-  // State to track when suggestion was just accepted (for immediate clearing)
-  const [suggestionJustAccepted, setSuggestionJustAccepted] = useState<boolean>(false);
   
   // Show suggestion button state
   const [showSuggestionButton, setShowSuggestionButton] = useState(false);
@@ -386,23 +450,9 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     }
   }, [editor, content, setEditContent]);
 
-  // Improved debounce logic for suggestions
+  // Simplified word count tracking without problematic debouncing
   const currentWordCount = plainTextContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-  const wordsAddedSinceLastSuggestion = currentWordCount - lastAcceptedSuggestionLength;
-  const WORDS_AFTER_SUGGESTION = 3;
-  
-  const shouldShowSuggestions = (
-    !suggestionDebounceActive || 
-    wordsAddedSinceLastSuggestion >= WORDS_AFTER_SUGGESTION
-  );
-
-  // Reset debounce when enough words have been added
-  useEffect(() => {
-    if (suggestionDebounceActive && shouldShowSuggestions) {
-      console.log('🕰️ Debounce period ended, re-enabling suggestions');
-      setSuggestionDebounceActive(false);
-    }
-  }, [suggestionDebounceActive, shouldShowSuggestions]);
+  const shouldShowSuggestions = true; // Always show suggestions when available
 
   // Improved grammar correction for AI suggestions
   const fixSuggestionGrammar = useCallback((suggestion: string, context: string): string => {
@@ -435,20 +485,40 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     return fixedSuggestion;
   }, []);
 
-  // Get current autocomplete suggestion (only if debounce allows it)
-  // Always use content.length to bypass cursor position checks in the hook
-  const rawSuggestion = shouldShowSuggestions ? getSuggestionForInput(plainTextContent, plainTextContent.length) : null;
-  const currentAutocomplete = rawSuggestion ? fixSuggestionGrammar(rawSuggestion, plainTextContent) : null;
+  // Get current autocomplete suggestion with stabilization to prevent flashing
+  const [stableSuggestion, setStableSuggestion] = useState<string | null>(null);
+  const [lastContentLength, setLastContentLength] = useState(0);
+  
+  // Only update suggestion when content length changes (user typed/deleted)
+  // This prevents constant re-evaluation that causes flashing
+  useEffect(() => {
+    if (plainTextContent.length !== lastContentLength) {
+      // If user is actively typing (content increased), update suggestion immediately
+      // Don't clear it to prevent flickering
+      if (plainTextContent.length > lastContentLength) {
+        // Update suggestion immediately to prevent disappearing
+        const rawSuggestion = getSuggestionForInput(plainTextContent, cursorPosition);
+        const newSuggestion = rawSuggestion ? fixSuggestionGrammar(rawSuggestion, plainTextContent) : null;
+        setStableSuggestion(newSuggestion);
+        setLastContentLength(plainTextContent.length);
+      } else {
+        // If user deleted content, update immediately
+        const rawSuggestion = getSuggestionForInput(plainTextContent, cursorPosition);
+        const newSuggestion = rawSuggestion ? fixSuggestionGrammar(rawSuggestion, plainTextContent) : null;
+        setStableSuggestion(newSuggestion);
+        setLastContentLength(plainTextContent.length);
+      }
+    }
+  }, [plainTextContent.length, lastContentLength, getSuggestionForInput, fixSuggestionGrammar, plainTextContent, cursorPosition]);
+  
+  const currentAutocomplete = stableSuggestion;
   
   // Debug logging for Tab functionality
   console.log('🔧 Tab Debug:', {
-    shouldShowSuggestions,
-    suggestionJustAccepted,
-    rawSuggestion: rawSuggestion?.substring(0, 20),
     currentAutocomplete: currentAutocomplete?.substring(0, 20),
     suggestionsAvailable: suggestions.length,
     plainTextLength: plainTextContent.length,
-    willShowInline: isEditingContent && currentAutocomplete && aiEnabled && shouldShowSuggestions && !suggestionJustAccepted && plainTextContent.trim().split(/\s+/).length >= 3
+    willShowInline: isEditingContent && currentAutocomplete && aiEnabled && plainTextContent.trim().split(/\s+/).length >= 3
   });
 
   // Update editor's autocomplete storage with current state
@@ -469,10 +539,8 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         globalAutocompleteStorage.suggestion = currentAutocomplete;
         globalAutocompleteStorage.triggerSuggestions = fetchAISuggestions;
         globalAutocompleteStorage.setSuggestionDebounce = (wordCount: number) => {
-          console.log('🕰️ Setting suggestion debounce after accepting suggestion, word count:', wordCount);
+          console.log('🕰️ Setting suggestion tracking after accepting suggestion, word count:', wordCount);
           setLastAcceptedSuggestionLength(wordCount);
-          setSuggestionDebounceActive(true);
-          setSuggestionJustAccepted(true);
           
           // Clear note suggestion cache to force fresh suggestions for new context
           try {
@@ -503,19 +571,16 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           
           // Immediately clear current autocomplete to prevent stale display
           globalAutocompleteStorage.suggestion = null;
+          // Also clear the stable suggestion to prevent flashing
+          setStableSuggestion(null);
           
-          // Trigger fresh suggestions immediately after clearing cache
+          // Trigger fresh suggestions after a short delay
           if (forceRefreshSuggestions) {
             console.log('🔄 Force refreshing suggestions after cache clear');
             setTimeout(() => {
               forceRefreshSuggestions();
-            }, 200); // Small delay to let editor settle after insertion
+            }, 300); // Small delay to let editor settle after insertion
           }
-          
-          // Clear the "just accepted" flag after a brief moment to allow re-render
-          setTimeout(() => {
-            setSuggestionJustAccepted(false);
-          }, 100);
         };
         globalAutocompleteStorage.handleSave = () => {
           // Clear autosave timeout since we're manually saving
@@ -551,7 +616,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     }
   }, [editor, currentAutocomplete, fetchAISuggestions, handleEditContent]); // Removed isEditingContent from dependencies
 
-  // Debug logging for note autocomplete
+  // Simplified debug logging for note autocomplete
   useEffect(() => {
     console.log('📝 Rich Note Autocomplete State:', {
       isEditingContent,
@@ -563,15 +628,10 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       continuationsCount: continuations.length,
       wordCount: currentWordCount,
       shouldShow: isEditingContent && currentAutocomplete && plainTextContent.trim().split(/\s+/).length >= 3,
-      // Debounce info
-      suggestionDebounceActive,
-      lastAcceptedSuggestionLength,
-      wordsAddedSinceLastSuggestion,
-      shouldShowSuggestions,
       firstSuggestion: suggestions[0]?.substring(0, 30),
       firstContinuation: continuations[0]?.substring(0, 30)
     });
-  }, [isEditingContent, aiEnabled, plainTextContent, cursorPosition, currentAutocomplete, suggestions.length, continuations.length, suggestions, continuations, suggestionDebounceActive, lastAcceptedSuggestionLength, shouldShowSuggestions]);
+  }, [isEditingContent, aiEnabled, plainTextContent, cursorPosition, currentAutocomplete, suggestions.length, continuations.length, suggestions, continuations]);
 
   // Show suggestion button when appropriate
   useEffect(() => {
@@ -635,6 +695,16 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     };
   }, [isEditingContent, handleEditContent, editor]);
 
+  // Cleanup autosave timeout on component unmount to prevent stale calls
+  useEffect(() => {
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        console.log('🧹 Cleaning up autosave timeout on component unmount');
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (!editor) {
     return <div className="p-4">Loading editor...</div>;
   }
@@ -672,8 +742,8 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
             }}
           />
 
-          {/* AI Suggestion Overlay - GitHub Copilot style */}
-          {isEditingContent && currentAutocomplete && aiEnabled && shouldShowSuggestions && !suggestionJustAccepted && plainTextContent.trim().split(/\s+/).length >= 3 && (
+          {/* AI Suggestion Overlay - GitHub Copilot style - simplified condition */}
+          {isEditingContent && currentAutocomplete && aiEnabled && plainTextContent.trim().split(/\s+/).length >= 3 && (
             <style>
               {`
                 .ProseMirror p:last-child::after {
@@ -741,4 +811,4 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       )}
     </div>
   );
-}; 
+};

@@ -1461,6 +1461,43 @@ setTimeout(async () => {
         }
       });
 
+      // Update whiteboard position only (dedicated endpoint for drag operations)
+      app.put('/api/whiteboards/:id/position', global.authenticateJWT, async (req, res) => {
+        try {
+          const { id } = req.params;
+          const { x, y } = req.body;
+          
+          if (typeof x !== 'number' || typeof y !== 'number') {
+            return res.status(400).json({ error: 'Invalid position coordinates' });
+          }
+          
+          const client = await actualPool.connect();
+          const result = await client.query(
+            'UPDATE whiteboards SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+            [x, y, id, req.user.id]
+          );
+          client.release();
+          
+          if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Whiteboard not found' });
+          }
+
+          // Broadcast position update to shared viewers if whiteboard is public
+          if (result.rows[0].is_public && result.rows[0].share_token && global.broadcastWhiteboardUpdate) {
+            global.broadcastWhiteboardUpdate(result.rows[0].share_token, 'POSITION_UPDATE', {
+              id: result.rows[0].id,
+              position_x: result.rows[0].position_x,
+              position_y: result.rows[0].position_y
+            });
+          }
+
+          res.json(result.rows[0]);
+        } catch (error) {
+          console.error('Error updating whiteboard position:', error);
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+
       // Delete a whiteboard
       app.delete('/api/whiteboards/:whiteboardId', global.authenticateJWT, async (req, res) => {
         try {
@@ -2116,6 +2153,17 @@ setTimeout(async () => {
         // Continue running even if AI service fails
       }
 
+      // Try to initialize Note AI suggestion service
+      try {
+        console.log('Initializing Note AI suggestion service...');
+        const noteSuggestionsRoutes = require('./routes/noteSuggestions');
+        app.use('/api/note-suggestions', noteSuggestionsRoutes);
+        console.log('✅ Note AI suggestion service initialized');
+      } catch (noteAiError) {
+        console.error('Failed to initialize Note AI suggestion service:', noteAiError.message);
+        // Continue running even if Note AI service fails
+      }
+
       // Enhanced status endpoint for status page - placed after DB initialization
       app.get('/api/status', async (req, res) => {
         try {
@@ -2141,7 +2189,7 @@ setTimeout(async () => {
               auth: 'operational'
             },
             endpoints: {
-              total: 25,
+              total: 26,
               available: [
                 '/api/auth/*',
                 '/api/lists',
@@ -2160,6 +2208,7 @@ setTimeout(async () => {
                 '/api/categories',
                 '/api/categories/:id',
                 '/api/suggestions',
+                '/api/note-suggestions',
                 '/api/docs/content',
                 '/api/docs/structure',
                 '/api/docs/search',

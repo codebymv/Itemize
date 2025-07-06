@@ -17,6 +17,7 @@ import { useTheme } from 'next-themes';
 import { Category } from '@/types';
 import { DeleteNoteModal } from '../DeleteNoteModal';
 import { updateNoteContent } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NoteCardProps {
   note: Note;
@@ -43,6 +44,9 @@ const NoteCard: React.FC<NoteCardProps> = ({
 }) => {
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Get auth token
+  const { token } = useAuth();
 
   const {
     // Title for display
@@ -321,7 +325,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               onAutoSave={async (content: string) => {
                 // Use granular content update for real-time updates
                 try {
-                  await updateNoteContent(note.id, content);
+                  await updateNoteContent(note.id, content, token);
                   console.log('✅ Granular content update successful');
                 } catch (error) {
                   console.error('❌ Granular content update failed:', error);

@@ -243,7 +243,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           // Auto-fix corrupted data
           console.log('🎨 Auto-fixing corrupted canvas data after load error...');
           try {
-            onSave([]);
+            onSave({ canvas_data: [], updated_at: new Date().toISOString() });
           } catch (saveError) {
             console.error('🎨 Failed to auto-fix corrupted data:', saveError);
           }
@@ -327,17 +327,54 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           return;
         }
 
-        // Test JSON serialization to catch malformed data early
-        const testSerialization = JSON.stringify(canvasData);
-        JSON.parse(testSerialization); // This will throw if the JSON is malformed
+        // Sanitize canvas data to prevent JSON serialization issues
+        let sanitizedCanvasData = canvasData;
+        
+        try {
+          // Deep clone and sanitize the canvas data to remove any circular references
+          // or problematic nested objects that might cause JSON serialization issues
+          sanitizedCanvasData = canvasData.map(path => {
+            if (typeof path === 'object' && path !== null) {
+              // Create a clean object with only the essential properties
+              const cleanPath = {
+                drawMode: path.drawMode || true,
+                strokeColor: typeof path.strokeColor === 'string' ? path.strokeColor : '#2563eb',
+                strokeWidth: typeof path.strokeWidth === 'number' ? path.strokeWidth : 2,
+                paths: Array.isArray(path.paths) ? path.paths : (Array.isArray(path.path) ? path.path : [])
+              };
+              
+              // Ensure paths array contains only valid coordinate objects
+              if (Array.isArray(cleanPath.paths)) {
+                cleanPath.paths = cleanPath.paths.filter(point => 
+                  point && typeof point === 'object' && 
+                  typeof point.x === 'number' && 
+                  typeof point.y === 'number'
+                );
+              }
+              
+              return cleanPath;
+            }
+            return path;
+          });
+          
+          // Test JSON serialization to catch any remaining issues
+          const testSerialization = JSON.stringify(sanitizedCanvasData);
+          JSON.parse(testSerialization);
+          
+          console.log('🎨 Auto-saving sanitized canvas data:', {
+            originalPaths: canvasData.length,
+            sanitizedPaths: sanitizedCanvasData.length,
+            dataPreview: testSerialization.substring(0, 200),
+            whiteboardId
+          });
+          
+        } catch (sanitizationError) {
+          console.error('🎨 Canvas data sanitization failed during auto-save:', sanitizationError);
+          // Fallback to empty array if sanitization fails
+          sanitizedCanvasData = [];
+        }
 
-        console.log('🎨 Auto-saving canvas data:', {
-          pathCount: canvasData.length,
-          dataPreview: testSerialization.substring(0, 200),
-          whiteboardId,
-          fullDataSample: canvasData.length > 0 ? canvasData[0] : 'empty'
-        });
-        await onSave({ canvas_data: canvasData, updated_at: new Date().toISOString() });
+        await onSave({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
         console.log('🎨 Canvas auto-save completed successfully');
       } catch (error) {
         console.error('🎨 Canvas auto-save failed:', error);
@@ -880,4 +917,4 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       </div>
     </div>
   );
-}; 
+};

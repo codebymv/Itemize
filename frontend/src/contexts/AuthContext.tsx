@@ -23,9 +23,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Token expiration buffer (1 day)
-const EXPIRATION_BUFFER = 24 * 60 * 60 * 1000;
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -38,74 +35,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
-  const [lastAuthenticated, setLastAuthenticated] = useState<number>(0);
-  const backendLogoutFailures = useRef(0);
 
-  // Initialize authentication state
+  // Initialize authentication state - simplified like Prototype2
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log('Starting authentication initialization');
         // Check for saved authentication data in localStorage
         const savedToken = localStorage.getItem('itemize_token');
         const savedUser = localStorage.getItem('itemize_user');
         const expiryTime = localStorage.getItem('itemize_expiry');
         
-        console.log('Auth data from storage:', { 
-          hasToken: !!savedToken, 
-          hasUser: !!savedUser, 
-          hasExpiry: !!expiryTime 
-        });
-        
-        // Safely check localStorage values
-        if (savedToken && 
-            typeof savedToken === 'string' && 
-            savedUser && 
-            typeof savedUser === 'string' && 
-            savedUser !== 'undefined' && 
-            expiryTime && 
-            !isNaN(parseInt(expiryTime)) && 
-            parseInt(expiryTime) > Date.now()) {
-          
+        // Simple check like Prototype2 - if we have token, user, and not expired, restore auth
+        if (savedToken && savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
           try {
             const userData = JSON.parse(savedUser);
-            
-            // Validate user data has the expected structure
-            if (userData && typeof userData === 'object' && userData.uid) {
-              console.log('Restoring authentication with user:', userData);
-              setToken(savedToken);
-              setCurrentUser(userData);
-              setLastAuthenticated(Date.now());
-              console.log('Authentication restored successfully');
-            } else {
-              console.error('Invalid user data structure:', userData);
-              throw new Error('Invalid user data structure');
-            }
+            setToken(savedToken);
+            setCurrentUser(userData);
           } catch (parseError) {
-            console.error('Failed to parse saved user data:', parseError);
             // Clean up invalid data
             localStorage.removeItem('itemize_token');
             localStorage.removeItem('itemize_user');
             localStorage.removeItem('itemize_expiry');
-            setToken(null);
-            setCurrentUser(null);
           }
-        } else {
-          // Clear any invalid or expired data
-          console.log('No valid authentication found, cleaning up storage');
-          localStorage.removeItem('itemize_token');
-          localStorage.removeItem('itemize_user');
-          localStorage.removeItem('itemize_expiry');
-          setToken(null);
-          setCurrentUser(null);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Reset state on error
-        setToken(null);
-        setCurrentUser(null);
       } finally {
-        console.log('Authentication initialization complete');
         setLoading(false);
       }
     };
@@ -143,21 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log('Backend auth response:', response.data);
           
-          // Extract data from response with proper error checking
-          if (!response.data) {
-            throw new Error('Empty response data from backend');
-          }
-          
-          const backendToken = response.data.token;
-          const userData = response.data.user;
-          
-          if (!backendToken) {
-            throw new Error('Missing token in backend response');
-          }
-          
-          if (!userData || !userData.uid) {
-            throw new Error('Missing or invalid user data in backend response');
-          }
+          const { token: backendToken, user: userData } = response.data;
           
           // Set token expiry (7 days)
           const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
@@ -168,14 +109,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('itemize_expiry', expiryTime.toString());
           
           // Update state
-          console.log('Setting authentication state with:', { token: backendToken, user: userData });
           setToken(backendToken);
           setCurrentUser(userData);
           
-          // Force a re-render by setting a timestamp
-          setLastAuthenticated(Date.now());
-          
-          console.log('Backend auth successful, state updated');
           toast({
             title: 'Welcome!',
             description: 'Successfully signed in with Google.',
@@ -203,8 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    console.log('Logging out user...');
-    
     // Clear state
     setToken(null);
     setCurrentUser(null);
@@ -221,17 +155,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error signing out from Google:', googleError);
     }
     
-    // Call backend logout if needed
-    if (backendLogoutFailures.current < 3) {
-      try {
-        api.post(`/api/auth/logout`).catch((error) => {
-          console.error('Backend logout failed:', error);
-          backendLogoutFailures.current++;
-        });
-      } catch (error) {
+    // Optional backend logout - simple approach like Prototype2
+    try {
+      api.post(`/api/auth/logout`).catch((error) => {
         console.error('Backend logout failed:', error);
-        backendLogoutFailures.current++;
-      }
+      });
+    } catch (error) {
+      console.error('Backend logout failed:', error);
     }
   };
 
@@ -258,10 +188,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('itemize_expiry', expiryTime.toString());
       
       // Update state
-      console.log('Setting authentication state with:', { token: backendToken, user: userData });
       setToken(backendToken);
       setCurrentUser(userData);
-      setLastAuthenticated(Date.now());
       toast({
         title: 'Welcome!',
         description: 'Successfully signed in with Google.',
@@ -272,17 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
-
-  // Add extra logging for debugging
-  useEffect(() => {
-    console.log('Auth context changed:', { 
-      isAuthenticated: !!currentUser && !!token,
-      hasUser: !!currentUser,
-      hasToken: !!token,
-      lastAuthenticated,
-      userData: currentUser
-    });
-  }, [currentUser, token, lastAuthenticated]);
 
   const value: AuthContextType = {
     currentUser,

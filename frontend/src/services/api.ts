@@ -246,6 +246,13 @@ export const deleteWhiteboard = async (whiteboardId: number, token?: string) => 
   return response.data;
 };
 
+export const updateWhiteboardPosition = async (whiteboardId: number, x: number, y: number, token?: string) => {
+  const response = await api.put(`/api/whiteboards/${whiteboardId}/position`, { x, y }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
 // Category API functions
 export const getCategories = async (token?: string): Promise<Category[]> => {
   const response = await api.get('/api/categories', {
