@@ -138,7 +138,16 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       }
     }
     
-    onUpdate({ ...list, type: category });
+    // When changing to a non-General category, adopt that category's color
+    let updateData: Partial<List> = { type: category };
+    if (category !== 'General') {
+      const selectedCategory = existingCategories.find(c => c.name === category);
+      if (selectedCategory?.color_value) {
+        updateData.color_value = selectedCategory.color_value;
+      }
+    }
+    
+    onUpdate({ ...list, ...updateData });
     setIsEditingCategory(false);
     setShowNewCategoryInput(false);
   };
@@ -147,16 +156,22 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   const handleAddCustomCategory = async () => {
     if (newCategory.trim() !== '') {
       try {
+        let newCategoryColor = '#3B82F6'; // Default blue color
+        
         // First create the category in the database (only if addCategory is provided)
         if (addCategory) {
           await addCategory({ 
             name: newCategory.trim(), 
-            color_value: '#3B82F6' // Default blue color
+            color_value: newCategoryColor
           });
         }
         
-        // Then update the list to use this category
-        onUpdate({ ...list, type: newCategory.trim() });
+        // Then update the list to use this category and adopt its color
+        onUpdate({ 
+          ...list, 
+          type: newCategory.trim(),
+          color_value: newCategoryColor // Adopt the new category's color
+        });
         setIsEditingCategory(false);
         setShowNewCategoryInput(false);
         setNewCategory('');

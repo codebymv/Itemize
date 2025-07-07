@@ -8,6 +8,10 @@ import { ColorPicker } from './ui/color-picker';
 import { List, ListItem, Category } from '@/types';
 import { createList } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { MIN_LIST_WIDTH } from '@/constants/dimensions';
+
+// Add buffer to prevent any shrinking below optimal size
+const OPTIMAL_LIST_WIDTH = MIN_LIST_WIDTH + 50; // 50px buffer above minimum
 
 interface LocalCategory {
   name: string;
@@ -101,6 +105,7 @@ export const NewListModal: React.FC<NewListModalProps> = ({
         type: finalCategory,
         color_value: color,
         items: [],
+        width: MIN_LIST_WIDTH, // Set initial width to minimum width
         // Add position if provided
         ...(position && { position_x: position.x, position_y: position.y }),
         // If creating a new category, also include category color info

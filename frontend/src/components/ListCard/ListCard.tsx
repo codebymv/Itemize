@@ -246,7 +246,7 @@ const ListCard: React.FC<ListCardProps> = ({
               </DndContext>
               {list.items.length === 0 && (
                 <div className="text-gray-400 dark:text-gray-300 text-sm py-2 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  No items yet. Add one below or use AI suggestions.
+                  No items yet.
                 </div>
               )}
             </div>

@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ListCard } from '../../components/ListCard';
 import { List, Category } from '../../types';
+import { MIN_LIST_WIDTH } from '../../constants/dimensions';
+
+// Add buffer to prevent any shrinking below optimal size
+const OPTIMAL_LIST_WIDTH = MIN_LIST_WIDTH + 50; // 50px buffer above minimum
+// Add a snap threshold to prevent small width changes that could cause text reflow
+const SNAP_THRESHOLD = 10; // px
 
 interface DraggableListCardProps {
   list: List;
@@ -37,27 +43,18 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
   const [resizeStartData, setResizeStartData] = useState({ 
     startX: 0, 
     startY: 0, 
-    startWidth: 0, 
+    startWidth: MIN_LIST_WIDTH,
     startHeight: 0 
   });
 
   // Set up initial position and size
   useEffect(() => {
     if (listRef.current) {
-      const currentLeft = parseFloat(listRef.current.style.left) || 0;
-      const currentTop = parseFloat(listRef.current.style.top) || 0;
-      const newLeft = list.position_x || 0;
-      const newTop = list.position_y || 0;
-      
-      // Only update DOM if position actually changed to prevent flashing
-      if (currentLeft !== newLeft) {
-        listRef.current.style.left = `${newLeft}px`;
-      }
-      if (currentTop !== newTop) {
-        listRef.current.style.top = `${newTop}px`;
-      }
+      listRef.current.style.left = `${list.position_x || 0}px`;
+      listRef.current.style.top = `${list.position_y || 0}px`;
+      listRef.current.style.width = `${Math.max(MIN_LIST_WIDTH, list.width || MIN_LIST_WIDTH)}px`;
     }
-  }, [list.position_x, list.position_y]);
+  }, [list.position_x, list.position_y, list.width]);
 
   // Drag start handler
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -112,10 +109,9 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
       // Account for canvas scale in the resize delta
       const scaledDeltaX = deltaX / canvasTransform.scale;
       
-      const newWidth = Math.max(320, resizeStartData.startWidth + scaledDeltaX); // Min width 320px
-      
+      // Simply enforce minimum width during resize
+      const newWidth = Math.max(MIN_LIST_WIDTH, resizeStartData.startWidth + scaledDeltaX);
       listRef.current.style.width = `${newWidth}px`;
-      // Height is automatically determined by content - no manual height setting
     }
   };
   
@@ -143,7 +139,7 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
       // Get current position and width from the style (in canvas coordinates)
       const currentLeft = parseFloat(listRef.current.style.left) || 0;
       const currentTop = parseFloat(listRef.current.style.top) || 0;
-      const currentWidth = parseFloat(listRef.current.style.width) || list.width || 340;
+      const currentWidth = Math.max(MIN_LIST_WIDTH, parseFloat(listRef.current.style.width) || list.width || MIN_LIST_WIDTH);
       
       const newPosition = {
         x: Math.round(currentLeft),
@@ -177,13 +173,13 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
     e.stopPropagation(); // Prevent triggering drag
     
     if (listRef.current) {
-      const currentWidth = parseFloat(listRef.current.style.width) || list.width || 340;
+      const currentWidth = Math.max(MIN_LIST_WIDTH, parseFloat(listRef.current.style.width) || list.width || MIN_LIST_WIDTH);
       
       setResizeStartData({
         startX: e.clientX,
-        startY: e.clientY, // Keep for consistency but not used
+        startY: e.clientY,
         startWidth: currentWidth,
-        startHeight: 0 // Not used since height is auto
+        startHeight: 0
       });
       setIsResizing(true);
     }
@@ -196,7 +192,8 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
       className="draggable-list-card shadow-lg rounded-lg flex flex-col overflow-hidden border relative"
       style={{
         position: 'absolute',
-        width: `${list.width || 340}px`,
+        minWidth: `${MIN_LIST_WIDTH}px`, // Add explicit minWidth
+        width: `${Math.max(MIN_LIST_WIDTH, list.width || MIN_LIST_WIDTH)}px`, // Enforce minimum in initial render
         height: 'auto', // Let content determine height
         minHeight: '150px', // Reduced minimum height for better fit
         zIndex: (isDragging || isResizing) ? 1000 : 1,

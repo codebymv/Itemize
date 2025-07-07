@@ -1,4 +1,5 @@
 import api from '../lib/api';
+import { MIN_LIST_WIDTH } from '../constants/dimensions';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -75,6 +76,7 @@ export const createList = async (listData: any, token?: string) => {
     const backendData = {
       ...listData,
       category: listData.type || listData.category || 'General', // Map type to category for backend
+      width: MIN_LIST_WIDTH, // Always set width to MIN_LIST_WIDTH for new lists
     };
     
     // Remove 'type' field to avoid confusion on backend
@@ -98,7 +100,7 @@ export const createList = async (listData: any, token?: string) => {
       color_value: response.data.color_value,
       position_x: response.data.position_x,
       position_y: response.data.position_y,
-      width: response.data.width,
+      width: MIN_LIST_WIDTH, // Ensure width is MIN_LIST_WIDTH even if backend returns something else
       height: response.data.height,
       share_token: response.data.share_token,
       is_public: response.data.is_public,

@@ -90,25 +90,34 @@ export const NoteCategorySelector: React.FC<NoteCategorySelectorProps> = ({
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {existingCategories.map((cat) => (
-                    <SelectItem key={cat.name} value={cat.name} style={{ fontFamily: '"Raleway", sans-serif' }}>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-block w-3 h-3 rounded-full border"
-                          style={{ backgroundColor: cat.color_value }}
-                        />
-                        {cat.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="__custom__" style={{ fontFamily: '"Raleway", sans-serif', color: '#2563eb' }}>
+                  {/* General category first */}
+                  <SelectItem value="General" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <div className="flex items-center gap-2">
+                      General
+                    </div>
+                  </SelectItem>
+                  {/* Other categories */}
+                  {existingCategories
+                    .filter(cat => cat.name !== 'General')
+                    .map((cat) => (
+                      <SelectItem key={cat.name} value={cat.name} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-3 h-3 rounded-full border"
+                            style={{ backgroundColor: cat.color_value }}
+                          />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  <SelectItem value="__custom__" className="text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
                     + Add new category
                   </SelectItem>
                 </SelectContent>
               </Select>
               
-              {/* Category Color Picker - only show for existing categories */}
-              {displayCategory !== '__custom__' && (
+              {/* Category Color Picker - only show for existing categories that are not General */}
+              {displayCategory !== '__custom__' && displayCategory !== 'General' && (
                 <div className="flex items-center gap-2 ml-2">
                   <ColorPicker
                     color={displayColor}
@@ -119,15 +128,10 @@ export const NoteCategorySelector: React.FC<NoteCategorySelectorProps> = ({
                       variant="outline"
                       size="sm"
                       className="h-8 px-3 flex items-center gap-2"
-                      style={{ 
-                        backgroundColor: 'white', 
-                        borderColor: '#d1d5db',
-                        color: '#374151'
-                      }}
                     >
                       <span
                         className="inline-block w-3 h-3 rounded-full border"
-                        style={{ backgroundColor: displayColor, borderColor: '#d1d5db' }}
+                        style={{ backgroundColor: displayColor }}
                       />
                       Category Color
                     </Button>
