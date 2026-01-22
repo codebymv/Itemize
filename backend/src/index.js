@@ -207,6 +207,30 @@ setTimeout(async () => {
         app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));
         console.log('✅ Workflows routes initialized');
 
+        // Calendars routes (Appointments)
+        const calendarsRoutes = require('./routes/calendars.routes');
+        app.use('/api/calendars', calendarsRoutes(pool, authenticateJWT));
+        console.log('✅ Calendars routes initialized');
+
+        // Bookings routes (Appointments)
+        // Note: Public booking routes (/public/book/*) are included in the router
+        // and will be accessible via /api/bookings/public/book/* 
+        // OR mount a separate public router for /api/public/book/*
+        const bookingsRoutes = require('./routes/bookings.routes');
+        app.use('/api/bookings', bookingsRoutes(pool, authenticateJWT, publicRateLimit));
+        console.log('✅ Bookings routes initialized');
+
+        // Forms routes
+        // Note: Public form routes (/public/form/*) are included in the router
+        const formsRoutes = require('./routes/forms.routes');
+        app.use('/api/forms', formsRoutes(pool, authenticateJWT, publicRateLimit));
+        console.log('✅ Forms routes initialized');
+
+        // Conversations routes (Inbox)
+        const conversationsRoutes = require('./routes/conversations.routes');
+        app.use('/api/conversations', conversationsRoutes(pool, authenticateJWT));
+        console.log('✅ Conversations routes initialized');
+
         // Sharing routes (includes public shared content endpoints)
         const sharingRoutes = require('./routes/sharing.routes');
         app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit));

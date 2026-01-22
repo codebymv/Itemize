@@ -13,8 +13,19 @@ import {
     Sparkles,
     Users,
     TrendingUp,
-    LayoutGrid,
+    Map,
+    LucideIcon,
 } from 'lucide-react';
+
+interface QuickAction {
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    action: () => void;
+    primary?: boolean;
+    disabled?: boolean;
+    badge?: string;
+}
 
 export function DashboardPage() {
     const { currentUser } = useAuth();
@@ -26,8 +37,8 @@ export function DashboardPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <h1 
-                    className="text-xl font-semibold italic truncate ml-2" 
+                <h1
+                    className="text-xl font-semibold italic truncate ml-2"
                     style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
                 >
                     DASHBOARD
@@ -39,7 +50,7 @@ export function DashboardPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
                         onClick={() => navigate('/workspace')}
                     >
-                        <LayoutGrid className="h-4 w-4 sm:mr-2" />
+                        <Map className="h-4 w-4 sm:mr-2" />
                         <span className="hidden sm:inline">Go to Workspace</span>
                     </Button>
                 </div>
@@ -65,18 +76,18 @@ export function DashboardPage() {
             value: '—',
             icon: StickyNote,
             description: 'Saved notes',
-            color: 'text-green-600'
+            color: 'text-blue-600'
         },
         {
             title: 'Whiteboards',
             value: '—',
             icon: Palette,
             description: 'Canvas boards',
-            color: 'text-purple-600'
+            color: 'text-blue-600'
         },
     ];
 
-    const quickActions = [
+    const quickActions: QuickAction[] = [
         {
             title: 'Manage Contacts',
             description: 'View and manage your CRM contacts',
@@ -99,7 +110,7 @@ export function DashboardPage() {
     ];
 
     return (
-        <div className="container mx-auto p-6 max-w-6xl">
+        <div className="container mx-auto p-6 max-w-7xl">
             {/* Main Content Card */}
             <Card>
                 <CardContent className="p-6">

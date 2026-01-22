@@ -284,3 +284,280 @@ export interface ContactsResponse {
     totalPages: number;
   };
 }
+
+// ======================
+// Calendar & Booking Types
+// ======================
+
+// Availability window for recurring schedule
+export interface AvailabilityWindow {
+  id?: number;
+  calendar_id?: number;
+  day_of_week: number; // 0=Sunday, 6=Saturday
+  start_time: string; // HH:MM format
+  end_time: string;
+  is_active?: boolean;
+}
+
+// Date override (blocked dates or custom hours)
+export interface CalendarDateOverride {
+  id: number;
+  calendar_id: number;
+  override_date: string;
+  is_available: boolean;
+  start_time?: string;
+  end_time?: string;
+  reason?: string;
+  created_at: string;
+}
+
+// Calendar for appointment scheduling
+export interface Calendar {
+  id: number;
+  organization_id: number;
+  name: string;
+  description?: string;
+  slug: string;
+  timezone: string;
+  duration_minutes: number;
+  buffer_before_minutes: number;
+  buffer_after_minutes: number;
+  min_notice_hours: number;
+  max_future_days: number;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  assignment_mode: 'specific' | 'round_robin';
+  confirmation_email: boolean;
+  reminder_email: boolean;
+  reminder_hours: number;
+  color: string;
+  is_active: boolean;
+  created_by?: number;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  availability_windows?: AvailabilityWindow[];
+  date_overrides?: CalendarDateOverride[];
+  upcoming_bookings?: number;
+}
+
+// Booking/Appointment
+export interface Booking {
+  id: number;
+  organization_id: number;
+  calendar_id: number;
+  contact_id?: number;
+  title?: string;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  attendee_name?: string;
+  attendee_email?: string;
+  attendee_phone?: string;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  cancelled_at?: string;
+  cancellation_reason?: string;
+  cancellation_token?: string;
+  notes?: string;
+  internal_notes?: string;
+  reminder_sent_at?: string;
+  custom_fields: Record<string, any>;
+  source: 'booking_page' | 'manual' | 'api' | 'import';
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  calendar_name?: string;
+  calendar_color?: string;
+  contact_first_name?: string;
+  contact_last_name?: string;
+  contact_email?: string;
+}
+
+// Calendars API response
+export interface CalendarsResponse {
+  calendars: Calendar[];
+}
+
+// Bookings API response
+export interface BookingsResponse {
+  bookings: Booking[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Public calendar info for booking page
+export interface PublicCalendarInfo {
+  id: number;
+  name: string;
+  description?: string;
+  slug: string;
+  timezone: string;
+  duration_minutes: number;
+  min_notice_hours: number;
+  max_future_days: number;
+  color: string;
+  is_active: boolean;
+  organization_name: string;
+  availability: Array<{
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+  }>;
+}
+
+// Available slots response
+export interface AvailableSlotsResponse {
+  calendar: {
+    id: number;
+    duration_minutes: number;
+    buffer_before: number;
+    buffer_after: number;
+    min_notice_hours: number;
+    timezone: string;
+  };
+  availability: AvailabilityWindow[];
+  overrides: CalendarDateOverride[];
+  booked_slots: Array<{ start_time: string; end_time: string }>;
+}
+
+// ======================
+// Forms & Surveys Types
+// ======================
+
+export type FormFieldType = 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'number' | 'rating' | 'nps';
+
+export interface FormFieldOption {
+  label: string;
+  value: string;
+}
+
+export interface FormField {
+  id?: number;
+  form_id?: number;
+  field_type: FormFieldType;
+  label: string;
+  placeholder?: string;
+  help_text?: string;
+  is_required: boolean;
+  validation?: Record<string, any>;
+  options?: FormFieldOption[];
+  field_order: number;
+  width: 'full' | 'half';
+  conditions?: any[];
+  map_to_contact_field?: string;
+}
+
+export interface Form {
+  id: number;
+  organization_id: number;
+  name: string;
+  description?: string;
+  slug: string;
+  type: 'form' | 'survey' | 'quiz';
+  status: 'draft' | 'published' | 'archived';
+  submit_button_text: string;
+  success_message: string;
+  redirect_url?: string;
+  notify_on_submit: boolean;
+  notification_emails: string[];
+  theme: { primaryColor: string;[key: string]: any };
+  create_contact: boolean;
+  contact_tags: string[];
+  created_by?: number;
+  created_at: string;
+  updated_at: string;
+  fields?: FormField[];
+  submission_count?: number;
+  field_count?: number;
+}
+
+export interface FormSubmission {
+  id: number;
+  form_id: number;
+  organization_id: number;
+  contact_id?: number;
+  data: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  referrer?: string;
+  score?: number;
+  created_at: string;
+  contact_first_name?: string;
+  contact_last_name?: string;
+  contact_email?: string;
+}
+
+export interface FormsResponse {
+  forms: Form[];
+}
+
+export interface FormSubmissionsResponse {
+  submissions: FormSubmission[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// ======================
+// Inbox/Conversations Types
+// ======================
+
+export interface Conversation {
+  id: number;
+  organization_id: number;
+  contact_id?: number;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  status: 'open' | 'closed' | 'snoozed';
+  snoozed_until?: string;
+  channel: string;
+  subject?: string;
+  last_message_at?: string;
+  last_message_preview?: string;
+  unread_count: number;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  contact_first_name?: string;
+  contact_last_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  messages?: Message[];
+}
+
+export interface Message {
+  id: number;
+  conversation_id: number;
+  organization_id: number;
+  sender_type: 'user' | 'contact' | 'system';
+  sender_user_id?: number;
+  sender_contact_id?: number;
+  sender_user_name?: string;
+  sender_contact_first_name?: string;
+  sender_contact_last_name?: string;
+  channel: string;
+  content: string;
+  content_html?: string;
+  metadata?: Record<string, any>;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ConversationsResponse {
+  conversations: Conversation[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

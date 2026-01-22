@@ -9,6 +9,15 @@ const { runAllCRMMigrations } = require('./db_crm_migrations');
 // Import Automation migrations
 const { runAllAutomationMigrations } = require('./db_automation_migrations');
 
+// Import Calendar migrations
+const { runAllCalendarMigrations } = require('./db_calendar_migrations');
+
+// Import Forms migrations
+const { runAllFormsMigrations } = require('./db_forms_migrations');
+
+// Import Inbox migrations
+const { runAllInboxMigrations } = require('./db_inbox_migrations');
+
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
 const inMemoryLists = [];
@@ -20,23 +29,23 @@ const createDbConnection = () => {
     // Check if DATABASE_URL is provided
     const dbUrl = process.env.DATABASE_URL;
     console.log('Starting database connection with URL:', dbUrl ? 'URL provided' : 'No URL found');
-    
+
     if (!dbUrl) {
       console.warn('DATABASE_URL not found in environment. Using in-memory storage.');
       useInMemory = true;
       return null;
     }
-    
+
     // For Railway deployments, we need to parse the connection info more granularly
     let connectionConfig;
-    
+
     try {
       // Try to extract host from connection string to log it for debugging
       const matches = dbUrl.match(/postgresql:\/\/.*?@([^:]+)(:[0-9]+)?/);
       if (matches && matches[1]) {
         const host = matches[1];
         console.log(`Attempting to connect to host: ${host}`);
-        
+
         // Try to resolve the host to its IP addresses for debugging
         require('dns').lookup(host, { all: true }, (err, addresses) => {
           if (err) {
@@ -49,7 +58,7 @@ const createDbConnection = () => {
     } catch (err) {
       console.log('Could not parse host from connection string:', err.message);
     }
-    
+
     // Create a connection pool with more robust timeout settings
     const pool = new Pool({
       connectionString: dbUrl,
@@ -93,7 +102,7 @@ const createDbConnection = () => {
     pool.on('release', (client) => {
       console.log('🔓 Client released back to pool');
     });
-    
+
     // Test the connection immediately
     console.log('Testing database connection...');
     pool.query('SELECT 1 as health_check')
@@ -133,7 +142,6 @@ const initializeDatabase = async (pool) => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    
 
 
 
@@ -141,35 +149,36 @@ const initializeDatabase = async (pool) => {
 
 
 
-    
+
+
     // Add missing columns to users table if they don't exist
     try {
       // Run canvas feature migration
       await runCanvasMigration(pool);
-      
+
       // Run list resize feature migration
       await runListResizeMigration(pool);
-      
+
       // Run notes table migration
       await runCreateNotesTableMigration(pool);
-      
+
       // Run notes name and category migration
       await runAddTitleAndCategoryToNotesMigration(pool);
-      
+
       // Run categories table migration (safe)
       try {
         await runCategoriesTableMigration(pool);
       } catch (categoriesTableError) {
         console.error('⚠️ Categories table migration failed, continuing with legacy categories:', categoriesTableError.message);
       }
-      
+
       // Run categories data migration (safe)
       try {
         await runCategoriesDataMigration(pool);
       } catch (categoriesDataError) {
         console.error('⚠️ Categories data migration failed, continuing with legacy categories:', categoriesDataError.message);
       }
-      
+
       // Run cleanup of default categories (safe)
       try {
         await runCleanupDefaultCategories(pool);
@@ -183,7 +192,7 @@ const initializeDatabase = async (pool) => {
       } catch (sharingError) {
         console.error('⚠️ Sharing migration failed, continuing without sharing feature:', sharingError.message);
       }
-      
+
       await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
       // console.log('Ensured google_id column exists in public.users table.');
     } catch (e) {
@@ -275,6 +284,27 @@ const initializeDatabase = async (pool) => {
       console.error('⚠️ Automation migrations failed, continuing without automation features:', automationError.message);
     }
 
+    // Run Calendar migrations
+    try {
+      await runAllCalendarMigrations(pool);
+    } catch (calendarError) {
+      console.error('⚠️ Calendar migrations failed, continuing without calendar features:', calendarError.message);
+    }
+
+    // Run Forms migrations
+    try {
+      await runAllFormsMigrations(pool);
+    } catch (formsError) {
+      console.error('⚠️ Forms migrations failed, continuing without forms features:', formsError.message);
+    }
+
+    // Run Inbox migrations
+    try {
+      await runAllInboxMigrations(pool);
+    } catch (inboxError) {
+      console.error('⚠️ Inbox migrations failed, continuing without inbox features:', inboxError.message);
+    }
+
     console.log('Database initialized successfully');
     return true;
   } catch (error) {
@@ -289,12 +319,12 @@ const userOperations = {
   findById: async (pool, id) => {
     try {
       if (!pool) return null;
-      
+
       const result = await pool.query(
         'SELECT * FROM public.users WHERE id = $1',
         [id]
       );
-      
+
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error finding user by ID:', error);
@@ -306,13 +336,13 @@ const userOperations = {
   findByEmail: async (pool, email) => {
     try {
       if (!pool) return null;
-      
+
       console.log('Looking up user by email:', email);
       const result = await pool.query(
         'SELECT * FROM public.users WHERE email = $1',
         [email]
       );
-      
+
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error finding user by email:', error);
@@ -325,7 +355,7 @@ const userOperations = {
     try {
       // Try to find the user first
       let user = await userOperations.findByEmail(pool, userData.email);
-      
+
       // If user exists, update their info
       if (user) {
         const updateResult = await pool.query(
@@ -338,7 +368,7 @@ const userOperations = {
         );
         return updateResult.rows[0];
       }
-      
+
       // Otherwise create a new user
       const createResult = await pool.query(
         `INSERT INTO public.users (email, name, google_id, created_at, updated_at) 
@@ -346,7 +376,7 @@ const userOperations = {
          RETURNING *`,
         [userData.email, userData.name, userData.googleId]
       );
-      
+
       return createResult.rows[0];
     } catch (error) {
       console.error('Error finding or creating user:', error);
@@ -376,13 +406,13 @@ const listOperations = {
     try {
       let query = 'SELECT * FROM public.lists WHERE id = $1';
       let params = [listId];
-      
+
       // If userId provided, verify ownership
       if (userId) {
         query += ' AND user_id = $2';
         params.push(userId);
       }
-      
+
       const result = await pool.query(query, params);
       return result.rows[0] || null;
     } catch (error) {
@@ -431,7 +461,7 @@ const listOperations = {
           userId
         ]
       );
-      
+
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error updating list:', error);
@@ -452,7 +482,7 @@ const listOperations = {
       return false;
     }
   },
-  
+
   // Update list position (for canvas view)
   updatePosition: async (pool, listId, userId, position) => {
     try {
@@ -465,14 +495,14 @@ const listOperations = {
          RETURNING *`,
         [position.x, position.y, listId, userId]
       );
-      
+
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error updating list position:', error);
       return null;
     }
   },
-  
+
   // Get all lists for canvas view with positions
   findAllForCanvas: async (pool, userId) => {
     try {

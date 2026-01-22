@@ -27,6 +27,10 @@ import {
     ChevronRight,
     Kanban,
     Zap,
+    Calendar,
+    CalendarCheck,
+    FileText,
+    Inbox,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -51,6 +55,26 @@ const mainNavItems = [
         title: 'Pipelines',
         icon: Kanban,
         path: '/pipelines',
+    },
+    {
+        title: 'Calendars',
+        icon: Calendar,
+        path: '/calendars',
+    },
+    {
+        title: 'Bookings',
+        icon: CalendarCheck,
+        path: '/bookings',
+    },
+    {
+        title: 'Forms',
+        icon: FileText,
+        path: '/forms',
+    },
+    {
+        title: 'Inbox',
+        icon: Inbox,
+        path: '/inbox',
     },
     {
         title: 'Automations',

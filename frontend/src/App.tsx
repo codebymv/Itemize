@@ -36,6 +36,10 @@ import ContactDetailPage from "./pages/contacts/ContactDetailPage";
 import PipelinesPage from "./pages/pipelines/PipelinesPage";
 import { AutomationsPage } from "./pages/automations";
 import WorkflowBuilderPage from "./pages/automations/WorkflowBuilderPage";
+import CalendarsPage from "./pages/calendars/CalendarsPage";
+import BookingsPage from "./pages/bookings/BookingsPage";
+import FormsPage from "./pages/forms/FormsPage";
+import InboxPage from "./pages/inbox/InboxPage";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -126,6 +130,10 @@ const AppContent = () => {
         <Route path="/contacts" element={<AuthenticatedLayout><ContactsPage /></AuthenticatedLayout>} />
         <Route path="/contacts/:id" element={<AuthenticatedLayout><ContactDetailPage /></AuthenticatedLayout>} />
         <Route path="/pipelines" element={<AuthenticatedLayout><PipelinesPage /></AuthenticatedLayout>} />
+        <Route path="/calendars" element={<AuthenticatedLayout><CalendarsPage /></AuthenticatedLayout>} />
+        <Route path="/bookings" element={<AuthenticatedLayout><BookingsPage /></AuthenticatedLayout>} />
+        <Route path="/forms" element={<AuthenticatedLayout><FormsPage /></AuthenticatedLayout>} />
+        <Route path="/inbox" element={<AuthenticatedLayout><InboxPage /></AuthenticatedLayout>} />
         <Route path="/automations" element={<AuthenticatedLayout><AutomationsPage /></AuthenticatedLayout>} />
         <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/automations/:id" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />

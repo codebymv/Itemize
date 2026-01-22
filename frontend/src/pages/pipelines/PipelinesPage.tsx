@@ -45,8 +45,8 @@ export function PipelinesPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <h1 
-          className="text-xl font-semibold italic truncate ml-2" 
+        <h1
+          className="text-xl font-semibold italic truncate ml-2"
           style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
         >
           PIPELINES
@@ -112,7 +112,7 @@ export function PipelinesPage() {
         setInitError(null);
       } catch (error: any) {
         console.error('Error initializing organization:', error);
-        const errorMsg = error.response?.status === 500 
+        const errorMsg = error.response?.status === 500
           ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
           : 'Failed to initialize organization. Please check your connection.';
         setInitError(errorMsg);
@@ -251,9 +251,9 @@ export function PipelinesPage() {
   // Show error state if initialization failed
   if (initError) {
     return (
-      <div className="h-full flex items-center justify-center p-6">
-        <Card className="max-w-lg">
-          <CardContent className="pt-6 text-center">
+      <div className="container mx-auto p-6 max-w-7xl">
+        <Card>
+          <CardContent className="p-12 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
               <TrendingUp className="h-6 w-6 text-destructive" />
             </div>
@@ -304,16 +304,17 @@ export function PipelinesPage() {
             ))}
           </div>
         ) : pipelines.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <Card className="max-w-md">
-              <CardHeader>
-                <CardTitle>No pipelines yet</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <div className="p-6">
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <TrendingUp className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">No pipelines yet</h3>
                 <p className="text-muted-foreground mb-4">
                   Create your first sales pipeline to start tracking deals
                 </p>
-                <Button 
+                <Button
                   onClick={() => setShowCreatePipelineModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
