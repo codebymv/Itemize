@@ -1,7 +1,7 @@
 {
-  "name": "listify-backend",
+  "name": "itemize-backend",
   "version": "1.0.0",
-  "description": "Backend API for Listify app",
+  "description": "Backend API for Itemize app",
   "main": "src/index.js",
   "scripts": {
     "start": "node --dns-result-order=ipv4first src/index.js",

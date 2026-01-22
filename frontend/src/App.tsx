@@ -5,15 +5,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
+
+// Layout components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AppShell from "@/components/AppShell";
+
+// Pages
 import Home from "./pages/Home";
 import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
@@ -23,39 +28,54 @@ import StatusPage from "./pages/StatusPage";
 import SharedListPage from "./pages/SharedListPage";
 import SharedNotePage from "./pages/SharedNotePage";
 import SharedWhiteboardPage from "./pages/SharedWhiteboardPage";
+import CanvasPage from "./pages/canvas";
+import DashboardPage from "./pages/DashboardPage";
+import SettingsPage from "./pages/SettingsPage";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import CanvasPage from "./pages/canvas";
 
 const queryClient = new QueryClient();
-const googleClientId = "761425672348-63ncpr61i8hv48l94ljju4uloahreohs.apps.googleusercontent.com";
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
   const { currentUser, loading } = useAuth();
-  
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
     </div>;
   }
-  
-  return currentUser ? <Navigate to="/canvas" replace /> : <Navigate to="/home" replace />;
+
+  // Redirect to dashboard when authenticated
+  return currentUser ? <Navigate to="/dashboard" replace /> : <Navigate to="/home" replace />;
+};
+
+// Public layout with navbar and footer
+const PublicLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+      <main className="flex-grow flex flex-col">
+        {children}
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+// App shell layout for authenticated users (with sidebar)
+const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <AppShell>
+      {children}
+    </AppShell>
+  );
 };
 
 const AppContent = () => {
   const location = useLocation();
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 768);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Disable browser scroll restoration to prevent interference with manual scroll control
   useEffect(() => {
@@ -74,41 +94,42 @@ const AppContent = () => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  const isCanvasPage = location.pathname === '/canvas';
-  const showFooter = !isCanvasPage || !isDesktop;
+  // Determine if this is a public route (no sidebar)
+  const publicRoutes = ['/home', '/auth/callback', '/status'];
+  const isPublicRoute = publicRoutes.includes(location.pathname) ||
+    location.pathname.startsWith('/shared/') ||
+    location.pathname.startsWith('/help');
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      <main className="flex-grow flex flex-col">
-        <Routes>
-          {/* Root path redirects based on authentication */}
-          <Route path="/" element={<RootRedirect />} />
-          
-          {/* Public routes */}
-          <Route path="/home" element={<Home />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/help/*" element={<DocsPage />} />
-          <Route path="/status" element={<StatusPage />} />
+    <Routes>
+      {/* Root path redirects based on authentication */}
+      <Route path="/" element={<RootRedirect />} />
 
-          {/* Shared content routes (public) */}
-          <Route path="/shared/list/:token" element={<SharedListPage />} />
-          <Route path="/shared/note/:token" element={<SharedNotePage />} />
-          <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
-          
-          {/* Protected routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/lists" element={<UserHome />} />
-            <Route path="/canvas" element={<CanvasPage />} />
-            {/* Add other protected routes here */}
-          </Route>
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      {showFooter && <Footer />}
-    </div>
+      {/* Public routes with navbar/footer layout */}
+      <Route path="/home" element={<PublicLayout><Home /></PublicLayout>} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
+
+      {/* Shared content routes (public, minimal layout) */}
+      <Route path="/shared/list/:token" element={<SharedListPage />} />
+      <Route path="/shared/note/:token" element={<SharedNotePage />} />
+      <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
+
+      {/* Protected routes with sidebar layout */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<AuthenticatedLayout><DashboardPage /></AuthenticatedLayout>} />
+        <Route path="/workspace" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
+        <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
+
+        {/* Legacy routes - redirect to new paths */}
+        <Route path="/canvas" element={<Navigate to="/workspace" replace />} />
+        <Route path="/lists" element={<Navigate to="/workspace" replace />} />
+      </Route>
+
+      {/* Catch-all route */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 

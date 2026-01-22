@@ -3,22 +3,22 @@ import { useTheme } from 'next-themes';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
-import { 
-  fetchCanvasLists, 
-  createList as apiCreateList, 
+import {
+  fetchCanvasLists,
+  createList as apiCreateList,
   updateList as apiUpdateList,
   updateListPosition as apiUpdateListPosition,
   deleteList as apiDeleteList,
-  getNotes, 
-  createNote as apiCreateNote, 
-  updateNote as apiUpdateNote, 
-  deleteNote as apiDeleteNote, 
+  getNotes,
+  createNote as apiCreateNote,
+  updateNote as apiUpdateNote,
+  deleteNote as apiDeleteNote,
   CreateNotePayload,
-  getWhiteboards, 
-  createWhiteboard as apiCreateWhiteboard, 
-  updateWhiteboard as apiUpdateWhiteboard, 
+  getWhiteboards,
+  createWhiteboard as apiCreateWhiteboard,
+  updateWhiteboard as apiUpdateWhiteboard,
   updateWhiteboardPosition as apiUpdateWhiteboardPosition,
-  deleteWhiteboard as apiDeleteWhiteboard, 
+  deleteWhiteboard as apiDeleteWhiteboard,
   CreateWhiteboardPayload,
   updateCategory as apiUpdateCategory
 } from '../services/api';
@@ -45,6 +45,7 @@ import { useIsMobile } from '../hooks/use-mobile';
 import { logger } from '../lib/logger';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
+import { useHeader } from '../contexts/HeaderContext';
 
 // Debounce utility function
 function debounce<T extends (...args: any[]) => any>(
@@ -52,8 +53,8 @@ function debounce<T extends (...args: any[]) => any>(
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  
-  return function(...args: Parameters<T>) {
+
+  return function (...args: Parameters<T>) {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
@@ -61,7 +62,9 @@ function debounce<T extends (...args: any[]) => any>(
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
-  
+  // Use the header context to set the header content
+  const { setHeaderContent } = useHeader();
+
 
   const [lists, setLists] = useState<List[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +119,7 @@ const CanvasPage: React.FC = () => {
     isCategoryInUse,
     getCategoryByName
   } = useDatabaseCategories();
-  
+
   // Create editCategory function for updating existing categories
   const editCategory = async (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => {
     try {
@@ -124,33 +127,33 @@ const CanvasPage: React.FC = () => {
       if (!existingCategory) {
         throw new Error(`Category "${categoryName}" not found`);
       }
-      
+
       // Use the hook's editCategory method which properly manages state and triggers refreshes
       const updatedCategory = await updateCategoryInDB(existingCategory.id, {
         name: updatedData.name || existingCategory.name,
         color_value: updatedData.color_value || existingCategory.color_value
       });
-      
+
       if (!updatedCategory) {
         throw new Error('Failed to update category');
       }
-      
+
       logger.log('Category updated successfully:', updatedCategory);
-      
+
       // If color was updated, cascade the change to all linked items
       if (updatedData.color_value) {
         const newColor = updatedData.color_value;
-        
+
         // Update all lists that belong to this category
         const listsToUpdate = lists.filter(list => (list.type || 'General') === categoryName);
         const failedListIds: string[] = [];
-        
+
         for (const list of listsToUpdate) {
           try {
             await updateList({ ...list, color_value: newColor });
           } catch (error: any) {
             console.error(`Failed to update list ${list.id} color:`, error);
-            
+
             // If it's a 404 error, the list no longer exists in the backend
             // Remove it from the frontend state to prevent future errors
             if (error?.response?.status === 404 || error?.status === 404) {
@@ -159,13 +162,13 @@ const CanvasPage: React.FC = () => {
             }
           }
         }
-        
+
         // Remove any lists that no longer exist in the backend
         if (failedListIds.length > 0) {
           setLists(prev => prev.filter(list => !failedListIds.includes(list.id)));
           console.log(`Removed ${failedListIds.length} stale list(s) from frontend state:`, failedListIds);
         }
-        
+
         // Update all notes that belong to this category
         const notesToUpdate = notes.filter(note => (note.category || 'General') === categoryName);
         for (const note of notesToUpdate) {
@@ -175,7 +178,7 @@ const CanvasPage: React.FC = () => {
             console.error(`Failed to update note ${note.id} color:`, error);
           }
         }
-        
+
         // Update all whiteboards that belong to this category
         const whiteboardsToUpdate = whiteboards.filter(whiteboard => (whiteboard.category || 'General') === categoryName);
         for (const whiteboard of whiteboardsToUpdate) {
@@ -185,14 +188,14 @@ const CanvasPage: React.FC = () => {
             console.error(`Failed to update whiteboard ${whiteboard.id} color:`, error);
           }
         }
-        
+
         // Color change completed silently - no toast needed
         logger.log(`Category "${categoryName}" and ${listsToUpdate.length + notesToUpdate.length + whiteboardsToUpdate.length} linked items updated successfully.`);
       }
-      
+
       // The useDatabaseCategories hook should automatically refresh its state
       // If it doesn't, we may need to implement a refresh mechanism in the hook
-      
+
     } catch (error) {
       console.error('Error updating category:', error);
       toast({
@@ -202,7 +205,7 @@ const CanvasPage: React.FC = () => {
       });
     }
   };
-  
+
   // Wrapper function to match NewListModal's expected signature
   const updateCategoryColor = (categoryName: string, newColor: string) => {
     editCategory(categoryName, { color_value: newColor });
@@ -215,37 +218,92 @@ const CanvasPage: React.FC = () => {
     noteCount: 0,
     totalCount: 0
   }));
-  
+
   // Filter function for backward compatibility
   const filterByCategory = (categoryFilter: string | null) => {
     if (!categoryFilter) {
       return { filteredLists: lists, filteredNotes: notes, filteredWhiteboards: whiteboards };
     }
-    
+
     const filteredLists = lists.filter(list => list.type === categoryFilter);
     const filteredNotes = notes.filter(note => note.category === categoryFilter);
     const filteredWhiteboards = whiteboards.filter(whiteboard => whiteboard.category === categoryFilter);
-    
+
     return { filteredLists, filteredNotes, filteredWhiteboards };
   };
-  
+
   // Reference to canvas container methods
   const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
-  
+
   // Track recently created list IDs to prevent WebSocket duplicates
   const recentlyCreatedListIds = useRef<Set<string>>(new Set());
-  
+
   // Button context menu state (separate from canvas context menu)
   const [showButtonContextMenu, setShowButtonContextMenu] = useState(false);
   const [buttonMenuPosition, setButtonMenuPosition] = useState({ x: 0, y: 0 });
-  
+
+  // Header content effect - Pushes search bar and controls to the AppShell header
+  useEffect(() => {
+    setHeaderContent(
+      <div className="flex items-center justify-between w-full min-w-0">
+        <h1 className="text-xl font-semibold italic truncate ml-2" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
+          MY WORKSPACE
+        </h1>
+
+        <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">
+          {/* Desktop search */}
+          <div className="relative hidden sm:block w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search canvas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
+            />
+          </div>
+
+          {/* New Button */}
+          <Button
+            id="new-canvas-button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              if (showButtonContextMenu) {
+                setShowButtonContextMenu(false);
+              } else {
+                const buttonElement = document.getElementById('new-canvas-button');
+                if (buttonElement) {
+                  const rect = buttonElement.getBoundingClientRect();
+                  setButtonMenuPosition({
+                    x: rect.left + rect.width / 2,
+                    y: rect.bottom + 5
+                  });
+                  setShowButtonContextMenu(true);
+                }
+              }
+            }}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add</span>
+          </Button>
+        </div>
+      </div>
+    );
+
+    return () => setHeaderContent(null);
+  }, [searchQuery, theme, showButtonContextMenu, setHeaderContent]);
+
   // Collapsible state management - persists across filter changes
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
   const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
   const [collapsedWhiteboardIds, setCollapsedWhiteboardIds] = useState<Set<number>>(new Set());
-  
+
   // Note: Race condition prevention refs removed since WebSocket creation events are disabled
-  
+
   // Utility function for intelligent positioning of mobile-created items
   const getIntelligentPosition = () => {
     const centerX = 2000; // Canvas center X coordinate
@@ -254,14 +312,14 @@ const CanvasPage: React.FC = () => {
     const itemWidth = 390; // Approximate width of list/note cards
     const itemHeight = 295; // Approximate height of list/note cards (accounting for headers)
     const minDistance = 50; // Minimum distance between items
-    
+
     // Get all existing positions from lists, notes, and whiteboards
     const existingPositions: Array<{ x: number; y: number }> = [
       ...lists.map(list => ({ x: list.position_x || 0, y: list.position_y || 0 })),
       ...notes.map(note => ({ x: note.position_x, y: note.position_y })),
       ...whiteboards.map(whiteboard => ({ x: whiteboard.position_x, y: whiteboard.position_y }))
     ];
-    
+
     // Function to check if a position overlaps with existing items
     const hasOverlap = (newX: number, newY: number): boolean => {
       return existingPositions.some(pos => {
@@ -270,28 +328,28 @@ const CanvasPage: React.FC = () => {
         return distanceX < (itemWidth + minDistance) && distanceY < (itemHeight + minDistance);
       });
     };
-    
+
     // Try to find a non-overlapping position
     let attempts = 0;
     const maxAttempts = 20;
     let position;
-    
+
     do {
       const spreadRadius = baseSpreadRadius + (attempts * 50); // Increase spread radius with each attempt
       const randomX = (Math.random() - 0.5) * spreadRadius * 2;
       const randomY = (Math.random() - 0.5) * spreadRadius * 2;
-      
+
       position = {
         x: centerX + randomX,
         y: centerY + randomY
       };
-      
+
       attempts++;
     } while (hasOverlap(position.x, position.y) && attempts < maxAttempts);
-    
+
     return position;
   };
-  
+
   // Helper functions for managing collapsible state
   const isListCollapsed = (listId: string) => collapsedListIds.has(listId);
   const toggleListCollapsed = useCallback((listId: string) => {
@@ -314,7 +372,7 @@ const CanvasPage: React.FC = () => {
     });
     return callbacks;
   }, [lists.map(l => l.id).join(','), toggleListCollapsed]);
-  
+
   const isNoteCollapsed = (noteId: number) => collapsedNoteIds.has(noteId);
   const toggleNoteCollapsed = (noteId: number) => {
     setCollapsedNoteIds(prev => {
@@ -327,7 +385,7 @@ const CanvasPage: React.FC = () => {
       return newSet;
     });
   };
-  
+
   const isWhiteboardCollapsed = (whiteboardId: number) => collapsedWhiteboardIds.has(whiteboardId);
   const toggleWhiteboardCollapsed = (whiteboardId: number) => {
     setCollapsedWhiteboardIds(prev => {
@@ -340,7 +398,7 @@ const CanvasPage: React.FC = () => {
       return newSet;
     });
   };
-  
+
   // Fetch lists on component mount
   useEffect(() => {
     const getLists = async () => {
@@ -349,7 +407,7 @@ const CanvasPage: React.FC = () => {
         setError(null);
         const fetchedLists = await fetchCanvasLists(token);
         setLists(fetchedLists);
-        
+
         // Categories are now managed by useUnifiedCategories hook
       } catch (error) {
         console.error('Error fetching lists:', error);
@@ -358,7 +416,7 @@ const CanvasPage: React.FC = () => {
         setLoadingLists(false);
       }
     };
-    
+
     getLists();
   }, [token, toast]); // Ensure token and toast are in dependency array if used inside like in notes fetcher
 
@@ -494,7 +552,7 @@ const CanvasPage: React.FC = () => {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
-      
+
       const payloadWithDefaults: CreateNotePayload = {
         title: title, // Set the note title properly
         content: '', // Initialize with empty content
@@ -508,9 +566,9 @@ const CanvasPage: React.FC = () => {
 
       const newNote = await apiCreateNote(payloadWithDefaults, token);
       setNotes(prev => [newNote, ...prev]);
-      
+
       // Category is now managed by unified category system
-      
+
       setShowNewNoteModal(false);
     } catch (error) {
       console.error('Failed to create note:', error);
@@ -526,10 +584,10 @@ const CanvasPage: React.FC = () => {
   const handleUpdateNote = async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
     // Save original state for potential rollback
     const originalNotes = [...notes];
-    
+
     // Optimistic update - update UI immediately for smooth UX
     setNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...updatedData } : n));
-    
+
     try {
       const updatedNote = await apiUpdateNote(noteId, updatedData, token);
       // Update with the authoritative API response (in case server made changes)
@@ -588,7 +646,7 @@ const CanvasPage: React.FC = () => {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
-      
+
       const payloadWithDefaults: CreateWhiteboardPayload = {
         title: title, // Set the whiteboard title
         category: category, // Use selected category
@@ -605,7 +663,7 @@ const CanvasPage: React.FC = () => {
 
       const newWhiteboard = await apiCreateWhiteboard(payloadWithDefaults, token);
       setWhiteboards(prev => [newWhiteboard, ...prev]);
-      
+
       // Removed success toast - no need to distract user for routine whiteboard creation
     } catch (error) {
       console.error('Failed to create whiteboard:', error);
@@ -621,10 +679,10 @@ const CanvasPage: React.FC = () => {
   const handleUpdateWhiteboard = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     // Save original state for potential rollback
     const originalWhiteboards = [...whiteboards];
-    
+
     // Optimistic update - update UI immediately for smooth UX
     setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? { ...w, ...updatedData } : w));
-    
+
     try {
       console.log('🎨 CanvasPage: Updating whiteboard:', {
         whiteboardId,
@@ -633,16 +691,16 @@ const CanvasPage: React.FC = () => {
         canvasDataType: typeof updatedData.canvas_data,
         canvasDataPreview: updatedData.canvas_data ? JSON.stringify(updatedData.canvas_data).substring(0, 200) : 'N/A'
       });
-      
+
       const updatedWhiteboard = await apiUpdateWhiteboard(whiteboardId, updatedData, token);
-      
+
       logger.log('🎨 CanvasPage: Whiteboard update response:', {
         whiteboardId: updatedWhiteboard.id,
         hasCanvasData: !!updatedWhiteboard.canvas_data,
         canvasDataType: typeof updatedWhiteboard.canvas_data,
         updatedAt: updatedWhiteboard.updated_at
       });
-      
+
       // Update with the authoritative API response (in case server made changes)
       setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? updatedWhiteboard : w));
       return updatedWhiteboard;
@@ -685,20 +743,20 @@ const CanvasPage: React.FC = () => {
   const createList = async (title: string, type: string, color: string) => {
     try {
       const position = getIntelligentPosition();
-      
+
       // Check if the category exists, if not create it
       if (!isCategoryInUse(type) && type !== 'General') {
         await addCategory({ name: type, color_value: color });
       }
-      
-      const response = await apiCreateList({ 
-        title, 
-        type, 
-        items: [], 
+
+      const response = await apiCreateList({
+        title,
+        type,
+        items: [],
         position_x: position.x,
         position_y: position.y
       }, token);
-      
+
       // Handle the response properly based on the API response structure
       const newList: List = {
         id: response.id,
@@ -710,23 +768,23 @@ const CanvasPage: React.FC = () => {
         position_y: response.position_y || position.y,
         // Add any other required List properties
       };
-      
+
       // Track the created list ID to prevent WebSocket duplicates
       recentlyCreatedListIds.current.add(newList.id);
       console.log('📝 Mobile Creation: Tracking list ID to prevent duplicates:', newList.id);
-      
+
       // Remove from tracking after a short delay
       setTimeout(() => {
         recentlyCreatedListIds.current.delete(newList.id);
         logger.log('📝 Mobile Creation: Stopped tracking list ID:', newList.id);
       }, 2000);
-      
+
       setLists(prev => [newList, ...prev]);
       setShowCreateModal(false);
-      
+
       // Update categories if needed
       // Category is now managed by unified category system
-      
+
       // Removed success toast - no need to distract user for routine list creation
     } catch (error) {
       console.error('Failed to create list:', error);
@@ -742,7 +800,7 @@ const CanvasPage: React.FC = () => {
     try {
       // Make API call first (like Prototype2 approach)
       const updatedListFromAPI = await apiUpdateList(updatedList, token);
-      
+
       // Transform API response to match frontend List interface
       const transformedList: List = {
         id: updatedListFromAPI.id,
@@ -759,15 +817,15 @@ const CanvasPage: React.FC = () => {
         is_public: updatedListFromAPI.is_public,
         shared_at: updatedListFromAPI.shared_at ? new Date(updatedListFromAPI.shared_at).toISOString() : undefined,
       };
-      
+
       // Update local state only after successful API call
       setLists(prev =>
         prev.map(list => list.id === updatedList.id ? transformedList : list)
       );
-      
+
     } catch (error: any) {
       console.error('Failed to update list:', error);
-      
+
       // If it's a 404 error, the list no longer exists in the backend
       if (error?.response?.status === 404 || error?.status === 404) {
         console.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
@@ -791,15 +849,15 @@ const CanvasPage: React.FC = () => {
     try {
       // Make API call first (like Prototype2 approach)
       await apiDeleteList(listId, token);
-      
+
       // Update local state only after successful API call
       setLists(prev => prev.filter(list => list.id !== listId));
-      
+
       toast({
         title: "List deleted",
         description: "Your list has been successfully removed.",
       });
-      
+
       return true;
     } catch (error) {
       console.error('Failed to delete list:', error);
@@ -808,7 +866,7 @@ const CanvasPage: React.FC = () => {
         description: "Could not delete your list. Please try again.",
         variant: "destructive"
       });
-      
+
       return false;
     }
   };
@@ -820,16 +878,16 @@ const CanvasPage: React.FC = () => {
       if (!isCategoryInUse(type) && type !== 'General') {
         await addCategory({ name: type, color_value: color });
       }
-      
-      const response = await apiCreateList({ 
-        title, 
-        type, 
-        items: [], 
+
+      const response = await apiCreateList({
+        title,
+        type,
+        items: [],
         position_x: position.x,
         position_y: position.y,
         color_value: color
       }, token);
-      
+
       // Handle the response properly based on the API response structure
       const newList: List = {
         id: response.id,
@@ -846,12 +904,12 @@ const CanvasPage: React.FC = () => {
         is_public: response.is_public,
         shared_at: response.shared_at ? new Date(response.shared_at).toISOString() : undefined,
       };
-      
+
       // Update UI state after successful API call
       setLists(prev => [newList, ...prev]);
       setShowNewListModal(false);
       return newList; // Return the created list on success
-      
+
       // Removed success toast - no need to distract user for routine list creation
     } catch (error) {
       console.error('Failed to create list:', error);
@@ -1038,10 +1096,10 @@ const CanvasPage: React.FC = () => {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
-      
+
       const position = getIntelligentPosition();
-      
-            const response = await apiCreateNote({
+
+      const response = await apiCreateNote({
         title: title, // Set the note title properly
         content: '', // Initialize with empty content
         color_value: color, // Use selected color
@@ -1054,7 +1112,7 @@ const CanvasPage: React.FC = () => {
 
       setNotes(prev => [response, ...prev]);
       setShowCreateNoteModal(false);
-      
+
       // Categories are now managed by database category system
     } catch (error) {
       console.error('Failed to create note:', error);
@@ -1070,10 +1128,10 @@ const CanvasPage: React.FC = () => {
   const handleListPositionUpdate = (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => {
     // console.log('📍 handleListPositionUpdate called for listId:', listId, 'newPosition:', newPosition);
     // console.log('📍 Current lists before position update:', lists.length, lists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
-    
+
     // Save original state for rollback (optimistic update pattern from Prototype1)
     const originalLists = [...lists];
-    
+
     // Update local state immediately (optimistic update)
     setLists(prev => {
       const newLists = prev.map(list => list.id === listId ? {
@@ -1108,7 +1166,7 @@ const CanvasPage: React.FC = () => {
   const handleWhiteboardPositionUpdate = (whiteboardId: number, newPosition: { x: number; y: number }) => {
     // Save original state for rollback
     const originalWhiteboards = [...whiteboards];
-    
+
     // Update local state immediately (optimistic update)
     setWhiteboards(prev => prev.map(whiteboard => whiteboard.id === whiteboardId ? {
       ...whiteboard,
@@ -1135,45 +1193,10 @@ const CanvasPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-screen">
-        <div className="bg-background border-b border-border relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <h1 className="text-xl font-semibold italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>MY CANVAS</h1>
-                  
-                  {/* Desktop search - next to MY CANVAS */}
-                  <div className="relative hidden sm:block ml-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                    <div className="animate-pulse bg-slate-200 rounded-md w-48 h-9"></div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                  {/* AI Suggest Toggle (placeholder) */}
-                  <div className="animate-pulse bg-slate-200 rounded-md w-12 h-6"></div>
-                  
-                  {/* New Button (placeholder) */}
-                  <div className="animate-pulse bg-slate-200 rounded-md w-20 h-9"></div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Mobile search (placeholder) */}
-            <div className="sm:hidden pb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                <div className="animate-pulse bg-slate-200 rounded-md w-full h-9"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-            <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>Loading Canvas...</span>
-          </div>
+      <div className="flex flex-col h-full items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+          <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>Loading Workspace...</span>
         </div>
       </div>
     );
@@ -1191,24 +1214,24 @@ const CanvasPage: React.FC = () => {
     // Use unified category filtering for lists, notes, and whiteboards
     // null selectedFilter means show all content (no filtering)
     const { filteredLists, filteredNotes, filteredWhiteboards } = filterByCategory(selectedFilter);
-    
+
     // Apply search filter to lists
     let searchFilteredLists = [...filteredLists];
     if (searchQuery) {
       searchFilteredLists = searchFilteredLists.filter(list => {
         return list.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (list.items && list.items.some(item => 
-              item.text?.toLowerCase().includes(searchQuery.toLowerCase())
-            ));
+          (list.items && list.items.some(item =>
+            item.text?.toLowerCase().includes(searchQuery.toLowerCase())
+          ));
       });
     }
-    
+
     // Apply search filter to notes
     let searchFilteredNotes = [...filteredNotes];
     if (searchQuery) {
       searchFilteredNotes = searchFilteredNotes.filter(note => {
         return note.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               note.content?.toLowerCase().includes(searchQuery.toLowerCase());
+          note.content?.toLowerCase().includes(searchQuery.toLowerCase());
       });
     }
 
@@ -1219,118 +1242,45 @@ const CanvasPage: React.FC = () => {
         return whiteboard.title?.toLowerCase().includes(searchQuery.toLowerCase());
       });
     }
-    
-    return { 
-      filteredLists: searchFilteredLists, 
+
+    return {
+      filteredLists: searchFilteredLists,
       filteredNotes: searchFilteredNotes,
       filteredWhiteboards: searchFilteredWhiteboards
     };
   };
-  
+
   // Get count of lists and notes per category for filter tabs
   const getFilterCounts = () => {
     const counts: Record<string, number> = {};
-    
+
     // Count lists by category (lists use 'type' field)
     lists.forEach(list => {
       const category = list.type || 'General';
       counts[category] = (counts[category] || 0) + 1;
     });
-    
+
     // Count notes by category (notes use 'category' field)
     notes.forEach(note => {
       const category = note.category || 'General';
       counts[category] = (counts[category] || 0) + 1;
     });
-    
+
     return counts;
   };
 
   const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
 
-  // Header component shared by both views
-  const HeaderSection = () => (
-    <div className="bg-background border-b border-border relative z-10">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-        <div className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <h1 className="text-xl font-semibold italic whitespace-nowrap" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>MY CANVAS</h1>
-              
-              {/* Desktop search - next to MY CANVAS */}
-              <div className="relative hidden sm:block ml-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search canvas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-48 h-9"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {/* New Button (for both lists and notes) */}
-              <Button 
-                id="new-canvas-button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  // Show button context menu for both mobile and desktop
-                  if (showButtonContextMenu) {
-                    // Close if already open
-                    setShowButtonContextMenu(false);
-                  } else {
-                    // Open button context menu
-                    const buttonElement = document.getElementById('new-canvas-button');
-                    if (buttonElement) {
-                      const rect = buttonElement.getBoundingClientRect();
-                      setButtonMenuPosition({
-                        x: rect.left + rect.width / 2,
-                        y: rect.bottom + 5
-                      });
-                      setShowButtonContextMenu(true);
-                    }
-                  }
-                }}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add
-              </Button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Mobile search */}
-        <div className="sm:hidden pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search canvas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 placeholder:font-light"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   // Mobile List View Component (similar to UserHome.tsx)
   const MobileListView = () => {
     const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
-    
+
     return (
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8">
         {/* Categories Section */}
         <div className="flex items-center gap-4 mb-8">
           <h3 className="text-lg font-light text-foreground flex-shrink-0">Categories</h3>
-          
+
           {/* Filter Tabs - Horizontal scrolling */}
           <div className="flex gap-2 overflow-x-auto flex-1 pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {getUniqueTypes().map((filter) => {
@@ -1368,24 +1318,24 @@ const CanvasPage: React.FC = () => {
                     <Plus className="h-8 w-8 text-blue-600" />
                   </div>
                   <h3 className="text-lg font-light text-foreground mb-6">
-                    No content on your canvas<br/>(for now!)
+                    No content on your canvas<br />(for now!)
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Button 
+                    <Button
                       onClick={() => setShowNewListModal(true)}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add List
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => setShowCreateNoteModal(true)}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Note
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => {
                         const position = getIntelligentPosition();
                         setNewWhiteboardInitialPosition(position);
@@ -1433,7 +1383,7 @@ const CanvasPage: React.FC = () => {
                 </div>
               </>
             )}
-            
+
             {/* My Notes section */}
             {filteredNotes.length > 0 && (
               <div className={filteredLists.length > 0 ? "mt-12" : ""}>
@@ -1517,192 +1467,206 @@ const CanvasPage: React.FC = () => {
         }
       `}</style>
       <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-[calc(100vh-4rem)] overflow-hidden'}`}>
-        <HeaderSection />
-      
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-            <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>
-              Loading Canvas...
-            </span>
+        {/* Mobile Search Bar - shown when not in desktop view */}
+        {isMobileView && (
+          <div className="px-4 py-2 border-b bg-background">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search canvas..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9 w-full"
+                style={{ fontFamily: '"Raleway", sans-serif' }}
+              />
+            </div>
           </div>
-        </div>
-      ) : error ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <div className="text-destructive text-lg mb-4">⚠️ {error}</div>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      ) : (
-        // Conditional Rendering based on viewport size
-        isMobileView ? (
-          // Mobile: Stacked List View with scrolling
-          <div className="flex-1 overflow-y-auto">
-            <MobileListView />
+        )}
+
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+              <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>
+                Loading Canvas...
+              </span>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="text-destructive text-lg mb-4">⚠️ {error}</div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+            >
+              Retry
+            </button>
           </div>
         ) : (
-          // Desktop: Full-width Canvas View with drag and drop
-          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
-            <CanvasContainer
-              lists={lists}
-              notes={notes}
-              whiteboards={whiteboards}
+          // Conditional Rendering based on viewport size
+          isMobileView ? (
+            // Mobile: Stacked List View with scrolling
+            <div className="flex-1 overflow-y-auto">
+              <MobileListView />
+            </div>
+          ) : (
+            // Desktop: Full-width Canvas View with drag and drop
+            <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
+              <CanvasContainer
+                lists={lists}
+                notes={notes}
+                whiteboards={whiteboards}
+                existingCategories={dbCategories}
+                onListUpdate={updateList}
+                onListPositionUpdate={handleListPositionUpdate}
+                onListDelete={deleteList}
+                onListShare={handleShareList}
+                onNoteUpdate={handleUpdateNote}
+                onNoteDelete={handleDeleteNote}
+                onNoteShare={handleShareNote}
+                onWhiteboardUpdate={handleUpdateWhiteboard}
+                onWhiteboardDelete={handleDeleteWhiteboard}
+                onWhiteboardShare={handleShareWhiteboard}
+                addCategory={addCategory}
+                updateCategory={editCategory}
+                onOpenNewNoteModal={handleOpenNewNoteModal}
+                onOpenNewListModal={handleOpenNewListModal}
+                onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
+                searchQuery={searchQuery}
+                onReady={(methods) => {
+                  if (!canvasMethodsRef.current) {
+                    canvasMethodsRef.current = methods;
+                    logger.log('Canvas methods ready:', methods);
+                  }
+                }}
+              />
+            </div>
+          )
+        )}
+
+        {/* Mobile View Modals */}
+        {isMobileView ? (
+          <>
+            {/* Create List Modal - used by mobile view */}
+            <CreateListModal
+              isOpen={showCreateModal}
+              onClose={() => setShowCreateModal(false)}
+              onCreateList={createList}
               existingCategories={dbCategories}
-              onListUpdate={updateList}
-              onListPositionUpdate={handleListPositionUpdate}
-              onListDelete={deleteList}
-              onListShare={handleShareList}
-              onNoteUpdate={handleUpdateNote}
-              onNoteDelete={handleDeleteNote}
-              onNoteShare={handleShareNote}
-              onWhiteboardUpdate={handleUpdateWhiteboard}
-              onWhiteboardDelete={handleDeleteWhiteboard}
-              onWhiteboardShare={handleShareWhiteboard}
-              addCategory={addCategory}
-              updateCategory={editCategory}
-              onOpenNewNoteModal={handleOpenNewNoteModal}
-              onOpenNewListModal={handleOpenNewListModal}
-              onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
-              searchQuery={searchQuery}
-              onReady={(methods) => {
-                if (!canvasMethodsRef.current) {
-                  canvasMethodsRef.current = methods;
-                  logger.log('Canvas methods ready:', methods);
-                }
-              }}
+            />
+
+            {/* Create Note Modal - used by mobile view */}
+            <CreateNoteModal
+              isOpen={showCreateNoteModal}
+              onClose={() => setShowCreateNoteModal(false)}
+              onCreateNote={createNote}
+              existingCategories={categoryNames}
+            />
+          </>
+        ) : (
+          <>
+            {/* Desktop Canvas Note Modal */}
+            {showNewNoteModal && newNoteInitialPosition && (
+              <NewNoteModal
+                isOpen={showNewNoteModal}
+                onClose={() => setShowNewNoteModal(false)}
+                onCreateNote={handleCreateNote}
+                initialPosition={newNoteInitialPosition}
+                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+                updateCategory={updateCategoryColor}
+              />
+            )}
+
+            {/* Desktop Canvas Whiteboard Modal */}
+            {showNewWhiteboardModal && newWhiteboardInitialPosition && (
+              <NewWhiteboardModal
+                isOpen={showNewWhiteboardModal}
+                onClose={() => setShowNewWhiteboardModal(false)}
+                onCreateWhiteboard={handleCreateWhiteboard}
+                initialPosition={newWhiteboardInitialPosition}
+                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+                updateCategory={updateCategoryColor}
+              />
+            )}
+
+            {/* Desktop Canvas List Modal */}
+            {showNewListModal && newListInitialPosition && (
+              <NewListModal
+                isOpen={showNewListModal}
+                onClose={() => setShowNewListModal(false)}
+                onCreateList={handleCreateList}
+                existingCategories={dbCategories}
+                position={newListInitialPosition}
+                updateCategory={updateCategoryColor}
+              />
+            )}
+          </>
+        )}
+
+        {/* Share Modals */}
+        {showShareListModal && currentShareItem && (
+          <ShareListModal
+            isOpen={showShareListModal}
+            onClose={() => {
+              setShowShareListModal(false);
+              setCurrentShareItem(null);
+            }}
+            listId={currentShareItem.id as string}
+            listTitle={currentShareItem.title}
+            onShare={handleListShare}
+            onUnshare={handleListUnshare}
+            existingShareData={currentShareItem.shareData}
+          />
+        )}
+
+        {showShareNoteModal && currentShareItem && (
+          <ShareNoteModal
+            isOpen={showShareNoteModal}
+            onClose={() => {
+              setShowShareNoteModal(false);
+              setCurrentShareItem(null);
+            }}
+            noteId={currentShareItem.id as number}
+            noteTitle={currentShareItem.title}
+            onShare={handleNoteShare}
+            onUnshare={handleNoteUnshare}
+            existingShareData={currentShareItem.shareData}
+          />
+        )}
+
+        {showShareWhiteboardModal && currentShareItem && (
+          <ShareWhiteboardModal
+            isOpen={showShareWhiteboardModal}
+            onClose={() => {
+              setShowShareWhiteboardModal(false);
+              setCurrentShareItem(null);
+            }}
+            whiteboardId={currentShareItem.id as number}
+            whiteboardTitle={currentShareItem.title}
+            onShare={handleWhiteboardShare}
+            onUnshare={handleWhiteboardUnshare}
+            existingShareData={currentShareItem.shareData}
+          />
+        )}
+
+        {/* Button Context Menu - rendered outside canvas transform */}
+        {showButtonContextMenu && (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'auto' }}
+            onClick={() => setShowButtonContextMenu(false)} // Close menu when clicking outside
+          >
+            <ContextMenu
+              position={{ x: 0, y: 0 }} // Not used for button context menu
+              absolutePosition={buttonMenuPosition}
+              onAddList={handleButtonAddList}
+              onAddNote={handleButtonAddNote}
+              onAddWhiteboard={handleButtonAddWhiteboard}
+              onClose={() => setShowButtonContextMenu(false)}
+              isFromButton={true}
             />
           </div>
-        )
-      )}
-      
-      {/* Mobile View Modals */}
-      {isMobileView ? (
-        <>
-          {/* Create List Modal - used by mobile view */}
-          <CreateListModal
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
-            onCreateList={createList}
-            existingCategories={dbCategories}
-          />
-          
-          {/* Create Note Modal - used by mobile view */}
-          <CreateNoteModal
-            isOpen={showCreateNoteModal}
-            onClose={() => setShowCreateNoteModal(false)}
-            onCreateNote={createNote}
-            existingCategories={categoryNames}
-          />
-        </>
-      ) : (
-        <>
-          {/* Desktop Canvas Note Modal */}
-          {showNewNoteModal && newNoteInitialPosition && (
-            <NewNoteModal
-              isOpen={showNewNoteModal}
-              onClose={() => setShowNewNoteModal(false)}
-              onCreateNote={handleCreateNote} 
-              initialPosition={newNoteInitialPosition}
-              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
-              updateCategory={updateCategoryColor}
-            />
-          )}
-
-          {/* Desktop Canvas Whiteboard Modal */}
-          {showNewWhiteboardModal && newWhiteboardInitialPosition && (
-            <NewWhiteboardModal
-              isOpen={showNewWhiteboardModal}
-              onClose={() => setShowNewWhiteboardModal(false)}
-              onCreateWhiteboard={handleCreateWhiteboard} 
-              initialPosition={newWhiteboardInitialPosition}
-              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
-              updateCategory={updateCategoryColor}
-            />
-          )}
-
-          {/* Desktop Canvas List Modal */}
-          {showNewListModal && newListInitialPosition && (
-            <NewListModal
-              isOpen={showNewListModal}
-              onClose={() => setShowNewListModal(false)}
-              onCreateList={handleCreateList}
-              existingCategories={dbCategories}
-              position={newListInitialPosition}
-              updateCategory={updateCategoryColor}
-            />
-          )}
-        </>
-      )}
-
-      {/* Share Modals */}
-      {showShareListModal && currentShareItem && (
-        <ShareListModal
-          isOpen={showShareListModal}
-          onClose={() => {
-            setShowShareListModal(false);
-            setCurrentShareItem(null);
-          }}
-          listId={currentShareItem.id as string}
-          listTitle={currentShareItem.title}
-          onShare={handleListShare}
-          onUnshare={handleListUnshare}
-          existingShareData={currentShareItem.shareData}
-        />
-      )}
-
-      {showShareNoteModal && currentShareItem && (
-        <ShareNoteModal
-          isOpen={showShareNoteModal}
-          onClose={() => {
-            setShowShareNoteModal(false);
-            setCurrentShareItem(null);
-          }}
-          noteId={currentShareItem.id as number}
-          noteTitle={currentShareItem.title}
-          onShare={handleNoteShare}
-          onUnshare={handleNoteUnshare}
-          existingShareData={currentShareItem.shareData}
-        />
-      )}
-
-      {showShareWhiteboardModal && currentShareItem && (
-        <ShareWhiteboardModal
-          isOpen={showShareWhiteboardModal}
-          onClose={() => {
-            setShowShareWhiteboardModal(false);
-            setCurrentShareItem(null);
-          }}
-          whiteboardId={currentShareItem.id as number}
-          whiteboardTitle={currentShareItem.title}
-          onShare={handleWhiteboardShare}
-          onUnshare={handleWhiteboardUnshare}
-          existingShareData={currentShareItem.shareData}
-        />
-      )}
-
-      {/* Button Context Menu - rendered outside canvas transform */}
-      {showButtonContextMenu && (
-        <div 
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: 'auto' }}
-          onClick={() => setShowButtonContextMenu(false)} // Close menu when clicking outside
-        >
-          <ContextMenu
-            position={{ x: 0, y: 0 }} // Not used for button context menu
-            absolutePosition={buttonMenuPosition}
-            onAddList={handleButtonAddList}
-            onAddNote={handleButtonAddNote}
-            onAddWhiteboard={handleButtonAddWhiteboard}
-            onClose={() => setShowButtonContextMenu(false)}
-            isFromButton={true}
-          />
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </>
   );
 };
