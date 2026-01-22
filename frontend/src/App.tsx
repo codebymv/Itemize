@@ -25,6 +25,7 @@ import SharedNotePage from "./pages/SharedNotePage";
 import SharedWhiteboardPage from "./pages/SharedWhiteboardPage";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import CanvasPage from "./pages/canvas";
 
 const queryClient = new QueryClient();
@@ -131,7 +132,9 @@ const App = () => (
                   v7_relativeSplatPath: true
                 }}
               >
-                <AppContent />
+                <ErrorBoundary>
+                  <AppContent />
+                </ErrorBoundary>
               </BrowserRouter>
             </AISuggestProvider>
           </AuthProvider>

@@ -1,4 +1,5 @@
 import api from '../lib/api';
+import { logger } from '../lib/logger';
 import { MIN_LIST_WIDTH } from '../constants/dimensions';
 
 // Types for API requests
@@ -207,8 +208,8 @@ export const updateNoteCategory = async (noteId: number, category: string, token
 };
 
 export const deleteNote = async (noteId: number, token?: string) => {
-  console.log(`🌐 API: Making DELETE request to /api/notes/${noteId}`);
-  console.log(`🔑 API: Auth headers:`, getAuthHeaders(token));
+  logger.log(`🌐 API: Making DELETE request to /api/notes/${noteId}`);
+  logger.log(`🔑 API: Auth headers:`, getAuthHeaders(token));
 
   const response = await api.delete(`/api/notes/${noteId}`, {
     headers: getAuthHeaders(token)
@@ -234,7 +235,7 @@ export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, 
 };
 
 export const updateWhiteboard = async (whiteboardId: number, whiteboardData: any, token?: string) => {
-  console.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
+  logger.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
   const response = await api.put(`/api/whiteboards/${whiteboardId}`, whiteboardData, {
     headers: getAuthHeaders(token)
   });

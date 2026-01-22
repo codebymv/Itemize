@@ -55,20 +55,26 @@ const runListResizeMigration = async (pool) => {
 const runCreateNotesTableMigration = async (pool) => {
   console.log('Running create notes table migration...');
   try {
-    // Create the notes table
+    // Create the notes table (with all columns including sharing)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notes (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT DEFAULT 'Untitled Note',
           content TEXT DEFAULT '',
-          color_value TEXT DEFAULT '#FFFFE0', -- Default light yellow
+          category TEXT DEFAULT 'General',
+          color_value TEXT DEFAULT '#FFFFE0',
           position_x FLOAT8 NOT NULL DEFAULT 0,
           position_y FLOAT8 NOT NULL DEFAULT 0,
           width INTEGER DEFAULT 200,
           height INTEGER DEFAULT 200,
           z_index INTEGER DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+          updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          share_token VARCHAR(255),
+          is_public BOOLEAN DEFAULT FALSE,
+          shared_at TIMESTAMP WITH TIME ZONE,
+          category_id INTEGER
       );
     `);
     console.log('✅ notes table created (if not exists)');

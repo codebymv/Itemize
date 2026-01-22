@@ -193,18 +193,54 @@ const initializeDatabase = async (pool) => {
       throw e; // Re-throw if altering the table fails for unexpected reasons
     }
 
-    // Create lists table if it doesn't exist
+    // Create lists table if it doesn't exist (with all columns including migration additions)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.lists (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         category VARCHAR(255) DEFAULT 'General',
+        type VARCHAR(255) DEFAULT 'General',
         items JSONB DEFAULT '[]'::jsonb,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        color_value VARCHAR(50) DEFAULT '#3B82F6',
+        position_x FLOAT DEFAULT 0,
+        position_y FLOAT DEFAULT 0,
+        width FLOAT DEFAULT 320,
+        height FLOAT,
+        z_index INTEGER DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        share_token VARCHAR(255),
+        is_public BOOLEAN DEFAULT FALSE,
+        shared_at TIMESTAMP WITH TIME ZONE,
+        category_id INTEGER
       );
     `);
+    console.log('✅ Lists table created (if not exists)');
+
+    // Create whiteboards table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.whiteboards (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) DEFAULT 'Untitled Whiteboard',
+        category VARCHAR(255),
+        canvas_data JSONB DEFAULT '[]'::jsonb,
+        canvas_width INTEGER DEFAULT 750,
+        canvas_height INTEGER DEFAULT 620,
+        background_color VARCHAR(50) DEFAULT '#ffffff',
+        position_x FLOAT DEFAULT 0,
+        position_y FLOAT DEFAULT 0,
+        z_index INTEGER DEFAULT 0,
+        color_value VARCHAR(50) DEFAULT '#3B82F6',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        share_token VARCHAR(255),
+        is_public BOOLEAN DEFAULT FALSE,
+        shared_at TIMESTAMP WITH TIME ZONE
+      );
+    `);
+    console.log('✅ Whiteboards table created (if not exists)');
 
     // Diagnostic: Log actual columns for public.users table
     try {

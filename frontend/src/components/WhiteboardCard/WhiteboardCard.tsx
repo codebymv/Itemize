@@ -8,6 +8,7 @@ import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Palette, Share2 } f
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
 import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
@@ -31,25 +32,25 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   const categoryColor = existingCategories.find(c => c.name === whiteboard.category)?.color_value;
   const whiteboardDisplayColor = whiteboard.color_value || categoryColor || '#3B82F6'; // Default to blue if no color is set
 
-  // Mobile detection
-  const [isMobile, setIsMobile] = useState(false);
+  // Mobile detection using shared hook
+  const isMobile = useIsMobile();
   const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Color preview state for ColorPicker
+  const [currentColorPreview, setCurrentColorPreview] = useState(whiteboard.color_value || '#3B82F6');
+
+  // Toast for error notifications
+  const { toast } = useToast();
+
   const whiteboardContainerRef = useRef<HTMLDivElement>(null);
 
-  // Check if mobile on mount and resize
+  // Sync color preview when whiteboard color changes externally
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    setCurrentColorPreview(whiteboard.color_value || '#3B82F6');
+  }, [whiteboard.color_value]);
 
   
 

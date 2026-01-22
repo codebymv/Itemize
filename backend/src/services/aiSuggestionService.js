@@ -13,8 +13,8 @@ class AISuggestionService {
       new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
     
     if (this.genAI) {
-      // Use Gemini 1.5 Flash for quicker responses
-      this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // Use Gemini 2.5 Flash for quick responses (gemini-1.5-flash was retired)
+      this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       console.log('✅ AI Suggestion Service initialized');
     } else {
       console.warn('⚠️ AI Suggestion Service initialized without API key');

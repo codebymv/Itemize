@@ -7,8 +7,11 @@ import { formatRelativeTime } from '../../utils/timeUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Whiteboard } from '@/types';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import { debounce } from 'lodash';
 import { useTheme } from 'next-themes';
+// TODO: Integrate coordinate normalization for mobile canvas support
+// import { processCanvasDataForLoad, processCanvasDataForSave } from '@/utils/canvasCoordinates';
 
 interface WhiteboardCanvasProps {
   whiteboard: Whiteboard;
@@ -91,7 +94,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (canvasRef.current && !isCanvasLoaded) {
       // Handle empty or null canvas data
       if (!whiteboard.canvas_data || whiteboard.canvas_data === '' || whiteboard.canvas_data === 'null') {
-        console.log('🎨 No canvas data to load, initializing empty canvas');
+        logger.log('🎨 No canvas data to load, initializing empty canvas');
         try {
           canvasRef.current.loadPaths([]);
           setIsCanvasLoaded(true);
@@ -102,7 +105,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         return;
       }
       try {
-        console.log('🎨 Loading canvas data:', {
+        logger.log('🎨 Loading canvas data:', {
           dataType: typeof whiteboard.canvas_data,
           isArray: Array.isArray(whiteboard.canvas_data),
           dataLength: Array.isArray(whiteboard.canvas_data) ? whiteboard.canvas_data.length : 'N/A',
@@ -124,24 +127,24 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               throw new Error('Invalid parsed format');
             }
           } catch (e) {
-            console.warn('🎨 Failed to parse string canvas data:', e);
-            console.warn('🎨 Corrupted data preview:', (dataToLoad as string)?.substring?.(0, 200) || 'N/A');
+            logger.warn('🎨 Failed to parse string canvas data:', e);
+            logger.warn('🎨 Corrupted data preview:', (dataToLoad as string)?.substring?.(0, 200) || 'N/A');
             dataToLoad = [];
             
             
           }
         } else if (dataToLoad && typeof dataToLoad === 'object' && dataToLoad.paths) {
           // Object format with paths property from backend
-          console.log('🎨 Data is in object format with paths, extracting array');
+          logger.log('🎨 Data is in object format with paths, extracting array');
           dataToLoad = dataToLoad.paths;
         } else if (!Array.isArray(dataToLoad)) {
-          console.warn('🎨 Unknown data format or not an array, using empty array');
+          logger.warn('🎨 Unknown data format or not an array, using empty array');
           dataToLoad = [];
         }
 
         // Ensure dataToLoad is an array before proceeding
         if (!Array.isArray(dataToLoad)) {
-          console.warn('🎨 Data is not an array after processing, forcing empty array:', typeof dataToLoad);
+          logger.warn('🎨 Data is not an array after processing, forcing empty array:', typeof dataToLoad);
           dataToLoad = [];
         }
 
@@ -160,7 +163,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         if (dataToLoad.length > 0) {
           const firstPath = dataToLoad[0];
           if (!firstPath.drawMode || !firstPath.strokeColor || !firstPath.strokeWidth) {
-            console.log('🎨 Reconstructing missing metadata for canvas paths');
+            logger.log('🎨 Reconstructing missing metadata for canvas paths');
             dataToLoad = dataToLoad.map((pathData: any, index: number) => ({
               drawMode: true,
               strokeColor: pathData.strokeColor || '#2563eb', // Default to theme blue
@@ -170,7 +173,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           }
         }
         
-        console.log('🎨 Final data to load:', {
+        logger.log('🎨 Final data to load:', {
           isArray: Array.isArray(dataToLoad),
           length: Array.isArray(dataToLoad) ? dataToLoad.length : 'N/A',
           dataPreview: JSON.stringify(dataToLoad).substring(0, 300)
@@ -201,16 +204,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           if (autoSaveTimeout) {
             clearTimeout(autoSaveTimeout);
             setAutoSaveTimeout(null);
-            console.log('🎨 Cleared pending auto-save timeout after loading data');
+            logger.log('🎨 Cleared pending auto-save timeout after loading data');
           }
           
-          console.log('🎨 Canvas data loaded successfully');
+          logger.log('🎨 Canvas data loaded successfully');
           
           // Restore original console methods
           console.warn = originalWarn;
           console.error = originalError;
         } else {
-          console.warn('🎨 Invalid canvas data format, using empty canvas:', {
+          logger.warn('🎨 Invalid canvas data format, using empty canvas:', {
             dataType: typeof dataToLoad,
             dataValue: dataToLoad
           });
@@ -241,7 +244,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           }
           
           // Auto-fix corrupted data
-          console.log('🎨 Auto-fixing corrupted canvas data after load error...');
+          logger.log('🎨 Auto-fixing corrupted canvas data after load error...');
           try {
             onSave({ canvas_data: [], updated_at: new Date().toISOString() });
           } catch (saveError) {
@@ -286,7 +289,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
-          console.log('🎨 Container dimensions changed:', { width, height });
+          logger.log('🎨 Container dimensions changed:', { width, height });
           // Inner container already accounts for footer space via paddingBottom
           setCanvasDimensions({
             width: Math.floor(width),
@@ -301,7 +304,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     // Also trigger immediate measurement in case ResizeObserver doesn't fire right away
     const rect = canvasContainerRef.current.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      console.log('🎨 Initial container dimensions:', { width: rect.width, height: rect.height });
+      logger.log('🎨 Initial container dimensions:', { width: rect.width, height: rect.height });
       // Inner container already accounts for footer space via paddingBottom
       setCanvasDimensions({
         width: Math.floor(rect.width),
@@ -314,7 +317,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Debug canvas dimensions changes
   useEffect(() => {
-    console.log('🎨 Canvas dimensions updated:', canvasDimensions);
+    logger.log('🎨 Canvas dimensions updated:', canvasDimensions);
   }, [canvasDimensions]);
 
   // Debounced auto-save function (reduced delay for faster saves)
@@ -323,7 +326,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       try {
         // Validate canvas data before saving
         if (!Array.isArray(canvasData)) {
-          console.warn('🎨 Invalid canvas data format - not an array:', typeof canvasData);
+          logger.warn('🎨 Invalid canvas data format - not an array:', typeof canvasData);
           return;
         }
 
@@ -361,7 +364,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           const testSerialization = JSON.stringify(sanitizedCanvasData);
           JSON.parse(testSerialization);
           
-          console.log('🎨 Auto-saving sanitized canvas data:', {
+          logger.log('🎨 Auto-saving sanitized canvas data:', {
             originalPaths: canvasData.length,
             sanitizedPaths: sanitizedCanvasData.length,
             dataPreview: testSerialization.substring(0, 200),
@@ -375,7 +378,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         }
 
         await onSave({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
-        console.log('🎨 Canvas auto-save completed successfully');
+        logger.log('🎨 Canvas auto-save completed successfully');
       } catch (error) {
         console.error('🎨 Canvas auto-save failed:', error);
         
@@ -395,7 +398,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Handle drawing end with auto-save trigger
   const handleDrawingEnd = useCallback(async () => {
-    console.log('🎨 handleDrawingEnd called.');
+    logger.log('🎨 handleDrawingEnd called.');
     setIsDrawing(false);
     
     // Only auto-save if there are actual changes
@@ -404,17 +407,17 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     // Prevent auto-saves immediately after loading data (canvas library needs time to render)
     const timeSinceLoad = Date.now() - canvasLoadTime;
     if (timeSinceLoad < 500) { // Wait 500ms after loading before auto-saving (reduced from 2000ms)
-      console.log('🎨 Skipping auto-save - too soon after canvas load:', { timeSinceLoad });
+      logger.log('🎨 Skipping auto-save - too soon after canvas load:', { timeSinceLoad });
       return;
     }
     
     try {
       const currentCanvasData = await canvasRef.current.exportPaths();
-      console.log('🎨 WhiteboardCanvas: Raw exported paths:', currentCanvasData);
+      logger.log('🎨 WhiteboardCanvas: Raw exported paths:', currentCanvasData);
       
       // Validate canvas data before processing
       if (!Array.isArray(currentCanvasData)) {
-        console.warn('🎨 Invalid canvas data format from exportPaths - not an array:', typeof currentCanvasData);
+        logger.warn('🎨 Invalid canvas data format from exportPaths - not an array:', typeof currentCanvasData);
         return;
       }
 
@@ -447,7 +450,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       const currentDataString = JSON.stringify(currentCanvasData);
       const savedDataString = JSON.stringify(normalizedSavedData);
       
-      console.log('🎨 Canvas change detection:', {
+      logger.log('🎨 Canvas change detection:', {
         currentPaths: currentCanvasData?.length || 0,
         savedPaths: normalizedSavedData?.length || 0,
         hasChanges: currentDataString !== savedDataString,
@@ -459,12 +462,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       
       // Only trigger auto-save if canvas data actually changed
       if (currentDataString !== savedDataString) {
-        console.log('🎨 Canvas changes detected, scheduling auto-save...');
+        logger.log('🎨 Canvas changes detected, scheduling auto-save...');
         
         // Prevent accidental clearing - if we expect content but get empty, skip save
         // Unless it's an intentional clear operation
         if (currentCanvasData.length === 0 && (lastLoadedData.length > 0 || normalizedSavedData.length > 0) && !isIntentionalClear) {
-          console.warn('🎨 Preventing accidental canvas clear - expected content but got empty data', {
+          logger.warn('🎨 Preventing accidental canvas clear - expected content but got empty data', {
             expectedPaths: Math.max(lastLoadedData.length, normalizedSavedData.length),
             currentPaths: currentCanvasData.length,
             timeSinceLoad: Date.now() - canvasLoadTime,
@@ -474,7 +477,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           });
           return;
         } else if (isIntentionalClear && currentCanvasData.length === 0) {
-          console.log('🎨 Allowing intentional canvas clear');
+          logger.log('🎨 Allowing intentional canvas clear');
         }
         
         // Clear existing timeout
@@ -489,7 +492,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         
         setAutoSaveTimeout(timeout);
       } else {
-        console.log('🎨 No canvas changes detected, skipping auto-save');
+        logger.log('🎨 No canvas changes detected, skipping auto-save');
       }
     } catch (error) {
       console.error('Failed to check canvas changes:', error);
@@ -558,7 +561,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       try {
         await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
         setLastLoadedData([]);
-        console.log('🎨 Canvas cleared and saved successfully');
+        logger.log('🎨 Canvas cleared and saved successfully');
       } catch (error) {
         console.error('🎨 Failed to save cleared canvas:', error);
       } finally {
@@ -586,7 +589,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!isMobile) return;
 
-    console.log(`Touch start: ${e.touches.length} fingers`);
+    logger.log(`Touch start: ${e.touches.length} fingers`);
 
     if (e.touches.length === 2) {
       // Two-finger gesture - prevent drawing and enable pan/zoom
@@ -601,11 +604,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       const center = getTouchCenter(e.touches[0], e.touches[1]);
       setPanStart(center);
       
-      console.log('Multi-touch enabled for pan/zoom');
+      logger.log('Multi-touch enabled for pan/zoom');
     } else if (e.touches.length === 1) {
       // Single finger - allow drawing mode only if not coming from multi-touch
       if (!isMultiTouch) {
-        console.log('Single finger - drawing mode');
+        logger.log('Single finger - drawing mode');
       }
       // Don't immediately set isMultiTouch to false here, wait for touchend
     }
@@ -627,7 +630,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         setInitialPinchDistance(distance);
         const center = getTouchCenter(e.touches[0], e.touches[1]);
         setPanStart(center);
-        console.log('Multi-touch enabled during move');
+        logger.log('Multi-touch enabled during move');
         return;
       }
 
@@ -661,12 +664,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isMobile) return;
 
-    console.log(`Touch end: ${e.touches.length} fingers remaining`);
+    logger.log(`Touch end: ${e.touches.length} fingers remaining`);
 
     // Reset multi-touch when no fingers or only one finger remains
     if (e.touches.length < 2) {
       if (isMultiTouch) {
-        console.log('Exiting multi-touch mode');
+        logger.log('Exiting multi-touch mode');
         setIsMultiTouch(false);
         setInitialPinchDistance(0);
         setIsDrawing(false);
@@ -868,7 +871,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             canvasColor="#ffffff"
             ref={canvasRef}
             onStroke={(path) => {
-              console.log('🎨 onStroke triggered - stroke completed', path);
+              logger.log('🎨 onStroke triggered - stroke completed', path);
               setIsDrawing(true);
               // Trigger auto-save after each stroke completes
               setTimeout(() => {

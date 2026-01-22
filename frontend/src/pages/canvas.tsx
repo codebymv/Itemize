@@ -41,6 +41,8 @@ import { ShareListModal } from '../components/ShareListModal';
 import { ShareNoteModal } from '../components/ShareNoteModal';
 import { ShareWhiteboardModal } from '../components/ShareWhiteboardModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
+import { useIsMobile } from '../hooks/use-mobile';
+import { logger } from '../lib/logger';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
@@ -73,7 +75,7 @@ const CanvasPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-  const [isMobileView, setIsMobileView] = useState(false);
+  const isMobileView = useIsMobile();
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteInitialPosition, setNewNoteInitialPosition] = useState<{ x: number, y: number } | null>(null);
@@ -133,7 +135,7 @@ const CanvasPage: React.FC = () => {
         throw new Error('Failed to update category');
       }
       
-      console.log('Category updated successfully:', updatedCategory);
+      logger.log('Category updated successfully:', updatedCategory);
       
       // If color was updated, cascade the change to all linked items
       if (updatedData.color_value) {
@@ -152,7 +154,7 @@ const CanvasPage: React.FC = () => {
             // If it's a 404 error, the list no longer exists in the backend
             // Remove it from the frontend state to prevent future errors
             if (error?.response?.status === 404 || error?.status === 404) {
-              console.warn(`List ${list.id} no longer exists in backend, removing from frontend state`);
+              logger.warn(`List ${list.id} no longer exists in backend, removing from frontend state`);
               failedListIds.push(list.id);
             }
           }
@@ -185,7 +187,7 @@ const CanvasPage: React.FC = () => {
         }
         
         // Color change completed silently - no toast needed
-        console.log(`Category "${categoryName}" and ${listsToUpdate.length + notesToUpdate.length + whiteboardsToUpdate.length} linked items updated successfully.`);
+        logger.log(`Category "${categoryName}" and ${listsToUpdate.length + notesToUpdate.length + whiteboardsToUpdate.length} linked items updated successfully.`);
       }
       
       // The useDatabaseCategories hook should automatically refresh its state
@@ -339,22 +341,6 @@ const CanvasPage: React.FC = () => {
     });
   };
   
-  // Check viewport size for responsive layout
-  useEffect(() => {
-    const checkMobileView = () => {
-      setIsMobileView(window.innerWidth < 768); // Consider tablet and phone as mobile view
-    };
-    
-    // Initial check
-    checkMobileView();
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkMobileView);
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkMobileView);
-  }, []);
-
   // Fetch lists on component mount
   useEffect(() => {
     const getLists = async () => {
@@ -435,13 +421,13 @@ const CanvasPage: React.FC = () => {
     });
 
     newSocket.on('connect', () => {
-      console.log('Canvas: WebSocket connected, joining user canvas');
+      logger.log('Canvas: WebSocket connected, joining user canvas');
       setIsConnected(true);
       newSocket.emit('joinUserCanvas', { token });
     });
 
     newSocket.on('disconnect', () => {
-      console.log('Canvas: WebSocket disconnected');
+      logger.log('Canvas: WebSocket disconnected');
       setIsConnected(false);
     });
 
@@ -455,12 +441,12 @@ const CanvasPage: React.FC = () => {
 
     // Add debugging for all WebSocket events
     newSocket.onAny((eventName, ...args) => {
-      console.log('Canvas: Received WebSocket event:', eventName, args);
+      logger.log('Canvas: Received WebSocket event:', eventName, args);
     });
 
     // Listen for test pong
     newSocket.on('testPong', (data) => {
-      console.log('Canvas: Received test pong:', data);
+      logger.log('Canvas: Received test pong:', data);
     });
 
     // Listen for real-time list updates
@@ -565,8 +551,8 @@ const CanvasPage: React.FC = () => {
 
   const handleDeleteNote = async (noteId: number) => {
     try {
-      console.log(`🗑️ Frontend: Attempting to delete note ${noteId}`);
-      console.log(`🔑 Frontend: Using token: ${token ? 'Present' : 'Missing'}`);
+      logger.log(`🗑️ Frontend: Attempting to delete note ${noteId}`);
+      logger.log(`🔑 Frontend: Using token: ${token ? 'Present' : 'Missing'}`);
 
       const result = await apiDeleteNote(noteId, token);
       console.log(`✅ Frontend: Delete API response:`, result);
@@ -615,7 +601,7 @@ const CanvasPage: React.FC = () => {
         z_index: 0,
         color_value: color, // Border color
       };
-      console.log('handleCreateWhiteboard payload:', payloadWithDefaults);
+      logger.log('handleCreateWhiteboard payload:', payloadWithDefaults);
 
       const newWhiteboard = await apiCreateWhiteboard(payloadWithDefaults, token);
       setWhiteboards(prev => [newWhiteboard, ...prev]);
@@ -650,7 +636,7 @@ const CanvasPage: React.FC = () => {
       
       const updatedWhiteboard = await apiUpdateWhiteboard(whiteboardId, updatedData, token);
       
-      console.log('🎨 CanvasPage: Whiteboard update response:', {
+      logger.log('🎨 CanvasPage: Whiteboard update response:', {
         whiteboardId: updatedWhiteboard.id,
         hasCanvasData: !!updatedWhiteboard.canvas_data,
         canvasDataType: typeof updatedWhiteboard.canvas_data,
@@ -732,7 +718,7 @@ const CanvasPage: React.FC = () => {
       // Remove from tracking after a short delay
       setTimeout(() => {
         recentlyCreatedListIds.current.delete(newList.id);
-        console.log('📝 Mobile Creation: Stopped tracking list ID:', newList.id);
+        logger.log('📝 Mobile Creation: Stopped tracking list ID:', newList.id);
       }, 2000);
       
       setLists(prev => [newList, ...prev]);
@@ -897,7 +883,7 @@ const CanvasPage: React.FC = () => {
   };
 
   const handleOpenNewWhiteboardModal = (position: { x: number, y: number }) => {
-    console.log('handleOpenNewWhiteboardModal called with position:', position);
+    logger.log('handleOpenNewWhiteboardModal called with position:', position);
     setNewWhiteboardInitialPosition(position);
     setShowNewWhiteboardModal(true);
   };
@@ -1586,7 +1572,7 @@ const CanvasPage: React.FC = () => {
               onReady={(methods) => {
                 if (!canvasMethodsRef.current) {
                   canvasMethodsRef.current = methods;
-                  console.log('Canvas methods ready:', methods);
+                  logger.log('Canvas methods ready:', methods);
                 }
               }}
             />
