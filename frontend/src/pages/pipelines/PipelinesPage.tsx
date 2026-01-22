@@ -1,0 +1,365 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTheme } from 'next-themes';
+import { Plus, Settings, MoreHorizontal, DollarSign, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useHeader } from '@/contexts/HeaderContext';
+import { Pipeline, Deal, PipelineStage } from '@/types';
+import { getPipelines, getPipeline, createPipeline, moveDealToStage } from '@/services/pipelinesApi';
+import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { KanbanBoard } from './components/KanbanBoard';
+import { CreateDealModal } from './components/CreateDealModal';
+import { CreatePipelineModal } from './components/CreatePipelineModal';
+
+export function PipelinesPage() {
+  const { toast } = useToast();
+  const { setHeaderContent } = useHeader();
+  const { theme } = useTheme();
+
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null);
+  const [currentPipeline, setCurrentPipeline] = useState<(Pipeline & { deals: Deal[] }) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const [showCreateDealModal, setShowCreateDealModal] = useState(false);
+  const [showCreatePipelineModal, setShowCreatePipelineModal] = useState(false);
+  const [initialStageId, setInitialStageId] = useState<string | undefined>();
+
+  // Set header content following workspace pattern
+  useEffect(() => {
+    setHeaderContent(
+      <div className="flex items-center justify-between w-full min-w-0">
+        <h1 
+          className="text-xl font-semibold italic truncate ml-2" 
+          style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
+        >
+          PIPELINES
+        </h1>
+        <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">
+          {/* Pipeline selector */}
+          {pipelines.length > 0 && (
+            <Select
+              value={selectedPipelineId?.toString() || ''}
+              onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
+            >
+              <SelectTrigger className="w-[180px] h-9 bg-muted/20 border-border/50">
+                <SelectValue placeholder="Select pipeline" />
+              </SelectTrigger>
+              <SelectContent>
+                {pipelines.map((pipeline) => (
+                  <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                    {pipeline.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {/* More options */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Pipeline
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <Settings className="h-4 w-4 mr-2" />
+                Pipeline Settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* Add Deal Button */}
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+            onClick={() => setShowCreateDealModal(true)}
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Deal</span>
+          </Button>
+        </div>
+      </div>
+    );
+    return () => setHeaderContent(null);
+  }, [pipelines, selectedPipelineId, theme, setHeaderContent]);
+
+  // Initialize organization
+  useEffect(() => {
+    const initOrg = async () => {
+      try {
+        const org = await ensureDefaultOrganization();
+        setOrganizationId(org.id);
+        setInitError(null);
+      } catch (error: any) {
+        console.error('Error initializing organization:', error);
+        const errorMsg = error.response?.status === 500 
+          ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
+          : 'Failed to initialize organization. Please check your connection.';
+        setInitError(errorMsg);
+        setLoading(false);
+      }
+    };
+    initOrg();
+  }, []);
+
+  // Fetch pipelines
+  const fetchPipelines = useCallback(async () => {
+    if (!organizationId) return;
+
+    try {
+      const data = await getPipelines(organizationId);
+      setPipelines(data);
+
+      // Select default pipeline or first one
+      if (data.length > 0) {
+        const defaultPipeline = data.find(p => p.is_default) || data[0];
+        setSelectedPipelineId(defaultPipeline.id);
+      } else {
+        // No pipelines - stop loading so empty state shows
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching pipelines:', error);
+      setLoading(false);
+      toast({
+        title: 'Error',
+        description: 'Failed to load pipelines',
+        variant: 'destructive',
+      });
+    }
+  }, [organizationId]);
+
+  useEffect(() => {
+    fetchPipelines();
+  }, [fetchPipelines]);
+
+  // Fetch selected pipeline with deals
+  const fetchPipeline = useCallback(async () => {
+    if (!selectedPipelineId || !organizationId) return;
+
+    setLoading(true);
+    try {
+      const data = await getPipeline(selectedPipelineId, organizationId);
+      setCurrentPipeline(data);
+    } catch (error) {
+      console.error('Error fetching pipeline:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load pipeline',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedPipelineId, organizationId]);
+
+  useEffect(() => {
+    fetchPipeline();
+  }, [fetchPipeline]);
+
+  // Handle deal stage change (drag and drop)
+  const handleDealMove = async (dealId: number, newStageId: string) => {
+    if (!organizationId) return;
+
+    try {
+      await moveDealToStage(dealId, newStageId, organizationId);
+      // Update local state
+      setCurrentPipeline(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          deals: prev.deals.map(d =>
+            d.id === dealId ? { ...d, stage_id: newStageId } : d
+          )
+        };
+      });
+    } catch (error) {
+      console.error('Error moving deal:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to move deal',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle deal created
+  const handleDealCreated = (deal: Deal) => {
+    setShowCreateDealModal(false);
+    setInitialStageId(undefined);
+    // Refresh pipeline
+    fetchPipeline();
+    toast({
+      title: 'Success',
+      description: 'Deal created successfully',
+    });
+  };
+
+  // Handle pipeline created
+  const handlePipelineCreated = (pipeline: Pipeline) => {
+    setShowCreatePipelineModal(false);
+    fetchPipelines();
+    setSelectedPipelineId(pipeline.id);
+    toast({
+      title: 'Success',
+      description: 'Pipeline created successfully',
+    });
+  };
+
+  // Add deal to specific stage
+  const handleAddDealToStage = (stageId: string) => {
+    setInitialStageId(stageId);
+    setShowCreateDealModal(true);
+  };
+
+  // Calculate pipeline stats
+  const getPipelineStats = () => {
+    if (!currentPipeline) return { totalValue: 0, dealCount: 0, openDeals: 0 };
+
+    const openDeals = currentPipeline.deals.filter(d => !d.won_at && !d.lost_at);
+    const totalValue = openDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+
+    return {
+      totalValue,
+      dealCount: currentPipeline.deals.length,
+      openDeals: openDeals.length
+    };
+  };
+
+  const stats = getPipelineStats();
+
+  // Show error state if initialization failed
+  if (initError) {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <Card className="max-w-lg">
+          <CardContent className="pt-6 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <TrendingUp className="h-6 w-6 text-destructive" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">CRM Not Ready</h3>
+            <p className="text-muted-foreground mb-4">{initError}</p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Stats bar */}
+      {currentPipeline && (
+        <div className="px-6 py-3 border-b bg-muted/20">
+          <div className="flex gap-6">
+            <div className="flex items-center gap-2 text-sm">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Open deals:</span>
+              <span className="font-medium">{stats.openDeals}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Pipeline value:</span>
+              <span className="font-medium">
+                ${stats.totalValue.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kanban Board */}
+      <div className="flex-1 overflow-hidden">
+        {loading ? (
+          <div className="p-6 flex gap-4 overflow-x-auto">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-80">
+                <Skeleton className="h-12 w-full mb-4" />
+                <Skeleton className="h-32 w-full mb-2" />
+                <Skeleton className="h-32 w-full mb-2" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : pipelines.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <Card className="max-w-md">
+              <CardHeader>
+                <CardTitle>No pipelines yet</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Create your first sales pipeline to start tracking deals
+                </p>
+                <Button 
+                  onClick={() => setShowCreatePipelineModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Pipeline
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        ) : currentPipeline ? (
+          <KanbanBoard
+            pipeline={currentPipeline}
+            deals={currentPipeline.deals}
+            onDealMove={handleDealMove}
+            onAddDeal={handleAddDealToStage}
+            onRefresh={fetchPipeline}
+            organizationId={organizationId!}
+          />
+        ) : null}
+      </div>
+
+      {/* Create Deal Modal */}
+      {showCreateDealModal && organizationId && selectedPipelineId && (
+        <CreateDealModal
+          pipelineId={selectedPipelineId}
+          stages={currentPipeline?.stages || []}
+          initialStageId={initialStageId}
+          organizationId={organizationId}
+          onClose={() => {
+            setShowCreateDealModal(false);
+            setInitialStageId(undefined);
+          }}
+          onCreated={handleDealCreated}
+        />
+      )}
+
+      {/* Create Pipeline Modal */}
+      {showCreatePipelineModal && organizationId && (
+        <CreatePipelineModal
+          organizationId={organizationId}
+          onClose={() => setShowCreatePipelineModal(false)}
+          onCreated={handlePipelineCreated}
+        />
+      )}
+    </div>
+  );
+}
+
+export default PipelinesPage;

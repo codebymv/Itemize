@@ -25,6 +25,8 @@ import {
     Activity,
     ChevronLeft,
     ChevronRight,
+    Kanban,
+    Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -44,7 +46,16 @@ const mainNavItems = [
         title: 'Contacts',
         icon: Users,
         path: '/contacts',
-        disabled: true, // Coming soon
+    },
+    {
+        title: 'Pipelines',
+        icon: Kanban,
+        path: '/pipelines',
+    },
+    {
+        title: 'Automations',
+        icon: Zap,
+        path: '/automations',
     },
 ];
 

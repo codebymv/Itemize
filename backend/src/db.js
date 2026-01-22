@@ -3,6 +3,12 @@ const { Pool } = require('pg');
 // Import database migrations
 const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration } = require('./db_migrations');
 
+// Import CRM migrations
+const { runAllCRMMigrations } = require('./db_crm_migrations');
+
+// Import Automation migrations
+const { runAllAutomationMigrations } = require('./db_automation_migrations');
+
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
 const inMemoryLists = [];
@@ -253,6 +259,20 @@ const initializeDatabase = async (pool) => {
       console.log('Columns in public.users after initialization:', JSON.stringify(rows, null, 2));
     } catch (diagError) {
       console.error('Error during diagnostic query for public.users columns:', diagError);
+    }
+
+    // Run CRM migrations
+    try {
+      await runAllCRMMigrations(pool);
+    } catch (crmError) {
+      console.error('⚠️ CRM migrations failed, continuing without CRM features:', crmError.message);
+    }
+
+    // Run Automation migrations
+    try {
+      await runAllAutomationMigrations(pool);
+    } catch (automationError) {
+      console.error('⚠️ Automation migrations failed, continuing without automation features:', automationError.message);
     }
 
     console.log('Database initialized successfully');

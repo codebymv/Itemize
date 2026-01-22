@@ -110,3 +110,177 @@ export interface WhiteboardCardProps {
   onToggleCollapsed?: () => void;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
+
+// ======================
+// CRM Types
+// ======================
+
+// Organization for multi-tenancy
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  settings: Record<string, any>;
+  logo_url?: string;
+  role?: 'owner' | 'admin' | 'member' | 'viewer';
+  created_at: string;
+  updated_at: string;
+}
+
+// Organization member
+export interface OrganizationMember {
+  id: number;
+  organization_id: number;
+  user_id: number;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  invited_at: string;
+  joined_at?: string;
+  invited_by?: number;
+  user_name?: string;
+  email?: string;
+}
+
+// Contact address structure
+export interface ContactAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+}
+
+// Contact - core CRM entity
+export interface Contact {
+  id: number;
+  organization_id: number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  job_title?: string;
+  address: ContactAddress;
+  source: 'manual' | 'import' | 'form' | 'integration' | 'api';
+  status: 'active' | 'inactive' | 'archived';
+  custom_fields: Record<string, any>;
+  tags: string[];
+  assigned_to?: number;
+  assigned_to_name?: string;
+  created_by?: number;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Contact activity for timeline
+export interface ContactActivity {
+  id: number;
+  contact_id: number;
+  user_id?: number;
+  user_name?: string;
+  user_email?: string;
+  type: 'note' | 'email' | 'call' | 'task' | 'meeting' | 'status_change' | 'deal_update' | 'system';
+  title?: string;
+  content: Record<string, any>;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+// CRM Tag
+export interface Tag {
+  id: number;
+  organization_id: number;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+// Pipeline stage
+export interface PipelineStage {
+  id: string;
+  name: string;
+  order: number;
+  color: string;
+}
+
+// Pipeline for deal management
+export interface Pipeline {
+  id: number;
+  organization_id: number;
+  name: string;
+  description?: string;
+  stages: PipelineStage[];
+  is_default: boolean;
+  created_by?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Deal/opportunity
+export interface Deal {
+  id: number;
+  organization_id: number;
+  pipeline_id: number;
+  contact_id?: number;
+  stage_id: string;
+  title: string;
+  value: number;
+  currency: string;
+  probability: number;
+  expected_close_date?: string;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  created_by?: number;
+  won_at?: string;
+  lost_at?: string;
+  lost_reason?: string;
+  custom_fields: Record<string, any>;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  contact?: Contact;
+  pipeline?: Pipeline;
+}
+
+// Task
+export interface Task {
+  id: number;
+  organization_id: number;
+  contact_id?: number;
+  deal_id?: number;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  created_by?: number;
+  title: string;
+  description?: string;
+  due_date?: string;
+  completed_at?: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  reminder_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Pagination response wrapper
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Contacts API response
+export interface ContactsResponse {
+  contacts: Contact[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

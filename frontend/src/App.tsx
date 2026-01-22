@@ -31,6 +31,11 @@ import SharedWhiteboardPage from "./pages/SharedWhiteboardPage";
 import CanvasPage from "./pages/canvas";
 import DashboardPage from "./pages/DashboardPage";
 import SettingsPage from "./pages/SettingsPage";
+import ContactsPage from "./pages/contacts/ContactsPage";
+import ContactDetailPage from "./pages/contacts/ContactDetailPage";
+import PipelinesPage from "./pages/pipelines/PipelinesPage";
+import { AutomationsPage } from "./pages/automations";
+import WorkflowBuilderPage from "./pages/automations/WorkflowBuilderPage";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -118,6 +123,12 @@ const AppContent = () => {
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<AuthenticatedLayout><DashboardPage /></AuthenticatedLayout>} />
+        <Route path="/contacts" element={<AuthenticatedLayout><ContactsPage /></AuthenticatedLayout>} />
+        <Route path="/contacts/:id" element={<AuthenticatedLayout><ContactDetailPage /></AuthenticatedLayout>} />
+        <Route path="/pipelines" element={<AuthenticatedLayout><PipelinesPage /></AuthenticatedLayout>} />
+        <Route path="/automations" element={<AuthenticatedLayout><AutomationsPage /></AuthenticatedLayout>} />
+        <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
+        <Route path="/automations/:id" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/workspace" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
         <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />

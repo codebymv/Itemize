@@ -247,7 +247,7 @@ const CanvasPage: React.FC = () => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
         <h1 className="text-xl font-semibold italic truncate ml-2" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
-          MY WORKSPACE
+          WORKSPACE
         </h1>
 
         <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">

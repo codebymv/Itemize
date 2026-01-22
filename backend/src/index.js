@@ -177,6 +177,36 @@ setTimeout(async () => {
         app.use('/api', categoriesRoutes(pool, authenticateJWT));
         console.log('✅ Categories routes initialized');
 
+        // Organizations routes (CRM)
+        const organizationsRoutes = require('./routes/organizations.routes');
+        app.use('/api/organizations', organizationsRoutes(pool, authenticateJWT));
+        console.log('✅ Organizations routes initialized');
+
+        // Contacts routes (CRM)
+        const contactsRoutes = require('./routes/contacts.routes');
+        app.use('/api/contacts', contactsRoutes(pool, authenticateJWT));
+        console.log('✅ Contacts routes initialized');
+
+        // Tags routes (CRM)
+        const tagsRoutes = require('./routes/tags.routes');
+        app.use('/api/tags', tagsRoutes(pool, authenticateJWT));
+        console.log('✅ Tags routes initialized');
+
+        // Pipelines and Deals routes (CRM)
+        const pipelinesRoutes = require('./routes/pipelines.routes');
+        app.use('/api/pipelines', pipelinesRoutes(pool, authenticateJWT));
+        console.log('✅ Pipelines routes initialized');
+
+        // Email Templates routes (Automation)
+        const emailTemplatesRoutes = require('./routes/email-templates.routes');
+        app.use('/api/email-templates', emailTemplatesRoutes(pool, authenticateJWT));
+        console.log('✅ Email Templates routes initialized');
+
+        // Workflows routes (Automation)
+        const workflowsRoutes = require('./routes/workflows.routes');
+        app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));
+        console.log('✅ Workflows routes initialized');
+
         // Sharing routes (includes public shared content endpoints)
         const sharingRoutes = require('./routes/sharing.routes');
         app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit));
