@@ -14,10 +14,22 @@ export interface CreateNotePayload {
   z_index?: number;
 }
 
+export interface CanvasPath {
+  drawMode: boolean;
+  strokeColor: string;
+  strokeWidth: number;
+  paths: Array<{ x: number; y: number }>;
+}
+
+export interface CanvasData {
+  paths: CanvasPath[];
+  shapes?: unknown[];
+}
+
 export interface CreateWhiteboardPayload {
   title?: string;
   category?: string;
-  canvas_data?: any;
+  canvas_data?: CanvasData | string;
   canvas_width?: number;
   canvas_height?: number;
   background_color?: string;
@@ -25,6 +37,64 @@ export interface CreateWhiteboardPayload {
   position_y: number;
   z_index?: number;
   color_value?: string;
+}
+
+export interface ListPayload {
+  id?: string | number;
+  title: string;
+  type?: string;
+  category?: string;
+  items?: Array<{ id: string; text: string; completed: boolean }>;
+  color_value?: string;
+  position_x?: number;
+  position_y?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface NotePayload {
+  id?: number;
+  title?: string;
+  content?: string;
+  category?: string;
+  color_value?: string;
+  position_x?: number;
+  position_y?: number;
+  width?: number;
+  height?: number;
+  z_index?: number;
+}
+
+export interface WhiteboardPayload {
+  id?: number;
+  title?: string;
+  category?: string;
+  canvas_data?: CanvasData | string;
+  canvas_width?: number;
+  canvas_height?: number;
+  background_color?: string;
+  position_x?: number;
+  position_y?: number;
+  z_index?: number;
+  color_value?: string;
+}
+
+// Backend response types
+interface BackendListResponse {
+  id: string | number;
+  title: string;
+  category?: string;
+  type?: string;
+  items?: Array<{ id: string; text: string; completed: boolean }>;
+  created_at?: string;
+  color_value?: string | null;
+  position_x?: number;
+  position_y?: number;
+  width?: number;
+  height?: number;
+  share_token?: string;
+  is_public?: boolean;
+  shared_at?: string;
 }
 
 export interface Category {
@@ -52,7 +122,7 @@ export const fetchCanvasLists = async (token?: string) => {
   });
   
   // Transform backend response to match frontend List interface
-  const transformedLists = response.data.map((listFromBackend: any) => ({
+  const transformedLists = response.data.map((listFromBackend: BackendListResponse) => ({
     id: listFromBackend.id,
     title: listFromBackend.title,
     type: listFromBackend.category || listFromBackend.type || 'General',
@@ -71,7 +141,7 @@ export const fetchCanvasLists = async (token?: string) => {
   return transformedLists;
 };
 
-export const createList = async (listData: any, token?: string) => {
+export const createList = async (listData: ListPayload, token?: string) => {
   try {
     // Transform frontend 'type' field to backend 'category' field
     const backendData = {
@@ -115,7 +185,7 @@ export const createList = async (listData: any, token?: string) => {
   }
 };
 
-export const updateList = async (listData: any, token?: string) => {
+export const updateList = async (listData: ListPayload & { id: string | number }, token?: string) => {
   // Transform frontend 'type' field to backend 'category' field
   const backendData = {
     ...listData,
@@ -178,7 +248,7 @@ export const createNote = async (noteData: CreateNotePayload, token?: string) =>
   return response.data;
 };
 
-export const updateNote = async (noteId: number, noteData: any, token?: string) => {
+export const updateNote = async (noteId: number, noteData: NotePayload, token?: string) => {
   const response = await api.put(`/api/notes/${noteId}`, noteData, {
     headers: getAuthHeaders(token)
   });
@@ -234,7 +304,7 @@ export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, 
   return response.data;
 };
 
-export const updateWhiteboard = async (whiteboardId: number, whiteboardData: any, token?: string) => {
+export const updateWhiteboard = async (whiteboardId: number, whiteboardData: WhiteboardPayload, token?: string) => {
   logger.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
   const response = await api.put(`/api/whiteboards/${whiteboardId}`, whiteboardData, {
     headers: getAuthHeaders(token)

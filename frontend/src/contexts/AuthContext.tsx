@@ -36,27 +36,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
-  // Initialize authentication state - simplified like Prototype2
+  // Initialize authentication state from localStorage (user data only, token is in httpOnly cookie)
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check for saved authentication data in localStorage
-        const savedToken = localStorage.getItem('itemize_token');
+        // Check for saved user data in localStorage (token is now in httpOnly cookie)
         const savedUser = localStorage.getItem('itemize_user');
         const expiryTime = localStorage.getItem('itemize_expiry');
         
-        // Simple check like Prototype2 - if we have token, user, and not expired, restore auth
-        if (savedToken && savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
+        // If we have user data and not expired, restore auth state
+        // The actual token is stored in httpOnly cookie and sent automatically
+        if (savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
           try {
             const userData = JSON.parse(savedUser);
-            setToken(savedToken);
+            setToken('httponly'); // Placeholder - actual token is in cookie
             setCurrentUser(userData);
           } catch (parseError) {
             // Clean up invalid data
-            localStorage.removeItem('itemize_token');
             localStorage.removeItem('itemize_user');
             localStorage.removeItem('itemize_expiry');
           }
+        } else {
+          // Clean up expired data
+          localStorage.removeItem('itemize_user');
+          localStorage.removeItem('itemize_expiry');
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -98,18 +101,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log('Backend auth response:', response.data);
           
-          const { token: backendToken, user: userData } = response.data;
+          const { user: userData } = response.data;
           
-          // Set token expiry (7 days)
+          // Set expiry (7 days) - token is now stored in httpOnly cookie by backend
           const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
           
-          // Store auth data
-          localStorage.setItem('itemize_token', backendToken);
+          // Store user data only (token is in httpOnly cookie, not accessible to JS)
           localStorage.setItem('itemize_user', JSON.stringify(userData));
           localStorage.setItem('itemize_expiry', expiryTime.toString());
           
-          // Update state
-          setToken(backendToken);
+          // Update state - token placeholder since actual token is in httpOnly cookie
+          setToken('httponly');
           setCurrentUser(userData);
           
           toast({
@@ -143,8 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setCurrentUser(null);
     
-    // Clear local storage
-    localStorage.removeItem('itemize_token');
+    // Clear local storage (user data only, token is in httpOnly cookie)
     localStorage.removeItem('itemize_user');
     localStorage.removeItem('itemize_expiry');
     
@@ -155,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error signing out from Google:', googleError);
     }
     
-    // Optional backend logout - simple approach like Prototype2
+    // Backend logout clears the httpOnly cookie
     try {
       api.post(`/api/auth/logout`).catch((error) => {
         console.error('Backend logout failed:', error);
@@ -177,18 +178,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         credential: credentialResponse.credential
       });
 
-      const { token: backendToken, user: userData } = response.data;
+      const { user: userData } = response.data;
       
-      // Set token expiry (7 days)
+      // Set expiry (7 days) - token is now stored in httpOnly cookie by backend
       const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
       
-      // Store auth data
-      localStorage.setItem('itemize_token', backendToken);
+      // Store user data only (token is in httpOnly cookie, not accessible to JS)
       localStorage.setItem('itemize_user', JSON.stringify(userData));
       localStorage.setItem('itemize_expiry', expiryTime.toString());
       
-      // Update state
-      setToken(backendToken);
+      // Update state - token placeholder since actual token is in httpOnly cookie
+      setToken('httponly');
       setCurrentUser(userData);
       toast({
         title: 'Welcome!',

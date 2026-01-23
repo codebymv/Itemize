@@ -16,6 +16,8 @@ module.exports = (io, pool) => {
     const sharedNoteViewers = new Map(); // shareToken -> Set of socket IDs
     const sharedWhiteboardViewers = new Map(); // shareToken -> Set of socket IDs
     const userCanvasConnections = new Map(); // userId -> Set of socket IDs
+    const chatSessionConnections = new Map(); // sessionToken -> Set of socket IDs
+    const orgChatConnections = new Map(); // orgId -> Set of socket IDs (for agents)
 
     // Broadcast helper functions
     const broadcast = {
@@ -229,6 +231,120 @@ module.exports = (io, pool) => {
             }
         });
 
+        // ====================================
+        // Chat Widget WebSocket Handlers
+        // ====================================
+
+        // Handle visitor joining a chat session (for real-time messages)
+        socket.on('joinChatSession', async (sessionToken) => {
+            try {
+                const client = await pool.connect();
+                const result = await client.query(
+                    'SELECT id, organization_id FROM chat_sessions WHERE session_token = $1 AND status = \'active\'',
+                    [sessionToken]
+                );
+                client.release();
+
+                if (result.rows.length === 0) {
+                    socket.emit('error', { message: 'Invalid or inactive session' });
+                    return;
+                }
+
+                const roomName = `chat-session-${sessionToken}`;
+                socket.join(roomName);
+
+                if (!chatSessionConnections.has(sessionToken)) {
+                    chatSessionConnections.set(sessionToken, new Set());
+                }
+                chatSessionConnections.get(sessionToken).add(socket.id);
+
+                socket.emit('joinedChatSession', {
+                    message: 'Successfully joined chat session',
+                    session_id: result.rows[0].id
+                });
+
+                console.log(`Visitor joined chat session: ${sessionToken}`);
+            } catch (error) {
+                console.error('Error joining chat session:', error);
+                socket.emit('error', { message: 'Failed to join chat session' });
+            }
+        });
+
+        // Handle agent joining organization chat room (to receive all chat notifications)
+        socket.on('joinOrgChat', async (data) => {
+            try {
+                const { token, organizationId } = data;
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const userId = decoded.id;
+
+                // Verify user is member of org
+                const client = await pool.connect();
+                const memberCheck = await client.query(
+                    'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+                    [organizationId, userId]
+                );
+                client.release();
+
+                if (memberCheck.rows.length === 0) {
+                    socket.emit('error', { message: 'Not authorized for this organization' });
+                    return;
+                }
+
+                const roomName = `org-${organizationId}`;
+                socket.join(roomName);
+
+                if (!orgChatConnections.has(organizationId)) {
+                    orgChatConnections.set(organizationId, new Set());
+                }
+                orgChatConnections.get(organizationId).add(socket.id);
+
+                socket.emit('joinedOrgChat', {
+                    message: 'Successfully joined organization chat room',
+                    organizationId
+                });
+
+                console.log(`Agent ${userId} joined org chat room: ${organizationId}`);
+            } catch (error) {
+                console.error('Error joining org chat:', error);
+                socket.emit('error', { message: 'Failed to join organization chat' });
+            }
+        });
+
+        // Handle agent typing in a chat session
+        socket.on('agentTyping', async (data) => {
+            const { sessionToken, isTyping } = data;
+            if (sessionToken) {
+                io.to(`chat-session-${sessionToken}`).emit('agentTyping', {
+                    is_typing: isTyping,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Handle visitor typing
+        socket.on('visitorTyping', async (data) => {
+            try {
+                const { sessionToken, isTyping } = data;
+                
+                const client = await pool.connect();
+                const result = await client.query(
+                    'SELECT id, organization_id FROM chat_sessions WHERE session_token = $1',
+                    [sessionToken]
+                );
+                client.release();
+
+                if (result.rows.length > 0) {
+                    io.to(`org-${result.rows[0].organization_id}`).emit('visitorTyping', {
+                        session_id: result.rows[0].id,
+                        is_typing: isTyping,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            } catch (error) {
+                console.error('Error broadcasting visitor typing:', error);
+            }
+        });
+
         // Handle disconnection
         socket.on('disconnect', () => {
             console.log(`WebSocket client disconnected: ${socket.id}`);
@@ -257,6 +373,26 @@ module.exports = (io, pool) => {
                     connections.delete(socket.id);
                     if (connections.size === 0) {
                         userCanvasConnections.delete(userId);
+                    }
+                }
+            }
+
+            // Remove from chat session connections
+            for (const [sessionToken, connections] of chatSessionConnections.entries()) {
+                if (connections.has(socket.id)) {
+                    connections.delete(socket.id);
+                    if (connections.size === 0) {
+                        chatSessionConnections.delete(sessionToken);
+                    }
+                }
+            }
+
+            // Remove from org chat connections
+            for (const [orgId, connections] of orgChatConnections.entries()) {
+                if (connections.has(socket.id)) {
+                    connections.delete(socket.id);
+                    if (connections.size === 0) {
+                        orgChatConnections.delete(orgId);
                     }
                 }
             }

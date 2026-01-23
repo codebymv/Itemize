@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
@@ -18,28 +18,37 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AppShell from "@/components/AppShell";
 
-// Pages
+// Pages - Static imports for critical/frequently used pages
 import Home from "./pages/Home";
-import UserHome from "./pages/UserHome";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
-import DocsPage from "./pages/DocsPage";
-import StatusPage from "./pages/StatusPage";
-import SharedListPage from "./pages/SharedListPage";
-import SharedNotePage from "./pages/SharedNotePage";
-import SharedWhiteboardPage from "./pages/SharedWhiteboardPage";
-import CanvasPage from "./pages/canvas";
-import DashboardPage from "./pages/DashboardPage";
-import SettingsPage from "./pages/SettingsPage";
-import ContactsPage from "./pages/contacts/ContactsPage";
-import ContactDetailPage from "./pages/contacts/ContactDetailPage";
-import PipelinesPage from "./pages/pipelines/PipelinesPage";
-import { AutomationsPage } from "./pages/automations";
-import WorkflowBuilderPage from "./pages/automations/WorkflowBuilderPage";
-import CalendarsPage from "./pages/calendars/CalendarsPage";
-import BookingsPage from "./pages/bookings/BookingsPage";
-import FormsPage from "./pages/forms/FormsPage";
-import InboxPage from "./pages/inbox/InboxPage";
+
+// Pages - Lazy loaded for code splitting (reduces initial bundle size)
+const UserHome = React.lazy(() => import("./pages/UserHome"));
+const DocsPage = React.lazy(() => import("./pages/DocsPage"));
+const StatusPage = React.lazy(() => import("./pages/StatusPage"));
+const SharedListPage = React.lazy(() => import("./pages/SharedListPage"));
+const SharedNotePage = React.lazy(() => import("./pages/SharedNotePage"));
+const SharedWhiteboardPage = React.lazy(() => import("./pages/SharedWhiteboardPage"));
+const CanvasPage = React.lazy(() => import("./pages/canvas"));
+const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
+const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
+const ContactsPage = React.lazy(() => import("./pages/contacts/ContactsPage"));
+const ContactDetailPage = React.lazy(() => import("./pages/contacts/ContactDetailPage"));
+const PipelinesPage = React.lazy(() => import("./pages/pipelines/PipelinesPage"));
+const AutomationsPage = React.lazy(() => import("./pages/automations").then(m => ({ default: m.AutomationsPage })));
+const WorkflowBuilderPage = React.lazy(() => import("./pages/automations/WorkflowBuilderPage"));
+const CalendarsPage = React.lazy(() => import("./pages/calendars/CalendarsPage"));
+const BookingsPage = React.lazy(() => import("./pages/bookings/BookingsPage"));
+const FormsPage = React.lazy(() => import("./pages/forms/FormsPage"));
+const InboxPage = React.lazy(() => import("./pages/inbox/InboxPage"));
+
+// Loading fallback component for lazy-loaded pages
+const PageLoading = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+  </div>
+);
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -173,7 +182,9 @@ const App = () => (
                 }}
               >
                 <ErrorBoundary>
-                  <AppContent />
+                  <Suspense fallback={<PageLoading />}>
+                    <AppContent />
+                  </Suspense>
                 </ErrorBoundary>
               </BrowserRouter>
             </AISuggestProvider>

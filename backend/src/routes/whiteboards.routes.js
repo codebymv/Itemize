@@ -13,16 +13,70 @@ const router = express.Router();
  */
 module.exports = (pool, authenticateJWT, broadcast) => {
 
-    // Get all whiteboards for the current user
+    // Get all whiteboards for the current user with pagination
     router.get('/whiteboards', authenticateJWT, async (req, res) => {
         try {
+            const { 
+                page = 1, 
+                limit = 50, 
+                category,
+                search 
+            } = req.query;
+            
+            const pageNum = Math.max(1, parseInt(page));
+            const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+            const offset = (pageNum - 1) * limitNum;
+
             const client = await pool.connect();
-            const result = await client.query(
-                'SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at, share_token, is_public, shared_at FROM whiteboards WHERE user_id = $1 ORDER BY created_at DESC',
-                [req.user.id]
-            );
-            client.release();
-            res.json(result.rows);
+            
+            try {
+                // Build query with optional filters
+                let whereClause = 'WHERE user_id = $1';
+                const params = [req.user.id];
+                let paramIndex = 2;
+
+                if (category) {
+                    whereClause += ` AND category = $${paramIndex}`;
+                    params.push(category);
+                    paramIndex++;
+                }
+
+                if (search) {
+                    whereClause += ` AND title ILIKE $${paramIndex}`;
+                    params.push(`%${search}%`);
+                    paramIndex++;
+                }
+
+                // Get total count
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM whiteboards ${whereClause}`,
+                    params
+                );
+                const total = parseInt(countResult.rows[0].count);
+
+                // Get paginated results
+                const result = await client.query(
+                    `SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at, share_token, is_public, shared_at 
+                     FROM whiteboards ${whereClause} 
+                     ORDER BY updated_at DESC 
+                     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+                    [...params, limitNum, offset]
+                );
+
+                res.json({
+                    whiteboards: result.rows,
+                    pagination: {
+                        page: pageNum,
+                        limit: limitNum,
+                        total,
+                        totalPages: Math.ceil(total / limitNum),
+                        hasNext: pageNum * limitNum < total,
+                        hasPrev: pageNum > 1
+                    }
+                });
+            } finally {
+                client.release();
+            }
         } catch (error) {
             console.error('Error fetching whiteboards:', error);
             res.status(500).json({ error: 'Internal server error while fetching whiteboards' });

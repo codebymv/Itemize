@@ -18,6 +18,36 @@ const { runAllFormsMigrations } = require('./db_forms_migrations');
 // Import Inbox migrations
 const { runAllInboxMigrations } = require('./db_inbox_migrations');
 
+// Import SMS migrations
+const { runAllSmsMigrations } = require('./db_sms_migrations');
+
+// Import Chat Widget migrations
+const { runAllChatWidgetMigrations } = require('./db_chat_widget_migrations');
+
+// Import Email Campaign migrations
+const { runAllCampaignMigrations } = require('./db_campaign_migrations');
+
+// Import Segments migrations
+const { runAllSegmentMigrations } = require('./db_segments_migrations');
+
+// Import Invoicing migrations
+const { runAllInvoicingMigrations } = require('./db_invoicing_migrations');
+
+// Import Reputation migrations
+const { runAllReputationMigrations } = require('./db_reputation_migrations');
+
+// Import Social migrations
+const { runAllSocialMigrations } = require('./db_social_migrations');
+
+// Import Pages migrations
+const { runAllPagesMigrations } = require('./db_pages_migrations');
+
+// Import Index migrations (performance optimization)
+const { runAllIndexMigrations } = require('./db_indexes_migrations');
+
+// Import Normalization migrations (schema improvements)
+const { runAllNormalizationMigrations } = require('./db_normalization_migrations');
+
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
 const inMemoryLists = [];
@@ -303,6 +333,88 @@ const initializeDatabase = async (pool) => {
       await runAllInboxMigrations(pool);
     } catch (inboxError) {
       console.error('⚠️ Inbox migrations failed, continuing without inbox features:', inboxError.message);
+    }
+
+    // Run SMS migrations
+    try {
+      await runAllSmsMigrations(pool);
+    } catch (smsError) {
+      console.error('⚠️ SMS migrations failed, continuing without SMS features:', smsError.message);
+    }
+
+    // Run Chat Widget migrations
+    try {
+      await runAllChatWidgetMigrations(pool);
+    } catch (chatError) {
+      console.error('⚠️ Chat Widget migrations failed, continuing without chat widget features:', chatError.message);
+    }
+
+    // Run Email Campaign migrations
+    try {
+      await runAllCampaignMigrations(pool);
+    } catch (campaignError) {
+      console.error('⚠️ Email Campaign migrations failed, continuing without campaign features:', campaignError.message);
+    }
+
+    // Run Segments migrations
+    try {
+      await runAllSegmentMigrations(pool);
+    } catch (segmentError) {
+      console.error('⚠️ Segment migrations failed, continuing without segment features:', segmentError.message);
+    }
+
+    // Run Invoicing migrations
+    try {
+      await runAllInvoicingMigrations(pool);
+    } catch (invoicingError) {
+      console.error('⚠️ Invoicing migrations failed, continuing without invoicing features:', invoicingError.message);
+    }
+
+    // Run Reputation migrations
+    try {
+      await runAllReputationMigrations(pool);
+    } catch (reputationError) {
+      console.error('⚠️ Reputation migrations failed, continuing without reputation features:', reputationError.message);
+    }
+
+    // Run Social migrations
+    try {
+      await runAllSocialMigrations(pool);
+      
+      // Create oauth_states table for OAuth flow
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS oauth_states (
+          state VARCHAR(100) PRIMARY KEY,
+          organization_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          provider VARCHAR(50) NOT NULL,
+          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (socialError) {
+      console.error('⚠️ Social migrations failed, continuing without social features:', socialError.message);
+    }
+
+    // Run Pages migrations
+    try {
+      await runAllPagesMigrations(pool);
+    } catch (pagesError) {
+      console.error('⚠️ Pages migrations failed, continuing without pages features:', pagesError.message);
+    }
+
+    // Run Index migrations (performance optimization - run last after all tables exist)
+    try {
+      await runAllIndexMigrations(pool);
+    } catch (indexError) {
+      console.error('⚠️ Index migrations failed, performance may be degraded:', indexError.message);
+    }
+
+    // Run Normalization migrations (schema improvements)
+    try {
+      await runAllNormalizationMigrations(pool);
+    } catch (normError) {
+      console.error('⚠️ Normalization migrations failed:', normError.message);
     }
 
     console.log('Database initialized successfully');

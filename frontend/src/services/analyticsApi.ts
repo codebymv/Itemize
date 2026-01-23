@@ -103,6 +103,138 @@ export interface BookingSummary {
     completionRate: number;
 }
 
+export interface ConversionRates {
+    period: string;
+    conversions: {
+        leadToCustomer: {
+            rate: number;
+            leads: number;
+            customers: number;
+            total: number;
+        };
+        dealWinRate: {
+            rate: number;
+            won: number;
+            lost: number;
+            totalClosed: number;
+            wonValue: number;
+            lostValue: number;
+        };
+        formToContact: {
+            rate: number;
+            submissions: number;
+            converted: number;
+        };
+        pipelines: Array<{
+            pipelineName: string;
+            stages: any[];
+            stageCounts: Record<string, number>;
+        }>;
+    };
+}
+
+export interface RevenueTrend {
+    period: string;
+    dealsWon: number;
+    revenue: number;
+    cumulativeRevenue: number;
+}
+
+export interface RevenueTrends {
+    period: string;
+    data: RevenueTrend[];
+    summary: {
+        totalRevenue: number;
+        totalDeals: number;
+        avgDealValue: number;
+        growthRate: number;
+    };
+}
+
+export interface PipelineVelocityStage {
+    stageId: string;
+    stageName: string;
+    stageColor: string;
+    stageOrder: number;
+    dealCount: number;
+    totalValue: number;
+    avgAgeDays: number;
+    isBottleneck: boolean;
+}
+
+export interface PipelineVelocity {
+    pipeline: {
+        id: number;
+        name: string;
+    } | null;
+    velocity: PipelineVelocityStage[];
+    summary: {
+        avgDaysToWin: number;
+        avgDaysToLose: number;
+        avgWonValue: number;
+        openDeals: number;
+        wonDeals: number;
+        lostDeals: number;
+        winRate: number;
+    };
+}
+
+export interface CommunicationStats {
+    period: string;
+    email: {
+        total: number;
+        sent: number;
+        delivered: number;
+        opened: number;
+        clicked: number;
+        bounced: number;
+        failed: number;
+        rates: {
+            delivery: number;
+            open: number;
+            click: number;
+        };
+    };
+    sms: {
+        total: number;
+        outbound: number;
+        inbound: number;
+        sent: number;
+        delivered: number;
+        failed: number;
+        segments: number;
+        rates: {
+            delivery: number;
+        };
+    };
+}
+
+export interface WorkflowPerformance {
+    workflows: Array<{
+        id: number;
+        name: string;
+        triggerType: string;
+        isActive: boolean;
+        enrollments: {
+            total: number;
+            completed: number;
+            active: number;
+            failed: number;
+        };
+        completionRate: number;
+        stats: any;
+    }>;
+    summary: {
+        totalWorkflows: number;
+        activeWorkflows: number;
+        totalEnrollments: number;
+        completedEnrollments: number;
+        activeEnrollments: number;
+        failedEnrollments: number;
+        overallCompletionRate: number;
+    };
+}
+
 // ======================
 // API Functions
 // ======================
@@ -155,9 +287,80 @@ export const getBookingSummary = async (organizationId?: number): Promise<Bookin
     return response.data;
 };
 
+/**
+ * Get conversion rate metrics
+ */
+export const getConversionRates = async (
+    period: '7days' | '30days' | '90days' | '12months' = '30days',
+    organizationId?: number
+): Promise<ConversionRates> => {
+    const response = await api.get('/api/analytics/conversion-rates', {
+        params: { period },
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+/**
+ * Get revenue trends over time
+ */
+export const getRevenueTrends = async (
+    period: '30days' | '6months' | '12months' = '6months',
+    organizationId?: number
+): Promise<RevenueTrends> => {
+    const response = await api.get('/api/analytics/revenue-trends', {
+        params: { period },
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+/**
+ * Get pipeline velocity metrics
+ */
+export const getPipelineVelocity = async (
+    pipelineId?: number,
+    organizationId?: number
+): Promise<PipelineVelocity> => {
+    const response = await api.get('/api/analytics/pipeline-velocity', {
+        params: pipelineId ? { pipeline_id: pipelineId } : {},
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+/**
+ * Get communication (email/SMS) statistics
+ */
+export const getCommunicationStats = async (
+    period: '7days' | '30days' | '90days' = '30days',
+    organizationId?: number
+): Promise<CommunicationStats> => {
+    const response = await api.get('/api/analytics/communication-stats', {
+        params: { period },
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+/**
+ * Get workflow performance metrics
+ */
+export const getWorkflowPerformance = async (organizationId?: number): Promise<WorkflowPerformance> => {
+    const response = await api.get('/api/analytics/workflow-performance', {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
 export default {
     getDashboardAnalytics,
     getContactTrends,
     getDealPerformance,
     getBookingSummary,
+    getConversionRates,
+    getRevenueTrends,
+    getPipelineVelocity,
+    getCommunicationStats,
+    getWorkflowPerformance,
 };

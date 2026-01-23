@@ -706,7 +706,7 @@ module.exports = (pool, authenticateJWT) => {
     }
   });
 
-  // Import contacts from CSV
+  // Import contacts from CSV - Optimized bulk import
   router.post('/import/csv', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { contacts: importData, skipDuplicates = true } = req.body;
@@ -722,71 +722,124 @@ module.exports = (pool, authenticateJWT) => {
         errors: []
       };
 
-      for (let i = 0; i < importData.length; i++) {
-        const row = importData[i];
-        
-        try {
-          // Check for duplicate email if skipDuplicates is enabled
-          if (skipDuplicates && row.email) {
-            const existingContact = await client.query(
-              'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
-              [req.organizationId, row.email]
-            );
+      try {
+        await client.query('BEGIN');
 
-            if (existingContact.rows.length > 0) {
+        // Step 1: Get all existing emails in one query (bulk duplicate check)
+        let existingEmails = new Set();
+        if (skipDuplicates) {
+          const emails = importData
+            .map(row => row.email)
+            .filter(Boolean);
+          
+          if (emails.length > 0) {
+            const existingResult = await client.query(
+              'SELECT email FROM contacts WHERE organization_id = $1 AND email = ANY($2::text[])',
+              [req.organizationId, emails]
+            );
+            existingEmails = new Set(existingResult.rows.map(r => r.email.toLowerCase()));
+          }
+        }
+
+        // Step 2: Prepare contacts for bulk insert
+        const contactsToInsert = [];
+        const BATCH_SIZE = 500; // Process in batches to avoid query size limits
+
+        for (let i = 0; i < importData.length; i++) {
+          const row = importData[i];
+          
+          try {
+            // Skip duplicates based on pre-fetched data
+            if (skipDuplicates && row.email && existingEmails.has(row.email.toLowerCase())) {
               results.skipped++;
               continue;
             }
-          }
 
-          // Parse tags if it's a string
-          let tags = [];
-          if (row.tags) {
-            if (typeof row.tags === 'string') {
-              tags = row.tags.split(';').map(t => t.trim()).filter(Boolean);
-            } else if (Array.isArray(row.tags)) {
-              tags = row.tags;
+            // Parse tags
+            let tags = [];
+            if (row.tags) {
+              if (typeof row.tags === 'string') {
+                tags = row.tags.split(';').map(t => t.trim()).filter(Boolean);
+              } else if (Array.isArray(row.tags)) {
+                tags = row.tags;
+              }
             }
-          }
 
-          // Build address object
-          const address = {};
-          if (row.street) address.street = row.street;
-          if (row.city) address.city = row.city;
-          if (row.state) address.state = row.state;
-          if (row.zip) address.zip = row.zip;
-          if (row.country) address.country = row.country;
+            // Build address object
+            const address = {};
+            if (row.street) address.street = row.street;
+            if (row.city) address.city = row.city;
+            if (row.state) address.state = row.state;
+            if (row.zip) address.zip = row.zip;
+            if (row.country) address.country = row.country;
+
+            contactsToInsert.push({
+              first_name: row.first_name || row.firstName || null,
+              last_name: row.last_name || row.lastName || null,
+              email: row.email || null,
+              phone: row.phone || null,
+              company: row.company || null,
+              job_title: row.job_title || row.jobTitle || null,
+              address: JSON.stringify(address),
+              status: row.status || 'active',
+              tags: tags,
+              rowIndex: i
+            });
+          } catch (rowError) {
+            results.errors.push({
+              row: i + 1,
+              error: rowError.message
+            });
+          }
+        }
+
+        // Step 3: Bulk insert in batches
+        for (let batchStart = 0; batchStart < contactsToInsert.length; batchStart += BATCH_SIZE) {
+          const batch = contactsToInsert.slice(batchStart, batchStart + BATCH_SIZE);
+          
+          if (batch.length === 0) continue;
+
+          // Build bulk insert query
+          const values = [];
+          const placeholders = [];
+          let paramIndex = 1;
+
+          for (const contact of batch) {
+            placeholders.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            values.push(
+              req.organizationId,
+              contact.first_name,
+              contact.last_name,
+              contact.email,
+              contact.phone,
+              contact.company,
+              contact.job_title,
+              contact.address,
+              'import',
+              contact.status,
+              contact.tags,
+              req.user.id
+            );
+          }
 
           await client.query(`
             INSERT INTO contacts (
               organization_id, first_name, last_name, email, phone,
               company, job_title, address, source, status, tags, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-          `, [
-            req.organizationId,
-            row.first_name || row.firstName || null,
-            row.last_name || row.lastName || null,
-            row.email || null,
-            row.phone || null,
-            row.company || null,
-            row.job_title || row.jobTitle || null,
-            JSON.stringify(address),
-            'import',
-            row.status || 'active',
-            tags,
-            req.user.id
-          ]);
+            ) VALUES ${placeholders.join(', ')}
+          `, values);
 
-          results.imported++;
-        } catch (rowError) {
-          results.errors.push({
-            row: i + 1,
-            error: rowError.message
-          });
+          results.imported += batch.length;
         }
+
+        await client.query('COMMIT');
+      } catch (txError) {
+        await client.query('ROLLBACK');
+        throw txError;
+      } finally {
+        client.release();
       }
 
-      client.release();
       res.json({
         message: `Import completed: ${results.imported} imported, ${results.skipped} skipped`,
         ...results

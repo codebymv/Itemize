@@ -11,6 +11,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
@@ -27,6 +28,7 @@ console.log(`DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'not set'
 
 // Basic middleware
 app.use(express.json());
+app.use(cookieParser()); // Parse cookies for httpOnly auth tokens
 app.use(helmet());
 app.use(morgan('combined'));
 
@@ -81,11 +83,8 @@ app.get('/api/health', (req, res) => {
 const docsRoutes = require('./routes/docs');
 app.use('/docs', docsRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Error:', err.message);
-    res.status(500).json({ error: 'Something went wrong!' });
-});
+// Import structured error handling
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 // Create HTTP server and Socket.IO
 const server = createServer(app);
@@ -206,6 +205,46 @@ setTimeout(async () => {
         const workflowsRoutes = require('./routes/workflows.routes');
         app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));
         console.log('✅ Workflows routes initialized');
+
+        // SMS Templates routes (SMS/Twilio)
+        const smsTemplatesRoutes = require('./routes/sms-templates.routes');
+        app.use('/api/sms-templates', smsTemplatesRoutes(pool, authenticateJWT, publicRateLimit));
+        console.log('✅ SMS Templates routes initialized');
+
+        // Chat Widget routes (Live Chat)
+        const chatWidgetRoutes = require('./routes/chat-widget.routes');
+        app.use('/api/chat-widget', chatWidgetRoutes(pool, authenticateJWT, publicRateLimit, io));
+        console.log('✅ Chat Widget routes initialized');
+
+        // Email Campaigns routes
+        const campaignsRoutes = require('./routes/campaigns.routes');
+        app.use('/api/campaigns', campaignsRoutes(pool, authenticateJWT));
+        console.log('✅ Email Campaigns routes initialized');
+
+        // Segments routes
+        const segmentsRoutes = require('./routes/segments.routes');
+        app.use('/api/segments', segmentsRoutes(pool, authenticateJWT));
+        console.log('✅ Segments routes initialized');
+
+        // Invoicing routes
+        const invoicesRoutes = require('./routes/invoices.routes');
+        app.use('/api/invoices', invoicesRoutes(pool, authenticateJWT, publicRateLimit));
+        console.log('✅ Invoicing routes initialized');
+
+        // Reputation Management routes
+        const reputationRoutes = require('./routes/reputation.routes');
+        app.use('/api/reputation', reputationRoutes(pool, authenticateJWT, publicRateLimit));
+        console.log('✅ Reputation Management routes initialized');
+
+        // Social Media Integration routes
+        const socialRoutes = require('./routes/social.routes');
+        app.use('/api/social', socialRoutes(pool, authenticateJWT, publicRateLimit, io));
+        console.log('✅ Social Media Integration routes initialized');
+
+        // Landing Pages routes
+        const pagesRoutes = require('./routes/pages.routes');
+        app.use('/api/pages', pagesRoutes(pool, authenticateJWT, publicRateLimit));
+        console.log('✅ Landing Pages routes initialized');
 
         // Calendars routes (Appointments)
         const calendarsRoutes = require('./routes/calendars.routes');
@@ -329,6 +368,13 @@ setTimeout(async () => {
 
         console.log('✅ Status endpoint initialized');
         console.log('✅ All API routes registered');
+
+        // 404 handler for undefined API routes
+        app.use('/api/*', notFoundHandler);
+        
+        // Structured error handling middleware (must be after all routes)
+        app.use(errorHandler);
+        console.log('✅ Error handling middleware initialized');
 
     } catch (dbError) {
         console.error('Database connection error:', dbError.message);

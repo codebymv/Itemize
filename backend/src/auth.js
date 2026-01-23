@@ -1,13 +1,43 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { userOperations } = require('./db');
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// CRITICAL: JWT_SECRET must be set - no fallback allowed
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    throw new Error('JWT_SECRET environment variable is required. Please set it in your .env file.');
+}
+
+// Strict rate limiting for authentication endpoints (5 attempts per 15 minutes)
+const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per window
+    message: { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use IP + email if available for more precise limiting
+        const email = req.body?.email || '';
+        return `${req.ip}-${email}`;
+    }
+});
+
+// Cookie configuration for httpOnly secure cookies
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+  path: '/',
+};
 
 // Error handler wrapper
 const asyncHandler = fn => (req, res, next) => {
@@ -24,8 +54,9 @@ const generateTokens = (userId) => {
 /**
  * Handle Google OAuth login endpoint using direct token-based approach
  * This endpoint receives user data from Google directly from the frontend
+ * Protected by strict rate limiting to prevent brute force attacks
  */
-router.post('/google-login', asyncHandler(async (req, res) => {
+router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
   try {
     const { googleId, email, name } = req.body;
     
@@ -75,9 +106,12 @@ router.post('/google-login', asyncHandler(async (req, res) => {
       { expiresIn: '7d' }
     );
     
-    // Return the user data and token
+    // Set httpOnly cookie for secure token storage
+    res.cookie('itemize_auth', token, COOKIE_OPTIONS);
+    
+    // Return the user data (token still included for backward compatibility)
     res.status(200).json({
-      token,
+      token, // Keep for backward compatibility during transition
       user: {
         uid: user.id, // Use uid to match frontend expected format
         email: user.email,
@@ -93,8 +127,9 @@ router.post('/google-login', asyncHandler(async (req, res) => {
 
 /**
  * Handle Google ID token verification endpoint for Google One Tap
+ * Protected by strict rate limiting to prevent brute force attacks
  */
-router.post('/google-credential', asyncHandler(async (req, res) => {
+router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) => {
   try {
     const { credential } = req.body;
     
@@ -147,8 +182,11 @@ router.post('/google-credential', asyncHandler(async (req, res) => {
       { expiresIn: '7d' }
     );
     
+    // Set httpOnly cookie for secure token storage
+    res.cookie('itemize_auth', token, COOKIE_OPTIONS);
+    
     res.status(200).json({
-      token,
+      token, // Keep for backward compatibility during transition
       user: {
         uid: user.id,
         email: user.email,
@@ -166,20 +204,31 @@ router.post('/google-credential', asyncHandler(async (req, res) => {
  * Logout endpoint
  */
 router.post('/logout', (req, res) => {
-  // We don't need to do much here since we're using stateless JWT
-  // The frontend will remove the token from storage
+  // Clear the httpOnly cookie by setting it with an expired date
+  res.cookie('itemize_auth', '', {
+    ...COOKIE_OPTIONS,
+    maxAge: 0, // Expire immediately
+  });
   res.status(200).json({ message: 'Logged out successfully' });
 });
 
 /**
  * Middleware to authenticate JWT
+ * Reads token from httpOnly cookie first, falls back to Authorization header
  */
 const authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  // Try to get token from httpOnly cookie first (more secure)
+  let token = req.cookies?.itemize_auth;
+  
+  // Fall back to Authorization header for backward compatibility
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+  }
 
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
-
+  if (token) {
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) {
         return res.sendStatus(403);

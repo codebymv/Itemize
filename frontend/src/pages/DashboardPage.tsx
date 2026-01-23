@@ -23,8 +23,23 @@ import {
     Clock,
     AlertCircle,
     CalendarDays,
+    Target,
+    Mail,
+    Phone,
+    Workflow,
+    BarChart3,
+    PieChart,
 } from 'lucide-react';
-import { getDashboardAnalytics, type DashboardAnalytics } from '@/services/analyticsApi';
+import { 
+    getDashboardAnalytics, 
+    getConversionRates,
+    getCommunicationStats,
+    getPipelineVelocity,
+    type DashboardAnalytics,
+    type ConversionRates,
+    type CommunicationStats,
+    type PipelineVelocity,
+} from '@/services/analyticsApi';
 
 interface QuickAction {
     title: string;
@@ -150,6 +165,184 @@ function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalytics['dea
     );
 }
 
+function ConversionRateCard({ 
+    title, 
+    rate, 
+    numerator, 
+    denominator, 
+    icon: Icon, 
+    color = 'text-green-600',
+    isLoading 
+}: { 
+    title: string;
+    rate: number;
+    numerator: number;
+    denominator: number;
+    icon: LucideIcon;
+    color?: string;
+    isLoading?: boolean;
+}) {
+    if (isLoading) {
+        return (
+            <div className="p-4 bg-muted/30 rounded-lg">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-20" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+                <Icon className={`h-4 w-4 ${color}`} />
+                <span className="text-sm font-medium text-muted-foreground">{title}</span>
+            </div>
+            <div className="text-2xl font-bold">{rate}%</div>
+            <div className="text-xs text-muted-foreground">
+                {numerator} of {denominator}
+            </div>
+        </div>
+    );
+}
+
+function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationStats; isLoading?: boolean }) {
+    if (isLoading) {
+        return (
+            <div className="space-y-4">
+                <Skeleton className="h-20" />
+                <Skeleton className="h-20" />
+            </div>
+        );
+    }
+
+    if (!stats) {
+        return (
+            <div className="text-center text-muted-foreground py-8">
+                No communication data available
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            {/* Email Stats */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium">Email</span>
+                    <span className="text-sm text-muted-foreground ml-auto">{stats.email.total} total</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div className="text-lg font-bold text-blue-600">{stats.email.rates.delivery}%</div>
+                        <div className="text-xs text-muted-foreground">Delivered</div>
+                    </div>
+                    <div>
+                        <div className="text-lg font-bold text-green-600">{stats.email.rates.open}%</div>
+                        <div className="text-xs text-muted-foreground">Opened</div>
+                    </div>
+                    <div>
+                        <div className="text-lg font-bold text-purple-600">{stats.email.rates.click}%</div>
+                        <div className="text-xs text-muted-foreground">Clicked</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* SMS Stats */}
+            <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                    <Phone className="h-4 w-4 text-green-600" />
+                    <span className="font-medium">SMS</span>
+                    <span className="text-sm text-muted-foreground ml-auto">{stats.sms.total} total</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div className="text-lg font-bold text-green-600">{stats.sms.rates.delivery}%</div>
+                        <div className="text-xs text-muted-foreground">Delivered</div>
+                    </div>
+                    <div>
+                        <div className="text-lg font-bold">{stats.sms.outbound}</div>
+                        <div className="text-xs text-muted-foreground">Outbound</div>
+                    </div>
+                    <div>
+                        <div className="text-lg font-bold">{stats.sms.inbound}</div>
+                        <div className="text-xs text-muted-foreground">Inbound</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PipelineVelocityCard({ velocity, isLoading }: { velocity?: PipelineVelocity; isLoading?: boolean }) {
+    if (isLoading) {
+        return (
+            <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 flex-1" />
+                        <Skeleton className="h-4 w-16" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    if (!velocity?.velocity || velocity.velocity.length === 0) {
+        return (
+            <div className="text-center text-muted-foreground py-8">
+                No pipeline data available
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            {velocity.velocity.map((stage) => (
+                <div key={stage.stageId} className="flex items-center gap-3">
+                    <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: stage.stageColor }}
+                    />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium truncate">{stage.stageName}</span>
+                            <div className="flex items-center gap-2">
+                                {stage.isBottleneck && (
+                                    <span className="text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded">
+                                        Bottleneck
+                                    </span>
+                                )}
+                                <span className="text-sm text-muted-foreground">
+                                    {stage.dealCount} deal{stage.dealCount !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Avg {stage.avgAgeDays} days</span>
+                            <span>${stage.totalValue.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+            ))}
+            {velocity.summary && (
+                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div className="text-lg font-bold text-green-600">{velocity.summary.avgDaysToWin}</div>
+                        <div className="text-xs text-muted-foreground">Avg days to win</div>
+                    </div>
+                    <div>
+                        <div className="text-lg font-bold">{velocity.summary.winRate}%</div>
+                        <div className="text-xs text-muted-foreground">Win rate</div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function RecentActivityList({ activities, isLoading }: { activities: DashboardAnalytics['recentActivity']; isLoading?: boolean }) {
     if (isLoading) {
         return (
@@ -226,6 +419,30 @@ export function DashboardPage() {
         queryKey: ['dashboardAnalytics'],
         queryFn: () => getDashboardAnalytics(),
         staleTime: 1000 * 60 * 5, // 5 minutes
+        refetchOnWindowFocus: false,
+    });
+
+    // Fetch conversion rates
+    const { data: conversionData, isLoading: conversionLoading } = useQuery({
+        queryKey: ['conversionRates'],
+        queryFn: () => getConversionRates('30days'),
+        staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
+    });
+
+    // Fetch communication stats
+    const { data: commStats, isLoading: commLoading } = useQuery({
+        queryKey: ['communicationStats'],
+        queryFn: () => getCommunicationStats('30days'),
+        staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
+    });
+
+    // Fetch pipeline velocity
+    const { data: velocityData, isLoading: velocityLoading } = useQuery({
+        queryKey: ['pipelineVelocity'],
+        queryFn: () => getPipelineVelocity(),
+        staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,
     });
 
@@ -417,6 +634,117 @@ export function DashboardPage() {
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* Conversion Rates & Communication Stats */}
+                    <div className="grid gap-6 md:grid-cols-2 mb-8">
+                        {/* Conversion Rates */}
+                        <Card className="bg-muted/10">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Target className="h-4 w-4" />
+                                        Conversion Rates
+                                    </CardTitle>
+                                    <span className="text-xs text-muted-foreground">Last 30 days</span>
+                                </div>
+                                <CardDescription>Key conversion metrics</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <ConversionRateCard
+                                        title="Lead → Customer"
+                                        rate={conversionData?.conversions.leadToCustomer.rate ?? 0}
+                                        numerator={conversionData?.conversions.leadToCustomer.customers ?? 0}
+                                        denominator={conversionData?.conversions.leadToCustomer.total ?? 0}
+                                        icon={Users}
+                                        color="text-blue-600"
+                                        isLoading={conversionLoading}
+                                    />
+                                    <ConversionRateCard
+                                        title="Deal Win Rate"
+                                        rate={conversionData?.conversions.dealWinRate.rate ?? 0}
+                                        numerator={conversionData?.conversions.dealWinRate.won ?? 0}
+                                        denominator={conversionData?.conversions.dealWinRate.totalClosed ?? 0}
+                                        icon={TrendingUp}
+                                        color="text-green-600"
+                                        isLoading={conversionLoading}
+                                    />
+                                    <ConversionRateCard
+                                        title="Form → Contact"
+                                        rate={conversionData?.conversions.formToContact.rate ?? 0}
+                                        numerator={conversionData?.conversions.formToContact.converted ?? 0}
+                                        denominator={conversionData?.conversions.formToContact.submissions ?? 0}
+                                        icon={CheckSquare}
+                                        color="text-purple-600"
+                                        isLoading={conversionLoading}
+                                    />
+                                    <div className="p-4 bg-muted/30 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <DollarSign className="h-4 w-4 text-green-600" />
+                                            <span className="text-sm font-medium text-muted-foreground">Won Value</span>
+                                        </div>
+                                        <div className="text-2xl font-bold">
+                                            ${(conversionData?.conversions.dealWinRate.wonValue ?? 0).toLocaleString()}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Lost: ${(conversionData?.conversions.dealWinRate.lostValue ?? 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Communication Stats */}
+                        <Card className="bg-muted/10">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Mail className="h-4 w-4" />
+                                        Communication
+                                    </CardTitle>
+                                    <span className="text-xs text-muted-foreground">Last 30 days</span>
+                                </div>
+                                <CardDescription>Email and SMS performance</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <CommunicationStatsCard 
+                                    stats={commStats} 
+                                    isLoading={commLoading} 
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Pipeline Velocity */}
+                    <Card className="bg-muted/10 mb-8">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <BarChart3 className="h-4 w-4" />
+                                        Pipeline Velocity
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {velocityData?.pipeline?.name || 'Default Pipeline'} - Deal flow analysis
+                                    </CardDescription>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigate('/pipelines')}
+                                    className="text-xs"
+                                >
+                                    View Details <ArrowRight className="h-3 w-3 ml-1" />
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <PipelineVelocityCard 
+                                velocity={velocityData} 
+                                isLoading={velocityLoading} 
+                            />
+                        </CardContent>
+                    </Card>
 
                     {/* Quick Actions */}
                     <div className="mb-8">

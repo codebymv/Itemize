@@ -94,14 +94,9 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    // Automatically inject authentication token if available
-    const token = localStorage.getItem('itemize_token');
-    if (token && !config.headers?.Authorization) {
-      if (!config.headers) {
-        config.headers = new AxiosHeaders();
-      }
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Authentication is now handled via httpOnly cookies
+    // which are automatically sent with `withCredentials: true`
+    // No need to manually inject Authorization header
 
     return config;
   },
@@ -118,8 +113,7 @@ api.interceptors.response.use(
     
     // Handle 401 unauthorized
     if (error.response?.status === 401) {
-      // Clear auth data on unauthorized - simple approach like Prototype2
-      localStorage.removeItem('itemize_token');
+      // Clear user data on unauthorized (token is in httpOnly cookie, cleared by backend)
       localStorage.removeItem('itemize_user');
       localStorage.removeItem('itemize_expiry');
       return Promise.reject(error);

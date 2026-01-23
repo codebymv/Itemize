@@ -4,6 +4,7 @@
  */
 
 const emailService = require('./emailService');
+const smsService = require('./smsService');
 
 class AutomationEngine {
   constructor(pool) {
@@ -310,6 +311,9 @@ class AutomationEngine {
       case 'move_deal':
         return this.executeMoveDeal(client, enrollment, config);
 
+      case 'send_sms':
+        return this.executeSendSms(client, enrollment, contact, config);
+
       default:
         return { success: false, error: `Unknown step type: ${step.step_type}` };
     }
@@ -369,6 +373,80 @@ class AutomationEngine {
         success: sendResult.success || sendResult.simulated, 
         error: sendResult.error,
         emailId: sendResult.id,
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Execute send SMS step
+   */
+  async executeSendSms(client, enrollment, contact, config) {
+    if (!contact.phone) {
+      return { success: false, error: 'Contact has no phone number' };
+    }
+
+    // Either template_id or message is required
+    if (!config.template_id && !config.message) {
+      return { success: false, error: 'No template_id or message specified' };
+    }
+
+    try {
+      let message;
+      let templateId = null;
+
+      // If using template, fetch and process it
+      if (config.template_id) {
+        const templateResult = await client.query(
+          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+          [config.template_id, enrollment.organization_id]
+        );
+
+        if (templateResult.rows.length === 0) {
+          return { success: false, error: 'SMS template not found' };
+        }
+
+        const template = templateResult.rows[0];
+        templateId = template.id;
+        message = smsService.replaceVariables(template.message, contact);
+      } else {
+        // Use direct message from config
+        message = smsService.replaceVariables(config.message, contact);
+      }
+
+      // Get message info for logging
+      const messageInfo = smsService.getMessageInfo(message);
+
+      // Send SMS
+      const sendResult = await smsService.sendSms({
+        to: contact.phone,
+        message,
+      });
+
+      // Log SMS to database
+      await client.query(
+        `INSERT INTO sms_logs 
+          (organization_id, contact_id, template_id, workflow_enrollment_id, to_phone, from_phone, message, direction, status, external_id, segments)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'outbound', $8, $9, $10)`,
+        [
+          enrollment.organization_id,
+          contact.id,
+          templateId,
+          enrollment.id,
+          smsService.normalizePhoneNumber(contact.phone),
+          process.env.TWILIO_PHONE_NUMBER || null,
+          message,
+          sendResult.success ? 'sent' : 'failed',
+          sendResult.id || null,
+          messageInfo.segments,
+        ]
+      );
+
+      return { 
+        success: sendResult.success || sendResult.simulated, 
+        error: sendResult.error,
+        smsId: sendResult.id,
       };
     } catch (error) {
       return { success: false, error: error.message };

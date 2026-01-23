@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { format, parseISO } from 'date-fns';
-import { Search, Inbox, MessageSquare, MoreHorizontal, X, Check, User, Clock, Archive } from 'lucide-react';
+import { Search, Inbox, MessageSquare, MoreHorizontal, X, Check, User, Clock, Archive, Phone, Mail, MessagesSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -159,6 +159,32 @@ export function InboxPage() {
         return conv.contact_email || 'Unknown';
     };
 
+    const getChannelInfo = (channel?: string) => {
+        switch (channel) {
+            case 'sms':
+                return {
+                    icon: Phone,
+                    label: 'SMS',
+                    color: 'text-green-600 dark:text-green-400',
+                    bgColor: 'bg-green-100 dark:bg-green-900',
+                };
+            case 'email':
+                return {
+                    icon: Mail,
+                    label: 'Email',
+                    color: 'text-blue-600 dark:text-blue-400',
+                    bgColor: 'bg-blue-100 dark:bg-blue-900',
+                };
+            default:
+                return {
+                    icon: MessagesSquare,
+                    label: 'Internal',
+                    color: 'text-gray-600 dark:text-gray-400',
+                    bgColor: 'bg-gray-100 dark:bg-gray-800',
+                };
+        }
+    };
+
     return (
         <div className="container mx-auto p-6 max-w-7xl h-[calc(100vh-64px)]">
             <Card className="h-full overflow-hidden">
@@ -186,20 +212,33 @@ export function InboxPage() {
                                         onClick={() => handleSelectConversation(conv)}
                                     >
                                         <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                                                <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-                                            </div>
+                                            {(() => {
+                                                const channelInfo = getChannelInfo(conv.channel);
+                                                const ChannelIcon = channelInfo.icon;
+                                                return (
+                                                    <div className={`w-10 h-10 rounded-full ${channelInfo.bgColor} flex items-center justify-center flex-shrink-0`}>
+                                                        <ChannelIcon className={`h-5 w-5 ${channelInfo.color}`} />
+                                                    </div>
+                                                );
+                                            })()}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between">
-                                                    <p className="font-medium truncate">{getContactName(conv)}</p>
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <p className="font-medium truncate">{getContactName(conv)}</p>
+                                                        {conv.channel === 'sms' && (
+                                                            <Badge variant="outline" className="text-xs text-green-600 border-green-300 flex-shrink-0">SMS</Badge>
+                                                        )}
+                                                    </div>
                                                     {conv.unread_count > 0 && (
-                                                        <Badge className="bg-blue-600 text-white text-xs">{conv.unread_count}</Badge>
+                                                        <Badge className="bg-blue-600 text-white text-xs flex-shrink-0">{conv.unread_count}</Badge>
                                                     )}
                                                 </div>
                                                 <p className="text-sm text-muted-foreground truncate">{conv.last_message_preview || 'No messages'}</p>
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    {conv.last_message_at ? format(parseISO(conv.last_message_at), 'MMM d, h:mm a') : ''}
-                                                </p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {conv.last_message_at ? format(parseISO(conv.last_message_at), 'MMM d, h:mm a') : ''}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -227,9 +266,29 @@ export function InboxPage() {
                             <>
                                 {/* Header */}
                                 <div className="p-4 border-b flex items-center justify-between">
-                                    <div>
-                                        <h2 className="font-medium">{getContactName(selectedConversation)}</h2>
-                                        <p className="text-sm text-muted-foreground">{selectedConversation.contact_email}</p>
+                                    <div className="flex items-center gap-3">
+                                        {(() => {
+                                            const channelInfo = getChannelInfo(selectedConversation.channel);
+                                            const ChannelIcon = channelInfo.icon;
+                                            return (
+                                                <div className={`w-10 h-10 rounded-full ${channelInfo.bgColor} flex items-center justify-center`}>
+                                                    <ChannelIcon className={`h-5 w-5 ${channelInfo.color}`} />
+                                                </div>
+                                            );
+                                        })()}
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h2 className="font-medium">{getContactName(selectedConversation)}</h2>
+                                                {selectedConversation.channel === 'sms' && (
+                                                    <Badge variant="outline" className="text-xs text-green-600 border-green-300">SMS</Badge>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">
+                                                {selectedConversation.channel === 'sms' 
+                                                    ? selectedConversation.contact_phone || selectedConversation.contact_email
+                                                    : selectedConversation.contact_email}
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Button variant="outline" size="sm" onClick={handleCloseConversation}>
@@ -241,32 +300,58 @@ export function InboxPage() {
                                 {/* Messages */}
                                 <ScrollArea className="flex-1 p-4">
                                     <div className="space-y-4">
-                                        {(selectedConversation.messages || []).map((msg) => (
-                                            <div
-                                                key={msg.id}
-                                                className={`flex ${msg.sender_type === 'user' ? 'justify-end' : 'justify-start'}`}
-                                            >
-                                                <div
-                                                    className={`max-w-[70%] rounded-lg p-3 ${msg.sender_type === 'user'
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'bg-muted'
-                                                        }`}
-                                                >
-                                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                                    <p className={`text-xs mt-1 ${msg.sender_type === 'user' ? 'text-blue-100' : 'text-muted-foreground'}`}>
-                                                        {format(parseISO(msg.created_at), 'h:mm a')}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                                        {(selectedConversation.messages || []).map((msg) => {
+                                                            const isSms = msg.channel === 'sms' || selectedConversation.channel === 'sms';
+                                                            const isOutbound = msg.sender_type === 'user';
+                                                            return (
+                                                                <div
+                                                                    key={msg.id}
+                                                                    className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}
+                                                                >
+                                                                    <div
+                                                                        className={`max-w-[70%] rounded-lg p-3 ${isOutbound
+                                                                            ? isSms ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+                                                                            : 'bg-muted'
+                                                                            }`}
+                                                                    >
+                                                                        {isSms && !isOutbound && (
+                                                                            <div className="flex items-center gap-1 mb-1">
+                                                                                <Phone className="h-3 w-3 text-green-600" />
+                                                                                <span className="text-xs text-green-600 font-medium">SMS</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                                        <div className={`flex items-center gap-2 mt-1 ${isOutbound ? (isSms ? 'text-green-100' : 'text-blue-100') : 'text-muted-foreground'}`}>
+                                                                            <p className="text-xs">
+                                                                                {format(parseISO(msg.created_at), 'h:mm a')}
+                                                                            </p>
+                                                                            {isSms && isOutbound && (
+                                                                                <Phone className="h-3 w-3" />
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                     </div>
                                 </ScrollArea>
 
                                 {/* Input */}
                                 <div className="p-4 border-t">
+                                    {selectedConversation.channel === 'sms' && (
+                                        <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+                                            <div className="flex items-center gap-1">
+                                                <Phone className="h-3 w-3 text-green-600" />
+                                                <span>SMS Message</span>
+                                            </div>
+                                            <span className={newMessage.length > 160 ? 'text-orange-500' : ''}>
+                                                {newMessage.length}/160 {newMessage.length > 160 && `(${Math.ceil(newMessage.length / 153)} segments)`}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex gap-2">
                                         <Textarea
-                                            placeholder="Type your message..."
+                                            placeholder={selectedConversation.channel === 'sms' ? "Type your SMS message..." : "Type your message..."}
                                             value={newMessage}
                                             onChange={(e) => setNewMessage(e.target.value)}
                                             className="resize-none"
@@ -281,7 +366,7 @@ export function InboxPage() {
                                         <Button
                                             onClick={handleSendMessage}
                                             disabled={sendingMessage || !newMessage.trim()}
-                                            className="bg-blue-600 hover:bg-blue-700"
+                                            className={selectedConversation.channel === 'sms' ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
                                         >
                                             Send
                                         </Button>

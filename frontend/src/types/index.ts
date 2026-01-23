@@ -66,12 +66,24 @@ export interface Note {
   shared_at?: string;
 }
 
+export interface CanvasPath {
+  drawMode: boolean;
+  strokeColor: string;
+  strokeWidth: number;
+  paths: Array<{ x: number; y: number }>;
+}
+
+export interface CanvasData {
+  paths: CanvasPath[];
+  shapes?: unknown[];
+}
+
 export interface Whiteboard {
   id: number;
   user_id: number;
   title: string;
   category?: string; // Optional category field, defaults to "General" (null)
-  canvas_data: any; // Raw library data - react-sketch-canvas format
+  canvas_data: CanvasData | string; // Raw library data - react-sketch-canvas format
   canvas_width: number;
   canvas_height: number;
   background_color: string;
