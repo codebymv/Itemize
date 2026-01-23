@@ -27,16 +27,19 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, ensureDefaultOrganization, exportContactsCSV } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
+import { ContactCardList } from './components/ContactCard';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
 import { ImportContactsModal } from './components/ImportContactsModal';
 import { BulkTagModal } from './components/BulkTagModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function ContactsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
+  const isMobile = useIsMobile();
 
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -377,6 +380,14 @@ export function ContactsPage() {
                 Add Contact
               </Button>
             </div>
+          ) : isMobile ? (
+            <ContactCardList
+              contacts={contacts}
+              selectedContacts={selectedContacts}
+              onSelectContact={handleSelectContact}
+              onContactClick={handleContactClick}
+              onDeleteContact={handleDeleteContact}
+            />
           ) : (
             <ContactsTable
               contacts={contacts}

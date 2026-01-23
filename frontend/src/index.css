@@ -217,6 +217,18 @@ html {
   overflow-x: hidden;
 }
 
+/* Safe area support for iOS devices with notch/home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Ensure mobile bottom nav doesn't overlap content */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
 /* Autocomplete suggestion styles for TipTap editor */
 .autocomplete-suggestion {
   color: #9CA3AF !important;

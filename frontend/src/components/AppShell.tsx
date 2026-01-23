@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -114,11 +116,19 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
                 </header>
 
-                {/* Main content */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto h-[calc(100vh-3.5rem)]">
+                {/* Breadcrumb navigation - hidden on mobile, shown on desktop */}
+                <div className="hidden md:block border-b px-4 py-2 bg-muted/30">
+                    <Breadcrumbs />
+                </div>
+
+                {/* Main content - add bottom padding on mobile for bottom nav */}
+                <main className="flex-1 overflow-x-hidden overflow-y-auto h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem-2.5rem)] pb-16 md:pb-0">
                     {children}
                 </main>
             </SidebarInset>
+            
+            {/* Mobile bottom navigation */}
+            <MobileBottomNav />
         </SidebarProvider>
     );
 }

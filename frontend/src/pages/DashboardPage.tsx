@@ -9,6 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart';
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
+import {
     Users,
     TrendingUp,
     Calendar,
@@ -35,10 +48,12 @@ import {
     getConversionRates,
     getCommunicationStats,
     getPipelineVelocity,
+    getRevenueTrends,
     type DashboardAnalytics,
     type ConversionRates,
     type CommunicationStats,
     type PipelineVelocity,
+    type RevenueTrends,
 } from '@/services/analyticsApi';
 
 interface QuickAction {
@@ -408,11 +423,92 @@ function RecentActivityList({ activities, isLoading }: { activities: DashboardAn
     );
 }
 
+// Period options for date range selector
+type PeriodOption = '7days' | '30days' | '90days' | '6months' | '12months';
+const periodLabels: Record<PeriodOption, string> = {
+    '7days': 'Last 7 days',
+    '30days': 'Last 30 days',
+    '90days': 'Last 90 days',
+    '6months': 'Last 6 months',
+    '12months': 'Last 12 months',
+};
+
+// Revenue Trends Chart Component
+function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoading?: boolean }) {
+    if (isLoading) {
+        return (
+            <div className="h-[200px] flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+            </div>
+        );
+    }
+
+    if (!data?.data || data.data.length === 0) {
+        return (
+            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                No revenue data available
+            </div>
+        );
+    }
+
+    const chartConfig = {
+        revenue: {
+            label: 'Revenue',
+            color: 'hsl(142, 76%, 36%)',
+        },
+    };
+
+    return (
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+            <AreaChart data={data.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0} />
+                    </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                    dataKey="period" 
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12 }}
+                    className="text-muted-foreground"
+                />
+                <YAxis 
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12 }}
+                    className="text-muted-foreground"
+                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <ChartTooltip 
+                    content={
+                        <ChartTooltipContent 
+                            formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']}
+                        />
+                    } 
+                />
+                <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="hsl(142, 76%, 36%)"
+                    strokeWidth={2}
+                    fill="url(#revenueGradient)"
+                />
+            </AreaChart>
+        </ChartContainer>
+    );
+}
+
 export function DashboardPage() {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+    
+    // Date range state
+    const [period, setPeriod] = useState<PeriodOption>('30days');
 
     // Fetch analytics data
     const { data: analytics, isLoading, error } = useQuery({
@@ -422,18 +518,18 @@ export function DashboardPage() {
         refetchOnWindowFocus: false,
     });
 
-    // Fetch conversion rates
+    // Fetch conversion rates with dynamic period
     const { data: conversionData, isLoading: conversionLoading } = useQuery({
-        queryKey: ['conversionRates'],
-        queryFn: () => getConversionRates('30days'),
+        queryKey: ['conversionRates', period],
+        queryFn: () => getConversionRates(period as any),
         staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,
     });
 
-    // Fetch communication stats
+    // Fetch communication stats with dynamic period
     const { data: commStats, isLoading: commLoading } = useQuery({
-        queryKey: ['communicationStats'],
-        queryFn: () => getCommunicationStats('30days'),
+        queryKey: ['communicationStats', period],
+        queryFn: () => getCommunicationStats(period as any),
         staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,
     });
@@ -442,6 +538,14 @@ export function DashboardPage() {
     const { data: velocityData, isLoading: velocityLoading } = useQuery({
         queryKey: ['pipelineVelocity'],
         queryFn: () => getPipelineVelocity(),
+        staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
+    });
+
+    // Fetch revenue trends with dynamic period
+    const { data: revenueData, isLoading: revenueLoading } = useQuery({
+        queryKey: ['revenueTrends', period],
+        queryFn: () => getRevenueTrends(period as any),
         staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,
     });
@@ -457,6 +561,19 @@ export function DashboardPage() {
                     DASHBOARD
                 </h1>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    {/* Date Range Selector */}
+                    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
+                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(periodLabels).map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                    {label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
@@ -469,7 +586,7 @@ export function DashboardPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, navigate, setHeaderContent]);
+    }, [theme, navigate, setHeaderContent, period]);
 
     const firstName = currentUser?.name?.split(' ')[0] || 'there';
 
@@ -584,6 +701,43 @@ export function DashboardPage() {
                         />
                     </div>
 
+                    {/* Revenue Trends Chart */}
+                    <Card className="bg-muted/10 mb-8">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <TrendingUp className="h-4 w-4 text-green-600" />
+                                        Revenue Trends
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {periodLabels[period]} - Total: ${(revenueData?.summary?.totalRevenue ?? 0).toLocaleString()}
+                                    </CardDescription>
+                                </div>
+                                {revenueData?.summary && (
+                                    <div className="text-right">
+                                        <div className="flex items-center gap-1 text-sm">
+                                            {revenueData.summary.growthRate >= 0 ? (
+                                                <ArrowUpRight className="h-4 w-4 text-green-500" />
+                                            ) : (
+                                                <ArrowDownRight className="h-4 w-4 text-red-500" />
+                                            )}
+                                            <span className={revenueData.summary.growthRate >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                                {revenueData.summary.growthRate > 0 ? '+' : ''}{revenueData.summary.growthRate}%
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {revenueData.summary.totalDeals} deals closed
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <RevenueTrendsChart data={revenueData} isLoading={revenueLoading} />
+                        </CardContent>
+                    </Card>
+
                     {/* Pipeline Funnel & Recent Activity */}
                     <div className="grid gap-6 md:grid-cols-2 mb-8">
                         {/* Pipeline Funnel */}
@@ -645,7 +799,7 @@ export function DashboardPage() {
                                         <Target className="h-4 w-4" />
                                         Conversion Rates
                                     </CardTitle>
-                                    <span className="text-xs text-muted-foreground">Last 30 days</span>
+                                    <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
                                 </div>
                                 <CardDescription>Key conversion metrics</CardDescription>
                             </CardHeader>
@@ -702,7 +856,7 @@ export function DashboardPage() {
                                         <Mail className="h-4 w-4" />
                                         Communication
                                     </CardTitle>
-                                    <span className="text-xs text-muted-foreground">Last 30 days</span>
+                                    <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
                                 </div>
                                 <CardDescription>Email and SMS performance</CardDescription>
                             </CardHeader>
