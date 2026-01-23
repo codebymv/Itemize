@@ -1,17 +1,23 @@
 /**
  * SMS Service - Handles SMS sending via Twilio
+ * Extended with retry logic and timeouts (Phase 6)
  */
+
+const BaseService = require('./BaseService');
+const { logger } = require('../utils/logger');
 
 // Check if Twilio is available (optional dependency)
 let Twilio = null;
 try {
   Twilio = require('twilio');
 } catch (e) {
-  console.log('Twilio package not installed - SMS sending disabled');
+  logger.info('Twilio package not installed - SMS sending disabled');
 }
 
-class SmsService {
+class SmsService extends BaseService {
   constructor() {
+    super('SmsService', { timeout: 15000, maxRetries: 3 });
+    
     this.client = null;
     this.fromNumber = process.env.TWILIO_PHONE_NUMBER || '';
     this.isConfigured = false;
@@ -22,9 +28,9 @@ class SmsService {
     if (Twilio && accountSid && authToken && this.fromNumber) {
       this.client = Twilio(accountSid, authToken);
       this.isConfigured = true;
-      console.log('✅ SMS service configured with Twilio');
+      this.logInfo('SMS service configured with Twilio');
     } else {
-      console.log('⚠️ SMS service not configured - set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to enable');
+      this.logWarn('SMS service not configured - set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to enable');
     }
   }
 
@@ -115,11 +121,11 @@ class SmsService {
   }
 
   /**
-   * Send SMS using Twilio
+   * Send SMS using Twilio with retry logic (Phase 6)
    */
   async sendSms({ to, message, from, mediaUrl }) {
     if (!this.isConfigured) {
-      console.log('SMS not sent - service not configured');
+      this.logWarn('SMS not sent - service not configured');
       return {
         success: false,
         error: 'SMS service not configured',
@@ -137,20 +143,24 @@ class SmsService {
       };
     }
 
+    const messageOptions = {
+      body: message,
+      from: from || this.fromNumber,
+      to: normalizedTo,
+    };
+
+    // Add media URL if provided (for MMS)
+    if (mediaUrl) {
+      messageOptions.mediaUrl = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
+    }
+
     try {
-      const messageOptions = {
-        body: message,
-        from: from || this.fromNumber,
-        to: normalizedTo,
-      };
+      const response = await this.withRetry(
+        async () => this.client.messages.create(messageOptions),
+        { to: normalizedTo }
+      );
 
-      // Add media URL if provided (for MMS)
-      if (mediaUrl) {
-        messageOptions.mediaUrl = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
-      }
-
-      const response = await this.client.messages.create(messageOptions);
-
+      this.logInfo('SMS sent successfully', { to: normalizedTo, sid: response.sid });
       return {
         success: true,
         id: response.sid,
@@ -164,7 +174,7 @@ class SmsService {
         },
       };
     } catch (error) {
-      console.error('Error sending SMS:', error);
+      this.logError('Error sending SMS', error);
       return {
         success: false,
         error: error.message,

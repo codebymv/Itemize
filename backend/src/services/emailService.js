@@ -1,17 +1,23 @@
 /**
  * Email Service - Handles email sending via Resend
+ * Extended with retry logic and timeouts (Phase 6)
  */
+
+const BaseService = require('./BaseService');
+const { logger } = require('../utils/logger');
 
 // Check if Resend is available (optional dependency)
 let Resend = null;
 try {
   Resend = require('resend').Resend;
 } catch (e) {
-  console.log('Resend package not installed - email sending disabled');
+  logger.info('Resend package not installed - email sending disabled');
 }
 
-class EmailService {
+class EmailService extends BaseService {
   constructor() {
+    super('EmailService', { timeout: 10000, maxRetries: 3 });
+    
     this.resend = null;
     this.fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     this.isConfigured = false;
@@ -19,9 +25,9 @@ class EmailService {
     if (Resend && process.env.RESEND_API_KEY) {
       this.resend = new Resend(process.env.RESEND_API_KEY);
       this.isConfigured = true;
-      console.log('✅ Email service configured with Resend');
+      this.logInfo('Email service configured with Resend');
     } else {
-      console.log('⚠️ Email service not configured - set RESEND_API_KEY to enable');
+      this.logWarn('Email service not configured - set RESEND_API_KEY to enable');
     }
   }
 
@@ -78,11 +84,11 @@ class EmailService {
   }
 
   /**
-   * Send email using Resend
+   * Send email using Resend with retry logic (Phase 6)
    */
   async sendEmail({ to, subject, html, text, from, replyTo, tags }) {
     if (!this.isConfigured) {
-      console.log('Email not sent - service not configured');
+      this.logWarn('Email not sent - service not configured');
       return {
         success: false,
         error: 'Email service not configured',
@@ -90,24 +96,30 @@ class EmailService {
       };
     }
 
-    try {
-      const response = await this.resend.emails.send({
-        from: from || this.fromEmail,
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        html,
-        text,
-        reply_to: replyTo,
-        tags: tags || [],
-      });
+    const emailOptions = {
+      from: from || this.fromEmail,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      text,
+      reply_to: replyTo,
+      tags: tags || [],
+    };
 
+    try {
+      const response = await this.withRetry(
+        async () => this.resend.emails.send(emailOptions),
+        { to: emailOptions.to, subject }
+      );
+
+      this.logInfo('Email sent successfully', { to: emailOptions.to, subject });
       return {
         success: true,
         id: response.data?.id,
         response: response.data,
       };
     } catch (error) {
-      console.error('Error sending email:', error);
+      this.logError('Error sending email', error);
       return {
         success: false,
         error: error.message,

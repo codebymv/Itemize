@@ -1,8 +1,48 @@
 /**
  * Google Calendar Integration Service
  * Handles OAuth flow and two-way sync between Itemize bookings and Google Calendar
+ * Extended with retry logic and better error handling (Phase 6)
  */
 const { google } = require('googleapis');
+const { logger } = require('../utils/logger');
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const BASE_DELAY = 1000;
+
+/**
+ * Execute an operation with retry logic
+ */
+const withRetry = async (operation, context = {}) => {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+            
+            // Don't retry on auth errors
+            if (error.code === 401 || error.code === 403) {
+                throw error;
+            }
+            
+            if (attempt < MAX_RETRIES) {
+                const delay = BASE_DELAY * Math.pow(2, attempt - 1);
+                logger.warn('GoogleCalendar: Retry attempt', { 
+                    attempt, 
+                    maxRetries: MAX_RETRIES,
+                    context, 
+                    error: error.message 
+                });
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    
+    logger.error('GoogleCalendar: All retries failed', { context, error: lastError.message });
+    throw lastError;
+};
 
 // OAuth2 Configuration
 const getOAuth2Client = () => {
@@ -50,13 +90,16 @@ const exchangeCodeForTokens = async (code) => {
 };
 
 /**
- * Refresh access token using refresh token
+ * Refresh access token using refresh token with retry logic
  */
 const refreshAccessToken = async (refreshToken) => {
-    const oauth2Client = getOAuth2Client();
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    return credentials;
+    return withRetry(async () => {
+        const oauth2Client = getOAuth2Client();
+        oauth2Client.setCredentials({ refresh_token: refreshToken });
+        const { credentials } = await oauth2Client.refreshAccessToken();
+        logger.info('GoogleCalendar: Access token refreshed successfully');
+        return credentials;
+    }, { operation: 'refreshAccessToken' });
 };
 
 /**

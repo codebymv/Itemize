@@ -6,50 +6,17 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const { logger } = require('../utils/logger');
+const { asyncHandler } = require('../middleware/errorHandler');
+
+// Password hashing configuration (Phase 1.2)
+const SALT_ROUNDS = 10;
 
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
-    /**
-     * Middleware to require organization context
-     */
-    const requireOrganization = async (req, res, next) => {
-        try {
-            const organizationId = req.query.organization_id || req.body.organization_id || req.headers['x-organization-id'];
-
-            if (!organizationId) {
-                const client = await pool.connect();
-                const result = await client.query(
-                    'SELECT default_organization_id FROM users WHERE id = $1',
-                    [req.user.id]
-                );
-                client.release();
-
-                if (result.rows.length === 0 || !result.rows[0].default_organization_id) {
-                    return res.status(400).json({ error: 'Organization ID required' });
-                }
-                req.organizationId = result.rows[0].default_organization_id;
-            } else {
-                req.organizationId = parseInt(organizationId);
-            }
-
-            const client = await pool.connect();
-            const memberCheck = await client.query(
-                'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
-                [req.organizationId, req.user.id]
-            );
-            client.release();
-
-            if (memberCheck.rows.length === 0) {
-                return res.status(403).json({ error: 'Not a member of this organization' });
-            }
-
-            req.orgRole = memberCheck.rows[0].role;
-            next();
-        } catch (error) {
-            console.error('Error in requireOrganization middleware:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    };
+    // Use shared organization middleware (Phase 5.3)
+    const { requireOrganization } = require('../middleware/organization')(pool);
 
     /**
      * Generate unique slug from name
@@ -171,7 +138,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
             });
         } catch (error) {
-            console.error('Error fetching pages:', error);
+            logger.error('Error fetching pages', { error: error.message });
             res.status(500).json({ error: 'Failed to fetch pages' });
         }
     });
@@ -210,7 +177,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             res.json(page);
         } catch (error) {
-            console.error('Error fetching page:', error);
+            logger.error('Error fetching page', { error: error.message });
             res.status(500).json({ error: 'Failed to fetch page' });
         }
     });
@@ -440,7 +407,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             res.json(page);
         } catch (error) {
-            console.error('Error updating page:', error);
+            logger.error('Error updating page', { error: error.message });
             res.status(500).json({ error: 'Failed to update page' });
         }
     });
@@ -567,7 +534,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 throw error;
             }
         } catch (error) {
-            console.error('Error duplicating page:', error);
+            logger.error('Error duplicating page', { error: error.message });
             res.status(500).json({ error: 'Failed to duplicate page' });
         }
     });
@@ -648,7 +615,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 throw error;
             }
         } catch (error) {
-            console.error('Error updating sections:', error);
+            logger.error('Error updating sections', { error: error.message });
             res.status(500).json({ error: 'Failed to update sections' });
         }
     });
@@ -730,7 +697,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 throw error;
             }
         } catch (error) {
-            console.error('Error adding section:', error);
+            logger.error('Error adding section', { error: error.message });
             res.status(500).json({ error: 'Failed to add section' });
         }
     });
@@ -829,7 +796,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             client.release();
             res.json({ success: true });
         } catch (error) {
-            console.error('Error deleting section:', error);
+            logger.error('Error deleting section', { error: error.message });
             res.status(500).json({ error: 'Failed to delete section' });
         }
     });
@@ -980,10 +947,138 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 utm_sources: utmStats.rows
             });
         } catch (error) {
-            console.error('Error fetching analytics:', error);
+            logger.error('Error fetching analytics', { error: error.message });
             res.status(500).json({ error: 'Failed to fetch analytics' });
         }
     });
+
+    // ======================
+    // Password Management (Phase 1.2)
+    // ======================
+
+    /**
+     * POST /api/pages/:id/password - Set or update page password
+     */
+    router.post('/:id/password', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        const { id } = req.params;
+        const { password } = req.body;
+
+        if (!password || password.length < 4) {
+            return res.status(400).json({ error: 'Password must be at least 4 characters' });
+        }
+
+        const client = await pool.connect();
+
+        try {
+            // Verify page exists and belongs to organization
+            const pageResult = await client.query(
+                'SELECT id, settings FROM pages WHERE id = $1 AND organization_id = $2',
+                [id, req.organizationId]
+            );
+
+            if (pageResult.rows.length === 0) {
+                return res.status(404).json({ error: 'Page not found' });
+            }
+
+            // Hash the password
+            const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+            // Update settings with hashed password
+            const currentSettings = pageResult.rows[0].settings || {};
+            const newSettings = { ...currentSettings, password: hashedPassword };
+
+            await client.query(
+                'UPDATE pages SET settings = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                [JSON.stringify(newSettings), id]
+            );
+
+            logger.info('Page password updated', { pageId: id, organizationId: req.organizationId });
+            res.json({ success: true, message: 'Password set successfully' });
+        } finally {
+            client.release();
+        }
+    }));
+
+    /**
+     * DELETE /api/pages/:id/password - Remove page password
+     */
+    router.delete('/:id/password', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        const { id } = req.params;
+        const client = await pool.connect();
+
+        try {
+            // Verify page exists and belongs to organization
+            const pageResult = await client.query(
+                'SELECT id, settings FROM pages WHERE id = $1 AND organization_id = $2',
+                [id, req.organizationId]
+            );
+
+            if (pageResult.rows.length === 0) {
+                return res.status(404).json({ error: 'Page not found' });
+            }
+
+            // Remove password from settings
+            const currentSettings = pageResult.rows[0].settings || {};
+            delete currentSettings.password;
+
+            await client.query(
+                'UPDATE pages SET settings = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                [JSON.stringify(currentSettings), id]
+            );
+
+            logger.info('Page password removed', { pageId: id, organizationId: req.organizationId });
+            res.json({ success: true, message: 'Password removed successfully' });
+        } finally {
+            client.release();
+        }
+    }));
+
+    /**
+     * POST /api/pages/:id/verify-password - Verify page password (public)
+     */
+    router.post('/:id/verify-password', publicRateLimit, asyncHandler(async (req, res) => {
+        const { id } = req.params;
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password required' });
+        }
+
+        const client = await pool.connect();
+
+        try {
+            const pageResult = await client.query(
+                'SELECT settings FROM pages WHERE id = $1 AND status = $2',
+                [id, 'published']
+            );
+
+            if (pageResult.rows.length === 0) {
+                return res.status(404).json({ error: 'Page not found' });
+            }
+
+            const settings = pageResult.rows[0].settings || {};
+            
+            if (!settings.password) {
+                return res.json({ valid: true, message: 'Page is not password protected' });
+            }
+
+            // Verify password
+            let isValid = false;
+            if (settings.password.startsWith('$2')) {
+                isValid = await bcrypt.compare(password, settings.password);
+            } else {
+                isValid = password === settings.password;
+            }
+
+            if (isValid) {
+                res.json({ valid: true });
+            } else {
+                res.status(401).json({ valid: false, error: 'Invalid password' });
+            }
+        } finally {
+            client.release();
+        }
+    }));
 
     // ======================
     // Public Page Access
@@ -1011,13 +1106,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             const page = pageResult.rows[0];
 
-            // Check if password protected
+            // Check if password protected (Phase 1.2 - use bcrypt)
             const settings = page.settings || {};
             if (settings.password) {
                 const providedPassword = req.headers['x-page-password'] || req.query.password;
-                if (providedPassword !== settings.password) {
+                
+                if (!providedPassword) {
                     client.release();
                     return res.status(401).json({ error: 'Password required', password_protected: true });
+                }
+                
+                // Support both hashed and legacy plaintext passwords
+                let isValidPassword = false;
+                if (settings.password.startsWith('$2')) {
+                    // Bcrypt hashed password
+                    isValidPassword = await bcrypt.compare(providedPassword, settings.password);
+                } else {
+                    // Legacy plaintext comparison (will be migrated on next password set)
+                    isValidPassword = providedPassword === settings.password;
+                }
+                
+                if (!isValidPassword) {
+                    client.release();
+                    return res.status(401).json({ error: 'Invalid password', password_protected: true });
                 }
             }
 
@@ -1125,7 +1236,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             client.release();
             res.json({ success: true });
         } catch (error) {
-            console.error('Error updating analytics:', error);
+            logger.error('Error updating analytics', { error: error.message });
             res.status(500).json({ error: 'Failed to update analytics' });
         }
     });

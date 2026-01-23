@@ -3,6 +3,8 @@
  * Provides consistent error responses and better debugging
  */
 
+const { logger } = require('../utils/logger');
+
 /**
  * Custom application error class
  * Use this to throw errors with specific status codes and error codes
@@ -61,23 +63,6 @@ const errors = {
  * Place at the end of middleware chain to catch all errors
  */
 const errorHandler = (err, req, res, next) => {
-    // Log error details
-    const errorLog = {
-        message: err.message,
-        code: err.code || 'UNKNOWN',
-        statusCode: err.statusCode || 500,
-        path: req.path,
-        method: req.method,
-        timestamp: new Date().toISOString()
-    };
-
-    // In development, include stack trace
-    if (process.env.NODE_ENV !== 'production') {
-        errorLog.stack = err.stack;
-    }
-
-    console.error('Error:', JSON.stringify(errorLog, null, 2));
-
     // Determine status code
     let statusCode = err.statusCode || 500;
     let code = err.code || 'INTERNAL_ERROR';
@@ -104,30 +89,40 @@ const errorHandler = (err, req, res, next) => {
         statusCode = 413;
         code = 'PAYLOAD_TOO_LARGE';
         message = 'Request payload is too large';
+    } else if (err.code === '22P02') { // PostgreSQL invalid input syntax
+        statusCode = 400;
+        code = 'INVALID_INPUT';
+        message = 'Invalid input syntax';
     }
+
+    // Log error with structured logger
+    const logLevel = statusCode >= 500 ? 'error' : 'warn';
+    logger[logLevel]('Request error', {
+        message: err.message,
+        code,
+        statusCode,
+        path: req.path,
+        method: req.method,
+        requestId: req.requestId,
+        userId: req.user?.id,
+        ...(statusCode >= 500 && { stack: err.stack })
+    });
 
     // Don't expose internal error details in production
     if (statusCode === 500 && process.env.NODE_ENV === 'production' && !err.isOperational) {
         message = 'Internal server error';
     }
 
-    // Send response
+    // Build response (Phase 4.1 - standardized format)
     const response = {
+        success: false,
         error: {
             message,
-            code
+            code,
+            ...(err.field && { field: err.field }),
+            ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
         }
     };
-
-    // Include field info for validation errors
-    if (err.field) {
-        response.error.field = err.field;
-    }
-
-    // Include stack trace in development
-    if (process.env.NODE_ENV !== 'production') {
-        response.error.stack = err.stack;
-    }
 
     res.status(statusCode).json(response);
 };

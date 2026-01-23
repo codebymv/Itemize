@@ -6,50 +6,12 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const { logger } = require('../utils/logger');
+const { asyncHandler } = require('../middleware/errorHandler');
+const { withDbClient } = require('../utils/db');
 
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
-
-    /**
-     * Middleware to require organization context
-     */
-    const requireOrganization = async (req, res, next) => {
-        try {
-            const organizationId = req.query.organization_id || req.body.organization_id || req.headers['x-organization-id'];
-
-            if (!organizationId) {
-                const client = await pool.connect();
-                const result = await client.query(
-                    'SELECT default_organization_id FROM users WHERE id = $1',
-                    [req.user.id]
-                );
-                client.release();
-
-                if (result.rows.length === 0 || !result.rows[0].default_organization_id) {
-                    return res.status(400).json({ error: 'Organization ID required' });
-                }
-                req.organizationId = result.rows[0].default_organization_id;
-            } else {
-                req.organizationId = parseInt(organizationId);
-            }
-
-            const client = await pool.connect();
-            const memberCheck = await client.query(
-                'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
-                [req.organizationId, req.user.id]
-            );
-            client.release();
-
-            if (memberCheck.rows.length === 0) {
-                return res.status(403).json({ error: 'Not a member of this organization' });
-            }
-
-            req.orgRole = memberCheck.rows[0].role;
-            next();
-        } catch (error) {
-            console.error('Error in requireOrganization middleware:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-    };
+    const { requireOrganization } = require('../middleware/organization')(pool);
 
     /**
      * Calculate sentiment from rating
