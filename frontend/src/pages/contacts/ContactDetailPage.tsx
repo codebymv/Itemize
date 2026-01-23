@@ -55,6 +55,7 @@ import {
 } from '@/services/contactsApi';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
+import { ComposeEmailModal } from './components/ComposeEmailModal';
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +76,9 @@ export function ContactDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
+
   const [addingNote, setAddingNote] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Helper function for contact name (used in header)
   const getContactDisplayName = (c: Contact | null) => {
@@ -99,8 +102,8 @@ export function ContactDetailPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 
-            className="text-xl font-semibold italic truncate" 
+          <h1
+            className="text-xl font-semibold italic truncate"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
           >
             {getContactDisplayName(contact)}
@@ -244,6 +247,17 @@ export function ContactDetailPage() {
       });
     } finally {
       setAddingNote(false);
+    }
+  };
+
+  // Handle email sent
+  const handleEmailSent = async () => {
+    if (!contact || !organizationId) return;
+    try {
+      const activitiesData = await getContactActivities(contact.id, { limit: 50 }, organizationId);
+      setActivities(activitiesData);
+    } catch (error) {
+      console.error('Error refreshing activities:', error);
     }
   };
 
@@ -545,11 +559,9 @@ export function ContactDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {contact.email && (
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <a href={`mailto:${contact.email}`}>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Email
-                  </a>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setShowEmailModal(true)}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
                 </Button>
               )}
               {contact.phone && (
@@ -602,6 +614,16 @@ export function ContactDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Email modal */}
+      {showEmailModal && contact && organizationId && (
+        <ComposeEmailModal
+          contact={contact}
+          organizationId={organizationId}
+          onClose={() => setShowEmailModal(false)}
+          onSent={handleEmailSent}
+        />
+      )}
 
       {/* Edit modal */}
       {showEditModal && organizationId && (

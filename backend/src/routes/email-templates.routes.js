@@ -20,7 +20,7 @@ module.exports = (pool, authenticateJWT) => {
   const requireOrganization = async (req, res, next) => {
     try {
       const organizationId = req.query.organization_id || req.body.organization_id || req.headers['x-organization-id'];
-      
+
       if (!organizationId) {
         const client = await pool.connect();
         const result = await client.query(
@@ -66,7 +66,7 @@ module.exports = (pool, authenticateJWT) => {
 
     try {
       const client = await pool.connect();
-      
+
       let query = `
         SELECT 
           et.*,
@@ -178,8 +178,8 @@ module.exports = (pool, authenticateJWT) => {
 
     // Validation
     if (!name || !subject || !body_html) {
-      return res.status(400).json({ 
-        error: 'name, subject, and body_html are required' 
+      return res.status(400).json({
+        error: 'name, subject, and body_html are required'
       });
     }
 
@@ -417,6 +417,172 @@ module.exports = (pool, authenticateJWT) => {
     } catch (error) {
       console.error('Error duplicating email template:', error);
       res.status(500).json({ error: 'Failed to duplicate email template' });
+    }
+  });
+
+  /**
+     * POST /api/email-templates/send-to-contact
+     * Send an email to a specific contact (with optional template)
+     */
+  router.post('/send-to-contact', authenticateJWT, requireOrganization, async (req, res) => {
+    const userId = req.user?.id;
+    const {
+      contact_id,
+      template_id,
+      subject: customSubject,
+      body_html: customBodyHtml,
+      body_text: customBodyText,
+      reply_to
+    } = req.body;
+
+    if (!contact_id) {
+      return res.status(400).json({ error: 'contact_id is required' });
+    }
+
+    // Must have either template_id or custom content
+    if (!template_id && (!customSubject || !customBodyHtml)) {
+      return res.status(400).json({
+        error: 'Either template_id or (subject and body_html) are required'
+      });
+    }
+
+    try {
+      const client = await pool.connect();
+
+      // Get contact
+      const contactResult = await client.query(
+        'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
+        [contact_id, req.organizationId]
+      );
+
+      if (contactResult.rows.length === 0) {
+        client.release();
+        return res.status(404).json({ error: 'Contact not found' });
+      }
+
+      const contact = contactResult.rows[0];
+
+      if (!contact.email) {
+        client.release();
+        return res.status(400).json({ error: 'Contact does not have an email address' });
+      }
+
+      let subject, bodyHtml, bodyText, templateName;
+
+      if (template_id) {
+        // Get template
+        const templateResult = await client.query(
+          'SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2',
+          [template_id, req.organizationId]
+        );
+
+        if (templateResult.rows.length === 0) {
+          client.release();
+          return res.status(404).json({ error: 'Email template not found' });
+        }
+
+        const template = templateResult.rows[0];
+        templateName = template.name;
+
+        // Prepare email content with variable substitution
+        const content = emailService.prepareEmailContent(template, contact);
+        subject = content.subject;
+        bodyHtml = content.html;
+        bodyText = content.text;
+      } else {
+        // Use custom content with variable substitution
+        const contactData = {
+          first_name: contact.first_name || '',
+          last_name: contact.last_name || '',
+          full_name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'there',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          company: contact.company || '',
+          ...contact.custom_fields,
+        };
+
+        subject = emailService.replaceVariables(customSubject, contactData);
+        bodyHtml = emailService.replaceVariables(customBodyHtml, contactData);
+        bodyText = customBodyText ? emailService.replaceVariables(customBodyText, contactData) : null;
+      }
+
+      // Get organization for from email
+      const orgResult = await client.query(
+        'SELECT name FROM organizations WHERE id = $1',
+        [req.organizationId]
+      );
+      const orgName = orgResult.rows[0]?.name || 'Itemize';
+      const fromEmail = process.env.EMAIL_FROM || `${orgName} <onboarding@resend.dev>`;
+
+      // Send email
+      const sendResult = await emailService.sendEmail({
+        to: contact.email,
+        subject,
+        html: bodyHtml,
+        text: bodyText,
+        from: fromEmail,
+        replyTo: reply_to,
+        tags: [
+          { name: 'contact_id', value: String(contact.id) },
+          { name: 'organization_id', value: String(req.organizationId) },
+          ...(template_id ? [{ name: 'template_id', value: String(template_id) }] : []),
+        ],
+      });
+
+      if (sendResult.success || sendResult.simulated) {
+        // Log activity
+        await client.query(
+          `INSERT INTO contact_activities (organization_id, contact_id, type, description, created_by)
+           VALUES ($1, $2, 'email', $3, $4)`,
+          [
+            req.organizationId,
+            contact.id,
+            templateName
+              ? `Sent email "${subject}" using template "${templateName}"`
+              : `Sent email "${subject}"`,
+            userId,
+          ]
+        );
+
+        // Log to email_logs if table exists
+        try {
+          await client.query(
+            `INSERT INTO email_logs 
+              (organization_id, contact_id, template_id, subject, to_email, status, sent_at, created_by)
+             VALUES ($1, $2, $3, $4, $5, 'sent', NOW(), $6)`,
+            [
+              req.organizationId,
+              contact.id,
+              template_id || null,
+              subject,
+              contact.email,
+              userId,
+            ]
+          );
+        } catch (logError) {
+          console.log('Email log table may not exist yet, skipping log');
+        }
+
+        client.release();
+
+        res.json({
+          success: true,
+          simulated: sendResult.simulated || false,
+          message: sendResult.simulated
+            ? 'Email service not configured - email would have been sent'
+            : 'Email sent successfully',
+          email_id: sendResult.id,
+        });
+      } else {
+        client.release();
+        res.status(500).json({
+          success: false,
+          error: sendResult.error,
+        });
+      }
+    } catch (error) {
+      console.error('Error sending email to contact:', error);
+      res.status(500).json({ error: 'Failed to send email' });
     }
   });
 

@@ -231,6 +231,16 @@ setTimeout(async () => {
         app.use('/api/conversations', conversationsRoutes(pool, authenticateJWT));
         console.log('✅ Conversations routes initialized');
 
+        // Analytics routes (Dashboard)
+        const analyticsRoutes = require('./routes/analytics.routes');
+        app.use('/api/analytics', analyticsRoutes(pool, authenticateJWT));
+        console.log('✅ Analytics routes initialized');
+
+        // Calendar Integrations routes (Google/Outlook sync)
+        const calendarIntegrationsRoutes = require('./routes/calendar-integrations.routes');
+        app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));
+        console.log('✅ Calendar Integrations routes initialized');
+
         // Sharing routes (includes public shared content endpoints)
         const sharingRoutes = require('./routes/sharing.routes');
         app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit));

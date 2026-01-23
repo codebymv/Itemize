@@ -25,10 +25,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Contact, ContactsResponse } from '@/types';
-import { getContacts, deleteContact, bulkDeleteContacts, ensureDefaultOrganization } from '@/services/contactsApi';
+import { getContacts, deleteContact, bulkDeleteContacts, ensureDefaultOrganization, exportContactsCSV } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
+import { ImportContactsModal } from './components/ImportContactsModal';
+import { BulkTagModal } from './components/BulkTagModal';
 
 export function ContactsPage() {
   const navigate = useNavigate();
@@ -45,6 +47,8 @@ export function ContactsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showBulkTagModal, setShowBulkTagModal] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -56,8 +60,8 @@ export function ContactsPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <h1 
-          className="text-xl font-semibold italic truncate ml-2" 
+        <h1
+          className="text-xl font-semibold italic truncate ml-2"
           style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
         >
           CONTACTS
@@ -95,11 +99,11 @@ export function ContactsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => setShowImportModal(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 Import CSV
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)}>
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
               </DropdownMenuItem>
@@ -129,7 +133,7 @@ export function ContactsPage() {
         setInitError(null);
       } catch (error: any) {
         console.error('Error initializing organization:', error);
-        const errorMsg = error.response?.status === 500 
+        const errorMsg = error.response?.status === 500
           ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
           : 'Failed to initialize organization. Please check your connection.';
         setInitError(errorMsg);
@@ -307,11 +311,11 @@ export function ContactsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => setShowImportModal(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 Import CSV
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)}>
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
               </DropdownMenuItem>
@@ -329,7 +333,7 @@ export function ContactsPage() {
                 {selectedContacts.length} contact{selectedContacts.length > 1 ? 's' : ''} selected
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" onClick={() => setShowBulkTagModal(true)}>
                   <Tag className="h-4 w-4 mr-2" />
                   Tag
                 </Button>
@@ -365,7 +369,7 @@ export function ContactsPage() {
               <p className="text-muted-foreground mb-4">
                 Get started by adding your first contact
               </p>
-              <Button 
+              <Button
                 onClick={() => setShowCreateModal(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
@@ -421,6 +425,28 @@ export function ContactsPage() {
           organizationId={organizationId}
           onClose={() => setShowCreateModal(false)}
           onCreated={handleContactCreated}
+        />
+      )}
+
+      {/* Import contacts modal */}
+      {showImportModal && organizationId && (
+        <ImportContactsModal
+          organizationId={organizationId}
+          onClose={() => setShowImportModal(false)}
+          onImported={fetchContacts}
+        />
+      )}
+
+      {/* Bulk tag modal */}
+      {showBulkTagModal && organizationId && (
+        <BulkTagModal
+          selectedContactIds={selectedContacts}
+          organizationId={organizationId}
+          onClose={() => setShowBulkTagModal(false)}
+          onCompleted={() => {
+            setSelectedContacts([]);
+            fetchContacts();
+          }}
         />
       )}
     </div>

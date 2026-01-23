@@ -21,6 +21,7 @@ import { Calendar } from '@/types';
 import { getCalendars, updateCalendar, deleteCalendar } from '@/services/calendarsApi';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { CreateCalendarModal } from './components/CreateCalendarModal';
+import { CalendarIntegrations } from './components/CalendarIntegrations';
 
 export function CalendarsPage() {
     const navigate = useNavigate();
@@ -216,6 +217,9 @@ export function CalendarsPage() {
                     />
                 </div>
             </div>
+
+            {/* Calendar Integrations */}
+            {organizationId && <CalendarIntegrations organizationId={organizationId} />}
 
             {/* Calendars content */}
             <Card>

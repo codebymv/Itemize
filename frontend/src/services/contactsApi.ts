@@ -79,7 +79,7 @@ export interface ContactsQueryParams {
 }
 
 export const getContacts = async (params: ContactsQueryParams = {}): Promise<ContactsResponse> => {
-  const response = await api.get('/api/contacts', { 
+  const response = await api.get('/api/contacts', {
     params,
     headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {}
   });
@@ -155,7 +155,7 @@ export const bulkUpdateContacts = async (data: BulkUpdateData): Promise<{ messag
 };
 
 export const bulkDeleteContacts = async (contactIds: number[], organizationId?: number): Promise<{ message: string; deleted_ids: number[] }> => {
-  const response = await api.post('/api/contacts/bulk-delete', 
+  const response = await api.post('/api/contacts/bulk-delete',
     { contact_ids: contactIds },
     { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
   );
@@ -164,7 +164,7 @@ export const bulkDeleteContacts = async (contactIds: number[], organizationId?: 
 
 // Activities
 export const getContactActivities = async (
-  contactId: number, 
+  contactId: number,
   params: { type?: string; limit?: number; offset?: number } = {},
   organizationId?: number
 ): Promise<ContactActivity[]> => {
@@ -200,6 +200,72 @@ export const getContactContent = async (contactId: number, organizationId?: numb
   const response = await api.get(`/api/contacts/${contactId}/content`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
+  return response.data;
+};
+
+// CSV Import/Export
+export interface ImportContactData {
+  first_name?: string;
+  firstName?: string;
+  last_name?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  job_title?: string;
+  jobTitle?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  status?: string;
+  tags?: string;
+}
+
+export interface ImportResult {
+  message: string;
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; error: string }>;
+}
+
+export const exportContactsCSV = async (
+  organizationId: number,
+  filters?: { status?: string; tags?: string[] }
+): Promise<void> => {
+  const params = new URLSearchParams();
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.tags) params.set('tags', filters.tags.join(','));
+
+  const response = await api.get('/api/contacts/export/csv', {
+    params,
+    headers: { 'x-organization-id': organizationId.toString() },
+    responseType: 'blob',
+  });
+
+  // Create download
+  const blob = new Blob([response.data], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contacts-export-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importContactsCSV = async (
+  contacts: ImportContactData[],
+  organizationId: number,
+  skipDuplicates: boolean = true
+): Promise<ImportResult> => {
+  const response = await api.post(
+    '/api/contacts/import/csv',
+    { contacts, skipDuplicates },
+    { headers: { 'x-organization-id': organizationId.toString() } }
+  );
   return response.data;
 };
 
