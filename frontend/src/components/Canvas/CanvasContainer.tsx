@@ -591,7 +591,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ) : (
           <>
             {/* Empty state when no content exists */}
-            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && wireframes.length === 0 && (
+            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && wireframes.length === 0 && vaults.length === 0 && (
               <div 
                 className="flex items-center justify-center h-full"
                 style={{

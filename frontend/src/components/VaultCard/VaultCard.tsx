@@ -246,11 +246,11 @@ export const VaultCard: React.FC<VaultCardProps> = ({
           setIsCollapsibleOpen(open);
         }
       }}
-      className="w-full"
+      className="w-full h-full flex flex-col"
       style={{ '--vault-color': vaultDisplayColor } as React.CSSProperties}
     >
       <Card 
-        className="w-full shadow-sm h-full flex flex-col" 
+        className="w-full shadow-sm h-full flex flex-col overflow-hidden" 
         style={{ border: 'none' }}
       >
         <CardHeader className="pb-2">
@@ -389,10 +389,10 @@ export const VaultCard: React.FC<VaultCardProps> = ({
           handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
 
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            {/* Items count */}
-            <div className="flex items-center justify-between mb-3">
+        <CollapsibleContent className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <CardContent className="pt-0 flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Items count and add button - fixed header */}
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
               <span className="text-sm text-muted-foreground">
                 {items.length} {items.length === 1 ? 'item' : 'items'}
               </span>
@@ -407,103 +407,106 @@ export const VaultCard: React.FC<VaultCardProps> = ({
               </Button>
             </div>
 
-            {/* New item form */}
-            {showAddItem && (
-              <div className="mb-4 p-3 rounded-lg border bg-muted/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <select
-                    value={newItemType}
-                    onChange={(e) => setNewItemType(e.target.value as 'key_value' | 'secure_note')}
-                    className="h-8 px-2 rounded-md border bg-background text-sm"
-                  >
-                    <option value="key_value">Key-Value</option>
-                    <option value="secure_note">Secure Note</option>
-                  </select>
-                  <Input
-                    ref={newItemLabelRef}
-                    value={newItemLabel}
-                    onChange={(e) => setNewItemLabel(e.target.value)}
-                    onPaste={newItemType === 'key_value' ? handleLabelPaste : undefined}
-                    placeholder={newItemType === 'key_value' ? "KEY_NAME (paste .env to bulk import)" : "Note title"}
-                    className="h-8 font-mono text-sm flex-1"
-                    autoFocus
-                  />
-                </div>
-                {newItemType === 'key_value' ? (
-                  <Input
-                    value={newItemValue}
-                    onChange={(e) => setNewItemValue(e.target.value)}
-                    placeholder="Value"
-                    className="h-8 font-mono text-sm mb-2"
-                  />
-                ) : (
-                  <textarea
-                    value={newItemValue}
-                    onChange={(e) => setNewItemValue(e.target.value)}
-                    placeholder="Secure note content..."
-                    className="w-full p-2 rounded-md border bg-background font-mono text-sm min-h-[80px] mb-2"
-                  />
-                )}
-                <div className="flex justify-end gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    setShowAddItem(false);
-                    setNewItemLabel('');
-                    setNewItemValue('');
-                  }}>
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleAddItem} className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Add
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Items list */}
-            {isLoadingItems ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : items.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No items in this vault</p>
-                <p className="text-xs mt-1">Click "Add Item" to store secrets</p>
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={items.map(item => item.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-1">
-                    {items.map((item) => (
-                      <SortableItem key={item.id} id={item.id}>
-                        <VaultItemRow
-                          item={item}
-                          isVisible={isItemVisible(item.id)}
-                          isEditing={editingItemId === item.id}
-                          editingLabel={editingItemLabel}
-                          editingValue={editingItemValue}
-                          onToggleVisibility={() => toggleItemVisibility(item.id)}
-                          onCopy={() => copyToClipboard(item.value, item.label)}
-                          onStartEdit={() => startEditingItem(item)}
-                          onCancelEdit={cancelEditingItem}
-                          onSaveEdit={() => handleUpdateItem(item.id)}
-                          onDelete={() => handleDeleteItem(item.id)}
-                          onEditingLabelChange={setEditingItemLabel}
-                          onEditingValueChange={setEditingItemValue}
-                        />
-                      </SortableItem>
-                    ))}
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {/* New item form */}
+              {showAddItem && (
+                <div className="mb-4 p-3 rounded-lg border bg-muted/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <select
+                      value={newItemType}
+                      onChange={(e) => setNewItemType(e.target.value as 'key_value' | 'secure_note')}
+                      className="h-8 px-2 rounded-md border bg-background text-sm"
+                    >
+                      <option value="key_value">Key-Value</option>
+                      <option value="secure_note">Secure Note</option>
+                    </select>
+                    <Input
+                      ref={newItemLabelRef}
+                      value={newItemLabel}
+                      onChange={(e) => setNewItemLabel(e.target.value)}
+                      onPaste={newItemType === 'key_value' ? handleLabelPaste : undefined}
+                      placeholder={newItemType === 'key_value' ? "KEY_NAME (paste .env to bulk import)" : "Note title"}
+                      className="h-8 font-mono text-sm flex-1"
+                      autoFocus
+                    />
                   </div>
-                </SortableContext>
-              </DndContext>
-            )}
+                  {newItemType === 'key_value' ? (
+                    <Input
+                      value={newItemValue}
+                      onChange={(e) => setNewItemValue(e.target.value)}
+                      placeholder="Value"
+                      className="h-8 font-mono text-sm mb-2"
+                    />
+                  ) : (
+                    <textarea
+                      value={newItemValue}
+                      onChange={(e) => setNewItemValue(e.target.value)}
+                      placeholder="Secure note content..."
+                      className="w-full p-2 rounded-md border bg-background font-mono text-sm min-h-[80px] mb-2"
+                    />
+                  )}
+                  <div className="flex justify-end gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => {
+                      setShowAddItem(false);
+                      setNewItemLabel('');
+                      setNewItemValue('');
+                    }}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleAddItem} className="bg-blue-600 hover:bg-blue-700 text-white">
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Items list */}
+              {isLoadingItems ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : items.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No items in this vault</p>
+                  <p className="text-xs mt-1">Click "Add Item" to store secrets</p>
+                </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={items.map(item => item.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-1">
+                      {items.map((item) => (
+                        <SortableItem key={item.id} id={item.id}>
+                          <VaultItemRow
+                            item={item}
+                            isVisible={isItemVisible(item.id)}
+                            isEditing={editingItemId === item.id}
+                            editingLabel={editingItemLabel}
+                            editingValue={editingItemValue}
+                            onToggleVisibility={() => toggleItemVisibility(item.id)}
+                            onCopy={() => copyToClipboard(item.value, item.label)}
+                            onStartEdit={() => startEditingItem(item)}
+                            onCancelEdit={cancelEditingItem}
+                            onSaveEdit={() => handleUpdateItem(item.id)}
+                            onDelete={() => handleDeleteItem(item.id)}
+                            onEditingLabelChange={setEditingItemLabel}
+                            onEditingValueChange={setEditingItemValue}
+                          />
+                        </SortableItem>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Card>

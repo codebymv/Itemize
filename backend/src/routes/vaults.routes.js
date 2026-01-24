@@ -393,6 +393,53 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     // VAULT ITEMS OPERATIONS
     // =====================
 
+    // Reorder vault items (MUST come before :itemId routes to avoid matching 'reorder' as an itemId)
+    router.put('/vaults/:vaultId/items/reorder', authenticateJWT, async (req, res) => {
+        try {
+            const { vaultId } = req.params;
+            const { item_ids } = req.body; // Array of item IDs in new order
+
+            if (!Array.isArray(item_ids)) {
+                return res.status(400).json({ error: 'item_ids array is required' });
+            }
+
+            const client = await pool.connect();
+            
+            try {
+                // Verify ownership through vault
+                const vaultCheck = await client.query(
+                    'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
+                    [vaultId, req.user.id]
+                );
+
+                if (vaultCheck.rows.length === 0) {
+                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                }
+
+                // Update order_index for each item
+                for (let i = 0; i < item_ids.length; i++) {
+                    await client.query(
+                        'UPDATE vault_items SET order_index = $1 WHERE id = $2 AND vault_id = $3',
+                        [i, item_ids[i], vaultId]
+                    );
+                }
+
+                // Update vault's updated_at
+                await client.query(
+                    'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                    [vaultId]
+                );
+
+                res.json({ message: 'Items reordered successfully' });
+            } finally {
+                client.release();
+            }
+        } catch (error) {
+            logger.error('Error reordering vault items:', { error: error.message });
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
     // Add item to vault
     router.post('/vaults/:vaultId/items', authenticateJWT, async (req, res) => {
         try {
@@ -666,53 +713,6 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         } catch (error) {
             logger.error('Error deleting vault item:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while deleting vault item' });
-        }
-    });
-
-    // Reorder vault items
-    router.put('/vaults/:vaultId/items/reorder', authenticateJWT, async (req, res) => {
-        try {
-            const { vaultId } = req.params;
-            const { item_ids } = req.body; // Array of item IDs in new order
-
-            if (!Array.isArray(item_ids)) {
-                return res.status(400).json({ error: 'item_ids array is required' });
-            }
-
-            const client = await pool.connect();
-            
-            try {
-                // Verify ownership through vault
-                const vaultCheck = await client.query(
-                    'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
-                    [vaultId, req.user.id]
-                );
-
-                if (vaultCheck.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
-                }
-
-                // Update order_index for each item
-                for (let i = 0; i < item_ids.length; i++) {
-                    await client.query(
-                        'UPDATE vault_items SET order_index = $1 WHERE id = $2 AND vault_id = $3',
-                        [i, item_ids[i], vaultId]
-                    );
-                }
-
-                // Update vault's updated_at
-                await client.query(
-                    'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-                    [vaultId]
-                );
-
-                res.json({ message: 'Items reordered successfully' });
-            } finally {
-                client.release();
-            }
-        } catch (error) {
-            logger.error('Error reordering vault items:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
         }
     });
 
