@@ -41,6 +41,13 @@ import { List, Note, Whiteboard, Wireframe, Vault } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 import { useToast } from "../hooks/use-toast";
 import CreateListModal from "../components/CreateListModal";
@@ -96,6 +103,7 @@ const CanvasPage: React.FC = () => {
   const [loadingVaults, setLoadingVaults] = useState(true);
   const isLoading = loadingLists || loadingNotes || loadingWhiteboards || loadingWireframes || loadingVaults;
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
@@ -300,6 +308,22 @@ const CanvasPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">
+          {/* Type filter */}
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="list">Lists</SelectItem>
+              <SelectItem value="note">Notes</SelectItem>
+              <SelectItem value="whiteboard">Whiteboards</SelectItem>
+              <SelectItem value="wireframe">Wireframes</SelectItem>
+              <SelectItem value="vault">Vaults</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Desktop search */}
           <div className="relative hidden sm:block w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -344,7 +368,7 @@ const CanvasPage: React.FC = () => {
     );
 
     return () => setHeaderContent(null);
-  }, [searchQuery, theme, showButtonContextMenu, setHeaderContent, location.pathname]);
+  }, [searchQuery, typeFilter, theme, showButtonContextMenu, setHeaderContent, location.pathname]);
 
   // Collapsible state management - persists across filter changes
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
@@ -449,6 +473,27 @@ const CanvasPage: React.FC = () => {
     });
   };
 
+  // Filter data based on type filter
+  const filteredData = useMemo(() => {
+    if (typeFilter === 'all') {
+      return {
+        filteredLists: lists,
+        filteredNotes: notes,
+        filteredWhiteboards: whiteboards,
+        filteredWireframes: wireframes,
+        filteredVaults: vaults,
+      };
+    }
+
+    return {
+      filteredLists: typeFilter === 'list' ? lists : [],
+      filteredNotes: typeFilter === 'note' ? notes : [],
+      filteredWhiteboards: typeFilter === 'whiteboard' ? whiteboards : [],
+      filteredWireframes: typeFilter === 'wireframe' ? wireframes : [],
+      filteredVaults: typeFilter === 'vault' ? vaults : [],
+    };
+  }, [typeFilter, lists, notes, whiteboards, wireframes, vaults]);
+
   // Fetch lists on component mount
   useEffect(() => {
     const getLists = async () => {
@@ -476,7 +521,9 @@ const CanvasPage: React.FC = () => {
       try {
         setLoadingNotes(true);
         setErrorNotes(null);
-        const fetchedNotes = await getNotes(token);
+        const response = await getNotes(token);
+        // API returns { notes: [...], pagination: {...} }
+        const fetchedNotes = response?.notes || response || [];
         setNotes(Array.isArray(fetchedNotes) ? fetchedNotes : []);
       } catch (err) {
         console.error('Error fetching notes:', err);
@@ -499,7 +546,9 @@ const CanvasPage: React.FC = () => {
       try {
         setLoadingWhiteboards(true);
         setErrorWhiteboards(null);
-        const fetchedWhiteboards = await getWhiteboards(token);
+        const response = await getWhiteboards(token);
+        // API returns { whiteboards: [...], pagination: {...} }
+        const fetchedWhiteboards = response?.whiteboards || response || [];
         setWhiteboards(Array.isArray(fetchedWhiteboards) ? fetchedWhiteboards : []);
       } catch (err) {
         console.error('Error fetching whiteboards:', err);
@@ -1818,7 +1867,7 @@ const CanvasPage: React.FC = () => {
       <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-[calc(100vh-4rem)] overflow-hidden'}`}>
         {/* Mobile Search Bar - shown when not in desktop view */}
         {isMobileView && (
-          <div className="px-4 py-2 border-b bg-background">
+          <div className="px-4 py-2 border-b bg-background space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -1829,6 +1878,20 @@ const CanvasPage: React.FC = () => {
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               />
             </div>
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+              <SelectTrigger className="w-full h-9">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="list">Lists</SelectItem>
+                <SelectItem value="note">Notes</SelectItem>
+                <SelectItem value="whiteboard">Whiteboards</SelectItem>
+                <SelectItem value="wireframe">Wireframes</SelectItem>
+                <SelectItem value="vault">Vaults</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -1862,11 +1925,11 @@ const CanvasPage: React.FC = () => {
             // Desktop: Full-width Canvas View with drag and drop
             <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
               <CanvasContainer
-                lists={lists}
-                notes={notes}
-                whiteboards={whiteboards}
-                wireframes={wireframes}
-                vaults={vaults}
+                lists={filteredData.filteredLists}
+                notes={filteredData.filteredNotes}
+                whiteboards={filteredData.filteredWhiteboards}
+                wireframes={filteredData.filteredWireframes}
+                vaults={filteredData.filteredVaults}
                 existingCategories={dbCategories}
                 onListUpdate={updateList}
                 onListPositionUpdate={handleListPositionUpdate}

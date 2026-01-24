@@ -284,8 +284,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Canvas zooming handler
   const handleWheel = (e: React.WheelEvent) => {
-    // Check if the event target is within a text editor or input field
     const target = e.target as HTMLElement;
+    
+    // Check if the event target is within a text editor or input field
     const isInTextEditor = target.closest('.ProseMirror') || 
                           target.closest('textarea') || 
                           target.closest('input') || 
@@ -297,6 +298,53 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return;
     }
     
+    // Check if the target is within any draggable card on the canvas
+    const isInCard = target.closest('.draggable-note-card') ||
+                     target.closest('.draggable-list-card') ||
+                     target.closest('.draggable-vault-card') ||
+                     target.closest('.draggable-whiteboard-card') ||
+                     target.closest('.draggable-wireframe-card');
+    
+    // If hovering over a card, check for scrollable content
+    if (isInCard) {
+      // Find scrollable container within the card
+      const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+        while (element && element !== isInCard) {
+          const style = window.getComputedStyle(element);
+          const overflowY = style.overflowY;
+          const isScrollable = (overflowY === 'auto' || overflowY === 'scroll') && 
+                               element.scrollHeight > element.clientHeight;
+          
+          if (isScrollable) {
+            // Check if we can actually scroll in the direction the user wants
+            const canScrollUp = element.scrollTop > 0;
+            const canScrollDown = element.scrollTop < (element.scrollHeight - element.clientHeight);
+            const scrollingUp = e.deltaY < 0;
+            const scrollingDown = e.deltaY > 0;
+            
+            // Only allow native scroll if we can scroll in that direction
+            if ((scrollingUp && canScrollUp) || (scrollingDown && canScrollDown)) {
+              return element;
+            }
+          }
+          element = element.parentElement;
+        }
+        return null;
+      };
+      
+      const scrollableParent = findScrollableParent(target);
+      if (scrollableParent) {
+        // Allow native scroll behavior for scrollable containers
+        return;
+      }
+      
+      // Hovering over a card but no scrollable content (or at scroll boundary)
+      // Prevent zoom but don't do anything else - this prevents accidental zooming
+      e.preventDefault();
+      return;
+    }
+    
+    // Not over a card - allow canvas zoom
     e.preventDefault();
     
     if (canvasRef.current) {

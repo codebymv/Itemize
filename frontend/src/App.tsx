@@ -50,6 +50,8 @@ const CalendarsPage = React.lazy(() => import("./pages/calendars/CalendarsPage")
 const BookingsPage = React.lazy(() => import("./pages/bookings/BookingsPage"));
 const FormsPage = React.lazy(() => import("./pages/forms/FormsPage"));
 const InboxPage = React.lazy(() => import("./pages/inbox/InboxPage"));
+const ContentsPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.ContentsPage })));
+const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.SharedPage })));
 
 // Loading fallback component for lazy-loaded pages
 const PageLoading = () => (
@@ -163,8 +165,8 @@ const AppContent = () => {
         <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/automations/:id" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/workspace" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
-        <Route path="/workspace/contents" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
-        <Route path="/workspace/shared" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
+        <Route path="/workspace/contents" element={<AuthenticatedLayout><ContentsPage /></AuthenticatedLayout>} />
+        <Route path="/workspace/shared" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
         <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
 

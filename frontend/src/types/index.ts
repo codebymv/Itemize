@@ -11,6 +11,8 @@ export interface List {
   type: string; // Represents category
   items: ListItem[];
   createdAt?: Date; // Made optional as it might not always be present or needed by frontend
+  created_at?: string; // Alternative field name from API
+  updated_at?: string; // Updated timestamp
   color_value?: string | null; // Changed from 'color' to 'color_value', stores hex, can be null or undefined
   position_x?: number; // X coordinate for canvas view
   position_y?: number; // Y coordinate for canvas view

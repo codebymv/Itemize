@@ -597,3 +597,51 @@ export const unlockVault = async (vaultId: number, masterPassword: string, token
   });
   return response.data;
 };
+
+// Share list
+export const shareList = async (listId: string, token?: string) => {
+  const response = await api.post(`/api/lists/${listId}/share`, {}, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Unshare list
+export const unshareList = async (listId: string, token?: string) => {
+  const response = await api.delete(`/api/lists/${listId}/share`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Share note
+export const shareNote = async (noteId: number, token?: string) => {
+  const response = await api.post(`/api/notes/${noteId}/share`, {}, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Unshare note
+export const unshareNote = async (noteId: number, token?: string) => {
+  const response = await api.delete(`/api/notes/${noteId}/share`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Share whiteboard
+export const shareWhiteboard = async (whiteboardId: number, token?: string) => {
+  const response = await api.post(`/api/whiteboards/${whiteboardId}/share`, {}, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Unshare whiteboard
+export const unshareWhiteboard = async (whiteboardId: number, token?: string) => {
+  const response = await api.delete(`/api/whiteboards/${whiteboardId}/share`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
