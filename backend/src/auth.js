@@ -71,10 +71,12 @@ const strictRateLimit = rateLimit({
 });
 
 // Cookie configuration for httpOnly secure cookies
+// NOTE: sameSite must be 'none' for cross-origin requests (frontend and backend on different domains)
+// When sameSite is 'none', secure MUST be true
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin
   maxAge: 15 * 60 * 1000, // 15 minutes for access token
   path: '/',
 };
@@ -82,7 +84,7 @@ const ACCESS_COOKIE_OPTIONS = {
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for refresh token
   path: '/api/auth',
 };
