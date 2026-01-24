@@ -34,7 +34,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
   const [category, setCategory] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [color, setColor] = useState('#6366F1'); // Default indigo color for vaults
+  const [color, setColor] = useState('#3B82F6'); // Default blue color for vaults
   const [categoryColor, setCategoryColor] = useState('#808080'); // Default category color
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
       setCategory('');
       setNewCategory('');
       setIsAddingNewCategory(false);
-      setColor('#6366F1');
+      setColor('#3B82F6');
       setCategoryColor('#808080');
     }
   }, [isOpen]);
@@ -95,7 +95,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-indigo-500" />
+            <KeyRound className="h-5 w-5 text-blue-500" />
             Add Vault
           </DialogTitle>
         </DialogHeader>
@@ -128,7 +128,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                     const categoryColorValue = value === 'General' ? '#808080' : (selectedCat?.color_value || '#808080');
                     setCategoryColor(categoryColorValue);
                     if (value === 'General') {
-                      setColor('#6366F1'); // Default indigo for General category vaults
+                      setColor('#3B82F6'); // Default blue for General category vaults
                     } else {
                       setColor(categoryColorValue);
                     }
@@ -315,7 +315,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
             <Button 
               type="submit"
               disabled={!title.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               Create Vault

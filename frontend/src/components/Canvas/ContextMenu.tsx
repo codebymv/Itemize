@@ -128,7 +128,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             onClick={(e) => handleClickItem(e, onAddVault)}
             style={{ fontFamily: '"Raleway", sans-serif' }}
           >
-            <KeyRound className="h-4 w-4 mr-3 text-indigo-600" />
+            <KeyRound className="h-4 w-4 mr-3 text-blue-600" />
             <span>Add Vault</span>
           </button>
         )}

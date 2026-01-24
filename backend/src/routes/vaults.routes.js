@@ -205,7 +205,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 width = 400,
                 height = 300,
                 z_index = 0,
-                color_value = '#6366F1',
+                color_value = '#3B82F6',
                 master_password // Optional - if provided, vault will be locked
             } = req.body;
 

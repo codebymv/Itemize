@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS vaults (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) DEFAULT 'Untitled Vault',
     category VARCHAR(255) DEFAULT 'General',
-    color_value VARCHAR(50) DEFAULT '#6366F1',  -- Indigo for security theme
+    color_value VARCHAR(50) DEFAULT '#3B82F6',  -- Blue to match other content types
     position_x FLOAT NOT NULL DEFAULT 0,
     position_y FLOAT NOT NULL DEFAULT 0,
     width INTEGER DEFAULT 400,

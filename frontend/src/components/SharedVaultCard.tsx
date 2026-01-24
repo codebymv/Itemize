@@ -29,7 +29,7 @@ interface SharedVaultCardProps {
 
 export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) => {
   const { toast } = useToast();
-  const vaultColor = vaultData.color_value || '#6366F1';
+  const vaultColor = vaultData.color_value || '#3B82F6';
   
   // Track which items are visible
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());

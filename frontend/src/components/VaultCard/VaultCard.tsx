@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Lock, KeyRound, Share2, Plus, FileDown, Unlock } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Lock, KeyRound, Share2, Plus } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useVaultCardLogic } from '@/hooks/useVaultCardLogic';
@@ -68,24 +68,20 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   updateCategory
 }) => {
   const categoryColor = existingCategories.find(c => c.name === vault.category)?.color_value;
-  const vaultDisplayColor = vault.color_value || categoryColor || '#6366F1'; // Default to indigo
+  const vaultDisplayColor = vault.color_value || categoryColor || '#3B82F6'; // Default to blue
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
-  // State for env paste modal
-  const [showEnvPasteModal, setShowEnvPasteModal] = useState(false);
-  const [envPasteText, setEnvPasteText] = useState('');
 
   // Color preview state
-  const [currentColorPreview, setCurrentColorPreview] = useState(vault.color_value || '#6366F1');
+  const [currentColorPreview, setCurrentColorPreview] = useState(vault.color_value || '#3B82F6');
 
   // Get theme for styling
   const { theme } = useTheme();
 
   // Sync color preview when vault color changes
   useEffect(() => {
-    setCurrentColorPreview(vault.color_value || '#6366F1');
+    setCurrentColorPreview(vault.color_value || '#3B82F6');
   }, [vault.color_value]);
 
   const {
@@ -168,14 +164,26 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     return await onDelete(parseInt(vaultId));
   };
 
-  // Handle env paste import
-  const handleEnvImport = async () => {
-    const parsedItems = parseEnvFormat(envPasteText);
-    if (parsedItems.length > 0) {
+  // Handle paste in key-value input - detect .env format and bulk import
+  const handleLabelPaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    const parsedItems = parseEnvFormat(pastedText);
+    
+    // If pasted text contains multiple env variables, bulk import them
+    if (parsedItems.length > 1) {
+      e.preventDefault();
       await handleBulkAddItems(parsedItems);
-      setShowEnvPasteModal(false);
-      setEnvPasteText('');
+      setShowAddItem(false);
+      setNewItemLabel('');
+      setNewItemValue('');
     }
+    // If it's a single KEY=VALUE, parse and fill both fields
+    else if (parsedItems.length === 1) {
+      e.preventDefault();
+      setNewItemLabel(parsedItems[0].label);
+      setNewItemValue(parsedItems[0].value);
+    }
+    // Otherwise, let the default paste behavior happen
   };
 
   // Drag and drop sensors
@@ -283,33 +291,8 @@ export const VaultCard: React.FC<VaultCardProps> = ({
               </div>
             ) : (
               <>
-                <CollapsibleTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 flex-1 min-w-0">
-                    {vault.is_locked ? (
-                      <Lock className="h-5 w-5 flex-shrink-0" style={{ color: vaultDisplayColor }} />
-                    ) : (
-                      <KeyRound className="h-5 w-5 flex-shrink-0" style={{ color: vaultDisplayColor }} />
-                    )}
-                    <CardTitle 
-                      className="text-lg truncate font-light" 
-                      style={{ 
-                        fontFamily: '"Raleway", sans-serif',
-                        borderBottom: `2px solid ${vaultDisplayColor}`
-                      }}
-                    >
-                      {vaultTitle}
-                    </CardTitle>
-                    <ChevronDown 
-                      className={cn(
-                        "h-4 w-4 transition-transform flex-shrink-0",
-                        isCollapsibleOpen ? "transform rotate-180" : ""
-                      )}
-                    />
-                  </div>
-                </CollapsibleTrigger>
-
-                <div className="flex items-center gap-1">
-                  {/* Color Picker */}
+                <div className="flex items-center gap-2">
+                  {/* Color Picker - first on left */}
                   <ColorPicker
                     color={currentColorPreview}
                     onChange={setCurrentColorPreview}
@@ -317,43 +300,70 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   >
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
+                      size="icon"
+                      className="h-6 w-6 p-0 rounded-full flex items-center justify-center relative"
+                      aria-label="Change vault color"
+                      disabled={isSavingColor}
                     >
-                      <div 
-                        className="h-4 w-4 rounded-full border"
-                        style={{ backgroundColor: currentColorPreview }}
+                      <span
+                        className="inline-block w-3 h-3 rounded-full border border-border transition-colors duration-150"
+                        style={{ backgroundColor: vaultDisplayColor }}
                       />
+                      {isSavingColor && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-full">
+                          <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+                        </div>
+                      )}
                     </Button>
                   </ColorPicker>
-
+                  {/* Type icon */}
+                  {vault.is_locked ? (
+                    <Lock className="h-4 w-4" style={{ color: vaultDisplayColor }} />
+                  ) : (
+                    <KeyRound className="h-4 w-4" style={{ color: vaultDisplayColor }} />
+                  )}
+                  {/* Title - clickable to edit */}
+                  <CardTitle 
+                    className="text-lg font-medium cursor-pointer"
+                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    onClick={() => setIsEditing(true)}
+                  >
+                    {vaultTitle}
+                  </CardTitle>
+                </div>
+                <div className="flex">
+                  {/* Collapsible trigger - separate button */}
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        isCollapsibleOpen ? "" : "transform rotate-180"
+                      )}/>
+                    </Button>
+                  </CollapsibleTrigger>
+                  {/* Dropdown menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" className="h-8 w-8 p-0">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Edit3 className="h-4 w-4 mr-2" />
-                        Rename
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareVault}>
-                        <Share2 className="h-4 w-4 mr-2" />
+                      <DropdownMenuItem onClick={handleShareVault} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Share2 className="mr-2 h-4 w-4" />
                         Share
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setShowEnvPasteModal(true)}>
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Import .env
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={handleDeleteConfirmation}
-                        className="text-destructive focus:text-destructive"
+                        className="text-red-600"
+                        style={{ fontFamily: '"Raleway", sans-serif' }}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Vault
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -413,7 +423,8 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                     ref={newItemLabelRef}
                     value={newItemLabel}
                     onChange={(e) => setNewItemLabel(e.target.value)}
-                    placeholder={newItemType === 'key_value' ? "KEY_NAME" : "Note title"}
+                    onPaste={newItemType === 'key_value' ? handleLabelPaste : undefined}
+                    placeholder={newItemType === 'key_value' ? "KEY_NAME (paste .env to bulk import)" : "Note title"}
                     className="h-8 font-mono text-sm flex-1"
                     autoFocus
                   />
@@ -441,7 +452,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   }}>
                     Cancel
                   </Button>
-                  <Button size="sm" onClick={handleAddItem}>
+                  <Button size="sm" onClick={handleAddItem} className="bg-blue-600 hover:bg-blue-700 text-white">
                     Add
                   </Button>
                 </div>
@@ -505,44 +516,6 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         vaultId={vault.id.toString()}
         vaultTitle={vaultTitle}
       />
-
-      {/* Env Paste Modal */}
-      {showEnvPasteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-lg mx-4 p-6">
-            <h3 className="text-lg font-semibold mb-2">Import .env Variables</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Paste your .env file contents below. Each line should be in KEY=VALUE format.
-            </p>
-            <textarea
-              value={envPasteText}
-              onChange={(e) => setEnvPasteText(e.target.value)}
-              placeholder={`# Paste your .env here\nDATABASE_URL=postgres://...\nAPI_KEY=sk_live_...`}
-              className="w-full p-3 rounded-md border bg-muted/30 font-mono text-sm min-h-[200px] mb-4"
-              autoFocus
-            />
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                {parseEnvFormat(envPasteText).length} variables detected
-              </span>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => {
-                  setShowEnvPasteModal(false);
-                  setEnvPasteText('');
-                }}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleEnvImport}
-                  disabled={parseEnvFormat(envPasteText).length === 0}
-                >
-                  Import {parseEnvFormat(envPasteText).length} Variables
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </Collapsible>
   );
 };

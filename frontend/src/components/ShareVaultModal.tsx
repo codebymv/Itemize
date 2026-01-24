@@ -128,7 +128,7 @@ export const ShareVaultModal: React.FC<ShareVaultModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-            <Share2 className="h-5 w-5 text-indigo-500" />
+            <Share2 className="h-5 w-5 text-blue-500" />
             Share Vault
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -142,7 +142,7 @@ export const ShareVaultModal: React.FC<ShareVaultModalProps> = ({
             <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Sharing</Label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
               <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                <KeyRound className="h-4 w-4 text-indigo-500" />
+                <KeyRound className="h-4 w-4 text-blue-500" />
                 {vaultTitle}
               </p>
             </div>
@@ -230,7 +230,7 @@ export const ShareVaultModal: React.FC<ShareVaultModalProps> = ({
                 <Button
                   type="button"
                   onClick={onClose}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   style={{ fontFamily: '"Raleway", sans-serif' }}
                 >
                   Done
@@ -253,7 +253,7 @@ export const ShareVaultModal: React.FC<ShareVaultModalProps> = ({
                   type="button"
                   onClick={handleShare}
                   disabled={isLoading}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   style={{ fontFamily: '"Raleway", sans-serif' }}
                 >
                   {isLoading ? 'Creating Link...' : 'I understand, Share'}
