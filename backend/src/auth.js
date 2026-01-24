@@ -1,10 +1,34 @@
+// ============================================
+// Authentication Routes
+// Supports both Google OAuth and Email/Password
+// ============================================
+
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { userOperations } = require('./db');
 const { logger } = require('./utils/logger');
+const { generateVerificationToken, hashToken } = require('./utils/crypto');
+const { 
+  sendVerificationEmail, 
+  sendPasswordResetEmail, 
+  sendWelcomeEmail, 
+  sendPasswordChangedEmail,
+  isEmailServiceConfigured 
+} = require('./services/email.service');
+const {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
+  validate,
+} = require('./lib/validators');
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -18,7 +42,7 @@ if (!JWT_SECRET) {
 }
 
 // ===========================
-// JWT Token Configuration (Phase 1.3)
+// JWT Token Configuration
 // ===========================
 const ACCESS_TOKEN_EXPIRY = '15m';  // Short-lived access token
 const REFRESH_TOKEN_EXPIRY = '30d'; // Long-lived refresh token
@@ -37,10 +61,19 @@ const authRateLimit = rateLimit({
     }
 });
 
+// Stricter rate limiting for email-sending endpoints (10 attempts per 15 minutes)
+const strictRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Cookie configuration for httpOnly secure cookies
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+  secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   maxAge: 15 * 60 * 1000, // 15 minutes for access token
   path: '/',
@@ -51,18 +84,15 @@ const REFRESH_COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for refresh token
-  path: '/api/auth', // Only sent to auth endpoints
+  path: '/api/auth',
 };
-
-// Legacy cookie options for backward compatibility
-const COOKIE_OPTIONS = ACCESS_COOKIE_OPTIONS;
 
 // Error handler wrapper
 const asyncHandler = fn => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Token generation helper (Phase 1.3)
+// Token generation helper
 const generateTokens = (user) => {
   const payload = { 
     id: user.id,
@@ -80,10 +110,579 @@ const generateTokens = (user) => {
   return { accessToken, refreshToken };
 };
 
+// Helper to create personal organization for new users
+const createPersonalOrganization = async (client, userId, userName) => {
+  try {
+    // Generate slug from name or email
+    const slug = (userName || `user${userId}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      + `-${userId}`;
+
+    // Create personal organization
+    const orgResult = await client.query(`
+      INSERT INTO organizations (name, slug, settings)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [`${userName}'s Workspace`, slug, JSON.stringify({ personal: true })]);
+
+    const organization = orgResult.rows[0];
+
+    // Add user as owner
+    await client.query(`
+      INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+      VALUES ($1, $2, 'owner', CURRENT_TIMESTAMP)
+    `, [organization.id, userId]);
+
+    // Set as default organization
+    await client.query(`
+      UPDATE users 
+      SET default_organization_id = $1 
+      WHERE id = $2
+    `, [organization.id, userId]);
+
+    logger.info('Created personal organization', { userId, orgId: organization.id, slug });
+    return organization;
+  } catch (error) {
+    logger.error('Failed to create personal organization', { userId, error: error.message });
+    throw error;
+  }
+};
+
+// ===========================
+// EMAIL/PASSWORD REGISTRATION
+// ===========================
+
 /**
- * Handle Google OAuth login endpoint using direct token-based approach
- * This endpoint receives user data from Google directly from the frontend
- * Protected by strict rate limiting to prevent brute force attacks
+ * POST /api/auth/register
+ * Create a new account with email and password
+ */
+router.post('/register', authRateLimit, validate(registerSchema), asyncHandler(async (req, res) => {
+  const { email, password, name } = req.validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Check if user already exists
+    const existingUser = await client.query(
+      'SELECT id, provider FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      const user = existingUser.rows[0];
+      if (user.provider === 'google') {
+        return res.status(400).json({ 
+          error: 'This email is already registered with Google. Please sign in with Google.',
+          code: 'GOOGLE_ACCOUNT_EXISTS'
+        });
+      }
+      return res.status(400).json({ 
+        error: 'An account with this email already exists.',
+        code: 'USER_EXISTS'
+      });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // Generate verification token
+    const { token: verificationToken, hash: verificationTokenHash } = generateVerificationToken();
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Create user
+    const result = await client.query(
+      `INSERT INTO users (email, name, password_hash, provider, email_verified, verification_token, verification_token_expires, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING id, email, name`,
+      [email, name || email.split('@')[0], passwordHash, 'email', false, verificationTokenHash, verificationTokenExpiry]
+    );
+
+    const user = result.rows[0];
+
+    // Create personal organization for new user
+    try {
+      await createPersonalOrganization(client, user.id, user.name);
+    } catch (orgError) {
+      logger.error('Failed to create organization for new user', { userId: user.id, error: orgError.message });
+      // Don't fail registration if org creation fails - user can create one later
+    }
+
+    // Send verification email (non-blocking)
+    if (isEmailServiceConfigured()) {
+      sendVerificationEmail({ email: user.email, name: user.name }, verificationToken)
+        .catch(err => logger.error('Failed to send verification email', { error: err.message }));
+    } else {
+      logger.warn('Email service not configured. Verification email not sent.');
+    }
+
+    logger.info('User registered', { email: user.email });
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created. Please check your email to verify your account.',
+      data: { email: user.email },
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+// ===========================
+// EMAIL/PASSWORD LOGIN
+// ===========================
+
+/**
+ * POST /api/auth/login
+ * Login with email and password
+ */
+router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (req, res) => {
+  const { email, password } = req.validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Find user
+    const result = await client.query(
+      'SELECT id, email, name, password_hash, provider, email_verified FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ 
+        error: 'Invalid email or password.',
+        code: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Check if user registered with Google
+    if (user.provider === 'google' && !user.password_hash) {
+      return res.status(400).json({ 
+        error: 'This account uses Google sign-in. Please sign in with Google.',
+        code: 'GOOGLE_ACCOUNT'
+      });
+    }
+
+    // Verify password
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ 
+        error: 'Invalid email or password.',
+        code: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    // Check email verification
+    if (!user.email_verified) {
+      return res.status(403).json({
+        error: 'Please verify your email address before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
+        data: { email: user.email },
+      });
+    }
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    // Set cookies
+    res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+
+    logger.info('User logged in', { email: user.email });
+
+    res.json({
+      success: true,
+      token: accessToken, // For backward compatibility
+      user: {
+        uid: user.id,
+        email: user.email,
+        name: user.name,
+        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
+      },
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+// ===========================
+// EMAIL VERIFICATION
+// ===========================
+
+/**
+ * POST /api/auth/verify-email
+ * Verify email address with token
+ */
+router.post('/verify-email', authRateLimit, validate(verifyEmailSchema), asyncHandler(async (req, res) => {
+  const { token } = req.validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const tokenHash = hashToken(token);
+
+  const client = await pool.connect();
+  try {
+    // Find user with valid verification token
+    const result = await client.query(
+      `SELECT id, email, name, email_verified FROM users 
+       WHERE verification_token = $1 AND verification_token_expires > NOW()`,
+      [tokenHash]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ 
+        error: 'Invalid or expired verification link.',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    const user = result.rows[0];
+
+    if (user.email_verified) {
+      return res.status(400).json({ 
+        error: 'Email is already verified.',
+        code: 'ALREADY_VERIFIED'
+      });
+    }
+
+    // Update user
+    await client.query(
+      `UPDATE users SET email_verified = true, verification_token = NULL, verification_token_expires = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    // Generate auth token (user is now logged in)
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    // Set cookies
+    res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+
+    // Send welcome email (non-blocking)
+    if (isEmailServiceConfigured()) {
+      sendWelcomeEmail({ email: user.email, name: user.name })
+        .catch(err => logger.error('Failed to send welcome email', { error: err.message }));
+    }
+
+    logger.info('Email verified', { email: user.email });
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully!',
+      token: accessToken,
+      user: {
+        uid: user.id,
+        email: user.email,
+        name: user.name,
+        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
+      },
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+/**
+ * POST /api/auth/resend-verification
+ * Resend verification email
+ */
+router.post('/resend-verification', strictRateLimit, validate(resendVerificationSchema), asyncHandler(async (req, res) => {
+  const { email } = req.validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Find user
+    const result = await client.query(
+      'SELECT id, email, name, email_verified FROM users WHERE email = $1',
+      [email]
+    );
+
+    // Always return success to prevent email enumeration
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a verification link.',
+      });
+    }
+
+    const user = result.rows[0];
+
+    if (user.email_verified) {
+      return res.json({
+        success: true,
+        message: 'Your email is already verified. You can log in.',
+      });
+    }
+
+    // Generate new verification token
+    const { token: verificationToken, hash: verificationTokenHash } = generateVerificationToken();
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Update user
+    await client.query(
+      `UPDATE users SET verification_token = $1, verification_token_expires = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [verificationTokenHash, verificationTokenExpiry, user.id]
+    );
+
+    // Send verification email
+    if (isEmailServiceConfigured()) {
+      await sendVerificationEmail({ email: user.email, name: user.name }, verificationToken);
+    }
+
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, you will receive a verification link.',
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+// ===========================
+// PASSWORD RESET
+// ===========================
+
+/**
+ * POST /api/auth/forgot-password
+ * Request password reset email
+ */
+router.post('/forgot-password', strictRateLimit, validate(forgotPasswordSchema), asyncHandler(async (req, res) => {
+  const { email } = req.validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Find user
+    const result = await client.query(
+      'SELECT id, email, name, provider FROM users WHERE email = $1',
+      [email]
+    );
+
+    // Always return success to prevent email enumeration
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a password reset link.',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Don't send reset for Google-only accounts
+    if (user.provider === 'google') {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a password reset link.',
+      });
+    }
+
+    // Generate reset token
+    const { token: resetToken, hash: resetTokenHash } = generateVerificationToken();
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Update user
+    await client.query(
+      `UPDATE users SET password_reset_token = $1, password_reset_expires = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [resetTokenHash, resetTokenExpiry, user.id]
+    );
+
+    // Send reset email
+    if (isEmailServiceConfigured()) {
+      await sendPasswordResetEmail({ email: user.email, name: user.name }, resetToken);
+    }
+
+    logger.info('Password reset requested', { email: user.email });
+
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, you will receive a password reset link.',
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password with token
+ */
+router.post('/reset-password', authRateLimit, validate(resetPasswordSchema), asyncHandler(async (req, res) => {
+  const { token, password } = req.validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const tokenHash = hashToken(token);
+
+  const client = await pool.connect();
+  try {
+    // Find user with valid reset token
+    const result = await client.query(
+      `SELECT id, email, name FROM users 
+       WHERE password_reset_token = $1 AND password_reset_expires > NOW()`,
+      [tokenHash]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ 
+        error: 'Invalid or expired reset link.',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // Update user
+    await client.query(
+      `UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL, updated_at = NOW()
+       WHERE id = $2`,
+      [passwordHash, user.id]
+    );
+
+    // Send confirmation email (non-blocking)
+    if (isEmailServiceConfigured()) {
+      sendPasswordChangedEmail({ email: user.email, name: user.name })
+        .catch(err => logger.error('Failed to send password changed email', { error: err.message }));
+    }
+
+    logger.info('Password reset', { email: user.email });
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now log in.',
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+/**
+ * POST /api/auth/change-password
+ * Change password (authenticated)
+ */
+router.post('/change-password', asyncHandler(async (req, res) => {
+  // Authenticate first
+  const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Validate input
+  let validatedBody;
+  try {
+    validatedBody = changePasswordSchema.parse(req.body);
+  } catch (error) {
+    return res.status(400).json({ error: error.errors?.[0]?.message || 'Validation failed' });
+  }
+
+  const { currentPassword, newPassword } = validatedBody;
+  const pool = req.dbPool;
+
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Get user with password
+    const result = await client.query(
+      'SELECT id, email, name, password_hash FROM users WHERE id = $1',
+      [decoded.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    if (!user.password_hash) {
+      return res.status(400).json({ 
+        error: 'This account uses Google sign-in and does not have a password.',
+        code: 'NO_PASSWORD'
+      });
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ 
+        error: 'Current password is incorrect.',
+        code: 'INVALID_PASSWORD'
+      });
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await client.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [passwordHash, user.id]
+    );
+
+    // Send confirmation email (non-blocking)
+    if (isEmailServiceConfigured()) {
+      sendPasswordChangedEmail({ email: user.email, name: user.name })
+        .catch(err => logger.error('Failed to send password changed email', { error: err.message }));
+    }
+
+    logger.info('Password changed', { email: user.email });
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully.',
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+// ===========================
+// GOOGLE OAUTH (EXISTING)
+// ===========================
+
+/**
+ * POST /api/auth/google-login
+ * Handle Google OAuth login
  */
 router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
   try {
@@ -95,19 +694,20 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
 
     logger.info('Processing Google login', { email });
     
-    // Get the database pool from request
     const pool = req.dbPool;
     
     if (!pool) {
       return res.status(503).json({ error: 'Database connection unavailable' });
     }
 
-    // Find or create a user in our database
+    // Find or create user
     let user;
+    let isNewUser = false;
     try {
-      logger.debug('Looking up user by email', { email });
+      // Check if user exists first
+      const existingUser = await userOperations.findByEmail(pool, email);
+      isNewUser = !existingUser;
       
-      // Use the userOperations to find or create user
       user = await userOperations.findOrCreate(pool, {
         email,
         name,
@@ -118,27 +718,47 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
       if (!user) {
         throw new Error('Failed to create or retrieve user');
       }
+
+      // Ensure Google users are marked as verified and have an organization
+      const client = await pool.connect();
+      try {
+        await client.query(
+          'UPDATE users SET email_verified = true WHERE id = $1 AND email_verified = false',
+          [user.id]
+        );
+
+        // Check if user has an organization
+        const orgCheck = await client.query(
+          'SELECT default_organization_id FROM users WHERE id = $1',
+          [user.id]
+        );
+
+        if (!orgCheck.rows[0].default_organization_id) {
+          // Create personal organization for new Google users
+          await createPersonalOrganization(client, user.id, user.name);
+        }
+      } finally {
+        client.release();
+      }
     } catch (error) {
       logger.error('Error handling user', { error: error.message });
-      res.status(500).json({ error: 'Database error occurred' });
-      return;
+      return res.status(500).json({ error: 'Database error occurred' });
     }
     
-    // Generate tokens (Phase 1.3 - short-lived access, long-lived refresh)
+    // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user);
     
-    // Set httpOnly cookies for secure token storage
+    // Set cookies
     res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
     
-    // Return the user data (token still included for backward compatibility)
     res.status(200).json({
-      token: accessToken, // Keep for backward compatibility during transition
+      token: accessToken,
       user: {
-        uid: user.id, // Use uid to match frontend expected format
+        uid: user.id,
         email: user.email,
         name: user.name,
-        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random` // Use default avatar generator
+        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
       }
     });
   } catch (error) {
@@ -148,8 +768,8 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
 }));
 
 /**
- * Handle Google ID token verification endpoint for Google One Tap
- * Protected by strict rate limiting to prevent brute force attacks
+ * POST /api/auth/google-credential
+ * Handle Google One Tap verification
  */
 router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) => {
   try {
@@ -166,17 +786,19 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
     
     const { sub: googleId, email, name, picture } = response.data;
     
-    // Get the database pool from request
     const pool = req.dbPool;
     
     if (!pool) {
       return res.status(503).json({ error: 'Database connection unavailable' });
     }
     
-    // Find or create a user in our database
+    // Find or create user
     let user;
     try {
-      // Use the userOperations to find or create user
+      // Check if user exists first
+      const existingUser = await userOperations.findByEmail(pool, email);
+      const isNewUser = !existingUser;
+
       user = await userOperations.findOrCreate(pool, {
         email,
         name,
@@ -187,21 +809,42 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
       if (!user) {
         throw new Error('Failed to create or retrieve user');
       }
+
+      // Ensure Google users are marked as verified and have an organization
+      const client = await pool.connect();
+      try {
+        await client.query(
+          'UPDATE users SET email_verified = true WHERE id = $1 AND email_verified = false',
+          [user.id]
+        );
+
+        // Check if user has an organization
+        const orgCheck = await client.query(
+          'SELECT default_organization_id FROM users WHERE id = $1',
+          [user.id]
+        );
+
+        if (!orgCheck.rows[0].default_organization_id) {
+          // Create personal organization for new Google users
+          await createPersonalOrganization(client, user.id, user.name);
+        }
+      } finally {
+        client.release();
+      }
     } catch (error) {
       logger.error('Error handling Google credential user', { error: error.message });
-      res.status(500).json({ error: 'Database error occurred' });
-      return;
+      return res.status(500).json({ error: 'Database error occurred' });
     }
     
-    // Generate tokens (Phase 1.3 - short-lived access, long-lived refresh)
+    // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user);
     
-    // Set httpOnly cookies for secure token storage
+    // Set cookies
     res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
     
     res.status(200).json({
-      token: accessToken, // Keep for backward compatibility during transition
+      token: accessToken,
       user: {
         uid: user.id,
         email: user.email,
@@ -215,25 +858,133 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
   }
 }));
 
+// ===========================
+// USER PROFILE
+// ===========================
+
 /**
- * Logout endpoint
+ * GET /api/auth/me
+ * Get current user profile
+ */
+router.get('/me', asyncHandler(async (req, res) => {
+  const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  const pool = req.dbPool;
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT id, email, name, provider, email_verified, created_at FROM users WHERE id = $1',
+      [decoded.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        provider: user.provider,
+        emailVerified: user.email_verified,
+        createdAt: user.created_at,
+      },
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+/**
+ * PUT /api/auth/me
+ * Update current user profile
+ */
+router.put('/me', asyncHandler(async (req, res) => {
+  const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  const { name } = req.body;
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const pool = req.dbPool;
+  if (!pool) {
+    return res.status(503).json({ error: 'Database connection unavailable' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, name',
+      [name.trim(), decoded.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+      success: true,
+      data: user,
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+// ===========================
+// SESSION MANAGEMENT
+// ===========================
+
+/**
+ * POST /api/auth/logout
+ * Clear authentication cookies
  */
 router.post('/logout', (req, res) => {
-  // Clear both access and refresh cookies
   res.cookie('itemize_auth', '', {
     ...ACCESS_COOKIE_OPTIONS,
-    maxAge: 0, // Expire immediately
+    maxAge: 0,
   });
   res.cookie('itemize_refresh', '', {
     ...REFRESH_COOKIE_OPTIONS,
-    maxAge: 0, // Expire immediately
+    maxAge: 0,
   });
-  res.status(200).json({ message: 'Logged out successfully' });
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
 });
 
 /**
- * Refresh token endpoint (Phase 1.3)
- * Issues a new access token using a valid refresh token
+ * POST /api/auth/refresh
+ * Refresh access token
  */
 router.post('/refresh', asyncHandler(async (req, res) => {
   const refreshToken = req.cookies?.itemize_refresh;
@@ -245,12 +996,10 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET);
     
-    // Ensure it's a refresh token
     if (decoded.type !== 'refresh') {
       return res.status(401).json({ error: 'Invalid token type' });
     }
     
-    // Get user from database to ensure they still exist
     const pool = req.dbPool;
     if (!pool) {
       return res.status(503).json({ error: 'Database connection unavailable' });
@@ -259,7 +1008,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     const client = await pool.connect();
     try {
       const result = await client.query(
-        'SELECT id, email, name FROM users WHERE id = $1',
+        'SELECT id, email, name, email_verified FROM users WHERE id = $1',
         [decoded.userId]
       );
       
@@ -268,8 +1017,16 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       }
       
       const user = result.rows[0];
+
+      // Check if email is verified
+      if (!user.email_verified) {
+        return res.status(401).json({ 
+          error: 'Email not verified',
+          code: 'EMAIL_NOT_VERIFIED'
+        });
+      }
       
-      // Generate new access token only (don't rotate refresh token)
+      // Generate new access token
       const newAccessToken = jwt.sign(
         { id: user.id, email: user.email, name: user.name },
         JWT_SECRET,
@@ -279,7 +1036,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       res.cookie('itemize_auth', newAccessToken, ACCESS_COOKIE_OPTIONS);
       res.json({ 
         success: true,
-        token: newAccessToken // For backward compatibility
+        token: newAccessToken
       });
     } finally {
       client.release();
@@ -293,15 +1050,16 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   }
 }));
 
+// ===========================
+// JWT MIDDLEWARE
+// ===========================
+
 /**
  * Middleware to authenticate JWT
- * Reads token from httpOnly cookie first, falls back to Authorization header
  */
 const authenticateJWT = (req, res, next) => {
-  // Try to get token from httpOnly cookie first (more secure)
   let token = req.cookies?.itemize_auth;
   
-  // Fall back to Authorization header for backward compatibility
   if (!token) {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -314,7 +1072,6 @@ const authenticateJWT = (req, res, next) => {
       if (err) {
         return res.sendStatus(403);
       }
-
       req.user = user;
       next();
     });
@@ -323,7 +1080,6 @@ const authenticateJWT = (req, res, next) => {
   }
 };
 
-// Export the router and middleware
 module.exports = {
   router,
   authenticateJWT

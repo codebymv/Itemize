@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
-import { List, Note, Whiteboard, Category } from '../../types'; // Add Note and Whiteboard types
+import { List, Note, Whiteboard, Wireframe, Category } from '../../types';
 import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 import Spinner from '../../components/ui/Spinner';
-import { DraggableNoteCard } from './DraggableNoteCard'; // Import the new component
-import { DraggableWhiteboardCard } from './DraggableWhiteboardCard'; // Import the whiteboard component
+import { DraggableNoteCard } from './DraggableNoteCard';
+import { DraggableWhiteboardCard } from './DraggableWhiteboardCard';
+import { DraggableWireframeCard } from './DraggableWireframeCard';
 import { Plus, Minus, RotateCcw, Search } from 'lucide-react';
 
 interface CanvasContainerProps {
@@ -32,6 +33,12 @@ interface CanvasContainerProps {
   onWhiteboardDelete: (whiteboardId: number) => Promise<boolean>;
   onWhiteboardShare: (whiteboardId: number) => void;
   onOpenNewWhiteboardModal?: (position: { x: number; y: number }) => void;
+  wireframes?: Wireframe[];
+  onWireframeUpdate?: (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Wireframe | null>;
+  onWireframePositionUpdate?: (wireframeId: number, newPosition: { x: number; y: number }) => void;
+  onWireframeDelete?: (wireframeId: number) => Promise<boolean>;
+  onWireframeShare?: (wireframeId: number) => void;
+  onOpenNewWireframeModal?: (position: { x: number; y: number }) => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
@@ -65,6 +72,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onWhiteboardDelete,
   onWhiteboardShare,
   onOpenNewWhiteboardModal,
+  wireframes = [],
+  onWireframeUpdate,
+  onWireframePositionUpdate,
+  onWireframeDelete,
+  onWireframeShare,
+  onOpenNewWireframeModal,
   addCategory,
   updateCategory
 }) => {
@@ -107,6 +120,15 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (onOpenNewWhiteboardModal) {
       console.log('Opening whiteboard modal at position:', menuPosition);
       onOpenNewWhiteboardModal(menuPosition);
+    }
+  };
+
+  // Handler for when 'Add Wireframe' is clicked in the context menu
+  const handleRequestAddWireframe = () => {
+    setShowContextMenu(false); 
+    if (onOpenNewWireframeModal) {
+      console.log('Opening wireframe modal at position:', menuPosition);
+      onOpenNewWireframeModal(menuPosition);
     }
   };
 
@@ -394,6 +416,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     let filteredLists = lists;
     let filteredNotes = notes;
     let filteredWhiteboards = whiteboards;
+    let filteredWireframes = wireframes;
 
     // Apply search filter
     if (searchQuery) {
@@ -414,6 +437,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       filteredWhiteboards = whiteboards.filter(whiteboard => {
         return whiteboard.title && whiteboard.title.toLowerCase().includes(searchQuery.toLowerCase());
       });
+
+      filteredWireframes = wireframes.filter(wireframe => {
+        return wireframe.title && wireframe.title.toLowerCase().includes(searchQuery.toLowerCase());
+      });
     }
 
     // Apply category filter
@@ -421,12 +448,13 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       filteredLists = filteredLists.filter(list => (list.type || 'General') === selectedFilter);
       filteredNotes = filteredNotes.filter(note => (note.category || 'General') === selectedFilter);
       filteredWhiteboards = filteredWhiteboards.filter(whiteboard => (whiteboard.category || 'General') === selectedFilter);
+      filteredWireframes = filteredWireframes.filter(wireframe => (wireframe.category || 'General') === selectedFilter);
     }
 
-    return { filteredLists, filteredNotes, filteredWhiteboards };
+    return { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes };
   };
 
-  const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
+  const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes } = getFilteredContent();
 
   // Memoize the canvas transform string to prevent unnecessary recalculations
   const canvasTransformStyle = useMemo(() => {
@@ -541,7 +569,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ) : (
           <>
             {/* Empty state when no content exists */}
-            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && (
+            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && wireframes.length === 0 && (
               <div 
                 className="flex items-center justify-center h-full"
                 style={{
@@ -617,6 +645,23 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 updateCategory={updateCategory}
               />
             ))}
+
+            {/* Render wireframes */}
+            {wireframes && onWireframeUpdate && onWireframeDelete && onWireframeShare && wireframes.map(wireframe => (
+              <DraggableWireframeCard
+                key={wireframe.id}
+                wireframe={wireframe}
+                onUpdate={onWireframeUpdate}
+                onDelete={onWireframeDelete}
+                onShare={onWireframeShare}
+                existingCategories={existingCategories}
+                canvasTransform={canvasTransform}
+                onPositionChange={(wireframeId, newPosition) => {
+                  onWireframeUpdate(wireframeId, { position_x: newPosition.x, position_y: newPosition.y });
+                }}
+                updateCategory={updateCategory}
+              />
+            ))}
             
             {/* Context menu */}
             {showContextMenu && (() => {
@@ -626,8 +671,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   position={menuPosition}
                   absolutePosition={menuAbsolutePosition}
                   onAddList={handleAddList}
-                  onAddNote={handleRequestAddNote} // Pass the new handler
-                  onAddWhiteboard={handleRequestAddWhiteboard} // Pass the whiteboard handler
+                  onAddNote={handleRequestAddNote}
+                  onAddWhiteboard={handleRequestAddWhiteboard}
+                  onAddWireframe={handleRequestAddWireframe}
                   onClose={() => setShowContextMenu(false)}
                   isFromButton={menuIsFromButton}
                 />

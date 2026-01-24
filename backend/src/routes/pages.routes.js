@@ -1,6 +1,7 @@
 /**
  * Landing Pages Routes
  * CRUD operations, section management, and public page serving
+ * Updated with feature gating (Subscription Phase 6)
  */
 
 const express = require('express');
@@ -9,6 +10,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
+const UsageTrackingService = require('../services/usageTrackingService');
 
 // Password hashing configuration (Phase 1.2)
 const SALT_ROUNDS = 10;
@@ -17,6 +19,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     // Use shared organization middleware (Phase 5.3)
     const { requireOrganization } = require('../middleware/organization')(pool);
+    
+    // Subscription middleware for feature gating
+    const { checkUsageLimit } = require('../middleware/subscription')(pool);
+    
+    // Usage tracking service
+    const usageService = new UsageTrackingService(pool);
 
     /**
      * Generate unique slug from name
@@ -184,8 +192,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     /**
      * POST /api/pages - Create page
+     * Usage limited: landing_pages count
      */
-    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/', authenticateJWT, requireOrganization, checkUsageLimit('landing_pages'), async (req, res) => {
         try {
             const {
                 name,
@@ -264,6 +273,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 client.release();
+
+                // Track usage
+                await usageService.incrementUsage(req.organizationId, 'landing_pages');
 
                 page.sections = sectionsResult.rows;
                 res.status(201).json(page);

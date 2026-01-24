@@ -1,6 +1,7 @@
 /**
  * Forms Routes
  * CRUD operations for forms and form fields
+ * Updated with feature gating (Subscription Phase 6)
  */
 
 const express = require('express');
@@ -9,6 +10,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const UsageTrackingService = require('../services/usageTrackingService');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -24,6 +26,12 @@ try {
  */
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
+    
+    // Subscription middleware for feature gating
+    const { checkUsageLimit } = require('../middleware/subscription')(pool);
+    
+    // Usage tracking service
+    const usageService = new UsageTrackingService(pool);
 
     const generateSlug = (name) => {
         return name
@@ -108,8 +116,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     /**
      * POST /api/forms - Create form
+     * Usage limited: forms count
      */
-    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/', authenticateJWT, requireOrganization, checkUsageLimit('forms'), async (req, res) => {
         try {
             const {
                 name,
@@ -210,6 +219,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 form.fields = fieldsResult.rows;
 
                 client.release();
+                
+                // Track usage
+                await usageService.incrementUsage(req.organizationId, 'forms');
+
                 res.status(201).json(form);
             } catch (error) {
                 await client.query('ROLLBACK');

@@ -2,6 +2,7 @@
  * Contacts Routes
  * Handles contact CRUD operations, search, filtering, and activities
  * Refactored with shared middleware and asyncHandler (Phase 5)
+ * Updated with feature gating (Subscription Phase 6)
  */
 const express = require('express');
 const router = express.Router();
@@ -9,6 +10,11 @@ const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validators } = require('../validators');
 const { withDbClient } = require('../utils/db');
+const { 
+    CONTACTS_LIMITS, 
+    ERROR_CODES,
+    PLAN_METADATA 
+} = require('../lib/subscription.constants');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -28,6 +34,30 @@ try {
 module.exports = (pool, authenticateJWT) => {
   // Use shared organization middleware (Phase 5.3)
   const { requireOrganization } = require('../middleware/organization')(pool);
+
+  /**
+   * Helper: Check contact limit for organization
+   */
+  async function checkContactLimit(organizationId) {
+    const orgResult = await pool.query(
+      'SELECT plan, contacts_limit FROM organizations WHERE id = $1',
+      [organizationId]
+    );
+    const org = orgResult.rows[0];
+    const plan = org?.plan || 'starter';
+    const limit = org?.contacts_limit ?? CONTACTS_LIMITS[plan] ?? 5000;
+    
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM contacts WHERE organization_id = $1',
+      [organizationId]
+    );
+    const current = parseInt(countResult.rows[0].count);
+    
+    // -1 means unlimited
+    const allowed = limit === -1 || current < limit;
+    
+    return { allowed, limit, current, plan };
+  }
 
   // Get all contacts with search, filtering, and pagination
   router.get('/', authenticateJWT, requireOrganization, validators.pagination, asyncHandler(async (req, res) => {
@@ -147,6 +177,7 @@ module.exports = (pool, authenticateJWT) => {
   }));
 
   // Create a new contact
+  // Usage limited: contacts_per_org count based on plan
   router.post('/', authenticateJWT, requireOrganization, validators.createContact, asyncHandler(async (req, res) => {
     const {
       first_name,
@@ -162,6 +193,19 @@ module.exports = (pool, authenticateJWT) => {
       tags,
       assigned_to
     } = req.body;
+
+    // Check contact limit (inline check - gleamai pattern)
+    const limitCheck = await checkContactLimit(req.organizationId);
+    if (!limitCheck.allowed) {
+      const planName = PLAN_METADATA[limitCheck.plan]?.displayName || limitCheck.plan;
+      return res.status(403).json({
+        error: `Contact limit reached. Your ${planName} plan allows ${limitCheck.limit} contact(s). Please upgrade to add more.`,
+        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+        current: limitCheck.current,
+        limit: limitCheck.limit,
+        plan: limitCheck.plan
+      });
+    }
 
     // Validate at least one identifier
     if (!first_name && !last_name && !email && !company) {

@@ -273,6 +273,7 @@ const ListCard: React.FC<ListCardProps> = ({
         onClose={() => setShowDeleteModal(false)}
         listId={list.id}
         listTitle={list.title}
+        listColor={listDisplayColor}
         onDelete={handleConfirmDelete}
       />
     </Collapsible>

@@ -19,7 +19,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
 
-  const { currentUser, login, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const { aiEnabled, setAiEnabled } = useAISuggest();
   const { toast } = useToast();
@@ -28,19 +28,7 @@ const Navbar: React.FC = () => {
 
 
   const handleLogin = () => {
-    try {
-      login(); // Initiate login, success/error is handled in AuthContext
-    } catch (error) {
-      // This catch block might not be necessary if login() itself doesn't throw
-      // or if errors are meant to be handled globally by AuthContext.
-      // For now, we'll keep it in case login() can throw an immediate error.
-      console.error('Error initiating login:', error);
-      toast({
-        title: 'Error',
-        description: 'Could not start sign-in process. Please try again.',
-        variant: 'destructive',
-      });
-    }
+    navigate('/login');
   };
 
   // Function to get user initials
@@ -75,7 +63,7 @@ const Navbar: React.FC = () => {
   const handleNavigate = (path: string) => {
     // For logo clicks, direct to appropriate home page based on auth status
     if (path === '/') {
-      navigate(currentUser ? '/canvas' : '/home');
+      navigate(currentUser ? '/dashboard' : '/home');
     } else {
       navigate(path);
     }

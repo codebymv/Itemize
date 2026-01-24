@@ -15,10 +15,23 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: () => void;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   handleGoogleSuccess: (credentialResponse: CredentialResponse) => void;
-  token: string | null; // Expose the token to consumers
-  isAuthenticated: boolean; // Add isAuthenticated flag
+  token: string | null;
+  isAuthenticated: boolean;
+  setCurrentUser: (user: User | null) => void;
+}
+
+// Custom error class for auth errors with code
+export class AuthError extends Error {
+  code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.code = code;
+    this.name = 'AuthError';
+  }
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +84,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
+  // Helper to save user data after successful auth
+  const saveAuthState = (userData: User) => {
+    // Set expiry (7 days) - token is now stored in httpOnly cookie by backend
+    const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+    
+    // Store user data only (token is in httpOnly cookie, not accessible to JS)
+    localStorage.setItem('itemize_user', JSON.stringify(userData));
+    localStorage.setItem('itemize_expiry', expiryTime.toString());
+    
+    // Update state - token placeholder since actual token is in httpOnly cookie
+    setToken('httponly');
+    setCurrentUser(userData);
+  };
+
   // Use Google Login hook
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -97,22 +124,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: googleUser.email,
             name: googleUser.name,
             picture: googleUser.picture
-          });
+          }, { withCredentials: true });
 
           console.log('Backend auth response:', response.data);
           
           const { user: userData } = response.data;
-          
-          // Set expiry (7 days) - token is now stored in httpOnly cookie by backend
-          const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
-          
-          // Store user data only (token is in httpOnly cookie, not accessible to JS)
-          localStorage.setItem('itemize_user', JSON.stringify(userData));
-          localStorage.setItem('itemize_expiry', expiryTime.toString());
-          
-          // Update state - token placeholder since actual token is in httpOnly cookie
-          setToken('httponly');
-          setCurrentUser(userData);
+          saveAuthState(userData);
           
           toast({
             title: 'Welcome!',
@@ -140,6 +157,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     googleLogin();
   };
 
+  /**
+   * Login with email and password
+   */
+  const loginWithEmail = async (email: string, password: string): Promise<void> => {
+    try {
+      const response = await api.post('/api/auth/login', { email, password });
+      
+      if (response.data.success || response.data.user) {
+        const userData = response.data.user;
+        saveAuthState(userData);
+      } else {
+        throw new AuthError(response.data.error || 'Login failed', response.data.code || 'UNKNOWN');
+      }
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        throw new AuthError(
+          error.response.data.error || 'Login failed',
+          error.response.data.code || 'UNKNOWN'
+        );
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * Register a new account with email and password
+   */
+  const register = async (email: string, password: string, name?: string): Promise<void> => {
+    try {
+      const response = await api.post('/auth/register', { email, password, name });
+      
+      if (!response.data.success) {
+        throw new AuthError(response.data.error || 'Registration failed', response.data.code || 'UNKNOWN');
+      }
+      // Don't auto-login - user needs to verify email first
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        throw new AuthError(
+          error.response.data.error || 'Registration failed',
+          error.response.data.code || 'UNKNOWN'
+        );
+      }
+      throw error;
+    }
+  };
+
   const logout = () => {
     // Clear state
     setToken(null);
@@ -158,7 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Backend logout clears the httpOnly cookie
     try {
-      api.post(`/api/auth/logout`).catch((error) => {
+      api.post('/api/auth/logout').catch((error) => {
         console.error('Backend logout failed:', error);
       });
     } catch (error) {
@@ -176,20 +241,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const apiUrl = getApiUrl();
       const response = await axios.post(`${apiUrl}/api/auth/google-credential`, {
         credential: credentialResponse.credential
-      });
+      }, { withCredentials: true });
 
       const { user: userData } = response.data;
+      saveAuthState(userData);
       
-      // Set expiry (7 days) - token is now stored in httpOnly cookie by backend
-      const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
-      
-      // Store user data only (token is in httpOnly cookie, not accessible to JS)
-      localStorage.setItem('itemize_user', JSON.stringify(userData));
-      localStorage.setItem('itemize_expiry', expiryTime.toString());
-      
-      // Update state - token placeholder since actual token is in httpOnly cookie
-      setToken('httponly');
-      setCurrentUser(userData);
       toast({
         title: 'Welcome!',
         description: 'Successfully signed in with Google.',
@@ -205,10 +261,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentUser,
     loading,
     login,
+    loginWithEmail,
+    register,
     logout,
     handleGoogleSuccess,
     token,
-    isAuthenticated: !!currentUser && !!token
+    isAuthenticated: !!currentUser && !!token,
+    setCurrentUser,
   };
 
   return (

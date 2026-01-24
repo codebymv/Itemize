@@ -73,15 +73,18 @@ export function MobileBottomNav() {
                                 className={cn(
                                     "flex flex-col items-center justify-center flex-1 h-full min-w-[64px] py-2 transition-colors",
                                     active 
-                                        ? "text-blue-600 dark:text-blue-400" 
+                                        ? "text-gray-900 dark:text-white" 
                                         : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <Icon className={cn("h-5 w-5 mb-1", active && "text-blue-600 dark:text-blue-400")} />
-                                <span className={cn(
-                                    "text-xs font-medium",
-                                    active && "text-blue-600 dark:text-blue-400"
-                                )}>
+                                <Icon className={cn("h-5 w-5 mb-1", active && "text-blue-600")} />
+                                <span 
+                                    className={cn(
+                                        "text-xs font-medium",
+                                        active && "text-gray-900 dark:text-white"
+                                    )}
+                                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                                >
                                     {item.title}
                                 </span>
                             </button>
@@ -94,12 +97,12 @@ export function MobileBottomNav() {
                         className={cn(
                             "flex flex-col items-center justify-center flex-1 h-full min-w-[64px] py-2 transition-colors",
                             moreOpen 
-                                ? "text-blue-600 dark:text-blue-400" 
+                                ? "text-gray-900 dark:text-white" 
                                 : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <Menu className="h-5 w-5 mb-1" />
-                        <span className="text-xs font-medium">More</span>
+                        <span className="text-xs font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>More</span>
                     </button>
                 </div>
             </nav>
@@ -108,7 +111,7 @@ export function MobileBottomNav() {
             <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
                 <DrawerContent className="max-h-[85vh]">
                     <DrawerHeader className="flex items-center justify-between">
-                        <DrawerTitle>More</DrawerTitle>
+                        <DrawerTitle style={{ fontFamily: '"Raleway", sans-serif' }}>More</DrawerTitle>
                         <DrawerClose asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <X className="h-4 w-4" />
@@ -128,12 +131,21 @@ export function MobileBottomNav() {
                                         className={cn(
                                             "flex flex-col items-center justify-center p-4 rounded-xl transition-colors",
                                             active 
-                                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" 
-                                                : "bg-muted/50 hover:bg-muted text-foreground"
+                                                ? "bg-blue-100 dark:bg-blue-900/30" 
+                                                : "bg-muted/50 hover:bg-muted"
                                         )}
                                     >
-                                        <Icon className="h-6 w-6 mb-2" />
-                                        <span className="text-xs font-medium text-center">
+                                        <Icon className={cn(
+                                            "h-6 w-6 mb-2",
+                                            active ? "text-blue-600" : "text-foreground"
+                                        )} />
+                                        <span 
+                                            className={cn(
+                                                "text-xs font-medium text-center",
+                                                active ? "text-gray-900 dark:text-white" : "text-foreground"
+                                            )}
+                                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                                        >
                                             {item.title}
                                         </span>
                                     </button>

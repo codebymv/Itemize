@@ -116,13 +116,26 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" className="border-r">
-            <SidebarHeader className="border-b px-2 py-3">
-                <div className="flex items-center justify-between">
-                    {!isCollapsed && (
+            <SidebarHeader className="border-b px-3 py-4">
+                <div className="flex items-center justify-between gap-2">
+                    {!isCollapsed ? (
+                        <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                            <img
+                                src="/icon.png"
+                                alt="Itemize Icon"
+                                className="h-7 w-7 flex-shrink-0"
+                            />
+                            <img
+                                src={theme === 'dark' ? '/textwhite.png' : '/textblack.png'}
+                                alt="Itemize"
+                                className="h-6 w-auto object-contain object-left"
+                            />
+                        </div>
+                    ) : (
                         <img
-                            src={theme === 'dark' ? '/cover_whitetext.png' : '/cover.png'}
+                            src="/icon.png"
                             alt="Itemize"
-                            className="h-8 w-auto cursor-pointer"
+                            className="h-8 w-8 cursor-pointer"
                             onClick={() => navigate('/dashboard')}
                         />
                     )}
@@ -130,7 +143,7 @@ export function AppSidebar() {
                         variant="ghost"
                         size="icon"
                         onClick={toggleSidebar}
-                        className="h-8 w-8"
+                        className="h-8 w-8 flex-shrink-0"
                     >
                         {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                     </Button>
@@ -139,7 +152,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel>Main</SidebarGroupLabel>
+                    <SidebarGroupLabel style={{ fontFamily: '"Raleway", sans-serif' }}>Main</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {mainNavItems.map((item) => {
@@ -154,10 +167,11 @@ export function AppSidebar() {
                                             onClick={() => handleNavigate(item.path, item.disabled)}
                                             className={cn(
                                                 item.disabled ? 'opacity-50 cursor-not-allowed' : '',
-                                                isActive ? 'text-blue-600 dark:text-blue-400 font-medium' : ''
+                                                isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                             )}
+                                            style={{ fontFamily: '"Raleway", sans-serif' }}
                                         >
-                                            <item.icon className={cn("h-4 w-4", isActive && "text-blue-600 dark:text-blue-400")} />
+                                            <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
                                             <span>{item.title}</span>
                                             {item.disabled && (
                                                 <span className="ml-auto text-xs text-muted-foreground">Soon</span>
@@ -186,10 +200,11 @@ export function AppSidebar() {
                                             isActive={isActive}
                                             onClick={() => handleNavigate(item.path)}
                                             className={cn(
-                                                isActive ? 'text-blue-600 dark:text-blue-400 font-medium' : ''
+                                                isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                             )}
+                                            style={{ fontFamily: '"Raleway", sans-serif' }}
                                         >
-                                            <item.icon className={cn("h-4 w-4", isActive && "text-blue-600 dark:text-blue-400")} />
+                                            <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
                                             <span>{item.title}</span>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>

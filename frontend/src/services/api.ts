@@ -326,6 +326,83 @@ export const updateWhiteboardPosition = async (whiteboardId: number, x: number, 
   return response.data;
 };
 
+// Wireframe types and API functions
+export interface FlowData {
+  nodes: Array<{
+    id: string;
+    type?: string;
+    position: { x: number; y: number };
+    data: { label: string; [key: string]: any };
+    style?: Record<string, any>;
+  }>;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    label?: string;
+    animated?: boolean;
+  }>;
+  viewport: { x: number; y: number; zoom: number };
+}
+
+export interface CreateWireframePayload {
+  title?: string;
+  category?: string;
+  flow_data?: FlowData | string;
+  position_x: number;
+  position_y: number;
+  z_index?: number;
+  color_value?: string;
+}
+
+export interface WireframePayload {
+  id?: number;
+  title?: string;
+  category?: string;
+  flow_data?: FlowData | string;
+  position_x?: number;
+  position_y?: number;
+  z_index?: number;
+  color_value?: string;
+}
+
+export const getWireframes = async (token?: string) => {
+  const response = await api.get('/api/wireframes', {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const createWireframe = async (wireframeData: CreateWireframePayload, token?: string) => {
+  const response = await api.post('/api/wireframes', wireframeData, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const updateWireframe = async (wireframeId: number, wireframeData: WireframePayload, token?: string) => {
+  logger.log('Sending wireframe update to backend:', { wireframeId, wireframeData });
+  const response = await api.put(`/api/wireframes/${wireframeId}`, wireframeData, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const deleteWireframe = async (wireframeId: number, token?: string) => {
+  const response = await api.delete(`/api/wireframes/${wireframeId}`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+export const updateWireframePosition = async (wireframeId: number, x: number, y: number, token?: string) => {
+  const response = await api.put(`/api/wireframes/${wireframeId}/position`, { x, y }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
 // Category API functions
 export const getCategories = async (token?: string): Promise<Category[]> => {
   const response = await api.get('/api/categories', {

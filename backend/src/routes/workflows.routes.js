@@ -2,6 +2,7 @@
  * Workflows Routes
  * CRUD operations for marketing automation workflows
  * Refactored with shared middleware (Phase 5)
+ * Updated with feature gating (Subscription Phase 6)
  */
 
 const express = require('express');
@@ -9,6 +10,11 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
+const { 
+    WORKFLOW_LIMITS, 
+    ERROR_CODES,
+    PLAN_METADATA 
+} = require('../lib/subscription.constants');
 
 /**
  * Create workflows routes with injected dependencies
@@ -18,6 +24,31 @@ const { withDbClient, withTransaction } = require('../utils/db');
 module.exports = (pool, authenticateJWT) => {
   // Use shared organization middleware (Phase 5.3)
   const { requireOrganization } = require('../middleware/organization')(pool);
+
+  /**
+   * Helper: Check workflow limit for organization
+   * Returns { allowed: boolean, limit: number, current: number, plan: string }
+   */
+  async function checkWorkflowLimit(organizationId) {
+    const orgResult = await pool.query(
+      'SELECT plan, workflows_limit FROM organizations WHERE id = $1',
+      [organizationId]
+    );
+    const org = orgResult.rows[0];
+    const plan = org?.plan || 'starter';
+    const limit = org?.workflows_limit ?? WORKFLOW_LIMITS[plan] ?? 5;
+    
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM workflows WHERE organization_id = $1',
+      [organizationId]
+    );
+    const current = parseInt(countResult.rows[0].count);
+    
+    // -1 means unlimited
+    const allowed = limit === -1 || current < limit;
+    
+    return { allowed, limit, current, plan };
+  }
 
   /**
    * GET /api/workflows
@@ -137,10 +168,27 @@ module.exports = (pool, authenticateJWT) => {
   /**
    * POST /api/workflows
    * Create a new workflow
+   * Usage limited: workflows count based on plan
    */
-  router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
+  router.post('/', 
+    authenticateJWT, 
+    requireOrganization,
+    asyncHandler(async (req, res) => {
     const userId = req.user?.id;
     const { name, description, trigger_type, trigger_config, steps } = req.body;
+
+    // Check workflow limit (inline check - gleamai pattern)
+    const limitCheck = await checkWorkflowLimit(req.organizationId);
+    if (!limitCheck.allowed) {
+      const planName = PLAN_METADATA[limitCheck.plan]?.displayName || limitCheck.plan;
+      return res.status(403).json({
+        error: `Workflow limit reached. Your ${planName} plan allows ${limitCheck.limit} workflow(s). Please upgrade to create more.`,
+        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+        current: limitCheck.current,
+        limit: limitCheck.limit,
+        plan: limitCheck.plan
+      });
+    }
 
     // Validation
     if (!name || !trigger_type) {
@@ -220,7 +268,7 @@ module.exports = (pool, authenticateJWT) => {
       console.error('Error creating workflow:', error);
       res.status(500).json({ error: 'Failed to create workflow' });
     }
-  });
+  }));
 
   /**
    * PUT /api/workflows/:id
@@ -584,10 +632,27 @@ module.exports = (pool, authenticateJWT) => {
   /**
    * POST /api/workflows/:id/duplicate
    * Duplicate a workflow
+   * Usage limited: workflows count based on plan
    */
-  router.post('/:id/duplicate', authenticateJWT, requireOrganization, async (req, res) => {
+  router.post('/:id/duplicate', 
+    authenticateJWT, 
+    requireOrganization, 
+    asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
+
+    // Check workflow limit (inline check - gleamai pattern)
+    const limitCheck = await checkWorkflowLimit(req.organizationId);
+    if (!limitCheck.allowed) {
+      const planName = PLAN_METADATA[limitCheck.plan]?.displayName || limitCheck.plan;
+      return res.status(403).json({
+        error: `Workflow limit reached. Your ${planName} plan allows ${limitCheck.limit} workflow(s). Please upgrade to create more.`,
+        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+        current: limitCheck.current,
+        limit: limitCheck.limit,
+        plan: limitCheck.plan
+      });
+    }
 
     const client = await pool.connect();
 
@@ -666,7 +731,7 @@ module.exports = (pool, authenticateJWT) => {
       console.error('Error duplicating workflow:', error);
       res.status(500).json({ error: 'Failed to duplicate workflow' });
     }
-  });
+  }));
 
   return router;
 };

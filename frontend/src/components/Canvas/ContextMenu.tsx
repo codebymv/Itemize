@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckSquare, StickyNote, Palette } from 'lucide-react';
+import { CheckSquare, StickyNote, Palette, GitBranch } from 'lucide-react';
 import { List } from '../../types';
 
 interface ContextMenuProps {
@@ -7,6 +7,7 @@ interface ContextMenuProps {
   onAddList: () => void;
   onAddNote?: () => void; // Optional for now, will make required as we implement
   onAddWhiteboard?: () => void; // Add whiteboard support
+  onAddWireframe?: () => void; // Add wireframe support
   onClose: () => void;
   isFromButton?: boolean;
   absolutePosition?: { x: number, y: number };
@@ -17,6 +18,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onAddList,
   onAddNote,
   onAddWhiteboard,
+  onAddWireframe,
   onClose,
   isFromButton = false,
   absolutePosition
@@ -83,16 +85,18 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         <button 
           className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
           onClick={(e) => handleClickItem(e, onAddList)}
+          style={{ fontFamily: '"Raleway", sans-serif' }}
         >
-          <CheckSquare className="h-4 w-4 mr-3 text-muted-foreground" />
+          <CheckSquare className="h-4 w-4 mr-3 text-blue-600" />
           <span>Add List</span>
         </button>
         {onAddNote && (
           <button 
             className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
             onClick={(e) => handleClickItem(e, onAddNote)}
+            style={{ fontFamily: '"Raleway", sans-serif' }}
           >
-            <StickyNote className="h-4 w-4 mr-3 text-muted-foreground" />
+            <StickyNote className="h-4 w-4 mr-3 text-blue-600" />
             <span>Add Note</span>
           </button>
         )}
@@ -100,9 +104,20 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           <button 
             className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
             onClick={(e) => handleClickItem(e, onAddWhiteboard)}
+            style={{ fontFamily: '"Raleway", sans-serif' }}
           >
-            <Palette className="h-4 w-4 mr-3 text-muted-foreground" />
+            <Palette className="h-4 w-4 mr-3 text-blue-600" />
             <span>Add Whiteboard</span>
+          </button>
+        )}
+        {onAddWireframe && (
+          <button 
+            className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
+            onClick={(e) => handleClickItem(e, onAddWireframe)}
+            style={{ fontFamily: '"Raleway", sans-serif' }}
+          >
+            <GitBranch className="h-4 w-4 mr-3 text-blue-600" />
+            <span>Add Wireframe</span>
           </button>
         )}
       </div>

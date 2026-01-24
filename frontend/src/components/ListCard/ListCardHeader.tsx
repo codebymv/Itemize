@@ -124,7 +124,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                   )}
                 </Button>
               </ColorPicker>
-              <CheckSquare className="h-4 w-4 text-slate-500" />
+              <CheckSquare className="h-4 w-4" style={{ color: 'var(--list-color)' }} />
               <CardTitle
                 className="text-lg font-medium cursor-pointer"
                 style={{ fontFamily: '"Raleway", sans-serif' }}

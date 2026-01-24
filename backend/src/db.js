@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 // Import database migrations
-const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration } = require('./db_migrations');
+const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runWireframesMigration, runWireframesDimensionsMigration } = require('./db_migrations');
 
 // Import CRM migrations
 const { runAllCRMMigrations } = require('./db_crm_migrations');
@@ -47,6 +47,9 @@ const { runAllIndexMigrations } = require('./db_indexes_migrations');
 
 // Import Normalization migrations (schema improvements)
 const { runAllNormalizationMigrations } = require('./db_normalization_migrations');
+
+// Import Subscription migrations (feature gating and billing)
+const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
 
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
@@ -287,6 +290,20 @@ const initializeDatabase = async (pool) => {
     `);
     console.log('✅ Whiteboards table created (if not exists)');
 
+    // Run wireframes migration
+    try {
+      await runWireframesMigration(pool);
+    } catch (wireframesError) {
+      console.error('⚠️ Wireframes migration failed, continuing without wireframes features:', wireframesError.message);
+    }
+
+    // Run wireframes dimensions migration (add width/height columns)
+    try {
+      await runWireframesDimensionsMigration(pool);
+    } catch (wireframesDimensionsError) {
+      console.error('⚠️ Wireframes dimensions migration failed:', wireframesDimensionsError.message);
+    }
+
     // Diagnostic: Log actual columns for public.users table
     try {
       const { rows } = await pool.query(`
@@ -415,6 +432,13 @@ const initializeDatabase = async (pool) => {
       await runAllNormalizationMigrations(pool);
     } catch (normError) {
       console.error('⚠️ Normalization migrations failed:', normError.message);
+    }
+
+    // Run Subscription migrations (feature gating and billing)
+    try {
+      await runAllSubscriptionMigrations(pool);
+    } catch (subscriptionError) {
+      console.error('⚠️ Subscription migrations failed, continuing without subscription features:', subscriptionError.message);
     }
 
     console.log('Database initialized successfully');

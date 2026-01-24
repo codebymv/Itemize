@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,12 +63,15 @@ export function ContactsPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <h1
-          className="text-xl font-semibold italic truncate ml-2"
-          style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
-        >
-          CONTACTS
-        </h1>
+        <div className="flex items-center gap-2 ml-2">
+          <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <h1
+            className="text-xl font-semibold italic truncate"
+            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+          >
+            CONTACTS
+          </h1>
+        </div>
         <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
           {/* Desktop search */}
           <div className="relative hidden md:block w-full max-w-xs">

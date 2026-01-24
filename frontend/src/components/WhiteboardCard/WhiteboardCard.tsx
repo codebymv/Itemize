@@ -199,7 +199,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                       )}
                     </Button>
                   </ColorPicker>
-                  <Palette className="h-4 w-4 text-muted-foreground" />
+                  <Palette className="h-4 w-4" style={{ color: 'var(--whiteboard-color)' }} />
                   <CardTitle 
                     className="text-lg font-medium cursor-pointer"
                     style={{ fontFamily: '"Raleway", sans-serif' }}
@@ -294,6 +294,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
         onClose={() => setShowDeleteModal(false)}
         whiteboardId={whiteboard.id.toString()}
         whiteboardTitle={whiteboard.title}
+        whiteboardColor={whiteboardDisplayColor}
         onDelete={handleConfirmDelete}
       />
     </Collapsible>

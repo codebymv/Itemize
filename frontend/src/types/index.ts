@@ -123,6 +123,71 @@ export interface WhiteboardCardProps {
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
+// React Flow node and edge types for wireframes
+export interface FlowNode {
+  id: string;
+  type?: string;
+  position: { x: number; y: number };
+  data: { label: string; [key: string]: any };
+  style?: Record<string, any>;
+  width?: number;
+  height?: number;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  type?: string;
+  label?: string;
+  animated?: boolean;
+  style?: Record<string, any>;
+}
+
+export interface FlowViewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+export interface FlowData {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  viewport: FlowViewport;
+}
+
+export interface Wireframe {
+  id: number;
+  user_id: number;
+  title: string;
+  category?: string;
+  flow_data: FlowData | string;
+  position_x: number;
+  position_y: number;
+  width?: number;
+  height?: number;
+  z_index: number;
+  color_value: string;
+  created_at: string;
+  updated_at: string;
+  // Sharing fields
+  share_token?: string;
+  is_public?: boolean;
+  shared_at?: string;
+}
+
+// Props for WireframeCard component
+export interface WireframeCardProps {
+  wireframe: Wireframe;
+  onUpdate: (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Wireframe | null>;
+  onDelete: (wireframeId: number) => Promise<boolean>;
+  onShare: (wireframeId: number) => void;
+  existingCategories: Category[];
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+}
+
 // ======================
 // CRM Types
 // ======================

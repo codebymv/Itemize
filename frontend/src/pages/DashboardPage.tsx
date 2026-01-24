@@ -42,6 +42,7 @@ import {
     Workflow,
     BarChart3,
     PieChart,
+    LayoutDashboard,
 } from 'lucide-react';
 import { 
     getDashboardAnalytics, 
@@ -231,7 +232,7 @@ function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationSta
         );
     }
 
-    if (!stats) {
+    if (!stats || !stats.email || !stats.sms) {
         return (
             <div className="text-center text-muted-foreground py-8">
                 No communication data available
@@ -246,19 +247,19 @@ function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationSta
                 <div className="flex items-center gap-2 mb-3">
                     <Mail className="h-4 w-4 text-blue-600" />
                     <span className="font-medium">Email</span>
-                    <span className="text-sm text-muted-foreground ml-auto">{stats.email.total} total</span>
+                    <span className="text-sm text-muted-foreground ml-auto">{stats.email?.total ?? 0} total</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                        <div className="text-lg font-bold text-blue-600">{stats.email.rates.delivery}%</div>
+                        <div className="text-lg font-bold text-blue-600">{stats.email?.rates?.delivery ?? 0}%</div>
                         <div className="text-xs text-muted-foreground">Delivered</div>
                     </div>
                     <div>
-                        <div className="text-lg font-bold text-green-600">{stats.email.rates.open}%</div>
+                        <div className="text-lg font-bold text-green-600">{stats.email?.rates?.open ?? 0}%</div>
                         <div className="text-xs text-muted-foreground">Opened</div>
                     </div>
                     <div>
-                        <div className="text-lg font-bold text-purple-600">{stats.email.rates.click}%</div>
+                        <div className="text-lg font-bold text-purple-600">{stats.email?.rates?.click ?? 0}%</div>
                         <div className="text-xs text-muted-foreground">Clicked</div>
                     </div>
                 </div>
@@ -269,19 +270,19 @@ function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationSta
                 <div className="flex items-center gap-2 mb-3">
                     <Phone className="h-4 w-4 text-green-600" />
                     <span className="font-medium">SMS</span>
-                    <span className="text-sm text-muted-foreground ml-auto">{stats.sms.total} total</span>
+                    <span className="text-sm text-muted-foreground ml-auto">{stats.sms?.total ?? 0} total</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                        <div className="text-lg font-bold text-green-600">{stats.sms.rates.delivery}%</div>
+                        <div className="text-lg font-bold text-green-600">{stats.sms?.rates?.delivery ?? 0}%</div>
                         <div className="text-xs text-muted-foreground">Delivered</div>
                     </div>
                     <div>
-                        <div className="text-lg font-bold">{stats.sms.outbound}</div>
+                        <div className="text-lg font-bold">{stats.sms?.outbound ?? 0}</div>
                         <div className="text-xs text-muted-foreground">Outbound</div>
                     </div>
                     <div>
-                        <div className="text-lg font-bold">{stats.sms.inbound}</div>
+                        <div className="text-lg font-bold">{stats.sms?.inbound ?? 0}</div>
                         <div className="text-xs text-muted-foreground">Inbound</div>
                     </div>
                 </div>
@@ -554,12 +555,15 @@ export function DashboardPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <h1
-                    className="text-xl font-semibold italic truncate ml-2"
-                    style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
-                >
-                    DASHBOARD
-                </h1>
+                <div className="flex items-center gap-2 ml-2">
+                    <LayoutDashboard className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    <h1
+                        className="text-xl font-semibold italic truncate"
+                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                    >
+                        DASHBOARD
+                    </h1>
+                </div>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     {/* Date Range Selector */}
                     <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
@@ -637,9 +641,9 @@ export function DashboardPage() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                         <StatCard
                             title="Total Contacts"
-                            value={analytics?.contacts.total ?? 0}
+                            value={analytics?.contacts?.total ?? 0}
                             icon={Users}
-                            trend={analytics?.contacts.newThisWeek ? {
+                            trend={analytics?.contacts?.newThisWeek ? {
                                 value: analytics.contacts.newThisWeek,
                                 label: 'this week',
                                 positive: true
@@ -649,15 +653,15 @@ export function DashboardPage() {
                         />
                         <StatCard
                             title="Open Deals"
-                            value={analytics?.deals.open ?? 0}
+                            value={analytics?.deals?.open ?? 0}
                             icon={TrendingUp}
-                            description={`$${(analytics?.deals.openValue ?? 0).toLocaleString()} in pipeline`}
+                            description={`$${(analytics?.deals?.openValue ?? 0).toLocaleString()} in pipeline`}
                             color="text-purple-600"
                             isLoading={isLoading}
                         />
                         <StatCard
                             title="Revenue Won"
-                            value={`$${(analytics?.deals.wonThisMonth ?? 0).toLocaleString()}`}
+                            value={`$${(analytics?.deals?.wonThisMonth ?? 0).toLocaleString()}`}
                             icon={DollarSign}
                             description="This month"
                             color="text-green-600"
@@ -665,9 +669,9 @@ export function DashboardPage() {
                         />
                         <StatCard
                             title="Upcoming Bookings"
-                            value={analytics?.bookings.upcomingThisWeek ?? 0}
+                            value={analytics?.bookings?.upcomingThisWeek ?? 0}
                             icon={CalendarDays}
-                            description={`${analytics?.bookings.upcomingToday ?? 0} today`}
+                            description={`${analytics?.bookings?.upcomingToday ?? 0} today`}
                             color="text-orange-600"
                             isLoading={isLoading}
                         />
@@ -677,25 +681,25 @@ export function DashboardPage() {
                     <div className="grid gap-4 md:grid-cols-3 mb-8">
                         <StatCard
                             title="Tasks Overdue"
-                            value={analytics?.tasks.overdue ?? 0}
+                            value={analytics?.tasks?.overdue ?? 0}
                             icon={AlertCircle}
-                            description={`${analytics?.tasks.pending ?? 0} pending`}
-                            color={analytics?.tasks.overdue && analytics.tasks.overdue > 0 ? 'text-red-600' : 'text-gray-600'}
+                            description={`${analytics?.tasks?.pending ?? 0} pending`}
+                            color={analytics?.tasks?.overdue && analytics.tasks.overdue > 0 ? 'text-red-600' : 'text-gray-600'}
                             isLoading={isLoading}
                         />
                         <StatCard
                             title="Deals Won"
-                            value={analytics?.deals.won ?? 0}
+                            value={analytics?.deals?.won ?? 0}
                             icon={CheckSquare}
-                            description={`$${(analytics?.deals.wonValue ?? 0).toLocaleString()} total`}
+                            description={`$${(analytics?.deals?.wonValue ?? 0).toLocaleString()} total`}
                             color="text-green-600"
                             isLoading={isLoading}
                         />
                         <StatCard
                             title="Active Leads"
-                            value={analytics?.contacts.leads ?? 0}
+                            value={analytics?.contacts?.leads ?? 0}
                             icon={Users}
-                            description={`${analytics?.contacts.customers ?? 0} customers`}
+                            description={`${analytics?.contacts?.customers ?? 0} customers`}
                             color="text-blue-600"
                             isLoading={isLoading}
                         />
@@ -717,17 +721,17 @@ export function DashboardPage() {
                                 {revenueData?.summary && (
                                     <div className="text-right">
                                         <div className="flex items-center gap-1 text-sm">
-                                            {revenueData.summary.growthRate >= 0 ? (
+                                            {(revenueData.summary.growthRate ?? 0) >= 0 ? (
                                                 <ArrowUpRight className="h-4 w-4 text-green-500" />
                                             ) : (
                                                 <ArrowDownRight className="h-4 w-4 text-red-500" />
                                             )}
-                                            <span className={revenueData.summary.growthRate >= 0 ? 'text-green-500' : 'text-red-500'}>
-                                                {revenueData.summary.growthRate > 0 ? '+' : ''}{revenueData.summary.growthRate}%
+                                            <span className={(revenueData.summary.growthRate ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                                {(revenueData.summary.growthRate ?? 0) > 0 ? '+' : ''}{revenueData.summary.growthRate ?? 0}%
                                             </span>
                                         </div>
                                         <div className="text-xs text-muted-foreground">
-                                            {revenueData.summary.totalDeals} deals closed
+                                            {revenueData.summary.totalDeals ?? 0} deals closed
                                         </div>
                                     </div>
                                 )}
@@ -758,7 +762,7 @@ export function DashboardPage() {
                             </CardHeader>
                             <CardContent>
                                 <PipelineFunnel
-                                    funnel={analytics?.deals.funnel ?? []}
+                                    funnel={analytics?.deals?.funnel ?? []}
                                     isLoading={isLoading}
                                 />
                             </CardContent>
@@ -807,27 +811,27 @@ export function DashboardPage() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <ConversionRateCard
                                         title="Lead → Customer"
-                                        rate={conversionData?.conversions.leadToCustomer.rate ?? 0}
-                                        numerator={conversionData?.conversions.leadToCustomer.customers ?? 0}
-                                        denominator={conversionData?.conversions.leadToCustomer.total ?? 0}
+                                        rate={conversionData?.conversions?.leadToCustomer?.rate ?? 0}
+                                        numerator={conversionData?.conversions?.leadToCustomer?.customers ?? 0}
+                                        denominator={conversionData?.conversions?.leadToCustomer?.total ?? 0}
                                         icon={Users}
                                         color="text-blue-600"
                                         isLoading={conversionLoading}
                                     />
                                     <ConversionRateCard
                                         title="Deal Win Rate"
-                                        rate={conversionData?.conversions.dealWinRate.rate ?? 0}
-                                        numerator={conversionData?.conversions.dealWinRate.won ?? 0}
-                                        denominator={conversionData?.conversions.dealWinRate.totalClosed ?? 0}
+                                        rate={conversionData?.conversions?.dealWinRate?.rate ?? 0}
+                                        numerator={conversionData?.conversions?.dealWinRate?.won ?? 0}
+                                        denominator={conversionData?.conversions?.dealWinRate?.totalClosed ?? 0}
                                         icon={TrendingUp}
                                         color="text-green-600"
                                         isLoading={conversionLoading}
                                     />
                                     <ConversionRateCard
                                         title="Form → Contact"
-                                        rate={conversionData?.conversions.formToContact.rate ?? 0}
-                                        numerator={conversionData?.conversions.formToContact.converted ?? 0}
-                                        denominator={conversionData?.conversions.formToContact.submissions ?? 0}
+                                        rate={conversionData?.conversions?.formToContact?.rate ?? 0}
+                                        numerator={conversionData?.conversions?.formToContact?.converted ?? 0}
+                                        denominator={conversionData?.conversions?.formToContact?.submissions ?? 0}
                                         icon={CheckSquare}
                                         color="text-purple-600"
                                         isLoading={conversionLoading}
@@ -838,10 +842,10 @@ export function DashboardPage() {
                                             <span className="text-sm font-medium text-muted-foreground">Won Value</span>
                                         </div>
                                         <div className="text-2xl font-bold">
-                                            ${(conversionData?.conversions.dealWinRate.wonValue ?? 0).toLocaleString()}
+                                            ${(conversionData?.conversions?.dealWinRate?.wonValue ?? 0).toLocaleString()}
                                         </div>
                                         <div className="text-xs text-muted-foreground">
-                                            Lost: ${(conversionData?.conversions.dealWinRate.lostValue ?? 0).toLocaleString()}
+                                            Lost: ${(conversionData?.conversions?.dealWinRate?.lostValue ?? 0).toLocaleString()}
                                         </div>
                                     </div>
                                 </div>
@@ -879,7 +883,7 @@ export function DashboardPage() {
                                         Pipeline Velocity
                                     </CardTitle>
                                     <CardDescription>
-                                        {velocityData?.pipeline?.name || 'Default Pipeline'} - Deal flow analysis
+                                        {velocityData?.pipeline?.name ?? 'Default Pipeline'} - Deal flow analysis
                                     </CardDescription>
                                 </div>
                                 <Button

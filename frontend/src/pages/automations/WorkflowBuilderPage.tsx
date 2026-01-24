@@ -188,9 +188,10 @@ export function WorkflowBuilderPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
+          <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1 
             className="text-xl font-semibold italic truncate" 
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
+            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
             {isNewWorkflow ? 'NEW WORKFLOW' : name.toUpperCase() || 'WORKFLOW'}
           </h1>

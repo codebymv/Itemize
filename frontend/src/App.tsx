@@ -23,6 +23,13 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 
+// Auth pages - Static imports for fast loading
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
 // Pages - Lazy loaded for code splitting (reduces initial bundle size)
 const UserHome = React.lazy(() => import("./pages/UserHome"));
 const DocsPage = React.lazy(() => import("./pages/DocsPage"));
@@ -113,7 +120,7 @@ const AppContent = () => {
   }, [location.pathname]);
 
   // Determine if this is a public route (no sidebar)
-  const publicRoutes = ['/home', '/auth/callback', '/status'];
+  const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
     location.pathname.startsWith('/help');
@@ -127,6 +134,13 @@ const AppContent = () => {
       <Route path="/home" element={<PublicLayout><Home /></PublicLayout>} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
+
+      {/* Auth routes (standalone, no navbar/footer) */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Shared content routes (public, minimal layout) */}
       <Route path="/shared/list/:token" element={<SharedListPage />} />

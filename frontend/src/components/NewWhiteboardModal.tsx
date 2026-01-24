@@ -98,8 +98,8 @@ export const NewWhiteboardModal: React.FC<NewWhiteboardModalProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-            <Palette className="h-5 w-5 text-slate-500" />
+          <DialogTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-blue-500" />
             Add Whiteboard
           </DialogTitle>
         </DialogHeader>

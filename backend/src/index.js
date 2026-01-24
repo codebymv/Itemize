@@ -307,6 +307,11 @@ setTimeout(async () => {
         app.use('/api', whiteboardsRoutes(pool, authenticateJWT, broadcast));
         logger.info('Whiteboards routes initialized');
 
+        // Wireframes routes (React Flow diagrams)
+        const wireframesRoutes = require('./routes/wireframes.routes');
+        app.use('/api', wireframesRoutes(pool, authenticateJWT, broadcast));
+        logger.info('Wireframes routes initialized');
+
         // Categories routes
         const categoriesRoutes = require('./routes/categories.routes');
         app.use('/api', categoriesRoutes(pool, authenticateJWT));
@@ -366,6 +371,17 @@ setTimeout(async () => {
         const invoicesRoutes = require('./routes/invoices.routes');
         app.use('/api/invoices', invoicesRoutes(pool, authenticateJWT, publicRateLimit));
         logger.info('Invoicing routes initialized');
+
+        // Billing routes (simplified Stripe integration - gleamai pattern)
+        const billingRoutes = require('./routes/billing.routes');
+        app.use('/api/billing', billingRoutes(pool, authenticateJWT));
+        logger.info('Billing routes initialized');
+
+        // Legacy Subscriptions routes (for backward compatibility)
+        // TODO: Remove once frontend is fully migrated to /api/billing
+        const subscriptionsRoutes = require('./routes/subscriptions.routes');
+        app.use('/api/subscriptions', subscriptionsRoutes(pool));
+        logger.info('Subscriptions routes initialized');
 
         // Reputation Management routes
         const reputationRoutes = require('./routes/reputation.routes');

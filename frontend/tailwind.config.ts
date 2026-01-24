@@ -10,6 +10,9 @@ export default {
 	],
 	prefix: "",
 	theme: {
+		fontFamily: {
+			sans: ['Raleway', 'sans-serif'],
+		},
 		container: {
 			center: true,
 			padding: {

@@ -17,6 +17,7 @@ interface DeleteNoteModalProps {
   onClose: () => void;
   noteId: string;
   noteTitle: string;
+  noteColor?: string;
   onDelete: (noteId: string) => Promise<boolean>;
 }
 
@@ -82,7 +83,7 @@ export const DeleteNoteModal: React.FC<DeleteNoteModalProps> = ({
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md border">
               <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                 <StickyNote className="h-4 w-4 text-slate-500" />
-                {noteTitle}
+                <StickyNote className="h-4 w-4" style={{ color: noteColor || 'var(--note-color)' }} />
               </p>
             </div>
           </div>

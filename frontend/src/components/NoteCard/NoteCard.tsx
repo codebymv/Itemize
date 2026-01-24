@@ -240,7 +240,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       )}
                     </Button>
                   </ColorPicker>
-                  <StickyNote className="h-4 w-4 text-slate-500" />
+                  <StickyNote className="h-4 w-4" style={{ color: 'var(--note-color)' }} />
                   <CardTitle 
                     className="text-lg font-medium cursor-pointer"
                     style={{ fontFamily: '"Raleway", sans-serif' }}
@@ -345,6 +345,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
         onClose={() => setShowDeleteModal(false)}
         noteId={note.id.toString()}
         noteTitle={note.title}
+        noteColor={noteDisplayColor}
         onDelete={handleConfirmDelete}
       />
     </Collapsible>

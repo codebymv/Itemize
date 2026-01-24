@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { format, parseISO } from 'date-fns';
-import { Search, Calendar as CalendarIcon, Clock, User, MoreHorizontal, X, Check, MapPin } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, CalendarCheck, Clock, User, MoreHorizontal, X, Check, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,12 +50,15 @@ export function BookingsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <h1
-                    className="text-xl font-semibold italic truncate ml-2"
-                    style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
-                >
-                    BOOKINGS
-                </h1>
+                <div className="flex items-center gap-2 ml-2">
+                    <CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    <h1
+                        className="text-xl font-semibold italic truncate"
+                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                    >
+                        BOOKINGS
+                    </h1>
+                </div>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     {/* Search */}
                     <div className="relative hidden md:block w-full max-w-xs">

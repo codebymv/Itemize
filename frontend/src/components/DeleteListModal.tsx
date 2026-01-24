@@ -17,6 +17,7 @@ interface DeleteListModalProps {
   onClose: () => void;
   listId: string;
   listTitle: string;
+  listColor?: string;
   onDelete: (listId: string) => Promise<boolean>;
 }
 
@@ -25,6 +26,7 @@ export const DeleteListModal: React.FC<DeleteListModalProps> = ({
   onClose,
   listId,
   listTitle,
+  listColor,
   onDelete
 }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -81,7 +83,7 @@ export const DeleteListModal: React.FC<DeleteListModalProps> = ({
             </label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md border">
               <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                <CheckSquare className="h-4 w-4 text-slate-500" />
+                <CheckSquare className="h-4 w-4" style={{ color: listColor || 'var(--list-color)' }} />
                 {listTitle}
               </p>
             </div>

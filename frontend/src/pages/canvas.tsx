@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTheme } from 'next-themes';
-import { Search, Plus, Filter, Palette, CheckSquare, StickyNote } from 'lucide-react';
+import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
 import {
@@ -20,9 +20,15 @@ import {
   updateWhiteboardPosition as apiUpdateWhiteboardPosition,
   deleteWhiteboard as apiDeleteWhiteboard,
   CreateWhiteboardPayload,
+  getWireframes,
+  createWireframe as apiCreateWireframe,
+  updateWireframe as apiUpdateWireframe,
+  updateWireframePosition as apiUpdateWireframePosition,
+  deleteWireframe as apiDeleteWireframe,
+  CreateWireframePayload,
   updateCategory as apiUpdateCategory
 } from '../services/api';
-import { List, Note, Whiteboard } from '../types';
+import { List, Note, Whiteboard, Wireframe } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -37,6 +43,7 @@ import { WhiteboardCard } from '../components/WhiteboardCard';
 import { NewNoteModal } from '../components/NewNoteModal';
 import { NewListModal } from '../components/NewListModal';
 import { NewWhiteboardModal } from '../components/NewWhiteboardModal';
+import { NewWireframeModal } from '../components/NewWireframeModal';
 import { ShareListModal } from '../components/ShareListModal';
 import { ShareNoteModal } from '../components/ShareNoteModal';
 import { ShareWhiteboardModal } from '../components/ShareWhiteboardModal';
@@ -73,7 +80,8 @@ const CanvasPage: React.FC = () => {
   const [loadingLists, setLoadingLists] = useState(true);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [loadingWhiteboards, setLoadingWhiteboards] = useState(true);
-  const isLoading = loadingLists || loadingNotes || loadingWhiteboards;
+  const [loadingWireframes, setLoadingWireframes] = useState(true);
+  const isLoading = loadingLists || loadingNotes || loadingWhiteboards || loadingWireframes;
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
@@ -86,6 +94,8 @@ const CanvasPage: React.FC = () => {
   const [newListInitialPosition, setNewListInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
   const [newWhiteboardInitialPosition, setNewWhiteboardInitialPosition] = useState<{ x: number, y: number } | null>(null);
+  const [showNewWireframeModal, setShowNewWireframeModal] = useState(false);
+  const [newWireframeInitialPosition, setNewWireframeInitialPosition] = useState<{ x: number, y: number } | null>(null);
 
   // Sharing modal states
   const [showShareListModal, setShowShareListModal] = useState(false);
@@ -107,6 +117,10 @@ const CanvasPage: React.FC = () => {
   // State for Whiteboards
   const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
   const [errorWhiteboards, setErrorWhiteboards] = useState<string | null>(null);
+
+  // State for Wireframes
+  const [wireframes, setWireframes] = useState<Wireframe[]>([]);
+  const [errorWireframes, setErrorWireframes] = useState<string | null>(null);
 
   // Database-backed category management
   const {
@@ -221,15 +235,22 @@ const CanvasPage: React.FC = () => {
 
   // Filter function for backward compatibility
   const filterByCategory = (categoryFilter: string | null) => {
+    // Ensure arrays are always defined (handle null/undefined)
+    const safeLists = Array.isArray(lists) ? lists : [];
+    const safeNotes = Array.isArray(notes) ? notes : [];
+    const safeWhiteboards = Array.isArray(whiteboards) ? whiteboards : [];
+    const safeWireframes = Array.isArray(wireframes) ? wireframes : [];
+
     if (!categoryFilter) {
-      return { filteredLists: lists, filteredNotes: notes, filteredWhiteboards: whiteboards };
+      return { filteredLists: safeLists, filteredNotes: safeNotes, filteredWhiteboards: safeWhiteboards, filteredWireframes: safeWireframes };
     }
 
-    const filteredLists = lists.filter(list => list.type === categoryFilter);
-    const filteredNotes = notes.filter(note => note.category === categoryFilter);
-    const filteredWhiteboards = whiteboards.filter(whiteboard => whiteboard.category === categoryFilter);
+    const filteredLists = safeLists.filter(list => list.type === categoryFilter);
+    const filteredNotes = safeNotes.filter(note => note.category === categoryFilter);
+    const filteredWhiteboards = safeWhiteboards.filter(whiteboard => whiteboard.category === categoryFilter);
+    const filteredWireframes = safeWireframes.filter(wireframe => wireframe.category === categoryFilter);
 
-    return { filteredLists, filteredNotes, filteredWhiteboards };
+    return { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes };
   };
 
   // Reference to canvas container methods
@@ -246,9 +267,12 @@ const CanvasPage: React.FC = () => {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <h1 className="text-xl font-semibold italic truncate ml-2" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
-          WORKSPACE
-        </h1>
+        <div className="flex items-center gap-2 ml-2">
+          <Map className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <h1 className="text-xl font-semibold italic truncate" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}>
+            WORKSPACE
+          </h1>
+        </div>
 
         <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">
           {/* Desktop search */}
@@ -313,11 +337,12 @@ const CanvasPage: React.FC = () => {
     const itemHeight = 295; // Approximate height of list/note cards (accounting for headers)
     const minDistance = 50; // Minimum distance between items
 
-    // Get all existing positions from lists, notes, and whiteboards
+    // Get all existing positions from lists, notes, whiteboards, and wireframes
     const existingPositions: Array<{ x: number; y: number }> = [
       ...lists.map(list => ({ x: list.position_x || 0, y: list.position_y || 0 })),
       ...notes.map(note => ({ x: note.position_x, y: note.position_y })),
-      ...whiteboards.map(whiteboard => ({ x: whiteboard.position_x, y: whiteboard.position_y }))
+      ...whiteboards.map(whiteboard => ({ x: whiteboard.position_x, y: whiteboard.position_y })),
+      ...wireframes.map(wireframe => ({ x: wireframe.position_x, y: wireframe.position_y }))
     ];
 
     // Function to check if a position overlaps with existing items
@@ -406,7 +431,7 @@ const CanvasPage: React.FC = () => {
         setLoadingLists(true);
         setError(null);
         const fetchedLists = await fetchCanvasLists(token);
-        setLists(fetchedLists);
+        setLists(Array.isArray(fetchedLists) ? fetchedLists : []);
 
         // Categories are now managed by useUnifiedCategories hook
       } catch (error) {
@@ -427,7 +452,7 @@ const CanvasPage: React.FC = () => {
         setLoadingNotes(true);
         setErrorNotes(null);
         const fetchedNotes = await getNotes(token);
-        setNotes(fetchedNotes);
+        setNotes(Array.isArray(fetchedNotes) ? fetchedNotes : []);
       } catch (err) {
         console.error('Error fetching notes:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load notes. Please try again.';
@@ -450,7 +475,7 @@ const CanvasPage: React.FC = () => {
         setLoadingWhiteboards(true);
         setErrorWhiteboards(null);
         const fetchedWhiteboards = await getWhiteboards(token);
-        setWhiteboards(fetchedWhiteboards);
+        setWhiteboards(Array.isArray(fetchedWhiteboards) ? fetchedWhiteboards : []);
       } catch (err) {
         console.error('Error fetching whiteboards:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load whiteboards. Please try again.';
@@ -465,6 +490,30 @@ const CanvasPage: React.FC = () => {
       fetchWhiteboardsData();
     }
   }, [token, toast]); // Re-fetch if token changes, include toast in dependencies
+
+  // Fetch wireframes on component mount
+  useEffect(() => {
+    const fetchWireframesData = async () => {
+      try {
+        setLoadingWireframes(true);
+        setErrorWireframes(null);
+        const response = await getWireframes(token);
+        const fetchedWireframes = response?.wireframes || response || [];
+        setWireframes(Array.isArray(fetchedWireframes) ? fetchedWireframes : []);
+      } catch (err) {
+        console.error('Error fetching wireframes:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load wireframes. Please try again.';
+        setErrorWireframes(errorMessage);
+        toast({ title: "Error fetching wireframes", description: errorMessage, variant: "destructive" });
+      } finally {
+        setLoadingWireframes(false);
+      }
+    };
+
+    if (token) {
+      fetchWireframesData();
+    }
+  }, [token, toast]);
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -511,6 +560,17 @@ const CanvasPage: React.FC = () => {
     // Note: WebSocket list update events removed to prevent conflicts with API-first approach
     // This eliminates the double-update issue that was causing UI flashing
     // Lists are now updated only through direct API calls for consistency
+
+    // Listen for real-time wireframe updates (node text/flow changes)
+    newSocket.on('userWireframeUpdated', (update) => {
+      const updated = update?.data;
+      if (!updated?.id) return;
+      setWireframes(prev =>
+        prev.map(wireframe =>
+          wireframe.id === updated.id ? { ...wireframe, ...updated } : wireframe
+        )
+      );
+    });
 
     newSocket.on('error', (error) => {
       console.error('Canvas: WebSocket error:', error);
@@ -739,6 +799,91 @@ const CanvasPage: React.FC = () => {
     }
   };
 
+  // CRUD operations for Wireframes
+  const handleCreateWireframe = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    try {
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(category) && category !== 'General') {
+        await addCategory({ name: category, color_value: color });
+      }
+
+      const payloadWithDefaults: CreateWireframePayload = {
+        title: title,
+        category: category,
+        flow_data: '{"nodes": [], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}',
+        position_x: position.x,
+        position_y: position.y,
+        z_index: 0,
+        color_value: color,
+      };
+      logger.log('handleCreateWireframe payload:', payloadWithDefaults);
+
+      const newWireframe = await apiCreateWireframe(payloadWithDefaults, token);
+      setWireframes(prev => [newWireframe, ...prev]);
+    } catch (error) {
+      console.error('Failed to create wireframe:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not create your wireframe. Please try again.';
+      toast({
+        title: "Error creating wireframe",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateWireframe = async (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    const originalWireframes = [...wireframes];
+
+    // Optimistic update
+    setWireframes(prev => prev.map(w => w.id === wireframeId ? { ...w, ...updatedData } : w));
+
+    try {
+      const updatedWireframe = await apiUpdateWireframe(wireframeId, updatedData, token);
+      setWireframes(prev => prev.map(w => w.id === wireframeId ? updatedWireframe : w));
+      return updatedWireframe;
+    } catch (error) {
+      console.error('Failed to update wireframe:', error);
+      setWireframes(originalWireframes);
+      const errorMessage = error instanceof Error ? error.message : 'Could not update your wireframe. Please try again.';
+      toast({
+        title: "Error updating wireframe",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+
+  const handleDeleteWireframe = async (wireframeId: number) => {
+    try {
+      await apiDeleteWireframe(wireframeId, token);
+      setWireframes(prev => prev.filter(w => w.id !== wireframeId));
+      toast({
+        title: "Wireframe deleted",
+        description: "Your wireframe has been successfully removed.",
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to delete wireframe:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not delete your wireframe. Please try again.';
+      toast({
+        title: "Error deleting wireframe",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  const handleWireframePositionChange = async (wireframeId: number, newPosition: { x: number; y: number }) => {
+    try {
+      await apiUpdateWireframePosition(wireframeId, newPosition.x, newPosition.y, token);
+      setWireframes(prev => prev.map(w => w.id === wireframeId ? { ...w, position_x: newPosition.x, position_y: newPosition.y } : w));
+    } catch (error) {
+      console.error('Failed to update wireframe position:', error);
+    }
+  };
+
   // CRUD operations for lists (used by mobile view)
   const createList = async (title: string, type: string, color: string) => {
     try {
@@ -963,6 +1108,12 @@ const CanvasPage: React.FC = () => {
     setShowButtonContextMenu(false);
     setNewWhiteboardInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
     setShowNewWhiteboardModal(true);
+  };
+
+  const handleButtonAddWireframe = () => {
+    setShowButtonContextMenu(false);
+    setNewWireframeInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
+    setShowNewWireframeModal(true);
   };
 
   // Sharing functions
@@ -1211,9 +1362,9 @@ const CanvasPage: React.FC = () => {
   };
 
   const getFilteredContent = () => {
-    // Use unified category filtering for lists, notes, and whiteboards
+    // Use unified category filtering for lists, notes, whiteboards, and wireframes
     // null selectedFilter means show all content (no filtering)
-    const { filteredLists, filteredNotes, filteredWhiteboards } = filterByCategory(selectedFilter);
+    const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes } = filterByCategory(selectedFilter);
 
     // Apply search filter to lists
     let searchFilteredLists = [...filteredLists];
@@ -1243,10 +1394,19 @@ const CanvasPage: React.FC = () => {
       });
     }
 
+    // Apply search filter to wireframes
+    let searchFilteredWireframes = [...filteredWireframes];
+    if (searchQuery) {
+      searchFilteredWireframes = searchFilteredWireframes.filter(wireframe => {
+        return wireframe.title?.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
+
     return {
       filteredLists: searchFilteredLists,
       filteredNotes: searchFilteredNotes,
-      filteredWhiteboards: searchFilteredWhiteboards
+      filteredWhiteboards: searchFilteredWhiteboards,
+      filteredWireframes: searchFilteredWireframes
     };
   };
 
@@ -1269,11 +1429,11 @@ const CanvasPage: React.FC = () => {
     return counts;
   };
 
-  const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
+  const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes } = getFilteredContent();
 
   // Mobile List View Component (similar to UserHome.tsx)
   const MobileListView = () => {
-    const { filteredLists, filteredNotes, filteredWhiteboards } = getFilteredContent();
+    const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes } = getFilteredContent();
 
     return (
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8">
@@ -1308,10 +1468,10 @@ const CanvasPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Content section - Lists, Notes, and Whiteboards */}
-        {filteredLists.length === 0 && filteredNotes.length === 0 && filteredWhiteboards.length === 0 ? (
+        {/* Content section - Lists, Notes, Whiteboards, and Wireframes */}
+        {filteredLists.length === 0 && filteredNotes.length === 0 && filteredWhiteboards.length === 0 && filteredWireframes.length === 0 ? (
           <div className="text-center py-12">
-            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 ? (
+            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && wireframes.length === 0 ? (
               <div className="max-w-md mx-auto">
                 <div className="bg-card rounded-lg shadow-sm border border-border p-8">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1516,6 +1676,7 @@ const CanvasPage: React.FC = () => {
                 lists={lists}
                 notes={notes}
                 whiteboards={whiteboards}
+                wireframes={wireframes}
                 existingCategories={dbCategories}
                 onListUpdate={updateList}
                 onListPositionUpdate={handleListPositionUpdate}
@@ -1527,11 +1688,22 @@ const CanvasPage: React.FC = () => {
                 onWhiteboardUpdate={handleUpdateWhiteboard}
                 onWhiteboardDelete={handleDeleteWhiteboard}
                 onWhiteboardShare={handleShareWhiteboard}
+                onWireframeUpdate={handleUpdateWireframe}
+                onWireframeDelete={handleDeleteWireframe}
+                onWireframeShare={(wireframeId) => {
+                  // TODO: Implement wireframe sharing
+                  console.log('Share wireframe:', wireframeId);
+                }}
+                onWireframePositionUpdate={handleWireframePositionChange}
                 addCategory={addCategory}
                 updateCategory={editCategory}
                 onOpenNewNoteModal={handleOpenNewNoteModal}
                 onOpenNewListModal={handleOpenNewListModal}
                 onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
+                onOpenNewWireframeModal={(position) => {
+                  setNewWireframeInitialPosition(position);
+                  setShowNewWireframeModal(true);
+                }}
                 searchQuery={searchQuery}
                 onReady={(methods) => {
                   if (!canvasMethodsRef.current) {
@@ -1584,6 +1756,18 @@ const CanvasPage: React.FC = () => {
                 onClose={() => setShowNewWhiteboardModal(false)}
                 onCreateWhiteboard={handleCreateWhiteboard}
                 initialPosition={newWhiteboardInitialPosition}
+                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+                updateCategory={updateCategoryColor}
+              />
+            )}
+
+            {/* Desktop Canvas Wireframe Modal */}
+            {showNewWireframeModal && newWireframeInitialPosition && (
+              <NewWireframeModal
+                isOpen={showNewWireframeModal}
+                onClose={() => setShowNewWireframeModal(false)}
+                onCreateWireframe={handleCreateWireframe}
+                initialPosition={newWireframeInitialPosition}
                 existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
                 updateCategory={updateCategoryColor}
               />
@@ -1661,6 +1845,7 @@ const CanvasPage: React.FC = () => {
               onAddList={handleButtonAddList}
               onAddNote={handleButtonAddNote}
               onAddWhiteboard={handleButtonAddWhiteboard}
+              onAddWireframe={handleButtonAddWireframe}
               onClose={() => setShowButtonContextMenu(false)}
               isFromButton={true}
             />

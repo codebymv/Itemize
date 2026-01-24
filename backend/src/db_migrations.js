@@ -521,6 +521,271 @@ const runSharingMigration = async (pool) => {
   }
 };
 
+// Email/Password Authentication Migration
+const runEmailPasswordAuthMigration = async (pool) => {
+  console.log('Running email/password authentication migration...');
+  
+  try {
+    // First, check what columns exist in the users table
+    console.log('📋 Checking existing table structure...');
+    const columnsResult = await pool.query(`
+      SELECT column_name, is_nullable, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'users'
+      ORDER BY ordinal_position;
+    `);
+    
+    const existingColumns = columnsResult.rows.map(r => r.column_name);
+    console.log('✅ Found existing columns:', existingColumns.join(', '));
+    
+    console.log('\n📋 Adding authentication columns to users table...');
+    
+    // Add password hash column
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+    `);
+    console.log('✅ Added password_hash column');
+    
+    // Add email verification columns
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
+    `);
+    console.log('✅ Added email_verified column');
+    
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);
+    `);
+    console.log('✅ Added verification_token column');
+    
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP WITH TIME ZONE;
+    `);
+    console.log('✅ Added verification_token_expires column');
+    
+    // Add password reset columns
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(255);
+    `);
+    console.log('✅ Added password_reset_token column');
+    
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP WITH TIME ZONE;
+    `);
+    console.log('✅ Added password_reset_expires column');
+    
+    // Add role column
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'USER';
+    `);
+    console.log('✅ Added role column');
+    
+    // Add provider columns if they don't exist
+    if (!existingColumns.includes('provider')) {
+      console.log('📋 Adding provider column...');
+      await pool.query(`
+        ALTER TABLE users 
+        ADD COLUMN IF NOT EXISTS provider VARCHAR(50);
+      `);
+      console.log('✅ Added provider column');
+    }
+    
+    if (!existingColumns.includes('provider_id')) {
+      console.log('📋 Adding provider_id column...');
+      await pool.query(`
+        ALTER TABLE users 
+        ADD COLUMN IF NOT EXISTS provider_id VARCHAR(255);
+      `);
+      console.log('✅ Added provider_id column');
+    }
+    
+    // Make provider columns nullable if they exist and have NOT NULL constraint
+    if (existingColumns.includes('provider')) {
+      console.log('📋 Making provider column nullable...');
+      try {
+        await pool.query(`
+          ALTER TABLE users 
+          ALTER COLUMN provider DROP NOT NULL;
+        `);
+        console.log('✅ Made provider column nullable');
+      } catch (err) {
+        if (err.code === '42703') {
+          console.log('ℹ️  Provider column already nullable');
+        } else {
+          throw err;
+        }
+      }
+    }
+    
+    if (existingColumns.includes('provider_id')) {
+      console.log('📋 Making provider_id column nullable...');
+      try {
+        await pool.query(`
+          ALTER TABLE users 
+          ALTER COLUMN provider_id DROP NOT NULL;
+        `);
+        console.log('✅ Made provider_id column nullable');
+      } catch (err) {
+        if (err.code === '42703') {
+          console.log('ℹ️  Provider_id column already nullable');
+        } else {
+          throw err;
+        }
+      }
+    }
+    
+    // Set existing Google OAuth users as email verified
+    if (existingColumns.includes('provider')) {
+      console.log('📋 Marking existing Google users as verified...');
+      const result = await pool.query(`
+        UPDATE users 
+        SET email_verified = true 
+        WHERE provider = 'google' AND (email_verified IS NULL OR email_verified = false);
+      `);
+      console.log(`✅ Marked ${result.rowCount} Google users as email verified`);
+    }
+    
+    // Add indexes for token lookups
+    console.log('📋 Creating indexes for performance...');
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_verification_token 
+      ON users(verification_token) 
+      WHERE verification_token IS NOT NULL;
+    `);
+    console.log('✅ Created index on verification_token');
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_password_reset_token 
+      ON users(password_reset_token) 
+      WHERE password_reset_token IS NOT NULL;
+    `);
+    console.log('✅ Created index on password_reset_token');
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_email_verified 
+      ON users(email_verified);
+    `);
+    console.log('✅ Created index on email_verified');
+    
+    console.log('\n✅ Email/password authentication migration completed successfully!');
+    console.log('\n📋 Summary of changes:');
+    console.log('   • Added password_hash column for storing hashed passwords');
+    console.log('   • Added email_verified flag and verification token columns');
+    console.log('   • Added password reset token columns');
+    console.log('   • Added role column for future permissions');
+    console.log('   • Added/ensured provider columns exist and are nullable');
+    console.log('   • Created indexes for fast token lookups');
+    console.log('   • Marked existing Google users as verified (if applicable)');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Email/password authentication migration failed:', error.message);
+    console.error('Full error:', error);
+    return false;
+  }
+};
+
+// Migration to create wireframes table for React Flow diagrams
+const runWireframesMigration = async (pool) => {
+  console.log('Running wireframes table migration...');
+
+  try {
+    // Create wireframes table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS wireframes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'General',
+        flow_data JSONB DEFAULT '{"nodes": [], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}',
+        position_x INTEGER NOT NULL DEFAULT 0,
+        position_y INTEGER NOT NULL DEFAULT 0,
+        z_index INTEGER DEFAULT 0,
+        color_value VARCHAR(7) DEFAULT '#3B82F6',
+        share_token UUID,
+        is_public BOOLEAN DEFAULT FALSE,
+        shared_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+    console.log('✅ wireframes table created (if not exists)');
+
+    // Create index on user_id for wireframes table
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_wireframes_user_id ON wireframes(user_id);
+    `);
+    console.log('✅ index idx_wireframes_user_id created');
+
+    // Create index on category for wireframes table
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_wireframes_category ON wireframes(category);
+    `);
+    console.log('✅ index idx_wireframes_category created');
+
+    // Create index on share_token for wireframes table
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_wireframes_share_token ON wireframes(share_token) WHERE share_token IS NOT NULL;
+    `);
+    console.log('✅ index idx_wireframes_share_token created');
+
+    // Create index on is_public for wireframes table
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_wireframes_is_public ON wireframes(is_public) WHERE is_public = TRUE;
+    `);
+    console.log('✅ index idx_wireframes_is_public created');
+
+    // Create trigger for wireframes table to automatically update updated_at
+    await pool.query(`
+      DROP TRIGGER IF EXISTS trigger_wireframes_updated_at ON wireframes;
+    `);
+    await pool.query(`
+      CREATE TRIGGER trigger_wireframes_updated_at
+      BEFORE UPDATE ON wireframes
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+    `);
+    console.log('✅ trigger_wireframes_updated_at created');
+
+    console.log('✅ Wireframes table migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Wireframes table migration failed:', error.message);
+    return false;
+  }
+};
+
+// Migration to add width and height columns to wireframes table
+const runWireframesDimensionsMigration = async (pool) => {
+  console.log('Running wireframes dimensions migration...');
+
+  try {
+    // Add width column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE wireframes ADD COLUMN IF NOT EXISTS width INTEGER DEFAULT 600;
+    `);
+    console.log('✅ width column added to wireframes (if not exists)');
+
+    // Add height column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE wireframes ADD COLUMN IF NOT EXISTS height INTEGER DEFAULT 600;
+    `);
+    console.log('✅ height column added to wireframes (if not exists)');
+
+    console.log('✅ Wireframes dimensions migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Wireframes dimensions migration failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = {
   runCanvasMigration,
   runListResizeMigration,
@@ -529,5 +794,8 @@ module.exports = {
   runCategoriesTableMigration,
   runCategoriesDataMigration,
   runCleanupDefaultCategories,
-  runSharingMigration
+  runSharingMigration,
+  runEmailPasswordAuthMigration,
+  runWireframesMigration,
+  runWireframesDimensionsMigration
 };

@@ -15,6 +15,7 @@ module.exports = (io, pool) => {
     const sharedListViewers = new Map(); // shareToken -> Set of socket IDs
     const sharedNoteViewers = new Map(); // shareToken -> Set of socket IDs
     const sharedWhiteboardViewers = new Map(); // shareToken -> Set of socket IDs
+    const sharedWireframeViewers = new Map(); // shareToken -> Set of socket IDs
     const userCanvasConnections = new Map(); // userId -> Set of socket IDs
     const chatSessionConnections = new Map(); // sessionToken -> Set of socket IDs
     const orgChatConnections = new Map(); // orgId -> Set of socket IDs (for agents)
@@ -57,10 +58,34 @@ module.exports = (io, pool) => {
             }
         },
 
+        wireframeUpdate: (shareToken, eventType, data) => {
+            if (shareToken && io) {
+                const roomName = `shared-wireframe-${shareToken}`;
+                io.to(roomName).emit('wireframeUpdated', {
+                    type: eventType,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                });
+                console.log(`Broadcasted ${eventType} to shared wireframe: ${shareToken}`);
+            }
+        },
+
         userListUpdate: (userId, eventType, data) => {
             if (userId && io) {
                 const roomName = `user-canvas-${userId}`;
                 io.to(roomName).emit('userListUpdated', {
+                    type: eventType,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                });
+                console.log(`Broadcasted ${eventType} to user ${userId} canvas`);
+            }
+        },
+
+        userWireframeUpdate: (userId, eventType, data) => {
+            if (userId && io) {
+                const roomName = `user-canvas-${userId}`;
+                io.to(roomName).emit('userWireframeUpdated', {
                     type: eventType,
                     data: data,
                     timestamp: new Date().toISOString()
@@ -89,7 +114,27 @@ module.exports = (io, pool) => {
         // Handle user joining their own canvas for real-time updates
         socket.on('joinUserCanvas', async (data) => {
             try {
-                const { token } = data;
+                // Try to get token from data (passed by client) or from cookies (httpOnly)
+                let token = data?.token;
+                
+                // If token is 'httponly' placeholder or not provided, get from cookies
+                if (!token || token === 'httponly') {
+                    // Parse cookies from handshake headers
+                    const cookies = socket.handshake.headers.cookie;
+                    if (cookies) {
+                        const cookieObj = cookies.split(';').reduce((acc, cookie) => {
+                            const [key, value] = cookie.trim().split('=');
+                            acc[key] = value;
+                            return acc;
+                        }, {});
+                        token = cookieObj.itemize_auth;
+                    }
+                }
+
+                if (!token) {
+                    throw new Error('No authentication token provided');
+                }
+
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 const userId = decoded.id;
 
@@ -107,7 +152,7 @@ module.exports = (io, pool) => {
                 });
             } catch (error) {
                 console.error('Error joining user canvas:', error);
-                socket.emit('error', { message: 'Failed to join user canvas' });
+                socket.emit('error', { message: 'Failed to join user canvas', details: error.message });
             }
         });
 
@@ -228,6 +273,44 @@ module.exports = (io, pool) => {
             } catch (error) {
                 console.error('Error joining shared whiteboard:', error);
                 socket.emit('error', { message: 'Failed to join shared whiteboard' });
+            }
+        });
+
+        // Handle viewer joining a shared wireframe
+        socket.on('joinSharedWireframe', async (shareToken) => {
+            try {
+                const client = await pool.connect();
+                const result = await client.query(
+                    'SELECT id, title, is_public FROM wireframes WHERE share_token = $1',
+                    [shareToken]
+                );
+
+                if (result.rows.length === 0 || !result.rows[0].is_public) {
+                    client.release();
+                    socket.emit('error', { message: 'Invalid or inactive share link' });
+                    return;
+                }
+
+                client.release();
+
+                const roomName = `shared-wireframe-${shareToken}`;
+                socket.join(roomName);
+
+                if (!sharedWireframeViewers.has(shareToken)) {
+                    sharedWireframeViewers.set(shareToken, new Set());
+                }
+                sharedWireframeViewers.get(shareToken).add(socket.id);
+
+                socket.emit('joinedSharedWireframe', {
+                    message: 'Successfully joined shared wireframe',
+                    wireframeTitle: result.rows[0].title
+                });
+
+                const viewerCount = sharedWireframeViewers.get(shareToken).size;
+                io.to(roomName).emit('viewerCount', viewerCount);
+            } catch (error) {
+                console.error('Error joining shared wireframe:', error);
+                socket.emit('error', { message: 'Failed to join shared wireframe' });
             }
         });
 
@@ -353,7 +436,8 @@ module.exports = (io, pool) => {
             [
                 { map: sharedListViewers, prefix: 'shared-list-' },
                 { map: sharedNoteViewers, prefix: 'shared-note-' },
-                { map: sharedWhiteboardViewers, prefix: 'shared-whiteboard-' }
+                { map: sharedWhiteboardViewers, prefix: 'shared-whiteboard-' },
+                { map: sharedWireframeViewers, prefix: 'shared-wireframe-' }
             ].forEach(({ map, prefix }) => {
                 for (const [shareToken, viewers] of map.entries()) {
                     if (viewers.has(socket.id)) {
@@ -407,6 +491,7 @@ module.exports = (io, pool) => {
             list: sharedListViewers,
             note: sharedNoteViewers,
             whiteboard: sharedWhiteboardViewers,
+            wireframe: sharedWireframeViewers,
             userCanvas: userCanvasConnections
         }
     };

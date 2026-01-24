@@ -206,10 +206,16 @@
 @layer base {
   * {
     @apply border-border;
+    font-family: 'Raleway', sans-serif !important;
   }
 
   body {
     @apply bg-background text-foreground overflow-x-hidden;
+    font-family: 'Raleway', sans-serif !important;
+  }
+  
+  button, input, select, textarea, label, span, div, p, h1, h2, h3, h4, h5, h6, a {
+    font-family: 'Raleway', sans-serif !important;
   }
 }
 
@@ -256,4 +262,13 @@ html {
 .progress-bar-text {
   font-family: "Raleway", sans-serif !important;
   font-display: swap !important;
+}
+
+/* GLOBAL FONT OVERRIDE - Applied after all other styles */
+* {
+  font-family: 'Raleway', sans-serif !important;
+}
+
+html, body, button, input, select, textarea, label, span, div, p, h1, h2, h3, h4, h5, h6, a, li, td, th {
+  font-family: 'Raleway', sans-serif !important;
 }

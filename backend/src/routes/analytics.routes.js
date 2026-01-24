@@ -129,10 +129,11 @@ module.exports = (pool, authenticateJWT) => {
                 // Recent activity (last 10 items)
                 client.query(`
           SELECT 
-            id, type, description, created_at, contact_id
-          FROM contact_activities 
-          WHERE organization_id = $1
-          ORDER BY created_at DESC
+            ca.id, ca.type, ca.title, ca.content, ca.created_at, ca.contact_id
+          FROM contact_activities ca
+          JOIN contacts c ON ca.contact_id = c.id
+          WHERE c.organization_id = $1
+          ORDER BY ca.created_at DESC
           LIMIT 10
         `, [orgId])
             ]);
@@ -214,7 +215,8 @@ module.exports = (pool, authenticateJWT) => {
                 recentActivity: recentActivityResult.rows.map(row => ({
                     id: row.id,
                     type: row.type,
-                    description: row.description,
+                    title: row.title,
+                    content: row.content,
                     createdAt: row.created_at,
                     contactId: row.contact_id
                 }))

@@ -2,6 +2,7 @@
  * Email Campaigns Routes
  * CRUD operations and campaign sending functionality
  * Refactored with shared middleware (Phase 5)
+ * Updated with feature gating (Subscription Phase 6)
  */
 
 const express = require('express');
@@ -10,10 +11,17 @@ const emailService = require('../services/emailService');
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
+const UsageTrackingService = require('../services/usageTrackingService');
 
 module.exports = (pool, authenticateJWT) => {
     // Use shared organization middleware (Phase 5.3)
     const { requireOrganization } = require('../middleware/organization')(pool);
+    
+    // Subscription middleware for feature gating
+    const { checkUsageLimit } = require('../middleware/subscription')(pool);
+    
+    // Usage tracking service
+    const usageService = new UsageTrackingService(pool);
 
     // ======================
     // Campaign CRUD
@@ -514,6 +522,29 @@ module.exports = (pool, authenticateJWT) => {
                     return res.status(400).json({ error: 'No recipients match the campaign criteria' });
                 }
 
+                // Check email usage limits before sending
+                const usageLimitCheck = await usageService.isWithinLimits(
+                    req.organizationId, 
+                    'emails_per_month', 
+                    recipients.length
+                );
+                
+                if (!usageLimitCheck.withinLimits) {
+                    await client.query('ROLLBACK');
+                    client.release();
+                    return res.status(429).json({
+                        success: false,
+                        error: {
+                            message: `Sending ${recipients.length} emails would exceed your monthly limit`,
+                            code: 'USAGE_LIMIT_EXCEEDED',
+                            current: usageLimitCheck.current,
+                            limit: usageLimitCheck.limit,
+                            requested: recipients.length,
+                            remaining: usageLimitCheck.remaining || 0
+                        }
+                    });
+                }
+
                 // Update campaign status
                 await client.query(`
                     UPDATE email_campaigns SET
@@ -536,6 +567,9 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 await client.query('COMMIT');
+
+                // Track email usage (pre-allocate the quota)
+                await usageService.incrementUsage(req.organizationId, 'emails_per_month', recipients.length);
 
                 // Start sending in background
                 sendCampaignEmails(pool, id, campaign, recipients).catch(err => {

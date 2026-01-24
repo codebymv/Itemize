@@ -17,6 +17,7 @@ import {
   Palette,
   ListChecks,
   Plus,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -102,9 +103,10 @@ export function ContactDetailPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
+          <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
             className="text-xl font-semibold italic truncate"
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#374151' }}
+            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
             {getContactDisplayName(contact)}
           </h1>
