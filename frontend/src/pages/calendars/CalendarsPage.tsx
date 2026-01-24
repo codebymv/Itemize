@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Calendar as CalendarIcon, Calendar, Settings, Link2, MoreHorizontal, Trash2, Copy, ExternalLink } from 'lucide-react';
+import { Plus, Search, Calendar as CalendarIcon, Settings, Link2, MoreHorizontal, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +42,7 @@ export function CalendarsPage() {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2 ml-2">
-                    <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    <CalendarIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
