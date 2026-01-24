@@ -69,6 +69,14 @@ const mainNavItems: NavItem[] = [
                 title: 'Canvas',
                 path: '/workspace',
             },
+            {
+                title: 'Contents',
+                path: '/workspace/contents',
+            },
+            {
+                title: 'Shared',
+                path: '/workspace/shared',
+            },
         ],
     },
     {
@@ -185,6 +193,9 @@ export function AppSidebar() {
                                     (item.path !== '/' && location.pathname.startsWith(item.path));
 
                                 if (item.items && item.items.length > 0) {
+                                    const activeSubItem = item.items.find(subItem => location.pathname === subItem.path);
+                                    const displayTitle = activeSubItem ? `${item.title} | ${activeSubItem.title}` : item.title;
+
                                     return (
                                         <Collapsible
                                             key={item.title}
@@ -201,7 +212,7 @@ export function AppSidebar() {
                                                         style={{ fontFamily: '"Raleway", sans-serif' }}
                                                     >
                                                         <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
-                                                        <span>{item.title}</span>
+                                                        <span>{displayTitle}</span>
                                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                                     </SidebarMenuButton>
                                                 </CollapsibleTrigger>
