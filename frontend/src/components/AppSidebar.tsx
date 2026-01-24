@@ -35,7 +35,14 @@ import {
 import { Button } from '@/components/ui/button';
 
 // Navigation items for the sidebar
-const mainNavItems = [
+interface NavItem {
+    title: string;
+    icon: React.ElementType;
+    path: string;
+    disabled?: boolean;
+}
+
+const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         icon: LayoutDashboard,
@@ -83,7 +90,7 @@ const mainNavItems = [
     },
 ];
 
-const secondaryNavItems = [
+const secondaryNavItems: NavItem[] = [
     {
         title: 'Settings',
         icon: Settings,
@@ -154,7 +161,7 @@ export function AppSidebar() {
                 <SidebarGroup>
                     <SidebarGroupLabel style={{ fontFamily: '"Raleway", sans-serif' }}>Main</SidebarGroupLabel>
                     <SidebarGroupContent>
-                        <SidebarMenu>
+                        <SidebarMenu className="gap-3">
                             {mainNavItems.map((item) => {
                                 const isActive = location.pathname === item.path ||
                                     (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -166,6 +173,7 @@ export function AppSidebar() {
                                             isActive={isActive}
                                             onClick={() => handleNavigate(item.path, item.disabled)}
                                             className={cn(
+                                                "h-10",
                                                 item.disabled ? 'opacity-50 cursor-not-allowed' : '',
                                                 isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                             )}
@@ -188,7 +196,7 @@ export function AppSidebar() {
             <SidebarFooter className="border-t">
                 <SidebarGroup>
                     <SidebarGroupContent>
-                        <SidebarMenu>
+                        <SidebarMenu className="gap-2">
                             {secondaryNavItems.map((item) => {
                                 const isActive = location.pathname === item.path ||
                                     (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -200,6 +208,7 @@ export function AppSidebar() {
                                             isActive={isActive}
                                             onClick={() => handleNavigate(item.path)}
                                             className={cn(
+                                                "h-9",
                                                 isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                             )}
                                             style={{ fontFamily: '"Raleway", sans-serif' }}
