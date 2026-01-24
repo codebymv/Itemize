@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
-import { List, Note, Whiteboard, Wireframe, Category } from '../../types';
+import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
 import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -10,6 +10,7 @@ import Spinner from '../../components/ui/Spinner';
 import { DraggableNoteCard } from './DraggableNoteCard';
 import { DraggableWhiteboardCard } from './DraggableWhiteboardCard';
 import { DraggableWireframeCard } from './DraggableWireframeCard';
+import { DraggableVaultCard } from './DraggableVaultCard';
 import { Plus, Minus, RotateCcw, Search } from 'lucide-react';
 
 interface CanvasContainerProps {
@@ -39,6 +40,12 @@ interface CanvasContainerProps {
   onWireframeDelete?: (wireframeId: number) => Promise<boolean>;
   onWireframeShare?: (wireframeId: number) => void;
   onOpenNewWireframeModal?: (position: { x: number; y: number }) => void;
+  vaults?: Vault[];
+  onVaultUpdate?: (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Vault | null>;
+  onVaultPositionUpdate?: (vaultId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => void;
+  onVaultDelete?: (vaultId: number) => Promise<boolean>;
+  onVaultShare?: (vaultId: number) => void;
+  onOpenNewVaultModal?: (position: { x: number; y: number }) => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
@@ -78,6 +85,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onWireframeDelete,
   onWireframeShare,
   onOpenNewWireframeModal,
+  vaults = [],
+  onVaultUpdate,
+  onVaultPositionUpdate,
+  onVaultDelete,
+  onVaultShare,
+  onOpenNewVaultModal,
   addCategory,
   updateCategory
 }) => {
@@ -129,6 +142,15 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (onOpenNewWireframeModal) {
       console.log('Opening wireframe modal at position:', menuPosition);
       onOpenNewWireframeModal(menuPosition);
+    }
+  };
+
+  // Handler for when 'Add Vault' is clicked in the context menu
+  const handleRequestAddVault = () => {
+    setShowContextMenu(false); 
+    if (onOpenNewVaultModal) {
+      console.log('Opening vault modal at position:', menuPosition);
+      onOpenNewVaultModal(menuPosition);
     }
   };
 
@@ -662,6 +684,23 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 updateCategory={updateCategory}
               />
             ))}
+
+            {/* Render vaults */}
+            {vaults && onVaultUpdate && onVaultDelete && onVaultShare && vaults.map(vault => (
+              <DraggableVaultCard
+                key={vault.id}
+                vault={vault}
+                onUpdate={onVaultUpdate}
+                onDelete={onVaultDelete}
+                onShare={onVaultShare}
+                existingCategories={existingCategories}
+                canvasTransform={canvasTransform}
+                onPositionUpdate={onVaultPositionUpdate || ((vaultId, newPosition) => {
+                  onVaultUpdate(vaultId, { position_x: newPosition.x, position_y: newPosition.y });
+                })}
+                updateCategory={updateCategory}
+              />
+            ))}
             
             {/* Context menu */}
             {showContextMenu && (() => {
@@ -674,6 +713,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   onAddNote={handleRequestAddNote}
                   onAddWhiteboard={handleRequestAddWhiteboard}
                   onAddWireframe={handleRequestAddWireframe}
+                  onAddVault={handleRequestAddVault}
                   onClose={() => setShowContextMenu(false)}
                   isFromButton={menuIsFromButton}
                 />

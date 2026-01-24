@@ -51,6 +51,9 @@ const { runAllNormalizationMigrations } = require('./db_normalization_migrations
 // Import Subscription migrations (feature gating and billing)
 const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
 
+// Import Vault migrations (encrypted storage)
+const { runVaultMigrations } = require('./db_vault_migrations');
+
 // In-memory storage fallbacks if database fails
 const inMemoryUsers = [];
 const inMemoryLists = [];
@@ -439,6 +442,13 @@ const initializeDatabase = async (pool) => {
       await runAllSubscriptionMigrations(pool);
     } catch (subscriptionError) {
       console.error('⚠️ Subscription migrations failed, continuing without subscription features:', subscriptionError.message);
+    }
+
+    // Run Vault migrations (encrypted storage)
+    try {
+      await runVaultMigrations(pool);
+    } catch (vaultError) {
+      console.error('⚠️ Vault migrations failed, continuing without vault features:', vaultError.message);
     }
 
     console.log('Database initialized successfully');

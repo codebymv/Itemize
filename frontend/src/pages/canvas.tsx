@@ -26,9 +26,17 @@ import {
   updateWireframePosition as apiUpdateWireframePosition,
   deleteWireframe as apiDeleteWireframe,
   CreateWireframePayload,
+  getVaults,
+  createVault as apiCreateVault,
+  updateVault as apiUpdateVault,
+  updateVaultPosition as apiUpdateVaultPosition,
+  deleteVault as apiDeleteVault,
+  shareVault as apiShareVault,
+  unshareVault as apiUnshareVault,
+  CreateVaultPayload,
   updateCategory as apiUpdateCategory
 } from '../services/api';
-import { List, Note, Whiteboard, Wireframe } from '../types';
+import { List, Note, Whiteboard, Wireframe, Vault } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -44,9 +52,11 @@ import { NewNoteModal } from '../components/NewNoteModal';
 import { NewListModal } from '../components/NewListModal';
 import { NewWhiteboardModal } from '../components/NewWhiteboardModal';
 import { NewWireframeModal } from '../components/NewWireframeModal';
+import { NewVaultModal } from '../components/NewVaultModal';
 import { ShareListModal } from '../components/ShareListModal';
 import { ShareNoteModal } from '../components/ShareNoteModal';
 import { ShareWhiteboardModal } from '../components/ShareWhiteboardModal';
+import { ShareVaultModal } from '../components/ShareVaultModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 import { useIsMobile } from '../hooks/use-mobile';
 import { logger } from '../lib/logger';
@@ -81,7 +91,8 @@ const CanvasPage: React.FC = () => {
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [loadingWhiteboards, setLoadingWhiteboards] = useState(true);
   const [loadingWireframes, setLoadingWireframes] = useState(true);
-  const isLoading = loadingLists || loadingNotes || loadingWhiteboards || loadingWireframes;
+  const [loadingVaults, setLoadingVaults] = useState(true);
+  const isLoading = loadingLists || loadingNotes || loadingWhiteboards || loadingWireframes || loadingVaults;
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
@@ -96,12 +107,15 @@ const CanvasPage: React.FC = () => {
   const [newWhiteboardInitialPosition, setNewWhiteboardInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const [showNewWireframeModal, setShowNewWireframeModal] = useState(false);
   const [newWireframeInitialPosition, setNewWireframeInitialPosition] = useState<{ x: number, y: number } | null>(null);
+  const [showNewVaultModal, setShowNewVaultModal] = useState(false);
+  const [newVaultInitialPosition, setNewVaultInitialPosition] = useState<{ x: number, y: number } | null>(null);
 
   // Sharing modal states
   const [showShareListModal, setShowShareListModal] = useState(false);
   const [showShareNoteModal, setShowShareNoteModal] = useState(false);
   const [showShareWhiteboardModal, setShowShareWhiteboardModal] = useState(false);
-  const [currentShareItem, setCurrentShareItem] = useState<{ id: string | number; title: string; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
+  const [showShareVaultModal, setShowShareVaultModal] = useState(false);
+  const [currentShareItem, setCurrentShareItem] = useState<{ id: string | number; title: string; isLocked?: boolean; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
 
   const { toast } = useToast();
   const { token } = useAuth();
@@ -121,6 +135,10 @@ const CanvasPage: React.FC = () => {
   // State for Wireframes
   const [wireframes, setWireframes] = useState<Wireframe[]>([]);
   const [errorWireframes, setErrorWireframes] = useState<string | null>(null);
+
+  // State for Vaults
+  const [vaults, setVaults] = useState<Vault[]>([]);
+  const [errorVaults, setErrorVaults] = useState<string | null>(null);
 
   // Database-backed category management
   const {
@@ -515,6 +533,30 @@ const CanvasPage: React.FC = () => {
     }
   }, [token, toast]);
 
+  // Fetch vaults on component mount
+  useEffect(() => {
+    const fetchVaultsData = async () => {
+      try {
+        setLoadingVaults(true);
+        setErrorVaults(null);
+        const response = await getVaults(token);
+        const fetchedVaults = response?.vaults || response || [];
+        setVaults(Array.isArray(fetchedVaults) ? fetchedVaults : []);
+      } catch (err) {
+        console.error('Error fetching vaults:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load vaults. Please try again.';
+        setErrorVaults(errorMessage);
+        toast({ title: "Error fetching vaults", description: errorMessage, variant: "destructive" });
+      } finally {
+        setLoadingVaults(false);
+      }
+    };
+
+    if (token) {
+      fetchVaultsData();
+    }
+  }, [token, toast]);
+
   // WebSocket connection for real-time updates
   useEffect(() => {
     if (!token) return;
@@ -881,6 +923,146 @@ const CanvasPage: React.FC = () => {
       setWireframes(prev => prev.map(w => w.id === wireframeId ? { ...w, position_x: newPosition.x, position_y: newPosition.y } : w));
     } catch (error) {
       console.error('Failed to update wireframe position:', error);
+    }
+  };
+
+  // CRUD operations for vaults
+  const handleCreateVault = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    try {
+      // Check if the category exists, if not create it
+      if (!isCategoryInUse(category) && category !== 'General') {
+        await addCategory({ name: category, color_value: color });
+      }
+
+      const payloadWithDefaults: CreateVaultPayload = {
+        title: title,
+        category: category,
+        position_x: position.x,
+        position_y: position.y,
+        z_index: 0,
+        color_value: color,
+      };
+      logger.log('handleCreateVault payload:', payloadWithDefaults);
+
+      const newVault = await apiCreateVault(payloadWithDefaults, token);
+      setVaults(prev => [newVault, ...prev]);
+    } catch (error) {
+      console.error('Failed to create vault:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not create your vault. Please try again.';
+      toast({
+        title: "Error creating vault",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateVault = async (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    const originalVaults = [...vaults];
+
+    // Optimistic update
+    setVaults(prev => prev.map(v => v.id === vaultId ? { ...v, ...updatedData } : v));
+
+    try {
+      const updatedVault = await apiUpdateVault(vaultId, updatedData, token);
+      setVaults(prev => prev.map(v => v.id === vaultId ? updatedVault : v));
+      return updatedVault;
+    } catch (error) {
+      console.error('Failed to update vault:', error);
+      setVaults(originalVaults);
+      const errorMessage = error instanceof Error ? error.message : 'Could not update your vault. Please try again.';
+      toast({
+        title: "Error updating vault",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+
+  const handleDeleteVault = async (vaultId: number) => {
+    try {
+      await apiDeleteVault(vaultId, token);
+      setVaults(prev => prev.filter(v => v.id !== vaultId));
+      toast({
+        title: "Vault deleted",
+        description: "Your vault has been successfully removed.",
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to delete vault:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not delete your vault. Please try again.';
+      toast({
+        title: "Error deleting vault",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  const handleVaultPositionChange = async (vaultId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
+    try {
+      // Update position
+      await apiUpdateVaultPosition(vaultId, newPosition.x, newPosition.y, token);
+      
+      // If size was changed, update that too
+      if (newSize) {
+        await apiUpdateVault(vaultId, { width: newSize.width, height: newSize.height }, token);
+        setVaults(prev => prev.map(v => v.id === vaultId 
+          ? { ...v, position_x: newPosition.x, position_y: newPosition.y, width: newSize.width, height: newSize.height } 
+          : v
+        ));
+      } else {
+        setVaults(prev => prev.map(v => v.id === vaultId 
+          ? { ...v, position_x: newPosition.x, position_y: newPosition.y } 
+          : v
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update vault position:', error);
+    }
+  };
+
+  // Vault sharing handlers
+  const handleShareVault = async (vaultId: number) => {
+    try {
+      const result = await apiShareVault(vaultId, token);
+      // Update local state with share data
+      setVaults(prev => prev.map(v => v.id === vaultId 
+        ? { ...v, share_token: result.shareToken, is_public: true, shared_at: new Date().toISOString() } 
+        : v
+      ));
+      return result;
+    } catch (error) {
+      console.error('Failed to share vault:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not share your vault. Please try again.';
+      toast({
+        title: "Error sharing vault",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const handleUnshareVault = async (vaultId: number) => {
+    try {
+      await apiUnshareVault(vaultId, token);
+      // Update local state
+      setVaults(prev => prev.map(v => v.id === vaultId 
+        ? { ...v, is_public: false } 
+        : v
+      ));
+    } catch (error) {
+      console.error('Failed to unshare vault:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not revoke vault sharing. Please try again.';
+      toast({
+        title: "Error revoking share",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
@@ -1677,6 +1859,7 @@ const CanvasPage: React.FC = () => {
                 notes={notes}
                 whiteboards={whiteboards}
                 wireframes={wireframes}
+                vaults={vaults}
                 existingCategories={dbCategories}
                 onListUpdate={updateList}
                 onListPositionUpdate={handleListPositionUpdate}
@@ -1695,6 +1878,24 @@ const CanvasPage: React.FC = () => {
                   console.log('Share wireframe:', wireframeId);
                 }}
                 onWireframePositionUpdate={handleWireframePositionChange}
+                onVaultUpdate={handleUpdateVault}
+                onVaultDelete={handleDeleteVault}
+                onVaultShare={(vaultId) => {
+                  const vault = vaults.find(v => v.id === vaultId);
+                  if (vault) {
+                    setCurrentShareItem({
+                      id: vaultId,
+                      title: vault.title || 'Untitled Vault',
+                      isLocked: vault.is_locked,
+                      shareData: vault.share_token && vault.is_public ? {
+                        shareToken: vault.share_token,
+                        shareUrl: `${window.location.origin}/shared/vault/${vault.share_token}`
+                      } : undefined
+                    });
+                    setShowShareVaultModal(true);
+                  }
+                }}
+                onVaultPositionUpdate={handleVaultPositionChange}
                 addCategory={addCategory}
                 updateCategory={editCategory}
                 onOpenNewNoteModal={handleOpenNewNoteModal}
@@ -1703,6 +1904,10 @@ const CanvasPage: React.FC = () => {
                 onOpenNewWireframeModal={(position) => {
                   setNewWireframeInitialPosition(position);
                   setShowNewWireframeModal(true);
+                }}
+                onOpenNewVaultModal={(position) => {
+                  setNewVaultInitialPosition(position);
+                  setShowNewVaultModal(true);
                 }}
                 searchQuery={searchQuery}
                 onReady={(methods) => {
@@ -1773,6 +1978,18 @@ const CanvasPage: React.FC = () => {
               />
             )}
 
+            {/* Desktop Canvas Vault Modal */}
+            {showNewVaultModal && newVaultInitialPosition && (
+              <NewVaultModal
+                isOpen={showNewVaultModal}
+                onClose={() => setShowNewVaultModal(false)}
+                onCreateVault={handleCreateVault}
+                initialPosition={newVaultInitialPosition}
+                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+                updateCategory={updateCategoryColor}
+              />
+            )}
+
             {/* Desktop Canvas List Modal */}
             {showNewListModal && newListInitialPosition && (
               <NewListModal
@@ -1833,6 +2050,22 @@ const CanvasPage: React.FC = () => {
           />
         )}
 
+        {showShareVaultModal && currentShareItem && (
+          <ShareVaultModal
+            isOpen={showShareVaultModal}
+            onClose={() => {
+              setShowShareVaultModal(false);
+              setCurrentShareItem(null);
+            }}
+            vaultId={currentShareItem.id as number}
+            vaultTitle={currentShareItem.title}
+            isLocked={currentShareItem.isLocked || false}
+            onShare={handleShareVault}
+            onUnshare={handleUnshareVault}
+            existingShareData={currentShareItem.shareData}
+          />
+        )}
+
         {/* Button Context Menu - rendered outside canvas transform */}
         {showButtonContextMenu && (
           <div
@@ -1846,6 +2079,11 @@ const CanvasPage: React.FC = () => {
               onAddNote={handleButtonAddNote}
               onAddWhiteboard={handleButtonAddWhiteboard}
               onAddWireframe={handleButtonAddWireframe}
+              onAddVault={() => {
+                setShowButtonContextMenu(false);
+                setNewVaultInitialPosition(getIntelligentPosition());
+                setShowNewVaultModal(true);
+              }}
               onClose={() => setShowButtonContextMenu(false)}
               isFromButton={true}
             />

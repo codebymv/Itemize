@@ -189,6 +189,61 @@ export interface WireframeCardProps {
 }
 
 // ======================
+// Vault Types (Encrypted Storage)
+// ======================
+
+export interface VaultItem {
+  id: number;
+  vault_id: number;
+  item_type: 'key_value' | 'secure_note';
+  label: string;
+  value: string; // Decrypted value (never stored in frontend)
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Vault {
+  id: number;
+  user_id: number;
+  title: string;
+  category?: string;
+  color_value: string;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  z_index: number;
+  is_locked: boolean;
+  encryption_salt?: string;
+  item_count?: number;
+  items?: VaultItem[];
+  requires_unlock?: boolean;
+  created_at: string;
+  updated_at: string;
+  // Sharing fields
+  share_token?: string;
+  is_public?: boolean;
+  shared_at?: string;
+}
+
+// Props for VaultCard component
+export interface VaultCardProps {
+  vault: Vault;
+  onUpdate: (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Vault | null>;
+  onDelete: (vaultId: number) => Promise<boolean>;
+  onShare: (vaultId: number) => void;
+  existingCategories: Category[];
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  onAddItem?: (vaultId: number, item: { item_type: string; label: string; value: string }) => Promise<VaultItem | null>;
+  onUpdateItem?: (vaultId: number, itemId: number, data: { label?: string; value?: string }) => Promise<VaultItem | null>;
+  onDeleteItem?: (vaultId: number, itemId: number) => Promise<boolean>;
+  onBulkAddItems?: (vaultId: number, items: Array<{ item_type: string; label: string; value: string }>) => Promise<VaultItem[]>;
+}
+
+// ======================
 // CRM Types
 // ======================
 

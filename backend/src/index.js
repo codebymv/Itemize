@@ -312,6 +312,11 @@ setTimeout(async () => {
         app.use('/api', wireframesRoutes(pool, authenticateJWT, broadcast));
         logger.info('Wireframes routes initialized');
 
+        // Vaults routes (encrypted storage)
+        const vaultsRoutes = require('./routes/vaults.routes');
+        app.use('/api', vaultsRoutes(pool, authenticateJWT, broadcast));
+        logger.info('Vaults routes initialized');
+
         // Categories routes
         const categoriesRoutes = require('./routes/categories.routes');
         app.use('/api', categoriesRoutes(pool, authenticateJWT));

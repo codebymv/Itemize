@@ -431,3 +431,169 @@ export const deleteCategory = async (categoryId: number, token?: string) => {
   });
   return response.data;
 };
+
+// ======================
+// Vault API Functions (Encrypted Storage)
+// ======================
+
+export interface CreateVaultPayload {
+  title?: string;
+  category?: string;
+  position_x: number;
+  position_y: number;
+  width?: number;
+  height?: number;
+  z_index?: number;
+  color_value?: string;
+  master_password?: string; // Optional - if provided, vault will be locked
+}
+
+export interface VaultPayload {
+  title?: string;
+  category?: string;
+  color_value?: string;
+  position_x?: number;
+  position_y?: number;
+  width?: number;
+  height?: number;
+  z_index?: number;
+}
+
+export interface VaultItemPayload {
+  item_type: 'key_value' | 'secure_note';
+  label: string;
+  value: string;
+}
+
+// Get all vaults
+export const getVaults = async (token?: string) => {
+  const response = await api.get('/api/vaults', {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Get a single vault with decrypted items
+export const getVault = async (vaultId: number, masterPassword?: string, token?: string) => {
+  const params = masterPassword ? { master_password: masterPassword } : {};
+  const response = await api.get(`/api/vaults/${vaultId}`, {
+    headers: getAuthHeaders(token),
+    params
+  });
+  return response.data;
+};
+
+// Create a new vault
+export const createVault = async (vaultData: CreateVaultPayload, token?: string) => {
+  const response = await api.post('/api/vaults', vaultData, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Update a vault
+export const updateVault = async (vaultId: number, vaultData: VaultPayload, token?: string) => {
+  const response = await api.put(`/api/vaults/${vaultId}`, vaultData, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Update vault position
+export const updateVaultPosition = async (vaultId: number, x: number, y: number, token?: string) => {
+  const response = await api.put(`/api/vaults/${vaultId}/position`, { position_x: x, position_y: y }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Delete a vault
+export const deleteVault = async (vaultId: number, token?: string) => {
+  const response = await api.delete(`/api/vaults/${vaultId}`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Add item to vault
+export const addVaultItem = async (vaultId: number, item: VaultItemPayload, token?: string) => {
+  const response = await api.post(`/api/vaults/${vaultId}/items`, item, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Bulk add items to vault (for .env import)
+export const bulkAddVaultItems = async (vaultId: number, items: VaultItemPayload[], token?: string) => {
+  const response = await api.post(`/api/vaults/${vaultId}/items/bulk`, { items }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Update a vault item
+export const updateVaultItem = async (vaultId: number, itemId: number, data: { label?: string; value?: string }, token?: string) => {
+  const response = await api.put(`/api/vaults/${vaultId}/items/${itemId}`, data, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Delete a vault item
+export const deleteVaultItem = async (vaultId: number, itemId: number, token?: string) => {
+  const response = await api.delete(`/api/vaults/${vaultId}/items/${itemId}`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Reorder vault items
+export const reorderVaultItems = async (vaultId: number, itemIds: number[], token?: string) => {
+  const response = await api.put(`/api/vaults/${vaultId}/items/reorder`, { item_ids: itemIds }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Enable vault sharing
+export const shareVault = async (vaultId: number, token?: string) => {
+  const response = await api.post(`/api/vaults/${vaultId}/share`, {}, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Disable vault sharing
+export const unshareVault = async (vaultId: number, token?: string) => {
+  const response = await api.delete(`/api/vaults/${vaultId}/share`, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Get shared vault (public)
+export const getSharedVault = async (shareToken: string) => {
+  const response = await api.get(`/api/shared/vault/${shareToken}`);
+  return response.data;
+};
+
+// Lock vault with master password
+export const lockVault = async (vaultId: number, masterPassword: string, currentPassword?: string, token?: string) => {
+  const response = await api.post(`/api/vaults/${vaultId}/lock`, {
+    master_password: masterPassword,
+    current_password: currentPassword
+  }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};
+
+// Unlock vault (remove master password)
+export const unlockVault = async (vaultId: number, masterPassword: string, token?: string) => {
+  const response = await api.post(`/api/vaults/${vaultId}/unlock`, {
+    master_password: masterPassword
+  }, {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
+};

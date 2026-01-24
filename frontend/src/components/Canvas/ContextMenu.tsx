@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckSquare, StickyNote, Palette, GitBranch } from 'lucide-react';
+import { CheckSquare, StickyNote, Palette, GitBranch, KeyRound } from 'lucide-react';
 import { List } from '../../types';
 
 interface ContextMenuProps {
@@ -8,6 +8,7 @@ interface ContextMenuProps {
   onAddNote?: () => void; // Optional for now, will make required as we implement
   onAddWhiteboard?: () => void; // Add whiteboard support
   onAddWireframe?: () => void; // Add wireframe support
+  onAddVault?: () => void; // Add vault support
   onClose: () => void;
   isFromButton?: boolean;
   absolutePosition?: { x: number, y: number };
@@ -19,6 +20,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onAddNote,
   onAddWhiteboard,
   onAddWireframe,
+  onAddVault,
   onClose,
   isFromButton = false,
   absolutePosition
@@ -118,6 +120,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           >
             <GitBranch className="h-4 w-4 mr-3 text-blue-600" />
             <span>Add Wireframe</span>
+          </button>
+        )}
+        {onAddVault && (
+          <button 
+            className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
+            onClick={(e) => handleClickItem(e, onAddVault)}
+            style={{ fontFamily: '"Raleway", sans-serif' }}
+          >
+            <KeyRound className="h-4 w-4 mr-3 text-indigo-600" />
+            <span>Add Vault</span>
           </button>
         )}
       </div>
