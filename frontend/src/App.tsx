@@ -163,6 +163,8 @@ const AppContent = () => {
         <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/automations/:id" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/workspace" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
+        <Route path="/workspace/contents" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
+        <Route path="/workspace/shared" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
         <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
 

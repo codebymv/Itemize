@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
@@ -81,6 +82,7 @@ const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
   // Use the header context to set the header content
   const { setHeaderContent } = useHeader();
+  const location = useLocation();
 
 
   const [lists, setLists] = useState<List[]>([]);
@@ -283,12 +285,17 @@ const CanvasPage: React.FC = () => {
 
   // Header content effect - Pushes search bar and controls to the AppShell header
   useEffect(() => {
+    let subTitle = '';
+    if (location.pathname.includes('/contents')) subTitle = ' | Contents';
+    else if (location.pathname.includes('/shared')) subTitle = ' | Shared';
+    else subTitle = ' | Canvas';
+
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2">
           <Map className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1 className="text-xl font-semibold italic truncate" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}>
-            WORKSPACE
+            WORKSPACE{subTitle}
           </h1>
         </div>
 
@@ -337,7 +344,7 @@ const CanvasPage: React.FC = () => {
     );
 
     return () => setHeaderContent(null);
-  }, [searchQuery, theme, showButtonContextMenu, setHeaderContent]);
+  }, [searchQuery, theme, showButtonContextMenu, setHeaderContent, location.pathname]);
 
   // Collapsible state management - persists across filter changes
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
