@@ -98,8 +98,9 @@ export function InvoicePreview({
                 </DialogHeader>
 
                 {/* Invoice Preview Content - matches PDF exactly */}
+                {/* Note: Inter font should be loaded in index.html for full parity */}
                 <div style={{
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     fontSize: '14px',
                     lineHeight: 1.5,
                     color: '#111827',

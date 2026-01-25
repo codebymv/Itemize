@@ -624,7 +624,7 @@ export function InvoicesPage() {
                                                         <span className="ml-2 text-muted-foreground">Loading preview...</span>
                                                     </div>
                                                 ) : expandedInvoiceData ? (
-                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 max-w-3xl mx-auto shadow-sm">
+                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 max-w-3xl mx-auto shadow-sm" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
                                                         {/* Header */}
                                                         <div className="flex justify-between items-start mb-6">
                                                             <div>
