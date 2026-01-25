@@ -5,7 +5,7 @@
 
 const { logger } = require('../utils/logger');
 
-// Email templates
+// Email templates - using table-based layout for email client compatibility
 const EMAIL_TEMPLATES = {
     invoiceSent: {
         subject: 'Invoice {invoice_number} from {business_name}',
@@ -23,21 +23,31 @@ const EMAIL_TEMPLATES = {
                             Please find attached your invoice from {business_name}.
                         </p>
                         
-                        <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="color: #6b7280;">Amount Due:</span>
-                                <span style="font-weight: 600; font-size: 20px; color: #111827;">{amount_due}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #6b7280;">Due Date:</span>
-                                <span style="color: #111827;">{due_date}</span>
-                            </div>
-                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px; margin-bottom: 24px;">
+                            <tr>
+                                <td style="padding: 20px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="color: #6b7280; padding-bottom: 12px;">Amount Due:</td>
+                                            <td style="text-align: right; font-weight: 600; font-size: 20px; color: #111827; padding-bottom: 12px;">{amount_due}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #6b7280;">Due Date:</td>
+                                            <td style="text-align: right; color: #111827;">{due_date}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
 
                         {payment_link_section}
 
                         <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
                             If you have any questions about this invoice, please don't hesitate to contact us.
+                        </p>
+                        
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; font-style: italic;">
+                            📎 Invoice PDF attached
                         </p>
                     </div>
                     <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
@@ -54,10 +64,8 @@ const EMAIL_TEMPLATES = {
                 <div style="padding: 32px 24px; background: #f9fafb;">
                     <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <div style="text-align: center; margin-bottom: 24px;">
-                            <div style="width: 64px; height: 64px; background: #d1fae5; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
-                                <svg width="32" height="32" fill="none" stroke="#059669" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M20 6L9 17l-5-5"/>
-                                </svg>
+                            <div style="width: 64px; height: 64px; background: #d1fae5; border-radius: 50%; margin: 0 auto 16px; line-height: 64px; text-align: center;">
+                                <span style="font-size: 32px;">✓</span>
                             </div>
                             <h1 style="font-size: 24px; margin: 0; color: #111827;">
                                 Payment Received
@@ -68,20 +76,26 @@ const EMAIL_TEMPLATES = {
                             Thank you for your payment, {customer_name}!
                         </p>
                         
-                        <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="color: #6b7280;">Invoice:</span>
-                                <span style="color: #111827;">{invoice_number}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="color: #6b7280;">Amount Paid:</span>
-                                <span style="font-weight: 600; color: #059669;">{amount_paid}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #6b7280;">Payment Date:</span>
-                                <span style="color: #111827;">{payment_date}</span>
-                            </div>
-                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px; margin-bottom: 24px;">
+                            <tr>
+                                <td style="padding: 20px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="color: #6b7280; padding-bottom: 8px;">Invoice:</td>
+                                            <td style="text-align: right; color: #111827; padding-bottom: 8px;">{invoice_number}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #6b7280; padding-bottom: 8px;">Amount Paid:</td>
+                                            <td style="text-align: right; font-weight: 600; color: #059669; padding-bottom: 8px;">{amount_paid}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #6b7280;">Payment Date:</td>
+                                            <td style="text-align: right; color: #111827;">{payment_date}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
 
                         <p style="color: #6b7280; font-size: 14px; text-align: center;">
                             A receipt has been attached to this email for your records.
@@ -110,16 +124,22 @@ const EMAIL_TEMPLATES = {
                             This is a friendly reminder that invoice {invoice_number} {reminder_text}.
                         </p>
                         
-                        <div style="background: {reminder_bg}; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="color: #6b7280;">Amount Due:</span>
-                                <span style="font-weight: 600; font-size: 20px; color: #111827;">{amount_due}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #6b7280;">Due Date:</span>
-                                <span style="color: {due_date_color}; font-weight: 500;">{due_date}</span>
-                            </div>
-                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: {reminder_bg}; border-radius: 8px; margin-bottom: 24px;">
+                            <tr>
+                                <td style="padding: 20px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="color: #6b7280; padding-bottom: 12px;">Amount Due:</td>
+                                            <td style="text-align: right; font-weight: 600; font-size: 20px; color: #111827; padding-bottom: 12px;">{amount_due}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #6b7280;">Due Date:</td>
+                                            <td style="text-align: right; color: {due_date_color}; font-weight: 500;">{due_date}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
 
                         {payment_link_section}
 
@@ -150,19 +170,29 @@ const EMAIL_TEMPLATES = {
                             Please find attached your estimate from {business_name}.
                         </p>
                         
-                        <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="color: #6b7280;">Estimated Total:</span>
-                                <span style="font-weight: 600; font-size: 20px; color: #111827;">{total}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #6b7280;">Valid Until:</span>
-                                <span style="color: #111827;">{valid_until}</span>
-                            </div>
-                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px; margin-bottom: 24px;">
+                            <tr>
+                                <td style="padding: 20px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="color: #6b7280; padding-bottom: 12px;">Estimated Total:</td>
+                                            <td style="text-align: right; font-weight: 600; font-size: 20px; color: #111827; padding-bottom: 12px;">{total}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #6b7280;">Valid Until:</td>
+                                            <td style="text-align: right; color: #111827;">{valid_until}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
 
                         <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
                             If you have any questions or would like to proceed, please don't hesitate to contact us.
+                        </p>
+                        
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; font-style: italic;">
+                            📎 Estimate PDF attached
                         </p>
                     </div>
                     <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
@@ -216,13 +246,21 @@ function applyTemplate(template, variables) {
 }
 
 /**
- * Send invoice email
+ * Send invoice email with optional PDF attachment
+ * @param {Object} emailService - The email service instance
+ * @param {Object} invoice - The invoice data
+ * @param {Object} settings - Payment settings with business info
+ * @param {string|null} paymentUrl - Optional payment URL
+ * @param {Buffer|null} pdfBuffer - Optional PDF buffer to attach
+ * @param {Object} options - Additional options (cc, customSubject, customMessage)
  */
-async function sendInvoiceEmail(emailService, invoice, settings, paymentUrl = null) {
+async function sendInvoiceEmail(emailService, invoice, settings, paymentUrl = null, pdfBuffer = null, options = {}) {
     if (!emailService || !invoice.customer_email) {
         logger.warn('Cannot send invoice email - no email service or customer email');
         return false;
     }
+
+    const { cc, customSubject, customMessage } = options;
 
     const paymentLinkSection = paymentUrl ? `
         <div style="text-align: center; margin: 24px 0;">
@@ -232,23 +270,62 @@ async function sendInvoiceEmail(emailService, invoice, settings, paymentUrl = nu
         </div>
     ` : '';
 
-    const template = applyTemplate(EMAIL_TEMPLATES.invoiceSent, {
-        invoice_number: invoice.invoice_number,
-        business_name: settings.business_name || 'Our Company',
-        business_email: settings.business_email || '',
-        customer_name: invoice.customer_name || 'Valued Customer',
-        amount_due: formatCurrency(invoice.amount_due, invoice.currency),
-        due_date: formatDate(invoice.due_date),
-        payment_link_section: paymentLinkSection
-    });
+    // Use custom message if provided, otherwise use template
+    let subject, html;
+    
+    if (customMessage) {
+        subject = customSubject || `Invoice ${invoice.invoice_number} from ${settings.business_name || 'Our Company'}`;
+        html = `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="padding: 32px 24px; background: #f9fafb;">
+                    <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <div style="white-space: pre-wrap; color: #374151; line-height: 1.6;">${customMessage}</div>
+                        ${pdfBuffer ? '<p style="color: #9ca3af; font-size: 12px; margin-top: 24px; font-style: italic;">📎 Invoice PDF attached</p>' : ''}
+                    </div>
+                    <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
+                        ${settings.business_name || ''} ${settings.business_email ? '• ' + settings.business_email : ''}
+                    </p>
+                </div>
+            </div>
+        `;
+    } else {
+        const template = applyTemplate(EMAIL_TEMPLATES.invoiceSent, {
+            invoice_number: invoice.invoice_number,
+            business_name: settings.business_name || 'Our Company',
+            business_email: settings.business_email || '',
+            customer_name: invoice.customer_name || 'Valued Customer',
+            amount_due: formatCurrency(invoice.amount_due, invoice.currency),
+            due_date: formatDate(invoice.due_date),
+            payment_link_section: paymentLinkSection
+        });
+        subject = template.subject;
+        html = template.html;
+    }
 
     try {
-        await emailService.sendEmail({
+        const emailOptions = {
             to: invoice.customer_email,
-            subject: template.subject,
-            html: template.html
-        });
-        logger.info(`Invoice email sent to ${invoice.customer_email} for invoice ${invoice.invoice_number}`);
+            subject,
+            html
+        };
+
+        // Add CC recipients if provided
+        if (cc && cc.length > 0) {
+            emailOptions.cc = cc;
+        }
+
+        // Add PDF attachment if provided
+        if (pdfBuffer) {
+            emailOptions.attachments = [
+                {
+                    filename: `${invoice.invoice_number}.pdf`,
+                    content: pdfBuffer
+                }
+            ];
+        }
+
+        await emailService.sendEmail(emailOptions);
+        logger.info(`Invoice email sent to ${invoice.customer_email} for invoice ${invoice.invoice_number}${pdfBuffer ? ' with PDF attachment' : ''}`);
         return true;
     } catch (error) {
         logger.error('Failed to send invoice email:', error);

@@ -95,8 +95,9 @@ class EmailService extends BaseService {
    * @param {string|string[]} [options.cc] - CC recipient(s)
    * @param {string|string[]} [options.bcc] - BCC recipient(s)
    * @param {Array} [options.tags] - Email tags for tracking
+   * @param {Array} [options.attachments] - File attachments [{filename, content}]
    */
-  async sendEmail({ to, subject, html, text, from, replyTo, cc, bcc, tags }) {
+  async sendEmail({ to, subject, html, text, from, replyTo, cc, bcc, tags, attachments }) {
     if (!this.isConfigured) {
       this.logWarn('Email not sent - service not configured');
       return {
@@ -126,13 +127,26 @@ class EmailService extends BaseService {
       emailOptions.bcc = Array.isArray(bcc) ? bcc : [bcc];
     }
 
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      emailOptions.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content
+      }));
+    }
+
     try {
       const response = await this.withRetry(
         async () => this.resend.emails.send(emailOptions),
         { to: emailOptions.to, subject }
       );
 
-      this.logInfo('Email sent successfully', { to: emailOptions.to, cc: emailOptions.cc, subject });
+      this.logInfo('Email sent successfully', { 
+        to: emailOptions.to, 
+        cc: emailOptions.cc, 
+        subject,
+        hasAttachments: !!(attachments && attachments.length > 0)
+      });
       return {
         success: true,
         id: response.data?.id,

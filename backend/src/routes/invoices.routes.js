@@ -819,12 +819,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     /**
      * POST /api/invoices/:id/send - Send invoice to customer
-     * Accepts optional email customization: { subject, message, ccEmails }
+     * Accepts optional email customization: { subject, message, ccEmails, resend }
+     * Set resend: true to resend an already-sent invoice without changing status
      */
     router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const { subject, message, ccEmails } = req.body || {};
+            const { subject, message, ccEmails, resend } = req.body || {};
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
@@ -834,10 +835,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const client = await pool.connect();
 
             try {
-                // First, fetch the full invoice data
+                // Fetch the full invoice data with items
                 const invoiceResult = await client.query(`
-                    SELECT * FROM invoices 
-                    WHERE id = $1 AND organization_id = $2
+                    SELECT i.*, 
+                           b.name as business_name, b.email as business_email, 
+                           b.phone as business_phone, b.address as business_address,
+                           b.logo_url as business_logo_url, b.tax_id as business_tax_id
+                    FROM invoices i
+                    LEFT JOIN businesses b ON i.business_id = b.id
+                    WHERE i.id = $1 AND i.organization_id = $2
                 `, [id, req.organizationId]);
 
                 if (invoiceResult.rows.length === 0) {
@@ -847,8 +853,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 const invoice = invoiceResult.rows[0];
 
-                // Check if invoice can be sent
-                if (!['draft', 'sent'].includes(invoice.status)) {
+                // Check if invoice can be sent (allow resend for sent invoices)
+                const allowedStatuses = resend ? ['draft', 'sent', 'viewed', 'partial', 'overdue'] : ['draft', 'sent'];
+                if (!allowedStatuses.includes(invoice.status)) {
                     client.release();
                     return res.status(400).json({ error: 'Invoice cannot be sent in current status' });
                 }
@@ -859,24 +866,67 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     return res.status(400).json({ error: 'Customer email is required to send invoice' });
                 }
 
-                // Fetch payment settings for business info
+                // Fetch invoice items for PDF generation
+                const itemsResult = await client.query(`
+                    SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order
+                `, [id]);
+                invoice.items = itemsResult.rows;
+
+                // Add business info to invoice object for PDF
+                invoice.business = {
+                    name: invoice.business_name,
+                    email: invoice.business_email,
+                    phone: invoice.business_phone,
+                    address: invoice.business_address,
+                    logo_url: invoice.business_logo_url,
+                    tax_id: invoice.business_tax_id
+                };
+
+                // Fetch payment settings for business info (fallback)
                 const settingsResult = await client.query(`
                     SELECT * FROM payment_settings WHERE organization_id = $1
                 `, [req.organizationId]);
 
                 const settings = settingsResult.rows[0] || {};
 
-                // Update invoice status to 'sent'
-                const updateResult = await client.query(`
-                    UPDATE invoices SET
-                        status = 'sent',
-                        sent_at = CURRENT_TIMESTAMP,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $1 AND organization_id = $2
-                    RETURNING *
-                `, [id, req.organizationId]);
+                // Use business info from invoice or fall back to settings
+                if (!invoice.business.name) {
+                    invoice.business.name = settings.business_name;
+                    invoice.business.email = settings.business_email;
+                    invoice.business.phone = settings.business_phone;
+                    invoice.business.address = settings.business_address;
+                    invoice.business.logo_url = settings.logo_url;
+                    invoice.business.tax_id = settings.tax_id;
+                }
 
-                const updatedInvoice = updateResult.rows[0];
+                // Update invoice status to 'sent' only if not already sent (or if resend=false)
+                let updatedInvoice = invoice;
+                if (invoice.status === 'draft') {
+                    const updateResult = await client.query(`
+                        UPDATE invoices SET
+                            status = 'sent',
+                            sent_at = CURRENT_TIMESTAMP,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = $1 AND organization_id = $2
+                        RETURNING *
+                    `, [id, req.organizationId]);
+                    updatedInvoice = updateResult.rows[0];
+                }
+
+                // Generate PDF for attachment
+                let pdfBuffer = null;
+                try {
+                    const { generateInvoicePDF, isPDFAvailable } = require('../services/pdf.service');
+                    if (isPDFAvailable()) {
+                        pdfBuffer = await generateInvoicePDF(invoice, settings);
+                        logger.info(`Generated PDF for invoice ${invoice.invoice_number}`);
+                    } else {
+                        logger.warn('PDF generation not available - sending email without attachment');
+                    }
+                } catch (pdfErr) {
+                    logger.error('Error generating invoice PDF:', pdfErr);
+                    // Continue without PDF attachment
+                }
 
                 // Attempt to send email
                 let emailSent = false;
@@ -884,39 +934,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 if (emailService.isEnabled()) {
                     try {
-                        // Use custom message if provided, otherwise use default template
-                        if (message) {
-                            // Send with custom message from modal
-                            const emailResult = await emailService.sendEmail({
-                                to: invoice.customer_email,
-                                subject: subject || `Invoice ${invoice.invoice_number} from ${settings.business_name || 'Our Company'}`,
-                                html: `
-                                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                        <div style="padding: 32px 24px; background: #f9fafb;">
-                                            <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                                                <pre style="font-family: inherit; white-space: pre-wrap; margin: 0; color: #374151; line-height: 1.6;">${message}</pre>
-                                            </div>
-                                            <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
-                                                ${settings.business_name || ''} ${settings.business_email ? '• ' + settings.business_email : ''}
-                                            </p>
-                                        </div>
-                                    </div>
-                                `,
-                                cc: ccEmails && ccEmails.length > 0 ? ccEmails : undefined,
-                            });
-                            emailSent = emailResult.success;
-                            if (!emailResult.success) {
-                                emailError = emailResult.error;
+                        // Send using the invoice email service with PDF attachment
+                        emailSent = await sendInvoiceEmail(
+                            emailService, 
+                            invoice, 
+                            { ...settings, business_name: invoice.business.name || settings.business_name, business_email: invoice.business.email || settings.business_email },
+                            null, // paymentUrl
+                            pdfBuffer,
+                            {
+                                cc: ccEmails,
+                                customSubject: subject,
+                                customMessage: message
                             }
-                        } else {
-                            // Use the default invoice email template
-                            emailSent = await sendInvoiceEmail(emailService, invoice, settings, null);
-                        }
+                        );
 
                         if (emailSent) {
-                            logger.info(`Invoice ${invoice.invoice_number} email sent to ${invoice.customer_email}`);
+                            logger.info(`Invoice ${invoice.invoice_number} email sent to ${invoice.customer_email}${pdfBuffer ? ' with PDF' : ''}`);
                         } else {
-                            logger.warn(`Failed to send invoice ${invoice.invoice_number} email: ${emailError || 'Unknown error'}`);
+                            emailError = 'Email service returned false';
+                            logger.warn(`Failed to send invoice ${invoice.invoice_number} email`);
                         }
                     } catch (emailErr) {
                         logger.error('Error sending invoice email:', emailErr);
@@ -924,6 +960,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     }
                 } else {
                     logger.warn('Email service not configured - invoice marked as sent but no email delivered');
+                    emailError = 'Email service not configured';
                 }
 
                 client.release();

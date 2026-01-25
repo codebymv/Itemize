@@ -286,6 +286,7 @@ export interface SendInvoiceOptions {
     subject?: string;
     message?: string;
     ccEmails?: string[];
+    resend?: boolean;
 }
 
 export interface SendInvoiceResponse extends Invoice {

@@ -50,6 +50,8 @@ import { getAssetUrl } from '@/lib/api';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getInvoices, getInvoice, deleteInvoice, sendInvoice, Invoice as ApiInvoice, Business } from '@/services/invoicesApi';
 import { Separator } from '@/components/ui/separator';
+import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
+import { RefreshCw } from 'lucide-react';
 
 interface Invoice {
     id: number;
@@ -58,6 +60,8 @@ interface Invoice {
     contact_first_name?: string;
     contact_last_name?: string;
     customer_name?: string;
+    customer_email?: string;
+    currency?: string;
     status: 'draft' | 'sent' | 'viewed' | 'paid' | 'partial' | 'overdue' | 'cancelled';
     total: number;
     amount_paid: number;
@@ -99,6 +103,13 @@ export function InvoicesPage() {
     const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(null);
     const [expandedInvoiceData, setExpandedInvoiceData] = useState<ApiInvoice | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    
+    // Send invoice modal state
+    const [showSendModal, setShowSendModal] = useState(false);
+    const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<Invoice | null>(null);
+    const [fullInvoiceDataForSend, setFullInvoiceDataForSend] = useState<ApiInvoice | null>(null);
+    const [sending, setSending] = useState(false);
+    const [isResend, setIsResend] = useState(false);
 
     useEffect(() => {
         setHeaderContent(
@@ -170,28 +181,59 @@ export function InvoicesPage() {
         navigate('/invoices/new');
     };
 
-    const handleSendInvoice = async (id: number) => {
+    // Open send modal for an invoice
+    const handleOpenSendModal = async (invoice: Invoice, resend: boolean = false) => {
         if (!organizationId) return;
+        
+        setSelectedInvoiceForSend(invoice);
+        setIsResend(resend);
+        
+        // Fetch full invoice data for modal display
         try {
-            const result = await sendInvoice(id, organizationId);
+            const fullData = await getInvoice(invoice.id, organizationId);
+            setFullInvoiceDataForSend(fullData);
+        } catch (error) {
+            // If fetch fails, use basic data
+            setFullInvoiceDataForSend(null);
+        }
+        
+        setShowSendModal(true);
+    };
+
+    // Actually send the invoice with email options
+    const handleSendInvoice = async (options: SendOptions) => {
+        if (!organizationId || !selectedInvoiceForSend) return;
+        
+        setSending(true);
+        try {
+            const result = await sendInvoice(selectedInvoiceForSend.id, organizationId, {
+                subject: options.subject,
+                message: options.message,
+                ccEmails: options.ccEmails,
+                resend: isResend
+            });
             
             // Show appropriate toast based on email status
             if (result.emailSent) {
-                toast({ title: 'Sent', description: 'Invoice sent and email delivered' });
+                toast({ title: isResend ? 'Resent' : 'Sent', description: 'Invoice email delivered successfully' });
             } else if (result.emailError) {
                 toast({ 
                     title: 'Sent with warning', 
-                    description: `Invoice marked as sent but email failed: ${result.emailError}`,
+                    description: `Invoice ${isResend ? 'resent' : 'marked as sent'} but email failed: ${result.emailError}`,
                     variant: 'destructive'
                 });
             } else {
-                toast({ title: 'Sent', description: 'Invoice marked as sent' });
+                toast({ title: isResend ? 'Resent' : 'Sent', description: `Invoice ${isResend ? 'resent' : 'marked as sent'}` });
             }
             
+            setShowSendModal(false);
+            setSelectedInvoiceForSend(null);
             fetchInvoices();
         } catch (error: any) {
             const errorMessage = error?.response?.data?.error || 'Failed to send invoice';
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+        } finally {
+            setSending(false);
         }
     };
 
@@ -540,8 +582,13 @@ export function InvoicesPage() {
                                                                 <Pencil className="h-4 w-4 mr-2" />Edit
                                                             </DropdownMenuItem>
                                                             {invoice.status === 'draft' && (
-                                                                <DropdownMenuItem onClick={() => handleSendInvoice(invoice.id)}>
+                                                                <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, false)}>
                                                                     <Send className="h-4 w-4 mr-2" />Send
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
+                                                                <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, true)}>
+                                                                    <RefreshCw className="h-4 w-4 mr-2" />Resend
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuItem>
@@ -715,10 +762,23 @@ export function InvoicesPage() {
                                                                     className="bg-blue-600 hover:bg-blue-700 text-white"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        handleSendInvoice(invoice.id);
+                                                                        handleOpenSendModal(invoice, false);
                                                                     }}
                                                                 >
                                                                     <Send className="h-4 w-4 mr-2" />Send Invoice
+                                                                </Button>
+                                                            )}
+                                                            {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenSendModal(invoice, true);
+                                                                    }}
+                                                                >
+                                                                    <RefreshCw className="h-4 w-4 mr-2" />Resend Invoice
                                                                 </Button>
                                                             )}
                                                             <Button variant="outline" size="sm">
@@ -767,6 +827,29 @@ export function InvoicesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Send Invoice Modal */}
+            {selectedInvoiceForSend && (
+                <SendInvoiceModal
+                    open={showSendModal}
+                    onOpenChange={(open) => {
+                        setShowSendModal(open);
+                        if (!open) {
+                            setSelectedInvoiceForSend(null);
+                            setFullInvoiceDataForSend(null);
+                        }
+                    }}
+                    onSend={handleSendInvoice}
+                    sending={sending}
+                    invoiceNumber={selectedInvoiceForSend.invoice_number}
+                    customerName={fullInvoiceDataForSend?.customer_name || selectedInvoiceForSend.customer_name || getContactName(selectedInvoiceForSend)}
+                    customerEmail={fullInvoiceDataForSend?.customer_email || ''}
+                    total={selectedInvoiceForSend.total}
+                    currency={fullInvoiceDataForSend?.currency || 'USD'}
+                    dueDate={selectedInvoiceForSend.due_date}
+                    business={fullInvoiceDataForSend?.business}
+                />
+            )}
         </div>
     );
 }
