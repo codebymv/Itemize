@@ -1387,9 +1387,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     }
                 }
 
-                // Generate logo URL
-                const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
-                const logoUrl = `${baseUrl}/uploads/logos/${req.file.filename}`;
+                // Store relative path (frontend will construct full URL based on environment)
+                const logoUrl = `/uploads/logos/${req.file.filename}`;
 
                 // Update business with logo URL
                 await client.query(
@@ -1581,9 +1580,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             try {
-                // Generate the URL for the uploaded file
-                const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-                const logoUrl = `${baseUrl}/uploads/logos/${req.file.filename}`;
+                // Store relative path (frontend will construct full URL based on environment)
+                const logoUrl = `/uploads/logos/${req.file.filename}`;
 
                 // Update payment settings with logo URL
                 const client = await pool.connect();

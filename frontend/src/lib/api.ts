@@ -191,4 +191,32 @@ export const getApiUrl = () => {
   return isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
 };
 
+/**
+ * Resolve an asset URL (like logo_url) to a full URL.
+ * Handles both relative paths (/uploads/...) and legacy absolute URLs.
+ */
+export const getAssetUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  
+  // If it's already an absolute URL, check if it needs fixing for production
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // If it's a localhost URL and we're in production, fix it
+    if (url.includes('localhost:') && window.location.hostname === 'itemize.cloud') {
+      // Extract the path portion and prepend production URL
+      const pathMatch = url.match(/\/uploads\/.*/);
+      if (pathMatch) {
+        return `${PRODUCTION_URL}${pathMatch[0]}`;
+      }
+    }
+    return url;
+  }
+  
+  // For relative paths, prepend the API base URL
+  if (url.startsWith('/')) {
+    return `${getApiUrl()}${url}`;
+  }
+  
+  return url;
+};
+
 export default api;

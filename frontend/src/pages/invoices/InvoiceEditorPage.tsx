@@ -35,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
+import { getAssetUrl } from '@/lib/api';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getContacts } from '@/services/contactsApi';
 import {
@@ -480,7 +481,7 @@ export function InvoiceEditorPage() {
                                             return selectedBusiness?.logo_url ? (
                                                 <div className="space-y-2">
                                                     <img
-                                                        src={selectedBusiness.logo_url}
+                                                        src={getAssetUrl(selectedBusiness.logo_url)}
                                                         alt="Business Logo"
                                                         className="h-24 w-auto object-contain rounded border bg-white p-2"
                                                     />
