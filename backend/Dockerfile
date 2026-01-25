@@ -1,27 +1,27 @@
-FROM node:18-alpine
+# Use Node.js with Puppeteer pre-installed
+FROM ghcr.io/puppeteer/puppeteer:24.6.0
 
+# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --production
+# Install dependencies (skip puppeteer chromium download since it's in base image)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+RUN npm install --omit=dev
 
-# Copy source code and docs
-COPY src/ ./src/
-COPY docs/ ./docs/
+# Copy application code
+COPY . .
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
-USER nodejs
+# Create uploads directory
+RUN mkdir -p uploads/logos
 
 # Expose port
 EXPOSE 3001
+
+# Set environment variable for port (Railway uses PORT)
+ENV PORT=3001
 
 # Start the application
 CMD ["npm", "start"]

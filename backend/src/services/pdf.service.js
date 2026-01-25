@@ -460,14 +460,9 @@ async function generatePDF(html) {
     try {
         logger.info('Launching Puppeteer browser for PDF generation...');
         
-        // Get chromium path from environment (Railway/Nixpacks provides this)
-        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || null;
-        if (executablePath) {
-            logger.info(`Using Chromium from: ${executablePath}`);
-        }
-        
         // Launch browser with args optimized for Docker/Railway
-        const launchOptions = {
+        // The official puppeteer Docker image has Chrome pre-installed
+        browser = await puppeteer.launch({
             headless: 'new',
             args: [
                 '--no-sandbox',
@@ -476,17 +471,9 @@ async function generatePDF(html) {
                 '--disable-accelerated-2d-canvas',
                 '--no-first-run',
                 '--no-zygote',
-                '--single-process',
                 '--disable-gpu'
             ]
-        };
-        
-        // Use custom executable path if provided (Railway)
-        if (executablePath) {
-            launchOptions.executablePath = executablePath;
-        }
-        
-        browser = await puppeteer.launch(launchOptions);
+        });
 
         logger.info('Browser launched, creating page...');
         const page = await browser.newPage();
