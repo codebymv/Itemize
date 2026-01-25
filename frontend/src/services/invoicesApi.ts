@@ -282,11 +282,23 @@ export const deleteInvoice = async (
     return response.data;
 };
 
+export interface SendInvoiceOptions {
+    subject?: string;
+    message?: string;
+    ccEmails?: string[];
+}
+
+export interface SendInvoiceResponse extends Invoice {
+    emailSent?: boolean;
+    emailError?: string;
+}
+
 export const sendInvoice = async (
     invoiceId: number,
-    organizationId?: number
-): Promise<Invoice> => {
-    const response = await api.post(`/api/invoices/${invoiceId}/send`, {}, {
+    organizationId?: number,
+    options?: SendInvoiceOptions
+): Promise<SendInvoiceResponse> => {
+    const response = await api.post(`/api/invoices/${invoiceId}/send`, options || {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
     return response.data;

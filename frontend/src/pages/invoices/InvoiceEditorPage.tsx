@@ -415,14 +415,31 @@ export function InvoiceEditorPage() {
 
         setSaving(true);
         try {
-            // For now, we just use the base sendInvoice function
-            // In a full implementation, we'd pass options to the backend
-            await sendInvoice(parseInt(id), organizationId);
-            toast({ title: 'Sent', description: 'Invoice sent successfully' });
+            // Pass email customization options to the backend
+            const result = await sendInvoice(parseInt(id), organizationId, {
+                subject: options.subject,
+                message: options.message,
+                ccEmails: options.ccEmails,
+            });
+            
+            // Show appropriate toast based on email status
+            if (result.emailSent) {
+                toast({ title: 'Sent', description: 'Invoice sent successfully and email delivered' });
+            } else if (result.emailError) {
+                toast({ 
+                    title: 'Sent with warning', 
+                    description: `Invoice marked as sent but email failed: ${result.emailError}`,
+                    variant: 'destructive'
+                });
+            } else {
+                toast({ title: 'Sent', description: 'Invoice marked as sent (email service not configured)' });
+            }
+            
             setShowSendModal(false);
             navigate('/invoices');
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to send invoice', variant: 'destructive' });
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.error || 'Failed to send invoice';
+            toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setSaving(false);
         }

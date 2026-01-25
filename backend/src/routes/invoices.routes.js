@@ -12,6 +12,10 @@ const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
 
+// Email services for invoice sending
+const emailService = require('../services/emailService');
+const { sendInvoiceEmail } = require('../services/invoice-email.service');
+
 // Multer for file uploads (if available)
 let multer = null;
 let upload = null;
@@ -815,10 +819,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     /**
      * POST /api/invoices/:id/send - Send invoice to customer
+     * Accepts optional email customization: { subject, message, ccEmails }
      */
     router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
+            const { subject, message, ccEmails } = req.body || {};
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
@@ -827,27 +833,113 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             const client = await pool.connect();
 
-            const result = await client.query(`
-                UPDATE invoices SET
-                    status = 'sent',
-                    sent_at = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND organization_id = $2 AND status IN ('draft', 'sent')
-                RETURNING *
-            `, [id, req.organizationId]);
+            try {
+                // First, fetch the full invoice data
+                const invoiceResult = await client.query(`
+                    SELECT * FROM invoices 
+                    WHERE id = $1 AND organization_id = $2
+                `, [id, req.organizationId]);
 
-            client.release();
+                if (invoiceResult.rows.length === 0) {
+                    client.release();
+                    return res.status(404).json({ error: 'Invoice not found' });
+                }
 
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Invoice not found or cannot be sent' });
+                const invoice = invoiceResult.rows[0];
+
+                // Check if invoice can be sent
+                if (!['draft', 'sent'].includes(invoice.status)) {
+                    client.release();
+                    return res.status(400).json({ error: 'Invoice cannot be sent in current status' });
+                }
+
+                // Check if customer email exists
+                if (!invoice.customer_email) {
+                    client.release();
+                    return res.status(400).json({ error: 'Customer email is required to send invoice' });
+                }
+
+                // Fetch payment settings for business info
+                const settingsResult = await client.query(`
+                    SELECT * FROM payment_settings WHERE organization_id = $1
+                `, [req.organizationId]);
+
+                const settings = settingsResult.rows[0] || {};
+
+                // Update invoice status to 'sent'
+                const updateResult = await client.query(`
+                    UPDATE invoices SET
+                        status = 'sent',
+                        sent_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1 AND organization_id = $2
+                    RETURNING *
+                `, [id, req.organizationId]);
+
+                const updatedInvoice = updateResult.rows[0];
+
+                // Attempt to send email
+                let emailSent = false;
+                let emailError = null;
+
+                if (emailService.isEnabled()) {
+                    try {
+                        // Use custom message if provided, otherwise use default template
+                        if (message) {
+                            // Send with custom message from modal
+                            const emailResult = await emailService.sendEmail({
+                                to: invoice.customer_email,
+                                subject: subject || `Invoice ${invoice.invoice_number} from ${settings.business_name || 'Our Company'}`,
+                                html: `
+                                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                        <div style="padding: 32px 24px; background: #f9fafb;">
+                                            <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                                <pre style="font-family: inherit; white-space: pre-wrap; margin: 0; color: #374151; line-height: 1.6;">${message}</pre>
+                                            </div>
+                                            <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
+                                                ${settings.business_name || ''} ${settings.business_email ? '• ' + settings.business_email : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                `,
+                                cc: ccEmails && ccEmails.length > 0 ? ccEmails : undefined,
+                            });
+                            emailSent = emailResult.success;
+                            if (!emailResult.success) {
+                                emailError = emailResult.error;
+                            }
+                        } else {
+                            // Use the default invoice email template
+                            emailSent = await sendInvoiceEmail(emailService, invoice, settings, null);
+                        }
+
+                        if (emailSent) {
+                            logger.info(`Invoice ${invoice.invoice_number} email sent to ${invoice.customer_email}`);
+                        } else {
+                            logger.warn(`Failed to send invoice ${invoice.invoice_number} email: ${emailError || 'Unknown error'}`);
+                        }
+                    } catch (emailErr) {
+                        logger.error('Error sending invoice email:', emailErr);
+                        emailError = emailErr.message;
+                    }
+                } else {
+                    logger.warn('Email service not configured - invoice marked as sent but no email delivered');
+                }
+
+                client.release();
+
+                // Return response with email status
+                res.json({
+                    ...updatedInvoice,
+                    emailSent,
+                    emailError: emailError || undefined,
+                });
+            } catch (innerError) {
+                client.release();
+                throw innerError;
             }
-
-            // TODO: Actually send email with invoice
-            // For now, just update status
-
-            res.json(result.rows[0]);
         } catch (error) {
-            console.error('Error sending invoice:', error);
+            logger.error('Error sending invoice:', error);
             res.status(500).json({ error: 'Failed to send invoice' });
         }
     });

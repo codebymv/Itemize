@@ -85,8 +85,18 @@ class EmailService extends BaseService {
 
   /**
    * Send email using Resend with retry logic (Phase 6)
+   * @param {Object} options - Email options
+   * @param {string|string[]} options.to - Recipient email(s)
+   * @param {string} options.subject - Email subject
+   * @param {string} options.html - HTML content
+   * @param {string} [options.text] - Plain text content
+   * @param {string} [options.from] - From address
+   * @param {string} [options.replyTo] - Reply-to address
+   * @param {string|string[]} [options.cc] - CC recipient(s)
+   * @param {string|string[]} [options.bcc] - BCC recipient(s)
+   * @param {Array} [options.tags] - Email tags for tracking
    */
-  async sendEmail({ to, subject, html, text, from, replyTo, tags }) {
+  async sendEmail({ to, subject, html, text, from, replyTo, cc, bcc, tags }) {
     if (!this.isConfigured) {
       this.logWarn('Email not sent - service not configured');
       return {
@@ -106,13 +116,23 @@ class EmailService extends BaseService {
       tags: tags || [],
     };
 
+    // Add CC recipients if provided
+    if (cc) {
+      emailOptions.cc = Array.isArray(cc) ? cc : [cc];
+    }
+
+    // Add BCC recipients if provided
+    if (bcc) {
+      emailOptions.bcc = Array.isArray(bcc) ? bcc : [bcc];
+    }
+
     try {
       const response = await this.withRetry(
         async () => this.resend.emails.send(emailOptions),
         { to: emailOptions.to, subject }
       );
 
-      this.logInfo('Email sent successfully', { to: emailOptions.to, subject });
+      this.logInfo('Email sent successfully', { to: emailOptions.to, cc: emailOptions.cc, subject });
       return {
         success: true,
         id: response.data?.id,

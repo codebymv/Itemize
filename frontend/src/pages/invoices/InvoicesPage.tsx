@@ -172,11 +172,25 @@ export function InvoicesPage() {
     const handleSendInvoice = async (id: number) => {
         if (!organizationId) return;
         try {
-            await sendInvoice(id, organizationId);
-            toast({ title: 'Sent', description: 'Invoice sent successfully' });
+            const result = await sendInvoice(id, organizationId);
+            
+            // Show appropriate toast based on email status
+            if (result.emailSent) {
+                toast({ title: 'Sent', description: 'Invoice sent and email delivered' });
+            } else if (result.emailError) {
+                toast({ 
+                    title: 'Sent with warning', 
+                    description: `Invoice marked as sent but email failed: ${result.emailError}`,
+                    variant: 'destructive'
+                });
+            } else {
+                toast({ title: 'Sent', description: 'Invoice marked as sent' });
+            }
+            
             fetchInvoices();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to send invoice', variant: 'destructive' });
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.error || 'Failed to send invoice';
+            toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         }
     };
 
