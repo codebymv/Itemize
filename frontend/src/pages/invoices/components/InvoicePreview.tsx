@@ -7,8 +7,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { getAssetUrl } from '@/lib/api';
 import { Business } from '@/services/invoicesApi';
 
@@ -44,13 +42,15 @@ interface InvoicePreviewProps {
     status?: string;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    viewed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    overdue: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    partial: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+// Status badge styles - MUST match backend pdf.service.js exactly
+const STATUS_STYLES: Record<string, React.CSSProperties> = {
+    draft: { background: '#f3f4f6', color: '#374151' },
+    sent: { background: '#dbeafe', color: '#1e40af' },
+    viewed: { background: '#dbeafe', color: '#1e40af' },
+    paid: { background: '#d1fae5', color: '#065f46' },
+    overdue: { background: '#fee2e2', color: '#991b1b' },
+    partial: { background: '#fef3c7', color: '#92400e' },
+    cancelled: { background: '#f3f4f6', color: '#6b7280' },
 };
 
 export function InvoicePreview({
@@ -85,7 +85,7 @@ export function InvoicePreview({
         if (!dateStr) return '';
         // Parse date parts manually to avoid timezone issues
         const [year, month, day] = dateStr.split('-').map(Number);
-        const date = new Date(year, month - 1, day); // month is 0-indexed
+        const date = new Date(year, month - 1, day);
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -94,7 +94,10 @@ export function InvoicePreview({
     };
 
     const validItems = lineItems.filter(item => item.name.trim());
+    const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.draft;
 
+    // These styles MUST match the backend pdf.service.js generateInvoiceHTML exactly
+    // Any changes here should be mirrored in the backend
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -104,101 +107,113 @@ export function InvoicePreview({
                         Invoice Preview
                     </DialogTitle>
                     <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        Preview how your invoice will appear to your customer
+                        This is exactly how your invoice PDF will appear
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Invoice Preview Content */}
-                <div className="bg-white dark:bg-gray-900 p-8 rounded-lg border">
+                {/* Invoice Preview Content - matches PDF exactly */}
+                <div style={{
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                    fontSize: '14px',
+                    lineHeight: 1.5,
+                    color: '#111827',
+                    background: 'white',
+                    padding: '40px',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb'
+                }}>
                     {/* Header */}
-                    <div className="flex justify-between items-start mb-8">
-                        <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+                        <div style={{ fontSize: '14px' }}>
                             {business?.logo_url && (
                                 <img
                                     src={getAssetUrl(business.logo_url)}
-                                    alt="Business Logo"
-                                    className="h-12 w-auto object-contain mb-2"
+                                    alt="Logo"
+                                    style={{ maxHeight: '48px', maxWidth: '180px', objectFit: 'contain', marginBottom: '8px', display: 'block' }}
                                 />
                             )}
                             {business?.name && (
-                                <div className="text-sm">
-                                    <p className="font-semibold">{business.name}</p>
-                                    {business.address && (
-                                        <p className="text-muted-foreground whitespace-pre-line">
-                                            {business.address}
-                                        </p>
-                                    )}
-                                    {business.email && (
-                                        <p className="text-muted-foreground">{business.email}</p>
-                                    )}
-                                    {business.phone && (
-                                        <p className="text-muted-foreground">{business.phone}</p>
-                                    )}
-                                </div>
+                                <>
+                                    <div style={{ fontWeight: 600, marginBottom: '4px' }}>{business.name}</div>
+                                    <div style={{ color: '#6b7280', fontSize: '12px' }}>
+                                        {business.address && (
+                                            <div style={{ whiteSpace: 'pre-line' }}>{business.address}</div>
+                                        )}
+                                        {business.email && <div>{business.email}</div>}
+                                        {business.phone && <div>{business.phone}</div>}
+                                    </div>
+                                </>
                             )}
                         </div>
-                        <div className="text-right">
-                            <h1 className="text-3xl font-light text-blue-600 mb-1">INVOICE</h1>
+                        <div style={{ textAlign: 'right' }}>
+                            <h1 style={{ fontSize: '32px', fontWeight: 300, color: '#2563eb', margin: '0 0 4px 0' }}>INVOICE</h1>
                             {invoiceNumber && (
-                                <p className="text-sm text-muted-foreground">{invoiceNumber}</p>
+                                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>{invoiceNumber}</div>
                             )}
-                            <Badge className={`mt-2 ${STATUS_STYLES[status] || STATUS_STYLES.draft}`}>
+                            <span style={{
+                                display: 'inline-block',
+                                padding: '4px 12px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                textTransform: 'uppercase',
+                                ...statusStyle
+                            }}>
                                 {status.toUpperCase()}
-                            </Badge>
+                            </span>
                         </div>
                     </div>
 
                     {/* Addresses and Dates */}
-                    <div className="flex justify-between mb-8">
-                        <div className="w-1/2">
-                            <p className="text-xs text-muted-foreground uppercase mb-2">Bill To</p>
-                            <div className="text-sm">
-                                {customerName && <p className="font-semibold">{customerName}</p>}
-                                {customerEmail && <p className="text-muted-foreground">{customerEmail}</p>}
-                                {customerPhone && <p className="text-muted-foreground">{customerPhone}</p>}
-                                {customerAddress && (
-                                    <p className="text-muted-foreground whitespace-pre-line">{customerAddress}</p>
-                                )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
+                        <div style={{ width: '50%' }}>
+                            <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                                Bill To
+                            </div>
+                            {customerName && <div style={{ fontWeight: 600, marginBottom: '4px' }}>{customerName}</div>}
+                            <div style={{ color: '#6b7280', fontSize: '14px' }}>
+                                {customerEmail && <div>{customerEmail}</div>}
+                                {customerPhone && <div>{customerPhone}</div>}
+                                {customerAddress && <div style={{ whiteSpace: 'pre-line' }}>{customerAddress}</div>}
                             </div>
                         </div>
-                        <div className="w-1/2 text-right">
-                            <div className="space-y-1 text-sm">
-                                <div className="flex justify-end gap-4">
-                                    <span className="text-muted-foreground">Issue Date:</span>
-                                    <span className="font-medium">{formatDate(issueDate)}</span>
-                                </div>
-                                <div className="flex justify-end gap-4">
-                                    <span className="text-muted-foreground">Due Date:</span>
-                                    <span className="font-medium">{formatDate(dueDate)}</span>
-                                </div>
+                        <div style={{ width: '50%', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '4px', fontSize: '14px' }}>
+                                <span style={{ color: '#6b7280' }}>Issue Date:</span>
+                                <span style={{ fontWeight: 500 }}>{formatDate(issueDate)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', fontSize: '14px' }}>
+                                <span style={{ color: '#6b7280' }}>Due Date:</span>
+                                <span style={{ fontWeight: 500 }}>{formatDate(dueDate)}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Line Items Table */}
-                    <table className="w-full mb-8">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
                         <thead>
-                            <tr className="border-b-2 text-xs text-muted-foreground uppercase">
-                                <th className="text-left py-2 w-1/2">Description</th>
-                                <th className="text-right py-2">Qty</th>
-                                <th className="text-right py-2">Unit Price</th>
-                                <th className="text-right py-2">Amount</th>
+                            <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                                <th style={{ padding: '8px 0', textAlign: 'left', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px', width: '50%' }}>Description</th>
+                                <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px' }}>Qty</th>
+                                <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px' }}>Unit Price</th>
+                                <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px' }}>Amount</th>
                             </tr>
                         </thead>
                         <tbody>
                             {validItems.map((item) => {
                                 const lineTotal = item.quantity * item.unit_price;
+                                const itemDesc = item.description && item.name !== item.description ? item.description : '';
                                 return (
-                                    <tr key={item.id} className="border-b">
-                                        <td className="py-3">
-                                            <p className="font-medium">{item.name}</p>
-                                            {item.description && (
-                                                <p className="text-xs text-muted-foreground">{item.description}</p>
+                                    <tr key={item.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '12px 0' }}>
+                                            <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
+                                            {itemDesc && (
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>{itemDesc}</p>
                                             )}
                                         </td>
-                                        <td className="text-right py-3">{item.quantity}</td>
-                                        <td className="text-right py-3">{formatCurrency(item.unit_price)}</td>
-                                        <td className="text-right py-3">{formatCurrency(lineTotal)}</td>
+                                        <td style={{ padding: '12px 0', textAlign: 'right' }}>{item.quantity}</td>
+                                        <td style={{ padding: '12px 0', textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
+                                        <td style={{ padding: '12px 0', textAlign: 'right' }}>{formatCurrency(lineTotal)}</td>
                                     </tr>
                                 );
                             })}
@@ -206,51 +221,52 @@ export function InvoicePreview({
                     </table>
 
                     {/* Totals */}
-                    <div className="flex justify-end mb-8">
-                        <div className="w-64 space-y-2 text-sm">
-                            <div className="flex justify-between">
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '32px' }}>
+                        <div style={{ width: '256px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
                                 <span>Subtotal</span>
                                 <span>{formatCurrency(subtotal)}</span>
                             </div>
                             {taxAmount > 0 && (
-                                <div className="flex justify-between">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
                                     <span>Tax</span>
                                     <span>{formatCurrency(taxAmount)}</span>
                                 </div>
                             )}
                             {discountAmount > 0 && (
-                                <div className="flex justify-between">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
                                     <span>Discount</span>
                                     <span>-{formatCurrency(discountAmount)}</span>
                                 </div>
                             )}
-                            <Separator />
-                            <div className="flex justify-between text-lg font-bold">
+                            <div style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '18px', fontWeight: 700 }}>
                                 <span>Total</span>
                                 <span>{formatCurrency(total)}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Notes and Terms */}
+                    {/* Notes */}
                     {notes && (
-                        <div className="mb-6 p-4 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground uppercase mb-1">Notes</p>
-                            <p className="text-sm whitespace-pre-line">{notes}</p>
+                        <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                            <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Notes</div>
+                            <div style={{ fontSize: '14px', whiteSpace: 'pre-line' }}>{notes}</div>
                         </div>
                     )}
 
+                    {/* Terms & Conditions */}
                     {termsAndConditions && (
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground uppercase mb-1">Terms & Conditions</p>
-                            <p className="text-xs whitespace-pre-line text-muted-foreground">{termsAndConditions}</p>
+                        <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                            <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Terms & Conditions</div>
+                            <div style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'pre-line' }}>{termsAndConditions}</div>
                         </div>
                     )}
 
                     {/* Footer */}
-                    <div className="mt-8 text-center text-xs text-muted-foreground">
-                        {business?.tax_id && <p>Tax ID: {business.tax_id}</p>}
-                        <p className="mt-2">Thank you for your business!</p>
+                    <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px', marginTop: '32px' }}>
+                        {business?.tax_id && <div>Tax ID: {business.tax_id}</div>}
+                        <div style={{ marginTop: '8px' }}>Thank you for your business!</div>
                     </div>
                 </div>
             </DialogContent>
