@@ -44,14 +44,16 @@ export const DeleteNoteModal: React.FC<DeleteNoteModalProps> = ({
         onClose();
       } else {
         toast({
-          title: "Error deleting note",
+          title: "Error",
+          description: "Failed to delete note",
           description: "Failed to delete the note. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error deleting note",
+        title: "Error",
+          description: "Failed to delete note",
         description: "Failed to delete the note. Please try again.",
         variant: "destructive",
       });

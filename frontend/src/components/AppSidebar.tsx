@@ -36,9 +36,13 @@ import {
     Kanban,
     Zap,
     Calendar,
-    CalendarCheck,
     FileText,
-    Inbox,
+    MessageSquare,
+    Mail,
+    Star,
+    Receipt,
+    Filter,
+    Link,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -85,34 +89,141 @@ const mainNavItems: NavItem[] = [
         path: '/contacts',
     },
     {
+        title: 'Segments',
+        icon: Filter,
+        path: '/segments',
+    },
+    {
         title: 'Pipelines',
         icon: Kanban,
         path: '/pipelines',
     },
     {
-        title: 'Calendars',
+        title: 'Scheduling',
         icon: Calendar,
         path: '/calendars',
+        items: [
+            {
+                title: 'Calendars',
+                path: '/calendars',
+            },
+            {
+                title: 'Bookings',
+                path: '/bookings',
+            },
+            {
+                title: 'Integrations',
+                path: '/calendar-integrations',
+            },
+        ],
     },
     {
-        title: 'Bookings',
-        icon: CalendarCheck,
-        path: '/bookings',
+        title: 'Campaigns',
+        icon: Mail,
+        path: '/campaigns',
+        items: [
+            {
+                title: 'All Campaigns',
+                path: '/campaigns',
+            },
+            {
+                title: 'Email Templates',
+                path: '/email-templates',
+            },
+            {
+                title: 'SMS Templates',
+                path: '/sms-templates',
+            },
+        ],
     },
     {
-        title: 'Forms',
+        title: 'Pages & Forms',
         icon: FileText,
-        path: '/forms',
+        path: '/pages',
+        items: [
+            {
+                title: 'Landing Pages',
+                path: '/pages',
+            },
+            {
+                title: 'Forms',
+                path: '/forms',
+            },
+        ],
     },
     {
-        title: 'Inbox',
-        icon: Inbox,
+        title: 'Communications',
+        icon: MessageSquare,
         path: '/inbox',
+        items: [
+            {
+                title: 'Inbox',
+                path: '/inbox',
+            },
+            {
+                title: 'Chat Widget',
+                path: '/chat-widget',
+            },
+            {
+                title: 'Social',
+                path: '/social',
+            },
+        ],
     },
     {
         title: 'Automations',
         icon: Zap,
         path: '/automations',
+    },
+    {
+        title: 'Reputation',
+        icon: Star,
+        path: '/reputation',
+        items: [
+            {
+                title: 'Reviews',
+                path: '/reputation',
+            },
+            {
+                title: 'Requests',
+                path: '/reputation/requests',
+            },
+            {
+                title: 'Widgets',
+                path: '/reputation/widgets',
+            },
+        ],
+    },
+    {
+        title: 'Sales & Payments',
+        icon: Receipt,
+        path: '/invoices',
+        items: [
+            {
+                title: 'Invoices',
+                path: '/invoices',
+            },
+            {
+                title: 'Estimates',
+                path: '/invoices/estimates',
+            },
+            {
+                title: 'Recurring',
+                path: '/invoices/recurring',
+            },
+            {
+                title: 'Payments',
+                path: '/invoices/payments',
+            },
+            {
+                title: 'Products',
+                path: '/invoices/products',
+            },
+            {
+                title: 'Settings',
+                path: '/invoices/settings',
+            },
+        ],
     },
 ];
 
@@ -121,6 +232,24 @@ const secondaryNavItems: NavItem[] = [
         title: 'Settings',
         icon: Settings,
         path: '/settings',
+        items: [
+            {
+                title: 'Profile',
+                path: '/settings',
+            },
+            {
+                title: 'Appearance',
+                path: '/settings/appearance',
+            },
+            {
+                title: 'AI Features',
+                path: '/settings/ai',
+            },
+            {
+                title: 'Integrations',
+                path: '/settings/integrations',
+            },
+        ],
     },
     {
         title: 'Help',
@@ -189,8 +318,10 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu className="gap-3">
                             {mainNavItems.map((item) => {
+                                // Check if any child route is active for grouped items
                                 const isActive = location.pathname === item.path ||
-                                    (item.path !== '/' && location.pathname.startsWith(item.path));
+                                    (item.path !== '/' && location.pathname.startsWith(item.path)) ||
+                                    (item.items?.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')));
 
                                 if (item.items && item.items.length > 0) {
                                     return (
@@ -268,7 +399,51 @@ export function AppSidebar() {
                         <SidebarMenu className="gap-2">
                             {secondaryNavItems.map((item) => {
                                 const isActive = location.pathname === item.path ||
-                                    (item.path !== '/' && location.pathname.startsWith(item.path));
+                                    (item.path !== '/' && location.pathname.startsWith(item.path)) ||
+                                    (item.items?.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')));
+
+                                if (item.items && item.items.length > 0) {
+                                    return (
+                                        <Collapsible
+                                            key={item.title}
+                                            asChild
+                                            defaultOpen={isActive}
+                                            className="group/collapsible"
+                                        >
+                                            <SidebarMenuItem>
+                                                <CollapsibleTrigger asChild>
+                                                    <SidebarMenuButton
+                                                        tooltip={item.title}
+                                                        isActive={isActive}
+                                                        className="h-9"
+                                                        style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                    >
+                                                        <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
+                                                        <span>{item.title}</span>
+                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                                    </SidebarMenuButton>
+                                                </CollapsibleTrigger>
+                                                <CollapsibleContent>
+                                                    <SidebarMenuSub>
+                                                        {item.items.map((subItem) => (
+                                                            <SidebarMenuSubItem key={subItem.title}>
+                                                                <SidebarMenuSubButton
+                                                                    asChild
+                                                                    isActive={location.pathname === subItem.path}
+                                                                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                                >
+                                                                    <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
+                                                                        <span>{subItem.title}</span>
+                                                                    </div>
+                                                                </SidebarMenuSubButton>
+                                                            </SidebarMenuSubItem>
+                                                        ))}
+                                                    </SidebarMenuSub>
+                                                </CollapsibleContent>
+                                            </SidebarMenuItem>
+                                        </Collapsible>
+                                    );
+                                }
 
                                 return (
                                     <SidebarMenuItem key={item.title}>

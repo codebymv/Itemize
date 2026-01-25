@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Kanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,7 +45,7 @@ export function CreatePipelineModal({
 
     if (!formData.name.trim()) {
       toast({
-        title: 'Validation Error',
+        title: 'Error',
         description: 'Pipeline name is required',
         variant: 'destructive',
       });
@@ -76,8 +77,11 @@ export function CreatePipelineModal({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle>Create New Pipeline</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Kanban className="h-5 w-5 text-blue-500" />
+            Create New Pipeline
+          </DialogTitle>
+          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
             Create a new sales pipeline with default stages
           </DialogDescription>
         </DialogHeader>
@@ -85,7 +89,7 @@ export function CreatePipelineModal({
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Pipeline Name *</Label>
+              <Label htmlFor="name" style={{ fontFamily: '"Raleway", sans-serif' }}>Pipeline Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -95,7 +99,7 @@ export function CreatePipelineModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" style={{ fontFamily: '"Raleway", sans-serif' }}>Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -107,7 +111,7 @@ export function CreatePipelineModal({
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Set as Default</Label>
+                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Set as Default</Label>
                 <p className="text-sm text-muted-foreground">
                   New deals will use this pipeline by default
                 </p>
@@ -137,10 +141,15 @@ export function CreatePipelineModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
+            >
               {loading ? 'Creating...' : 'Create Pipeline'}
             </Button>
           </DialogFooter>

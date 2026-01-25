@@ -207,10 +207,10 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <FileSpreadsheet className="h-5 w-5" />
+                        <FileSpreadsheet className="h-5 w-5 text-blue-500" />
                         Import Contacts from CSV
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
                         {step === 'upload' && 'Upload a CSV file with contact information'}
                         {step === 'preview' && 'Review the contacts before importing'}
                         {step === 'importing' && 'Importing contacts...'}
@@ -341,20 +341,20 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
 
                 <DialogFooter>
                     {step === 'upload' && (
-                        <Button variant="outline" onClick={onClose}>Cancel</Button>
+                        <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</Button>
                     )}
                     {step === 'preview' && (
                         <>
-                            <Button variant="outline" onClick={() => { setStep('upload'); setParsedData([]); }}>
+                            <Button variant="outline" onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }}>
                                 Back
                             </Button>
-                            <Button onClick={handleImport} className="bg-blue-600 hover:bg-blue-700">
+                            <Button onClick={handleImport} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }}>
                                 Import {parsedData.length} Contacts
                             </Button>
                         </>
                     )}
                     {step === 'complete' && (
-                        <Button onClick={onClose}>Done</Button>
+                        <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }}>Done</Button>
                     )}
                 </DialogFooter>
             </DialogContent>

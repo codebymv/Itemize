@@ -111,10 +111,12 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   if (activities.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center">
-          <MessageSquare className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">No activities yet</p>
-          <p className="text-sm text-muted-foreground">
+        <CardContent className="p-12 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+            <MessageSquare className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">No activities yet</h3>
+          <p className="text-muted-foreground mb-4">
             Add a note to start tracking interactions
           </p>
         </CardContent>

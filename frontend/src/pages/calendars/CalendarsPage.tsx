@@ -155,7 +155,7 @@ export function CalendarsPage() {
             await deleteCalendar(id, organizationId);
             setCalendars((prev) => prev.filter((c) => c.id !== id));
             toast({
-                title: 'Success',
+                title: 'Deleted',
                 description: 'Calendar deleted successfully',
             });
         } catch (error: any) {
@@ -183,7 +183,7 @@ export function CalendarsPage() {
         setShowCreateModal(false);
         setCalendars((prev) => [calendar, ...prev]);
         toast({
-            title: 'Success',
+            title: 'Created',
             description: 'Calendar created successfully',
         });
     };

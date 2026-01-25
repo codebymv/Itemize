@@ -44,14 +44,16 @@ export const DeleteWhiteboardModal: React.FC<DeleteWhiteboardModalProps> = ({
         onClose();
       } else {
         toast({
-          title: "Error deleting whiteboard",
+          title: "Error",
+          description: "Failed to delete whiteboard",
           description: "Failed to delete the whiteboard. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error deleting whiteboard",
+        title: "Error",
+          description: "Failed to delete whiteboard",
         description: "Failed to delete the whiteboard. Please try again.",
         variant: "destructive",
       });

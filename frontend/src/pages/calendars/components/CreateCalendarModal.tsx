@@ -113,10 +113,10 @@ export function CreateCalendarModal({
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
+                        <Calendar className="h-5 w-5 text-blue-500" />
                         Create Calendar
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
                         Set up a new calendar for appointment scheduling
                     </DialogDescription>
                 </DialogHeader>
@@ -125,7 +125,7 @@ export function CreateCalendarModal({
                     <div className="space-y-4 py-4">
                         {/* Name */}
                         <div className="space-y-2">
-                            <Label htmlFor="name">Calendar Name *</Label>
+                            <Label htmlFor="name" style={{ fontFamily: '"Raleway", sans-serif' }}>Calendar Name *</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
@@ -138,7 +138,7 @@ export function CreateCalendarModal({
 
                         {/* Description */}
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description" style={{ fontFamily: '"Raleway", sans-serif' }}>Description</Label>
                             <Textarea
                                 id="description"
                                 value={formData.description || ''}
@@ -153,7 +153,7 @@ export function CreateCalendarModal({
                         {/* Duration and Timezone */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="duration">Duration</Label>
+                                <Label htmlFor="duration" style={{ fontFamily: '"Raleway", sans-serif' }}>Duration</Label>
                                 <Select
                                     value={formData.duration_minutes?.toString()}
                                     onValueChange={(val) =>
@@ -199,7 +199,7 @@ export function CreateCalendarModal({
                         {/* Booking constraints */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="min_notice">Minimum Notice</Label>
+                                <Label htmlFor="min_notice" style={{ fontFamily: '"Raleway", sans-serif' }}>Minimum Notice</Label>
                                 <Select
                                     value={formData.min_notice_hours?.toString()}
                                     onValueChange={(val) =>
@@ -243,7 +243,7 @@ export function CreateCalendarModal({
 
                         {/* Color picker */}
                         <div className="space-y-2">
-                            <Label>Calendar Color</Label>
+                            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Calendar Color</Label>
                             <div className="flex gap-2">
                                 {COLORS.map((color) => (
                                     <button
@@ -260,13 +260,14 @@ export function CreateCalendarModal({
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>
+                        <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            style={{ fontFamily: '"Raleway", sans-serif' }}
                         >
                             {loading ? 'Creating...' : 'Create Calendar'}
                         </Button>

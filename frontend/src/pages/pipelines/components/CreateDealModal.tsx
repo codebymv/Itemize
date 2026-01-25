@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,7 +74,7 @@ export function CreateDealModal({
 
     if (!formData.title.trim()) {
       toast({
-        title: 'Validation Error',
+        title: 'Error',
         description: 'Deal title is required',
         variant: 'destructive',
       });
@@ -115,8 +116,11 @@ export function CreateDealModal({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Deal</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-blue-500" />
+            Create New Deal
+          </DialogTitle>
+          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
             Add a new opportunity to your pipeline
           </DialogDescription>
         </DialogHeader>
@@ -124,7 +128,7 @@ export function CreateDealModal({
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Deal Title *</Label>
+              <Label htmlFor="title" style={{ fontFamily: '"Raleway", sans-serif' }}>Deal Title *</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -135,7 +139,7 @@ export function CreateDealModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="value">Value ($)</Label>
+                <Label htmlFor="value" style={{ fontFamily: '"Raleway", sans-serif' }}>Value ($)</Label>
                 <Input
                   id="value"
                   type="number"
@@ -147,7 +151,7 @@ export function CreateDealModal({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stage">Stage</Label>
+                <Label htmlFor="stage" style={{ fontFamily: '"Raleway", sans-serif' }}>Stage</Label>
                 <Select
                   value={formData.stage_id}
                   onValueChange={(value) => handleChange('stage_id', value)}
@@ -173,7 +177,7 @@ export function CreateDealModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact">Contact</Label>
+              <Label htmlFor="contact" style={{ fontFamily: '"Raleway", sans-serif' }}>Contact</Label>
               <Select
                 value={formData.contact_id}
                 onValueChange={(value) => handleChange('contact_id', value)}
@@ -194,7 +198,7 @@ export function CreateDealModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="probability">Probability (%)</Label>
+                <Label htmlFor="probability" style={{ fontFamily: '"Raleway", sans-serif' }}>Probability (%)</Label>
                 <Input
                   id="probability"
                   type="number"
@@ -206,7 +210,7 @@ export function CreateDealModal({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expected_close_date">Expected Close</Label>
+                <Label htmlFor="expected_close_date" style={{ fontFamily: '"Raleway", sans-serif' }}>Expected Close</Label>
                 <Input
                   id="expected_close_date"
                   type="date"
@@ -218,10 +222,15 @@ export function CreateDealModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
+            >
               {loading ? 'Creating...' : 'Create Deal'}
             </Button>
           </DialogFooter>

@@ -146,7 +146,7 @@ export function BookingsPage() {
 
         try {
             await cancelBooking(id, 'Cancelled by admin', organizationId);
-            toast({ title: 'Booking cancelled' });
+            toast({ title: 'Cancelled', description: 'Booking cancelled successfully' });
             fetchBookings();
         } catch (error) {
             console.error('Error cancelling booking:', error);

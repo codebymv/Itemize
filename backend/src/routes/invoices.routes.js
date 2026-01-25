@@ -6,9 +6,54 @@
 
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
+
+// Multer for file uploads (if available)
+let multer = null;
+let upload = null;
+try {
+    multer = require('multer');
+    
+    // Ensure uploads directory exists
+    const uploadsDir = path.join(__dirname, '../../uploads/logos');
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    // Configure multer storage
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const ext = path.extname(file.originalname);
+            cb(null, `logo-${req.organizationId}-${uniqueSuffix}${ext}`);
+        }
+    });
+    
+    // File filter for images only
+    const fileFilter = (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'), false);
+        }
+    };
+    
+    upload = multer({
+        storage: storage,
+        limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+        fileFilter: fileFilter
+    });
+} catch (e) {
+    logger.info('Multer not available - file upload disabled');
+}
 
 // Stripe initialization (will be null if not configured)
 let stripe = null;
@@ -274,17 +319,27 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * GET /api/invoices/:id - Get invoice details
      */
-    router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
         try {
             const { id } = req.params;
+
+            // Skip if id is not a number (let other routes handle it)
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
             const client = await pool.connect();
 
             const invoiceResult = await client.query(`
-                SELECT i.*, c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
+                SELECT i.*, 
+                    c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
+                    b.name as business_name, b.email as business_email, b.phone as business_phone,
+                    b.address as business_address, b.tax_id as business_tax_id, b.logo_url as business_logo_url
                 FROM invoices i
                 LEFT JOIN contacts c ON i.contact_id = c.id
+                LEFT JOIN businesses b ON i.business_id = b.id
                 WHERE i.id = $1 AND i.organization_id = $2
-            `, [id, req.organizationId]);
+            `, [parseInt(id), req.organizationId]);
 
             if (invoiceResult.rows.length === 0) {
                 client.release();
@@ -310,6 +365,19 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const invoice = invoiceResult.rows[0];
             invoice.items = itemsResult.rows;
             invoice.payments = paymentsResult.rows;
+            
+            // Include business object if business_id is set
+            if (invoice.business_id) {
+                invoice.business = {
+                    id: invoice.business_id,
+                    name: invoice.business_name,
+                    email: invoice.business_email,
+                    phone: invoice.business_phone,
+                    address: invoice.business_address,
+                    tax_id: invoice.business_tax_id,
+                    logo_url: invoice.business_logo_url
+                };
+            }
 
             res.json(invoice);
         } catch (error) {
@@ -325,14 +393,17 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         try {
             const {
                 contact_id,
+                business_id,
                 customer_name,
                 customer_email,
                 customer_phone,
                 customer_address,
+                issue_date,
                 due_date,
                 items,
                 discount_type,
                 discount_value,
+                tax_rate,
                 notes,
                 terms_and_conditions,
                 payment_terms
@@ -352,14 +423,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Calculate totals
                 let subtotal = 0;
-                let taxAmount = 0;
 
                 for (const item of items) {
                     const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-                    const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
                     subtotal += itemTotal;
-                    taxAmount += itemTax;
                 }
+
+                // Calculate tax from invoice-level tax rate
+                const invoiceTaxRate = tax_rate || 0;
+                const taxAmount = subtotal * (invoiceTaxRate / 100);
 
                 // Apply discount
                 let discountAmount = 0;
@@ -386,25 +458,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     dueDateValue = dueDate.toISOString().split('T')[0];
                 }
 
+                // Calculate issue date (default to today if not provided)
+                const issueDateValue = issue_date || new Date().toISOString().split('T')[0];
+
                 // Create invoice
                 const invoiceResult = await client.query(`
                     INSERT INTO invoices (
-                        organization_id, invoice_number, contact_id,
+                        organization_id, invoice_number, contact_id, business_id,
                         customer_name, customer_email, customer_phone, customer_address,
-                        due_date, subtotal, tax_amount, discount_amount, discount_type, discount_value,
+                        issue_date, due_date, subtotal, tax_rate, tax_amount, discount_amount, discount_type, discount_value,
                         total, amount_due, notes, terms_and_conditions, payment_terms, created_by
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
                     RETURNING *
                 `, [
                     req.organizationId,
                     invoiceNumber,
                     contact_id || null,
+                    business_id || null,
                     customer_name || null,
                     customer_email || null,
                     customer_phone || null,
                     customer_address || null,
+                    issueDateValue,
                     dueDateValue,
                     subtotal,
+                    invoiceTaxRate,
                     taxAmount,
                     discountAmount,
                     discount_type || null,
@@ -416,6 +494,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     payment_terms || null,
                     req.user.id
                 ]);
+
+                // Update last_used_at on the selected business
+                if (business_id) {
+                    await client.query(
+                        'UPDATE businesses SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2',
+                        [business_id, req.organizationId]
+                    );
+                }
 
                 const invoiceId = invoiceResult.rows[0].id;
 
@@ -476,18 +562,27 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * PUT /api/invoices/:id - Update invoice
      */
-    router.put('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+    router.put('/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
         try {
             const { id } = req.params;
+
+            // Skip if id is not a number (let other routes handle it)
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
             const {
+                business_id,
                 customer_name,
                 customer_email,
                 customer_phone,
                 customer_address,
+                issue_date,
                 due_date,
                 items,
                 discount_type,
                 discount_value,
+                tax_rate,
                 notes,
                 terms_and_conditions,
                 payment_terms
@@ -521,14 +616,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 if (items && Array.isArray(items) && items.length > 0) {
                     let subtotal = 0;
-                    let taxAmount = 0;
 
                     for (const item of items) {
                         const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-                        const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
                         subtotal += itemTotal;
-                        taxAmount += itemTax;
                     }
+
+                    // Calculate tax from invoice-level tax rate
+                    const invoiceTaxRate = tax_rate || 0;
+                    const taxAmount = subtotal * (invoiceTaxRate / 100);
 
                     let discountAmount = 0;
                     if (discount_value && discount_value > 0) {
@@ -543,6 +639,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                     updateFields.push(`subtotal = $${paramIndex++}`);
                     updateParams.push(subtotal);
+                    updateFields.push(`tax_rate = $${paramIndex++}`);
+                    updateParams.push(invoiceTaxRate);
                     updateFields.push(`tax_amount = $${paramIndex++}`);
                     updateParams.push(taxAmount);
                     updateFields.push(`discount_amount = $${paramIndex++}`);
@@ -598,6 +696,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     updateFields.push(`customer_address = $${paramIndex++}`);
                     updateParams.push(customer_address);
                 }
+                if (issue_date) {
+                    updateFields.push(`issue_date = $${paramIndex++}`);
+                    updateParams.push(issue_date);
+                }
                 if (due_date) {
                     updateFields.push(`due_date = $${paramIndex++}`);
                     updateParams.push(due_date);
@@ -622,6 +724,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     updateFields.push(`payment_terms = $${paramIndex++}`);
                     updateParams.push(payment_terms);
                 }
+                if (business_id !== undefined) {
+                    updateFields.push(`business_id = $${paramIndex++}`);
+                    updateParams.push(business_id || null);
+                }
 
                 updateFields.push('updated_at = CURRENT_TIMESTAMP');
 
@@ -631,6 +737,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         UPDATE invoices SET ${updateFields.join(', ')}
                         WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
                     `, updateParams);
+                }
+
+                // Update last_used_at on the selected business
+                if (business_id) {
+                    await client.query(
+                        'UPDATE businesses SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2',
+                        [business_id, req.organizationId]
+                    );
                 }
 
                 await client.query('COMMIT');
@@ -659,14 +773,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * DELETE /api/invoices/:id - Delete invoice
      */
-    router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+    router.delete('/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
         try {
             const { id } = req.params;
+
+            // Skip if id is not a number (let other routes handle it)
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
             const client = await pool.connect();
 
-            // Only allow deleting draft invoices
+            // Check invoice exists
             const checkResult = await client.query(
-                'SELECT status FROM invoices WHERE id = $1 AND organization_id = $2',
+                'SELECT id, invoice_number FROM invoices WHERE id = $1 AND organization_id = $2',
                 [id, req.organizationId]
             );
 
@@ -675,15 +795,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(404).json({ error: 'Invoice not found' });
             }
 
-            if (checkResult.rows[0].status !== 'draft') {
-                client.release();
-                return res.status(400).json({ error: 'Can only delete draft invoices' });
-            }
-
+            // Delete invoice items first (foreign key constraint)
+            await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [id]);
+            
+            // Delete the invoice
             await client.query('DELETE FROM invoices WHERE id = $1', [id]);
             client.release();
 
-            res.json({ success: true });
+            res.json({ success: true, invoice_number: checkResult.rows[0].invoice_number });
         } catch (error) {
             console.error('Error deleting invoice:', error);
             res.status(500).json({ error: 'Failed to delete invoice' });
@@ -700,6 +819,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
+
             const client = await pool.connect();
 
             const result = await client.query(`
@@ -728,11 +853,82 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     });
 
     /**
+     * GET /api/invoices/:id/pdf - Generate and download invoice PDF
+     */
+    router.get('/:id/pdf', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
+
+            const { generateInvoicePDF, isPDFAvailable } = require('../services/pdf.service');
+
+            if (!isPDFAvailable()) {
+                return res.status(503).json({ error: 'PDF generation not available' });
+            }
+
+            const client = await pool.connect();
+
+            // Get invoice with items
+            const invoiceResult = await client.query(`
+                SELECT i.*, c.first_name as contact_first_name, c.last_name as contact_last_name
+                FROM invoices i
+                LEFT JOIN contacts c ON i.contact_id = c.id
+                WHERE i.id = $1 AND i.organization_id = $2
+            `, [id, req.organizationId]);
+
+            if (invoiceResult.rows.length === 0) {
+                client.release();
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
+
+            const invoice = invoiceResult.rows[0];
+
+            // Get items
+            const itemsResult = await client.query(`
+                SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order
+            `, [id]);
+            invoice.items = itemsResult.rows;
+
+            // Get payment settings for business info
+            const settingsResult = await client.query(
+                'SELECT * FROM payment_settings WHERE organization_id = $1',
+                [req.organizationId]
+            );
+            const settings = settingsResult.rows[0] || {};
+
+            client.release();
+
+            // Generate PDF
+            const pdf = await generateInvoicePDF(invoice, settings);
+
+            // Set response headers
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoice_number}.pdf"`);
+            res.setHeader('Content-Length', pdf.length);
+
+            res.send(pdf);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            res.status(500).json({ error: 'Failed to generate PDF' });
+        }
+    });
+
+    /**
      * POST /api/invoices/:id/record-payment - Record manual payment
      */
     router.post('/:id/record-payment', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
+
             const { amount, payment_method, notes } = req.body;
 
             if (!amount || amount <= 0) {
@@ -817,11 +1013,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/:id/create-payment-link', authenticateJWT, requireOrganization, async (req, res) => {
         try {
+            const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
+
             if (!stripe) {
                 return res.status(400).json({ error: 'Stripe not configured' });
             }
-
-            const { id } = req.params;
             const client = await pool.connect();
 
             const invoiceResult = await client.query(
@@ -869,6 +1070,387 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         } catch (error) {
             console.error('Error creating payment link:', error);
             res.status(500).json({ error: 'Failed to create payment link' });
+        }
+    });
+
+    // ======================
+    // Payments History
+    // ======================
+
+    /**
+     * GET /api/invoices/payments - List all payments
+     */
+    router.get('/payments', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const { status, payment_method, page = 1, limit = 50 } = req.query;
+            const offset = (parseInt(page) - 1) * parseInt(limit);
+
+            let whereClause = 'WHERE p.organization_id = $1';
+            const params = [req.organizationId];
+            let paramIndex = 2;
+
+            if (status && status !== 'all') {
+                whereClause += ` AND p.status = $${paramIndex}`;
+                params.push(status);
+                paramIndex++;
+            }
+
+            if (payment_method && payment_method !== 'all') {
+                whereClause += ` AND p.payment_method = $${paramIndex}`;
+                params.push(payment_method);
+                paramIndex++;
+            }
+
+            const client = await pool.connect();
+
+            const countResult = await client.query(
+                `SELECT COUNT(*) FROM payments p ${whereClause}`,
+                params
+            );
+
+            const result = await client.query(`
+                SELECT p.*, 
+                    i.invoice_number,
+                    c.first_name as contact_first_name, 
+                    c.last_name as contact_last_name,
+                    COALESCE(c.first_name || ' ' || c.last_name, i.customer_name) as contact_name
+                FROM payments p
+                LEFT JOIN invoices i ON p.invoice_id = i.id
+                LEFT JOIN contacts c ON p.contact_id = c.id
+                ${whereClause}
+                ORDER BY p.created_at DESC
+                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+            `, [...params, parseInt(limit), offset]);
+
+            client.release();
+
+            res.json({
+                payments: result.rows,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: parseInt(countResult.rows[0].count),
+                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                }
+            });
+        } catch (error) {
+            console.error('Error fetching payments:', error);
+            res.status(500).json({ error: 'Failed to fetch payments' });
+        }
+    });
+
+    // ======================
+    // Businesses (Multi-Business Support)
+    // ======================
+
+    /**
+     * GET /api/invoices/businesses - List all businesses for organization
+     */
+    router.get('/businesses', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const client = await pool.connect();
+
+            const result = await client.query(
+                `SELECT * FROM businesses 
+                 WHERE organization_id = $1 AND is_active = true
+                 ORDER BY last_used_at DESC NULLS LAST, created_at DESC`,
+                [req.organizationId]
+            );
+
+            client.release();
+            res.json(result.rows);
+        } catch (error) {
+            console.error('Error fetching businesses:', error);
+            res.status(500).json({ error: 'Failed to fetch businesses' });
+        }
+    });
+
+    /**
+     * GET /api/invoices/businesses/:id - Get single business
+     */
+    router.get('/businesses/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+        try {
+            const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
+            const client = await pool.connect();
+
+            const result = await client.query(
+                'SELECT * FROM businesses WHERE id = $1 AND organization_id = $2',
+                [id, req.organizationId]
+            );
+
+            client.release();
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Business not found' });
+            }
+
+            res.json(result.rows[0]);
+        } catch (error) {
+            console.error('Error fetching business:', error);
+            res.status(500).json({ error: 'Failed to fetch business' });
+        }
+    });
+
+    /**
+     * POST /api/invoices/businesses - Create new business
+     */
+    router.post('/businesses', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const { name, email, phone, address, tax_id, logo_url } = req.body;
+
+            if (!name || !name.trim()) {
+                return res.status(400).json({ error: 'Business name is required' });
+            }
+
+            const client = await pool.connect();
+
+            const result = await client.query(`
+                INSERT INTO businesses (organization_id, name, email, phone, address, tax_id, logo_url)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING *
+            `, [
+                req.organizationId,
+                name.trim(),
+                email || null,
+                phone || null,
+                address || null,
+                tax_id || null,
+                logo_url || null
+            ]);
+
+            client.release();
+            res.status(201).json(result.rows[0]);
+        } catch (error) {
+            console.error('Error creating business:', error);
+            res.status(500).json({ error: 'Failed to create business' });
+        }
+    });
+
+    /**
+     * PUT /api/invoices/businesses/:id - Update business
+     */
+    router.put('/businesses/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+        try {
+            const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
+            const { name, email, phone, address, tax_id, logo_url, is_active } = req.body;
+
+            if (name !== undefined && (!name || !name.trim())) {
+                return res.status(400).json({ error: 'Business name cannot be empty' });
+            }
+
+            const client = await pool.connect();
+
+            // Check if business exists and belongs to organization
+            const checkResult = await client.query(
+                'SELECT id FROM businesses WHERE id = $1 AND organization_id = $2',
+                [id, req.organizationId]
+            );
+
+            if (checkResult.rows.length === 0) {
+                client.release();
+                return res.status(404).json({ error: 'Business not found' });
+            }
+
+            const result = await client.query(`
+                UPDATE businesses SET
+                    name = COALESCE($1, name),
+                    email = COALESCE($2, email),
+                    phone = COALESCE($3, phone),
+                    address = COALESCE($4, address),
+                    tax_id = COALESCE($5, tax_id),
+                    logo_url = COALESCE($6, logo_url),
+                    is_active = COALESCE($7, is_active),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $8 AND organization_id = $9
+                RETURNING *
+            `, [
+                name?.trim(),
+                email,
+                phone,
+                address,
+                tax_id,
+                logo_url,
+                is_active,
+                id,
+                req.organizationId
+            ]);
+
+            client.release();
+            res.json(result.rows[0]);
+        } catch (error) {
+            console.error('Error updating business:', error);
+            res.status(500).json({ error: 'Failed to update business' });
+        }
+    });
+
+    /**
+     * DELETE /api/invoices/businesses/:id - Delete (soft) business
+     */
+    router.delete('/businesses/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+        try {
+            const { id } = req.params;
+
+            // Skip if id is not a number
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
+            const client = await pool.connect();
+
+            // Check if business exists and belongs to organization
+            const checkResult = await client.query(
+                'SELECT id FROM businesses WHERE id = $1 AND organization_id = $2',
+                [id, req.organizationId]
+            );
+
+            if (checkResult.rows.length === 0) {
+                client.release();
+                return res.status(404).json({ error: 'Business not found' });
+            }
+
+            // Soft delete by setting is_active = false
+            await client.query(
+                'UPDATE businesses SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                [id]
+            );
+
+            client.release();
+            res.json({ success: true, message: 'Business deleted' });
+        } catch (error) {
+            console.error('Error deleting business:', error);
+            res.status(500).json({ error: 'Failed to delete business' });
+        }
+    });
+
+    /**
+     * POST /api/invoices/businesses/:id/logo - Upload business logo
+     */
+    router.post('/businesses/:id/logo', authenticateJWT, requireOrganization, async (req, res, next) => {
+        if (!upload) {
+            return res.status(503).json({ error: 'File upload not available' });
+        }
+
+        const { id } = req.params;
+        if (isNaN(parseInt(id))) {
+            return next();
+        }
+
+        upload.single('logo')(req, res, async (err) => {
+            if (err) {
+                if (err instanceof multer.MulterError) {
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return res.status(400).json({ error: 'File too large. Maximum size is 2MB.' });
+                    }
+                }
+                return res.status(400).json({ error: err.message });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+
+            try {
+                const client = await pool.connect();
+
+                // Check if business exists
+                const checkResult = await client.query(
+                    'SELECT logo_url FROM businesses WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
+
+                if (checkResult.rows.length === 0) {
+                    client.release();
+                    return res.status(404).json({ error: 'Business not found' });
+                }
+
+                // Delete old logo file if exists
+                if (checkResult.rows[0].logo_url) {
+                    const oldUrl = checkResult.rows[0].logo_url;
+                    if (oldUrl.includes('/uploads/logos/')) {
+                        const oldFilename = oldUrl.split('/uploads/logos/')[1];
+                        const oldFilePath = path.join(__dirname, '../../uploads/logos', oldFilename);
+                        if (fs.existsSync(oldFilePath)) {
+                            fs.unlinkSync(oldFilePath);
+                        }
+                    }
+                }
+
+                // Generate logo URL
+                const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+                const logoUrl = `${baseUrl}/uploads/logos/${req.file.filename}`;
+
+                // Update business with logo URL
+                await client.query(
+                    'UPDATE businesses SET logo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                    [logoUrl, id]
+                );
+
+                client.release();
+                res.json({ logo_url: logoUrl });
+            } catch (error) {
+                console.error('Error uploading business logo:', error);
+                res.status(500).json({ error: 'Failed to upload logo' });
+            }
+        });
+    });
+
+    /**
+     * DELETE /api/invoices/businesses/:id/logo - Remove business logo
+     */
+    router.delete('/businesses/:id/logo', authenticateJWT, requireOrganization, async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
+            const client = await pool.connect();
+
+            // Get current logo
+            const result = await client.query(
+                'SELECT logo_url FROM businesses WHERE id = $1 AND organization_id = $2',
+                [id, req.organizationId]
+            );
+
+            if (result.rows.length === 0) {
+                client.release();
+                return res.status(404).json({ error: 'Business not found' });
+            }
+
+            if (result.rows[0].logo_url) {
+                const oldUrl = result.rows[0].logo_url;
+                if (oldUrl.includes('/uploads/logos/')) {
+                    const oldFilename = oldUrl.split('/uploads/logos/')[1];
+                    const oldFilePath = path.join(__dirname, '../../uploads/logos', oldFilename);
+                    if (fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                    }
+                }
+            }
+
+            // Clear logo_url
+            await client.query(
+                'UPDATE businesses SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                [id]
+            );
+
+            client.release();
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Error removing business logo:', error);
+            res.status(500).json({ error: 'Failed to remove logo' });
         }
     });
 
@@ -972,6 +1554,120 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         } catch (error) {
             console.error('Error updating payment settings:', error);
             res.status(500).json({ error: 'Failed to update payment settings' });
+        }
+    });
+
+    /**
+     * POST /api/invoices/settings/logo - Upload business logo
+     */
+    router.post('/settings/logo', authenticateJWT, requireOrganization, async (req, res) => {
+        if (!upload) {
+            return res.status(503).json({ error: 'File upload not available. Please install multer: npm install multer' });
+        }
+
+        // Use multer middleware
+        upload.single('logo')(req, res, async (err) => {
+            if (err) {
+                if (err instanceof multer.MulterError) {
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return res.status(400).json({ error: 'File too large. Maximum size is 2MB.' });
+                    }
+                }
+                return res.status(400).json({ error: err.message });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+
+            try {
+                // Generate the URL for the uploaded file
+                const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+                const logoUrl = `${baseUrl}/uploads/logos/${req.file.filename}`;
+
+                // Update payment settings with logo URL
+                const client = await pool.connect();
+
+                // Delete old logo file if exists
+                const oldSettings = await client.query(
+                    'SELECT logo_url FROM payment_settings WHERE organization_id = $1',
+                    [req.organizationId]
+                );
+
+                if (oldSettings.rows.length > 0 && oldSettings.rows[0].logo_url) {
+                    const oldUrl = oldSettings.rows[0].logo_url;
+                    // Only delete if it's a local file (starts with our base URL)
+                    if (oldUrl.includes('/uploads/logos/')) {
+                        const filename = oldUrl.split('/uploads/logos/')[1];
+                        const oldFilePath = path.join(__dirname, '../../uploads/logos', filename);
+                        if (fs.existsSync(oldFilePath)) {
+                            fs.unlinkSync(oldFilePath);
+                        }
+                    }
+                }
+
+                await client.query(`
+                    INSERT INTO payment_settings (organization_id, logo_url)
+                    VALUES ($1, $2)
+                    ON CONFLICT (organization_id) DO UPDATE SET
+                        logo_url = EXCLUDED.logo_url,
+                        updated_at = CURRENT_TIMESTAMP
+                `, [req.organizationId, logoUrl]);
+
+                client.release();
+
+                res.json({
+                    success: true,
+                    logo_url: logoUrl
+                });
+            } catch (error) {
+                // Clean up uploaded file on error
+                if (req.file) {
+                    fs.unlinkSync(req.file.path);
+                }
+                console.error('Error uploading logo:', error);
+                res.status(500).json({ error: 'Failed to upload logo' });
+            }
+        });
+    });
+
+    /**
+     * DELETE /api/invoices/settings/logo - Remove business logo
+     */
+    router.delete('/settings/logo', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const client = await pool.connect();
+
+            // Get current logo
+            const result = await client.query(
+                'SELECT logo_url FROM payment_settings WHERE organization_id = $1',
+                [req.organizationId]
+            );
+
+            if (result.rows.length > 0 && result.rows[0].logo_url) {
+                const oldUrl = result.rows[0].logo_url;
+                // Only delete if it's a local file
+                if (oldUrl.includes('/uploads/logos/')) {
+                    const filename = oldUrl.split('/uploads/logos/')[1];
+                    const filePath = path.join(__dirname, '../../uploads/logos', filename);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                }
+            }
+
+            // Clear logo_url in settings
+            await client.query(`
+                UPDATE payment_settings 
+                SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE organization_id = $1
+            `, [req.organizationId]);
+
+            client.release();
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Error removing logo:', error);
+            res.status(500).json({ error: 'Failed to remove logo' });
         }
     });
 

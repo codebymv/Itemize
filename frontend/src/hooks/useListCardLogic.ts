@@ -179,7 +179,8 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       } catch (error) {
         console.error('Failed to create category:', error);
         toast({
-          title: "Error creating category",
+          title: "Error",
+          description: "Failed to create category",
           description: "Could not create the category. Please try again.",
           variant: "destructive"
         });

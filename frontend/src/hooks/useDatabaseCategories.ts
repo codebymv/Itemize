@@ -87,7 +87,8 @@ export const useDatabaseCategories = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create category';
       
       toast({
-        title: "Error creating category",
+        title: "Error",
+        description: "Failed to create category",
         description: errorMessage,
         variant: "destructive"
       });
@@ -117,8 +118,8 @@ export const useDatabaseCategories = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update category';
       
       toast({
-        title: "Error updating category", 
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to update category",
         variant: "destructive"
       });
       
@@ -145,7 +146,8 @@ export const useDatabaseCategories = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete category';
       
       toast({
-        title: "Error deleting category",
+        title: "Error",
+        description: "Failed to delete category",
         description: errorMessage,
         variant: "destructive"
       });

@@ -106,7 +106,7 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to load vault items:', error);
       toast({
-        title: "Error loading items",
+        title: "Error",
         description: "Could not load vault items. Please try again.",
         variant: "destructive"
       });
@@ -123,7 +123,7 @@ export const useVaultCardLogic = ({
       } catch (error) {
         console.error('Failed to update vault title:', error);
         toast({
-          title: "Error updating title",
+          title: "Error",
           description: "Could not update vault title. Please try again.",
           variant: "destructive"
         });
@@ -145,8 +145,8 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to save vault color:', error);
       toast({
-        title: "Error updating color",
-        description: "Could not update vault color. Please try again.",
+        title: "Error",
+        description: "Failed to update vault color",
         variant: "destructive"
       });
       throw error;
@@ -168,7 +168,7 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to update vault category:', error);
       toast({
-        title: "Error updating category",
+        title: "Error",
         description: "Could not update vault category. Please try again.",
         variant: "destructive"
       });
@@ -185,7 +185,7 @@ export const useVaultCardLogic = ({
       } catch (error) {
         console.error('Failed to add custom category:', error);
         toast({
-          title: "Error adding category",
+          title: "Error",
           description: "Could not add custom category. Please try again.",
           variant: "destructive"
         });
@@ -279,8 +279,8 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to add vault item:', error);
       toast({
-        title: "Error adding item",
-        description: "Could not add item. Please try again.",
+        title: "Error",
+        description: "Failed to add item",
         variant: "destructive"
       });
     }
@@ -307,7 +307,7 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to update vault item:', error);
       toast({
-        title: "Error updating item",
+        title: "Error",
         description: "Could not update item. Please try again.",
         variant: "destructive"
       });
@@ -325,7 +325,7 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to delete vault item:', error);
       toast({
-        title: "Error deleting item",
+        title: "Error",
         description: "Could not delete item. Please try again.",
         variant: "destructive"
       });
@@ -357,8 +357,8 @@ export const useVaultCardLogic = ({
     } catch (error) {
       console.error('Failed to bulk add vault items:', error);
       toast({
-        title: "Error importing items",
-        description: "Could not import items. Please try again.",
+        title: "Error",
+        description: "Failed to import items",
         variant: "destructive"
       });
       return [];
@@ -383,7 +383,7 @@ export const useVaultCardLogic = ({
       // Rollback on error
       setItems(oldItems);
       toast({
-        title: "Error reordering items",
+        title: "Error",
         description: "Could not reorder items. Please try again.",
         variant: "destructive"
       });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { UserPen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,7 +75,7 @@ export function EditContactModal({
     // Validate at least one identifier
     if (!formData.first_name && !formData.last_name && !formData.email && !formData.company) {
       toast({
-        title: 'Validation Error',
+        title: 'Error',
         description: 'Please provide at least a name, email, or company',
         variant: 'destructive',
       });
@@ -104,8 +105,11 @@ export function EditContactModal({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Contact</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPen className="h-5 w-5 text-blue-500" />
+            Edit Contact
+          </DialogTitle>
+          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
             Update contact information
           </DialogDescription>
         </DialogHeader>
@@ -115,7 +119,7 @@ export function EditContactModal({
             {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">First Name</Label>
+                <Label htmlFor="first_name" style={{ fontFamily: '"Raleway", sans-serif' }}>First Name</Label>
                 <Input
                   id="first_name"
                   value={formData.first_name}
@@ -124,7 +128,7 @@ export function EditContactModal({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name</Label>
+                <Label htmlFor="last_name" style={{ fontFamily: '"Raleway", sans-serif' }}>Last Name</Label>
                 <Input
                   id="last_name"
                   value={formData.last_name}
@@ -135,7 +139,7 @@ export function EditContactModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" style={{ fontFamily: '"Raleway", sans-serif' }}>Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -158,7 +162,7 @@ export function EditContactModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
+                <Label htmlFor="company" style={{ fontFamily: '"Raleway", sans-serif' }}>Company</Label>
                 <Input
                   id="company"
                   value={formData.company}
@@ -178,7 +182,7 @@ export function EditContactModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status" style={{ fontFamily: '"Raleway", sans-serif' }}>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => handleChange('status', value)}
@@ -230,10 +234,15 @@ export function EditContactModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
+            >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>

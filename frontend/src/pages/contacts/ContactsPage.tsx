@@ -213,7 +213,7 @@ export function ContactsPage() {
     try {
       await deleteContact(id, organizationId);
       toast({
-        title: 'Success',
+        title: 'Deleted',
         description: 'Contact deleted successfully',
       });
       fetchContacts();
@@ -234,8 +234,8 @@ export function ContactsPage() {
     try {
       await bulkDeleteContacts(selectedContacts, organizationId);
       toast({
-        title: 'Success',
-        description: `${selectedContacts.length} contacts deleted`,
+        title: 'Deleted',
+        description: `${selectedContacts.length} contacts deleted successfully`,
       });
       setSelectedContacts([]);
       fetchContacts();
@@ -253,7 +253,7 @@ export function ContactsPage() {
   const handleContactCreated = (contact: Contact) => {
     setShowCreateModal(false);
     toast({
-      title: 'Success',
+      title: 'Created',
       description: 'Contact created successfully',
     });
     fetchContacts();

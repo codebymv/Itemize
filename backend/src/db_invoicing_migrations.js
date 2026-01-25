@@ -322,8 +322,151 @@ async function createPaymentSettingsTable(pool) {
 }
 
 /**
+ * Create businesses table
+ * Stores multiple business profiles per organization for invoicing
+ */
+async function createBusinessesTable(pool) {
+    const client = await pool.connect();
+    try {
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS businesses (
+                id SERIAL PRIMARY KEY,
+                organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                
+                -- Business info
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                address TEXT,
+                tax_id VARCHAR(100),
+                logo_url VARCHAR(500),
+                
+                -- Status
+                is_active BOOLEAN DEFAULT TRUE,
+                
+                -- Track last used for auto-selection
+                last_used_at TIMESTAMP WITH TIME ZONE,
+                
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_businesses_org ON businesses(organization_id)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_businesses_last_used ON businesses(organization_id, last_used_at DESC)
+        `);
+
+        console.log('✅ businesses table created/verified');
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Add business_id column to invoices table
+ */
+async function addBusinessIdToInvoices(pool) {
+    const client = await pool.connect();
+    try {
+        // Check if column exists
+        const checkResult = await client.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'invoices' AND column_name = 'business_id'
+        `);
+        
+        if (checkResult.rows.length === 0) {
+            await client.query(`
+                ALTER TABLE invoices 
+                ADD COLUMN business_id INTEGER REFERENCES businesses(id) ON DELETE SET NULL
+            `);
+            await client.query(`
+                CREATE INDEX IF NOT EXISTS idx_invoices_business ON invoices(business_id)
+            `);
+            console.log('✅ Added business_id column to invoices table');
+        }
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Migrate existing business info from payment_settings to businesses table
+ * This runs after businesses table is created to preserve existing data
+ */
+async function migratePaymentSettingsToBusinesses(pool) {
+    const client = await pool.connect();
+    try {
+        // Get all payment_settings with business info
+        const settingsResult = await client.query(`
+            SELECT organization_id, business_name, business_address, business_phone, business_email, logo_url, tax_id
+            FROM payment_settings
+            WHERE business_name IS NOT NULL AND business_name != ''
+        `);
+
+        for (const settings of settingsResult.rows) {
+            // Check if this org already has businesses
+            const existingResult = await client.query(
+                'SELECT id FROM businesses WHERE organization_id = $1 LIMIT 1',
+                [settings.organization_id]
+            );
+
+            if (existingResult.rows.length === 0) {
+                // No businesses yet - migrate the payment_settings business info
+                await client.query(`
+                    INSERT INTO businesses (organization_id, name, email, phone, address, tax_id, logo_url)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [
+                    settings.organization_id,
+                    settings.business_name,
+                    settings.business_email,
+                    settings.business_phone,
+                    settings.business_address,
+                    settings.tax_id,
+                    settings.logo_url
+                ]);
+                console.log(`✅ Migrated business info for organization ${settings.organization_id}`);
+            }
+        }
+
+        console.log('✅ Business info migration completed');
+    } catch (error) {
+        // Don't fail if migration has issues - it's a one-time migration
+        console.log('Business migration skipped or already done:', error.message);
+    } finally {
+        client.release();
+    }
+}
+
+/**
  * Run all invoicing migrations
  */
+/**
+ * Add tax_rate column to invoices table
+ */
+async function addInvoiceTaxRateColumn(pool) {
+    const client = await pool.connect();
+    try {
+        // Check if column exists
+        const checkResult = await client.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'invoices' AND column_name = 'tax_rate'
+        `);
+        
+        if (checkResult.rows.length === 0) {
+            await client.query(`
+                ALTER TABLE invoices 
+                ADD COLUMN tax_rate DECIMAL(5,2) DEFAULT 0
+            `);
+            console.log('✅ Added tax_rate column to invoices table');
+        }
+    } finally {
+        client.release();
+    }
+}
+
 async function runAllInvoicingMigrations(pool) {
     console.log('Running invoicing migrations...');
     
@@ -332,6 +475,10 @@ async function runAllInvoicingMigrations(pool) {
     await createInvoiceItemsTable(pool);
     await createPaymentsTable(pool);
     await createPaymentSettingsTable(pool);
+    await addInvoiceTaxRateColumn(pool);
+    await createBusinessesTable(pool);
+    await addBusinessIdToInvoices(pool);
+    await migratePaymentSettingsToBusinesses(pool);
     
     console.log('✅ All invoicing migrations completed');
 }
@@ -342,5 +489,7 @@ module.exports = {
     createInvoicesTable,
     createInvoiceItemsTable,
     createPaymentsTable,
-    createPaymentSettingsTable
+    createPaymentSettingsTable,
+    createBusinessesTable,
+    addBusinessIdToInvoices
 };

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { StickyNote } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -52,7 +53,10 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create New Note</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <StickyNote className="h-5 w-5 text-blue-500" />
+            Create New Note
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,7 +77,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
           {/* Category selection */}
           {!isAddingNewCategory ? (
             <div>
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category" style={{ fontFamily: '"Raleway", sans-serif' }}>Category</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a category" />
@@ -119,13 +123,14 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
           )}
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={!title.trim() || (!category && !newCategory.trim())}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               Create Note
             </Button>

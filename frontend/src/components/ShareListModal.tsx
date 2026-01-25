@@ -41,7 +41,8 @@ export const ShareListModal: React.FC<ShareListModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error sharing list",
+        title: "Error",
+        description: "Failed to share list",
         description: "Failed to generate share link. Please try again.",
         variant: "destructive",
       });
@@ -74,7 +75,8 @@ export const ShareListModal: React.FC<ShareListModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error revoking share",
+        title: "Error",
+        description: "Failed to revoke share",
         description: "Failed to revoke sharing. Please try again.",
         variant: "destructive",
       });
@@ -116,7 +118,7 @@ export const ShareListModal: React.FC<ShareListModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-            <Share2 className="h-5 w-5 text-slate-500" />
+            <Share2 className="h-5 w-5 text-blue-500" />
             Share List
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

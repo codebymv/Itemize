@@ -529,7 +529,7 @@ const CanvasPage: React.FC = () => {
         console.error('Error fetching notes:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load notes. Please try again.';
         setErrorNotes(errorMessage);
-        toast({ title: "Error fetching notes", description: errorMessage, variant: "destructive" });
+        toast({ title: "Error", description: "Failed to fetch notes", variant: "destructive" });
       } finally {
         setLoadingNotes(false);
       }
@@ -554,7 +554,7 @@ const CanvasPage: React.FC = () => {
         console.error('Error fetching whiteboards:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load whiteboards. Please try again.';
         setErrorWhiteboards(errorMessage);
-        toast({ title: "Error fetching whiteboards", description: errorMessage, variant: "destructive" });
+        toast({ title: "Error", description: "Failed to fetch whiteboards", variant: "destructive" });
       } finally {
         setLoadingWhiteboards(false);
       }
@@ -578,7 +578,7 @@ const CanvasPage: React.FC = () => {
         console.error('Error fetching wireframes:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load wireframes. Please try again.';
         setErrorWireframes(errorMessage);
-        toast({ title: "Error fetching wireframes", description: errorMessage, variant: "destructive" });
+        toast({ title: "Error", description: "Failed to fetch wireframes", variant: "destructive" });
       } finally {
         setLoadingWireframes(false);
       }
@@ -602,7 +602,7 @@ const CanvasPage: React.FC = () => {
         console.error('Error fetching vaults:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load vaults. Please try again.';
         setErrorVaults(errorMessage);
-        toast({ title: "Error fetching vaults", description: errorMessage, variant: "destructive" });
+        toast({ title: "Error", description: "Failed to fetch vaults", variant: "destructive" });
       } finally {
         setLoadingVaults(false);
       }
@@ -732,7 +732,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to create note:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your note. Please try again.';
       toast({
-        title: "Error creating note",
+        title: "Error",
+        description: "Failed to create note",
         description: errorMessage,
         variant: "destructive"
       });
@@ -755,10 +756,9 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to update note:', error);
       // Rollback to original state on error
       setNotes(originalNotes);
-      const errorMessage = error instanceof Error ? error.message : 'Could not update your note. Please try again.';
       toast({
-        title: "Error updating note",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to update note",
         variant: "destructive"
       });
       return null;
@@ -789,7 +789,8 @@ const CanvasPage: React.FC = () => {
 
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your note. Please try again.';
       toast({
-        title: "Error deleting note",
+        title: "Error",
+        description: "Failed to delete note",
         description: errorMessage,
         variant: "destructive"
       });
@@ -827,7 +828,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to create whiteboard:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your whiteboard. Please try again.';
       toast({
-        title: "Error creating whiteboard",
+        title: "Error",
+        description: "Failed to create whiteboard",
         description: errorMessage,
         variant: "destructive"
       });
@@ -868,8 +870,8 @@ const CanvasPage: React.FC = () => {
       setWhiteboards(originalWhiteboards);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
       toast({
-        title: "Error updating whiteboard",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to update whiteboard",
         variant: "destructive"
       });
       return null;
@@ -889,7 +891,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to delete whiteboard:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your whiteboard. Please try again.';
       toast({
-        title: "Error deleting whiteboard",
+        title: "Error",
+        description: "Failed to delete whiteboard",
         description: errorMessage,
         variant: "destructive"
       });
@@ -922,7 +925,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to create wireframe:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your wireframe. Please try again.';
       toast({
-        title: "Error creating wireframe",
+        title: "Error",
+        description: "Failed to create wireframe",
         description: errorMessage,
         variant: "destructive"
       });
@@ -944,7 +948,8 @@ const CanvasPage: React.FC = () => {
       setWireframes(originalWireframes);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your wireframe. Please try again.';
       toast({
-        title: "Error updating wireframe",
+        title: "Error",
+        description: "Failed to update wireframe",
         description: errorMessage,
         variant: "destructive"
       });
@@ -963,10 +968,9 @@ const CanvasPage: React.FC = () => {
       return true;
     } catch (error) {
       console.error('Failed to delete wireframe:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not delete your wireframe. Please try again.';
       toast({
-        title: "Error deleting wireframe",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to delete wireframe",
         variant: "destructive"
       });
       return false;
@@ -1006,7 +1010,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to create vault:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your vault. Please try again.';
       toast({
-        title: "Error creating vault",
+        title: "Error",
+        description: "Failed to create vault",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1028,8 +1033,8 @@ const CanvasPage: React.FC = () => {
       setVaults(originalVaults);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your vault. Please try again.';
       toast({
-        title: "Error updating vault",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to update vault",
         variant: "destructive"
       });
       return null;
@@ -1049,7 +1054,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to delete vault:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your vault. Please try again.';
       toast({
-        title: "Error deleting vault",
+        title: "Error",
+        description: "Failed to delete vault",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1094,7 +1100,8 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to share vault:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not share your vault. Please try again.';
       toast({
-        title: "Error sharing vault",
+        title: "Error",
+        description: "Failed to share vault",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1112,10 +1119,9 @@ const CanvasPage: React.FC = () => {
       ));
     } catch (error) {
       console.error('Failed to unshare vault:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not revoke vault sharing. Please try again.';
       toast({
-        title: "Error revoking share",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to revoke share",
         variant: "destructive"
       });
       throw error;
@@ -1172,7 +1178,8 @@ const CanvasPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to create list:', error);
       toast({
-        title: "Error creating list",
+        title: "Error",
+        description: "Failed to create list",
         description: "Could not create your list. Please try again.",
         variant: "destructive"
       });
@@ -1220,7 +1227,8 @@ const CanvasPage: React.FC = () => {
         });
       } else {
         toast({
-          title: "Error updating list",
+          title: "Error",
+          description: "Failed to update list",
           description: "Could not update your list. Please try again.",
           variant: "destructive"
         });
@@ -1245,8 +1253,8 @@ const CanvasPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to delete list:', error);
       toast({
-        title: "Error deleting list",
-        description: "Could not delete your list. Please try again.",
+        title: "Error",
+        description: "Failed to delete list",
         variant: "destructive"
       });
 
@@ -1297,7 +1305,8 @@ const CanvasPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to create list:', error);
       toast({
-        title: "Error creating list",
+        title: "Error",
+        description: "Failed to create list",
         description: "Could not create your list. Please try again.",
         variant: "destructive"
       });
@@ -1506,7 +1515,8 @@ const CanvasPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to create note:', error);
       toast({
-        title: "Error creating note",
+        title: "Error",
+        description: "Failed to create note",
         description: "Could not create your note. Please try again.",
         variant: "destructive"
       });
@@ -1544,7 +1554,8 @@ const CanvasPage: React.FC = () => {
         // console.log('📍 Rolling back to original state');
         setLists(originalLists);
         toast({
-          title: "Error updating position",
+          title: "Error",
+          description: "Failed to update position",
           description: "Could not update list position. Please try again.",
           variant: "destructive"
         });
@@ -1573,7 +1584,8 @@ const CanvasPage: React.FC = () => {
         // Rollback to original state on error
         setWhiteboards(originalWhiteboards);
         toast({
-          title: "Error updating position",
+          title: "Error",
+          description: "Failed to update position",
           description: "Could not update whiteboard position. Please try again.",
           variant: "destructive"
         });

@@ -149,7 +149,7 @@ export function InboxPage() {
             await updateConversation(selectedConversation.id, { status: 'closed' }, organizationId);
             setSelectedConversation(null);
             fetchConversations();
-            toast({ title: 'Conversation closed' });
+            toast({ title: 'Closed', description: 'Conversation closed successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to close conversation', variant: 'destructive' });
         }

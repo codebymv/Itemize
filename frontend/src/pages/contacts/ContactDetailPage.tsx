@@ -18,6 +18,7 @@ import {
   ListChecks,
   Plus,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -201,7 +202,7 @@ export function ContactDetailPage() {
     try {
       await deleteContact(contact.id, organizationId);
       toast({
-        title: 'Success',
+        title: 'Deleted',
         description: 'Contact deleted successfully',
       });
       navigate('/contacts');
@@ -237,7 +238,7 @@ export function ContactDetailPage() {
       setActivities(activitiesData);
 
       toast({
-        title: 'Success',
+        title: 'Note Added',
         description: 'Note added successfully',
       });
     } catch (error) {
@@ -268,7 +269,7 @@ export function ContactDetailPage() {
     setContact(updatedContact);
     setShowEditModal(false);
     toast({
-      title: 'Success',
+      title: 'Updated',
       description: 'Contact updated successfully',
     });
   };
@@ -641,16 +642,20 @@ export function ContactDetailPage() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete Contact
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
               Are you sure you want to delete this contact? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white"
               onClick={handleDelete}
+              style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               Delete
             </AlertDialogAction>

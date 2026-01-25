@@ -63,8 +63,8 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
     } catch (error) {
       console.error('Failed to save wireframe color:', error);
       toast({
-        title: "Error updating color",
-        description: "Could not update wireframe color. Please try again.",
+        title: "Error",
+        description: "Failed to update color",
         variant: "destructive"
       });
       throw error;
@@ -86,7 +86,8 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
     } catch (error) {
       console.error('Failed to update wireframe category:', error);
       toast({
-        title: "Error updating category",
+        title: "Error",
+        description: "Failed to update category",
         description: "Could not update wireframe category. Please try again.",
         variant: "destructive"
       });
@@ -103,8 +104,8 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
       } catch (error) {
         console.error('Failed to add custom category:', error);
         toast({
-          title: "Error adding category",
-          description: "Could not add custom category. Please try again.",
+          title: "Error",
+          description: "Failed to add category",
           variant: "destructive"
         });
       }
@@ -150,7 +151,8 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
     } catch (error) {
       console.error('Failed to save flow data:', error);
       toast({
-        title: "Error saving wireframe",
+        title: "Error",
+        description: "Failed to save wireframe",
         description: "Could not save your diagram. Please try again.",
         variant: "destructive"
       });

@@ -143,7 +143,7 @@ export function FormsPage() {
         try {
             const copy = await duplicateForm(id, organizationId);
             setForms(prev => [copy, ...prev]);
-            toast({ title: 'Form duplicated' });
+            toast({ title: 'Duplicated', description: 'Form duplicated successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });
         }
@@ -154,7 +154,7 @@ export function FormsPage() {
         try {
             await deleteForm(id, organizationId);
             setForms(prev => prev.filter(f => f.id !== id));
-            toast({ title: 'Form deleted' });
+            toast({ title: 'Deleted', description: 'Form deleted successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
         }
@@ -162,7 +162,7 @@ export function FormsPage() {
 
     const copyFormLink = (slug: string) => {
         navigator.clipboard.writeText(`${window.location.origin}/form/${slug}`);
-        toast({ title: 'Link copied' });
+        toast({ title: 'Link Copied', description: 'Form link copied to clipboard' });
     };
 
     const filteredForms = forms.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));

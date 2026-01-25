@@ -76,7 +76,7 @@ export function BulkTagModal({
             });
 
             toast({
-                title: 'Success',
+                title: mode === 'add' ? 'Tags Added' : 'Tags Removed',
                 description: `${mode === 'add' ? 'Added' : 'Removed'} ${tags.length} tag${tags.length > 1 ? 's' : ''} ${mode === 'add' ? 'to' : 'from'} ${selectedContactIds.length} contact${selectedContactIds.length > 1 ? 's' : ''}`,
             });
 
@@ -98,10 +98,10 @@ export function BulkTagModal({
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Tag className="h-5 w-5" />
+                        <Tag className="h-5 w-5 text-blue-500" />
                         Manage Tags
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
                         {mode === 'add' ? 'Add' : 'Remove'} tags for {selectedContactIds.length} selected contact{selectedContactIds.length > 1 ? 's' : ''}
                     </DialogDescription>
                 </DialogHeader>
@@ -109,7 +109,7 @@ export function BulkTagModal({
                 <div className="space-y-4 py-4">
                     {/* Mode selection */}
                     <div className="space-y-2">
-                        <Label>Action</Label>
+                        <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Action</Label>
                         <RadioGroup value={mode} onValueChange={(v) => setMode(v as 'add' | 'remove')} className="flex gap-4">
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="add" id="add" />
@@ -128,7 +128,7 @@ export function BulkTagModal({
 
                     {/* Tag input */}
                     <div className="space-y-2">
-                        <Label>Tags</Label>
+                        <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Tags</Label>
                         <div className="flex gap-2">
                             <Input
                                 placeholder="Enter tag name..."
@@ -166,13 +166,14 @@ export function BulkTagModal({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+                    <Button variant="outline" onClick={onClose} disabled={isSubmitting} style={{ fontFamily: '"Raleway", sans-serif' }}>
                         Cancel
                     </Button>
                     <Button
                         onClick={handleSubmit}
                         disabled={tags.length === 0 || isSubmitting}
-                        className={mode === 'add' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}
+                        className={mode === 'add' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'}
+                        style={{ fontFamily: '"Raleway", sans-serif' }}
                     >
                         {isSubmitting ? 'Updating...' : `${mode === 'add' ? 'Add' : 'Remove'} Tags`}
                     </Button>

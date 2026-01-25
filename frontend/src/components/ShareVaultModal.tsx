@@ -65,7 +65,8 @@ export const ShareVaultModal: React.FC<ShareVaultModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error sharing vault",
+        title: "Error",
+        description: "Failed to share vault",
         description: "Failed to generate share link. Please try again.",
         variant: "destructive",
       });
@@ -86,7 +87,8 @@ export const ShareVaultModal: React.FC<ShareVaultModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error revoking share",
+        title: "Error",
+        description: "Failed to revoke share",
         description: "Failed to revoke sharing. Please try again.",
         variant: "destructive",
       });

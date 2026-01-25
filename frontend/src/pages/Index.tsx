@@ -70,7 +70,8 @@ const Index = () => {
     } catch (error) {
       console.error('Failed to delete list:', error);
       toast({
-        title: "Error deleting list",
+        title: "Error",
+        description: "Failed to delete list",
         description: "Could not delete your list. Please try again.",
         variant: "destructive"
       });

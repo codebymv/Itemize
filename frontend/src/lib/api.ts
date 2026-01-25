@@ -105,18 +105,60 @@ api.interceptors.request.use(
   }
 );
 
+// Track if we're currently refreshing to prevent multiple refresh calls
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: Error | null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
 // Add a response interceptor for error handling and retry logic
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const config = error.config as RetryConfig | undefined;
     
-    // Handle 401 unauthorized
-    if (error.response?.status === 401) {
-      // Clear user data on unauthorized (token is in httpOnly cookie, cleared by backend)
-      localStorage.removeItem('itemize_user');
-      localStorage.removeItem('itemize_expiry');
-      return Promise.reject(error);
+    // Handle 401 unauthorized - attempt token refresh
+    if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh')) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => api(config)).catch(err => Promise.reject(err));
+      }
+
+      isRefreshing = true;
+
+      try {
+        // Attempt to refresh the token
+        await api.post('/api/auth/refresh');
+        processQueue(null);
+        isRefreshing = false;
+        // Retry the original request
+        return api(config);
+      } catch (refreshError) {
+        // Refresh failed - clear auth state and redirect to login
+        processQueue(refreshError as Error);
+        isRefreshing = false;
+        localStorage.removeItem('itemize_user');
+        localStorage.removeItem('itemize_expiry');
+        // Optionally redirect to login
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
     }
 
     // Handle retry logic

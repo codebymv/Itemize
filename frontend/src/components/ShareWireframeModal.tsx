@@ -41,8 +41,8 @@ export const ShareWireframeModal: React.FC<ShareWireframeModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error sharing wireframe",
-        description: "Failed to generate share link. Please try again.",
+        title: "Error",
+        description: "Failed to share wireframe",
         variant: "destructive",
       });
     } finally {
@@ -73,7 +73,8 @@ export const ShareWireframeModal: React.FC<ShareWireframeModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error revoking share",
+        title: "Error",
+        description: "Failed to revoke share",
         description: "Failed to revoke sharing. Please try again.",
         variant: "destructive",
       });
@@ -115,7 +116,7 @@ export const ShareWireframeModal: React.FC<ShareWireframeModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-slate-500" />
+            <Share2 className="h-5 w-5 text-blue-500" />
             Share Wireframe
           </DialogTitle>
           <DialogDescription>

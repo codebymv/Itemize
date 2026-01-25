@@ -63,7 +63,8 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     } catch (error) {
       console.error('Failed to save whiteboard color:', error);
       toast({
-        title: "Error updating color",
+        title: "Error",
+        description: "Failed to update color",
         description: "Could not update whiteboard color. Please try again.",
         variant: "destructive"
       });
@@ -86,8 +87,8 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     } catch (error) {
       console.error('Failed to update whiteboard category:', error);
       toast({
-        title: "Error updating category",
-        description: "Could not update whiteboard category. Please try again.",
+        title: "Error",
+        description: "Failed to update category",
         variant: "destructive"
       });
     }
@@ -103,7 +104,8 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
       } catch (error) {
         console.error('Failed to add custom category:', error);
         toast({
-          title: "Error adding category",
+          title: "Error",
+          description: "Failed to add category",
           description: "Could not add custom category. Please try again.",
           variant: "destructive"
         });
@@ -203,7 +205,8 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     } catch (error) {
       console.error('Failed to save canvas data:', error);
       toast({
-        title: "Error saving whiteboard",
+        title: "Error",
+        description: "Failed to save whiteboard",
         description: "Could not save your drawing. Please try again.",
         variant: "destructive"
       });

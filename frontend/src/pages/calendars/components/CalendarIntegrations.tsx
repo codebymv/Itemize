@@ -27,6 +27,7 @@ import {
     AlertCircle,
     Calendar as CalendarIcon,
     Loader2,
+    AlertTriangle,
 } from 'lucide-react';
 import {
     getCalendarConnections,
@@ -345,16 +346,20 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
                 <AlertDialog open={disconnectingId !== null} onOpenChange={() => setDisconnectingId(null)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Disconnect Calendar?</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                                Disconnect Calendar?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
                                 This will stop syncing your bookings with this calendar. Previously synced events will not be removed from the external calendar.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={() => disconnectingId && disconnectMutation.mutate(disconnectingId)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                                style={{ fontFamily: '"Raleway", sans-serif' }}
                             >
                                 Disconnect
                             </AlertDialogAction>

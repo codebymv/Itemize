@@ -191,10 +191,10 @@ export function AutomationsPage() {
     try {
       if (workflow.is_active) {
         await deactivateWorkflow(workflow.id, organizationId);
-        toast({ title: 'Workflow deactivated' });
+        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
       } else {
         await activateWorkflow(workflow.id, organizationId);
-        toast({ title: 'Workflow activated' });
+        toast({ title: 'Activated', description: 'Workflow activated successfully' });
       }
       fetchWorkflows();
     } catch (error: any) {
@@ -212,7 +212,7 @@ export function AutomationsPage() {
 
     try {
       await deleteWorkflow(workflow.id, organizationId);
-      toast({ title: 'Workflow deleted' });
+      toast({ title: 'Deleted', description: 'Workflow deleted successfully' });
       fetchWorkflows();
     } catch (error) {
       toast({
@@ -229,7 +229,7 @@ export function AutomationsPage() {
 
     try {
       await duplicateWorkflow(workflow.id, organizationId);
-      toast({ title: 'Workflow duplicated' });
+      toast({ title: 'Duplicated', description: 'Workflow duplicated successfully' });
       fetchWorkflows();
     } catch (error) {
       toast({

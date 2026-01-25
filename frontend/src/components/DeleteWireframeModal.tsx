@@ -44,14 +44,16 @@ export const DeleteWireframeModal: React.FC<DeleteWireframeModalProps> = ({
         onClose();
       } else {
         toast({
-          title: "Error deleting wireframe",
+          title: "Error",
+          description: "Failed to delete wireframe",
           description: "Failed to delete the wireframe. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error deleting wireframe",
+        title: "Error",
+          description: "Failed to delete wireframe",
         description: "Failed to delete the wireframe. Please try again.",
         variant: "destructive",
       });
@@ -66,11 +68,11 @@ export const DeleteWireframeModal: React.FC<DeleteWireframeModalProps> = ({
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
       <AlertDialogContent className="sm:max-w-[425px]">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
+          <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
             <AlertTriangle className="h-5 w-5 text-red-500" />
             Delete Wireframe
           </AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
             This will permanently delete the wireframe and all its diagram data. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -78,11 +80,11 @@ export const DeleteWireframeModal: React.FC<DeleteWireframeModalProps> = ({
         <div className="space-y-4">
           {/* Wireframe display */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label className="text-sm font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>
               Wireframe to delete
             </label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md border">
-              <p className="font-medium text-sm flex items-center gap-2">
+              <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
                 <GitBranch className="h-4 w-4" style={{ color: wireframeColor || 'var(--wireframe-color)' }} />
                 {wireframeTitle}
               </p>
@@ -94,6 +96,7 @@ export const DeleteWireframeModal: React.FC<DeleteWireframeModalProps> = ({
           <AlertDialogCancel 
             onClick={onClose}
             disabled={isLoading}
+            style={{ fontFamily: '"Raleway", sans-serif' }}
           >
             Cancel
           </AlertDialogCancel>
@@ -101,6 +104,7 @@ export const DeleteWireframeModal: React.FC<DeleteWireframeModalProps> = ({
             onClick={handleConfirm}
             disabled={isLoading}
             className="bg-red-600 hover:bg-red-700 text-white"
+            style={{ fontFamily: '"Raleway", sans-serif' }}
           >
             {isLoading ? 'Deleting...' : 'Delete Wireframe'}
           </AlertDialogAction>

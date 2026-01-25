@@ -312,6 +312,16 @@ export const sendBulkReviewRequests = async (
     return response.data;
 };
 
+export const deleteReviewRequest = async (
+    requestId: number,
+    organizationId?: number
+): Promise<{ success: boolean }> => {
+    const response = await api.delete(`/api/reputation/requests/${requestId}`, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
 // ======================
 // Widget API Functions
 // ======================
@@ -400,6 +410,12 @@ export const getReputationAnalytics = async (
     return response.data;
 };
 
+// Aliases for backward compatibility
+export const getReviewWidgets = getWidgets;
+export const createReviewWidget = createWidget;
+export const updateReviewWidget = updateWidget;
+export const deleteReviewWidget = deleteWidget;
+
 export default {
     // Platforms
     getPlatforms,
@@ -415,12 +431,18 @@ export default {
     getReviewRequests,
     sendReviewRequest,
     sendBulkReviewRequests,
+    deleteReviewRequest,
     // Widgets
     getWidgets,
     createWidget,
     updateWidget,
     deleteWidget,
     getWidgetEmbedCode,
+    // Aliases
+    getReviewWidgets,
+    createReviewWidget,
+    updateReviewWidget,
+    deleteReviewWidget,
     // Settings
     getReputationSettings,
     updateReputationSettings,

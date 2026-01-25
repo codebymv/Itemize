@@ -115,6 +115,16 @@ export const getGoogleAuthUrl = async (
 };
 
 /**
+ * Initiate Google OAuth flow (alias for getGoogleAuthUrl with organizationId as first param)
+ */
+export const initiateGoogleAuth = async (
+    organizationId?: number,
+    returnUrl?: string
+): Promise<{ authUrl: string }> => {
+    return getGoogleAuthUrl(returnUrl, organizationId);
+};
+
+/**
  * List available Google calendars for a connection
  */
 export const listGoogleCalendars = async (
@@ -162,6 +172,7 @@ export default {
     disconnectCalendar,
     updateCalendarConnection,
     getGoogleAuthUrl,
+    initiateGoogleAuth,
     listGoogleCalendars,
     syncCalendar,
     getSyncStatus,

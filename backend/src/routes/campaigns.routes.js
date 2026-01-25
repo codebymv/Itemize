@@ -17,9 +17,6 @@ module.exports = (pool, authenticateJWT) => {
     // Use shared organization middleware (Phase 5.3)
     const { requireOrganization } = require('../middleware/organization')(pool);
     
-    // Subscription middleware for feature gating
-    const { checkUsageLimit } = require('../middleware/subscription')(pool);
-    
     // Usage tracking service
     const usageService = new UsageTrackingService(pool);
 

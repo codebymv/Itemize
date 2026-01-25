@@ -86,8 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper to save user data after successful auth
   const saveAuthState = (userData: User) => {
-    // Set expiry (7 days) - token is now stored in httpOnly cookie by backend
-    const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+    // Set expiry to match refresh token duration (30 days)
+    // The access token (15min) auto-refreshes via API interceptor
+    const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
     
     // Store user data only (token is in httpOnly cookie, not accessible to JS)
     localStorage.setItem('itemize_user', JSON.stringify(userData));

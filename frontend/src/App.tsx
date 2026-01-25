@@ -53,6 +53,28 @@ const InboxPage = React.lazy(() => import("./pages/inbox/InboxPage"));
 const ContentsPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.ContentsPage })));
 const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.SharedPage })));
 
+// New pages for expanded navigation
+const SegmentsPage = React.lazy(() => import("./pages/segments/SegmentsPage"));
+const CalendarIntegrationsPage = React.lazy(() => import("./pages/calendar-integrations/CalendarIntegrationsPage"));
+const CampaignsPage = React.lazy(() => import("./pages/campaigns/CampaignsPage"));
+const EmailTemplatesPage = React.lazy(() => import("./pages/email-templates/EmailTemplatesPage"));
+const SMSTemplatesPage = React.lazy(() => import("./pages/sms-templates/SMSTemplatesPage"));
+const LandingPagesPage = React.lazy(() => import("./pages/pages/LandingPagesPage"));
+const PageEditorPage = React.lazy(() => import("./pages/pages/PageEditorPage"));
+const ChatWidgetPage = React.lazy(() => import("./pages/chat-widget/ChatWidgetPage"));
+const SocialPage = React.lazy(() => import("./pages/social/SocialPage"));
+const ReputationPage = React.lazy(() => import("./pages/reputation/ReputationPage"));
+const ReputationRequestsPage = React.lazy(() => import("./pages/reputation/ReputationRequestsPage"));
+const ReputationWidgetsPage = React.lazy(() => import("./pages/reputation/ReputationWidgetsPage"));
+const InvoicesPage = React.lazy(() => import("./pages/invoices/InvoicesPage"));
+const InvoiceEditorPage = React.lazy(() => import("./pages/invoices/InvoiceEditorPage"));
+const EstimatesPage = React.lazy(() => import("./pages/invoices/EstimatesPage"));
+const EstimateEditorPage = React.lazy(() => import("./pages/invoices/EstimateEditorPage"));
+const RecurringInvoicesPage = React.lazy(() => import("./pages/invoices/RecurringInvoicesPage"));
+const PaymentsPage = React.lazy(() => import("./pages/invoices/PaymentsPage"));
+const ProductsPage = React.lazy(() => import("./pages/invoices/ProductsPage"));
+const PaymentSettingsPage = React.lazy(() => import("./pages/invoices/PaymentSettingsPage"));
+
 // Loading fallback component for lazy-loaded pages
 const PageLoading = () => (
   <div className="flex items-center justify-center min-h-[50vh]">
@@ -169,6 +191,42 @@ const AppContent = () => {
         <Route path="/workspace/shared" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
         <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
+
+        {/* Segments */}
+        <Route path="/segments" element={<AuthenticatedLayout><SegmentsPage /></AuthenticatedLayout>} />
+
+        {/* Calendar Integrations */}
+        <Route path="/calendar-integrations" element={<AuthenticatedLayout><CalendarIntegrationsPage /></AuthenticatedLayout>} />
+
+        {/* Campaigns & Templates */}
+        <Route path="/campaigns" element={<AuthenticatedLayout><CampaignsPage /></AuthenticatedLayout>} />
+        <Route path="/email-templates" element={<AuthenticatedLayout><EmailTemplatesPage /></AuthenticatedLayout>} />
+        <Route path="/sms-templates" element={<AuthenticatedLayout><SMSTemplatesPage /></AuthenticatedLayout>} />
+
+        {/* Landing Pages */}
+        <Route path="/pages" element={<AuthenticatedLayout><LandingPagesPage /></AuthenticatedLayout>} />
+        <Route path="/pages/:id" element={<AuthenticatedLayout><PageEditorPage /></AuthenticatedLayout>} />
+
+        {/* Communications */}
+        <Route path="/chat-widget" element={<AuthenticatedLayout><ChatWidgetPage /></AuthenticatedLayout>} />
+        <Route path="/social" element={<AuthenticatedLayout><SocialPage /></AuthenticatedLayout>} />
+
+        {/* Reputation Management */}
+        <Route path="/reputation" element={<AuthenticatedLayout><ReputationPage /></AuthenticatedLayout>} />
+        <Route path="/reputation/requests" element={<AuthenticatedLayout><ReputationRequestsPage /></AuthenticatedLayout>} />
+        <Route path="/reputation/widgets" element={<AuthenticatedLayout><ReputationWidgetsPage /></AuthenticatedLayout>} />
+
+        {/* Sales & Payments */}
+        <Route path="/invoices" element={<AuthenticatedLayout><InvoicesPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/new" element={<AuthenticatedLayout><InvoiceEditorPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/:id" element={<AuthenticatedLayout><InvoiceEditorPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/estimates" element={<AuthenticatedLayout><EstimatesPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/estimates/new" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/estimates/:id" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/recurring" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/payments" element={<AuthenticatedLayout><PaymentsPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
+        <Route path="/invoices/settings" element={<AuthenticatedLayout><PaymentSettingsPage /></AuthenticatedLayout>} />
 
         {/* Legacy routes - redirect to new paths */}
         <Route path="/canvas" element={<Navigate to="/workspace" replace />} />

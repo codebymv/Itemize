@@ -98,7 +98,8 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     } catch (error) {
       console.error('Failed to save note color:', error);
       toast({
-        title: "Error updating color",
+        title: "Error",
+        description: "Failed to update color",
         description: "Could not update note color. Please try again.",
         variant: "destructive"
       });
@@ -129,7 +130,8 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       } catch (fallbackError) {
         console.error('Failed to update note category:', fallbackError);
         toast({
-          title: "Error updating category",
+          title: "Error",
+          description: "Failed to update category",
           description: "Could not update note category. Please try again.",
           variant: "destructive"
         });
@@ -156,7 +158,8 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
         } catch (fallbackError) {
           console.error('Failed to add custom category:', fallbackError);
           toast({
-            title: "Error adding category",
+            title: "Error",
+            description: "Failed to add category",
             description: "Could not add custom category. Please try again.",
             variant: "destructive"
           });

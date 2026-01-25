@@ -11,6 +11,11 @@ const bcrypt = require('bcrypt');
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const UsageTrackingService = require('../services/usageTrackingService');
+const { 
+    LANDING_PAGE_LIMITS, 
+    ERROR_CODES,
+    PLAN_METADATA 
+} = require('../lib/subscription.constants');
 
 // Password hashing configuration (Phase 1.2)
 const SALT_ROUNDS = 10;
@@ -20,11 +25,32 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     // Use shared organization middleware (Phase 5.3)
     const { requireOrganization } = require('../middleware/organization')(pool);
     
-    // Subscription middleware for feature gating
-    const { checkUsageLimit } = require('../middleware/subscription')(pool);
-    
     // Usage tracking service
     const usageService = new UsageTrackingService(pool);
+
+    /**
+     * Helper: Check landing page limit for organization
+     */
+    async function checkLandingPageLimit(organizationId) {
+        const orgResult = await pool.query(
+            'SELECT plan, landing_pages_limit FROM organizations WHERE id = $1',
+            [organizationId]
+        );
+        const org = orgResult.rows[0];
+        const plan = org?.plan || 'starter';
+        const limit = org?.landing_pages_limit ?? LANDING_PAGE_LIMITS[plan] ?? 10;
+        
+        const countResult = await pool.query(
+            'SELECT COUNT(*) FROM pages WHERE organization_id = $1',
+            [organizationId]
+        );
+        const current = parseInt(countResult.rows[0].count);
+        
+        // -1 or Infinity means unlimited
+        const allowed = limit === -1 || limit === Infinity || current < limit;
+        
+        return { allowed, limit, current, plan };
+    }
 
     /**
      * Generate unique slug from name
@@ -194,8 +220,24 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      * POST /api/pages - Create page
      * Usage limited: landing_pages count
      */
-    router.post('/', authenticateJWT, requireOrganization, checkUsageLimit('landing_pages'), async (req, res) => {
+    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
+            // Check landing page limit
+            const limitCheck = await checkLandingPageLimit(req.organizationId);
+            if (!limitCheck.allowed) {
+                return res.status(403).json({
+                    success: false,
+                    error: {
+                        message: `You've reached your landing page limit (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.`,
+                        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+                        resourceType: 'landing_pages',
+                        current: limitCheck.current,
+                        limit: limitCheck.limit,
+                        plan: limitCheck.plan
+                    }
+                });
+            }
+
             const {
                 name,
                 description,

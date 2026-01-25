@@ -15,6 +15,7 @@ import {
   Copy,
   Link2Off,
   Eye,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -539,17 +540,21 @@ export function SharedPage() {
       <AlertDialog open={unshareDialogOpen} onOpenChange={setUnshareDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disable Sharing?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Disable Sharing?
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
               This will disable the public share link for "{contentToUnshare?.title}". 
               Anyone with the current link will no longer be able to access it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleUnshare}
               className="bg-red-600 hover:bg-red-700 text-white"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               Disable Sharing
             </AlertDialogAction>

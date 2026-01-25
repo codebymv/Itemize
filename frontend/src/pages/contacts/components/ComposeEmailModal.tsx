@@ -135,10 +135,10 @@ export function ComposeEmailModal({
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Send className="h-5 w-5" />
+                        <Send className="h-5 w-5 text-blue-500" />
                         Send Email to {contactName}
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
                         Send to: {contact.email}
                     </DialogDescription>
                 </DialogHeader>
@@ -158,7 +158,7 @@ export function ComposeEmailModal({
                     {/* Custom email content */}
                     <TabsContent value="custom" className="space-y-4 mt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="subject">Subject</Label>
+                            <Label htmlFor="subject" style={{ fontFamily: '"Raleway", sans-serif' }}>Subject</Label>
                             <Input
                                 id="subject"
                                 placeholder="Email subject..."
@@ -219,7 +219,7 @@ export function ComposeEmailModal({
                         ) : (
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label>Select Template</Label>
+                                    <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Select Template</Label>
                                     <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Choose a template..." />
@@ -258,7 +258,7 @@ export function ComposeEmailModal({
                 </Tabs>
 
                 <DialogFooter className="mt-4">
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
                         Cancel
                     </Button>
                     <Button
@@ -268,7 +268,8 @@ export function ComposeEmailModal({
                             (mode === 'template' && !selectedTemplateId) ||
                             (mode === 'custom' && (!subject.trim() || !body.trim()))
                         }
-                        className="gap-2"
+                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        style={{ fontFamily: '"Raleway", sans-serif' }}
                     >
                         {isSending ? (
                             <>

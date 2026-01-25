@@ -475,7 +475,7 @@ export function WorkflowBuilderPage() {
           trigger_config: triggerConfig,
           steps,
         });
-        toast({ title: 'Workflow created' });
+        toast({ title: 'Created', description: 'Workflow created successfully' });
         navigate(`/automations/${newWorkflow.id}`);
       } else if (id) {
         await updateWorkflow(parseInt(id), {
@@ -486,7 +486,7 @@ export function WorkflowBuilderPage() {
           trigger_config: triggerConfig,
           steps,
         });
-        toast({ title: 'Workflow saved' });
+        toast({ title: 'Saved', description: 'Workflow saved successfully' });
       }
     } catch (error: any) {
       toast({
@@ -506,11 +506,11 @@ export function WorkflowBuilderPage() {
       if (isActive) {
         await deactivateWorkflow(parseInt(id), organizationId);
         setIsActive(false);
-        toast({ title: 'Workflow deactivated' });
+        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
       } else {
         await activateWorkflow(parseInt(id), organizationId);
         setIsActive(true);
-        toast({ title: 'Workflow activated' });
+        toast({ title: 'Activated', description: 'Workflow activated successfully' });
       }
     } catch (error: any) {
       toast({

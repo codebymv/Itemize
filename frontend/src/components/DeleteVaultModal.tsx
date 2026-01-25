@@ -44,14 +44,16 @@ export const DeleteVaultModal: React.FC<DeleteVaultModalProps> = ({
         onClose();
       } else {
         toast({
-          title: "Error deleting vault",
+          title: "Error",
+          description: "Failed to delete vault",
           description: "Failed to delete the vault. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error deleting vault",
+        title: "Error",
+          description: "Failed to delete vault",
         description: "Failed to delete the vault. Please try again.",
         variant: "destructive",
       });

@@ -33,6 +33,9 @@ const { runAllSegmentMigrations } = require('./db_segments_migrations');
 // Import Invoicing migrations
 const { runAllInvoicingMigrations } = require('./db_invoicing_migrations');
 
+// Import Estimates and Recurring migrations
+const { runEstimatesRecurringMigrations } = require('./db_estimates_recurring_migrations');
+
 // Import Reputation migrations
 const { runAllReputationMigrations } = require('./db_reputation_migrations');
 
@@ -388,6 +391,13 @@ const initializeDatabase = async (pool) => {
       await runAllInvoicingMigrations(pool);
     } catch (invoicingError) {
       console.error('⚠️ Invoicing migrations failed, continuing without invoicing features:', invoicingError.message);
+    }
+
+    // Run Estimates and Recurring migrations
+    try {
+      await runEstimatesRecurringMigrations(pool);
+    } catch (estimatesError) {
+      console.error('⚠️ Estimates/Recurring migrations failed, continuing without these features:', estimatesError.message);
     }
 
     // Run Reputation migrations

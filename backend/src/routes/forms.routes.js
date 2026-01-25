@@ -11,6 +11,11 @@ const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
 const UsageTrackingService = require('../services/usageTrackingService');
+const { 
+    FORM_LIMITS, 
+    ERROR_CODES,
+    PLAN_METADATA 
+} = require('../lib/subscription.constants');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -27,11 +32,32 @@ try {
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
     
-    // Subscription middleware for feature gating
-    const { checkUsageLimit } = require('../middleware/subscription')(pool);
-    
     // Usage tracking service
     const usageService = new UsageTrackingService(pool);
+
+    /**
+     * Helper: Check form limit for organization
+     */
+    async function checkFormLimit(organizationId) {
+        const orgResult = await pool.query(
+            'SELECT plan, forms_limit FROM organizations WHERE id = $1',
+            [organizationId]
+        );
+        const org = orgResult.rows[0];
+        const plan = org?.plan || 'starter';
+        const limit = org?.forms_limit ?? FORM_LIMITS[plan] ?? 10;
+        
+        const countResult = await pool.query(
+            'SELECT COUNT(*) FROM forms WHERE organization_id = $1',
+            [organizationId]
+        );
+        const current = parseInt(countResult.rows[0].count);
+        
+        // -1 or Infinity means unlimited
+        const allowed = limit === -1 || limit === Infinity || current < limit;
+        
+        return { allowed, limit, current, plan };
+    }
 
     const generateSlug = (name) => {
         return name
@@ -118,8 +144,24 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      * POST /api/forms - Create form
      * Usage limited: forms count
      */
-    router.post('/', authenticateJWT, requireOrganization, checkUsageLimit('forms'), async (req, res) => {
+    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
+            // Check form limit
+            const limitCheck = await checkFormLimit(req.organizationId);
+            if (!limitCheck.allowed) {
+                return res.status(403).json({
+                    success: false,
+                    error: {
+                        message: `You've reached your form limit (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.`,
+                        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+                        resourceType: 'forms',
+                        current: limitCheck.current,
+                        limit: limitCheck.limit,
+                        plan: limitCheck.plan
+                    }
+                });
+            }
+
             const {
                 name,
                 description,

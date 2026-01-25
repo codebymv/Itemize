@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { List, Plus, ChevronsUpDown, Check } from 'lucide-react';
+import { CheckSquare, Plus, ChevronsUpDown, Check } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils"; // For conditional class names
@@ -61,7 +61,10 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create New List</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-blue-500" />
+            Create New List
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -78,7 +81,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
           </div>
 
           <div>
-            <Label htmlFor="customType">Category (Optional)</Label>
+            <Label htmlFor="customType" style={{ fontFamily: '"Raleway", sans-serif' }}>Category (Optional)</Label>
             <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -216,13 +219,14 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={!title.trim()}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               Create List
             </Button>

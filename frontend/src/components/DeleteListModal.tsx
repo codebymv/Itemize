@@ -44,14 +44,16 @@ export const DeleteListModal: React.FC<DeleteListModalProps> = ({
         onClose();
       } else {
         toast({
-          title: "Error deleting list",
+          title: "Error",
+          description: "Failed to delete list",
           description: "Failed to delete the list. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error deleting list",
+        title: "Error",
+          description: "Failed to delete list",
         description: "Failed to delete the list. Please try again.",
         variant: "destructive",
       });

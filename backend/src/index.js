@@ -67,9 +67,9 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            imgSrc: ["'self'", "data:", "https:", "blob:"],
+            imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            connectSrc: ["'self'", "https://accounts.google.com", "https://oauth2.googleapis.com"],
+            connectSrc: ["'self'", "https://accounts.google.com", "https://oauth2.googleapis.com", "http://localhost:3001"],
             frameSrc: ["'self'", "https://accounts.google.com"],
         }
     },
@@ -119,6 +119,14 @@ app.use(cors({
     ),
     credentials: true
 }));
+
+// Serve uploaded files (logos, etc.) - registered early so it's available immediately
+// Add CORS headers for cross-origin image loading (needed for localhost dev with separate ports)
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // ===========================
 // Rate Limiting (Phase 7)
@@ -371,6 +379,16 @@ setTimeout(async () => {
         const segmentsRoutes = require('./routes/segments.routes');
         app.use('/api/segments', segmentsRoutes(pool, authenticateJWT));
         logger.info('Segments routes initialized');
+
+        // Estimates routes (Quotes) - MUST be registered before invoices to avoid /:id catching "estimates"
+        const estimatesRoutes = require('./routes/estimates.routes');
+        app.use('/api/invoices/estimates', estimatesRoutes(pool, authenticateJWT));
+        logger.info('Estimates routes initialized');
+
+        // Recurring Invoices routes - MUST be registered before invoices to avoid /:id catching "recurring"
+        const recurringRoutes = require('./routes/recurring.routes');
+        app.use('/api/invoices/recurring', recurringRoutes(pool, authenticateJWT));
+        logger.info('Recurring Invoices routes initialized');
 
         // Invoicing routes
         const invoicesRoutes = require('./routes/invoices.routes');

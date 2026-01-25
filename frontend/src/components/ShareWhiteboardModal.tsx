@@ -41,8 +41,8 @@ export const ShareWhiteboardModal: React.FC<ShareWhiteboardModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error sharing whiteboard",
-        description: "Failed to generate share link. Please try again.",
+        title: "Error",
+        description: "Failed to share whiteboard",
         variant: "destructive",
       });
     } finally {
@@ -74,7 +74,8 @@ export const ShareWhiteboardModal: React.FC<ShareWhiteboardModalProps> = ({
       });
     } catch (error) {
       toast({
-        title: "Error revoking share",
+        title: "Error",
+        description: "Failed to revoke share",
         description: "Failed to revoke sharing. Please try again.",
         variant: "destructive",
       });
@@ -116,7 +117,7 @@ export const ShareWhiteboardModal: React.FC<ShareWhiteboardModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-            <Share2 className="h-5 w-5 text-slate-500" />
+            <Share2 className="h-5 w-5 text-blue-500" />
             Share Whiteboard
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

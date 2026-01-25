@@ -95,13 +95,40 @@ export const sendEmailToContact = async (
  */
 export const sendTestEmail = async (
     templateId: number,
-    toEmail: string,
-    sampleData?: Record<string, string>,
-    organizationId?: number
+    organizationId?: number,
+    toEmail?: string,
+    sampleData?: Record<string, string>
 ): Promise<SendEmailResult> => {
     const response = await api.post(
         `/api/email-templates/${templateId}/send-test`,
         { to_email: toEmail, sample_data: sampleData },
+        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
+    );
+    return response.data;
+};
+
+/**
+ * Delete an email template
+ */
+export const deleteEmailTemplate = async (
+    templateId: number,
+    organizationId?: number
+): Promise<void> => {
+    await api.delete(`/api/email-templates/${templateId}`, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+};
+
+/**
+ * Duplicate an email template
+ */
+export const duplicateEmailTemplate = async (
+    templateId: number,
+    organizationId?: number
+): Promise<EmailTemplate> => {
+    const response = await api.post(
+        `/api/email-templates/${templateId}/duplicate`,
+        {},
         { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
     );
     return response.data;
@@ -112,4 +139,6 @@ export default {
     getEmailTemplate,
     sendEmailToContact,
     sendTestEmail,
+    deleteEmailTemplate,
+    duplicateEmailTemplate,
 };

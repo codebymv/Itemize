@@ -49,6 +49,7 @@ export interface Invoice {
     organization_id: number;
     invoice_number: string;
     contact_id?: number;
+    business_id?: number;
     customer_name?: string;
     customer_email?: string;
     customer_phone?: string;
@@ -90,6 +91,7 @@ export interface Invoice {
     contact_email?: string;
     items?: InvoiceItem[];
     payments?: Payment[];
+    business?: Business;
 }
 
 export interface Payment {
@@ -139,6 +141,21 @@ export interface PaymentSettings {
     default_currency: string;
     created_at?: string;
     updated_at?: string;
+}
+
+export interface Business {
+    id: number;
+    organization_id: number;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    tax_id?: string;
+    logo_url?: string;
+    is_active: boolean;
+    last_used_at?: string;
+    created_at: string;
+    updated_at: string;
 }
 
 // ======================
@@ -221,17 +238,20 @@ export const getInvoice = async (
 export const createInvoice = async (
     invoice: {
         contact_id?: number;
+        business_id?: number;
         customer_name?: string;
         customer_email?: string;
         customer_phone?: string;
         customer_address?: string;
+        issue_date?: string;
         due_date?: string;
         items: InvoiceItem[];
         discount_type?: 'fixed' | 'percent';
         discount_value?: number;
+        tax_rate?: number;
         notes?: string;
         terms_and_conditions?: string;
-        payment_terms?: string;
+        payment_terms?: number;
     },
     organizationId?: number
 ): Promise<Invoice> => {
@@ -318,6 +338,106 @@ export const updatePaymentSettings = async (
     return response.data;
 };
 
+export const uploadLogo = async (
+    file: File,
+    organizationId?: number
+): Promise<{ success: boolean; logo_url: string }> => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const response = await api.post('/api/invoices/settings/logo', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+            ...(organizationId ? { 'x-organization-id': organizationId.toString() } : {})
+        }
+    });
+    return response.data;
+};
+
+export const deleteLogo = async (organizationId?: number): Promise<{ success: boolean }> => {
+    const response = await api.delete('/api/invoices/settings/logo', {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+// ======================
+// Business API Functions
+// ======================
+
+export const getBusinesses = async (organizationId?: number): Promise<Business[]> => {
+    const response = await api.get('/api/invoices/businesses', {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+export const getBusiness = async (
+    businessId: number,
+    organizationId?: number
+): Promise<Business> => {
+    const response = await api.get(`/api/invoices/businesses/${businessId}`, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+export const createBusiness = async (
+    business: Partial<Business>,
+    organizationId?: number
+): Promise<Business> => {
+    const response = await api.post('/api/invoices/businesses', business, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+export const updateBusiness = async (
+    businessId: number,
+    business: Partial<Business>,
+    organizationId?: number
+): Promise<Business> => {
+    const response = await api.put(`/api/invoices/businesses/${businessId}`, business, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+export const deleteBusiness = async (
+    businessId: number,
+    organizationId?: number
+): Promise<{ success: boolean }> => {
+    const response = await api.delete(`/api/invoices/businesses/${businessId}`, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+export const uploadBusinessLogo = async (
+    businessId: number,
+    file: File,
+    organizationId?: number
+): Promise<{ logo_url: string }> => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const response = await api.post(`/api/invoices/businesses/${businessId}/logo`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+            ...(organizationId ? { 'x-organization-id': organizationId.toString() } : {})
+        }
+    });
+    return response.data;
+};
+
+export const deleteBusinessLogo = async (
+    businessId: number,
+    organizationId?: number
+): Promise<{ success: boolean }> => {
+    const response = await api.delete(`/api/invoices/businesses/${businessId}/logo`, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
 export default {
     // Products
     getProducts,
@@ -335,5 +455,15 @@ export default {
     createPaymentLink,
     // Settings
     getPaymentSettings,
-    updatePaymentSettings
+    updatePaymentSettings,
+    uploadLogo,
+    deleteLogo,
+    // Businesses
+    getBusinesses,
+    getBusiness,
+    createBusiness,
+    updateBusiness,
+    deleteBusiness,
+    uploadBusinessLogo,
+    deleteBusinessLogo
 };

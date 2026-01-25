@@ -82,7 +82,7 @@ export function KanbanBoard({
   const handleMarkWon = async (dealId: number) => {
     try {
       await markDealWon(dealId, organizationId);
-      toast({ title: 'Success', description: 'Deal marked as won!' });
+      toast({ title: 'Deal Won', description: 'Deal has been marked as won' });
       onRefresh();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to update deal', variant: 'destructive' });
@@ -92,7 +92,7 @@ export function KanbanBoard({
   const handleMarkLost = async (dealId: number) => {
     try {
       await markDealLost(dealId, undefined, organizationId);
-      toast({ title: 'Success', description: 'Deal marked as lost' });
+      toast({ title: 'Deal Lost', description: 'Deal has been marked as lost' });
       onRefresh();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to update deal', variant: 'destructive' });
@@ -104,7 +104,7 @@ export function KanbanBoard({
     
     try {
       await deleteDeal(dealId, organizationId);
-      toast({ title: 'Success', description: 'Deal deleted' });
+      toast({ title: 'Deleted', description: 'Deal deleted successfully' });
       onRefresh();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete deal', variant: 'destructive' });

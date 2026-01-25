@@ -213,7 +213,7 @@ export function PipelinesPage() {
     // Refresh pipeline
     fetchPipeline();
     toast({
-      title: 'Success',
+      title: 'Created',
       description: 'Deal created successfully',
     });
   };
@@ -224,7 +224,7 @@ export function PipelinesPage() {
     fetchPipelines();
     setSelectedPipelineId(pipeline.id);
     toast({
-      title: 'Success',
+      title: 'Created',
       description: 'Pipeline created successfully',
     });
   };

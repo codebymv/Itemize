@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, CheckSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -65,7 +65,8 @@ const UserHome = () => {
     } catch (error) {
       console.error('Failed to fetch lists:', error);
       toast({
-        title: "Error fetching lists",
+        title: "Error",
+        description: "Failed to fetch lists",
         description: "Could not retrieve your lists. Please try again later.",
         variant: "destructive"
       });
@@ -105,7 +106,8 @@ const UserHome = () => {
     } catch (error) {
       console.error('Failed to create list:', error);
       toast({
-        title: "Error creating list",
+        title: "Error",
+        description: "Failed to create list",
         description: "Could not create your list. Please try again.",
         variant: "destructive"
       });
@@ -129,8 +131,8 @@ const UserHome = () => {
     } catch (error) {
       console.error('Failed to delete list:', error);
       toast({
-        title: "Error deleting list",
-        description: "Could not delete your list. Please try again.",
+        title: "Error",
+        description: "Failed to delete list",
         variant: "destructive"
       });
       return false;
@@ -164,7 +166,8 @@ const UserHome = () => {
     } catch (error) {
       console.error('Failed to update list:', error);
       toast({
-        title: "Error updating list",
+        title: "Error",
+        description: "Failed to update list",
         description: "Could not update your list. Please try again.",
         variant: "destructive"
       });
@@ -320,19 +323,19 @@ const UserHome = () => {
           <div className="text-center py-12">
             {lists.length === 0 ? (
               <div className="max-w-md mx-auto">
-                <div className="bg-card rounded-lg shadow-sm border border-border p-8">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Plus className="h-8 w-8 text-blue-600" />
+                <div className="bg-card rounded-lg shadow-sm border border-border p-12">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <CheckSquare className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Create your first list
+                  <h3 className="text-lg font-medium mb-2">
+                    No lists yet
                   </h3>
-                  <p className="text-muted-foreground mb-6">
+                  <p className="text-muted-foreground mb-4">
                     Get organized with custom lists for any purpose - shopping, notes, tasks, and more.
                   </p>
                   <Button 
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Create List
@@ -340,9 +343,16 @@ const UserHome = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-muted-foreground">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No lists match your search criteria.</p>
+              <div className="max-w-md mx-auto">
+                <div className="bg-card rounded-lg shadow-sm border border-border p-12">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Search className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No results found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    No lists match your search criteria
+                  </p>
+                </div>
               </div>
             )}
           </div>
