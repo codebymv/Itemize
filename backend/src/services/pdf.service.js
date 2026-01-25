@@ -6,6 +6,8 @@
  */
 
 const { logger } = require('../utils/logger');
+const https = require('https');
+const http = require('http');
 
 // Try to load puppeteer
 let puppeteer = null;
@@ -71,11 +73,100 @@ function formatDate(dateInput) {
 }
 
 /**
+ * Convert image URL to base64 data URL for reliable PDF embedding
+ * This ensures Puppeteer can always load the image
+ */
+async function convertImageToDataUrl(imageUrl) {
+    if (!imageUrl) return null;
+    
+    // If already a data URL, return as-is
+    if (imageUrl.startsWith('data:')) {
+        return imageUrl;
+    }
+    
+    try {
+        // Normalize URL
+        let url = imageUrl;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            if (url.startsWith('/uploads/')) {
+                const baseUrl = process.env.API_URL || process.env.FRONTEND_URL || 'http://localhost:3001';
+                url = `${baseUrl}${url}`;
+            } else if (url.includes('.s3.') && !url.startsWith('http')) {
+                url = `https://${url}`;
+            } else {
+                return url; // Return as-is if we can't normalize
+            }
+        }
+        
+        logger.info(`Fetching image for PDF: ${url}`);
+        
+        // Fetch image and convert to base64
+        const imageBuffer = await new Promise((resolve, reject) => {
+            const protocol = url.startsWith('https') ? https : http;
+            protocol.get(url, (response) => {
+                if (response.statusCode !== 200) {
+                    reject(new Error(`Failed to fetch image: ${response.statusCode}`));
+                    return;
+                }
+                
+                const chunks = [];
+                response.on('data', (chunk) => chunks.push(chunk));
+                response.on('end', () => resolve(Buffer.concat(chunks)));
+                response.on('error', reject);
+            }).on('error', reject);
+        });
+        
+        // Determine content type from URL or response
+        let contentType = 'image/png'; // default
+        if (url.includes('.jpg') || url.includes('.jpeg')) contentType = 'image/jpeg';
+        else if (url.includes('.gif')) contentType = 'image/gif';
+        else if (url.includes('.webp')) contentType = 'image/webp';
+        
+        const base64 = imageBuffer.toString('base64');
+        const dataUrl = `data:${contentType};base64,${base64}`;
+        
+        logger.info(`Image converted to data URL, size: ${base64.length} chars`);
+        return dataUrl;
+    } catch (error) {
+        logger.warn(`Failed to convert image to data URL: ${error.message}, using original URL`);
+        return imageUrl; // Fallback to original URL
+    }
+}
+
+/**
+ * Normalize logo URL to absolute URL for Puppeteer
+ * Converts relative paths to absolute URLs
+ */
+function normalizeLogoUrl(logoUrl) {
+    if (!logoUrl) return null;
+    
+    // If already absolute URL (http/https), return as-is
+    if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+        return logoUrl;
+    }
+    
+    // If relative path starting with /uploads/, convert to absolute URL
+    if (logoUrl.startsWith('/uploads/')) {
+        // Use API_URL or FRONTEND_URL from environment, fallback to localhost
+        const baseUrl = process.env.API_URL || process.env.FRONTEND_URL || 'http://localhost:3001';
+        return `${baseUrl}${logoUrl}`;
+    }
+    
+    // If it's an S3 URL without protocol (shouldn't happen, but handle it)
+    if (logoUrl.includes('.s3.') && !logoUrl.startsWith('http')) {
+        return `https://${logoUrl}`;
+    }
+    
+    // Return as-is for other cases
+    return logoUrl;
+}
+
+/**
  * Generate invoice HTML template
  * This is the EXACT same layout as the frontend InvoicePreview component
  * Any changes here should be mirrored in the frontend preview
  */
-function generateInvoiceHTML(invoice, settings = {}) {
+async function generateInvoiceHTML(invoice, settings = {}) {
     const business = invoice.business || {
         name: settings.business_name,
         address: settings.business_address,
@@ -84,6 +175,13 @@ function generateInvoiceHTML(invoice, settings = {}) {
         logo_url: settings.logo_url,
         tax_id: settings.tax_id
     };
+    
+    // Convert logo URL to base64 data URL for reliable PDF embedding
+    // Check both business.logo_url and settings.logo_url
+    const rawLogoUrl = business.logo_url || settings.logo_url;
+    if (rawLogoUrl) {
+        business.logo_url = await convertImageToDataUrl(rawLogoUrl);
+    }
 
     const currency = invoice.currency || 'USD';
 
@@ -116,7 +214,7 @@ function generateInvoiceHTML(invoice, settings = {}) {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap');
                 
                 * {
                     margin: 0;
@@ -124,7 +222,7 @@ function generateInvoiceHTML(invoice, settings = {}) {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: 14px;
                     line-height: 1.5;
                     color: #111827;
@@ -475,11 +573,41 @@ async function generatePDF(html) {
             timeout: 30000
         });
 
-        // Wait for fonts to load
-        await page.evaluate(() => document.fonts.ready);
+        // Wait for fonts to load (including Raleway from Google Fonts)
+        await page.evaluate(() => {
+            return document.fonts.ready.then(() => {
+                // Additional check to ensure Raleway is loaded
+                const ralewayLoaded = document.fonts.check('1em Raleway');
+                if (!ralewayLoaded) {
+                    console.warn('Raleway font may not be loaded yet');
+                }
+                return Promise.resolve();
+            });
+        });
         
-        // Small delay to ensure fonts are rendered
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for all images to load
+        await page.evaluate(() => {
+            return Promise.all(
+                Array.from(document.images).map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => {
+                            console.warn('Image failed to load:', img.src);
+                            resolve(); // Resolve anyway to continue
+                        };
+                        // Timeout after 5 seconds
+                        setTimeout(() => {
+                            console.warn('Image load timeout:', img.src);
+                            resolve();
+                        }, 5000);
+                    });
+                })
+            );
+        });
+        
+        // Small delay to ensure fonts and images are fully rendered
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         logger.info('Page content set, generating PDF...');
         
@@ -514,7 +642,13 @@ async function generatePDF(html) {
  */
 async function generateInvoicePDF(invoice, settings = {}) {
     logger.info(`Generating PDF for invoice: ${invoice.invoice_number}`);
-    const html = generateInvoiceHTML(invoice, settings);
+    
+    // Log logo URL info for debugging
+    const businessLogoUrl = invoice.business?.logo_url;
+    const settingsLogoUrl = settings.logo_url;
+    logger.info(`Logo URL - Business: ${businessLogoUrl || 'none'}, Settings: ${settingsLogoUrl || 'none'}`);
+    
+    const html = await generateInvoiceHTML(invoice, settings);
     return generatePDF(html);
 }
 

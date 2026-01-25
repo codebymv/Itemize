@@ -110,6 +110,7 @@ export function PaymentSettingsPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [businessToDelete, setBusinessToDelete] = useState<Business | null>(null);
     const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
     const businessFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -194,6 +195,11 @@ export function PaymentSettingsPage() {
 
     // Business CRUD handlers
     const openBusinessDialog = (business?: Business) => {
+        // Clean up any pending blob URL
+        if (businessFormData.logo_url?.startsWith('blob:')) {
+            URL.revokeObjectURL(businessFormData.logo_url);
+        }
+        
         if (business) {
             setEditingBusiness(business);
             setBusinessFormData({
@@ -214,6 +220,7 @@ export function PaymentSettingsPage() {
                 tax_id: '',
                 logo_url: '',
             });
+            setPendingLogoFile(null);
         }
         setBusinessDialogOpen(true);
     };
@@ -232,9 +239,39 @@ export function PaymentSettingsPage() {
                 setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
                 toast({ title: 'Updated', description: 'Business updated successfully' });
             } else {
+                // Create business first
                 const created = await createBusiness(businessFormData, organizationId);
                 setBusinesses(prev => [created, ...prev]);
-                toast({ title: 'Created', description: 'Business created successfully' });
+                
+                // Upload logo if one was selected during creation
+                if (pendingLogoFile) {
+                    try {
+                        setUploadingLogo(true);
+                        const result = await uploadBusinessLogo(created.id, pendingLogoFile, organizationId);
+                        const updated = await updateBusiness(created.id, { ...businessFormData, logo_url: result.logo_url }, organizationId);
+                        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+                        // Clean up blob URL
+                        if (businessFormData.logo_url?.startsWith('blob:')) {
+                            URL.revokeObjectURL(businessFormData.logo_url);
+                        }
+                        toast({ title: 'Created', description: 'Business created with logo successfully' });
+                    } catch (logoError: any) {
+                        // Clean up blob URL even on error
+                        if (businessFormData.logo_url?.startsWith('blob:')) {
+                            URL.revokeObjectURL(businessFormData.logo_url);
+                        }
+                        toast({ 
+                            title: 'Created', 
+                            description: 'Business created but logo upload failed. You can add a logo later.', 
+                            variant: 'default' 
+                        });
+                    } finally {
+                        setUploadingLogo(false);
+                        setPendingLogoFile(null);
+                    }
+                } else {
+                    toast({ title: 'Created', description: 'Business created successfully' });
+                }
             }
             setBusinessDialogOpen(false);
         } catch (error) {
@@ -261,7 +298,7 @@ export function PaymentSettingsPage() {
 
     const handleBusinessLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !organizationId || !editingBusiness) return;
+        if (!file || !organizationId) return;
 
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
@@ -274,25 +311,35 @@ export function PaymentSettingsPage() {
             return;
         }
 
-        setUploadingLogo(true);
-        try {
-            const result = await uploadBusinessLogo(editingBusiness.id, file, organizationId);
-            setBusinessFormData(prev => ({ ...prev, logo_url: result.logo_url }));
-            setBusinesses(prev => prev.map(b => 
-                b.id === editingBusiness.id ? { ...b, logo_url: result.logo_url } : b
-            ));
-            toast({ title: 'Logo uploaded', description: 'Business logo has been updated.' });
-        } catch (error: any) {
-            toast({ 
-                title: 'Upload failed', 
-                description: error.response?.data?.error || 'Failed to upload logo.', 
-                variant: 'destructive' 
-            });
-        } finally {
-            setUploadingLogo(false);
-            if (businessFileInputRef.current) {
-                businessFileInputRef.current.value = '';
+        // If editing existing business, upload immediately
+        if (editingBusiness) {
+            setUploadingLogo(true);
+            try {
+                const result = await uploadBusinessLogo(editingBusiness.id, file, organizationId);
+                setBusinessFormData(prev => ({ ...prev, logo_url: result.logo_url }));
+                setBusinesses(prev => prev.map(b => 
+                    b.id === editingBusiness.id ? { ...b, logo_url: result.logo_url } : b
+                ));
+                toast({ title: 'Logo uploaded', description: 'Business logo has been updated.' });
+            } catch (error: any) {
+                toast({ 
+                    title: 'Upload failed', 
+                    description: error.response?.data?.error || 'Failed to upload logo.', 
+                    variant: 'destructive' 
+                });
+            } finally {
+                setUploadingLogo(false);
+                if (businessFileInputRef.current) {
+                    businessFileInputRef.current.value = '';
+                }
             }
+        } else {
+            // If adding new business, store file to upload after creation
+            setPendingLogoFile(file);
+            // Create preview URL for display
+            const previewUrl = URL.createObjectURL(file);
+            setBusinessFormData(prev => ({ ...prev, logo_url: previewUrl }));
+            toast({ title: 'Logo selected', description: 'Logo will be uploaded when you save the business.' });
         }
     };
 
@@ -655,7 +702,16 @@ export function PaymentSettingsPage() {
             </div>
 
             {/* Business Add/Edit Dialog */}
-            <Dialog open={businessDialogOpen} onOpenChange={setBusinessDialogOpen}>
+            <Dialog open={businessDialogOpen} onOpenChange={(open) => {
+                if (!open) {
+                    // Clean up blob URL when closing dialog
+                    if (businessFormData.logo_url?.startsWith('blob:')) {
+                        URL.revokeObjectURL(businessFormData.logo_url);
+                    }
+                    setPendingLogoFile(null);
+                }
+                setBusinessDialogOpen(open);
+            }}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -715,29 +771,31 @@ export function PaymentSettingsPage() {
                             />
                         </div>
                         
-                        {/* Logo Upload (only for editing) */}
-                        {editingBusiness && (
-                            <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Logo</Label>
-                                <div className="mt-1">
-                                    {businessFormData.logo_url ? (
-                                        <div className="flex items-center gap-4 p-3 border rounded-lg">
-                                            <img
-                                                src={getAssetUrl(businessFormData.logo_url)}
-                                                alt="Business Logo"
-                                                className="h-12 w-auto object-contain rounded border bg-white"
-                                            />
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => businessFileInputRef.current?.click()}
-                                                    disabled={uploadingLogo}
-                                                >
-                                                    <Upload className="h-3 w-3 mr-1" />
-                                                    Replace
-                                                </Button>
+                        {/* Logo Upload */}
+                        <div className="space-y-2">
+                            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Logo</Label>
+                            <div className="mt-1">
+                                {businessFormData.logo_url ? (
+                                    <div className="flex items-center gap-4 p-3 border rounded-lg">
+                                        <img
+                                            src={businessFormData.logo_url.startsWith('blob:') || businessFormData.logo_url.startsWith('http') 
+                                                ? businessFormData.logo_url 
+                                                : getAssetUrl(businessFormData.logo_url)}
+                                            alt="Business Logo"
+                                            className="h-12 w-auto object-contain rounded border bg-white"
+                                        />
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => businessFileInputRef.current?.click()}
+                                                disabled={uploadingLogo || savingBusiness}
+                                            >
+                                                <Upload className="h-3 w-3 mr-1" />
+                                                {editingBusiness ? 'Replace' : 'Change'}
+                                            </Button>
+                                            {editingBusiness && (
                                                 <Button
                                                     type="button"
                                                     variant="outline"
@@ -749,32 +807,55 @@ export function PaymentSettingsPage() {
                                                     <Trash2 className="h-3 w-3 mr-1" />
                                                     Remove
                                                 </Button>
-                                            </div>
+                                            )}
+                                            {!editingBusiness && pendingLogoFile && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        // Clean up blob URL
+                                                        if (businessFormData.logo_url?.startsWith('blob:')) {
+                                                            URL.revokeObjectURL(businessFormData.logo_url);
+                                                        }
+                                                        setPendingLogoFile(null);
+                                                        setBusinessFormData(prev => ({ ...prev, logo_url: '' }));
+                                                        if (businessFileInputRef.current) {
+                                                            businessFileInputRef.current.value = '';
+                                                        }
+                                                    }}
+                                                    disabled={uploadingLogo || savingBusiness}
+                                                    className="text-destructive hover:text-destructive"
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-1" />
+                                                    Remove
+                                                </Button>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => businessFileInputRef.current?.click()}
-                                            disabled={uploadingLogo}
-                                        >
-                                            <Upload className="h-4 w-4 mr-2" />
-                                            {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                                        </Button>
-                                    )}
-                                    <input
-                                        ref={businessFileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                                        onChange={handleBusinessLogoUpload}
-                                        className="hidden"
-                                    />
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                        PNG, JPG, GIF or WebP (max 2MB). Save the business first to upload a logo.
-                                    </p>
-                                </div>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => businessFileInputRef.current?.click()}
+                                        disabled={uploadingLogo || savingBusiness}
+                                    >
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                                    </Button>
+                                )}
+                                <input
+                                    ref={businessFileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                    onChange={handleBusinessLogoUpload}
+                                    className="hidden"
+                                />
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    PNG, JPG, GIF or WebP (max 2MB). {editingBusiness ? 'Logo will be updated immediately.' : 'Logo will be uploaded when you save the business.'}
+                                </p>
                             </div>
-                        )}
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setBusinessDialogOpen(false)} style={{ fontFamily: '"Raleway", sans-serif' }}>

@@ -133,15 +133,29 @@ class EmailService extends BaseService {
       emailOptions.attachments = attachments.map(att => {
         let content = att.content;
         
+        // Log attachment info for debugging
+        this.logInfo(`Processing attachment: ${att.filename}, type: ${typeof content}, isBuffer: ${Buffer.isBuffer(content)}, size: ${content ? content.length : 0} bytes`);
+        
         // Convert Uint8Array to Buffer if needed
         if (content instanceof Uint8Array && !(content instanceof Buffer)) {
           content = Buffer.from(content);
         }
         
-        return {
+        // Ensure content is a Buffer
+        if (!Buffer.isBuffer(content)) {
+          this.logWarn(`Attachment ${att.filename} content is not a Buffer, attempting conversion`);
+          content = Buffer.from(content);
+        }
+        
+        // Resend requires base64 encoded content for attachments
+        const attachmentData = {
           filename: att.filename,
-          content: content
+          content: content.toString('base64')
         };
+        
+        this.logInfo(`Attachment prepared: ${att.filename}, base64 length: ${attachmentData.content.length}`);
+        
+        return attachmentData;
       });
       
       this.logInfo(`Attaching ${attachments.length} file(s) to email`);

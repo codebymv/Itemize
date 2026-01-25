@@ -909,6 +909,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     invoice.business.logo_url = settings.logo_url;
                     invoice.business.tax_id = settings.tax_id;
                 }
+                
+                // Fallback to settings logo_url if business doesn't have one
+                if (!invoice.business.logo_url && settings.logo_url) {
+                    invoice.business.logo_url = settings.logo_url;
+                }
+                
+                // Log logo URL for debugging
+                logger.info(`Invoice ${invoice.invoice_number} - Business logo_url: ${invoice.business.logo_url || 'none'}, Settings logo_url: ${settings.logo_url || 'none'}`);
 
                 // Update invoice status to 'sent' only if not already sent (or if resend=false)
                 let updatedInvoice = invoice;
@@ -931,6 +939,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     if (isPDFAvailable()) {
                         pdfBuffer = await generateInvoicePDF(invoice, settings);
                         logger.info(`Generated PDF for invoice ${invoice.invoice_number}, size: ${pdfBuffer ? pdfBuffer.length : 0} bytes`);
+                        logger.info(`PDF buffer type: ${pdfBuffer ? pdfBuffer.constructor.name : 'null'}, isBuffer: ${Buffer.isBuffer(pdfBuffer)}`);
                     } else {
                         logger.warn('PDF generation not available (puppeteer not installed) - sending email without attachment');
                     }
