@@ -39,19 +39,7 @@ interface InvoicePreviewProps {
     currency: string;
     notes: string;
     termsAndConditions: string;
-    status?: string;
 }
-
-// Status badge styles - MUST match backend pdf.service.js exactly
-const STATUS_STYLES: Record<string, React.CSSProperties> = {
-    draft: { background: '#f3f4f6', color: '#374151' },
-    sent: { background: '#dbeafe', color: '#1e40af' },
-    viewed: { background: '#dbeafe', color: '#1e40af' },
-    paid: { background: '#d1fae5', color: '#065f46' },
-    overdue: { background: '#fee2e2', color: '#991b1b' },
-    partial: { background: '#fef3c7', color: '#92400e' },
-    cancelled: { background: '#f3f4f6', color: '#6b7280' },
-};
 
 export function InvoicePreview({
     open,
@@ -72,7 +60,6 @@ export function InvoicePreview({
     currency,
     notes,
     termsAndConditions,
-    status = 'draft',
 }: InvoicePreviewProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -94,7 +81,6 @@ export function InvoicePreview({
     };
 
     const validItems = lineItems.filter(item => item.name.trim());
-    const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.draft;
 
     // These styles MUST match the backend pdf.service.js generateInvoiceHTML exactly
     // Any changes here should be mirrored in the backend
@@ -148,19 +134,8 @@ export function InvoicePreview({
                         <div style={{ textAlign: 'right' }}>
                             <h1 style={{ fontSize: '32px', fontWeight: 300, color: '#2563eb', margin: '0 0 4px 0' }}>INVOICE</h1>
                             {invoiceNumber && (
-                                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>{invoiceNumber}</div>
+                                <div style={{ fontSize: '14px', color: '#6b7280' }}>{invoiceNumber}</div>
                             )}
-                            <span style={{
-                                display: 'inline-block',
-                                padding: '4px 12px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                textTransform: 'uppercase',
-                                ...statusStyle
-                            }}>
-                                {status.toUpperCase()}
-                            </span>
                         </div>
                     </div>
 

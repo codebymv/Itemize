@@ -555,7 +555,7 @@ export function InvoicesPage() {
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <p className="font-medium">{invoice.invoice_number}</p>
-                                                            <Badge className={`text-xs ${getStatusBadge(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
+                                                            <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
                                                                 {isOverdue(invoice) ? 'overdue' : invoice.status}
                                                             </Badge>
                                                         </div>
@@ -650,9 +650,6 @@ export function InvoicesPage() {
                                                             <div className="text-right">
                                                                 <h2 className="text-2xl font-light text-blue-600 mb-1">INVOICE</h2>
                                                                 <p className="text-sm text-muted-foreground">{expandedInvoiceData.invoice_number}</p>
-                                                                <Badge className={`mt-2 pointer-events-none cursor-default ${getStatusBadge(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
-                                                                    {(isOverdue(invoice) ? 'overdue' : invoice.status).toUpperCase()}
-                                                                </Badge>
                                                             </div>
                                                         </div>
 

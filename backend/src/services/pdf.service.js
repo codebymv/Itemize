@@ -86,19 +86,6 @@ function generateInvoiceHTML(invoice, settings = {}) {
     };
 
     const currency = invoice.currency || 'USD';
-    const status = invoice.status || 'draft';
-
-    // Status badge styles - matching frontend exactly
-    const statusStyles = {
-        draft: 'background: #f3f4f6; color: #374151;',
-        sent: 'background: #dbeafe; color: #1e40af;',
-        viewed: 'background: #dbeafe; color: #1e40af;',
-        paid: 'background: #d1fae5; color: #065f46;',
-        partial: 'background: #fef3c7; color: #92400e;',
-        overdue: 'background: #fee2e2; color: #991b1b;',
-        cancelled: 'background: #f3f4f6; color: #6b7280;'
-    };
-    const statusStyle = statusStyles[status] || statusStyles.draft;
 
     // Generate line items HTML
     const items = invoice.items || [];
@@ -177,15 +164,6 @@ function generateInvoiceHTML(invoice, settings = {}) {
                     font-size: 14px;
                     color: #6b7280;
                     margin-bottom: 8px;
-                }
-                .status-badge {
-                    display: inline-block;
-                    padding: 4px 12px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    ${statusStyle}
                 }
                 .addresses {
                     display: flex;
@@ -328,7 +306,6 @@ function generateInvoiceHTML(invoice, settings = {}) {
                     <div class="invoice-title">
                         <h1>INVOICE</h1>
                         ${invoice.invoice_number ? `<div class="invoice-number">${escapeHtml(invoice.invoice_number)}</div>` : ''}
-                        <span class="status-badge">${status.toUpperCase()}</span>
                     </div>
                 </div>
 
@@ -460,9 +437,14 @@ async function generatePDF(html) {
     try {
         logger.info('Launching Puppeteer browser for PDF generation...');
         
+        // Get Chrome path from environment (set by Dockerfile)
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        if (executablePath) {
+            logger.info(`Using Chrome from: ${executablePath}`);
+        }
+        
         // Launch browser with args optimized for Docker/Railway
-        // The official puppeteer Docker image has Chrome pre-installed
-        browser = await puppeteer.launch({
+        const launchOptions = {
             headless: 'new',
             args: [
                 '--no-sandbox',
@@ -473,7 +455,14 @@ async function generatePDF(html) {
                 '--no-zygote',
                 '--disable-gpu'
             ]
-        });
+        };
+        
+        // Use system Chrome if path is provided
+        if (executablePath) {
+            launchOptions.executablePath = executablePath;
+        }
+        
+        browser = await puppeteer.launch(launchOptions);
 
         logger.info('Browser launched, creating page...');
         const page = await browser.newPage();
