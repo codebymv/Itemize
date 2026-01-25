@@ -8,6 +8,8 @@
 const { logger } = require('../utils/logger');
 const https = require('https');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 // Try to load puppeteer
 let puppeteer = null;
@@ -159,6 +161,157 @@ function normalizeLogoUrl(logoUrl) {
     
     // Return as-is for other cases
     return logoUrl;
+}
+
+/**
+ * Load itemize.cloud logo for footer
+ * Returns base64 data URL of the logo
+ * Caches the result to avoid reading file multiple times
+ */
+let cachedLogoDataUrl = null;
+let cachedIconDataUrl = null;
+let cachedTextWhiteDataUrl = null;
+let cachedTextBlackDataUrl = null;
+
+function getItemizeLogo() {
+    // Return cached version if available
+    if (cachedLogoDataUrl !== null) {
+        return cachedLogoDataUrl;
+    }
+    
+    try {
+        // Try to load from frontend public directory (local development)
+        const logoPath = path.join(__dirname, '../../frontend/public/cover.png');
+        if (fs.existsSync(logoPath)) {
+            const logoBuffer = fs.readFileSync(logoPath);
+            const base64 = logoBuffer.toString('base64');
+            cachedLogoDataUrl = `data:image/png;base64,${base64}`;
+            logger.info('Itemize logo loaded from local file');
+            return cachedLogoDataUrl;
+        }
+        
+        // Fallback: try relative to backend
+        const altPath = path.join(__dirname, '../public/cover.png');
+        if (fs.existsSync(altPath)) {
+            const logoBuffer = fs.readFileSync(altPath);
+            const base64 = logoBuffer.toString('base64');
+            cachedLogoDataUrl = `data:image/png;base64,${base64}`;
+            logger.info('Itemize logo loaded from backend public directory');
+            return cachedLogoDataUrl;
+        }
+        
+        // In production (Railway), we might need to fetch from URL
+        // For now, return null and use text fallback
+        logger.warn('Itemize logo not found locally, footer will be text-only');
+        cachedLogoDataUrl = false; // Cache false to avoid repeated checks
+        return null;
+    } catch (error) {
+        logger.warn(`Failed to load itemize logo: ${error.message}`);
+        cachedLogoDataUrl = false;
+        return null;
+    }
+}
+
+function getItemizeIcon() {
+    // Return cached version if available
+    if (cachedIconDataUrl !== null) {
+        return cachedIconDataUrl;
+    }
+    
+    try {
+        // Try to load from frontend public directory (local development)
+        const iconPath = path.join(__dirname, '../../frontend/public/icon.png');
+        if (fs.existsSync(iconPath)) {
+            const iconBuffer = fs.readFileSync(iconPath);
+            const base64 = iconBuffer.toString('base64');
+            cachedIconDataUrl = `data:image/png;base64,${base64}`;
+            return cachedIconDataUrl;
+        }
+        
+        // Fallback: try relative to backend
+        const altPath = path.join(__dirname, '../public/icon.png');
+        if (fs.existsSync(altPath)) {
+            const iconBuffer = fs.readFileSync(altPath);
+            const base64 = iconBuffer.toString('base64');
+            cachedIconDataUrl = `data:image/png;base64,${base64}`;
+            return cachedIconDataUrl;
+        }
+        
+        cachedIconDataUrl = false;
+        return null;
+    } catch (error) {
+        logger.warn(`Failed to load itemize icon: ${error.message}`);
+        cachedIconDataUrl = false;
+        return null;
+    }
+}
+
+function getItemizeTextWhite() {
+    // Return cached version if available
+    if (cachedTextWhiteDataUrl !== null) {
+        return cachedTextWhiteDataUrl;
+    }
+    
+    try {
+        // Try to load from frontend public directory (local development)
+        const textPath = path.join(__dirname, '../../frontend/public/textwhite.png');
+        if (fs.existsSync(textPath)) {
+            const textBuffer = fs.readFileSync(textPath);
+            const base64 = textBuffer.toString('base64');
+            cachedTextWhiteDataUrl = `data:image/png;base64,${base64}`;
+            return cachedTextWhiteDataUrl;
+        }
+        
+        // Fallback: try relative to backend
+        const altPath = path.join(__dirname, '../public/textwhite.png');
+        if (fs.existsSync(altPath)) {
+            const textBuffer = fs.readFileSync(altPath);
+            const base64 = textBuffer.toString('base64');
+            cachedTextWhiteDataUrl = `data:image/png;base64,${base64}`;
+            return cachedTextWhiteDataUrl;
+        }
+        
+        cachedTextWhiteDataUrl = false;
+        return null;
+    } catch (error) {
+        logger.warn(`Failed to load itemize text white: ${error.message}`);
+        cachedTextWhiteDataUrl = false;
+        return null;
+    }
+}
+
+function getItemizeTextBlack() {
+    // Return cached version if available
+    if (cachedTextBlackDataUrl !== null) {
+        return cachedTextBlackDataUrl;
+    }
+    
+    try {
+        // Try to load from frontend public directory (local development)
+        const textPath = path.join(__dirname, '../../frontend/public/textblack.png');
+        if (fs.existsSync(textPath)) {
+            const textBuffer = fs.readFileSync(textPath);
+            const base64 = textBuffer.toString('base64');
+            cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
+            return cachedTextBlackDataUrl;
+        }
+        
+        // Fallback: try relative to backend
+        const altPath = path.join(__dirname, '../public/textblack.png');
+        if (fs.existsSync(altPath)) {
+            const textBuffer = fs.readFileSync(altPath);
+            const base64 = textBuffer.toString('base64');
+            cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
+            return cachedTextBlackDataUrl;
+        }
+        
+        cachedTextBlackDataUrl = false;
+        return null;
+    } catch (error) {
+        logger.warn(`Failed to load itemize text black: ${error.message}`);
+        cachedTextBlackDataUrl = false;
+        return null;
+    }
 }
 
 /**
@@ -377,6 +530,47 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                     font-size: 12px;
                     margin-top: 32px;
                 }
+                .powered-by-footer {
+                    margin-top: 48px;
+                    margin-left: -40px;
+                    margin-right: -40px;
+                    padding: 16px 24px;
+                    background-color: #2563eb;
+                    border-radius: 0;
+                    text-align: center;
+                    color: #ffffff;
+                    font-size: 14px;
+                }
+                .powered-by-footer .powered-by-text {
+                    margin-right: 8px;
+                }
+                .powered-by-footer .powered-by-card {
+                    background-color: #ffffff;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    text-decoration: none;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+                .powered-by-footer .powered-by-card:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                }
+                .powered-by-footer .itemize-icon {
+                    height: 24px;
+                    width: auto;
+                    display: inline-block;
+                    vertical-align: middle;
+                }
+                .powered-by-footer .itemize-text {
+                    height: 20px;
+                    width: auto;
+                    display: inline-block;
+                    vertical-align: middle;
+                }
                 .logo {
                     max-height: 48px;
                     max-width: 180px;
@@ -504,6 +698,28 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                 <div class="footer">
                     ${business.tax_id ? `<div>Tax ID: ${escapeHtml(business.tax_id)}</div>` : ''}
                     <div style="margin-top: 8px;">Thank you for your business!</div>
+                </div>
+
+                <!-- Powered By Footer -->
+                <div class="powered-by-footer">
+                    <span class="powered-by-text">Powered by</span>
+                    <a href="https://itemize.cloud" target="_blank" rel="noopener noreferrer" class="powered-by-card">
+                        ${(() => {
+                            const iconDataUrl = getItemizeIcon();
+                            const textDataUrl = getItemizeTextBlack();
+                            let logoHtml = '';
+                            if (iconDataUrl) {
+                                logoHtml += `<img src="${iconDataUrl}" class="itemize-icon" alt="itemize" />`;
+                            }
+                            if (textDataUrl) {
+                                logoHtml += `<img src="${textDataUrl}" class="itemize-text" alt="itemize.cloud" />`;
+                            }
+                            if (!logoHtml) {
+                                return '<span style="color: #111827; font-weight: 500;">itemize.cloud</span>';
+                            }
+                            return logoHtml;
+                        })()}
+                    </a>
                 </div>
             </div>
         </body>

@@ -624,7 +624,7 @@ export function InvoicesPage() {
                                                         <span className="ml-2 text-muted-foreground">Loading preview...</span>
                                                     </div>
                                                 ) : expandedInvoiceData ? (
-                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 max-w-3xl mx-auto shadow-sm" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 max-w-3xl mx-auto shadow-sm" style={{ fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
                                                         {/* Header */}
                                                         <div className="flex justify-between items-start mb-6">
                                                             <div>
@@ -739,6 +739,37 @@ export function InvoicesPage() {
                                                         {/* Footer */}
                                                         <div className="text-center text-xs text-muted-foreground pt-4">
                                                             <p>Thank you for your business!</p>
+                                                        </div>
+
+                                                        {/* Powered By Footer */}
+                                                        <div className="mt-12 -mx-6 py-4 px-6 bg-blue-600 rounded-none text-center text-sm text-white">
+                                                            <span className="mr-2">Powered by</span>
+                                                            <div className="bg-white py-2 px-3 rounded-md inline-flex items-center gap-1.5 shadow-sm">
+                                                                <img
+                                                                    src="/icon.png"
+                                                                    alt="itemize"
+                                                                    className="h-6 w-auto inline-block align-middle"
+                                                                    onError={(e) => {
+                                                                        e.currentTarget.style.display = 'none';
+                                                                    }}
+                                                                />
+                                                                <img
+                                                                    src="/textblack.png"
+                                                                    alt="itemize.cloud"
+                                                                    className="h-5 w-auto inline-block align-middle"
+                                                                    onError={(e) => {
+                                                                        const target = e.target as HTMLImageElement;
+                                                                        target.style.display = 'none';
+                                                                        // Only add fallback if both images fail
+                                                                        if (!target.parentElement?.querySelector('span.fallback-text')) {
+                                                                            const fallback = document.createElement('span');
+                                                                            fallback.textContent = 'itemize.cloud';
+                                                                            fallback.className = 'fallback-text text-gray-900 font-medium';
+                                                                            target.parentElement?.appendChild(fallback);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         </div>
 
                                                         {/* Action Buttons */}

@@ -98,9 +98,9 @@ export function InvoicePreview({
                 </DialogHeader>
 
                 {/* Invoice Preview Content - matches PDF exactly */}
-                {/* Note: Inter font should be loaded in index.html for full parity */}
+                {/* Note: Raleway font should be loaded in index.html for full parity */}
                 <div style={{
-                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                    fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     fontSize: '14px',
                     lineHeight: 1.5,
                     color: '#111827',
@@ -243,6 +243,69 @@ export function InvoicePreview({
                     <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px', marginTop: '32px' }}>
                         {business?.tax_id && <div>Tax ID: {business.tax_id}</div>}
                         <div style={{ marginTop: '8px' }}>Thank you for your business!</div>
+                    </div>
+
+                    {/* Powered By Footer */}
+                    <div style={{
+                        marginTop: '48px',
+                        marginLeft: '-40px',
+                        marginRight: '-40px',
+                        padding: '16px 24px',
+                        backgroundColor: '#2563eb',
+                        borderRadius: '0',
+                        textAlign: 'center',
+                        color: '#ffffff',
+                        fontSize: '14px'
+                    }}>
+                        <span style={{ marginRight: '8px' }}>Powered by</span>
+                        <div
+                            style={{
+                                backgroundColor: '#ffffff',
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                            }}
+                        >
+                            <img
+                                src="/icon.png"
+                                alt="itemize"
+                                style={{
+                                    height: '24px',
+                                    width: 'auto',
+                                    display: 'inline-block',
+                                    verticalAlign: 'middle'
+                                }}
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                }}
+                            />
+                            <img
+                                src="/textblack.png"
+                                alt="itemize.cloud"
+                                style={{
+                                    height: '20px',
+                                    width: 'auto',
+                                    display: 'inline-block',
+                                    verticalAlign: 'middle'
+                                }}
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    // Only add fallback if both images fail
+                                    if (!target.parentElement?.querySelector('span.fallback-text')) {
+                                        const fallback = document.createElement('span');
+                                        fallback.textContent = 'itemize.cloud';
+                                        fallback.className = 'fallback-text';
+                                        fallback.style.color = '#111827';
+                                        fallback.style.fontWeight = '500';
+                                        target.parentElement?.appendChild(fallback);
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
             </DialogContent>
