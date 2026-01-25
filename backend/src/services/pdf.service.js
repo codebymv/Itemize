@@ -1,23 +1,21 @@
 /**
  * PDF Service
  * Generate PDF documents for invoices and estimates
- * Uses puppeteer-core with @sparticuz/chromium for HTML-to-PDF conversion
+ * Uses puppeteer for HTML-to-PDF conversion
  * This ensures 100% parity between the frontend preview and the generated PDF
  */
 
 const { logger } = require('../utils/logger');
 
-// Try to load puppeteer-core and chromium
+// Try to load puppeteer
 let puppeteer = null;
-let chromium = null;
 
 try {
-    puppeteer = require('puppeteer-core');
-    chromium = require('@sparticuz/chromium');
-    logger.info('Puppeteer-core and Chromium loaded - PDF generation enabled');
+    puppeteer = require('puppeteer');
+    logger.info('Puppeteer loaded - PDF generation enabled');
 } catch (e) {
-    logger.info('Puppeteer not available - PDF generation will be disabled');
-    logger.info('Error:', e.message);
+    logger.warn('Puppeteer not available - PDF generation will be disabled');
+    logger.warn('Error:', e.message);
 }
 
 /**
@@ -434,30 +432,54 @@ function escapeHtml(text) {
  * Generate PDF from HTML using Puppeteer
  */
 async function generatePDF(html) {
-    if (!puppeteer || !chromium) {
-        throw new Error('PDF generation not available - puppeteer-core or chromium not installed');
+    if (!puppeteer) {
+        throw new Error('PDF generation not available - puppeteer not installed');
     }
 
     let browser = null;
     
     try {
-        // Configure chromium for serverless environment
-        const executablePath = await chromium.executablePath();
+        logger.info('Launching Puppeteer browser for PDF generation...');
         
-        browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: executablePath,
-            headless: chromium.headless,
-        });
+        // Get chromium path from environment (Railway/Nixpacks provides this)
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || null;
+        if (executablePath) {
+            logger.info(`Using Chromium from: ${executablePath}`);
+        }
+        
+        // Launch browser with args optimized for Docker/Railway
+        const launchOptions = {
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu'
+            ]
+        };
+        
+        // Use custom executable path if provided (Railway)
+        if (executablePath) {
+            launchOptions.executablePath = executablePath;
+        }
+        
+        browser = await puppeteer.launch(launchOptions);
 
+        logger.info('Browser launched, creating page...');
         const page = await browser.newPage();
         
         // Set content and wait for everything to load
         await page.setContent(html, { 
-            waitUntil: ['networkidle0', 'domcontentloaded']
+            waitUntil: ['networkidle0', 'domcontentloaded'],
+            timeout: 30000
         });
 
+        logger.info('Page content set, generating PDF...');
+        
         // Generate PDF
         const pdf = await page.pdf({
             format: 'A4',
@@ -470,10 +492,16 @@ async function generatePDF(html) {
             }
         });
 
+        logger.info(`PDF generated successfully, size: ${pdf.length} bytes`);
         return Buffer.from(pdf);
+    } catch (error) {
+        logger.error('Error in generatePDF:', error);
+        logger.error('Stack trace:', error.stack);
+        throw error;
     } finally {
         if (browser) {
             await browser.close();
+            logger.info('Browser closed');
         }
     }
 }
@@ -482,6 +510,7 @@ async function generatePDF(html) {
  * Generate invoice PDF
  */
 async function generateInvoicePDF(invoice, settings = {}) {
+    logger.info(`Generating PDF for invoice: ${invoice.invoice_number}`);
     const html = generateInvoiceHTML(invoice, settings);
     return generatePDF(html);
 }
@@ -490,7 +519,7 @@ async function generateInvoicePDF(invoice, settings = {}) {
  * Check if PDF generation is available
  */
 function isPDFAvailable() {
-    return puppeteer !== null && chromium !== null;
+    return puppeteer !== null;
 }
 
 module.exports = {
