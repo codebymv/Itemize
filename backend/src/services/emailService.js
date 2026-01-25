@@ -128,11 +128,23 @@ class EmailService extends BaseService {
     }
 
     // Add attachments if provided
+    // Resend expects content as Buffer or base64 string
     if (attachments && attachments.length > 0) {
-      emailOptions.attachments = attachments.map(att => ({
-        filename: att.filename,
-        content: att.content
-      }));
+      emailOptions.attachments = attachments.map(att => {
+        let content = att.content;
+        
+        // Convert Uint8Array to Buffer if needed
+        if (content instanceof Uint8Array && !(content instanceof Buffer)) {
+          content = Buffer.from(content);
+        }
+        
+        return {
+          filename: att.filename,
+          content: content
+        };
+      });
+      
+      this.logInfo(`Attaching ${attachments.length} file(s) to email`);
     }
 
     try {

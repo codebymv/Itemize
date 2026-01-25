@@ -919,12 +919,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     const { generateInvoicePDF, isPDFAvailable } = require('../services/pdf.service');
                     if (isPDFAvailable()) {
                         pdfBuffer = await generateInvoicePDF(invoice, settings);
-                        logger.info(`Generated PDF for invoice ${invoice.invoice_number}`);
+                        logger.info(`Generated PDF for invoice ${invoice.invoice_number}, size: ${pdfBuffer ? pdfBuffer.length : 0} bytes`);
                     } else {
-                        logger.warn('PDF generation not available - sending email without attachment');
+                        logger.warn('PDF generation not available (puppeteer not installed) - sending email without attachment');
                     }
                 } catch (pdfErr) {
                     logger.error('Error generating invoice PDF:', pdfErr);
+                    logger.error('PDF error details:', pdfErr.stack);
                     // Continue without PDF attachment
                 }
 
