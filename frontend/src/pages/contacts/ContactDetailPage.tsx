@@ -84,11 +84,11 @@ export function ContactDetailPage() {
 
   // Helper function for contact name (used in header)
   const getContactDisplayName = (c: Contact | null) => {
-    if (!c) return 'CONTACT';
+    if (!c) return 'Contact';
     if (c.first_name || c.last_name) {
-      return `${c.first_name || ''} ${c.last_name || ''}`.trim().toUpperCase();
+      return `${c.first_name || ''} ${c.last_name || ''}`.trim();
     }
-    return (c.email || c.company || 'CONTACT').toUpperCase();
+    return c.email || c.company || 'Contact';
   };
 
   // Set header content following workspace pattern
@@ -109,7 +109,7 @@ export function ContactDetailPage() {
             className="text-xl font-semibold italic truncate"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            {getContactDisplayName(contact)}
+            CONTACTS | {getContactDisplayName(contact)}
           </h1>
         </div>
         <div className="flex items-center gap-2 mr-4">

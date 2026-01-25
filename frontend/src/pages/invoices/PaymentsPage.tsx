@@ -97,7 +97,7 @@ export function PaymentsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        PAYMENTS
+                        SALES & PAYMENTS | Payments
                     </h1>
                 </div>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">

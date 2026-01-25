@@ -103,7 +103,7 @@ export function EstimateEditorPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        {isNew ? 'NEW ESTIMATE' : 'EDIT ESTIMATE'}
+                        SALES & PAYMENTS | {isNew ? 'New Estimate' : 'Estimate'}
                     </h1>
                 </div>
                 <div className="flex items-center gap-2 mr-4">

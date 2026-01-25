@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
@@ -64,6 +65,14 @@ import {
     deleteBusinessLogo,
 } from '@/services/invoicesApi';
 
+// Settings navigation items
+const settingsNav = [
+    { id: 'business', title: 'Business Profiles', icon: Building },
+    { id: 'invoice', title: 'Invoice Settings', icon: FileText },
+    { id: 'tax', title: 'Tax Settings', icon: Percent },
+    { id: 'payments', title: 'Online Payments', icon: CreditCard },
+];
+
 export function PaymentSettingsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
@@ -72,6 +81,7 @@ export function PaymentSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState('business');
     
     // Settings state
     const [settings, setSettings] = useState<PaymentSettings>({
@@ -110,7 +120,7 @@ export function PaymentSettingsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        PAYMENT SETTINGS
+                        SALES & PAYMENTS | Settings
                     </h1>
                 </div>
                 <div className="flex items-center gap-2 mr-4">
@@ -303,33 +313,18 @@ export function PaymentSettingsPage() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="container mx-auto p-6 max-w-4xl">
-                <div className="space-y-6">
-                    <Skeleton className="h-48" />
-                    <Skeleton className="h-48" />
-                    <Skeleton className="h-48" />
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="container mx-auto p-6 max-w-4xl">
-            <div className="space-y-6">
-                {/* Business Profiles */}
-                <Card>
-                    <CardHeader>
+    // Render tab content based on active tab
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'business':
+                return (
+                    <div className="space-y-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Building className="h-5 w-5" />
-                                    Business Profiles
-                                </CardTitle>
-                                <CardDescription>
-                                    Manage your business profiles for invoicing. Select which business to invoice from when creating invoices.
-                                </CardDescription>
+                                <h3 className="text-lg font-medium">Business Profiles</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Manage your business profiles for invoicing
+                                </p>
                             </div>
                             <Button
                                 onClick={() => openBusinessDialog()}
@@ -339,275 +334,322 @@ export function PaymentSettingsPage() {
                                 Add Business
                             </Button>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        {businesses.length === 0 ? (
-                            <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                                <Building className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                                <p className="text-muted-foreground">No businesses yet</p>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Add your first business to start creating invoices
-                                </p>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => openBusinessDialog()}
-                                >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Business
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {businesses.map(business => (
-                                    <div
-                                        key={business.id}
-                                        className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                                    >
-                                        {/* Logo */}
-                                        <div className="flex-shrink-0">
-                                            {business.logo_url ? (
-                                                <img
-                                                    src={business.logo_url}
-                                                    alt={business.name}
-                                                    className="h-14 w-14 object-contain rounded border bg-white"
-                                                />
-                                            ) : (
-                                                <div className="h-14 w-14 rounded border bg-muted flex items-center justify-center">
-                                                    <Building className="h-6 w-6 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-medium truncate">{business.name}</h3>
-                                                {business.last_used_at && (
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        <Clock className="h-3 w-3 mr-1" />
-                                                        Last used
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            {business.email && (
-                                                <p className="text-sm text-muted-foreground truncate">{business.email}</p>
-                                            )}
-                                            {business.phone && (
-                                                <p className="text-sm text-muted-foreground">{business.phone}</p>
-                                            )}
-                                            {business.address && (
-                                                <p className="text-sm text-muted-foreground truncate">{business.address}</p>
-                                            )}
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => openBusinessDialog(business)}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => {
-                                                    setBusinessToDelete(business);
-                                                    setDeleteDialogOpen(true);
-                                                }}
-                                                className="text-destructive hover:text-destructive"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                        <Separator />
+                        <Card>
+                            <CardContent className="pt-6">
+                                {businesses.length === 0 ? (
+                                    <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                                        <Building className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                                        <p className="text-muted-foreground">No businesses yet</p>
+                                        <p className="text-sm text-muted-foreground mb-4">
+                                            Add your first business to start creating invoices
+                                        </p>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => openBusinessDialog()}
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Business
+                                        </Button>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                ) : (
+                                    <div className="grid gap-4">
+                                        {businesses.map(business => (
+                                            <div
+                                                key={business.id}
+                                                className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                            >
+                                                {/* Logo */}
+                                                <div className="flex-shrink-0">
+                                                    {business.logo_url ? (
+                                                        <img
+                                                            src={business.logo_url}
+                                                            alt={business.name}
+                                                            className="h-14 w-14 object-contain rounded border bg-white"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-14 w-14 rounded border bg-muted flex items-center justify-center">
+                                                            <Building className="h-6 w-6 text-muted-foreground" />
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                {/* Invoice Settings */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Invoice Settings
-                        </CardTitle>
-                        <CardDescription>
-                            Configure how your invoices are numbered and their default terms
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <Label>Invoice Prefix</Label>
-                                <Input
-                                    value={settings.invoice_prefix || ''}
-                                    onChange={(e) => updateField('invoice_prefix', e.target.value)}
-                                    placeholder="INV-"
-                                />
-                            </div>
-                            <div>
-                                <Label>Next Invoice Number</Label>
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    value={settings.next_invoice_number || ''}
-                                    onChange={(e) => updateField('next_invoice_number', e.target.value === '' ? 1 : parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div>
-                                <Label>Default Payment Due</Label>
-                                <Select
-                                    value={String(settings.default_payment_terms || 30)}
-                                    onValueChange={(v) => updateField('default_payment_terms', parseInt(v))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">Due on receipt</SelectItem>
-                                        <SelectItem value="7">7 days</SelectItem>
-                                        <SelectItem value="14">14 days</SelectItem>
-                                        <SelectItem value="15">15 days</SelectItem>
-                                        <SelectItem value="30">30 days</SelectItem>
-                                        <SelectItem value="45">45 days</SelectItem>
-                                        <SelectItem value="60">60 days</SelectItem>
-                                        <SelectItem value="90">90 days</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-medium truncate">{business.name}</h3>
+                                                        {business.last_used_at && (
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                <Clock className="h-3 w-3 mr-1" />
+                                                                Last used
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    {business.email && (
+                                                        <p className="text-sm text-muted-foreground truncate">{business.email}</p>
+                                                    )}
+                                                    {business.phone && (
+                                                        <p className="text-sm text-muted-foreground">{business.phone}</p>
+                                                    )}
+                                                    {business.address && (
+                                                        <p className="text-sm text-muted-foreground truncate">{business.address}</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => openBusinessDialog(business)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            setBusinessToDelete(business);
+                                                            setDeleteDialogOpen(true);
+                                                        }}
+                                                        className="text-destructive hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                );
+
+            case 'invoice':
+                return (
+                    <div className="space-y-6">
                         <div>
-                            <Label>Default Notes</Label>
-                            <Textarea
-                                value={settings.default_notes || ''}
-                                onChange={(e) => updateField('default_notes', e.target.value)}
-                                placeholder="Thank you for your business!"
-                                rows={2}
-                            />
+                            <h3 className="text-lg font-medium">Invoice Settings</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Configure how your invoices are numbered and their default terms
+                            </p>
                         </div>
-                        <div>
-                            <Label>Default Terms & Conditions</Label>
-                            <Textarea
-                                value={settings.default_terms || ''}
-                                onChange={(e) => updateField('default_terms', e.target.value)}
-                                placeholder="Payment is due within the specified terms. Late payments may incur additional fees."
-                                rows={3}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Tax Settings */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Percent className="h-5 w-5" />
-                            Tax Settings
-                        </CardTitle>
-                        <CardDescription>
-                            Configure default tax rates for new products and invoices
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Default Tax Rate (%)</Label>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.1"
-                                    value={settings.default_tax_rate || ''}
-                                    onChange={(e) => updateField('default_tax_rate', e.target.value === '' ? 0 : parseFloat(e.target.value))}
-                                />
-                            </div>
-                            <div>
-                                <Label>Default Currency</Label>
-                                <Select
-                                    value={settings.default_currency || 'USD'}
-                                    onValueChange={(v) => updateField('default_currency', v)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="USD">USD - US Dollar</SelectItem>
-                                        <SelectItem value="EUR">EUR - Euro</SelectItem>
-                                        <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                                        <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                                        <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Stripe Connection */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5" />
-                            Online Payments (Stripe)
-                        </CardTitle>
-                        <CardDescription>
-                            Connect Stripe to accept online payments from your customers
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${settings.stripe_connected ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'}`}>
-                                    {settings.stripe_connected ? (
-                                        <CheckCircle className="h-6 w-6 text-green-600" />
-                                    ) : (
-                                        <XCircle className="h-6 w-6 text-muted-foreground" />
-                                    )}
+                        <Separator />
+                        <Card>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <Label>Invoice Prefix</Label>
+                                        <Input
+                                            value={settings.invoice_prefix || ''}
+                                            onChange={(e) => updateField('invoice_prefix', e.target.value)}
+                                            placeholder="INV-"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label>Next Invoice Number</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={settings.next_invoice_number || ''}
+                                            onChange={(e) => updateField('next_invoice_number', e.target.value === '' ? 1 : parseInt(e.target.value))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label>Default Payment Due</Label>
+                                        <Select
+                                            value={String(settings.default_payment_terms || 30)}
+                                            onValueChange={(v) => updateField('default_payment_terms', parseInt(v))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="0">Due on receipt</SelectItem>
+                                                <SelectItem value="7">7 days</SelectItem>
+                                                <SelectItem value="14">14 days</SelectItem>
+                                                <SelectItem value="15">15 days</SelectItem>
+                                                <SelectItem value="30">30 days</SelectItem>
+                                                <SelectItem value="45">45 days</SelectItem>
+                                                <SelectItem value="60">60 days</SelectItem>
+                                                <SelectItem value="90">90 days</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <div>
-                                    <p className="font-medium">
-                                        {settings.stripe_connected ? 'Stripe Connected' : 'Stripe Not Connected'}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {settings.stripe_connected
-                                            ? `Connected ${settings.stripe_connected_at ? new Date(settings.stripe_connected_at).toLocaleDateString() : ''}`
-                                            : 'Connect your Stripe account to accept credit card payments'
-                                        }
-                                    </p>
+                                    <Label>Default Notes</Label>
+                                    <Textarea
+                                        value={settings.default_notes || ''}
+                                        onChange={(e) => updateField('default_notes', e.target.value)}
+                                        placeholder="Thank you for your business!"
+                                        rows={2}
+                                    />
                                 </div>
-                            </div>
-                            <Button
-                                variant={settings.stripe_connected ? 'outline' : 'default'}
-                                className={!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
-                            >
-                                <Link className="h-4 w-4 mr-2" />
-                                {settings.stripe_connected ? 'Manage Connection' : 'Connect Stripe'}
-                            </Button>
-                        </div>
-                        {settings.stripe_connected && settings.stripe_account_id && (
-                            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                                <p className="text-sm text-muted-foreground">
-                                    Stripe Account ID: <code className="text-xs">{settings.stripe_account_id}</code>
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                <div>
+                                    <Label>Default Terms & Conditions</Label>
+                                    <Textarea
+                                        value={settings.default_terms || ''}
+                                        onChange={(e) => updateField('default_terms', e.target.value)}
+                                        placeholder="Payment is due within the specified terms. Late payments may incur additional fees."
+                                        rows={3}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                );
 
-                {/* Save Button (bottom) */}
-                <div className="flex justify-end">
-                    <Button
-                        onClick={handleSaveSettings}
-                        disabled={saving}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Settings'}
-                    </Button>
+            case 'tax':
+                return (
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-medium">Tax Settings</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Configure default tax rates for new products and invoices
+                            </p>
+                        </div>
+                        <Separator />
+                        <Card>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label>Default Tax Rate (%)</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="0.1"
+                                            value={settings.default_tax_rate || ''}
+                                            onChange={(e) => updateField('default_tax_rate', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label>Default Currency</Label>
+                                        <Select
+                                            value={settings.default_currency || 'USD'}
+                                            onValueChange={(v) => updateField('default_currency', v)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="USD">USD - US Dollar</SelectItem>
+                                                <SelectItem value="EUR">EUR - Euro</SelectItem>
+                                                <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                                                <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                                                <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                );
+
+            case 'payments':
+                return (
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-medium">Online Payments</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Connect Stripe to accept online payments from your customers
+                            </p>
+                        </div>
+                        <Separator />
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between p-4 border rounded-lg">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${settings.stripe_connected ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'}`}>
+                                            {settings.stripe_connected ? (
+                                                <CheckCircle className="h-6 w-6 text-green-600" />
+                                            ) : (
+                                                <XCircle className="h-6 w-6 text-muted-foreground" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium">
+                                                {settings.stripe_connected ? 'Stripe Connected' : 'Stripe Not Connected'}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {settings.stripe_connected
+                                                    ? `Connected ${settings.stripe_connected_at ? new Date(settings.stripe_connected_at).toLocaleDateString() : ''}`
+                                                    : 'Connect your Stripe account to accept credit card payments'
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant={settings.stripe_connected ? 'outline' : 'default'}
+                                        className={!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+                                    >
+                                        <Link className="h-4 w-4 mr-2" />
+                                        {settings.stripe_connected ? 'Manage Connection' : 'Connect Stripe'}
+                                    </Button>
+                                </div>
+                                {settings.stripe_connected && settings.stripe_account_id && (
+                                    <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                                        <p className="text-sm text-muted-foreground">
+                                            Stripe Account ID: <code className="text-xs">{settings.stripe_account_id}</code>
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="container mx-auto p-6 max-w-4xl">
+                <div className="grid gap-8 md:grid-cols-[200px_1fr]">
+                    <div className="space-y-2">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div>
+                        <Skeleton className="h-48" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container mx-auto p-6 max-w-4xl">
+            <div className="grid gap-8 md:grid-cols-[200px_1fr]">
+                {/* Tab Navigation */}
+                <nav className="flex flex-col gap-1">
+                    {settingsNav.map((item) => {
+                        const isActive = activeTab === item.id;
+                        return (
+                            <Button
+                                key={item.id}
+                                variant={isActive ? 'secondary' : 'ghost'}
+                                className={`justify-start text-muted-foreground hover:text-foreground`}
+                                onClick={() => setActiveTab(item.id)}
+                                style={{ fontFamily: '"Raleway", sans-serif' }}
+                            >
+                                <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
+                                {item.title}
+                            </Button>
+                        );
+                    })}
+                </nav>
+
+                {/* Tab Content */}
+                <div className="min-w-0">
+                    {renderTabContent()}
                 </div>
             </div>
 

@@ -38,11 +38,12 @@ function SettingsNav() {
                     <Button
                         key={item.path}
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className={`justify-start ${item.disabled ? 'opacity-50' : ''}`}
+                        className={`justify-start text-muted-foreground hover:text-foreground ${item.disabled ? 'opacity-50' : ''}`}
                         onClick={() => !item.disabled && navigate(item.path)}
                         disabled={item.disabled}
+                        style={{ fontFamily: '"Raleway", sans-serif' }}
                     >
-                        <item.icon className="mr-2 h-4 w-4" />
+                        <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
                         {item.title}
                         {item.disabled && <span className="ml-auto text-xs">Soon</span>}
                     </Button>
@@ -105,7 +106,7 @@ function AppearanceSettings() {
                     <div className="flex gap-4">
                         <Button
                             variant={theme === 'light' ? 'default' : 'outline'}
-                            className="flex-1"
+                            className={`flex-1 ${theme === 'light' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
                             onClick={() => setTheme('light')}
                         >
                             <Sun className="mr-2 h-4 w-4" />
@@ -113,7 +114,7 @@ function AppearanceSettings() {
                         </Button>
                         <Button
                             variant={theme === 'dark' ? 'default' : 'outline'}
-                            className="flex-1"
+                            className={`flex-1 ${theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
                             onClick={() => setTheme('dark')}
                         >
                             <Moon className="mr-2 h-4 w-4" />
