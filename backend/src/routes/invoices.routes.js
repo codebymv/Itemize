@@ -16,6 +16,14 @@ const { withDbClient, withTransaction } = require('../utils/db');
 const emailService = require('../services/emailService');
 const { sendInvoiceEmail } = require('../services/invoice-email.service');
 
+// S3 service for file uploads
+let s3Service = null;
+try {
+    s3Service = require('../services/s3.service');
+} catch (e) {
+    logger.info('S3 service not available - file uploads will use local storage');
+}
+
 // Multer for file uploads (if available)
 let multer = null;
 let upload = null;
@@ -29,16 +37,19 @@ try {
     }
     
     // Configure multer storage
-    const storage = multer.diskStorage({
-        destination: (req, file, cb) => {
-            cb(null, uploadsDir);
-        },
-        filename: (req, file, cb) => {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const ext = path.extname(file.originalname);
-            cb(null, `logo-${req.organizationId}-${uniqueSuffix}${ext}`);
-        }
-    });
+    // Use memory storage for S3 uploads, disk storage as fallback
+    const storage = process.env.AWS_ACCESS_KEY_ID 
+        ? multer.memoryStorage() // Store in memory for S3 uploads
+        : multer.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, uploadsDir);
+            },
+            filename: (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const ext = path.extname(file.originalname);
+                cb(null, `logo-${req.organizationId}-${uniqueSuffix}${ext}`);
+            }
+        });
     
     // File filter for images only
     const fileFilter = (req, file, cb) => {
@@ -1508,6 +1519,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 // Delete old logo file if exists
                 if (checkResult.rows[0].logo_url) {
                     const oldUrl = checkResult.rows[0].logo_url;
+                    // Delete from S3 if it's an S3 URL
+                    if (s3Service && oldUrl.includes('.s3.')) {
+                        try {
+                            const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                            if (oldKey) {
+                                await s3Service.deleteFile(oldKey);
+                            }
+                        } catch (s3Err) {
+                            logger.warn('Failed to delete old logo from S3:', s3Err);
+                        }
+                    }
+                    // Delete local file if it exists
                     if (oldUrl.includes('/uploads/logos/')) {
                         const oldFilename = oldUrl.split('/uploads/logos/')[1];
                         const oldFilePath = path.join(__dirname, '../../uploads/logos', oldFilename);
@@ -1517,8 +1540,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     }
                 }
 
-                // Store relative path (frontend will construct full URL based on environment)
-                const logoUrl = `/uploads/logos/${req.file.filename}`;
+                // Upload to S3 or use local storage
+                let logoUrl;
+                if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
+                    // Upload to S3
+                    const key = `logos/logo-${req.organizationId}-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+                    logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
+                    // Delete local file after S3 upload
+                    if (fs.existsSync(req.file.path)) {
+                        fs.unlinkSync(req.file.path);
+                    }
+                } else {
+                    // Fallback to local storage
+                    logoUrl = `/uploads/logos/${req.file.filename}`;
+                }
 
                 // Update business with logo URL
                 await client.query(
@@ -1560,6 +1595,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             if (result.rows[0].logo_url) {
                 const oldUrl = result.rows[0].logo_url;
+                // Delete from S3 if it's an S3 URL
+                if (s3Service && oldUrl.includes('.s3.')) {
+                    try {
+                        const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                        if (oldKey) {
+                            await s3Service.deleteFile(oldKey);
+                        }
+                    } catch (s3Err) {
+                        logger.warn('Failed to delete old logo from S3:', s3Err);
+                    }
+                }
+                // Delete local file if it exists
                 if (oldUrl.includes('/uploads/logos/')) {
                     const oldFilename = oldUrl.split('/uploads/logos/')[1];
                     const oldFilePath = path.join(__dirname, '../../uploads/logos', oldFilename);
@@ -1710,10 +1757,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             try {
-                // Store relative path (frontend will construct full URL based on environment)
-                const logoUrl = `/uploads/logos/${req.file.filename}`;
-
-                // Update payment settings with logo URL
                 const client = await pool.connect();
 
                 // Delete old logo file if exists
@@ -1724,7 +1767,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 if (oldSettings.rows.length > 0 && oldSettings.rows[0].logo_url) {
                     const oldUrl = oldSettings.rows[0].logo_url;
-                    // Only delete if it's a local file (starts with our base URL)
+                    // Delete from S3 if it's an S3 URL
+                    if (s3Service && oldUrl.includes('.s3.')) {
+                        try {
+                            const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                            if (oldKey) {
+                                await s3Service.deleteFile(oldKey);
+                            }
+                        } catch (s3Err) {
+                            logger.warn('Failed to delete old logo from S3:', s3Err);
+                        }
+                    }
+                    // Delete local file if it exists
                     if (oldUrl.includes('/uploads/logos/')) {
                         const filename = oldUrl.split('/uploads/logos/')[1];
                         const oldFilePath = path.join(__dirname, '../../uploads/logos', filename);
@@ -1732,6 +1786,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             fs.unlinkSync(oldFilePath);
                         }
                     }
+                }
+
+                // Upload to S3 or use local storage
+                let logoUrl;
+                if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
+                    // Upload to S3
+                    const key = `logos/logo-${req.organizationId}-settings-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+                    logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
+                    // Delete local file after S3 upload
+                    if (fs.existsSync(req.file.path)) {
+                        fs.unlinkSync(req.file.path);
+                    }
+                } else {
+                    // Fallback to local storage
+                    logoUrl = `/uploads/logos/${req.file.filename}`;
                 }
 
                 await client.query(`
@@ -1774,7 +1843,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             if (result.rows.length > 0 && result.rows[0].logo_url) {
                 const oldUrl = result.rows[0].logo_url;
-                // Only delete if it's a local file
+                // Delete from S3 if it's an S3 URL
+                if (s3Service && oldUrl.includes('.s3.')) {
+                    try {
+                        const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                        if (oldKey) {
+                            await s3Service.deleteFile(oldKey);
+                        }
+                    } catch (s3Err) {
+                        logger.warn('Failed to delete old logo from S3:', s3Err);
+                    }
+                }
+                // Delete local file if it exists
                 if (oldUrl.includes('/uploads/logos/')) {
                     const filename = oldUrl.split('/uploads/logos/')[1];
                     const filePath = path.join(__dirname, '../../uploads/logos', filename);
