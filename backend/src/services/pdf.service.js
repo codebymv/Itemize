@@ -115,10 +115,9 @@ function generateInvoiceHTML(invoice, settings = {}) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
             <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+                
                 * {
                     margin: 0;
                     padding: 0;
@@ -475,6 +474,12 @@ async function generatePDF(html) {
             waitUntil: ['networkidle0', 'domcontentloaded'],
             timeout: 30000
         });
+
+        // Wait for fonts to load
+        await page.evaluate(() => document.fonts.ready);
+        
+        // Small delay to ensure fonts are rendered
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         logger.info('Page content set, generating PDF...');
         
