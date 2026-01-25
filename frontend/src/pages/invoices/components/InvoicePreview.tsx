@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { getAssetUrl } from '@/lib/api';
 import { Business } from '@/services/invoicesApi';
 
 export interface LineItem {
@@ -114,7 +115,7 @@ export function InvoicePreview({
                         <div>
                             {business?.logo_url && (
                                 <img
-                                    src={business.logo_url}
+                                    src={getAssetUrl(business.logo_url)}
                                     alt="Business Logo"
                                     className="h-12 w-auto object-contain mb-2"
                                 />

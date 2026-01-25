@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
+import { getAssetUrl } from '@/lib/api';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getInvoices, getInvoice, deleteInvoice, sendInvoice, Invoice as ApiInvoice, Business } from '@/services/invoicesApi';
 import { Separator } from '@/components/ui/separator';
@@ -582,7 +583,7 @@ export function InvoicesPage() {
                                                             <div>
                                                                 {expandedInvoiceData.business?.logo_url && (
                                                                     <img
-                                                                        src={expandedInvoiceData.business.logo_url}
+                                                                        src={getAssetUrl(expandedInvoiceData.business.logo_url)}
                                                                         alt="Business Logo"
                                                                         className="h-10 w-auto object-contain mb-2"
                                                                     />

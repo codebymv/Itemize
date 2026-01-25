@@ -51,6 +51,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
+import { getAssetUrl } from '@/lib/api';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { 
     getPaymentSettings, 
@@ -363,7 +364,7 @@ export function PaymentSettingsPage() {
                                                 <div className="flex-shrink-0">
                                                     {business.logo_url ? (
                                                         <img
-                                                            src={business.logo_url}
+                                                            src={getAssetUrl(business.logo_url)}
                                                             alt={business.name}
                                                             className="h-14 w-14 object-contain rounded border bg-white"
                                                         />
@@ -722,7 +723,7 @@ export function PaymentSettingsPage() {
                                     {businessFormData.logo_url ? (
                                         <div className="flex items-center gap-4 p-3 border rounded-lg">
                                             <img
-                                                src={businessFormData.logo_url}
+                                                src={getAssetUrl(businessFormData.logo_url)}
                                                 alt="Business Logo"
                                                 className="h-12 w-auto object-contain rounded border bg-white"
                                             />
