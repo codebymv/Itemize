@@ -31,19 +31,38 @@ function formatCurrency(amount, currency = 'USD') {
 /**
  * Format date - matches frontend exactly (handles timezone issues)
  */
-function formatDate(dateStr) {
-    if (!dateStr) return '';
-    // Handle both ISO strings and YYYY-MM-DD format
+function formatDate(dateInput) {
+    if (!dateInput) return '';
+    
     let date;
-    if (dateStr.includes('T')) {
-        // For ISO strings, extract just the date part to avoid timezone shifts
-        const datePart = dateStr.split('T')[0];
-        const [year, month, day] = datePart.split('-').map(Number);
-        date = new Date(year, month - 1, day);
+    
+    // Handle Date objects
+    if (dateInput instanceof Date) {
+        date = dateInput;
     } else {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        date = new Date(year, month - 1, day);
+        // Convert to string if needed
+        const dateStr = String(dateInput);
+        
+        // Handle ISO strings and YYYY-MM-DD format
+        if (dateStr.includes('T')) {
+            // For ISO strings, extract just the date part to avoid timezone shifts
+            const datePart = dateStr.split('T')[0];
+            const [year, month, day] = datePart.split('-').map(Number);
+            date = new Date(year, month - 1, day);
+        } else if (dateStr.includes('-')) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            date = new Date(year, month - 1, day);
+        } else {
+            // Fallback: try to parse as-is
+            date = new Date(dateStr);
+        }
     }
+    
+    // Check for invalid date
+    if (isNaN(date.getTime())) {
+        return '';
+    }
+    
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
