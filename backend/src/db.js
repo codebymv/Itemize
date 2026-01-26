@@ -1,5 +1,8 @@
 const { Pool } = require('pg');
 
+// Import migration tracker for fast startup (skips already-run migrations)
+const { runMigrationOnce } = require('./utils/migrationTracker');
+
 // Import database migrations
 const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runWireframesMigration, runWireframesDimensionsMigration } = require('./db_migrations');
 
@@ -169,250 +172,126 @@ const initializeDatabase = async (pool) => {
     return false;
   }
 
+  const startTime = Date.now();
+  console.log('🚀 Starting database initialization...');
+
   try {
-    // Create users table if it doesn't exist
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        name VARCHAR(255),
-        google_id VARCHAR(255),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-
-
-
-
-
-
-
-
-    // Add missing columns to users table if they don't exist
-    try {
-      // Run canvas feature migration
-      await runCanvasMigration(pool);
-
-      // Run list resize feature migration
-      await runListResizeMigration(pool);
-
-      // Run notes table migration
-      await runCreateNotesTableMigration(pool);
-
-      // Run notes name and category migration
-      await runAddTitleAndCategoryToNotesMigration(pool);
-
-      // Run categories table migration (safe)
-      try {
-        await runCategoriesTableMigration(pool);
-      } catch (categoriesTableError) {
-        console.error('⚠️ Categories table migration failed, continuing with legacy categories:', categoriesTableError.message);
-      }
-
-      // Run categories data migration (safe)
-      try {
-        await runCategoriesDataMigration(pool);
-      } catch (categoriesDataError) {
-        console.error('⚠️ Categories data migration failed, continuing with legacy categories:', categoriesDataError.message);
-      }
-
-      // Run cleanup of default categories (safe)
-      try {
-        await runCleanupDefaultCategories(pool);
-      } catch (cleanupError) {
-        console.error('⚠️ Categories cleanup failed, continuing with existing categories:', cleanupError.message);
-      }
-
-      // Run sharing feature migration (safe)
-      try {
-        await runSharingMigration(pool);
-      } catch (sharingError) {
-        console.error('⚠️ Sharing migration failed, continuing without sharing feature:', sharingError.message);
-      }
-
-      await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
-      // console.log('Ensured google_id column exists in public.users table.');
-    } catch (e) {
-      console.error('Error ensuring google_id column exists:', e);
-      throw e; // Re-throw if altering the table fails for unexpected reasons
-    }
-
-    try {
-      await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`);
-      // console.log('Ensured updated_at column exists in public.users table.');
-    } catch (e) {
-      console.error('Error ensuring updated_at column exists:', e);
-      throw e; // Re-throw if altering the table fails for unexpected reasons
-    }
-
-    // Create lists table if it doesn't exist (with all columns including migration additions)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.lists (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        category VARCHAR(255) DEFAULT 'General',
-        type VARCHAR(255) DEFAULT 'General',
-        items JSONB DEFAULT '[]'::jsonb,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        color_value VARCHAR(50) DEFAULT '#3B82F6',
-        position_x FLOAT DEFAULT 0,
-        position_y FLOAT DEFAULT 0,
-        width FLOAT DEFAULT 320,
-        height FLOAT,
-        z_index INTEGER DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        share_token VARCHAR(255),
-        is_public BOOLEAN DEFAULT FALSE,
-        shared_at TIMESTAMP WITH TIME ZONE,
-        category_id INTEGER
-      );
-    `);
-    console.log('✅ Lists table created (if not exists)');
-
-    // Create whiteboards table if it doesn't exist
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.whiteboards (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        title VARCHAR(255) DEFAULT 'Untitled Whiteboard',
-        category VARCHAR(255),
-        canvas_data JSONB DEFAULT '[]'::jsonb,
-        canvas_width INTEGER DEFAULT 750,
-        canvas_height INTEGER DEFAULT 620,
-        background_color VARCHAR(50) DEFAULT '#ffffff',
-        position_x FLOAT DEFAULT 0,
-        position_y FLOAT DEFAULT 0,
-        z_index INTEGER DEFAULT 0,
-        color_value VARCHAR(50) DEFAULT '#3B82F6',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        share_token VARCHAR(255),
-        is_public BOOLEAN DEFAULT FALSE,
-        shared_at TIMESTAMP WITH TIME ZONE
-      );
-    `);
-    console.log('✅ Whiteboards table created (if not exists)');
-
-    // Run wireframes migration
-    try {
-      await runWireframesMigration(pool);
-    } catch (wireframesError) {
-      console.error('⚠️ Wireframes migration failed, continuing without wireframes features:', wireframesError.message);
-    }
-
-    // Run wireframes dimensions migration (add width/height columns)
-    try {
-      await runWireframesDimensionsMigration(pool);
-    } catch (wireframesDimensionsError) {
-      console.error('⚠️ Wireframes dimensions migration failed:', wireframesDimensionsError.message);
-    }
-
-    // Diagnostic: Log actual columns for public.users table
-    try {
-      const { rows } = await pool.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = 'users'
-        ORDER BY ordinal_position;
-      `);
-      console.log('Columns in public.users after initialization:', JSON.stringify(rows, null, 2));
-    } catch (diagError) {
-      console.error('Error during diagnostic query for public.users columns:', diagError);
-    }
-
-    // Run CRM migrations
-    try {
-      await runAllCRMMigrations(pool);
-    } catch (crmError) {
-      console.error('⚠️ CRM migrations failed, continuing without CRM features:', crmError.message);
-    }
-
-    // Run Automation migrations
-    try {
-      await runAllAutomationMigrations(pool);
-    } catch (automationError) {
-      console.error('⚠️ Automation migrations failed, continuing without automation features:', automationError.message);
-    }
-
-    // Run Calendar migrations
-    try {
-      await runAllCalendarMigrations(pool);
-    } catch (calendarError) {
-      console.error('⚠️ Calendar migrations failed, continuing without calendar features:', calendarError.message);
-    }
-
-    // Run Forms migrations
-    try {
-      await runAllFormsMigrations(pool);
-    } catch (formsError) {
-      console.error('⚠️ Forms migrations failed, continuing without forms features:', formsError.message);
-    }
-
-    // Run Inbox migrations
-    try {
-      await runAllInboxMigrations(pool);
-    } catch (inboxError) {
-      console.error('⚠️ Inbox migrations failed, continuing without inbox features:', inboxError.message);
-    }
-
-    // Run SMS migrations
-    try {
-      await runAllSmsMigrations(pool);
-    } catch (smsError) {
-      console.error('⚠️ SMS migrations failed, continuing without SMS features:', smsError.message);
-    }
-
-    // Run Chat Widget migrations
-    try {
-      await runAllChatWidgetMigrations(pool);
-    } catch (chatError) {
-      console.error('⚠️ Chat Widget migrations failed, continuing without chat widget features:', chatError.message);
-    }
-
-    // Run Email Campaign migrations
-    try {
-      await runAllCampaignMigrations(pool);
-    } catch (campaignError) {
-      console.error('⚠️ Email Campaign migrations failed, continuing without campaign features:', campaignError.message);
-    }
-
-    // Run Segments migrations
-    try {
-      await runAllSegmentMigrations(pool);
-    } catch (segmentError) {
-      console.error('⚠️ Segment migrations failed, continuing without segment features:', segmentError.message);
-    }
-
-    // Run Invoicing migrations
-    try {
-      await runAllInvoicingMigrations(pool);
-    } catch (invoicingError) {
-      console.error('⚠️ Invoicing migrations failed, continuing without invoicing features:', invoicingError.message);
-    }
-
-    // Run Estimates and Recurring migrations
-    try {
-      await runEstimatesRecurringMigrations(pool);
-    } catch (estimatesError) {
-      console.error('⚠️ Estimates/Recurring migrations failed, continuing without these features:', estimatesError.message);
-    }
-
-    // Run Reputation migrations
-    try {
-      await runAllReputationMigrations(pool);
-    } catch (reputationError) {
-      console.error('⚠️ Reputation migrations failed, continuing without reputation features:', reputationError.message);
-    }
-
-    // Run Social migrations
-    try {
-      await runAllSocialMigrations(pool);
-      
-      // Create oauth_states table for OAuth flow
+    // Core tables - always run (fast, idempotent)
+    await runMigrationOnce(pool, 'core_users_table', async () => {
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.users (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          name VARCHAR(255),
+          google_id VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      return true;
+    });
+
+
+
+
+
+
+
+
+
+    // Core tables - lists and whiteboards (run once)
+    await runMigrationOnce(pool, 'core_lists_table', async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.lists (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          category VARCHAR(255) DEFAULT 'General',
+          type VARCHAR(255) DEFAULT 'General',
+          items JSONB DEFAULT '[]'::jsonb,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          color_value VARCHAR(50) DEFAULT '#3B82F6',
+          position_x FLOAT DEFAULT 0,
+          position_y FLOAT DEFAULT 0,
+          width FLOAT DEFAULT 320,
+          height FLOAT,
+          z_index INTEGER DEFAULT 0,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          share_token VARCHAR(255),
+          is_public BOOLEAN DEFAULT FALSE,
+          shared_at TIMESTAMP WITH TIME ZONE,
+          category_id INTEGER
+        );
+      `);
+      return true;
+    });
+
+    await runMigrationOnce(pool, 'core_whiteboards_table', async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.whiteboards (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          title VARCHAR(255) DEFAULT 'Untitled Whiteboard',
+          category VARCHAR(255),
+          canvas_data JSONB DEFAULT '[]'::jsonb,
+          canvas_width INTEGER DEFAULT 750,
+          canvas_height INTEGER DEFAULT 620,
+          background_color VARCHAR(50) DEFAULT '#ffffff',
+          position_x FLOAT DEFAULT 0,
+          position_y FLOAT DEFAULT 0,
+          z_index INTEGER DEFAULT 0,
+          color_value VARCHAR(50) DEFAULT '#3B82F6',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          share_token VARCHAR(255),
+          is_public BOOLEAN DEFAULT FALSE,
+          shared_at TIMESTAMP WITH TIME ZONE
+        );
+      `);
+      return true;
+    });
+
+    // User column migrations
+    await runMigrationOnce(pool, 'users_google_id_column', async () => {
+      await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
+      return true;
+    });
+
+    await runMigrationOnce(pool, 'users_updated_at_column', async () => {
+      await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`);
+      return true;
+    });
+
+    // Feature migrations (tracked individually)
+    await runMigrationOnce(pool, 'feature_canvas', runCanvasMigration);
+    await runMigrationOnce(pool, 'feature_list_resize', runListResizeMigration);
+    await runMigrationOnce(pool, 'feature_notes_table', runCreateNotesTableMigration);
+    await runMigrationOnce(pool, 'feature_notes_title_category', runAddTitleAndCategoryToNotesMigration);
+    await runMigrationOnce(pool, 'feature_categories_table', runCategoriesTableMigration);
+    await runMigrationOnce(pool, 'feature_categories_data', runCategoriesDataMigration);
+    await runMigrationOnce(pool, 'feature_categories_cleanup', runCleanupDefaultCategories);
+    await runMigrationOnce(pool, 'feature_sharing', runSharingMigration);
+    await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
+    await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);
+
+    // Module migrations (each module handles its own tables)
+    await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
+    await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
+    await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
+    await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
+    await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
+    await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);
+    await runMigrationOnce(pool, 'module_chat_widget', runAllChatWidgetMigrations);
+    await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
+    await runMigrationOnce(pool, 'module_segments', runAllSegmentMigrations);
+    await runMigrationOnce(pool, 'module_invoicing', runAllInvoicingMigrations);
+    await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
+    await runMigrationOnce(pool, 'module_reputation', runAllReputationMigrations);
+    
+    // Social migrations + oauth_states table
+    await runMigrationOnce(pool, 'module_social', async (p) => {
+      await runAllSocialMigrations(p);
+      await p.query(`
         CREATE TABLE IF NOT EXISTS oauth_states (
           state VARCHAR(100) PRIMARY KEY,
           organization_id INTEGER NOT NULL,
@@ -422,46 +301,21 @@ const initializeDatabase = async (pool) => {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
       `);
-    } catch (socialError) {
-      console.error('⚠️ Social migrations failed, continuing without social features:', socialError.message);
-    }
+      return true;
+    });
+    
+    await runMigrationOnce(pool, 'module_pages', runAllPagesMigrations);
+    
+    // Performance and schema optimization (run last)
+    await runMigrationOnce(pool, 'optimization_indexes', runAllIndexMigrations);
+    await runMigrationOnce(pool, 'optimization_normalization', runAllNormalizationMigrations);
+    
+    // Billing and features
+    await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);
+    await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
 
-    // Run Pages migrations
-    try {
-      await runAllPagesMigrations(pool);
-    } catch (pagesError) {
-      console.error('⚠️ Pages migrations failed, continuing without pages features:', pagesError.message);
-    }
-
-    // Run Index migrations (performance optimization - run last after all tables exist)
-    try {
-      await runAllIndexMigrations(pool);
-    } catch (indexError) {
-      console.error('⚠️ Index migrations failed, performance may be degraded:', indexError.message);
-    }
-
-    // Run Normalization migrations (schema improvements)
-    try {
-      await runAllNormalizationMigrations(pool);
-    } catch (normError) {
-      console.error('⚠️ Normalization migrations failed:', normError.message);
-    }
-
-    // Run Subscription migrations (feature gating and billing)
-    try {
-      await runAllSubscriptionMigrations(pool);
-    } catch (subscriptionError) {
-      console.error('⚠️ Subscription migrations failed, continuing without subscription features:', subscriptionError.message);
-    }
-
-    // Run Vault migrations (encrypted storage)
-    try {
-      await runVaultMigrations(pool);
-    } catch (vaultError) {
-      console.error('⚠️ Vault migrations failed, continuing without vault features:', vaultError.message);
-    }
-
-    console.log('Database initialized successfully');
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ Database initialized successfully in ${elapsed}ms`);
     return true;
   } catch (error) {
     console.error('Error initializing database schema:', error);

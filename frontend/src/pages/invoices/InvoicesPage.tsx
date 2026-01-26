@@ -20,6 +20,7 @@ import {
     ChevronDown,
     ChevronRight,
     Loader2,
+    Repeat,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +52,10 @@ import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getInvoices, getInvoice, deleteInvoice, sendInvoice, Invoice as ApiInvoice, Business } from '@/services/invoicesApi';
 import { Separator } from '@/components/ui/separator';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
+import { MakeRecurringModal, RecurringOptions } from './components/MakeRecurringModal';
+import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { RefreshCw } from 'lucide-react';
+import api from '@/lib/api';
 
 interface Invoice {
     id: number;
@@ -110,6 +114,12 @@ export function InvoicesPage() {
     const [fullInvoiceDataForSend, setFullInvoiceDataForSend] = useState<ApiInvoice | null>(null);
     const [sending, setSending] = useState(false);
     const [isResend, setIsResend] = useState(false);
+    
+    // Make recurring modal state
+    const [showRecurringModal, setShowRecurringModal] = useState(false);
+    const [selectedInvoiceForRecurring, setSelectedInvoiceForRecurring] = useState<Invoice | null>(null);
+    const [fullInvoiceDataForRecurring, setFullInvoiceDataForRecurring] = useState<ApiInvoice | null>(null);
+    const [converting, setConverting] = useState(false);
 
     useEffect(() => {
         const initOrg = async () => {
@@ -198,6 +208,58 @@ export function InvoicesPage() {
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setSending(false);
+        }
+    };
+
+    // Open make recurring modal for an invoice
+    const handleOpenRecurringModal = async (invoice: Invoice, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!organizationId) return;
+        
+        // Don't allow for cancelled/refunded invoices
+        if (['cancelled', 'refunded'].includes(invoice.status)) {
+            toast({ title: 'Cannot Convert', description: 'Cancelled or refunded invoices cannot be made recurring', variant: 'destructive' });
+            return;
+        }
+        
+        setSelectedInvoiceForRecurring(invoice);
+        
+        // Fetch full invoice data for modal display
+        try {
+            const fullData = await getInvoice(invoice.id, organizationId);
+            setFullInvoiceDataForRecurring(fullData);
+        } catch (error) {
+            setFullInvoiceDataForRecurring(null);
+        }
+        
+        setShowRecurringModal(true);
+    };
+
+    // Convert invoice to recurring template
+    const handleMakeRecurring = async (options: RecurringOptions) => {
+        if (!organizationId || !selectedInvoiceForRecurring) return;
+        
+        setConverting(true);
+        try {
+            await api.post(`/api/invoices/recurring/from-invoice/${selectedInvoiceForRecurring.id}`, {
+                template_name: options.template_name,
+                frequency: options.frequency,
+                start_date: options.start_date,
+                end_date: options.end_date,
+            });
+            
+            toast({ title: 'Success', description: 'Invoice converted to recurring template' });
+            setShowRecurringModal(false);
+            setSelectedInvoiceForRecurring(null);
+            setFullInvoiceDataForRecurring(null);
+            
+            // Navigate to recurring invoices page
+            navigate('/invoices/recurring');
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.error || 'Failed to convert invoice';
+            toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+        } finally {
+            setConverting(false);
         }
     };
 
@@ -457,7 +519,7 @@ export function InvoicesPage() {
         <div className="container mx-auto p-6 max-w-7xl">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('unpaid')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -471,7 +533,7 @@ export function InvoicesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('unpaid')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -485,7 +547,7 @@ export function InvoicesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('draft')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -499,7 +561,7 @@ export function InvoicesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('paid')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -633,6 +695,11 @@ export function InvoicesPage() {
                                                             <DropdownMenuItem>
                                                                 <Download className="h-4 w-4 mr-2" />Download PDF
                                                             </DropdownMenuItem>
+                                                            {!['cancelled', 'refunded'].includes(invoice.status) && (
+                                                                <DropdownMenuItem onClick={(e) => handleOpenRecurringModal(invoice, e)}>
+                                                                    <Repeat className="h-4 w-4 mr-2" />Make Recurring
+                                                                </DropdownMenuItem>
+                                                            )}
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
                                                                 onClick={(e) => handleDeleteClick(invoice, e)}
@@ -663,155 +730,31 @@ export function InvoicesPage() {
                                                         <span className="ml-2 text-muted-foreground">Loading preview...</span>
                                                     </div>
                                                 ) : expandedInvoiceData ? (
-                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 pb-0 max-w-3xl mx-auto shadow-sm flex flex-col" style={{ fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", height: '990px' }}>
-                                                      <div className="flex-1">
-                                                        {/* Header */}
-                                                        <div className="flex justify-between items-start mb-6">
-                                                            <div>
-                                                                {expandedInvoiceData.business?.logo_url && (
-                                                                    <img
-                                                                        src={getAssetUrl(expandedInvoiceData.business.logo_url)}
-                                                                        alt="Business Logo"
-                                                                        className="h-10 w-auto object-contain mb-2"
-                                                                    />
-                                                                )}
-                                                                {expandedInvoiceData.business?.name && (
-                                                                    <div className="text-sm">
-                                                                        <p className="font-semibold">{expandedInvoiceData.business.name}</p>
-                                                                        {expandedInvoiceData.business.email && (
-                                                                            <p className="text-muted-foreground">{expandedInvoiceData.business.email}</p>
-                                                                        )}
-                                                                        {expandedInvoiceData.business.phone && (
-                                                                            <p className="text-muted-foreground">{expandedInvoiceData.business.phone}</p>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <h2 className="text-2xl font-light text-blue-600 mb-1">INVOICE</h2>
-                                                                <p className="text-sm text-muted-foreground">{expandedInvoiceData.invoice_number}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Bill To & Dates */}
-                                                        <div className="flex justify-between mb-6">
-                                                            <div className="w-1/2">
-                                                                <p className="text-xs text-muted-foreground uppercase mb-1">Bill To</p>
-                                                                <div className="text-sm">
-                                                                    {expandedInvoiceData.customer_name && <p className="font-semibold">{expandedInvoiceData.customer_name}</p>}
-                                                                    {expandedInvoiceData.customer_email && <p className="text-muted-foreground">{expandedInvoiceData.customer_email}</p>}
-                                                                    {expandedInvoiceData.customer_phone && <p className="text-muted-foreground">{expandedInvoiceData.customer_phone}</p>}
-                                                                    {expandedInvoiceData.customer_address && <p className="text-muted-foreground whitespace-pre-line">{expandedInvoiceData.customer_address}</p>}
-                                                                </div>
-                                                            </div>
-                                                            <div className="w-1/2 text-right text-sm space-y-1">
-                                                                <div className="flex justify-end gap-4">
-                                                                    <span className="text-muted-foreground">Issue Date:</span>
-                                                                    <span className="font-medium">{formatPreviewDate(expandedInvoiceData.issue_date)}</span>
-                                                                </div>
-                                                                <div className="flex justify-end gap-4">
-                                                                    <span className="text-muted-foreground">Due Date:</span>
-                                                                    <span className="font-medium">{formatPreviewDate(expandedInvoiceData.due_date)}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Line Items Table */}
-                                                        <table className="w-full mb-6 text-sm">
-                                                            <thead>
-                                                                <tr className="border-b-2 text-xs text-muted-foreground uppercase">
-                                                                    <th className="text-left py-2 w-1/2">Description</th>
-                                                                    <th className="text-right py-2">Qty</th>
-                                                                    <th className="text-right py-2">Unit Price</th>
-                                                                    <th className="text-right py-2">Amount</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {(expandedInvoiceData.items || []).map((item: any, idx: number) => (
-                                                                    <tr key={idx} className="border-b">
-                                                                        <td className="py-2">
-                                                                            <p className="font-medium">{item.name}</p>
-                                                                            {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                                                                        </td>
-                                                                        <td className="text-right py-2">{item.quantity}</td>
-                                                                        <td className="text-right py-2">{formatCurrency(item.unit_price)}</td>
-                                                                        <td className="text-right py-2">{formatCurrency(item.quantity * item.unit_price)}</td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-
-                                                        {/* Totals */}
-                                                        <div className="flex justify-end mb-6">
-                                                            <div className="w-56 space-y-1 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span>Subtotal</span>
-                                                                    <span>{formatCurrency(expandedInvoiceData.subtotal)}</span>
-                                                                </div>
-                                                                {(expandedInvoiceData.tax_amount || 0) > 0 && (
-                                                                    <div className="flex justify-between">
-                                                                        <span>Tax</span>
-                                                                        <span>{formatCurrency(expandedInvoiceData.tax_amount)}</span>
-                                                                    </div>
-                                                                )}
-                                                                {(expandedInvoiceData.discount_amount || 0) > 0 && (
-                                                                    <div className="flex justify-between">
-                                                                        <span>Discount</span>
-                                                                        <span>-{formatCurrency(expandedInvoiceData.discount_amount)}</span>
-                                                                    </div>
-                                                                )}
-                                                                <Separator />
-                                                                <div className="flex justify-between font-bold text-base">
-                                                                    <span>Total</span>
-                                                                    <span>{formatCurrency(expandedInvoiceData.total)}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Notes */}
-                                                        {expandedInvoiceData.notes && (
-                                                            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-                                                                <p className="text-xs text-muted-foreground uppercase mb-1">Notes</p>
-                                                                <p className="text-sm whitespace-pre-line">{expandedInvoiceData.notes}</p>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Footer */}
-                                                        <div className="text-center text-xs text-muted-foreground pt-4">
-                                                            <p>Thank you for your business!</p>
-                                                        </div>
-                                                      </div>
-
-                                                        {/* Powered By Footer */}
-                                                        <div className="mt-auto -mx-6 py-4 px-6 bg-blue-600 rounded-b-lg text-center text-sm text-white">
-                                                            <span className="mr-2">Powered by</span>
-                                                            <div className="bg-white py-2 px-3 rounded-md inline-flex items-center gap-1.5 shadow-sm">
-                                                                <img
-                                                                    src="/icon.png"
-                                                                    alt="itemize"
-                                                                    className="h-6 w-auto inline-block align-middle"
-                                                                    onError={(e) => {
-                                                                        e.currentTarget.style.display = 'none';
-                                                                    }}
-                                                                />
-                                                                <img
-                                                                    src="/textblack.png"
-                                                                    alt="itemize.cloud"
-                                                                    className="h-5 w-auto inline-block align-middle"
-                                                                    onError={(e) => {
-                                                                        const target = e.target as HTMLImageElement;
-                                                                        target.style.display = 'none';
-                                                                        // Only add fallback if both images fail
-                                                                        if (!target.parentElement?.querySelector('span.fallback-text')) {
-                                                                            const fallback = document.createElement('span');
-                                                                            fallback.textContent = 'itemize.cloud';
-                                                                            fallback.className = 'fallback-text text-gray-900 font-medium';
-                                                                            target.parentElement?.appendChild(fallback);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                    <div className="max-w-3xl mx-auto">
+                                                        <InvoicePreviewCard
+                                                            variant="invoice"
+                                                            business={expandedInvoiceData.business}
+                                                            documentNumber={expandedInvoiceData.invoice_number}
+                                                            issueDate={expandedInvoiceData.issue_date}
+                                                            dueDate={expandedInvoiceData.due_date}
+                                                            customerName={expandedInvoiceData.customer_name}
+                                                            customerEmail={expandedInvoiceData.customer_email}
+                                                            customerPhone={expandedInvoiceData.customer_phone}
+                                                            customerAddress={expandedInvoiceData.customer_address}
+                                                            items={(expandedInvoiceData.items || []).map((item: any) => ({
+                                                                name: item.name,
+                                                                description: item.description,
+                                                                quantity: item.quantity,
+                                                                unit_price: item.unit_price,
+                                                                tax_rate: item.tax_rate
+                                                            }))}
+                                                            subtotal={expandedInvoiceData.subtotal}
+                                                            taxAmount={expandedInvoiceData.tax_amount}
+                                                            discountAmount={expandedInvoiceData.discount_amount}
+                                                            total={expandedInvoiceData.total}
+                                                            currency={expandedInvoiceData.currency}
+                                                            notes={expandedInvoiceData.notes}
+                                                        />
 
                                                         {/* Action Buttons */}
                                                         <div className="flex justify-center gap-3 mt-6 pt-4 border-t">
@@ -853,6 +796,15 @@ export function InvoicesPage() {
                                                             <Button variant="outline" size="sm">
                                                                 <Download className="h-4 w-4 mr-2" />Download PDF
                                                             </Button>
+                                                            {!['cancelled', 'refunded'].includes(invoice.status) && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={(e) => handleOpenRecurringModal(invoice, e)}
+                                                                >
+                                                                    <Repeat className="h-4 w-4 mr-2" />Make Recurring
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ) : null}
@@ -917,6 +869,28 @@ export function InvoicesPage() {
                     currency={fullInvoiceDataForSend?.currency || 'USD'}
                     dueDate={selectedInvoiceForSend.due_date}
                     business={fullInvoiceDataForSend?.business}
+                />
+            )}
+
+            {/* Make Recurring Modal */}
+            {selectedInvoiceForRecurring && (
+                <MakeRecurringModal
+                    open={showRecurringModal}
+                    onOpenChange={(open) => {
+                        setShowRecurringModal(open);
+                        if (!open) {
+                            setSelectedInvoiceForRecurring(null);
+                            setFullInvoiceDataForRecurring(null);
+                        }
+                    }}
+                    onConfirm={handleMakeRecurring}
+                    converting={converting}
+                    invoiceNumber={selectedInvoiceForRecurring.invoice_number}
+                    customerName={fullInvoiceDataForRecurring?.customer_name || selectedInvoiceForRecurring.customer_name || getContactName(selectedInvoiceForRecurring)}
+                    total={selectedInvoiceForRecurring.total}
+                    currency={fullInvoiceDataForRecurring?.currency || 'USD'}
+                    itemCount={fullInvoiceDataForRecurring?.items?.length || 0}
+                    status={selectedInvoiceForRecurring.status}
                 />
             )}
         </div>

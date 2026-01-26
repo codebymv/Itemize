@@ -14,6 +14,10 @@ import {
     CheckCircle,
     Clock,
     History,
+    ChevronDown,
+    ChevronRight,
+    Loader2,
+    CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,10 +49,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization, getContacts } from '@/services/contactsApi';
-import { getProducts, Product } from '@/services/invoicesApi';
+import { getProducts, Product, getBusinesses, Business } from '@/services/invoicesApi';
+import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import api from '@/lib/api';
 
 interface RecurringInvoice {
@@ -58,15 +74,28 @@ interface RecurringInvoice {
     contact_first_name?: string;
     contact_last_name?: string;
     customer_name?: string;
+    customer_email?: string;
     frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
     status: 'active' | 'paused' | 'completed';
     next_run_date: string;
     start_date: string;
     end_date?: string;
     total: number;
+    subtotal?: number;
+    tax_amount?: number;
+    discount_amount?: number;
     last_generated_at?: string;
     invoices_generated: number;
     created_at: string;
+    items?: Array<{
+        name: string;
+        description?: string;
+        quantity: number;
+        unit_price: number;
+        tax_rate?: number;
+    }>;
+    notes?: string;
+    payment_terms?: string;
 }
 
 interface Contact {
@@ -105,6 +134,20 @@ export function RecurringInvoicesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
 
+    // Expanded recurring state
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [expandedData, setExpandedData] = useState<RecurringInvoice | null>(null);
+    const [loadingPreview, setLoadingPreview] = useState(false);
+    const [previewInvoiceNumber, setPreviewInvoiceNumber] = useState<string>('INV-00001');
+    
+    // Delete confirmation dialog state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [recurringToDelete, setRecurringToDelete] = useState<RecurringInvoice | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    // Business data for preview
+    const [business, setBusiness] = useState<Business | null>(null);
+
     // Create dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
     const [contacts, setContacts] = useState<Contact[]>([]);
@@ -128,13 +171,18 @@ export function RecurringInvoicesPage() {
                 const org = await ensureDefaultOrganization();
                 setOrganizationId(org.id);
 
-                // Load contacts and products for the form
-                const [contactsData, productsData] = await Promise.all([
+                // Load contacts, products, and business for the form and preview
+                const [contactsData, productsData, businessesData] = await Promise.all([
                     getContacts({}, org.id),
-                    getProducts({}, org.id)
+                    getProducts({}, org.id),
+                    getBusinesses(org.id)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
                 setProducts(productsData || []);
+                // Use the first (default) business for previews
+                if (businessesData && businessesData.length > 0) {
+                    setBusiness(businessesData[0]);
+                }
             } catch (error) {
                 toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
                 setLoading(false);
@@ -273,16 +321,68 @@ export function RecurringInvoicesPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDeleteClick = (recurring: RecurringInvoice, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setRecurringToDelete(recurring);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!organizationId || !recurringToDelete) return;
+        setDeleting(true);
         try {
-            await api.delete(`/api/invoices/recurring/${id}`, {
+            await api.delete(`/api/invoices/recurring/${recurringToDelete.id}`, {
                 headers: { 'x-organization-id': organizationId.toString() }
             });
-            setRecurringInvoices(prev => prev.filter(r => r.id !== id));
+            setRecurringInvoices(prev => prev.filter(r => r.id !== recurringToDelete.id));
             toast({ title: 'Deleted', description: 'Recurring invoice deleted successfully' });
+            setDeleteDialogOpen(false);
+            setRecurringToDelete(null);
+            // Collapse if deleted item was expanded
+            if (expandedId === recurringToDelete.id) {
+                setExpandedId(null);
+                setExpandedData(null);
+            }
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleToggleExpand = async (recurringId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        // If clicking on already expanded item, collapse it
+        if (expandedId === recurringId) {
+            setExpandedId(null);
+            setExpandedData(null);
+            return;
+        }
+        
+        // Expand new item
+        setExpandedId(recurringId);
+        setExpandedData(null);
+        setLoadingPreview(true);
+        
+        if (!organizationId) return;
+        
+        try {
+            const [recurringResponse, previewNumberResponse] = await Promise.all([
+                api.get(`/api/invoices/recurring/${recurringId}`, {
+                    headers: { 'x-organization-id': organizationId.toString() }
+                }),
+                api.get('/api/invoices/recurring/preview-invoice-number', {
+                    headers: { 'x-organization-id': organizationId.toString() }
+                })
+            ]);
+            setExpandedData(recurringResponse.data);
+            setPreviewInvoiceNumber(previewNumberResponse.data.invoice_number || 'INV-00001');
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to load recurring invoice details', variant: 'destructive' });
+            setExpandedId(null);
+        } finally {
+            setLoadingPreview(false);
         }
     };
 
@@ -291,6 +391,17 @@ export function RecurringInvoicesPage() {
             style: 'currency',
             currency: 'USD'
         }).format(amount || 0);
+    };
+
+    const formatDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     };
 
     const getContactName = (recurring: RecurringInvoice) => {
@@ -390,18 +501,18 @@ export function RecurringInvoicesPage() {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            case 'active': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
             case 'paused': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-            case 'completed': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+            case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
             default: return '';
         }
     };
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'active': return <Play className="h-4 w-4 text-green-600" />;
+            case 'active': return <Play className="h-4 w-4 text-blue-600" />;
             case 'paused': return <Pause className="h-4 w-4 text-yellow-600" />;
-            case 'completed': return <CheckCircle className="h-4 w-4 text-gray-400" />;
+            case 'completed': return <CheckCircle className="h-4 w-4 text-green-600" />;
             default: return <Clock className="h-4 w-4 text-gray-400" />;
         }
     };
@@ -414,21 +525,7 @@ export function RecurringInvoicesPage() {
         <div className="container mx-auto p-6 max-w-7xl">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('all')}>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('completed')}`}>Completed</Badge>
-                                <p className="text-2xl font-bold">{stats.completed}</p>
-                                <p className="text-xs text-muted-foreground">{stats.completed} recurring{stats.completed !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <CheckCircle className="h-5 w-5 text-gray-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('paused')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -442,16 +539,30 @@ export function RecurringInvoicesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('active')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
                                 <Badge className={`text-xs mb-2 ${getStatusBadge('active')}`}>Active</Badge>
-                                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
                                 <p className="text-xs text-muted-foreground">{stats.active} recurring{stats.active !== 1 ? 's' : ''}</p>
                             </div>
+                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                <Play className="h-5 w-5 text-blue-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('completed')}`}>Completed</Badge>
+                                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                                <p className="text-xs text-muted-foreground">{stats.completed} recurring{stats.completed !== 1 ? 's' : ''}</p>
+                            </div>
                             <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <Play className="h-5 w-5 text-green-600" />
+                                <CheckCircle className="h-5 w-5 text-green-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -492,77 +603,258 @@ export function RecurringInvoicesPage() {
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {filteredRecurring.map((recurring) => (
-                                <div key={recurring.id} className="p-4 hover:bg-muted/50 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                                {getStatusIcon(recurring.status)}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="font-medium">{recurring.template_name}</p>
-                                                    <Badge className={`text-xs ${getStatusBadge(recurring.status)}`}>
-                                                        {recurring.status.charAt(0).toUpperCase() + recurring.status.slice(1)}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {FREQUENCY_LABELS[recurring.frequency]}
-                                                    </Badge>
+                            {filteredRecurring.map((recurring) => {
+                                const isExpanded = expandedId === recurring.id;
+                                return (
+                                    <div key={recurring.id}>
+                                        {/* Recurring Row */}
+                                        <div
+                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                                            onClick={(e) => handleToggleExpand(recurring.id, e)}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    {/* Expand/Collapse Chevron */}
+                                                    <div className="w-6 h-6 flex items-center justify-center text-muted-foreground">
+                                                        {isExpanded ? (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                                        {getStatusIcon(recurring.status)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="font-medium">{recurring.template_name}</p>
+                                                            <Badge className={`text-xs ${getStatusBadge(recurring.status)}`}>
+                                                                {recurring.status.charAt(0).toUpperCase() + recurring.status.slice(1)}
+                                                            </Badge>
+                                                            <span className="text-muted-foreground">|</span>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Billed {FREQUENCY_LABELS[recurring.frequency]?.toLowerCase() || recurring.frequency}
+                                                            </p>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground">{getContactName(recurring)}</p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground">{getContactName(recurring)}</p>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{formatCurrency(recurring.total)}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {recurring.status === 'active' && recurring.next_run_date && (
+                                                                <>Next: {new Date(recurring.next_run_date).toLocaleDateString()}</>
+                                                            )}
+                                                            {recurring.invoices_generated > 0 && (
+                                                                <span className="ml-2">
+                                                                    ({recurring.invoices_generated} generated)
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                            <Button variant="ghost" size="icon">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenuItem>
+                                                                <Edit className="h-4 w-4 mr-2" />Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem>
+                                                                <History className="h-4 w-4 mr-2" />View History
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            {recurring.status === 'active' && (
+                                                                <DropdownMenuItem onClick={() => handlePause(recurring.id)}>
+                                                                    <Pause className="h-4 w-4 mr-2" />Pause
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {recurring.status === 'paused' && (
+                                                                <DropdownMenuItem onClick={() => handleResume(recurring.id)}>
+                                                                    <Play className="h-4 w-4 mr-2" />Resume
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => handleDeleteClick(recurring, e)}
+                                                                className="text-destructive"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+                                            <div className="ml-20 mt-2 text-xs text-muted-foreground">
+                                                {(() => {
+                                                    const startDate = new Date(recurring.start_date);
+                                                    const isFuture = startDate > new Date();
+                                                    return (
+                                                        <>
+                                                            {isFuture ? 'Starting' : 'Started'} {startDate.toLocaleDateString()}
+                                                            {recurring.end_date && (
+                                                                <span className="ml-2">
+                                                                    · Ends {new Date(recurring.end_date).toLocaleDateString()}
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-right">
-                                                <p className="font-medium">{formatCurrency(recurring.total)}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {recurring.status === 'active' && recurring.next_run_date && (
-                                                        <>Next: {new Date(recurring.next_run_date).toLocaleDateString()}</>
-                                                    )}
-                                                    {recurring.invoices_generated > 0 && (
-                                                        <span className="ml-2">
-                                                            ({recurring.invoices_generated} generated)
-                                                        </span>
-                                                    )}
-                                                </p>
+
+                                        {/* Expanded Preview */}
+                                        {isExpanded && (
+                                            <div className="bg-muted/30 border-t px-6 py-6">
+                                                {loadingPreview ? (
+                                                    <div className="flex items-center justify-center py-12">
+                                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                                        <span className="ml-2 text-muted-foreground">Loading details...</span>
+                                                    </div>
+                                                ) : expandedData ? (
+                                                    <div className="max-w-6xl mx-auto">
+                                                        {/* Two Column Layout: Preview + Schedule Details */}
+                                                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                                            {/* Left Column - Invoice Preview (takes 2/3 on xl) */}
+                                                            <div className="xl:col-span-2">
+                                                                <InvoicePreviewCard
+                                                                    variant="template"
+                                                                    business={business || undefined}
+                                                                    documentNumber={previewInvoiceNumber}
+                                                                    frequency={expandedData.frequency}
+                                                                    nextRunDate={expandedData.status === 'active' ? expandedData.next_run_date : undefined}
+                                                                    customerName={expandedData.customer_name}
+                                                                    customerEmail={expandedData.customer_email}
+                                                                    items={expandedData.items || []}
+                                                                    subtotal={expandedData.subtotal || 0}
+                                                                    taxAmount={expandedData.tax_amount}
+                                                                    discountAmount={expandedData.discount_amount}
+                                                                    total={expandedData.total}
+                                                                    notes={expandedData.notes}
+                                                                    className="max-w-3xl"
+                                                                />
+                                                            </div>
+
+                                                            {/* Right Column - Schedule Details */}
+                                                            <div className="xl:col-span-1">
+                                                                <div className="bg-white dark:bg-gray-900 rounded-lg border p-5 shadow-sm sticky top-6">
+                                                                    <h3 className="text-sm font-semibold uppercase text-muted-foreground mb-4 flex items-center gap-2">
+                                                                        <CalendarDays className="h-4 w-4" />
+                                                                        Schedule Details
+                                                                    </h3>
+                                                                    
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex justify-between items-center py-2 border-b">
+                                                                            <span className="text-sm text-muted-foreground">Frequency</span>
+                                                                            <span className="text-sm font-medium">
+                                                                                Billed {FREQUENCY_LABELS[expandedData.frequency]?.toLowerCase() || expandedData.frequency}
+                                                                            </span>
+                                                                        </div>
+                                                                        
+                                                                        <div className="flex justify-between items-center py-2 border-b">
+                                                                            <span className="text-sm text-muted-foreground">Status</span>
+                                                                            <Badge className={getStatusBadge(expandedData.status)}>
+                                                                                {expandedData.status.charAt(0).toUpperCase() + expandedData.status.slice(1)}
+                                                                            </Badge>
+                                                                        </div>
+                                                                        
+                                                                        <div className="flex justify-between items-center py-2 border-b">
+                                                                            <span className="text-sm text-muted-foreground">Start Date</span>
+                                                                            <span className="text-sm font-medium">{formatDate(expandedData.start_date)}</span>
+                                                                        </div>
+                                                                        
+                                                                        {expandedData.end_date && (
+                                                                            <div className="flex justify-between items-center py-2 border-b">
+                                                                                <span className="text-sm text-muted-foreground">End Date</span>
+                                                                                <span className="text-sm font-medium">{formatDate(expandedData.end_date)}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        {expandedData.status === 'active' && expandedData.next_run_date && (
+                                                                            <div className="flex justify-between items-center py-2 border-b">
+                                                                                <span className="text-sm text-muted-foreground">Next Invoice</span>
+                                                                                <span className="text-sm font-medium text-blue-600">{formatDate(expandedData.next_run_date)}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        {expandedData.last_generated_at && (
+                                                                            <div className="flex justify-between items-center py-2 border-b">
+                                                                                <span className="text-sm text-muted-foreground">Last Generated</span>
+                                                                                <span className="text-sm font-medium">{formatDate(expandedData.last_generated_at)}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        <div className="flex justify-between items-center py-2">
+                                                                            <span className="text-sm text-muted-foreground">Invoices Generated</span>
+                                                                            <span className="text-sm font-medium">{expandedData.invoices_generated || 0}</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Quick Actions in Schedule Card */}
+                                                                    <div className="mt-6 pt-4 border-t space-y-2">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="w-full justify-start"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <Edit className="h-4 w-4 mr-2" />Edit Template
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="w-full justify-start"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <History className="h-4 w-4 mr-2" />View History
+                                                                        </Button>
+                                                                        {recurring.status === 'active' && (
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                className="w-full justify-start border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handlePause(recurring.id);
+                                                                                }}
+                                                                            >
+                                                                                <Pause className="h-4 w-4 mr-2" />Pause Schedule
+                                                                            </Button>
+                                                                        )}
+                                                                        {recurring.status === 'paused' && (
+                                                                            <Button
+                                                                                size="sm"
+                                                                                className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleResume(recurring.id);
+                                                                                }}
+                                                                            >
+                                                                                <Play className="h-4 w-4 mr-2" />Resume Schedule
+                                                                            </Button>
+                                                                        )}
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="w-full justify-start border-destructive text-destructive hover:bg-destructive/10"
+                                                                            onClick={(e) => handleDeleteClick(recurring, e)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4 mr-2" />Delete Template
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : null}
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Edit className="h-4 w-4 mr-2" />Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <History className="h-4 w-4 mr-2" />View History
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    {recurring.status === 'active' && (
-                                                        <DropdownMenuItem onClick={() => handlePause(recurring.id)}>
-                                                            <Pause className="h-4 w-4 mr-2" />Pause
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    {recurring.status === 'paused' && (
-                                                        <DropdownMenuItem onClick={() => handleResume(recurring.id)}>
-                                                            <Play className="h-4 w-4 mr-2" />Resume
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleDelete(recurring.id)}
-                                                        className="text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>
@@ -712,6 +1004,42 @@ export function RecurringInvoicesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Recurring Invoice</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete recurring invoice{' '}
+                            <span className="font-semibold">{recurringToDelete?.template_name}</span>?
+                            {recurringToDelete?.status === 'active' && (
+                                <span className="block mt-2 text-yellow-600 dark:text-yellow-500">
+                                    This recurring invoice is currently active. No more invoices will be generated after deletion.
+                                </span>
+                            )}
+                            {(recurringToDelete?.invoices_generated || 0) > 0 && (
+                                <span className="block mt-2 text-muted-foreground">
+                                    {recurringToDelete?.invoices_generated} invoice{recurringToDelete?.invoices_generated !== 1 ? 's have' : ' has'} already been generated from this template. They will not be affected.
+                                </span>
+                            )}
+                            <span className="block mt-2">
+                                This action cannot be undone.
+                            </span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            disabled={deleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deleting ? 'Deleting...' : 'Delete'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

@@ -36,6 +36,36 @@ module.exports = (pool, authenticateJWT) => {
     }
 
     /**
+     * GET /api/invoices/recurring/preview-invoice-number - Get next invoice number for preview
+     */
+    router.get('/preview-invoice-number', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const client = await pool.connect();
+            
+            const settingsResult = await client.query(
+                'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
+                [req.organizationId]
+            );
+
+            let prefix = 'INV-';
+            let nextNumber = 1;
+
+            if (settingsResult.rows.length > 0) {
+                prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
+                nextNumber = settingsResult.rows[0].next_invoice_number || 1;
+            }
+
+            const previewNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+            
+            client.release();
+            res.json({ invoice_number: previewNumber });
+        } catch (error) {
+            console.error('Error getting preview invoice number:', error);
+            res.status(500).json({ error: 'Failed to get preview invoice number' });
+        }
+    });
+
+    /**
      * GET /api/invoices/recurring - List recurring invoice templates
      */
     router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
@@ -447,6 +477,169 @@ module.exports = (pool, authenticateJWT) => {
         } catch (error) {
             console.error('Error fetching recurring invoice history:', error);
             res.status(500).json({ error: 'Failed to fetch history' });
+        }
+    });
+
+    /**
+     * POST /api/invoices/recurring/from-invoice/:invoiceId - Convert invoice to recurring template
+     * Creates a recurring template from an existing invoice and deletes the original
+     */
+    router.post('/from-invoice/:invoiceId', authenticateJWT, requireOrganization, async (req, res) => {
+        const client = await pool.connect();
+        
+        try {
+            const { invoiceId } = req.params;
+            const {
+                template_name,
+                frequency,
+                start_date,
+                end_date
+            } = req.body;
+
+            // Validate required fields
+            if (!template_name || !frequency || !start_date) {
+                return res.status(400).json({ error: 'Template name, frequency, and start date are required' });
+            }
+
+            if (!['weekly', 'monthly', 'quarterly', 'yearly'].includes(frequency)) {
+                return res.status(400).json({ error: 'Invalid frequency. Must be weekly, monthly, quarterly, or yearly' });
+            }
+
+            // Start transaction
+            await client.query('BEGIN');
+
+            // Fetch the invoice
+            const invoiceResult = await client.query(`
+                SELECT i.*, 
+                    c.first_name as contact_first_name, 
+                    c.last_name as contact_last_name,
+                    c.email as contact_email
+                FROM invoices i
+                LEFT JOIN contacts c ON i.contact_id = c.id
+                WHERE i.id = $1 AND i.organization_id = $2
+            `, [invoiceId, req.organizationId]);
+
+            if (invoiceResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
+
+            const invoice = invoiceResult.rows[0];
+
+            // Check if invoice status allows conversion (exclude cancelled/refunded)
+            if (['cancelled', 'refunded'].includes(invoice.status)) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Cannot convert cancelled or refunded invoices' });
+            }
+
+            // Fetch invoice line items
+            const itemsResult = await client.query(`
+                SELECT name, description, quantity, unit_price, tax_rate, product_id
+                FROM invoice_items
+                WHERE invoice_id = $1
+                ORDER BY id
+            `, [invoiceId]);
+
+            const items = itemsResult.rows.map(item => ({
+                name: item.name,
+                description: item.description || '',
+                quantity: parseFloat(item.quantity) || 1,
+                unit_price: parseFloat(item.unit_price) || 0,
+                tax_rate: parseFloat(item.tax_rate) || 0,
+                product_id: item.product_id || null
+            }));
+
+            if (items.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Invoice has no line items' });
+            }
+
+            // Calculate totals
+            let subtotal = 0;
+            let taxAmount = 0;
+
+            for (const item of items) {
+                const itemTotal = item.quantity * item.unit_price;
+                const itemTax = itemTotal * (item.tax_rate / 100);
+                subtotal += itemTotal;
+                taxAmount += itemTax;
+            }
+
+            let discountAmount = 0;
+            const discountType = invoice.discount_type;
+            const discountValue = parseFloat(invoice.discount_value) || 0;
+
+            if (discountValue > 0) {
+                if (discountType === 'percent') {
+                    discountAmount = subtotal * (discountValue / 100);
+                } else {
+                    discountAmount = discountValue;
+                }
+            }
+
+            const total = subtotal + taxAmount - discountAmount;
+
+            // Create the recurring template
+            const templateResult = await client.query(`
+                INSERT INTO recurring_invoice_templates (
+                    organization_id, template_name, contact_id, customer_name, customer_email,
+                    frequency, start_date, end_date, next_run_date,
+                    items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
+                    notes, payment_terms, created_by, status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'active')
+                RETURNING *
+            `, [
+                req.organizationId,
+                template_name,
+                invoice.contact_id || null,
+                invoice.customer_name || null,
+                invoice.customer_email || null,
+                frequency,
+                start_date,
+                end_date || null,
+                start_date, // First run is on start date
+                JSON.stringify(items),
+                subtotal,
+                taxAmount,
+                discountAmount,
+                discountType || null,
+                discountValue,
+                total,
+                invoice.notes || null,
+                invoice.payment_terms || null,
+                req.user.id
+            ]);
+
+            const newTemplate = templateResult.rows[0];
+
+            // Delete the original invoice items first (due to foreign key)
+            await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [invoiceId]);
+
+            // Delete the original invoice
+            await client.query('DELETE FROM invoices WHERE id = $1 AND organization_id = $2', [invoiceId, req.organizationId]);
+
+            // Commit transaction
+            await client.query('COMMIT');
+
+            logger.info('Invoice converted to recurring template', {
+                invoiceId,
+                templateId: newTemplate.id,
+                organizationId: req.organizationId,
+                userId: req.user.id
+            });
+
+            res.status(201).json({
+                success: true,
+                template: newTemplate,
+                message: 'Invoice successfully converted to recurring template'
+            });
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            logger.error('Error converting invoice to recurring:', error);
+            res.status(500).json({ error: 'Failed to convert invoice to recurring template' });
+        } finally {
+            client.release();
         }
     });
 

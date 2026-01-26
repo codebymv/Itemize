@@ -266,7 +266,7 @@ export function EstimatesPage() {
         <div className="container mx-auto p-6 max-w-7xl">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('draft')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -280,7 +280,7 @@ export function EstimatesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('sent')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -294,7 +294,7 @@ export function EstimatesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('all')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -308,7 +308,7 @@ export function EstimatesPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('accepted')}>
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
