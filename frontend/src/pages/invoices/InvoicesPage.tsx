@@ -112,42 +112,6 @@ export function InvoicesPage() {
     const [isResend, setIsResend] = useState(false);
 
     useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
-                    <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-                    >
-                        SALES & PAYMENTS | Invoices
-                    </h1>
-                </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search invoices..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={handleCreateInvoice}
-                    >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Invoice</span>
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
-
-    useEffect(() => {
         const initOrg = async () => {
             try {
                 const org = await ensureDefaultOrganization();
@@ -343,6 +307,68 @@ export function InvoicesPage() {
         };
     }, [invoices]);
 
+    // Set header content (must be after stats is defined)
+    useEffect(() => {
+        setHeaderContent(
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
+                <div className="flex items-center gap-2 ml-2">
+                    <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    <h1
+                        className="text-xl font-semibold italic truncate"
+                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                    >
+                        SALES & PAYMENTS | Invoices
+                    </h1>
+                </div>
+                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    {/* Desktop Tabs - in header */}
+                    <div className="hidden md:flex items-center">
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+                            <TabsList className="h-9">
+                                <TabsTrigger value="all" className="text-xs">
+                                    All invoices
+                                    <Badge variant="secondary" className="ml-2">{invoices.length}</Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="unpaid" className="text-xs">
+                                    Unpaid
+                                    <Badge variant="secondary" className="ml-2">
+                                        {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
+                                    </Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="draft" className="text-xs">
+                                    Draft
+                                    <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="paid" className="text-xs">
+                                    Paid
+                                    <Badge variant="secondary" className="ml-2">{stats.paidCount}</Badge>
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
+                    <div className="relative hidden md:block w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search invoices..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={handleCreateInvoice}
+                    >
+                        <Plus className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">New Invoice</span>
+                    </Button>
+                </div>
+            </div>
+        );
+        return () => setHeaderContent(null);
+    }, [searchQuery, theme, setHeaderContent, activeTab, invoices, stats]);
+
     // Filter invoices based on tab and search
     const filteredInvoices = useMemo(() => {
         let filtered = invoices;
@@ -376,10 +402,10 @@ export function InvoicesPage() {
         switch (status) {
             case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
             case 'sent':
-            case 'viewed': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-            case 'draft': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+            case 'viewed': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+            case 'draft': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
             case 'overdue': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-            case 'partial': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+            case 'partial': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
             case 'cancelled': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
             default: return '';
         }
@@ -390,9 +416,22 @@ export function InvoicesPage() {
             case 'paid': return <CheckCircle className="h-4 w-4 text-green-600" />;
             case 'overdue': return <XCircle className="h-4 w-4 text-red-600" />;
             case 'sent':
-            case 'viewed': return <Send className="h-4 w-4 text-blue-600" />;
-            case 'partial': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+            case 'viewed': return <Send className="h-4 w-4 text-orange-600" />;
+            case 'partial': return <AlertCircle className="h-4 w-4 text-orange-600" />;
+            case 'draft': return <Clock className="h-4 w-4 text-sky-600" />;
             default: return <Clock className="h-4 w-4 text-gray-400" />;
+        }
+    };
+
+    const getStatusIconBg = (status: string) => {
+        switch (status) {
+            case 'paid': return 'bg-green-100 dark:bg-green-900';
+            case 'overdue': return 'bg-red-100 dark:bg-red-900';
+            case 'sent':
+            case 'viewed':
+            case 'partial': return 'bg-orange-100 dark:bg-orange-900';
+            case 'draft': return 'bg-sky-100 dark:bg-sky-900';
+            default: return 'bg-gray-100 dark:bg-gray-800';
         }
     };
 
@@ -422,7 +461,7 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Overdue</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('overdue')}`}>Overdue</Badge>
                                 <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.overdueCount} invoice{stats.overdueCount !== 1 ? 's' : ''}</p>
                             </div>
@@ -436,12 +475,12 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Due within 30 days</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Due within 30 days</Badge>
                                 <p className="text-2xl font-bold">{formatCurrency(stats.dueWithin30)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.dueWithin30Count} invoice{stats.dueWithin30Count !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-blue-600" />
+                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                <Calendar className="h-5 w-5 text-orange-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -450,12 +489,12 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Draft</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Draft</Badge>
                                 <p className="text-2xl font-bold">{formatCurrency(stats.draft)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.draftCount} invoice{stats.draftCount !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-gray-600" />
+                            <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-sky-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -464,7 +503,7 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Paid (Total)</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('paid')}`}>Paid (Total)</Badge>
                                 <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.paidCount} invoice{stats.paidCount !== 1 ? 's' : ''}</p>
                             </div>
@@ -476,8 +515,8 @@ export function InvoicesPage() {
                 </Card>
             </div>
 
-            {/* Tabs */}
-            <div className="mb-4">
+            {/* Tabs - Mobile only */}
+            <div className="mb-4 md:hidden">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList>
                         <TabsTrigger value="all">
@@ -549,14 +588,14 @@ export function InvoicesPage() {
                                                             <ChevronRight className="h-4 w-4" />
                                                         )}
                                                     </div>
-                                                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusIconBg(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
                                                         {getStatusIcon(isOverdue(invoice) ? 'overdue' : invoice.status)}
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <p className="font-medium">{invoice.invoice_number}</p>
                                                             <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
-                                                                {isOverdue(invoice) ? 'overdue' : invoice.status}
+                                                                {(isOverdue(invoice) ? 'overdue' : invoice.status).charAt(0).toUpperCase() + (isOverdue(invoice) ? 'overdue' : invoice.status).slice(1)}
                                                             </Badge>
                                                         </div>
                                                         <p className="text-sm text-muted-foreground">{getContactName(invoice)}</p>
@@ -624,7 +663,8 @@ export function InvoicesPage() {
                                                         <span className="ml-2 text-muted-foreground">Loading preview...</span>
                                                     </div>
                                                 ) : expandedInvoiceData ? (
-                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 max-w-3xl mx-auto shadow-sm" style={{ fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+                                                    <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 pb-0 max-w-3xl mx-auto shadow-sm flex flex-col" style={{ fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", height: '990px' }}>
+                                                      <div className="flex-1">
                                                         {/* Header */}
                                                         <div className="flex justify-between items-start mb-6">
                                                             <div>
@@ -740,9 +780,10 @@ export function InvoicesPage() {
                                                         <div className="text-center text-xs text-muted-foreground pt-4">
                                                             <p>Thank you for your business!</p>
                                                         </div>
+                                                      </div>
 
                                                         {/* Powered By Footer */}
-                                                        <div className="mt-12 -mx-6 py-4 px-6 bg-blue-600 rounded-none text-center text-sm text-white">
+                                                        <div className="mt-auto -mx-6 py-4 px-6 bg-blue-600 rounded-b-lg text-center text-sm text-white">
                                                             <span className="mr-2">Powered by</span>
                                                             <div className="bg-white py-2 px-3 rounded-md inline-flex items-center gap-1.5 shadow-sm">
                                                                 <img

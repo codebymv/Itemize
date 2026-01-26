@@ -101,15 +101,7 @@ export function PaymentsPage() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search payments..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
+                    {/* Filters first */}
                     <Select value={methodFilter} onValueChange={setMethodFilter}>
                         <SelectTrigger className="w-[130px] h-9 hidden sm:flex">
                             <SelectValue placeholder="Method" />
@@ -134,6 +126,16 @@ export function PaymentsPage() {
                             <SelectItem value="refunded">Refunded</SelectItem>
                         </SelectContent>
                     </Select>
+                    {/* Search after filters */}
+                    <div className="relative hidden md:block w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search payments..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
                 </div>
             </div>
         );
@@ -214,6 +216,18 @@ export function PaymentsPage() {
         });
     };
 
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'succeeded': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            case 'pending':
+            case 'processing': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+            case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            case 'refunded': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+            case 'cancelled': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+            default: return '';
+        }
+    };
+
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'succeeded': return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -241,21 +255,9 @@ export function PaymentsPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Total Received</p>
-                                <p className="text-2xl font-bold">{formatCurrency(stats.total)}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <DollarSign className="h-5 w-5 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">This Month</p>
+                                <Badge className="text-xs mb-2 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">This Month</Badge>
                                 <p className="text-2xl font-bold">{formatCurrency(stats.thisMonth)}</p>
+                                <p className="text-xs text-muted-foreground">Received this month</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
                                 <Calendar className="h-5 w-5 text-blue-600" />
@@ -267,8 +269,23 @@ export function PaymentsPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Succeeded</p>
-                                <p className="text-2xl font-bold">{stats.succeeded}</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('pending')}`}>Pending</Badge>
+                                <p className="text-2xl font-bold">{stats.pending}</p>
+                                <p className="text-xs text-muted-foreground">{stats.pending} payment{stats.pending !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-yellow-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('succeeded')}`}>Succeeded</Badge>
+                                <p className="text-2xl font-bold text-green-600">{stats.succeeded}</p>
+                                <p className="text-xs text-muted-foreground">{stats.succeeded} payment{stats.succeeded !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
                                 <CheckCircle className="h-5 w-5 text-green-600" />
@@ -280,11 +297,12 @@ export function PaymentsPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Pending</p>
-                                <p className="text-2xl font-bold">{stats.pending}</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('succeeded')}`}>Total Received</Badge>
+                                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.total)}</p>
+                                <p className="text-xs text-muted-foreground">{stats.succeeded} payment{stats.succeeded !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-yellow-600" />
+                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                <DollarSign className="h-5 w-5 text-green-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -308,8 +326,8 @@ export function PaymentsPage() {
                                 Payments will appear here when you record them on invoices
                             </p>
                             <Button
-                                variant="outline"
                                 onClick={() => navigate('/invoices')}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
                             >
                                 <Receipt className="h-4 w-4 mr-2" />
                                 Go to Invoices
@@ -334,7 +352,7 @@ export function PaymentsPage() {
                                                         {formatCurrency(payment.amount, payment.currency)}
                                                     </p>
                                                     <Badge className={`text-xs ${STATUS_STYLES[payment.status] || ''}`}>
-                                                        {payment.status}
+                                                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                                                     </Badge>
                                                 </div>
                                                 <div className="flex items-center gap-3 text-sm text-muted-foreground">

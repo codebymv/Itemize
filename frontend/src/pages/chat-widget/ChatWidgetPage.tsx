@@ -37,10 +37,11 @@ export function ChatWidgetPage() {
     const [saving, setSaving] = useState(false);
     const [initError, setInitError] = useState<string | null>(null);
     const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState('settings');
 
     useEffect(() => {
         setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
                 <div className="flex items-center gap-2 ml-2">
                     <MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
@@ -51,6 +52,22 @@ export function ChatWidgetPage() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    {/* Desktop Tabs - in header */}
+                    <div className="hidden md:flex items-center">
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+                            <TabsList className="h-9">
+                                <TabsTrigger value="settings" className="text-xs">
+                                    <Settings className="h-4 w-4 mr-1" />Settings
+                                </TabsTrigger>
+                                <TabsTrigger value="appearance" className="text-xs">
+                                    <Palette className="h-4 w-4 mr-1" />Appearance
+                                </TabsTrigger>
+                                <TabsTrigger value="install" className="text-xs">
+                                    <Code className="h-4 w-4 mr-1" />Install
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
@@ -64,7 +81,7 @@ export function ChatWidgetPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, saving, setHeaderContent]);
+    }, [theme, saving, setHeaderContent, activeTab]);
 
     useEffect(() => {
         const initOrg = async () => {
@@ -191,8 +208,9 @@ export function ChatWidgetPage() {
 
     return (
         <div className="container mx-auto p-6 max-w-4xl">
-            <Tabs defaultValue="settings">
-                <TabsList className="mb-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                {/* Mobile only TabsList */}
+                <TabsList className="mb-6 md:hidden">
                     <TabsTrigger value="settings">
                         <Settings className="h-4 w-4 mr-2" />Settings
                     </TabsTrigger>

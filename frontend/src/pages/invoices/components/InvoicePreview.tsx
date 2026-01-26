@@ -86,7 +86,7 @@ export function InvoicePreview({
     // Any changes here should be mirrored in the backend
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Eye className="h-5 w-5 text-blue-500" />
@@ -106,9 +106,16 @@ export function InvoicePreview({
                     color: '#111827',
                     background: 'white',
                     padding: '40px',
+                    paddingBottom: 0,
                     borderRadius: '8px',
-                    border: '1px solid #e5e7eb'
+                    border: '1px solid #e5e7eb',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    /* Fixed height for Letter page (8.5x11) aspect ratio: width * (11/8.5) ≈ 990px for ~765px width */
+                    height: '990px',
+                    boxSizing: 'border-box'
                 }}>
+                    <div style={{ flex: 1 }}>
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
                         <div style={{ fontSize: '14px' }}>
@@ -244,18 +251,22 @@ export function InvoicePreview({
                         {business?.tax_id && <div>Tax ID: {business.tax_id}</div>}
                         <div style={{ marginTop: '8px' }}>Thank you for your business!</div>
                     </div>
+                    </div>
+                    {/* /.invoice-content */}
 
                     {/* Powered By Footer */}
                     <div style={{
-                        marginTop: '48px',
+                        marginTop: 'auto',
                         marginLeft: '-40px',
                         marginRight: '-40px',
+                        marginBottom: '0',
                         padding: '16px 24px',
                         backgroundColor: '#2563eb',
                         borderRadius: '0',
                         textAlign: 'center',
                         color: '#ffffff',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        width: 'calc(100% + 80px)'
                     }}>
                         <span style={{ marginRight: '8px' }}>Powered by</span>
                         <div

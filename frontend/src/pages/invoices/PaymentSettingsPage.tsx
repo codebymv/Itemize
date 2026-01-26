@@ -49,6 +49,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
@@ -115,7 +116,7 @@ export function PaymentSettingsPage() {
 
     useEffect(() => {
         setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
                 <div className="flex items-center gap-2 ml-2">
                     <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
@@ -125,7 +126,26 @@ export function PaymentSettingsPage() {
                         SALES & PAYMENTS | Settings
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 mr-4">
+                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    {/* Desktop Tabs - in header */}
+                    <div className="hidden md:flex items-center">
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+                            <TabsList className="h-9">
+                                <TabsTrigger value="business" className="text-xs">
+                                    <Building className="h-4 w-4 mr-1" />Business
+                                </TabsTrigger>
+                                <TabsTrigger value="invoice" className="text-xs">
+                                    <FileText className="h-4 w-4 mr-1" />Invoice
+                                </TabsTrigger>
+                                <TabsTrigger value="tax" className="text-xs">
+                                    <Percent className="h-4 w-4 mr-1" />Tax
+                                </TabsTrigger>
+                                <TabsTrigger value="payments" className="text-xs">
+                                    <CreditCard className="h-4 w-4 mr-1" />Payments
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
@@ -139,7 +159,7 @@ export function PaymentSettingsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, saving]);
+    }, [theme, setHeaderContent, saving, activeTab]);
 
     useEffect(() => {
         const init = async () => {
@@ -675,30 +695,28 @@ export function PaymentSettingsPage() {
 
     return (
         <div className="container mx-auto p-6 max-w-4xl">
-            <div className="grid gap-8 md:grid-cols-[200px_1fr]">
-                {/* Tab Navigation */}
-                <nav className="flex flex-col gap-1">
-                    {settingsNav.map((item) => {
-                        const isActive = activeTab === item.id;
-                        return (
-                            <Button
-                                key={item.id}
-                                variant={isActive ? 'secondary' : 'ghost'}
-                                className={`justify-start text-muted-foreground hover:text-foreground`}
-                                onClick={() => setActiveTab(item.id)}
-                                style={{ fontFamily: '"Raleway", sans-serif' }}
-                            >
-                                <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
-                                {item.title}
-                            </Button>
-                        );
-                    })}
-                </nav>
+            {/* Mobile Navigation */}
+            <nav className="flex flex-col gap-1 mb-6 md:hidden">
+                {settingsNav.map((item) => {
+                    const isActive = activeTab === item.id;
+                    return (
+                        <Button
+                            key={item.id}
+                            variant={isActive ? 'secondary' : 'ghost'}
+                            className={`justify-start text-muted-foreground hover:text-foreground`}
+                            onClick={() => setActiveTab(item.id)}
+                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                        >
+                            <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
+                            {item.title}
+                        </Button>
+                    );
+                })}
+            </nav>
 
-                {/* Tab Content */}
-                <div className="min-w-0">
-                    {renderTabContent()}
-                </div>
+            {/* Tab Content - Full width on desktop since nav is in header */}
+            <div className="min-w-0">
+                {renderTabContent()}
             </div>
 
             {/* Business Add/Edit Dialog */}

@@ -16,8 +16,10 @@ import {
   Link2Off,
   Eye,
   AlertTriangle,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,6 +87,8 @@ export function SharedPage() {
 
   // Filter state
   const [typeFilter, setTypeFilter] = useState<ContentType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'title'>('recent');
 
   // Data states
   const [lists, setLists] = useState<List[]>([]);
@@ -232,11 +236,32 @@ export function SharedPage() {
     return content;
   }, [lists, notes, whiteboards, wireframes, vaults, baseUrl]);
 
-  // Filter content
+  // Filter and sort content
   const filteredContent = useMemo(() => {
-    if (typeFilter === 'all') return sharedContent;
-    return sharedContent.filter(c => c.type === typeFilter);
-  }, [sharedContent, typeFilter]);
+    let filtered = sharedContent;
+    
+    // Type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(c => c.type === typeFilter);
+    }
+    
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(c => 
+        c.title.toLowerCase().includes(query) ||
+        c.category.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort
+    if (sortBy === 'title') {
+      filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    // Default is 'recent' which is already sorted by shared_at in sharedContent
+    
+    return filtered;
+  }, [sharedContent, typeFilter, searchQuery, sortBy]);
 
   // Get content type icon
   const getTypeIcon = (type: ContentType) => {
@@ -369,9 +394,20 @@ export function SharedPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+          {/* Sort dropdown - Desktop */}
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden md:flex">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most Recent</SelectItem>
+              <SelectItem value="title">Title A-Z</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -384,6 +420,17 @@ export function SharedPage() {
               <SelectItem value="vault">Vaults</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Search - Desktop */}
+          <div className="relative hidden md:block w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search shared..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 bg-muted/20 border-border/50"
+            />
+          </div>
 
           {/* Go to Canvas button */}
           <Button
@@ -398,17 +445,53 @@ export function SharedPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [theme, navigate, setHeaderContent, typeFilter]);
+  }, [theme, navigate, setHeaderContent, typeFilter, searchQuery, sortBy]);
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      {/* Summary */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <span className="text-sm text-muted-foreground">
-            {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
-          </span>
+      {/* Mobile filters */}
+      <div className="md:hidden flex flex-col gap-3 mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search shared..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
+        <div className="flex items-center gap-2">
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
+            <SelectTrigger className="flex-1">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="list">Lists</SelectItem>
+              <SelectItem value="note">Notes</SelectItem>
+              <SelectItem value="whiteboard">Whiteboards</SelectItem>
+              <SelectItem value="wireframe">Wireframes</SelectItem>
+              <SelectItem value="vault">Vaults</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most Recent</SelectItem>
+              <SelectItem value="title">Title A-Z</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="flex items-center justify-end mb-6">
+        <span className="text-sm text-muted-foreground">
+          {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
+        </span>
       </div>
 
       {/* Content */}

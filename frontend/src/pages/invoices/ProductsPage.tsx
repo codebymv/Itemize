@@ -106,6 +106,17 @@ export function ProductsPage() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    {/* Show inactive toggle - Desktop */}
+                    <div className="hidden md:flex items-center gap-2">
+                        <Switch
+                            id="show-inactive-header"
+                            checked={showInactive}
+                            onCheckedChange={setShowInactive}
+                        />
+                        <Label htmlFor="show-inactive-header" className="text-sm text-muted-foreground">
+                            Show inactive
+                        </Label>
+                    </div>
                     <div className="relative hidden md:block w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
@@ -127,7 +138,7 @@ export function ProductsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
+    }, [searchQuery, theme, setHeaderContent, showInactive]);
 
     useEffect(() => {
         const init = async () => {
@@ -232,8 +243,10 @@ export function ProductsPage() {
 
     return (
         <div className="container mx-auto p-6 max-w-7xl">
+            {/* Mobile controls + product count */}
             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
+                {/* Show inactive toggle - Mobile only */}
+                <div className="flex items-center gap-4 md:hidden">
                     <div className="flex items-center gap-2">
                         <Switch
                             id="show-inactive"
@@ -245,6 +258,8 @@ export function ProductsPage() {
                         </Label>
                     </div>
                 </div>
+                {/* Desktop spacer */}
+                <div className="hidden md:block" />
                 <p className="text-sm text-muted-foreground">
                     {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
                 </p>

@@ -212,38 +212,62 @@ function getItemizeLogo() {
     }
 }
 
-function getItemizeIcon() {
+async function getItemizeIconAsync() {
     // Return cached version if available
-    if (cachedIconDataUrl !== null) {
+    if (cachedIconDataUrl !== null && cachedIconDataUrl !== false) {
         return cachedIconDataUrl;
     }
     
     try {
-        // Try to load from frontend public directory (local development)
-        const iconPath = path.join(__dirname, '../../frontend/public/icon.png');
-        if (fs.existsSync(iconPath)) {
-            const iconBuffer = fs.readFileSync(iconPath);
-            const base64 = iconBuffer.toString('base64');
-            cachedIconDataUrl = `data:image/png;base64,${base64}`;
+        // Try multiple possible paths
+        const possiblePaths = [
+            path.join(__dirname, '../../frontend/public/icon.png'),
+            path.join(__dirname, '../../../frontend/public/icon.png'),
+            path.join(__dirname, '../public/icon.png'),
+            path.join(process.cwd(), 'frontend/public/icon.png'),
+            path.join(process.cwd(), 'public/icon.png')
+        ];
+        
+        for (const iconPath of possiblePaths) {
+            if (fs.existsSync(iconPath)) {
+                const iconBuffer = fs.readFileSync(iconPath);
+                const base64 = iconBuffer.toString('base64');
+                cachedIconDataUrl = `data:image/png;base64,${base64}`;
+                logger.info(`Itemize icon loaded from filesystem: ${iconPath}`);
+                return cachedIconDataUrl;
+            }
+        }
+        
+        // Fallback: try to fetch via HTTP (for production environments)
+        const baseUrl = process.env.FRONTEND_URL || process.env.API_URL || 'http://localhost:5173';
+        const httpUrl = `${baseUrl}/icon.png`;
+        logger.info(`Trying to fetch itemize icon via HTTP: ${httpUrl}`);
+        const iconDataUrl = await convertImageToDataUrl(httpUrl);
+        if (iconDataUrl && iconDataUrl.startsWith('data:')) {
+            cachedIconDataUrl = iconDataUrl;
+            logger.info('Itemize icon loaded via HTTP');
             return cachedIconDataUrl;
         }
         
-        // Fallback: try relative to backend
-        const altPath = path.join(__dirname, '../public/icon.png');
-        if (fs.existsSync(altPath)) {
-            const iconBuffer = fs.readFileSync(altPath);
-            const base64 = iconBuffer.toString('base64');
-            cachedIconDataUrl = `data:image/png;base64,${base64}`;
-            return cachedIconDataUrl;
-        }
-        
+        logger.warn('Itemize icon not found in any expected location');
         cachedIconDataUrl = false;
         return null;
     } catch (error) {
         logger.warn(`Failed to load itemize icon: ${error.message}`);
+        logger.warn(`Error stack: ${error.stack}`);
         cachedIconDataUrl = false;
         return null;
     }
+}
+
+function getItemizeIcon() {
+    // Synchronous version for backward compatibility
+    // This will only work if already cached
+    if (cachedIconDataUrl !== null && cachedIconDataUrl !== false) {
+        return cachedIconDataUrl;
+    }
+    // If not cached, return null (will be loaded async)
+    return null;
 }
 
 function getItemizeTextWhite() {
@@ -280,38 +304,62 @@ function getItemizeTextWhite() {
     }
 }
 
-function getItemizeTextBlack() {
+async function getItemizeTextBlackAsync() {
     // Return cached version if available
-    if (cachedTextBlackDataUrl !== null) {
+    if (cachedTextBlackDataUrl !== null && cachedTextBlackDataUrl !== false) {
         return cachedTextBlackDataUrl;
     }
     
     try {
-        // Try to load from frontend public directory (local development)
-        const textPath = path.join(__dirname, '../../frontend/public/textblack.png');
-        if (fs.existsSync(textPath)) {
-            const textBuffer = fs.readFileSync(textPath);
-            const base64 = textBuffer.toString('base64');
-            cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
+        // Try multiple possible paths
+        const possiblePaths = [
+            path.join(__dirname, '../../frontend/public/textblack.png'),
+            path.join(__dirname, '../../../frontend/public/textblack.png'),
+            path.join(__dirname, '../public/textblack.png'),
+            path.join(process.cwd(), 'frontend/public/textblack.png'),
+            path.join(process.cwd(), 'public/textblack.png')
+        ];
+        
+        for (const textPath of possiblePaths) {
+            if (fs.existsSync(textPath)) {
+                const textBuffer = fs.readFileSync(textPath);
+                const base64 = textBuffer.toString('base64');
+                cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
+                logger.info(`Itemize text black loaded from filesystem: ${textPath}`);
+                return cachedTextBlackDataUrl;
+            }
+        }
+        
+        // Fallback: try to fetch via HTTP (for production environments)
+        const baseUrl = process.env.FRONTEND_URL || process.env.API_URL || 'http://localhost:5173';
+        const httpUrl = `${baseUrl}/textblack.png`;
+        logger.info(`Trying to fetch itemize text black via HTTP: ${httpUrl}`);
+        const textDataUrl = await convertImageToDataUrl(httpUrl);
+        if (textDataUrl && textDataUrl.startsWith('data:')) {
+            cachedTextBlackDataUrl = textDataUrl;
+            logger.info('Itemize text black loaded via HTTP');
             return cachedTextBlackDataUrl;
         }
         
-        // Fallback: try relative to backend
-        const altPath = path.join(__dirname, '../public/textblack.png');
-        if (fs.existsSync(altPath)) {
-            const textBuffer = fs.readFileSync(altPath);
-            const base64 = textBuffer.toString('base64');
-            cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
-            return cachedTextBlackDataUrl;
-        }
-        
+        logger.warn('Itemize text black not found in any expected location');
         cachedTextBlackDataUrl = false;
         return null;
     } catch (error) {
         logger.warn(`Failed to load itemize text black: ${error.message}`);
+        logger.warn(`Error stack: ${error.stack}`);
         cachedTextBlackDataUrl = false;
         return null;
     }
+}
+
+function getItemizeTextBlack() {
+    // Synchronous version for backward compatibility
+    // This will only work if already cached
+    if (cachedTextBlackDataUrl !== null && cachedTextBlackDataUrl !== false) {
+        return cachedTextBlackDataUrl;
+    }
+    // If not cached, return null (will be loaded async)
+    return null;
 }
 
 /**
@@ -335,6 +383,12 @@ async function generateInvoiceHTML(invoice, settings = {}) {
     if (rawLogoUrl) {
         business.logo_url = await convertImageToDataUrl(rawLogoUrl);
     }
+
+    // Load itemize logos for footer (baked into template)
+    // Try to load them asynchronously (will fallback to HTTP if filesystem fails)
+    const iconDataUrl = await getItemizeIconAsync();
+    const textDataUrl = await getItemizeTextBlackAsync();
+    logger.info(`Itemize logos - Icon: ${iconDataUrl ? 'loaded' : 'missing'}, Text: ${textDataUrl ? 'loaded' : 'missing'}`);
 
     const currency = invoice.currency || 'USD';
 
@@ -374,6 +428,11 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                     padding: 0;
                     box-sizing: border-box;
                 }
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
                 body {
                     font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: 14px;
@@ -381,11 +440,23 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                     color: #111827;
                     background: white;
                     padding: 40px;
+                    padding-bottom: 0;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                    box-sizing: border-box;
                 }
                 .invoice-container {
-                    max-width: 800px;
+                    max-width: 100%;
+                    width: 100%;
                     margin: 0 auto;
                     background: white;
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .invoice-content {
+                    flex: 1;
                 }
                 .header {
                     display: flex;
@@ -531,15 +602,17 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                     margin-top: 32px;
                 }
                 .powered-by-footer {
-                    margin-top: 48px;
+                    margin-top: auto;
                     margin-left: -40px;
                     margin-right: -40px;
+                    margin-bottom: 0;
                     padding: 16px 24px;
                     background-color: #2563eb;
                     border-radius: 0;
                     text-align: center;
                     color: #ffffff;
                     font-size: 14px;
+                    width: calc(100% + 80px);
                 }
                 .powered-by-footer .powered-by-text {
                     margin-right: 8px;
@@ -584,6 +657,7 @@ async function generateInvoiceHTML(invoice, settings = {}) {
         </head>
         <body>
             <div class="invoice-container">
+                <div class="invoice-content">
                 <!-- Header -->
                 <div class="header">
                     <div class="business-info">
@@ -699,14 +773,14 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                     ${business.tax_id ? `<div>Tax ID: ${escapeHtml(business.tax_id)}</div>` : ''}
                     <div style="margin-top: 8px;">Thank you for your business!</div>
                 </div>
+                </div>
+                <!-- /.invoice-content -->
 
                 <!-- Powered By Footer -->
                 <div class="powered-by-footer">
                     <span class="powered-by-text">Powered by</span>
                     <a href="https://itemize.cloud" target="_blank" rel="noopener noreferrer" class="powered-by-card">
                         ${(() => {
-                            const iconDataUrl = getItemizeIcon();
-                            const textDataUrl = getItemizeTextBlack();
                             let logoHtml = '';
                             if (iconDataUrl) {
                                 logoHtml += `<img src="${iconDataUrl}" class="itemize-icon" alt="itemize" />`;
@@ -827,9 +901,9 @@ async function generatePDF(html) {
 
         logger.info('Page content set, generating PDF...');
         
-        // Generate PDF
+        // Generate PDF - Letter format (8.5x11 inches)
         const pdf = await page.pdf({
-            format: 'A4',
+            format: 'Letter',
             printBackground: true,
             margin: {
                 top: '15mm',

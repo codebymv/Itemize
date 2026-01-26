@@ -340,7 +340,7 @@ export function ContentsPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          {/* View toggle */}
+          {/* View toggle - First (visual layout) */}
           <div className="hidden sm:flex border rounded-md">
             <Button
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -359,7 +359,32 @@ export function ContentsPage() {
               <ListIcon className="h-4 w-4" />
             </Button>
           </div>
-          
+
+          {/* Category filter - Desktop */}
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50 hidden md:flex">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {uniqueCategories.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Sort dropdown - Desktop */}
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50 hidden md:flex">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated">Last Updated</SelectItem>
+              <SelectItem value="created">Date Created</SelectItem>
+              <SelectItem value="title">Title A-Z</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
             <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
@@ -401,7 +426,7 @@ export function ContentsPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [theme, navigate, setHeaderContent, viewMode, typeFilter, searchQuery]);
+  }, [theme, navigate, setHeaderContent, viewMode, typeFilter, searchQuery, categoryFilter, sortBy, uniqueCategories]);
 
   // Get content type icon
   const getTypeIcon = (type: ContentType) => {
@@ -479,8 +504,8 @@ export function ContentsPage() {
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Filter bar - Mobile only */}
+      <div className="flex items-center justify-between mb-6 md:hidden">
         <div className="flex items-center gap-2">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[150px] h-9">
@@ -504,6 +529,13 @@ export function ContentsPage() {
             </SelectContent>
           </Select>
         </div>
+        <span className="text-sm text-muted-foreground">
+          {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'}
+        </span>
+      </div>
+
+      {/* Item count - Desktop only */}
+      <div className="hidden md:flex justify-end mb-4">
         <span className="text-sm text-muted-foreground">
           {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'}
         </span>

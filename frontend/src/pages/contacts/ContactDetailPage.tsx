@@ -81,6 +81,7 @@ export function ContactDetailPage() {
 
   const [addingNote, setAddingNote] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('activity');
 
   // Helper function for contact name (used in header)
   const getContactDisplayName = (c: Contact | null) => {
@@ -94,7 +95,7 @@ export function ContactDetailPage() {
   // Set header content following workspace pattern
   useEffect(() => {
     setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -113,6 +114,15 @@ export function ContactDetailPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2 mr-4">
+          {/* Desktop Tabs - in header */}
+          <div className="hidden md:flex items-center">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="h-9">
+                <TabsTrigger value="activity" className="text-xs">Activity</TabsTrigger>
+                <TabsTrigger value="content" className="text-xs">Related Content</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           {/* More options */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -148,7 +158,7 @@ export function ContactDetailPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [contact, theme, navigate, setHeaderContent]);
+  }, [contact, theme, navigate, setHeaderContent, activeTab]);
 
   // Initialize organization
   useEffect(() => {
@@ -417,8 +427,9 @@ export function ContactDetailPage() {
           </Card>
 
           {/* Activity tabs */}
-          <Tabs defaultValue="activity">
-            <TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            {/* Mobile only TabsList */}
+            <TabsList className="md:hidden">
               <TabsTrigger value="activity">Activity</TabsTrigger>
               <TabsTrigger value="content">Related Content</TabsTrigger>
             </TabsList>
