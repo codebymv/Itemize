@@ -306,6 +306,29 @@ export const sendInvoice = async (
     return response.data;
 };
 
+/**
+ * Invoice Email Preview
+ */
+export interface InvoiceEmailPreviewRequest {
+    message: string;
+    subject: string;
+    includePaymentLink?: boolean;
+}
+
+export interface InvoiceEmailPreviewResponse {
+    html: string;
+}
+
+export const getInvoiceEmailPreview = async (
+    data: InvoiceEmailPreviewRequest,
+    organizationId?: number
+): Promise<InvoiceEmailPreviewResponse> => {
+    const response = await api.post('/api/invoices/email/preview', data, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data.data;
+};
+
 export const recordPayment = async (
     invoiceId: number,
     payment: {
@@ -382,7 +405,17 @@ export const getBusinesses = async (organizationId?: number): Promise<Business[]
     const response = await api.get('/api/invoices/businesses', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    // Handle case where response might be wrapped or not an array
+    const data = response.data;
+    if (Array.isArray(data)) {
+        return data;
+    }
+    // If response has a businesses property (wrapped response)
+    if (data && Array.isArray(data.businesses)) {
+        return data.businesses;
+    }
+    // Default to empty array
+    return [];
 };
 
 export const getBusiness = async (

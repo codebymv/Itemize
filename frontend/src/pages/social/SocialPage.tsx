@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl } from '@/services/socialApi';
+import { cn } from '@/lib/utils';
 
 interface SocialChannel {
     id: number;
@@ -195,10 +196,10 @@ export function SocialPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-6">
                     <TabsTrigger value="conversations">
-                        <MessageCircle className="h-4 w-4 mr-2" />Conversations
+                        <MessageCircle className={cn("h-4 w-4 mr-2", activeTab === 'conversations' && "text-blue-600")} />Conversations
                     </TabsTrigger>
                     <TabsTrigger value="channels">
-                        <Share2 className="h-4 w-4 mr-2" />Connected Accounts
+                        <Share2 className={cn("h-4 w-4 mr-2", activeTab === 'channels' && "text-blue-600")} />Connected Accounts
                     </TabsTrigger>
                 </TabsList>
 

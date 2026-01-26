@@ -43,8 +43,8 @@ export function EmailComposeDialog({
     const [success, setSuccess] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
-    // Preview visibility
-    const [showPreview, setShowPreview] = useState(false);
+    // Preview visibility - default to true for better UX
+    const [showPreview, setShowPreview] = useState(true);
 
     // Additional recipients (manually added email addresses)
     const [additionalRecipients, setAdditionalRecipients] = useState<Recipient[]>([]);

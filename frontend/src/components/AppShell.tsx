@@ -158,7 +158,17 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                             <>
                                                 <DropdownMenuSeparator />
                                                 <div className="w-full">
-                                                    <Collapsible defaultOpen={isOnAdminRoute} className="w-full group/collapsible">
+                                                    <Collapsible 
+                                                        defaultOpen={isOnAdminRoute} 
+                                                        className="w-full group/collapsible"
+                                                        onOpenChange={(open) => {
+                                                            // When opening, navigate to first sub-item (matching sidebar behavior)
+                                                            // Only navigate if we're not already on an admin route
+                                                            if (open && !isOnAdminRoute && adminNavItems.length > 0) {
+                                                                navigate(adminNavItems[0].path);
+                                                            }
+                                                        }}
+                                                    >
                                                         <CollapsibleTrigger asChild>
                                                             <DropdownMenuItem 
                                                                 className="w-full cursor-pointer group/admin"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
-import { Star, Search, MoreHorizontal, MessageSquare, ThumbsUp, ThumbsDown, ExternalLink } from 'lucide-react';
+import { Star, Search, MoreHorizontal, MessageSquare, ThumbsUp, ThumbsDown, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,51 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
+
+// Color helper functions for stat cards (matching dashboard/invoice page visual language)
+const getStatBadgeClasses = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        case 'orange': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        case 'blue': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
+        case 'purple': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        case 'red': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+};
+
+const getStatIconBgClasses = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'bg-green-100 dark:bg-green-900';
+        case 'orange': return 'bg-orange-100 dark:bg-orange-900';
+        case 'blue': return 'bg-sky-100 dark:bg-sky-900';
+        case 'purple': return 'bg-purple-100 dark:bg-purple-900';
+        case 'red': return 'bg-red-100 dark:bg-red-900';
+        default: return 'bg-gray-100 dark:bg-gray-800';
+    }
+};
+
+const getStatValueColor = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'text-green-600';
+        case 'orange': return 'text-orange-600';
+        case 'blue': return 'text-sky-600';
+        case 'purple': return 'text-purple-600';
+        case 'red': return 'text-red-600';
+        default: return 'text-gray-600';
+    }
+};
+
+const getStatIconColor = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'text-green-600 dark:text-green-400';
+        case 'orange': return 'text-orange-600 dark:text-orange-400';
+        case 'blue': return 'text-sky-600 dark:text-sky-400';
+        case 'purple': return 'text-purple-600 dark:text-purple-400';
+        case 'red': return 'text-red-600 dark:text-red-400';
+        default: return 'text-gray-400 dark:text-gray-500';
+    }
+};
 
 interface Review {
     id: number;
@@ -184,40 +229,103 @@ export function ReputationPage() {
     return (
         <div className="container mx-auto p-6 max-w-7xl">
             {/* Analytics Summary */}
-            {analytics && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                    <Card>
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-2xl font-bold">{analytics.total_reviews}</p>
-                            <p className="text-sm text-muted-foreground">Total Reviews</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-2xl font-bold">{Number(analytics.average_rating || 0).toFixed(1)}</p>
-                            <p className="text-sm text-muted-foreground">Average Rating</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-2xl font-bold text-green-600">{analytics.positive_count}</p>
-                            <p className="text-sm text-muted-foreground">Positive</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-2xl font-bold text-gray-600">{analytics.neutral_count}</p>
-                            <p className="text-sm text-muted-foreground">Neutral</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-2xl font-bold text-red-600">{analytics.negative_count}</p>
-                            <p className="text-sm text-muted-foreground">Negative</p>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                {loading ? (
+                    <>
+                        {[...Array(5)].map((_, i) => (
+                            <Card key={i}>
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Skeleton className="h-5 w-20 mb-2" />
+                                            <Skeleton className="h-8 w-24 mb-1" />
+                                            <Skeleton className="h-3 w-16" />
+                                        </div>
+                                        <Skeleton className="h-10 w-10 rounded-full" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </>
+                ) : analytics ? (
+                    <>
+                        {/* Critical - Red (Needs Attention) */}
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Negative</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{analytics.negative_count}</p>
+                                        <p className="text-xs text-muted-foreground">Negative Reviews</p>
+                                    </div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
+                                        <ThumbsDown className={`h-5 w-5 ${getStatIconColor('red')}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        {/* General Overview - Blue (Primary Metrics) */}
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{analytics.total_reviews}</p>
+                                        <p className="text-xs text-muted-foreground">Total Reviews</p>
+                                    </div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
+                                        <FileText className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Average</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{Number(analytics.average_rating || 0).toFixed(1)}</p>
+                                        <p className="text-xs text-muted-foreground">Average Rating</p>
+                                    </div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
+                                        <Star className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        {/* Warning - Orange (Attention Needed) */}
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Neutral</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{analytics.neutral_count}</p>
+                                        <p className="text-xs text-muted-foreground">Neutral Reviews</p>
+                                    </div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
+                                        <MessageSquare className={`h-5 w-5 ${getStatIconColor('orange')}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        {/* Success - Green (Positive Outcome) */}
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Positive</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{analytics.positive_count}</p>
+                                        <p className="text-xs text-muted-foreground">Positive Reviews</p>
+                                    </div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
+                                        <ThumbsUp className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </>
+                ) : null}
+            </div>
 
             {/* Reviews List */}
             <Card>

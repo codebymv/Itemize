@@ -265,6 +265,59 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     });
 
     // ======================
+    // Invoice Email Preview
+    // ======================
+
+    /**
+     * POST /api/invoices/email/preview - Generate invoice email preview
+     * Returns the HTML that would be sent, wrapped in branded template
+     */
+    router.post('/email/preview', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const { message, subject, includePaymentLink } = req.body;
+
+            if (!message || !message.trim()) {
+                return res.status(400).json({ error: 'Message content is required' });
+            }
+
+            // Import the branded template wrapper
+            const { wrapInBrandedTemplate } = require('../services/email-template.service');
+
+            // Build the payment link section if requested
+            const paymentLinkSection = includePaymentLink ? `
+                <div style="text-align: center; margin: 24px 0;">
+                    <a href="#" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
+                        Pay Now
+                    </a>
+                </div>
+            ` : '';
+
+            // Build the invoice email body content (matching sendInvoiceEmail logic)
+            const emailBodyContent = `
+                <div style="white-space: pre-wrap; color: #374151; line-height: 1.6;">${message.trim()}</div>
+                ${paymentLinkSection}
+            `;
+
+            // Wrap in branded template with isPreview: true for correct logo URL
+            const previewHtml = wrapInBrandedTemplate(emailBodyContent, {
+                subject: subject || 'Invoice',
+                isPreview: true,
+                showUnsubscribe: false // Transactional emails don't need unsubscribe
+            });
+
+            res.json({
+                success: true,
+                data: {
+                    html: previewHtml
+                }
+            });
+        } catch (error) {
+            logger.error('Error generating invoice email preview:', error);
+            res.status(500).json({ error: 'Failed to generate preview' });
+        }
+    });
+
+    // ======================
     // Invoice CRUD
     // ======================
 

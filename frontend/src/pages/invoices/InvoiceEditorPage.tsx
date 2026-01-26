@@ -49,6 +49,7 @@ import {
     Product,
     PaymentSettings,
     Business,
+    Invoice,
 } from '@/services/invoicesApi';
 import { InvoicePreview } from './components/InvoicePreview';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
@@ -224,8 +225,8 @@ export function InvoiceEditorPage() {
                     getPaymentSettings(org.id)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
-                setProducts(productsData || []);
-                setBusinesses(businessesData || []);
+                setProducts(Array.isArray(productsData) ? productsData : productsData?.products || []);
+                setBusinesses(Array.isArray(businessesData) ? businessesData : businessesData?.businesses || []);
                 setSettings(settingsData);
 
                 // Load existing invoice if editing
@@ -268,8 +269,9 @@ export function InvoiceEditorPage() {
                         setTermsAndConditions(settingsData.default_terms || '');
                     }
                     // Auto-select last used business for new invoices
-                    if (businessesData && businessesData.length > 0) {
-                        const lastUsed = businessesData.find(b => b.last_used_at);
+                    const businessesList = Array.isArray(businessesData) ? businessesData : businessesData?.businesses || [];
+                    if (businessesList.length > 0) {
+                        const lastUsed = businessesList.find(b => b.last_used_at);
                         if (lastUsed) {
                             setSelectedBusinessId(lastUsed.id);
                         }
@@ -1102,6 +1104,43 @@ export function InvoiceEditorPage() {
                 onOpenChange={setShowSendModal}
                 onSend={handleSendInvoice}
                 sending={saving}
+                invoice={{
+                    id: 0, // Temporary for preview
+                    organization_id: organizationId || 0,
+                    invoice_number: invoiceNumber,
+                    customer_name: customerName,
+                    customer_email: customerEmail,
+                    customer_phone: customerPhone,
+                    customer_address: customerAddress,
+                    issue_date: issueDate,
+                    due_date: dueDate,
+                    subtotal,
+                    tax_amount: taxAmount,
+                    discount_amount: discountAmount,
+                    discount_type: 'fixed',
+                    discount_value: discountAmount,
+                    total,
+                    amount_paid: 0,
+                    amount_due: total,
+                    currency,
+                    status: 'draft',
+                    notes,
+                    terms_and_conditions: termsAndConditions,
+                    is_recurring: false,
+                    custom_fields: {},
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    items: lineItems.map((item, idx) => ({
+                        id: idx,
+                        name: item.name,
+                        description: item.description,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        tax_rate: item.tax_rate,
+                        product_id: item.product_id
+                    })),
+                    business: businesses.find(b => b.id === selectedBusinessId)
+                } as Invoice}
                 invoiceNumber={invoiceNumber}
                 customerName={customerName}
                 customerEmail={customerEmail}

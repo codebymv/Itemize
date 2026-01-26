@@ -44,6 +44,7 @@ import {
     BarChart3,
     PieChart,
     LayoutDashboard,
+    Activity,
 } from 'lucide-react';
 import { 
     getDashboardAnalytics, 
@@ -288,7 +289,7 @@ function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationSta
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                        <div className="text-lg font-bold text-blue-600">{stats.email?.rates?.delivery ?? 0}%</div>
+                        <div className="text-lg font-bold text-gray-600">{stats.email?.rates?.delivery ?? 0}%</div>
                         <div className="text-xs text-muted-foreground">Delivered</div>
                     </div>
                     <div>
@@ -489,6 +490,47 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
         );
     }
 
+    // Determine if we're showing days or months based on period
+    const isDayView = data.period === '30days';
+    const isMonthView = data.period === '6months' || data.period === '12months';
+
+    // Format date for display
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        if (isDayView) {
+            // For day view: "Jan 26"
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } else if (isMonthView) {
+            // For month view: "Jan 2026"
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+        // Fallback: "Jan 26, 2026"
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    // Format date for tooltip (more detailed)
+    const formatTooltipDate = (dateString: string) => {
+        const date = new Date(dateString);
+        if (isDayView) {
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+        } else {
+            return date.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+        }
+    };
+
+    // Prepare chart data with formatted labels
+    const chartData = data.data.map(item => ({
+        ...item,
+        formattedPeriod: formatDate(item.period)
+    }));
+
     const chartConfig = {
         revenue: {
             label: 'Revenue',
@@ -498,7 +540,7 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
 
     return (
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
-            <AreaChart data={data.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3} />
@@ -507,11 +549,14 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
-                    dataKey="period" 
+                    dataKey="formattedPeriod" 
                     tickLine={false}
                     axisLine={false}
                     tick={{ fontSize: 12 }}
                     className="text-muted-foreground"
+                    angle={isDayView ? -45 : 0}
+                    textAnchor={isDayView ? 'end' : 'middle'}
+                    height={isDayView ? 60 : 30}
                 />
                 <YAxis 
                     tickLine={false}
@@ -521,11 +566,26 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
                     tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                 />
                 <ChartTooltip 
-                    content={
-                        <ChartTooltipContent 
-                            formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']}
-                        />
-                    } 
+                    content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                            const dataPoint = payload[0].payload as typeof chartData[0];
+                            return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="grid gap-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-[0.70rem] text-muted-foreground">
+                                                {formatTooltipDate(dataPoint.period)}
+                                            </span>
+                                            <span className="font-bold text-foreground">
+                                                ${Number(payload[0].value).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    }}
                 />
                 <Area
                     type="monotone"
@@ -751,7 +811,7 @@ export function DashboardPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4 text-green-600" />
+                                        <TrendingUp className="h-4 w-4 text-blue-600" />
                                         Revenue Trends
                                     </CardTitle>
                                     <CardDescription>
@@ -788,14 +848,16 @@ export function DashboardPage() {
                         <Card className="bg-muted/10">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base">Pipeline Overview</CardTitle>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Workflow className="h-4 w-4 text-blue-600" />
+                                        Pipeline Overview
+                                    </CardTitle>
                                     <Button
-                                        variant="ghost"
                                         size="sm"
                                         onClick={() => navigate('/pipelines')}
-                                        className="text-xs"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
                                     >
-                                        View All <ArrowRight className="h-3 w-3 ml-1" />
+                                        View Details <ArrowRight className="h-3 w-3 ml-1" />
                                     </Button>
                                 </div>
                                 <CardDescription>Active deals by stage</CardDescription>
@@ -812,14 +874,16 @@ export function DashboardPage() {
                         <Card className="bg-muted/10">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base">Recent Activity</CardTitle>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Activity className="h-4 w-4 text-blue-600" />
+                                        Recent Activity
+                                    </CardTitle>
                                     <Button
-                                        variant="ghost"
                                         size="sm"
                                         onClick={() => navigate('/contacts')}
-                                        className="text-xs"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
                                     >
-                                        View All <ArrowRight className="h-3 w-3 ml-1" />
+                                        View Details <ArrowRight className="h-3 w-3 ml-1" />
                                     </Button>
                                 </div>
                                 <CardDescription>Latest updates across your CRM</CardDescription>
@@ -840,7 +904,7 @@ export function DashboardPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <Target className="h-4 w-4" />
+                                        <Target className="h-4 w-4 text-blue-600" />
                                         Conversion Rates
                                     </CardTitle>
                                     <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
@@ -855,7 +919,7 @@ export function DashboardPage() {
                                         numerator={conversionData?.conversions?.leadToCustomer?.customers ?? 0}
                                         denominator={conversionData?.conversions?.leadToCustomer?.total ?? 0}
                                         icon={Users}
-                                        color="text-blue-600"
+                                        color="text-gray-600"
                                         isLoading={conversionLoading}
                                     />
                                     <ConversionRateCard
@@ -897,7 +961,7 @@ export function DashboardPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <Mail className="h-4 w-4" />
+                                        <Mail className="h-4 w-4 text-blue-600" />
                                         Communication
                                     </CardTitle>
                                     <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
@@ -919,7 +983,7 @@ export function DashboardPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <BarChart3 className="h-4 w-4" />
+                                        <BarChart3 className="h-4 w-4 text-blue-600" />
                                         Pipeline Velocity
                                     </CardTitle>
                                     <CardDescription>
@@ -927,10 +991,9 @@ export function DashboardPage() {
                                     </CardDescription>
                                 </div>
                                 <Button
-                                    variant="ghost"
                                     size="sm"
                                     onClick={() => navigate('/pipelines')}
-                                    className="text-xs"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
                                 >
                                     View Details <ArrowRight className="h-3 w-3 ml-1" />
                                 </Button>

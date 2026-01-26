@@ -11,6 +11,51 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Color helper functions for stat cards (matching dashboard/invoice page visual language)
+const getStatBadgeClasses = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        case 'orange': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        case 'blue': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
+        case 'purple': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        case 'red': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+};
+
+const getStatIconBgClasses = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'bg-green-100 dark:bg-green-900';
+        case 'orange': return 'bg-orange-100 dark:bg-orange-900';
+        case 'blue': return 'bg-sky-100 dark:bg-sky-900';
+        case 'purple': return 'bg-purple-100 dark:bg-purple-900';
+        case 'red': return 'bg-red-100 dark:bg-red-900';
+        default: return 'bg-gray-100 dark:bg-gray-800';
+    }
+};
+
+const getStatValueColor = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'text-green-600';
+        case 'orange': return 'text-orange-600';
+        case 'blue': return 'text-sky-600';
+        case 'purple': return 'text-purple-600';
+        case 'red': return 'text-red-600';
+        default: return 'text-gray-600';
+    }
+};
+
+const getStatIconColor = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'text-green-600 dark:text-green-400';
+        case 'orange': return 'text-orange-600 dark:text-orange-400';
+        case 'blue': return 'text-sky-600 dark:text-sky-400';
+        case 'purple': return 'text-purple-600 dark:text-purple-400';
+        case 'red': return 'text-red-600 dark:text-red-400';
+        default: return 'text-gray-400 dark:text-gray-500';
+    }
+};
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -264,6 +309,7 @@ export function AutomationsPage() {
   const stats = {
     total: workflows.length,
     active: workflows.filter(w => w.is_active).length,
+    inactive: workflows.filter(w => !w.is_active).length,
     totalEnrolled: workflows.reduce((sum, w) => sum + (w.stats?.enrolled || 0), 0),
     totalCompleted: workflows.reduce((sum, w) => sum + (w.stats?.completed || 0), 0),
   };
@@ -307,51 +353,103 @@ export function AutomationsPage() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
-        <Card className="bg-muted/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Workflows</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Zap className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-              </div>
-              <Play className="h-8 w-8 text-green-600/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Enrolled</p>
-                <p className="text-2xl font-bold">{stats.totalEnrolled}</p>
-              </div>
-              <Users className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/20">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalCompleted}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-blue-600/50" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-5 mb-6">
+        {loading ? (
+          <>
+            {[...Array(5)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Skeleton className="h-5 w-20 mb-2" />
+                      <Skeleton className="h-8 w-24 mb-1" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            {/* Critical - Red (Needs Attention) */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Inactive</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{stats.inactive}</p>
+                    <p className="text-xs text-muted-foreground">Inactive Workflows</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
+                    <Pause className={`h-5 w-5 ${getStatIconColor('red')}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* General Overview - Blue (Primary Metrics) */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Total Workflows</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
+                    <Zap className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* Warning - Orange (Attention Needed) */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Enrolled</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{stats.totalEnrolled}</p>
+                    <p className="text-xs text-muted-foreground">Total Enrolled</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
+                    <Users className={`h-5 w-5 ${getStatIconColor('orange')}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* Success - Green (Positive Outcome) */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Active</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{stats.active}</p>
+                    <p className="text-xs text-muted-foreground">Active Workflows</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
+                    <Play className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* Success - Green (Positive Outcome) */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Completed</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{stats.totalCompleted}</p>
+                    <p className="text-xs text-muted-foreground">Completed</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
+                    <CheckCircle className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Workflows list */}

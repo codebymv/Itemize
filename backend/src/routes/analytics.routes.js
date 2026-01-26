@@ -38,7 +38,8 @@ module.exports = (pool, authenticateJWT) => {
                 bookingsResult,
                 tasksResult,
                 pipelinesResult,
-                recentActivityResult
+                recentActivityResult,
+                paymentsResult
             ] = await Promise.all([
                 // Total contacts and status breakdown
                 client.query(`
@@ -135,6 +136,16 @@ module.exports = (pool, authenticateJWT) => {
           WHERE c.organization_id = $1
           ORDER BY ca.created_at DESC
           LIMIT 10
+        `, [orgId]),
+
+                // Invoice payments revenue (succeeded payments)
+                client.query(`
+          SELECT 
+            COALESCE(SUM(amount), 0) as total_payments_revenue,
+            COALESCE(SUM(amount) FILTER (WHERE paid_at >= NOW() - INTERVAL '30 days'), 0) as payments_this_month
+          FROM payments 
+          WHERE organization_id = $1 
+            AND status = 'succeeded'
         `, [orgId])
             ]);
 
@@ -173,6 +184,15 @@ module.exports = (pool, authenticateJWT) => {
                 count: parseInt(row.count)
             }));
 
+            // Combine deals revenue + invoice payments revenue
+            const dealsRevenue = parseFloat(dealsResult.rows[0].won_value) || 0;
+            const dealsRevenueThisMonth = parseFloat(dealsResult.rows[0].won_this_month) || 0;
+            const paymentsRevenue = parseFloat(paymentsResult.rows[0].total_payments_revenue) || 0;
+            const paymentsRevenueThisMonth = parseFloat(paymentsResult.rows[0].payments_this_month) || 0;
+            
+            const totalRevenueWon = dealsRevenue + paymentsRevenue;
+            const totalRevenueThisMonth = dealsRevenueThisMonth + paymentsRevenueThisMonth;
+
             // Build response
             const analytics = {
                 contacts: {
@@ -190,8 +210,8 @@ module.exports = (pool, authenticateJWT) => {
                     won: parseInt(dealsResult.rows[0].won),
                     lost: parseInt(dealsResult.rows[0].lost),
                     openValue: parseFloat(dealsResult.rows[0].open_value),
-                    wonValue: parseFloat(dealsResult.rows[0].won_value),
-                    wonThisMonth: parseFloat(dealsResult.rows[0].won_this_month),
+                    wonValue: totalRevenueWon, // Combined: deals + invoice payments
+                    wonThisMonth: totalRevenueThisMonth, // Combined: deals + invoice payments this month
                     funnel: funnelData
                 },
                 bookings: {
@@ -577,29 +597,84 @@ module.exports = (pool, authenticateJWT) => {
                     groupBy = 'month';
             }
 
-            const result = await client.query(`
-                SELECT 
-                    DATE_TRUNC($1, won_at) as period,
-                    COUNT(*) as deals_won,
-                    COALESCE(SUM(value), 0) as revenue
-                FROM deals 
-                WHERE organization_id = $2 
-                    AND won_at IS NOT NULL
-                    AND won_at >= NOW() - INTERVAL '${interval}'
-                GROUP BY DATE_TRUNC($1, won_at)
-                ORDER BY period ASC
-            `, [groupBy, orgId]);
+            // Get revenue from both deals and invoice payments
+            const [dealsResult, paymentsResult] = await Promise.all([
+                // Deals revenue
+                client.query(`
+                    SELECT 
+                        DATE_TRUNC($1, won_at) as period,
+                        COUNT(*) as deals_won,
+                        COALESCE(SUM(value), 0) as revenue
+                    FROM deals 
+                    WHERE organization_id = $2 
+                        AND won_at IS NOT NULL
+                        AND won_at >= NOW() - INTERVAL '${interval}'
+                    GROUP BY DATE_TRUNC($1, won_at)
+                    ORDER BY period ASC
+                `, [groupBy, orgId]),
+
+                // Invoice payments revenue
+                client.query(`
+                    SELECT 
+                        DATE_TRUNC($1, COALESCE(paid_at, created_at)) as period,
+                        COUNT(*) as payments_count,
+                        COALESCE(SUM(amount), 0) as revenue
+                    FROM payments 
+                    WHERE organization_id = $2 
+                        AND status = 'succeeded'
+                        AND COALESCE(paid_at, created_at) >= NOW() - INTERVAL '${interval}'
+                    GROUP BY DATE_TRUNC($1, COALESCE(paid_at, created_at))
+                    ORDER BY period ASC
+                `, [groupBy, orgId])
+            ]);
 
             client.release();
 
+            // Combine deals and payments data by period
+            const revenueMap = new Map();
+            
+            // Add deals revenue
+            dealsResult.rows.forEach(row => {
+                const period = row.period;
+                if (!revenueMap.has(period)) {
+                    revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                }
+                const data = revenueMap.get(period);
+                data.dealsWon = parseInt(row.deals_won);
+                data.revenue += parseFloat(row.revenue);
+            });
+
+            // Add payments revenue
+            paymentsResult.rows.forEach(row => {
+                const period = row.period;
+                if (!revenueMap.has(period)) {
+                    revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                }
+                const data = revenueMap.get(period);
+                data.paymentsCount = parseInt(row.payments_count);
+                data.revenue += parseFloat(row.revenue);
+            });
+
+            // Convert map to sorted array
+            const sortedPeriods = Array.from(revenueMap.keys()).sort((a, b) => a - b);
+            
+            // Calculate totals from map before creating data array
+            let totalDeals = 0;
+            let totalPayments = 0;
+            revenueMap.forEach(periodData => {
+                totalDeals += periodData.dealsWon;
+                totalPayments += periodData.paymentsCount;
+            });
+            
             // Calculate cumulative revenue
             let cumulativeRevenue = 0;
-            const data = result.rows.map(row => {
-                cumulativeRevenue += parseFloat(row.revenue);
+            const data = sortedPeriods.map(period => {
+                const periodData = revenueMap.get(period);
+                cumulativeRevenue += periodData.revenue;
                 return {
-                    period: row.period,
-                    dealsWon: parseInt(row.deals_won),
-                    revenue: parseFloat(row.revenue),
+                    period: period,
+                    dealsWon: periodData.dealsWon,
+                    revenue: periodData.revenue,
                     cumulativeRevenue: cumulativeRevenue
                 };
             });
@@ -614,13 +689,16 @@ module.exports = (pool, authenticateJWT) => {
                 }
             }
 
+            const totalRevenueSources = totalDeals + totalPayments;
+
             res.json({
                 period,
                 data,
                 summary: {
                     totalRevenue: cumulativeRevenue,
-                    totalDeals: data.reduce((sum, d) => sum + d.dealsWon, 0),
-                    avgDealValue: data.length > 0 ? cumulativeRevenue / data.reduce((sum, d) => sum + d.dealsWon, 0) : 0,
+                    totalDeals: totalDeals,
+                    totalPayments: totalPayments,
+                    avgDealValue: totalRevenueSources > 0 ? cumulativeRevenue / totalRevenueSources : 0,
                     growthRate
                 }
             });

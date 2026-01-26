@@ -215,11 +215,17 @@ const getLogoUrl = (isPreview = false) => {
 /**
  * Wrap content in branded email template
  * @param {string} bodyHtml - Email body content
- * @param {object} options - Options (subject, showHeader, showFooter, isPreview)
+ * @param {object} options - Options (subject, showHeader, showFooter, isPreview, showUnsubscribe)
  * @returns {string} - Complete HTML email
  */
 function wrapInBrandedTemplate(bodyHtml, options = {}) {
-    const { subject = 'Itemize', showHeader = true, showFooter = true, isPreview = false } = options;
+    const { 
+        subject = 'Itemize', 
+        showHeader = true, 
+        showFooter = true, 
+        isPreview = false,
+        showUnsubscribe = true // Set to false for transactional emails (invoices, receipts, etc.)
+    } = options;
 
     // If content already looks like a complete HTML document, return as-is
     if (bodyHtml.toLowerCase().includes('<!doctype') || bodyHtml.toLowerCase().includes('<html')) {
@@ -244,12 +250,17 @@ function wrapInBrandedTemplate(bodyHtml, options = {}) {
         </div>
     ` : '';
 
+    // Footer links - conditionally include unsubscribe for non-transactional emails
+    const footerLinks = showUnsubscribe
+        ? `<a href="{{unsubscribeUrl}}" style="color: #2563eb; text-decoration: none;">Unsubscribe</a> · 
+           <a href="${FRONTEND_URL}" style="color: #2563eb; text-decoration: none;">Visit Website</a>`
+        : `<a href="${FRONTEND_URL}" style="color: #2563eb; text-decoration: none;">Visit Website</a>`;
+
     const footer = showFooter ? `
         <div style="text-align: center; padding: 30px 20px; color: #64748b; font-size: 13px;">
             <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} Itemize. All rights reserved.</p>
             <p style="margin: 0;">
-                <a href="{{unsubscribeUrl}}" style="color: #2563eb; text-decoration: none;">Unsubscribe</a> · 
-                <a href="${FRONTEND_URL}" style="color: #2563eb; text-decoration: none;">Visit Website</a>
+                ${footerLinks}
             </p>
         </div>
     ` : '';

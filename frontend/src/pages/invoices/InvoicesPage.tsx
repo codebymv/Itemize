@@ -1040,6 +1040,7 @@ export function InvoicesPage() {
                     }}
                     onSend={handleSendInvoice}
                     sending={sending}
+                    invoice={fullInvoiceDataForSend || undefined}
                     invoiceNumber={selectedInvoiceForSend.invoice_number}
                     customerName={fullInvoiceDataForSend?.customer_name || selectedInvoiceForSend.customer_name || getContactName(selectedInvoiceForSend)}
                     customerEmail={fullInvoiceDataForSend?.customer_email || ''}

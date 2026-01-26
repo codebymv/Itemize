@@ -55,23 +55,54 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
 
             const organizationId = orgResult.rows[0].default_organization_id;
 
-            // Update organization's subscription plan
+            // Get the plan_id from subscription_plans table
+            const planName = plan.toLowerCase();
+            const planResult = await pool.query(
+                `SELECT id FROM subscription_plans WHERE name = $1 AND is_active = true LIMIT 1`,
+                [planName]
+            );
+
+            if (!planResult.rows[0]) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        message: `Plan "${planName}" not found in subscription_plans table`,
+                        code: 'PLAN_NOT_FOUND'
+                    }
+                });
+            }
+
+            const planId = planResult.rows[0].id;
+
+            // Update or create subscription record
+            await pool.query(`
+                INSERT INTO subscriptions (organization_id, plan_id, status, created_at, updated_at)
+                VALUES ($1, $2, 'active', NOW(), NOW())
+                ON CONFLICT (organization_id) 
+                DO UPDATE SET 
+                    plan_id = $2,
+                    status = 'active',
+                    updated_at = NOW()
+            `, [organizationId, planId]);
+
+            // Update organization's current_plan_id for backward compatibility
             await pool.query(
-                `UPDATE organizations SET subscription_plan = $1, updated_at = NOW() WHERE id = $2`,
-                [plan.toLowerCase(), organizationId]
+                `UPDATE organizations SET current_plan_id = $1, updated_at = NOW() WHERE id = $2`,
+                [planId, organizationId]
             );
 
             logger.info('Admin changed plan tier', {
                 userId: req.user.id,
                 organizationId,
-                newPlan: plan
+                newPlan: planName,
+                planId
             });
 
             res.json({
                 success: true,
                 data: {
-                    message: `Plan updated to ${plan}`,
-                    plan: plan.toLowerCase()
+                    message: `Plan updated to ${planName}`,
+                    plan: planName
                 }
             });
         } catch (error) {

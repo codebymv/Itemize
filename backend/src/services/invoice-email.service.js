@@ -4,6 +4,7 @@
  */
 
 const { logger } = require('../utils/logger');
+const { wrapInBrandedTemplate } = require('./email-template.service');
 
 // Email templates - using table-based layout for email client compatibility
 const EMAIL_TEMPLATES = {
@@ -245,41 +246,44 @@ async function sendInvoiceEmail(emailService, invoice, settings, paymentUrl = nu
         </div>
     ` : '';
 
-    // Use custom message if provided and not empty, otherwise use simplified template
-    let subject, html;
-    
     // Check if customMessage is provided and not just whitespace
     const hasCustomMessage = customMessage && customMessage.trim().length > 0;
     
+    // Build the email body content
+    let bodyContent;
+    let subject;
+    
     if (hasCustomMessage) {
+        // Custom message from user
         subject = customSubject || `Invoice ${invoice.invoice_number} from ${settings.business_name || 'Our Company'}`;
-        html = `
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="padding: 32px 24px; background: #f9fafb;">
-                    <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="white-space: pre-wrap; color: #374151; line-height: 1.6;">${customMessage.trim()}</div>
-                        ${paymentLinkSection}
-                    </div>
-                    <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
-                        ${settings.business_name || ''} ${settings.business_email ? '• ' + settings.business_email : ''}
-                    </p>
-                </div>
-            </div>
+        bodyContent = `
+            <div style="white-space: pre-wrap; color: #374151; line-height: 1.6;">${customMessage.trim()}</div>
+            ${paymentLinkSection}
         `;
     } else {
-        // Simplified template - PDF has all the details, so keep email minimal
-        const template = applyTemplate(EMAIL_TEMPLATES.invoiceSent, {
-            invoice_number: invoice.invoice_number,
-            business_name: settings.business_name || 'Our Company',
-            business_email: settings.business_email || '',
-            customer_name: invoice.customer_name || 'Valued Customer',
-            amount_due: formatCurrency(invoice.amount_due, invoice.currency),
-            due_date: formatDate(invoice.due_date),
-            payment_link_section: paymentLinkSection
-        });
-        subject = customSubject || template.subject;
-        html = template.html;
+        // Default template - simplified since PDF has all the details
+        subject = customSubject || `Invoice ${invoice.invoice_number} from ${settings.business_name || 'Our Company'}`;
+        bodyContent = `
+            <p style="color: #374151; margin: 0 0 16px; line-height: 1.6;">
+                Hi ${invoice.customer_name || 'Valued Customer'},
+            </p>
+            <p style="color: #374151; margin: 0 0 16px; line-height: 1.6;">
+                Please find attached invoice ${invoice.invoice_number}. Payment is due by ${formatDate(invoice.due_date)}.
+            </p>
+            ${paymentLinkSection}
+            <p style="color: #6b7280; font-size: 14px; margin-top: 24px; margin-bottom: 0;">
+                Best regards,<br>
+                ${settings.business_name || 'Our Company'}
+            </p>
+        `;
     }
+
+    // Wrap in branded template (with Itemize logo header and footer)
+    const html = wrapInBrandedTemplate(bodyContent, {
+        subject,
+        isPreview: false,
+        showUnsubscribe: false // Transactional emails don't need unsubscribe
+    });
 
     try {
         const emailOptions = {
@@ -320,20 +324,61 @@ async function sendPaymentReceivedEmail(emailService, invoice, payment, settings
         return false;
     }
 
-    const template = applyTemplate(EMAIL_TEMPLATES.paymentReceived, {
-        invoice_number: invoice.invoice_number,
-        business_name: settings.business_name || 'Our Company',
-        business_email: settings.business_email || '',
-        customer_name: invoice.customer_name || 'Valued Customer',
-        amount_paid: formatCurrency(payment.amount, invoice.currency),
-        payment_date: formatDate(payment.paid_at || payment.created_at)
+    const subject = `Payment Received - Invoice ${invoice.invoice_number}`;
+    
+    // Build payment received content
+    const bodyContent = `
+        <div style="text-align: center; margin-bottom: 24px;">
+            <div style="width: 64px; height: 64px; background: #d1fae5; border-radius: 50%; margin: 0 auto 16px; line-height: 64px; text-align: center;">
+                <span style="font-size: 32px;">✓</span>
+            </div>
+            <h1 style="font-size: 24px; margin: 0; color: #111827;">
+                Payment Received
+            </h1>
+        </div>
+        
+        <p style="color: #6b7280; margin: 0 0 24px; text-align: center;">
+            Thank you for your payment, ${invoice.customer_name || 'Valued Customer'}!
+        </p>
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px; margin-bottom: 24px;">
+            <tr>
+                <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="color: #6b7280; padding-bottom: 8px;">Invoice:</td>
+                            <td style="text-align: right; color: #111827; padding-bottom: 8px;">${invoice.invoice_number}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #6b7280; padding-bottom: 8px;">Amount Paid:</td>
+                            <td style="text-align: right; font-weight: 600; color: #059669; padding-bottom: 8px;">${formatCurrency(payment.amount, invoice.currency)}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #6b7280;">Payment Date:</td>
+                            <td style="text-align: right; color: #111827;">${formatDate(payment.paid_at || payment.created_at)}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center;">
+            A receipt has been attached to this email for your records.
+        </p>
+    `;
+
+    // Wrap in branded template
+    const html = wrapInBrandedTemplate(bodyContent, {
+        subject,
+        isPreview: false,
+        showUnsubscribe: false
     });
 
     try {
         await emailService.sendEmail({
             to: invoice.customer_email,
-            subject: template.subject,
-            html: template.html
+            subject,
+            html
         });
         logger.info(`Payment confirmation email sent to ${invoice.customer_email}`);
         return true;
@@ -363,26 +408,61 @@ async function sendPaymentReminderEmail(emailService, invoice, settings, isOverd
         ? Math.floor((new Date() - new Date(invoice.due_date)) / (1000 * 60 * 60 * 24))
         : 0;
 
-    const template = applyTemplate(EMAIL_TEMPLATES.paymentReminder, {
-        invoice_number: invoice.invoice_number,
-        business_name: settings.business_name || 'Our Company',
-        business_email: settings.business_email || '',
-        customer_name: invoice.customer_name || 'Valued Customer',
-        amount_due: formatCurrency(invoice.amount_due, invoice.currency),
-        due_date: formatDate(invoice.due_date),
-        reminder_text: isOverdue 
-            ? `is now ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue`
-            : 'is due soon',
-        reminder_bg: isOverdue ? '#fee2e2' : '#fef3c7',
-        due_date_color: isOverdue ? '#dc2626' : '#d97706',
-        payment_link_section: paymentLinkSection
+    const reminderText = isOverdue 
+        ? `is now ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue`
+        : 'is due soon';
+    const reminderBg = isOverdue ? '#fee2e2' : '#fef3c7';
+    const dueDateColor = isOverdue ? '#dc2626' : '#d97706';
+
+    const subject = `Payment Reminder - Invoice ${invoice.invoice_number}`;
+    
+    const bodyContent = `
+        <h1 style="font-size: 24px; margin: 0 0 16px; color: #111827;">
+            Payment Reminder
+        </h1>
+        <p style="color: #6b7280; margin: 0 0 24px;">
+            Hi ${invoice.customer_name || 'Valued Customer'},
+        </p>
+        <p style="color: #374151; margin: 0 0 24px;">
+            This is a friendly reminder that invoice ${invoice.invoice_number} ${reminderText}.
+        </p>
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: ${reminderBg}; border-radius: 8px; margin-bottom: 24px;">
+            <tr>
+                <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="color: #6b7280; padding-bottom: 12px;">Amount Due:</td>
+                            <td style="text-align: right; font-weight: 600; font-size: 20px; color: #111827; padding-bottom: 12px;">${formatCurrency(invoice.amount_due, invoice.currency)}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #6b7280;">Due Date:</td>
+                            <td style="text-align: right; color: ${dueDateColor}; font-weight: 500;">${formatDate(invoice.due_date)}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        ${paymentLinkSection}
+
+        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+            If you've already sent your payment, please disregard this reminder.
+        </p>
+    `;
+
+    // Wrap in branded template
+    const html = wrapInBrandedTemplate(bodyContent, {
+        subject,
+        isPreview: false,
+        showUnsubscribe: false
     });
 
     try {
         await emailService.sendEmail({
             to: invoice.customer_email,
-            subject: template.subject,
-            html: template.html
+            subject,
+            html
         });
         logger.info(`Payment reminder email sent to ${invoice.customer_email} for invoice ${invoice.invoice_number}`);
         return true;
@@ -400,20 +480,57 @@ async function sendEstimateEmail(emailService, estimate, settings) {
         return false;
     }
 
-    const template = applyTemplate(EMAIL_TEMPLATES.estimateSent, {
-        estimate_number: estimate.estimate_number,
-        business_name: settings.business_name || 'Our Company',
-        business_email: settings.business_email || '',
-        customer_name: estimate.customer_name || 'Valued Customer',
-        total: formatCurrency(estimate.total, estimate.currency),
-        valid_until: formatDate(estimate.valid_until)
+    const subject = `Estimate ${estimate.estimate_number} from ${settings.business_name || 'Our Company'}`;
+    
+    const bodyContent = `
+        <h1 style="font-size: 24px; margin: 0 0 16px; color: #111827;">
+            Estimate ${estimate.estimate_number}
+        </h1>
+        <p style="color: #6b7280; margin: 0 0 24px;">
+            Hi ${estimate.customer_name || 'Valued Customer'},
+        </p>
+        <p style="color: #374151; margin: 0 0 24px;">
+            Please find attached your estimate from ${settings.business_name || 'Our Company'}.
+        </p>
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px; margin-bottom: 24px;">
+            <tr>
+                <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="color: #6b7280; padding-bottom: 12px;">Estimated Total:</td>
+                            <td style="text-align: right; font-weight: 600; font-size: 20px; color: #111827; padding-bottom: 12px;">${formatCurrency(estimate.total, estimate.currency)}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #6b7280;">Valid Until:</td>
+                            <td style="text-align: right; color: #111827;">${formatDate(estimate.valid_until)}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+            If you have any questions or would like to proceed, please don't hesitate to contact us.
+        </p>
+        
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; font-style: italic;">
+            📎 Estimate PDF attached
+        </p>
+    `;
+
+    // Wrap in branded template
+    const html = wrapInBrandedTemplate(bodyContent, {
+        subject,
+        isPreview: false,
+        showUnsubscribe: false
     });
 
     try {
         await emailService.sendEmail({
             to: estimate.customer_email,
-            subject: template.subject,
-            html: template.html
+            subject,
+            html
         });
         logger.info(`Estimate email sent to ${estimate.customer_email} for estimate ${estimate.estimate_number}`);
         return true;
