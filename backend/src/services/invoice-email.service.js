@@ -258,6 +258,7 @@ async function sendInvoiceEmail(emailService, invoice, settings, paymentUrl = nu
                 <div style="padding: 32px 24px; background: #f9fafb;">
                     <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <div style="white-space: pre-wrap; color: #374151; line-height: 1.6;">${customMessage.trim()}</div>
+                        ${paymentLinkSection}
                     </div>
                     <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
                         ${settings.business_name || ''} ${settings.business_email ? '• ' + settings.business_email : ''}
