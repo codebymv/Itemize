@@ -202,10 +202,10 @@ export function PaymentsPage() {
             );
 
             setStats({
-                total: succeededPayments.reduce((sum: number, p: Payment) => sum + p.amount, 0),
+                total: succeededPayments.reduce((sum: number, p: Payment) => sum + (Number(p.amount) || 0), 0),
                 succeeded: succeededPayments.length,
                 pending: pendingPayments.length,
-                thisMonth: thisMonthPayments.reduce((sum: number, p: Payment) => sum + p.amount, 0),
+                thisMonth: thisMonthPayments.reduce((sum: number, p: Payment) => sum + (Number(p.amount) || 0), 0),
             });
         } catch (error) {
             setPayments([]);
@@ -220,10 +220,11 @@ export function PaymentsPage() {
     }, [fetchPayments]);
 
     const formatCurrency = (amount: number, currency: string = 'USD') => {
+        const validAmount = Number(amount) || 0;
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: currency
-        }).format(amount);
+        }).format(validAmount);
     };
 
     const formatDate = (dateString: string) => {
