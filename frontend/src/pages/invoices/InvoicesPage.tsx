@@ -229,6 +229,7 @@ export function InvoicesPage() {
                 subject: options.subject,
                 message: options.message,
                 ccEmails: options.ccEmails,
+                includePaymentLink: options.includePaymentLink,
                 resend: isResend
             });
             
@@ -608,13 +609,13 @@ export function InvoicesPage() {
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'paid': return <CheckCircle className="h-4 w-4 text-green-600" />;
-            case 'overdue': return <XCircle className="h-4 w-4 text-red-600" />;
+            case 'paid': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
+            case 'overdue': return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
             case 'sent':
-            case 'viewed': return <Send className="h-4 w-4 text-orange-600" />;
-            case 'partial': return <AlertCircle className="h-4 w-4 text-orange-600" />;
-            case 'draft': return <Clock className="h-4 w-4 text-sky-600" />;
-            default: return <Clock className="h-4 w-4 text-gray-400" />;
+            case 'viewed': return <Send className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
+            case 'partial': return <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
+            case 'draft': return <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400" />;
+            default: return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
         }
     };
 
@@ -661,7 +662,7 @@ export function InvoicesPage() {
                                 <p className="text-xs text-muted-foreground">{stats.overdueCount} invoice{stats.overdueCount !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                                <XCircle className="h-5 w-5 text-red-600" />
+                                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                             </div>
                         </div>
                     </CardContent>
@@ -675,7 +676,7 @@ export function InvoicesPage() {
                                 <p className="text-xs text-muted-foreground">{stats.draftCount} invoice{stats.draftCount !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-sky-600" />
+                                <Clock className="h-5 w-5 text-sky-600 dark:text-sky-400" />
                             </div>
                         </div>
                     </CardContent>
@@ -689,7 +690,7 @@ export function InvoicesPage() {
                                 <p className="text-xs text-muted-foreground">{stats.dueWithin30Count} invoice{stats.dueWithin30Count !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-orange-600" />
+                                <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                             </div>
                         </div>
                     </CardContent>
@@ -703,7 +704,7 @@ export function InvoicesPage() {
                                 <p className="text-xs text-muted-foreground">{stats.paidCount} invoice{stats.paidCount !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <TrendingUp className="h-5 w-5 text-green-600" />
+                                <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
                             </div>
                         </div>
                     </CardContent>

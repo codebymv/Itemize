@@ -836,7 +836,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const { subject, message, ccEmails, resend } = req.body || {};
+            const { subject, message, ccEmails, includePaymentLink, resend } = req.body || {};
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
@@ -949,6 +949,70 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     // Continue without PDF attachment
                 }
 
+                // Handle payment link if requested
+                let paymentUrl = null;
+                if (includePaymentLink && invoice.amount_due > 0 && stripe) {
+                    try {
+                        // Check if we have an existing Stripe session
+                        if (invoice.stripe_payment_intent_id) {
+                            try {
+                                // Retrieve existing session
+                                const session = await stripe.checkout.sessions.retrieve(
+                                    invoice.stripe_payment_intent_id
+                                );
+                                
+                                // Only reuse if session is not expired (sessions expire after 24 hours)
+                                if (session.status === 'open' && session.url) {
+                                    paymentUrl = session.url;
+                                    logger.info(`Reusing existing payment link for invoice ${invoice.id}`);
+                                }
+                            } catch (retrieveError) {
+                                logger.warn(`Could not retrieve existing session: ${retrieveError.message}`);
+                            }
+                        }
+                        
+                        // Create new session if no valid existing one
+                        if (!paymentUrl) {
+                            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                            const session = await stripe.checkout.sessions.create({
+                                mode: 'payment',
+                                payment_method_types: ['card'],
+                                line_items: [{
+                                    price_data: {
+                                        currency: (invoice.currency || 'USD').toLowerCase(),
+                                        product_data: {
+                                            name: `Invoice ${invoice.invoice_number}`,
+                                            description: invoice.customer_name || 'Invoice Payment'
+                                        },
+                                        unit_amount: Math.round(invoice.amount_due * 100)
+                                    },
+                                    quantity: 1
+                                }],
+                                success_url: `${frontendUrl}/invoices?payment=success&invoice=${id}`,
+                                cancel_url: `${frontendUrl}/invoices?payment=cancelled&invoice=${id}`,
+                                customer_email: invoice.customer_email || undefined,
+                                metadata: {
+                                    invoice_id: invoice.id.toString(),
+                                    invoice_number: invoice.invoice_number,
+                                    organization_id: req.organizationId.toString()
+                                }
+                            });
+                            
+                            // Store session ID
+                            await client.query(
+                                'UPDATE invoices SET stripe_payment_intent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                                [session.id, id]
+                            );
+                            
+                            paymentUrl = session.url;
+                            logger.info(`Created new payment link for invoice ${invoice.id}`);
+                        }
+                    } catch (paymentLinkError) {
+                        logger.error('Error generating payment link:', paymentLinkError);
+                        // Continue without payment link - don't fail the send operation
+                    }
+                }
+
                 // Attempt to send email
                 let emailSent = false;
                 let emailError = null;
@@ -960,7 +1024,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             emailService, 
                             invoice, 
                             { ...settings, business_name: invoice.business.name || settings.business_name, business_email: invoice.business.email || settings.business_email },
-                            null, // paymentUrl
+                            paymentUrl, // Now dynamically set based on includePaymentLink flag
                             pdfBuffer,
                             {
                                 cc: ccEmails,

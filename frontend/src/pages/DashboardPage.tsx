@@ -94,12 +94,12 @@ const getStatValueColor = (theme: string) => {
 
 const getStatIconColor = (theme: string) => {
     switch (theme) {
-        case 'green': return 'text-green-600';
-        case 'orange': return 'text-orange-600';
-        case 'blue': return 'text-sky-600';
-        case 'purple': return 'text-purple-600';
-        case 'red': return 'text-red-600';
-        default: return 'text-gray-400';
+        case 'green': return 'text-green-600 dark:text-green-400';
+        case 'orange': return 'text-orange-600 dark:text-orange-400';
+        case 'blue': return 'text-sky-600 dark:text-sky-400';
+        case 'purple': return 'text-purple-600 dark:text-purple-400';
+        case 'red': return 'text-red-600 dark:text-red-400';
+        default: return 'text-gray-400 dark:text-gray-500';
     }
 };
 

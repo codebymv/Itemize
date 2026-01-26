@@ -286,6 +286,7 @@ export interface SendInvoiceOptions {
     subject?: string;
     message?: string;
     ccEmails?: string[];
+    includePaymentLink?: boolean;
     resend?: boolean;
 }
 

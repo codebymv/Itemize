@@ -330,7 +330,7 @@ export function AppSidebar() {
                         onClick={toggleSidebar}
                         className="h-8 w-8 flex-shrink-0"
                     >
-                        {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                        {isCollapsed ? <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" /> : <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
                     </Button>
                 </div>
             </SidebarHeader>
@@ -375,9 +375,9 @@ export function AppSidebar() {
                                                             // When expanded, CollapsibleTrigger handles toggle via onOpenChange
                                                         }}
                                                     >
-                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
+                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
                                                         <span>{item.title}</span>
-                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                     </SidebarMenuButton>
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent>
@@ -415,7 +415,7 @@ export function AppSidebar() {
                                             )}
                                             style={{ fontFamily: '"Raleway", sans-serif' }}
                                         >
-                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
+                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
                                             <span>{item.title}</span>
                                             {item.disabled && (
                                                 <span className="ml-auto text-xs text-muted-foreground">Soon</span>
@@ -467,9 +467,9 @@ export function AppSidebar() {
                                                             // When expanded, CollapsibleTrigger handles toggle via onOpenChange
                                                         }}
                                                     >
-                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
+                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
                                                         <span>{item.title}</span>
-                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                     </SidebarMenuButton>
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent>
@@ -506,7 +506,7 @@ export function AppSidebar() {
                                             )}
                                             style={{ fontFamily: '"Raleway", sans-serif' }}
                                         >
-                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
+                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
                                             <span>{item.title}</span>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>

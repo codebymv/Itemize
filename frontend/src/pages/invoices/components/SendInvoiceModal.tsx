@@ -13,7 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Send, Mail, Paperclip, Plus, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Send, Mail, Plus, X, CreditCard } from 'lucide-react';
 import { Business } from '@/services/invoicesApi';
 
 interface SendInvoiceModalProps {
@@ -34,6 +35,7 @@ export interface SendOptions {
     subject: string;
     message: string;
     ccEmails: string[];
+    includePaymentLink?: boolean;
 }
 
 export function SendInvoiceModal({
@@ -53,6 +55,7 @@ export function SendInvoiceModal({
     const [message, setMessage] = useState('');
     const [ccEmails, setCcEmails] = useState<string[]>([]);
     const [newCc, setNewCc] = useState('');
+    const [includePaymentLink, setIncludePaymentLink] = useState(false);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -85,6 +88,7 @@ export function SendInvoiceModal({
             );
             setCcEmails([]);
             setNewCc('');
+            setIncludePaymentLink(false);
         }
     }, [open, invoiceNumber, customerName, total, dueDate, business]);
 
@@ -100,7 +104,7 @@ export function SendInvoiceModal({
     };
 
     const handleSend = () => {
-        onSend({ subject, message, ccEmails });
+        onSend({ subject, message, ccEmails, includePaymentLink });
     };
 
     return (
@@ -188,10 +192,22 @@ export function SendInvoiceModal({
                         />
                     </div>
 
-                    {/* Attachment Notice */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
-                        <Paperclip className="h-4 w-4" />
-                        <span>Invoice PDF will be attached automatically</span>
+                    {/* Include Payment Link Option */}
+                    <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+                        <Checkbox
+                            id="includePaymentLink"
+                            checked={includePaymentLink}
+                            onCheckedChange={(checked) => setIncludePaymentLink(checked as boolean)}
+                        />
+                        <div className="flex-1">
+                            <Label htmlFor="includePaymentLink" className="text-sm font-medium cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                                Include Payment Link
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                Add a "Pay Now" button to the email for easy online payment
+                            </p>
+                        </div>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
                     </div>
                 </div>
 
