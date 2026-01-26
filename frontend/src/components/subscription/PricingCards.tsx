@@ -4,7 +4,7 @@
  * Theme-aware design matching itemize.cloud visual language
  */
 
-import { Check, Loader2, Zap, Crown, Building2 } from 'lucide-react';
+import { Check, Loader2, Zap, Crown, Building2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,14 @@ import {
 
 // Plan features - aligned with actual itemize.cloud capabilities
 const PLAN_FEATURES: Record<Plan, string[]> = {
+    free: [
+        'Up to 10 lists, notes & whiteboards',
+        '100 contacts',
+        '1 team member',
+        '1 automation workflow',
+        '100 emails/month',
+        'Basic features',
+    ],
     starter: [
         'Up to 50 lists, notes & whiteboards',
         '5,000 contacts',
@@ -90,6 +98,11 @@ const ITEMIZE_PLAN_META: Record<Plan, {
 
 interface PricingCardsProps {
     /**
+     * Hide the free plan (for upgrade/landing displays)
+     */
+    hideFree?: boolean;
+    
+    /**
      * Hide the starter plan (for upgrade dialogs)
      */
     hideStarter?: boolean;
@@ -132,12 +145,14 @@ interface PricingCardsProps {
 
 // Icon mapping for plans
 const PLAN_ICONS = {
+    free: User,
     starter: Zap,
     unlimited: Crown,
     pro: Building2,
 };
 
 export function PricingCards({
+    hideFree = true,
     hideStarter = false,
     currentPlan,
     variant = 'landing',
@@ -161,9 +176,14 @@ export function PricingCards({
     const highlightedBg = 'bg-gradient-to-b from-blue-600 to-indigo-700';
     const highlightedBorder = 'border-blue-500';
     
-    const plans = hideStarter 
-        ? [PLANS.UNLIMITED, PLANS.PRO] 
-        : [PLANS.STARTER, PLANS.UNLIMITED, PLANS.PRO];
+    // Build plans array based on hide flags
+    let plans: Plan[] = [PLANS.STARTER, PLANS.UNLIMITED, PLANS.PRO];
+    if (!hideFree) {
+        plans = [PLANS.FREE, ...plans];
+    }
+    if (hideStarter) {
+        plans = plans.filter(p => p !== PLANS.STARTER);
+    }
 
     // Get action label based on plan comparison
     const getActionLabel = (targetPlan: Plan): 'Upgrade' | 'Downgrade' | 'Current' => {

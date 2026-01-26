@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, ExternalLink, Eye, EyeOff, BarChart3 } from 'lucide-react';
+import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, ExternalLink, Eye, EyeOff, BarChart3, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -254,21 +254,23 @@ export function LandingPagesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => navigate(`/pages/${page.id}`)}>Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => navigate(`/pages/${page.id}`)} className="group/menu">
+                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                    </DropdownMenuItem>
                                                     {page.status === 'published' ? (
-                                                        <DropdownMenuItem onClick={() => handleToggleStatus(page, 'draft')}>
-                                                            <EyeOff className="h-4 w-4 mr-2" />Unpublish
+                                                        <DropdownMenuItem onClick={() => handleToggleStatus(page, 'draft')} className="group/menu">
+                                                            <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Unpublish
                                                         </DropdownMenuItem>
                                                     ) : (
-                                                        <DropdownMenuItem onClick={() => handleToggleStatus(page, 'published')}>
-                                                            <Eye className="h-4 w-4 mr-2" />Publish
+                                                        <DropdownMenuItem onClick={() => handleToggleStatus(page, 'published')} className="group/menu">
+                                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Publish
                                                         </DropdownMenuItem>
                                                     )}
-                                                    <DropdownMenuItem onClick={() => copyPageLink(page.slug)}>
-                                                        <Copy className="h-4 w-4 mr-2" />Copy Link
+                                                    <DropdownMenuItem onClick={() => copyPageLink(page.slug)} className="group/menu">
+                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Link
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDuplicate(page.id)}>
-                                                        <Copy className="h-4 w-4 mr-2" />Duplicate
+                                                    <DropdownMenuItem onClick={() => handleDuplicate(page.id)} className="group/menu">
+                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem onClick={() => handleDelete(page.id)} className="text-destructive">

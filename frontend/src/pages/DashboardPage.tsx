@@ -7,6 +7,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
     Select,
@@ -57,6 +58,51 @@ import {
     type RevenueTrends,
 } from '@/services/analyticsApi';
 
+// Color helper functions for stat cards (matching invoice page visual language)
+const getStatBadgeClasses = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        case 'orange': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        case 'blue': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
+        case 'purple': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        case 'red': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+};
+
+const getStatIconBgClasses = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'bg-green-100 dark:bg-green-900';
+        case 'orange': return 'bg-orange-100 dark:bg-orange-900';
+        case 'blue': return 'bg-sky-100 dark:bg-sky-900';
+        case 'purple': return 'bg-purple-100 dark:bg-purple-900';
+        case 'red': return 'bg-red-100 dark:bg-red-900';
+        default: return 'bg-gray-100 dark:bg-gray-800';
+    }
+};
+
+const getStatValueColor = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'text-green-600';
+        case 'orange': return 'text-orange-600';
+        case 'blue': return 'text-sky-600';
+        case 'purple': return 'text-purple-600';
+        case 'red': return 'text-red-600';
+        default: return 'text-gray-600';
+    }
+};
+
+const getStatIconColor = (theme: string) => {
+    switch (theme) {
+        case 'green': return 'text-green-600';
+        case 'orange': return 'text-orange-600';
+        case 'blue': return 'text-sky-600';
+        case 'purple': return 'text-purple-600';
+        case 'red': return 'text-red-600';
+        default: return 'text-gray-400';
+    }
+};
+
 interface QuickAction {
     title: string;
     description: string;
@@ -67,60 +113,51 @@ interface QuickAction {
 
 interface StatCardProps {
     title: string;
+    badgeText: string;
     value: string | number;
     icon: LucideIcon;
     description?: string;
-    trend?: {
-        value: number;
-        label: string;
-        positive?: boolean;
-    };
-    color?: string;
+    colorTheme: 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'gray';
     isLoading?: boolean;
 }
 
-function StatCard({ title, value, icon: Icon, description, trend, color = 'text-blue-600', isLoading }: StatCardProps) {
+function StatCard({ title, badgeText, value, icon: Icon, description, colorTheme, isLoading }: StatCardProps) {
     if (isLoading) {
         return (
-            <Card className="bg-muted/20">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-8 w-16 mb-1" />
-                    <Skeleton className="h-3 w-24" />
+            <Card>
+                <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Skeleton className="h-5 w-20 mb-2" />
+                            <Skeleton className="h-8 w-24 mb-1" />
+                            <Skeleton className="h-3 w-16" />
+                        </div>
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                    </div>
                 </CardContent>
             </Card>
         );
     }
 
     return (
-        <Card className="bg-muted/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {title}
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${color}`} />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-                {trend && (
-                    <div className="flex items-center gap-1 text-xs">
-                        {trend.positive ? (
-                            <ArrowUpRight className="h-3 w-3 text-green-500" />
-                        ) : (
-                            <ArrowDownRight className="h-3 w-3 text-red-500" />
+        <Card>
+            <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses(colorTheme)}`}>
+                            {badgeText}
+                        </Badge>
+                        <p className={`text-2xl font-bold ${getStatValueColor(colorTheme)}`}>
+                            {value}
+                        </p>
+                        {description && (
+                            <p className="text-xs text-muted-foreground">{description}</p>
                         )}
-                        <span className={trend.positive ? 'text-green-500' : 'text-red-500'}>
-                            {trend.value > 0 ? '+' : ''}{trend.value}
-                        </span>
-                        <span className="text-muted-foreground">{trend.label}</span>
                     </div>
-                )}
-                {description && !trend && (
-                    <p className="text-xs text-muted-foreground">{description}</p>
-                )}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses(colorTheme)}`}>
+                        <Icon className={`h-5 w-5 ${getStatIconColor(colorTheme)}`} />
+                    </div>
+                </div>
             </CardContent>
         </Card>
     );
@@ -641,38 +678,38 @@ export function DashboardPage() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                         <StatCard
                             title="Total Contacts"
+                            badgeText="Total Contacts"
                             value={analytics?.contacts?.total ?? 0}
                             icon={Users}
-                            trend={analytics?.contacts?.newThisWeek ? {
-                                value: analytics.contacts.newThisWeek,
-                                label: 'this week',
-                                positive: true
-                            } : undefined}
-                            color="text-blue-600"
+                            description={analytics?.contacts?.newThisWeek ? `+${analytics.contacts.newThisWeek} this week` : undefined}
+                            colorTheme="blue"
                             isLoading={isLoading}
                         />
                         <StatCard
                             title="Open Deals"
+                            badgeText="Open Deals"
                             value={analytics?.deals?.open ?? 0}
                             icon={TrendingUp}
                             description={`$${(analytics?.deals?.openValue ?? 0).toLocaleString()} in pipeline`}
-                            color="text-purple-600"
-                            isLoading={isLoading}
-                        />
-                        <StatCard
-                            title="Revenue Won"
-                            value={`$${(analytics?.deals?.wonThisMonth ?? 0).toLocaleString()}`}
-                            icon={DollarSign}
-                            description="This month"
-                            color="text-green-600"
+                            colorTheme="orange"
                             isLoading={isLoading}
                         />
                         <StatCard
                             title="Upcoming Bookings"
+                            badgeText="Upcoming"
                             value={analytics?.bookings?.upcomingThisWeek ?? 0}
                             icon={CalendarDays}
                             description={`${analytics?.bookings?.upcomingToday ?? 0} today`}
-                            color="text-orange-600"
+                            colorTheme="orange"
+                            isLoading={isLoading}
+                        />
+                        <StatCard
+                            title="Revenue Won"
+                            badgeText="Revenue Won"
+                            value={`$${(analytics?.deals?.wonThisMonth ?? 0).toLocaleString()}`}
+                            icon={DollarSign}
+                            description="This month"
+                            colorTheme="green"
                             isLoading={isLoading}
                         />
                     </div>
@@ -681,26 +718,29 @@ export function DashboardPage() {
                     <div className="grid gap-4 md:grid-cols-3 mb-8">
                         <StatCard
                             title="Tasks Overdue"
+                            badgeText="Overdue"
                             value={analytics?.tasks?.overdue ?? 0}
                             icon={AlertCircle}
                             description={`${analytics?.tasks?.pending ?? 0} pending`}
-                            color={analytics?.tasks?.overdue && analytics.tasks.overdue > 0 ? 'text-red-600' : 'text-gray-600'}
-                            isLoading={isLoading}
-                        />
-                        <StatCard
-                            title="Deals Won"
-                            value={analytics?.deals?.won ?? 0}
-                            icon={CheckSquare}
-                            description={`$${(analytics?.deals?.wonValue ?? 0).toLocaleString()} total`}
-                            color="text-green-600"
+                            colorTheme="red"
                             isLoading={isLoading}
                         />
                         <StatCard
                             title="Active Leads"
+                            badgeText="Active"
                             value={analytics?.contacts?.leads ?? 0}
                             icon={Users}
                             description={`${analytics?.contacts?.customers ?? 0} customers`}
-                            color="text-blue-600"
+                            colorTheme="orange"
+                            isLoading={isLoading}
+                        />
+                        <StatCard
+                            title="Deals Won"
+                            badgeText="Won"
+                            value={analytics?.deals?.won ?? 0}
+                            icon={CheckSquare}
+                            description={`$${(analytics?.deals?.wonValue ?? 0).toLocaleString()} total`}
+                            colorTheme="green"
                             isLoading={isLoading}
                         />
                     </div>

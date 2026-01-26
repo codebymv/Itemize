@@ -21,6 +21,9 @@ import {
     ChevronRight,
     Loader2,
     Repeat,
+    CreditCard,
+    Wallet,
+    Link,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +56,9 @@ import { getInvoices, getInvoice, deleteInvoice, sendInvoice, Invoice as ApiInvo
 import { Separator } from '@/components/ui/separator';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
 import { MakeRecurringModal, RecurringOptions } from './components/MakeRecurringModal';
+import { RecordPaymentModal, PaymentData } from './components/RecordPaymentModal';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
+import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -74,6 +79,8 @@ interface Invoice {
     sent_at?: string;
     paid_at?: string;
     created_at: string;
+    is_recurring_source?: boolean;
+    recurring_template_id?: number;
 }
 
 interface Stats {
@@ -121,6 +128,16 @@ export function InvoicesPage() {
     const [fullInvoiceDataForRecurring, setFullInvoiceDataForRecurring] = useState<ApiInvoice | null>(null);
     const [converting, setConverting] = useState(false);
 
+    // Record payment modal state
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
+    const [fullInvoiceDataForPayment, setFullInvoiceDataForPayment] = useState<ApiInvoice | null>(null);
+    const [recordingPayment, setRecordingPayment] = useState(false);
+
+    // Payment link modal state
+    const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
+    const [selectedInvoiceForPaymentLink, setSelectedInvoiceForPaymentLink] = useState<Invoice | null>(null);
+
     useEffect(() => {
         const initOrg = async () => {
             try {
@@ -150,6 +167,34 @@ export function InvoicesPage() {
     useEffect(() => {
         fetchInvoices();
     }, [fetchInvoices]);
+
+    // Handle payment success/cancelled query params from Stripe redirect
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const paymentStatus = params.get('payment');
+        const invoiceId = params.get('invoice');
+        
+        if (paymentStatus === 'success') {
+            toast({ 
+                title: 'Payment Successful', 
+                description: invoiceId 
+                    ? `Payment for invoice #${invoiceId} has been processed.`
+                    : 'The invoice payment has been processed.'
+            });
+            // Clean up URL without reloading
+            window.history.replaceState({}, '', window.location.pathname);
+            // Refresh invoices to show updated status
+            fetchInvoices();
+        } else if (paymentStatus === 'cancelled') {
+            toast({ 
+                title: 'Payment Cancelled', 
+                description: 'The payment was cancelled. You can try again anytime.',
+                variant: 'destructive'
+            });
+            // Clean up URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [toast, fetchInvoices]);
 
     const handleCreateInvoice = () => {
         navigate('/invoices/new');
@@ -235,7 +280,7 @@ export function InvoicesPage() {
         setShowRecurringModal(true);
     };
 
-    // Convert invoice to recurring template
+    // Create recurring template from invoice
     const handleMakeRecurring = async (options: RecurringOptions) => {
         if (!organizationId || !selectedInvoiceForRecurring) return;
         
@@ -248,19 +293,107 @@ export function InvoicesPage() {
                 end_date: options.end_date,
             });
             
-            toast({ title: 'Success', description: 'Invoice converted to recurring template' });
+            toast({ title: 'Template Created', description: 'Recurring template created. Original invoice has been preserved.' });
             setShowRecurringModal(false);
             setSelectedInvoiceForRecurring(null);
             setFullInvoiceDataForRecurring(null);
             
-            // Navigate to recurring invoices page
+            // Refresh invoices to show updated is_recurring_source status
+            fetchInvoices();
+            
+            // Navigate to recurring invoices page to see the new template
             navigate('/invoices/recurring');
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.error || 'Failed to convert invoice';
+            const errorMessage = error?.response?.data?.error || 'Failed to create recurring template';
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setConverting(false);
         }
+    };
+
+    // Open record payment modal for an invoice
+    const handleOpenPaymentModal = async (invoice: Invoice, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!organizationId) return;
+
+        // Don't allow for fully paid, cancelled, or refunded invoices
+        if (invoice.amount_due <= 0 || ['cancelled', 'refunded', 'paid'].includes(invoice.status)) {
+            toast({ title: 'Cannot Record Payment', description: 'This invoice is already paid or cancelled', variant: 'destructive' });
+            return;
+        }
+        
+        setSelectedInvoiceForPayment(invoice);
+        
+        // Fetch full invoice data for modal display
+        try {
+            const fullData = await getInvoice(invoice.id, organizationId);
+            setFullInvoiceDataForPayment(fullData);
+        } catch (error) {
+            setFullInvoiceDataForPayment(null);
+        }
+        
+        setShowPaymentModal(true);
+    };
+
+    // Record a manual payment
+    const handleRecordPayment = async (paymentData: PaymentData) => {
+        if (!organizationId || !selectedInvoiceForPayment) return;
+        
+        setRecordingPayment(true);
+        try {
+            await api.post(`/api/invoices/${selectedInvoiceForPayment.id}/record-payment`, {
+                amount: paymentData.amount,
+                payment_method: paymentData.payment_method,
+                notes: paymentData.notes,
+            }, {
+                headers: { 'x-organization-id': organizationId.toString() }
+            });
+            
+            toast({ title: 'Payment Recorded', description: `Payment of $${paymentData.amount.toFixed(2)} has been recorded.` });
+            setShowPaymentModal(false);
+            setSelectedInvoiceForPayment(null);
+            setFullInvoiceDataForPayment(null);
+            
+            // Refresh invoices to show updated payment status
+            fetchInvoices();
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.error || 'Failed to record payment';
+            toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+        } finally {
+            setRecordingPayment(false);
+        }
+    };
+
+    // Open payment link modal
+    const handleCreatePaymentLink = (invoice: Invoice, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!organizationId) return;
+
+        // Don't allow for fully paid, cancelled, or refunded invoices
+        if (invoice.amount_due <= 0 || ['cancelled', 'refunded', 'paid'].includes(invoice.status)) {
+            toast({ title: 'Cannot Create Payment Link', description: 'This invoice is already paid or cancelled', variant: 'destructive' });
+            return;
+        }
+        
+        setSelectedInvoiceForPaymentLink(invoice);
+        setShowPaymentLinkModal(true);
+    };
+
+    // Generate payment link (called from modal)
+    const generatePaymentLink = async (invoiceId: number): Promise<{ url: string }> => {
+        if (!organizationId) throw new Error('Organization not found');
+        
+        const response = await api.post(`/api/invoices/${invoiceId}/create-payment-link`, {}, {
+            headers: { 'x-organization-id': organizationId.toString() }
+        });
+        
+        const { url } = response.data;
+        
+        if (!url) {
+            throw new Error('No checkout URL returned');
+        }
+        
+        return { url };
     };
 
     const handleDeleteClick = (invoice: Invoice, e: React.MouseEvent) => {
@@ -537,12 +670,12 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Due within 30 days</Badge>
-                                <p className="text-2xl font-bold">{formatCurrency(stats.dueWithin30)}</p>
-                                <p className="text-xs text-muted-foreground">{stats.dueWithin30Count} invoice{stats.dueWithin30Count !== 1 ? 's' : ''}</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Draft</Badge>
+                                <p className="text-2xl font-bold text-sky-600">{formatCurrency(stats.draft)}</p>
+                                <p className="text-xs text-muted-foreground">{stats.draftCount} invoice{stats.draftCount !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-orange-600" />
+                            <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-sky-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -551,12 +684,12 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Draft</Badge>
-                                <p className="text-2xl font-bold">{formatCurrency(stats.draft)}</p>
-                                <p className="text-xs text-muted-foreground">{stats.draftCount} invoice{stats.draftCount !== 1 ? 's' : ''}</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Due within 30 days</Badge>
+                                <p className="text-2xl font-bold text-orange-600">{formatCurrency(stats.dueWithin30)}</p>
+                                <p className="text-xs text-muted-foreground">{stats.dueWithin30Count} invoice{stats.dueWithin30Count !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-sky-600" />
+                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                <Calendar className="h-5 w-5 text-orange-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -659,6 +792,18 @@ export function InvoicesPage() {
                                                             <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
                                                                 {(isOverdue(invoice) ? 'overdue' : invoice.status).charAt(0).toUpperCase() + (isOverdue(invoice) ? 'overdue' : invoice.status).slice(1)}
                                                             </Badge>
+                                                            {invoice.is_recurring_source && (
+                                                                <>
+                                                                    <span className="text-muted-foreground">|</span>
+                                                                    <p className="text-xs text-muted-foreground">Recurring</p>
+                                                                </>
+                                                            )}
+                                                            {invoice.recurring_template_id && (
+                                                                <>
+                                                                    <span className="text-muted-foreground">|</span>
+                                                                    <p className="text-xs text-muted-foreground">Auto-generated</p>
+                                                                </>
+                                                            )}
                                                         </div>
                                                         <p className="text-sm text-muted-foreground">{getContactName(invoice)}</p>
                                                     </div>
@@ -679,25 +824,36 @@ export function InvoicesPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                            <DropdownMenuItem onClick={() => navigate(`/invoices/${invoice.id}`)}>
-                                                                <Pencil className="h-4 w-4 mr-2" />Edit
+                                                            <DropdownMenuItem onClick={() => navigate(`/invoices/${invoice.id}`)} className="group/menu">
+                                                                <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
                                                             </DropdownMenuItem>
                                                             {invoice.status === 'draft' && (
-                                                                <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, false)}>
-                                                                    <Send className="h-4 w-4 mr-2" />Send
+                                                                <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, false)} className="group/menu">
+                                                                    <Send className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Send
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
-                                                                <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, true)}>
-                                                                    <RefreshCw className="h-4 w-4 mr-2" />Resend
+                                                                <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, true)} className="group/menu">
+                                                                    <RefreshCw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Resend
                                                                 </DropdownMenuItem>
                                                             )}
-                                                            <DropdownMenuItem>
-                                                                <Download className="h-4 w-4 mr-2" />Download PDF
+                                                            <DropdownMenuItem className="group/menu">
+                                                                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Download PDF
                                                             </DropdownMenuItem>
-                                                            {!['cancelled', 'refunded'].includes(invoice.status) && (
-                                                                <DropdownMenuItem onClick={(e) => handleOpenRecurringModal(invoice, e)}>
-                                                                    <Repeat className="h-4 w-4 mr-2" />Make Recurring
+                                                            {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onClick={(e) => handleOpenPaymentModal(invoice, e)} className="group/menu">
+                                                                        <Wallet className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Record Payment
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={(e) => handleCreatePaymentLink(invoice, e)} className="group/menu">
+                                                                        <CreditCard className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Create Payment Link
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                            {!['cancelled', 'refunded'].includes(invoice.status) && !invoice.is_recurring_source && (
+                                                                <DropdownMenuItem onClick={(e) => handleOpenRecurringModal(invoice, e)} className="group/menu">
+                                                                    <Repeat className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Make Recurring
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
@@ -783,8 +939,7 @@ export function InvoicesPage() {
                                                             {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
                                                                 <Button
                                                                     size="sm"
-                                                                    variant="outline"
-                                                                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleOpenSendModal(invoice, true);
@@ -793,14 +948,36 @@ export function InvoicesPage() {
                                                                     <RefreshCw className="h-4 w-4 mr-2" />Resend Invoice
                                                                 </Button>
                                                             )}
-                                                            <Button variant="outline" size="sm">
+                                                            <Button 
+                                                                size="sm"
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                            >
                                                                 <Download className="h-4 w-4 mr-2" />Download PDF
                                                             </Button>
-                                                            {!['cancelled', 'refunded'].includes(invoice.status) && (
+                                                            {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
+                                                                <>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={(e) => handleOpenPaymentModal(invoice, e)}
+                                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                    >
+                                                                        <Wallet className="h-4 w-4 mr-2" />Record Payment
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={(e) => handleCreatePaymentLink(invoice, e)}
+                                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                    >
+                                                                        <CreditCard className="h-4 w-4 mr-2" />
+                                                                        Payment Link
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                            {!['cancelled', 'refunded'].includes(invoice.status) && !invoice.is_recurring_source && (
                                                                 <Button
-                                                                    variant="outline"
                                                                     size="sm"
                                                                     onClick={(e) => handleOpenRecurringModal(invoice, e)}
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
                                                                 >
                                                                     <Repeat className="h-4 w-4 mr-2" />Make Recurring
                                                                 </Button>
@@ -890,7 +1067,46 @@ export function InvoicesPage() {
                     total={selectedInvoiceForRecurring.total}
                     currency={fullInvoiceDataForRecurring?.currency || 'USD'}
                     itemCount={fullInvoiceDataForRecurring?.items?.length || 0}
-                    status={selectedInvoiceForRecurring.status}
+                />
+            )}
+
+            {/* Record Payment Modal */}
+            {selectedInvoiceForPayment && (
+                <RecordPaymentModal
+                    open={showPaymentModal}
+                    onOpenChange={(open) => {
+                        setShowPaymentModal(open);
+                        if (!open) {
+                            setSelectedInvoiceForPayment(null);
+                            setFullInvoiceDataForPayment(null);
+                        }
+                    }}
+                    onConfirm={handleRecordPayment}
+                    recording={recordingPayment}
+                    invoiceNumber={selectedInvoiceForPayment.invoice_number}
+                    customerName={fullInvoiceDataForPayment?.customer_name || selectedInvoiceForPayment.customer_name || getContactName(selectedInvoiceForPayment)}
+                    amountDue={selectedInvoiceForPayment.amount_due}
+                    total={selectedInvoiceForPayment.total}
+                    amountPaid={selectedInvoiceForPayment.amount_paid}
+                    currency={fullInvoiceDataForPayment?.currency || 'USD'}
+                />
+            )}
+
+            {/* Payment Link Modal */}
+            {selectedInvoiceForPaymentLink && (
+                <PaymentLinkModal
+                    isOpen={showPaymentLinkModal}
+                    onClose={() => {
+                        setShowPaymentLinkModal(false);
+                        setSelectedInvoiceForPaymentLink(null);
+                    }}
+                    invoiceNumber={selectedInvoiceForPaymentLink.invoice_number}
+                    invoiceTotal={selectedInvoiceForPaymentLink.total}
+                    amountDue={selectedInvoiceForPaymentLink.amount_due}
+                    customerName={selectedInvoiceForPaymentLink.customer_name || getContactName(selectedInvoiceForPaymentLink)}
+                    dueDate={selectedInvoiceForPaymentLink.due_date}
+                    currency={selectedInvoiceForPaymentLink.currency || 'USD'}
+                    onGenerateLink={() => generatePaymentLink(selectedInvoiceForPaymentLink.id)}
                 />
             )}
         </div>

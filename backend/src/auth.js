@@ -255,7 +255,7 @@ router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (
   try {
     // Find user
     const result = await client.query(
-      'SELECT id, email, name, password_hash, provider, email_verified FROM users WHERE email = $1',
+      'SELECT id, email, name, password_hash, provider, email_verified, role FROM users WHERE email = $1',
       [email]
     );
 
@@ -310,6 +310,7 @@ router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (
         uid: user.id,
         email: user.email,
         name: user.name,
+        role: user.role || 'USER',
         photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
       },
     });
@@ -760,6 +761,7 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
         uid: user.id,
         email: user.email,
         name: user.name,
+        role: user.role || 'USER',
         photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
       }
     });
@@ -851,6 +853,7 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
         uid: user.id,
         email: user.email,
         name: user.name,
+        role: user.role || 'USER',
         photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`
       }
     });
@@ -889,7 +892,7 @@ router.get('/me', asyncHandler(async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, email, name, provider, email_verified, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, provider, email_verified, role, created_at FROM users WHERE id = $1',
       [decoded.id]
     );
 
@@ -907,6 +910,7 @@ router.get('/me', asyncHandler(async (req, res) => {
         name: user.name,
         provider: user.provider,
         emailVerified: user.email_verified,
+        role: user.role || 'USER',
         createdAt: user.created_at,
       },
     });
@@ -1082,7 +1086,62 @@ const authenticateJWT = (req, res, next) => {
   }
 };
 
+/**
+ * Middleware to require admin role
+ * Must be used after authenticateJWT
+ */
+const requireAdmin = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ 
+      success: false, 
+      error: { message: 'Authentication required', code: 'AUTH_REQUIRED' } 
+    });
+  }
+
+  const pool = req.dbPool;
+  if (!pool) {
+    return res.status(503).json({ 
+      success: false, 
+      error: { message: 'Database connection unavailable', code: 'DB_UNAVAILABLE' } 
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { message: 'User not found', code: 'USER_NOT_FOUND' } 
+      });
+    }
+
+    const userRole = result.rows[0].role || 'USER';
+    
+    if (userRole !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false, 
+        error: { message: 'Admin access required', code: 'FORBIDDEN' } 
+      });
+    }
+
+    // Attach role to request for use in routes
+    req.userRole = userRole;
+    next();
+  } catch (error) {
+    console.error('Error checking admin role:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } 
+    });
+  }
+};
+
 module.exports = {
   router,
-  authenticateJWT
+  authenticateJWT,
+  requireAdmin
 };

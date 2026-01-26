@@ -72,67 +72,62 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   return (
     <div 
-      className={`context-menu ${isFromButton ? 'dropdown-menu' : ''} bg-background border border-border rounded-md shadow-lg`}
+      className="context-menu min-w-[180px] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
       style={{
         position: isFromButton ? 'fixed' : 'absolute',
         ...positionStyle,
-        zIndex: 2000, // Higher z-index to ensure it's above everything
-        padding: '0.5rem 0',
-        minWidth: '180px',
-        marginTop: isFromButton ? '0' : '10px'
+        zIndex: 10000,
       }}
-      onClick={(e) => e.stopPropagation()} // Prevent clicks from closing the menu
+      onClick={(e) => e.stopPropagation()}
     >
-      <div className="menu-items">
+      <button 
+        className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+        onClick={(e) => handleClickItem(e, onAddList)}
+        style={{ fontFamily: '"Raleway", sans-serif' }}
+      >
+        <CheckSquare className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+        <span>Add List</span>
+      </button>
+      {onAddNote && (
         <button 
-          className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
-          onClick={(e) => handleClickItem(e, onAddList)}
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          onClick={(e) => handleClickItem(e, onAddNote)}
           style={{ fontFamily: '"Raleway", sans-serif' }}
         >
-          <CheckSquare className="h-4 w-4 mr-3 text-blue-600" />
-          <span>Add List</span>
+          <StickyNote className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <span>Add Note</span>
         </button>
-        {onAddNote && (
-          <button 
-            className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
-            onClick={(e) => handleClickItem(e, onAddNote)}
-            style={{ fontFamily: '"Raleway", sans-serif' }}
-          >
-            <StickyNote className="h-4 w-4 mr-3 text-blue-600" />
-            <span>Add Note</span>
-          </button>
-        )}
-        {onAddWhiteboard && (
-          <button 
-            className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
-            onClick={(e) => handleClickItem(e, onAddWhiteboard)}
-            style={{ fontFamily: '"Raleway", sans-serif' }}
-          >
-            <Palette className="h-4 w-4 mr-3 text-blue-600" />
-            <span>Add Whiteboard</span>
-          </button>
-        )}
-        {onAddWireframe && (
-          <button 
-            className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
-            onClick={(e) => handleClickItem(e, onAddWireframe)}
-            style={{ fontFamily: '"Raleway", sans-serif' }}
-          >
-            <GitBranch className="h-4 w-4 mr-3 text-blue-600" />
-            <span>Add Wireframe</span>
-          </button>
-        )}
-        {onAddVault && (
-          <button 
-            className="menu-item flex items-center px-4 py-3 cursor-pointer bg-transparent border-none w-full text-left font-light text-sm transition-colors hover:bg-accent hover:text-accent-foreground text-foreground"
-            onClick={(e) => handleClickItem(e, onAddVault)}
-            style={{ fontFamily: '"Raleway", sans-serif' }}
-          >
-            <KeyRound className="h-4 w-4 mr-3 text-blue-600" />
-            <span>Add Vault</span>
-          </button>
-        )}
-      </div>
+      )}
+      {onAddWhiteboard && (
+        <button 
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          onClick={(e) => handleClickItem(e, onAddWhiteboard)}
+          style={{ fontFamily: '"Raleway", sans-serif' }}
+        >
+          <Palette className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <span>Add Whiteboard</span>
+        </button>
+      )}
+      {onAddWireframe && (
+        <button 
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          onClick={(e) => handleClickItem(e, onAddWireframe)}
+          style={{ fontFamily: '"Raleway", sans-serif' }}
+        >
+          <GitBranch className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <span>Add Wireframe</span>
+        </button>
+      )}
+      {onAddVault && (
+        <button 
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          onClick={(e) => handleClickItem(e, onAddVault)}
+          style={{ fontFamily: '"Raleway", sans-serif' }}
+        >
+          <KeyRound className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <span>Add Vault</span>
+        </button>
+      )}
     </div>
   );
 };

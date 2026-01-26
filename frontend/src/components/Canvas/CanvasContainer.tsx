@@ -16,6 +16,7 @@ import { Plus, Minus, RotateCcw, Search } from 'lucide-react';
 interface CanvasContainerProps {
   existingCategories: Category[];
   searchQuery?: string;
+  categoryFilter?: string;
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
   onOpenNewListModal?: (position: { x: number; y: number }) => void;
@@ -61,6 +62,7 @@ export interface CanvasContainerMethods {
 export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   existingCategories,
   searchQuery = '',
+  categoryFilter = 'all',
   onReady,
   onOpenNewNoteModal,
   onOpenNewListModal,
@@ -113,9 +115,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   
-  // Filter state for canvas
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  // Use categoryFilter from props instead of internal state
+  const selectedFilter = categoryFilter;
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
@@ -452,41 +453,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   // Filter logic
-  const getUniqueCategories = () => {
-    const listCategories = lists.map(list => list.type || 'General').filter(Boolean);
-    const noteCategories = notes.map(note => note.category || 'General').filter(Boolean);
-    const allCategories = Array.from(new Set([...listCategories, ...noteCategories]));
-    return ['all', ...allCategories];
-  };
-
-  const getFilterCounts = () => {
-    const counts: Record<string, number> = { 
-      all: lists.length + notes.length + whiteboards.length 
-    };
-    
-    lists.forEach(list => {
-      const category = list.type || 'General';
-      counts[category] = (counts[category] || 0) + 1;
-    });
-    
-    notes.forEach(note => {
-      const category = note.category || 'General';
-      counts[category] = (counts[category] || 0) + 1;
-    });
-    
-    whiteboards.forEach(whiteboard => {
-      const category = whiteboard.category || 'General';
-      counts[category] = (counts[category] || 0) + 1;
-    });
-    
-    return counts;
-  };
-
   const getFilteredContent = () => {
     let filteredLists = lists;
     let filteredNotes = notes;
     let filteredWhiteboards = whiteboards;
     let filteredWireframes = wireframes;
+    let filteredVaults = vaults;
 
     // Apply search filter
     if (searchQuery) {
@@ -511,6 +483,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       filteredWireframes = wireframes.filter(wireframe => {
         return wireframe.title && wireframe.title.toLowerCase().includes(searchQuery.toLowerCase());
       });
+
+      filteredVaults = vaults.filter(vault => {
+        return vault.title && vault.title.toLowerCase().includes(searchQuery.toLowerCase());
+      });
     }
 
     // Apply category filter
@@ -519,12 +495,13 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       filteredNotes = filteredNotes.filter(note => (note.category || 'General') === selectedFilter);
       filteredWhiteboards = filteredWhiteboards.filter(whiteboard => (whiteboard.category || 'General') === selectedFilter);
       filteredWireframes = filteredWireframes.filter(wireframe => (wireframe.category || 'General') === selectedFilter);
+      filteredVaults = filteredVaults.filter(vault => (vault.category || 'General') === selectedFilter);
     }
 
-    return { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes };
+    return { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes, filteredVaults };
   };
 
-  const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes } = getFilteredContent();
+  const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes, filteredVaults } = getFilteredContent();
 
   // Memoize the canvas transform string to prevent unnecessary recalculations
   const canvasTransformStyle = useMemo(() => {
@@ -565,14 +542,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           setShowContextMenu(false);
         }
       }
-      
-      // Close filter panel if clicking outside
-      if (showFilterPanel) {
-        const target = e.target as HTMLElement;
-        if (!target.closest('[data-filter-panel]') && !target.closest('[data-filter-button]')) {
-          setShowFilterPanel(false);
-        }
-      }
     };
 
     document.addEventListener('mousedown', handleDocumentClick);
@@ -580,7 +549,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleDocumentClick);
     };
-  }, [showContextMenu, showFilterPanel, menuIsFromButton]);
+  }, [showContextMenu, menuIsFromButton]);
 
   return (
     <div className="canvas-container-wrapper">
@@ -717,7 +686,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
             ))}
 
             {/* Render wireframes */}
-            {wireframes && onWireframeUpdate && onWireframeDelete && onWireframeShare && wireframes.map(wireframe => (
+            {wireframes && onWireframeUpdate && onWireframeDelete && onWireframeShare && filteredWireframes.map(wireframe => (
               <DraggableWireframeCard
                 key={wireframe.id}
                 wireframe={wireframe}
@@ -734,7 +703,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
             ))}
 
             {/* Render vaults */}
-            {vaults && onVaultUpdate && onVaultDelete && onVaultShare && vaults.map(vault => (
+            {vaults && onVaultUpdate && onVaultDelete && onVaultShare && filteredVaults.map(vault => (
               <DraggableVaultCard
                 key={vault.id}
                 vault={vault}
@@ -887,118 +856,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           <Plus size={18} />
         </button>
 
-        {/* Separator */}
-        <div style={{
-          width: '1px',
-          height: '24px',
-          backgroundColor: 'var(--border)',
-          margin: '0 4px'
-        }} />
-
-        {/* Filter Controls */}
-        <button
-          onClick={() => setShowFilterPanel(!showFilterPanel)}
-          data-filter-button
-          style={{
-            minWidth: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 12px',
-            backgroundColor: showFilterPanel ? 'var(--accent)' : 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            color: 'var(--text)',
-            fontSize: '12px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            gap: '6px',
-            whiteSpace: 'nowrap'
-          }}
-          onMouseEnter={(e) => {
-            if (!showFilterPanel) {
-              e.currentTarget.style.backgroundColor = 'var(--accent)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!showFilterPanel) {
-              e.currentTarget.style.backgroundColor = 'var(--background)';
-            }
-          }}
-          title="Filter Content"
-        >
-          <span>Category:</span>
-          <span>{selectedFilter === 'all' ? 'All' : selectedFilter}</span>
-          <span style={{ opacity: 0.7 }}>({getFilterCounts()[selectedFilter] || 0})</span>
-        </button>
       </div>
-      
-      {/* Filter Panel */}
-      {showFilterPanel && (
-        <div
-          data-filter-panel
-          style={{
-            position: 'fixed',
-            bottom: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 1003,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px',
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            userSelect: 'none',
-            maxWidth: '600px',
-            flexWrap: 'wrap'
-          }}
-        >
-          {getUniqueCategories().map((category) => {
-            const count = getFilterCounts()[category] || 0;
-            const isActive = selectedFilter === category;
-            
-            return (
-              <button
-                key={category}
-                onClick={() => {
-                  setSelectedFilter(category);
-                  setShowFilterPanel(false);
-                }}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: isActive ? '#3b82f6' : 'var(--background)',
-                  color: isActive ? 'white' : 'var(--text)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                  textTransform: 'capitalize',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'var(--accent)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'var(--background)';
-                  }
-                }}
-              >
-                {category} ({count})
-              </button>
-            );
-          })}
-        </div>
-      )}
 
 
     </div>

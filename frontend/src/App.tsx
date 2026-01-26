@@ -12,6 +12,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -41,6 +42,7 @@ const SharedVaultPage = React.lazy(() => import("./pages/SharedVaultPage"));
 const CanvasPage = React.lazy(() => import("./pages/canvas"));
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
+const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const ContactsPage = React.lazy(() => import("./pages/contacts/ContactsPage"));
 const ContactDetailPage = React.lazy(() => import("./pages/contacts/ContactDetailPage"));
 const PipelinesPage = React.lazy(() => import("./pages/pipelines/PipelinesPage"));
@@ -73,7 +75,6 @@ const EstimateEditorPage = React.lazy(() => import("./pages/invoices/EstimateEdi
 const RecurringInvoicesPage = React.lazy(() => import("./pages/invoices/RecurringInvoicesPage"));
 const PaymentsPage = React.lazy(() => import("./pages/invoices/PaymentsPage"));
 const ProductsPage = React.lazy(() => import("./pages/invoices/ProductsPage"));
-const PaymentSettingsPage = React.lazy(() => import("./pages/invoices/PaymentSettingsPage"));
 
 // Loading fallback component for lazy-loaded pages
 const PageLoading = () => (
@@ -87,6 +88,12 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
+// Subscription provider wrapper that gets auth state
+const SubscriptionProviderWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  return <SubscriptionProvider isAuthenticated={isAuthenticated}>{children}</SubscriptionProvider>;
+};
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
@@ -147,8 +154,7 @@ const AppContent = () => {
   // Determine if this is a public route (no sidebar)
   const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
-    location.pathname.startsWith('/shared/') ||
-    location.pathname.startsWith('/help');
+    location.pathname.startsWith('/shared/');
 
   return (
     <Routes>
@@ -158,7 +164,6 @@ const AppContent = () => {
       {/* Public routes with navbar/footer layout */}
       <Route path="/home" element={<PublicLayout><Home /></PublicLayout>} />
       <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
 
       {/* Auth routes (standalone, no navbar/footer) */}
       <Route path="/login" element={<Login />} />
@@ -175,6 +180,7 @@ const AppContent = () => {
 
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>
+        <Route path="/help/*" element={<AuthenticatedLayout><DocsPage /></AuthenticatedLayout>} />
         <Route path="/dashboard" element={<AuthenticatedLayout><DashboardPage /></AuthenticatedLayout>} />
         <Route path="/contacts" element={<AuthenticatedLayout><ContactsPage /></AuthenticatedLayout>} />
         <Route path="/contacts/:id" element={<AuthenticatedLayout><ContactDetailPage /></AuthenticatedLayout>} />
@@ -190,6 +196,7 @@ const AppContent = () => {
         <Route path="/workspace/contents" element={<AuthenticatedLayout><ContentsPage /></AuthenticatedLayout>} />
         <Route path="/workspace/shared" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
         <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
         <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
 
         {/* Segments */}
@@ -226,9 +233,8 @@ const AppContent = () => {
         <Route path="/invoices/recurring" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
         <Route path="/invoices/payments" element={<AuthenticatedLayout><PaymentsPage /></AuthenticatedLayout>} />
         <Route path="/invoices/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/settings" element={<AuthenticatedLayout><PaymentSettingsPage /></AuthenticatedLayout>} />
-
         {/* Legacy routes - redirect to new paths */}
+        <Route path="/invoices/settings" element={<Navigate to="/settings/payments" replace />} />
         <Route path="/canvas" element={<Navigate to="/workspace" replace />} />
         <Route path="/lists" element={<Navigate to="/workspace" replace />} />
       </Route>
@@ -250,22 +256,24 @@ const App = () => (
       >
         <GoogleOAuthProvider clientId={googleClientId}>
           <AuthProvider>
-            <AISuggestProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter
-                future={{
-                  v7_startTransition: true,
-                  v7_relativeSplatPath: true
-                }}
-              >
-                <ErrorBoundary>
-                  <Suspense fallback={<PageLoading />}>
-                    <AppContent />
-                  </Suspense>
-                </ErrorBoundary>
-              </BrowserRouter>
-            </AISuggestProvider>
+            <SubscriptionProviderWrapper>
+              <AISuggestProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter
+                  future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true
+                  }}
+                >
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageLoading />}>
+                      <AppContent />
+                    </Suspense>
+                  </ErrorBoundary>
+                </BrowserRouter>
+              </AISuggestProvider>
+            </SubscriptionProviderWrapper>
           </AuthProvider>
         </GoogleOAuthProvider>
       </ThemeProvider>

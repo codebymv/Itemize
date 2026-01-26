@@ -18,7 +18,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Repeat, AlertTriangle, Calendar, FileText } from 'lucide-react';
+import { Repeat, Info, Calendar, FileText } from 'lucide-react';
 
 interface MakeRecurringModalProps {
     open: boolean;
@@ -30,7 +30,6 @@ interface MakeRecurringModalProps {
     total: number;
     currency: string;
     itemCount: number;
-    status: string;
 }
 
 export interface RecurringOptions {
@@ -57,7 +56,6 @@ export function MakeRecurringModal({
     total,
     currency,
     itemCount,
-    status,
 }: MakeRecurringModalProps) {
     const [templateName, setTemplateName] = useState('');
     const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
@@ -98,41 +96,26 @@ export function MakeRecurringModal({
 
     const isValid = templateName.trim() && frequency && startDate;
 
-    // Determine warning level based on status
-    const getWarningMessage = () => {
-        if (status === 'paid') {
-            return 'This invoice has already been paid. Converting it will remove the payment record.';
-        }
-        if (['partial', 'overdue'].includes(status)) {
-            return 'This invoice has outstanding payment activity. Converting it will remove all payment records.';
-        }
-        if (['sent', 'viewed'].includes(status)) {
-            return 'This invoice has been sent to the customer. The original invoice will be removed.';
-        }
-        return 'The original invoice will be converted to a recurring template and removed from your invoices.';
-    };
-
-    const isHighRiskStatus = ['paid', 'partial', 'overdue'].includes(status);
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Repeat className="h-5 w-5 text-blue-600" />
-                        Make Invoice Recurring
+                        Create Recurring Template
                     </DialogTitle>
                     <DialogDescription>
-                        Convert invoice <span className="font-semibold">{invoiceNumber}</span> into a recurring template.
+                        Create a recurring template based on invoice <span className="font-semibold">{invoiceNumber}</span>.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                    {/* Warning Alert */}
-                    <Alert variant={isHighRiskStatus ? 'destructive' : 'default'} className={isHighRiskStatus ? '' : 'border-amber-500 bg-amber-50 dark:bg-amber-950/20'}>
-                        <AlertTriangle className={`h-4 w-4 ${isHighRiskStatus ? '' : 'text-amber-600'}`} />
-                        <AlertDescription className={isHighRiskStatus ? '' : 'text-amber-800 dark:text-amber-200'}>
-                            {getWarningMessage()}
+                    {/* Info Alert */}
+                    <Alert variant="default" className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                        <Info className="h-4 w-4 text-blue-600" />
+                        <AlertDescription className="text-blue-800 dark:text-blue-200">
+                            The original invoice will remain in your invoices and can still receive payments. 
+                            A new recurring template will be created based on this invoice's data.
                         </AlertDescription>
                     </Alert>
 
@@ -222,9 +205,9 @@ export function MakeRecurringModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={!isValid || converting}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                        {converting ? 'Converting...' : 'Create Recurring Template'}
+                        {converting ? 'Creating...' : 'Create Recurring Template'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

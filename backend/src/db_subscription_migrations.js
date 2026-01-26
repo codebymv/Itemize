@@ -350,9 +350,14 @@ const seedSubscriptionPlans = async (pool) => {
             return true;
         }
         
+        // Get Stripe price IDs from environment
+        const stripePriceStarter = process.env.STRIPE_PRICE_STARTER || null;
+        const stripePriceGrowth = process.env.STRIPE_PRICE_GROWTH || null;
+        const stripePriceEnterprise = process.env.STRIPE_PRICE_ENTERPRISE || null;
+
         // Insert default plans
         await pool.query(`
-            INSERT INTO subscription_plans (name, display_name, description, tier_level, price_monthly, price_yearly, features, limits, is_default, trial_days, sort_order)
+            INSERT INTO subscription_plans (name, display_name, description, tier_level, price_monthly, price_yearly, stripe_price_id_monthly, features, limits, is_default, trial_days, sort_order)
             VALUES 
             (
                 'starter',
@@ -361,6 +366,7 @@ const seedSubscriptionPlans = async (pool) => {
                 1,
                 97.00,
                 970.00,
+                $1,
                 '{"contacts": true, "pipelines": true, "calendars": true, "forms": true, "landing_pages": true, "email_templates": true, "sms_templates": true, "conversations": true, "basic_automation": true, "api_access": false, "advanced_workflows": false, "white_label": false, "saas_mode": false, "priority_support": false}'::jsonb,
                 '{"organizations": 3, "contacts_per_org": 5000, "users_per_org": 3, "workflows": 5, "emails_per_month": 1000, "sms_per_month": 500, "landing_pages": 10, "api_calls_per_day": 0}'::jsonb,
                 true,
@@ -374,6 +380,7 @@ const seedSubscriptionPlans = async (pool) => {
                 2,
                 297.00,
                 2970.00,
+                $2,
                 '{"contacts": true, "pipelines": true, "calendars": true, "forms": true, "landing_pages": true, "email_templates": true, "sms_templates": true, "conversations": true, "basic_automation": true, "api_access": true, "advanced_workflows": true, "white_label": true, "saas_mode": false, "priority_support": false, "unlimited_orgs": true, "custom_domains": true}'::jsonb,
                 '{"organizations": -1, "contacts_per_org": 25000, "users_per_org": 10, "workflows": 25, "emails_per_month": 10000, "sms_per_month": 5000, "landing_pages": 50, "api_calls_per_day": 10000}'::jsonb,
                 false,
@@ -387,6 +394,7 @@ const seedSubscriptionPlans = async (pool) => {
                 3,
                 497.00,
                 4970.00,
+                $3,
                 '{"contacts": true, "pipelines": true, "calendars": true, "forms": true, "landing_pages": true, "email_templates": true, "sms_templates": true, "conversations": true, "basic_automation": true, "api_access": true, "advanced_workflows": true, "white_label": true, "saas_mode": true, "priority_support": true, "unlimited_orgs": true, "custom_domains": true, "client_billing": true, "mobile_white_label": true, "dedicated_support": true}'::jsonb,
                 '{"organizations": -1, "contacts_per_org": -1, "users_per_org": -1, "workflows": -1, "emails_per_month": 50000, "sms_per_month": 25000, "landing_pages": -1, "api_calls_per_day": 100000}'::jsonb,
                 false,
@@ -399,12 +407,13 @@ const seedSubscriptionPlans = async (pool) => {
                 tier_level = EXCLUDED.tier_level,
                 price_monthly = EXCLUDED.price_monthly,
                 price_yearly = EXCLUDED.price_yearly,
+                stripe_price_id_monthly = EXCLUDED.stripe_price_id_monthly,
                 features = EXCLUDED.features,
                 limits = EXCLUDED.limits,
                 trial_days = EXCLUDED.trial_days,
                 sort_order = EXCLUDED.sort_order,
                 updated_at = CURRENT_TIMESTAMP
-        `);
+        `, [stripePriceStarter, stripePriceGrowth, stripePriceEnterprise]);
         
         logger.info('Default subscription plans seeded');
         return true;

@@ -18,6 +18,8 @@ import {
     ChevronRight,
     Loader2,
     CalendarDays,
+    ExternalLink,
+    FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,6 +98,8 @@ interface RecurringInvoice {
     }>;
     notes?: string;
     payment_terms?: string;
+    source_invoice_id?: number;
+    source_invoice_number?: string;
 }
 
 interface Contact {
@@ -144,6 +148,9 @@ export function RecurringInvoicesPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [recurringToDelete, setRecurringToDelete] = useState<RecurringInvoice | null>(null);
     const [deleting, setDeleting] = useState(false);
+
+    // Generate invoice state
+    const [generatingInvoice, setGeneratingInvoice] = useState<number | null>(null);
 
     // Business data for preview
     const [business, setBusiness] = useState<Business | null>(null);
@@ -318,6 +325,28 @@ export function RecurringInvoicesPage() {
             fetchRecurringInvoices();
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to resume', variant: 'destructive' });
+        }
+    };
+
+    const handleGenerateNow = async (id: number, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!organizationId) return;
+        
+        setGeneratingInvoice(id);
+        try {
+            const response = await api.post(`/api/invoices/recurring/${id}/generate-now`, {}, {
+                headers: { 'x-organization-id': organizationId.toString() }
+            });
+            toast({ 
+                title: 'Invoice Generated', 
+                description: `${response.data.invoice_number} created successfully` 
+            });
+            fetchRecurringInvoices();
+        } catch (error: any) {
+            const message = error.response?.data?.error || 'Failed to generate invoice';
+            toast({ title: 'Error', description: message, variant: 'destructive' });
+        } finally {
+            setGeneratingInvoice(null);
         }
     };
 
@@ -502,7 +531,7 @@ export function RecurringInvoicesPage() {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'active': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-            case 'paused': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+            case 'paused': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
             case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
             default: return '';
         }
@@ -511,7 +540,7 @@ export function RecurringInvoicesPage() {
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'active': return <Play className="h-4 w-4 text-blue-600" />;
-            case 'paused': return <Pause className="h-4 w-4 text-yellow-600" />;
+            case 'paused': return <Pause className="h-4 w-4 text-orange-600" />;
             case 'completed': return <CheckCircle className="h-4 w-4 text-green-600" />;
             default: return <Clock className="h-4 w-4 text-gray-400" />;
         }
@@ -529,12 +558,12 @@ export function RecurringInvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('paused')}`}>Paused</Badge>
-                                <p className="text-2xl font-bold text-yellow-600">{stats.paused}</p>
-                                <p className="text-xs text-muted-foreground">{stats.paused} recurring{stats.paused !== 1 ? 's' : ''}</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('active')}`}>Active</Badge>
+                                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
+                                <p className="text-xs text-muted-foreground">{stats.active} recurring{stats.active !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
-                                <Pause className="h-5 w-5 text-yellow-600" />
+                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                <Play className="h-5 w-5 text-blue-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -543,12 +572,12 @@ export function RecurringInvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('active')}`}>Active</Badge>
-                                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
-                                <p className="text-xs text-muted-foreground">{stats.active} recurring{stats.active !== 1 ? 's' : ''}</p>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('paused')}`}>Paused</Badge>
+                                <p className="text-2xl font-bold text-orange-600">{stats.paused}</p>
+                                <p className="text-xs text-muted-foreground">{stats.paused} recurring{stats.paused !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                <Play className="h-5 w-5 text-blue-600" />
+                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                <Pause className="h-5 w-5 text-orange-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -612,8 +641,8 @@ export function RecurringInvoicesPage() {
                                             className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                                             onClick={(e) => handleToggleExpand(recurring.id, e)}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
                                                     {/* Expand/Collapse Chevron */}
                                                     <div className="w-6 h-6 flex items-center justify-center text-muted-foreground">
                                                         {isExpanded ? (
@@ -622,72 +651,82 @@ export function RecurringInvoicesPage() {
                                                             <ChevronRight className="h-4 w-4" />
                                                         )}
                                                     </div>
-                                                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                                        {getStatusIcon(recurring.status)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <p className="font-medium">{recurring.template_name}</p>
-                                                            <Badge className={`text-xs ${getStatusBadge(recurring.status)}`}>
-                                                                {recurring.status.charAt(0).toUpperCase() + recurring.status.slice(1)}
-                                                            </Badge>
+                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                                {getStatusIcon(recurring.status)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="font-medium">{recurring.template_name}</p>
+                                                    <Badge className={`text-xs ${getStatusBadge(recurring.status)}`}>
+                                                        {recurring.status.charAt(0).toUpperCase() + recurring.status.slice(1)}
+                                                    </Badge>
                                                             <span className="text-muted-foreground">|</span>
                                                             <p className="text-xs text-muted-foreground">
                                                                 Billed {FREQUENCY_LABELS[recurring.frequency]?.toLowerCase() || recurring.frequency}
                                                             </p>
-                                                        </div>
-                                                        <p className="text-sm text-muted-foreground">{getContactName(recurring)}</p>
-                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="text-right">
-                                                        <p className="font-medium">{formatCurrency(recurring.total)}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {recurring.status === 'active' && recurring.next_run_date && (
-                                                                <>Next: {new Date(recurring.next_run_date).toLocaleDateString()}</>
-                                                            )}
-                                                            {recurring.invoices_generated > 0 && (
-                                                                <span className="ml-2">
-                                                                    ({recurring.invoices_generated} generated)
-                                                                </span>
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                            <Button variant="ghost" size="icon">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                            <DropdownMenuItem>
-                                                                <Edit className="h-4 w-4 mr-2" />Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem>
-                                                                <History className="h-4 w-4 mr-2" />View History
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            {recurring.status === 'active' && (
-                                                                <DropdownMenuItem onClick={() => handlePause(recurring.id)}>
-                                                                    <Pause className="h-4 w-4 mr-2" />Pause
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            {recurring.status === 'paused' && (
-                                                                <DropdownMenuItem onClick={() => handleResume(recurring.id)}>
-                                                                    <Play className="h-4 w-4 mr-2" />Resume
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                onClick={(e) => handleDeleteClick(recurring, e)}
-                                                                className="text-destructive"
-                                                            >
-                                                                <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
+                                                <p className="text-sm text-muted-foreground">{getContactName(recurring)}</p>
                                             </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-right">
+                                                <p className="font-medium">{formatCurrency(recurring.total)}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {recurring.status === 'active' && recurring.next_run_date && (
+                                                        <>Next: {new Date(recurring.next_run_date).toLocaleDateString()}</>
+                                                    )}
+                                                    {recurring.invoices_generated > 0 && (
+                                                        <span className="ml-2">
+                                                            ({recurring.invoices_generated} generated)
+                                                        </span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenuItem className="group/menu">
+                                                        <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="group/menu">
+                                                        <History className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />View History
+                                                    </DropdownMenuItem>
+                                                            {recurring.status !== 'completed' && (
+                                                                <DropdownMenuItem 
+                                                                    onClick={(e) => handleGenerateNow(recurring.id, e)}
+                                                                    disabled={generatingInvoice === recurring.id}
+                                                                    className="group/menu"
+                                                                >
+                                                                    <FileText className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                                    {generatingInvoice === recurring.id ? 'Generating...' : 'Generate Next Invoice'}
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                    <DropdownMenuSeparator />
+                                                    {recurring.status === 'active' && (
+                                                        <DropdownMenuItem onClick={() => handlePause(recurring.id)} className="group/menu">
+                                                            <Pause className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Pause
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {recurring.status === 'paused' && (
+                                                        <DropdownMenuItem onClick={() => handleResume(recurring.id)} className="group/menu">
+                                                            <Play className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Resume
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                                onClick={(e) => handleDeleteClick(recurring, e)}
+                                                        className="text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
                                             <div className="ml-20 mt-2 text-xs text-muted-foreground">
                                                 {(() => {
                                                     const startDate = new Date(recurring.start_date);
@@ -703,7 +742,7 @@ export function RecurringInvoicesPage() {
                                                         </>
                                                     );
                                                 })()}
-                                            </div>
+                                </div>
                                         </div>
 
                                         {/* Expanded Preview */}
@@ -724,8 +763,7 @@ export function RecurringInvoicesPage() {
                                                                     variant="template"
                                                                     business={business || undefined}
                                                                     documentNumber={previewInvoiceNumber}
-                                                                    frequency={expandedData.frequency}
-                                                                    nextRunDate={expandedData.status === 'active' ? expandedData.next_run_date : undefined}
+                                                                    nextRunDate={expandedData.next_run_date}
                                                                     customerName={expandedData.customer_name}
                                                                     customerEmail={expandedData.customer_email}
                                                                     items={expandedData.items || []}
@@ -787,10 +825,28 @@ export function RecurringInvoicesPage() {
                                                                             </div>
                                                                         )}
                                                                         
-                                                                        <div className="flex justify-between items-center py-2">
+                                                                        <div className="flex justify-between items-center py-2 border-b">
                                                                             <span className="text-sm text-muted-foreground">Invoices Generated</span>
                                                                             <span className="text-sm font-medium">{expandedData.invoices_generated || 0}</span>
                                                                         </div>
+                                                                        
+                                                                        {expandedData.source_invoice_id && expandedData.source_invoice_number && (
+                                                                            <div className="flex justify-between items-center py-2">
+                                                                                <span className="text-sm text-muted-foreground">Source Invoice</span>
+                                                                                <Button
+                                                                                    variant="link"
+                                                                                    size="sm"
+                                                                                    className="text-sm font-medium text-blue-600 h-auto p-0"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        navigate(`/invoices`);
+                                                                                    }}
+                                                                                >
+                                                                                    {expandedData.source_invoice_number}
+                                                                                    <ExternalLink className="h-3 w-3 ml-1" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
 
                                                                     {/* Quick Actions in Schedule Card */}
@@ -811,6 +867,17 @@ export function RecurringInvoicesPage() {
                                                                         >
                                                                             <History className="h-4 w-4 mr-2" />View History
                                                                         </Button>
+                                                                        {recurring.status !== 'completed' && (
+                                                                            <Button
+                                                                                size="sm"
+                                                                                className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+                                                                                onClick={(e) => handleGenerateNow(recurring.id, e)}
+                                                                                disabled={generatingInvoice === recurring.id}
+                                                                            >
+                                                                                <FileText className="h-4 w-4 mr-2" />
+                                                                                {generatingInvoice === recurring.id ? 'Generating...' : 'Generate Next Invoice'}
+                                                                            </Button>
+                                                                        )}
                                                                         {recurring.status === 'active' && (
                                                                             <Button
                                                                                 variant="outline"

@@ -13,6 +13,11 @@ import {
     Building,
     Receipt,
     FileText,
+    ChevronRight,
+    ChevronDown,
+    ExternalLink,
+    Download,
+    Copy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
@@ -37,6 +43,8 @@ interface Payment {
     invoice_number?: string;
     contact_id?: number;
     contact_name?: string;
+    first_name?: string;
+    last_name?: string;
     amount: number;
     currency: string;
     payment_method: 'card' | 'bank_transfer' | 'cash' | 'check' | 'other' | 'stripe';
@@ -45,6 +53,8 @@ interface Payment {
     card_brand?: string;
     description?: string;
     notes?: string;
+    receipt_url?: string;
+    stripe_payment_intent_id?: string;
     paid_at?: string;
     created_at: string;
 }
@@ -58,9 +68,18 @@ const PAYMENT_METHOD_ICONS: Record<string, React.ReactNode> = {
     other: <DollarSign className="h-4 w-4" />,
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+    card: 'Card',
+    stripe: 'Stripe',
+    bank_transfer: 'Bank Transfer',
+    cash: 'Cash',
+    check: 'Check',
+    other: 'Other',
+};
+
 const STATUS_STYLES: Record<string, string> = {
     succeeded: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    pending: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
     processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
     refunded: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
@@ -79,6 +98,9 @@ export function PaymentsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [methodFilter, setMethodFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+
+    // Expanded payment state
+    const [expandedId, setExpandedId] = useState<number | null>(null);
 
     // Summary stats
     const [stats, setStats] = useState({
@@ -159,7 +181,6 @@ export function PaymentsPage() {
         if (!organizationId) return;
         setLoading(true);
         try {
-            // Fetch all payments (need to add this endpoint to backend)
             const response = await api.get('/api/invoices/payments', {
                 params: {
                     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -187,7 +208,6 @@ export function PaymentsPage() {
                 thisMonth: thisMonthPayments.reduce((sum: number, p: Payment) => sum + p.amount, 0),
             });
         } catch (error) {
-            // If endpoint doesn't exist yet, show empty state
             setPayments([]);
             toast({ title: 'Error', description: 'Failed to load payments', variant: 'destructive' });
         } finally {
@@ -216,25 +236,48 @@ export function PaymentsPage() {
         });
     };
 
+    const formatDateShort = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    };
+
     const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'succeeded': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'pending':
-            case 'processing': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-            case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-            case 'refunded': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-            case 'cancelled': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-            default: return '';
-        }
+        return STATUS_STYLES[status] || '';
     };
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'succeeded': return <CheckCircle className="h-4 w-4 text-green-600" />;
-            case 'failed': return <XCircle className="h-4 w-4 text-red-600" />;
-            case 'pending':
-            case 'processing': return <Clock className="h-4 w-4 text-yellow-600" />;
-            default: return <DollarSign className="h-4 w-4 text-gray-400" />;
+            case 'succeeded': return <CheckCircle className="h-5 w-5 text-green-600" />;
+            case 'failed': return <XCircle className="h-5 w-5 text-red-600" />;
+            case 'pending': return <Clock className="h-5 w-5 text-orange-600" />;
+            case 'processing': return <Clock className="h-5 w-5 text-blue-600" />;
+            case 'refunded': return <DollarSign className="h-5 w-5 text-purple-600" />;
+            default: return <DollarSign className="h-5 w-5 text-gray-400" />;
+        }
+    };
+
+    const getContactName = (payment: Payment) => {
+        if (payment.contact_name) return payment.contact_name;
+        if (payment.first_name || payment.last_name) {
+            return `${payment.first_name || ''} ${payment.last_name || ''}`.trim();
+        }
+        return 'Unknown';
+    };
+
+    const handleToggleExpand = (paymentId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedId(expandedId === paymentId ? null : paymentId);
+    };
+
+    const handleCopyToClipboard = async (text: string, label: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast({ title: 'Copied', description: `${label} copied to clipboard` });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to copy', variant: 'destructive' });
         }
     };
 
@@ -243,6 +286,8 @@ export function PaymentsPage() {
         return (
             (p.invoice_number && p.invoice_number.toLowerCase().includes(searchLower)) ||
             (p.contact_name && p.contact_name.toLowerCase().includes(searchLower)) ||
+            (p.first_name && p.first_name.toLowerCase().includes(searchLower)) ||
+            (p.last_name && p.last_name.toLowerCase().includes(searchLower)) ||
             (p.description && p.description.toLowerCase().includes(searchLower))
         );
     });
@@ -256,7 +301,7 @@ export function PaymentsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <Badge className="text-xs mb-2 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">This Month</Badge>
-                                <p className="text-2xl font-bold">{formatCurrency(stats.thisMonth)}</p>
+                                <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.thisMonth)}</p>
                                 <p className="text-xs text-muted-foreground">Received this month</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
@@ -270,11 +315,11 @@ export function PaymentsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <Badge className={`text-xs mb-2 ${getStatusBadge('pending')}`}>Pending</Badge>
-                                <p className="text-2xl font-bold">{stats.pending}</p>
+                                <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
                                 <p className="text-xs text-muted-foreground">{stats.pending} payment{stats.pending !== 1 ? 's' : ''}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-yellow-600" />
+                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-orange-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -335,60 +380,223 @@ export function PaymentsPage() {
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {filteredPayments.map((payment) => (
-                                <div
-                                    key={payment.id}
-                                    className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                                    onClick={() => payment.invoice_id && navigate(`/invoices/${payment.invoice_id}`)}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                                {getStatusIcon(payment.status)}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="font-medium">
-                                                        {formatCurrency(payment.amount, payment.currency)}
-                                                    </p>
-                                                    <Badge className={`text-xs ${STATUS_STYLES[payment.status] || ''}`}>
-                                                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                                                    </Badge>
+                            {filteredPayments.map((payment) => {
+                                const isExpanded = expandedId === payment.id;
+                                
+                                return (
+                                    <div key={payment.id}>
+                                        {/* Payment Row */}
+                                        <div
+                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                                            onClick={(e) => handleToggleExpand(payment.id, e)}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    {/* Expand/Collapse Chevron */}
+                                                    <div className="w-6 h-6 flex items-center justify-center text-muted-foreground">
+                                                        {isExpanded ? (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                                        {getStatusIcon(payment.status)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="font-medium">
+                                                                {formatCurrency(payment.amount, payment.currency)}
+                                                            </p>
+                                                            <Badge className={`text-xs ${getStatusBadge(payment.status)}`}>
+                                                                {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                                            </Badge>
+                                                            <span className="text-muted-foreground">|</span>
+                                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                {PAYMENT_METHOD_ICONS[payment.payment_method]}
+                                                                {PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                                            {payment.invoice_number && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Receipt className="h-3 w-3" />
+                                                                    {payment.invoice_number}
+                                                                </span>
+                                                            )}
+                                                            <span>{getContactName(payment)}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                                                    {payment.invoice_number && (
-                                                        <span className="flex items-center gap-1">
-                                                            <Receipt className="h-3 w-3" />
-                                                            {payment.invoice_number}
-                                                        </span>
-                                                    )}
-                                                    {payment.contact_name && (
-                                                        <span>{payment.contact_name}</span>
-                                                    )}
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {formatDateShort(payment.paid_at || payment.created_at)}
+                                                        </p>
+                                                        {payment.card_last4 && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {payment.card_brand && <span className="capitalize">{payment.card_brand}</span>} •••• {payment.card_last4}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-right">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    {PAYMENT_METHOD_ICONS[payment.payment_method] || PAYMENT_METHOD_ICONS.other}
-                                                    <span className="capitalize">
-                                                        {payment.payment_method === 'bank_transfer' ? 'Bank' : payment.payment_method}
-                                                    </span>
-                                                    {payment.card_last4 && (
-                                                        <span className="text-muted-foreground">
-                                                            •••• {payment.card_last4}
-                                                        </span>
-                                                    )}
+
+                                        {/* Expanded Payment Details */}
+                                        {isExpanded && (
+                                            <div className="bg-muted/30 border-t px-6 py-6">
+                                                <div className="max-w-4xl mx-auto">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        {/* Payment Details Card */}
+                                                        <div className="bg-white dark:bg-gray-900 rounded-lg border p-5 shadow-sm">
+                                                            <h3 className="text-sm font-semibold uppercase text-muted-foreground mb-4 flex items-center gap-2">
+                                                                <DollarSign className="h-4 w-4" />
+                                                                Payment Details
+                                                            </h3>
+                                                            
+                                                            <div className="space-y-3">
+                                                                <div className="flex justify-between items-center py-2 border-b">
+                                                                    <span className="text-sm text-muted-foreground">Amount</span>
+                                                                    <span className="text-lg font-bold text-green-600">
+                                                                        {formatCurrency(payment.amount, payment.currency)}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                <div className="flex justify-between items-center py-2 border-b">
+                                                                    <span className="text-sm text-muted-foreground">Status</span>
+                                                                    <Badge className={getStatusBadge(payment.status)}>
+                                                                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                                                    </Badge>
+                                                                </div>
+                                                                
+                                                                <div className="flex justify-between items-center py-2 border-b">
+                                                                    <span className="text-sm text-muted-foreground">Payment Method</span>
+                                                                    <span className="text-sm font-medium flex items-center gap-2">
+                                                                        {PAYMENT_METHOD_ICONS[payment.payment_method]}
+                                                                        {PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                {payment.card_last4 && (
+                                                                    <div className="flex justify-between items-center py-2 border-b">
+                                                                        <span className="text-sm text-muted-foreground">Card</span>
+                                                                        <span className="text-sm font-medium">
+                                                                            {payment.card_brand && <span className="capitalize">{payment.card_brand}</span>} •••• {payment.card_last4}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className="flex justify-between items-center py-2 border-b">
+                                                                    <span className="text-sm text-muted-foreground">Date</span>
+                                                                    <span className="text-sm font-medium">
+                                                                        {formatDate(payment.paid_at || payment.created_at)}
+                                                                    </span>
+                                                                </div>
+
+                                                                {payment.stripe_payment_intent_id && (
+                                                                    <div className="flex justify-between items-center py-2">
+                                                                        <span className="text-sm text-muted-foreground">Transaction ID</span>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-auto p-0 text-sm font-mono text-blue-600"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleCopyToClipboard(payment.stripe_payment_intent_id!, 'Transaction ID');
+                                                                            }}
+                                                                        >
+                                                                            {payment.stripe_payment_intent_id.slice(0, 20)}...
+                                                                            <Copy className="h-3 w-3 ml-1" />
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Invoice & Notes Card */}
+                                                        <div className="bg-white dark:bg-gray-900 rounded-lg border p-5 shadow-sm">
+                                                            <h3 className="text-sm font-semibold uppercase text-muted-foreground mb-4 flex items-center gap-2">
+                                                                <Receipt className="h-4 w-4" />
+                                                                Invoice & Notes
+                                                            </h3>
+                                                            
+                                                            <div className="space-y-3">
+                                                                {payment.invoice_id && payment.invoice_number && (
+                                                                    <div className="flex justify-between items-center py-2 border-b">
+                                                                        <span className="text-sm text-muted-foreground">Invoice</span>
+                                                                        <Button
+                                                                            variant="link"
+                                                                            size="sm"
+                                                                            className="text-sm font-medium text-blue-600 h-auto p-0"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                navigate(`/invoices`);
+                                                                            }}
+                                                                        >
+                                                                            {payment.invoice_number}
+                                                                            <ExternalLink className="h-3 w-3 ml-1" />
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className="flex justify-between items-center py-2 border-b">
+                                                                    <span className="text-sm text-muted-foreground">Customer</span>
+                                                                    <span className="text-sm font-medium">{getContactName(payment)}</span>
+                                                                </div>
+
+                                                                {payment.notes && (
+                                                                    <div className="py-2">
+                                                                        <span className="text-sm text-muted-foreground block mb-1">Notes</span>
+                                                                        <p className="text-sm bg-muted/50 p-2 rounded">{payment.notes}</p>
+                                                                    </div>
+                                                                )}
+
+                                                                {payment.description && (
+                                                                    <div className="py-2">
+                                                                        <span className="text-sm text-muted-foreground block mb-1">Description</span>
+                                                                        <p className="text-sm bg-muted/50 p-2 rounded">{payment.description}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Action Buttons */}
+                                                            <div className="mt-6 pt-4 border-t space-y-2">
+                                                                {payment.invoice_id && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="w-full justify-start"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            navigate('/invoices');
+                                                                        }}
+                                                                    >
+                                                                        <Receipt className="h-4 w-4 mr-2" />View Invoice
+                                                                    </Button>
+                                                                )}
+                                                                {payment.receipt_url && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="w-full justify-start"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            window.open(payment.receipt_url, '_blank');
+                                                                        }}
+                                                                    >
+                                                                        <Download className="h-4 w-4 mr-2" />Download Receipt
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {formatDate(payment.paid_at || payment.created_at)}
-                                                </p>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>

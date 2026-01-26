@@ -13,9 +13,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book, Activity } from 'lucide-react';
+import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book, Activity, ShieldCheck, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { PLAN_METADATA, type Plan } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
+
+// Admin navigation items for dropdown
+const adminNavItems = [
+  { title: 'Communications', path: '/admin', icon: Mail },
+  { title: 'Statistics', path: '/admin/stats', icon: BarChart3 },
+  { title: 'Change Tier', path: '/admin/change-tier', icon: Zap },
+];
 
 const Navbar: React.FC = () => {
 
@@ -23,6 +38,7 @@ const Navbar: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const { aiEnabled, setAiEnabled } = useAISuggest();
   const { toast } = useToast();
+  const { subscription } = useSubscription();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,6 +59,23 @@ const Navbar: React.FC = () => {
     // Fallback to email if no name
     return email ? email[0].toUpperCase() : 'U';
   };
+
+  // Get tier icon based on subscription plan
+  const getTierIcon = (plan?: Plan) => {
+    if (!plan) return User;
+    const iconName = PLAN_METADATA[plan]?.icon || 'user';
+    const iconMap = {
+      user: User,
+      zap: Zap,
+      crown: Crown,
+      building: Building2
+    };
+    return iconMap[iconName] || User;
+  };
+
+  // Get current plan
+  const currentPlan = (subscription?.planName?.toLowerCase() as Plan) || 'free';
+  const TierIcon = getTierIcon(currentPlan);
 
   const handleLogout = async () => {
     try {
@@ -93,20 +126,70 @@ const Navbar: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm">
-                        {getUserInitials(currentUser.name || '', currentUser.email || '')}
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-1">
+                        {currentUser?.role === 'ADMIN' && (
+                          <ShieldCheck className="h-4 w-4" />
+                        )}
+                        <TierIcon className="h-4 w-4" />
                       </div>
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">
+                      <div className="flex flex-col space-y-1 flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
                           {currentUser.name || 'User'}
                         </p>
-                        <p className="text-xs leading-none text-muted-foreground">
+                        <p className="text-xs text-muted-foreground truncate">
                           {currentUser.email}
                         </p>
                       </div>
                     </div>
                   </DropdownMenuLabel>
+                  
+                  {/* Admin Dashboard Collapsible - Only shown for ADMIN users */}
+                  {currentUser?.role === 'ADMIN' && (() => {
+                    const isOnAdminRoute = location.pathname.startsWith('/admin');
+                    
+                    return (
+                      <>
+                        <DropdownMenuSeparator />
+                        <div className="w-full">
+                          <Collapsible defaultOpen={isOnAdminRoute} className="w-full group/collapsible">
+                            <CollapsibleTrigger asChild>
+                              <DropdownMenuItem 
+                                className="w-full cursor-pointer group/admin"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600" : "group-hover/admin:text-blue-600")} />
+                                <span className="flex-1">Admin Dashboard</span>
+                                <ChevronRight className="h-4 w-4 ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              </DropdownMenuItem>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up overflow-hidden">
+                              <div className="pl-6 py-1">
+                                {adminNavItems.map((item) => {
+                                  const isActive = location.pathname === item.path || 
+                                    (item.path !== '/admin' && location.pathname.startsWith(item.path));
+                                  
+                                  return (
+                                    <DropdownMenuItem
+                                      key={item.path}
+                                      onClick={() => handleNavigate(item.path)}
+                                      className={cn(
+                                        "cursor-pointer",
+                                        isActive && "bg-muted"
+                                      )}
+                                    >
+                                      <span className="flex-1">{item.title}</span>
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </div>
+                      </>
+                    );
+                  })()}
+                  
                   <DropdownMenuSeparator />
                   
                   {/* Theme Section */}
@@ -163,19 +246,19 @@ const Navbar: React.FC = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleNavigate('/help')}>
                     <Book className="mr-2 h-4 w-4 text-blue-600" />
-                    <span>Help</span>
+                    <span className="flex-1">Help</span>
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleNavigate('/status')}>
                     <Activity className="mr-2 h-4 w-4 text-blue-600" />
-                    <span>Status</span>
+                    <span className="flex-1">Status</span>
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4 text-red-600" />
-                    <span>Log out</span>
+                    <span className="flex-1">Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

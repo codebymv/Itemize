@@ -131,7 +131,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
                     {/* Item type icon */}
                     <div className="flex-shrink-0 pt-0.5">
                       {isKeyValue ? (
-                        <Key className="h-4 w-4 text-muted-foreground" />
+                        <Key className="h-4 w-4" style={{ color: vaultColor }} />
                       ) : (
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       )}

@@ -148,13 +148,24 @@ module.exports = (pool) => {
     /**
      * POST /api/subscriptions/checkout
      * Create Stripe checkout session for subscription
+     * Follows gleamai.dev pattern - accepts priceId directly
      */
     router.post('/checkout', 
         authenticateJWT, 
         requireOrganization,
-        checkoutValidator,
         asyncHandler(async (req, res) => {
-            const { planName, billingPeriod, successUrl, cancelUrl } = req.body;
+            const { priceId, successUrl, cancelUrl } = req.body;
+
+            // Validate required fields
+            if (!priceId || !successUrl || !cancelUrl) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        message: 'Missing required fields: priceId, successUrl, cancelUrl',
+                        code: 'VALIDATION_ERROR'
+                    }
+                });
+            }
 
             // Check if Stripe is configured
             if (!stripeService.isConfigured()) {
@@ -167,17 +178,16 @@ module.exports = (pool) => {
                 });
             }
 
-            const session = await stripeService.createCheckoutSession(
+            const session = await stripeService.createCheckoutSessionWithPriceId(
                 req.organizationId,
-                planName,
-                billingPeriod,
+                priceId,
                 successUrl,
                 cancelUrl
             );
 
             logger.info('Checkout session created', { 
                 organizationId: req.organizationId,
-                planName,
+                priceId,
                 sessionId: session.id 
             });
 

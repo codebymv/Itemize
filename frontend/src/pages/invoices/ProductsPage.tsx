@@ -326,8 +326,8 @@ export function ProductsPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => openEditDialog(product)}>
-                                                        <Edit className="h-4 w-4 mr-2" />Edit
+                                                    <DropdownMenuItem onClick={() => openEditDialog(product)} className="group/menu">
+                                                        <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem

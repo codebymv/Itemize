@@ -270,8 +270,22 @@ export function EstimatesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
+                                <Badge className={`text-xs mb-2 ${getStatusBadge('declined')}`}>Declined</Badge>
+                                <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
+                                <p className="text-xs text-muted-foreground">{stats.declined} estimate{stats.declined !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                                <XCircle className="h-5 w-5 text-red-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
                                 <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Draft</Badge>
-                                <p className="text-2xl font-bold">{stats.draft}</p>
+                                <p className="text-2xl font-bold text-sky-600">{stats.draft}</p>
                                 <p className="text-xs text-muted-foreground">{stats.draft} estimate{stats.draft !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center">
@@ -285,25 +299,11 @@ export function EstimatesPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Sent</Badge>
-                                <p className="text-2xl font-bold">{stats.sent}</p>
+                                <p className="text-2xl font-bold text-orange-600">{stats.sent}</p>
                                 <p className="text-xs text-muted-foreground">{stats.sent} estimate{stats.sent !== 1 ? 's' : ''}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
                                 <Send className="h-5 w-5 text-orange-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('declined')}`}>Declined</Badge>
-                                <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
-                                <p className="text-xs text-muted-foreground">{stats.declined} estimate{stats.declined !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                                <XCircle className="h-5 w-5 text-red-600" />
                             </div>
                         </div>
                     </CardContent>
@@ -402,17 +402,17 @@ export function EstimatesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => navigate(`/invoices/estimates/${estimate.id}`)}>
-                                                        Edit
+                                                    <DropdownMenuItem onClick={() => navigate(`/invoices/estimates/${estimate.id}`)} className="group/menu">
+                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
                                                     </DropdownMenuItem>
                                                     {estimate.status === 'draft' && (
-                                                        <DropdownMenuItem onClick={() => handleSendEstimate(estimate.id)}>
-                                                            <Send className="h-4 w-4 mr-2" />Send
+                                                        <DropdownMenuItem onClick={() => handleSendEstimate(estimate.id)} className="group/menu">
+                                                            <Send className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Send
                                                         </DropdownMenuItem>
                                                     )}
                                                     {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
-                                                        <DropdownMenuItem onClick={() => handleConvertToInvoice(estimate.id)}>
-                                                            <ArrowRight className="h-4 w-4 mr-2" />Convert to Invoice
+                                                        <DropdownMenuItem onClick={() => handleConvertToInvoice(estimate.id)} className="group/menu">
+                                                            <ArrowRight className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Convert to Invoice
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuSeparator />

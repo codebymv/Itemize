@@ -118,6 +118,36 @@ async function runEstimatesRecurringMigrations(pool) {
         `);
         logger.info('Added recurring_template_id to invoices table');
 
+        // Add source_invoice_id to recurring_invoice_templates table
+        // This tracks which invoice a template was created from (non-destructive copy)
+        await client.query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'recurring_invoice_templates' AND column_name = 'source_invoice_id'
+                ) THEN
+                    ALTER TABLE recurring_invoice_templates ADD COLUMN source_invoice_id INTEGER REFERENCES invoices(id) ON DELETE SET NULL;
+                END IF;
+            END $$;
+        `);
+        logger.info('Added source_invoice_id to recurring_invoice_templates table');
+
+        // Add is_recurring_source to invoices table
+        // This marks invoices that have been used to create recurring templates
+        await client.query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'invoices' AND column_name = 'is_recurring_source'
+                ) THEN
+                    ALTER TABLE invoices ADD COLUMN is_recurring_source BOOLEAN DEFAULT FALSE;
+                END IF;
+            END $$;
+        `);
+        logger.info('Added is_recurring_source to invoices table');
+
         // Create indexes
         await client.query(`
             CREATE INDEX IF NOT EXISTS idx_estimates_organization ON estimates(organization_id);
@@ -134,6 +164,8 @@ async function runEstimatesRecurringMigrations(pool) {
             CREATE INDEX IF NOT EXISTS idx_recurring_templates_next_run ON recurring_invoice_templates(next_run_date);
             
             CREATE INDEX IF NOT EXISTS idx_invoices_recurring_template ON invoices(recurring_template_id);
+            CREATE INDEX IF NOT EXISTS idx_recurring_templates_source_invoice ON recurring_invoice_templates(source_invoice_id);
+            CREATE INDEX IF NOT EXISTS idx_invoices_recurring_source ON invoices(is_recurring_source) WHERE is_recurring_source = true;
         `);
         logger.info('Created indexes for estimates and recurring tables');
 

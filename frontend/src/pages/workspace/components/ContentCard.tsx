@@ -103,8 +103,8 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
               <DropdownMenuItem onClick={(e) => {
                 e.stopPropagation();
                 onClick();
-              }}>
-                <ExternalLink className="h-4 w-4 mr-2" />
+              }} className="group/menu">
+                <ExternalLink className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                 Open
               </DropdownMenuItem>
               {content.is_public && (
@@ -114,8 +114,8 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
                   const baseUrl = window.location.origin;
                   const shareUrl = `${baseUrl}/shared/${content.type}/${content.share_token}`;
                   navigator.clipboard.writeText(shareUrl);
-                }}>
-                  <Share2 className="h-4 w-4 mr-2" />
+                }} className="group/menu">
+                  <Share2 className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                   Copy Link
                 </DropdownMenuItem>
               )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map } from 'lucide-react';
+import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map, GitBranch, KeyRound } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
 import {
@@ -104,6 +104,7 @@ const CanvasPage: React.FC = () => {
   const isLoading = loadingLists || loadingNotes || loadingWhiteboards || loadingWireframes || loadingVaults;
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
@@ -261,6 +262,51 @@ const CanvasPage: React.FC = () => {
     totalCount: 0
   }));
 
+  // Get unique categories from all content types
+  const getUniqueCategories = useMemo(() => {
+    const listCategories = lists.map(list => list.type || 'General').filter(Boolean);
+    const noteCategories = notes.map(note => note.category || 'General').filter(Boolean);
+    const whiteboardCategories = whiteboards.map(wb => wb.category || 'General').filter(Boolean);
+    const wireframeCategories = wireframes.map(wf => wf.category || 'General').filter(Boolean);
+    const vaultCategories = vaults.map(v => v.category || 'General').filter(Boolean);
+    const allCategories = Array.from(new Set([...listCategories, ...noteCategories, ...whiteboardCategories, ...wireframeCategories, ...vaultCategories]));
+    return ['all', ...allCategories];
+  }, [lists, notes, whiteboards, wireframes, vaults]);
+
+  // Get filter counts for each category
+  const getCategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { 
+      all: lists.length + notes.length + whiteboards.length + wireframes.length + vaults.length
+    };
+    
+    lists.forEach(list => {
+      const category = list.type || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
+    notes.forEach(note => {
+      const category = note.category || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
+    whiteboards.forEach(whiteboard => {
+      const category = whiteboard.category || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
+    wireframes.forEach(wireframe => {
+      const category = wireframe.category || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
+    vaults.forEach(vault => {
+      const category = vault.category || 'General';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    
+    return counts;
+  }, [lists, notes, whiteboards, wireframes, vaults]);
+
   // Filter function for backward compatibility
   const filterByCategory = (categoryFilter: string | null) => {
     // Ensure arrays are always defined (handle null/undefined)
@@ -269,14 +315,14 @@ const CanvasPage: React.FC = () => {
     const safeWhiteboards = Array.isArray(whiteboards) ? whiteboards : [];
     const safeWireframes = Array.isArray(wireframes) ? wireframes : [];
 
-    if (!categoryFilter) {
+    if (!categoryFilter || categoryFilter === 'all') {
       return { filteredLists: safeLists, filteredNotes: safeNotes, filteredWhiteboards: safeWhiteboards, filteredWireframes: safeWireframes };
     }
 
-    const filteredLists = safeLists.filter(list => list.type === categoryFilter);
-    const filteredNotes = safeNotes.filter(note => note.category === categoryFilter);
-    const filteredWhiteboards = safeWhiteboards.filter(whiteboard => whiteboard.category === categoryFilter);
-    const filteredWireframes = safeWireframes.filter(wireframe => wireframe.category === categoryFilter);
+    const filteredLists = safeLists.filter(list => (list.type || 'General') === categoryFilter);
+    const filteredNotes = safeNotes.filter(note => (note.category || 'General') === categoryFilter);
+    const filteredWhiteboards = safeWhiteboards.filter(whiteboard => (whiteboard.category || 'General') === categoryFilter);
+    const filteredWireframes = safeWireframes.filter(wireframe => (wireframe.category || 'General') === categoryFilter);
 
     return { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes };
   };
@@ -316,11 +362,53 @@ const CanvasPage: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="list">Lists</SelectItem>
-              <SelectItem value="note">Notes</SelectItem>
-              <SelectItem value="whiteboard">Whiteboards</SelectItem>
-              <SelectItem value="wireframe">Wireframes</SelectItem>
-              <SelectItem value="vault">Vaults</SelectItem>
+              <SelectItem value="list">
+                <div className="flex items-center">
+                  <CheckSquare className="h-4 w-4 mr-2 transition-colors group-hover/item:text-blue-600" />
+                  <span>Lists</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="note">
+                <div className="flex items-center">
+                  <StickyNote className="h-4 w-4 mr-2 transition-colors group-hover/item:text-blue-600" />
+                  <span>Notes</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="whiteboard">
+                <div className="flex items-center">
+                  <Palette className="h-4 w-4 mr-2 transition-colors group-hover/item:text-blue-600" />
+                  <span>Whiteboards</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="wireframe">
+                <div className="flex items-center">
+                  <GitBranch className="h-4 w-4 mr-2 transition-colors group-hover/item:text-blue-600" />
+                  <span>Wireframes</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="vault">
+                <div className="flex items-center">
+                  <KeyRound className="h-4 w-4 mr-2 transition-colors group-hover/item:text-blue-600" />
+                  <span>Vaults</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Category filter */}
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
+            <SelectTrigger className="w-[180px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+              <Filter className="h-4 w-4 mr-2 flex-shrink-0" />
+              <SelectValue placeholder="Category">
+                {categoryFilter === 'all' ? 'All Categories' : categoryFilter}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {getUniqueCategories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category} ({getCategoryCounts[category] || 0})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -368,7 +456,7 @@ const CanvasPage: React.FC = () => {
     );
 
     return () => setHeaderContent(null);
-  }, [searchQuery, typeFilter, theme, showButtonContextMenu, setHeaderContent, location.pathname]);
+  }, [searchQuery, typeFilter, categoryFilter, theme, showButtonContextMenu, setHeaderContent, location.pathname, getUniqueCategories, getCategoryCounts]);
 
   // Collapsible state management - persists across filter changes
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
@@ -1992,6 +2080,7 @@ const CanvasPage: React.FC = () => {
                   setShowNewVaultModal(true);
                 }}
                 searchQuery={searchQuery}
+                categoryFilter={categoryFilter}
                 onReady={(methods) => {
                   if (!canvasMethodsRef.current) {
                     canvasMethodsRef.current = methods;

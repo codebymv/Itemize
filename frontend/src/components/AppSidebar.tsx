@@ -219,10 +219,6 @@ const mainNavItems: NavItem[] = [
                 title: 'Products',
                 path: '/invoices/products',
             },
-            {
-                title: 'Settings',
-                path: '/invoices/settings',
-            },
         ],
     },
 ];
@@ -234,20 +230,16 @@ const secondaryNavItems: NavItem[] = [
         path: '/settings',
         items: [
             {
-                title: 'Profile',
+                title: 'Account',
                 path: '/settings',
             },
             {
-                title: 'Appearance',
-                path: '/settings/appearance',
+                title: 'Preferences',
+                path: '/settings/preferences',
             },
             {
-                title: 'AI Features',
-                path: '/settings/ai',
-            },
-            {
-                title: 'Integrations',
-                path: '/settings/integrations',
+                title: 'Payments',
+                path: '/settings/payments',
             },
         ],
     },
@@ -276,10 +268,41 @@ export function AppSidebar() {
         navigate(path);
     };
 
+    const handleItemClick = (item: NavItem, disabled?: boolean) => {
+        if (disabled) return;
+        
+        // If it's a grouping with sub-items, navigate to first sub-item
+        if (item.items && item.items.length > 0) {
+            // If collapsed, expand sidebar first, then navigate
+            if (isCollapsed) {
+                toggleSidebar();
+                // Delay to allow sidebar to expand and component to re-render before navigation
+                setTimeout(() => {
+                    navigate(item.items![0].path);
+                }, 200);
+            } else {
+                // Already expanded, navigate immediately
+                navigate(item.items[0].path);
+            }
+        } else {
+            // Regular item (no sub-items)
+            if (isCollapsed) {
+                // Expand sidebar first, then navigate
+                toggleSidebar();
+                setTimeout(() => {
+                    navigate(item.path);
+                }, 200);
+            } else {
+                // Already expanded, navigate immediately
+                navigate(item.path);
+            }
+        }
+    };
+
     return (
         <Sidebar collapsible="icon" className="border-r">
-            <SidebarHeader className="border-b px-3 py-4">
-                <div className="flex items-center justify-between gap-2">
+            <SidebarHeader className={cn("border-b py-4", isCollapsed ? "px-2" : "px-3")}>
+                <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2 justify-center" : "justify-between gap-2")}>
                     {!isCollapsed ? (
                         <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate('/dashboard')}>
                             <img
@@ -313,10 +336,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <SidebarGroup>
+                <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                     <SidebarGroupLabel style={{ fontFamily: '"Raleway", sans-serif' }}>Main</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu className="gap-3">
+                    <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
+                        <SidebarMenu className={cn("gap-3", isCollapsed && "w-full items-center")}>
                             {mainNavItems.map((item) => {
                                 // Check if any child route is active for grouped items
                                 const isActive = location.pathname === item.path ||
@@ -328,18 +351,31 @@ export function AppSidebar() {
                                         <Collapsible
                                             key={item.title}
                                             asChild
-                                            defaultOpen={isActive}
+                                            open={!!isActive}
+                                            onOpenChange={(open) => {
+                                                // When opening, navigate to first sub-item
+                                                if (open && !isActive && item.items && item.items.length > 0) {
+                                                    navigate(item.items[0].path);
+                                                }
+                                            }}
                                             className="group/collapsible"
                                         >
-                                            <SidebarMenuItem>
+                                            <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
                                                 <CollapsibleTrigger asChild>
                                                     <SidebarMenuButton
                                                         tooltip={item.title}
                                                         isActive={isActive}
-                                                        className="h-10"
+                                                        className="h-10 group/item"
                                                         style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                        onClick={(e) => {
+                                                            if (isCollapsed) {
+                                                                e.preventDefault();
+                                                                handleItemClick(item, item.disabled);
+                                                            }
+                                                            // When expanded, CollapsibleTrigger handles toggle via onOpenChange
+                                                        }}
                                                     >
-                                                        <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
+                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
                                                         <span>{item.title}</span>
                                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                                     </SidebarMenuButton>
@@ -367,19 +403,19 @@ export function AppSidebar() {
                                 }
 
                                 return (
-                                    <SidebarMenuItem key={item.title}>
+                                    <SidebarMenuItem key={item.title} className={cn(isCollapsed && "flex justify-center")}>
                                         <SidebarMenuButton
                                             tooltip={item.title}
                                             isActive={isActive}
-                                            onClick={() => handleNavigate(item.path, item.disabled)}
+                                            onClick={() => handleItemClick(item, item.disabled)}
                                             className={cn(
-                                                "h-10",
+                                                "h-10 group/item",
                                                 item.disabled ? 'opacity-50 cursor-not-allowed' : '',
                                                 isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                             )}
                                             style={{ fontFamily: '"Raleway", sans-serif' }}
                                         >
-                                            <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
+                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
                                             <span>{item.title}</span>
                                             {item.disabled && (
                                                 <span className="ml-auto text-xs text-muted-foreground">Soon</span>
@@ -393,10 +429,10 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="border-t">
-                <SidebarGroup>
-                    <SidebarGroupContent>
-                        <SidebarMenu className="gap-2">
+            <SidebarFooter className={cn("border-t", isCollapsed && "flex items-center justify-center")}>
+                <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
+                    <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
+                        <SidebarMenu className={cn("gap-2", isCollapsed && "w-full items-center")}>
                             {secondaryNavItems.map((item) => {
                                 const isActive = location.pathname === item.path ||
                                     (item.path !== '/' && location.pathname.startsWith(item.path)) ||
@@ -407,18 +443,31 @@ export function AppSidebar() {
                                         <Collapsible
                                             key={item.title}
                                             asChild
-                                            defaultOpen={isActive}
+                                            open={!!isActive}
+                                            onOpenChange={(open) => {
+                                                // When opening, navigate to first sub-item
+                                                if (open && !isActive && item.items && item.items.length > 0) {
+                                                    navigate(item.items[0].path);
+                                                }
+                                            }}
                                             className="group/collapsible"
                                         >
-                                            <SidebarMenuItem>
+                                            <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
                                                 <CollapsibleTrigger asChild>
                                                     <SidebarMenuButton
                                                         tooltip={item.title}
                                                         isActive={isActive}
-                                                        className="h-9"
+                                                        className="h-9 group/item"
                                                         style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                        onClick={(e) => {
+                                                            if (isCollapsed) {
+                                                                e.preventDefault();
+                                                                handleItemClick(item);
+                                                            }
+                                                            // When expanded, CollapsibleTrigger handles toggle via onOpenChange
+                                                        }}
                                                     >
-                                                        <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
+                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
                                                         <span>{item.title}</span>
                                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                                     </SidebarMenuButton>
@@ -446,18 +495,18 @@ export function AppSidebar() {
                                 }
 
                                 return (
-                                    <SidebarMenuItem key={item.title}>
+                                    <SidebarMenuItem key={item.title} className={cn(isCollapsed && "flex justify-center")}>
                                         <SidebarMenuButton
                                             tooltip={item.title}
                                             isActive={isActive}
-                                            onClick={() => handleNavigate(item.path)}
+                                            onClick={() => handleItemClick(item)}
                                             className={cn(
-                                                "h-9",
+                                                "h-9 group/item",
                                                 isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                             )}
                                             style={{ fontFamily: '"Raleway", sans-serif' }}
                                         >
-                                            <item.icon className={cn("h-4 w-4", isActive && "text-blue-600")} />
+                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "group-hover/item:text-blue-600")} />
                                             <span>{item.title}</span>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>

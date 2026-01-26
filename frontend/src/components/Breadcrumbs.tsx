@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useBreadcrumbs } from '@/hooks/use-breadcrumbs';
 import {
     Breadcrumb,
@@ -16,6 +16,12 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ className }: BreadcrumbsProps) {
     const breadcrumbs = useBreadcrumbs();
+    const location = useLocation();
+
+    // Don't render breadcrumbs for /settings routes since all content is shown on a single page with sidebar navigation
+    if (location.pathname.startsWith('/settings')) {
+        return null;
+    }
 
     // Don't render if only one breadcrumb (root page)
     if (breadcrumbs.length <= 1) {

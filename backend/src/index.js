@@ -45,6 +45,9 @@ const { Server } = require('socket.io');
 // Structured logging
 const { logger, requestLogger } = require('./utils/logger');
 
+// Background job scheduler
+const { initScheduler } = require('./scheduler');
+
 // Create Express app
 const app = express();
 const port = process.env.PORT || 3001;
@@ -281,7 +284,7 @@ setTimeout(async () => {
 
         // Initialize auth routes
         logger.info('Initializing auth routes...');
-        const { router: authRouter, authenticateJWT } = require('./auth');
+        const { router: authRouter, authenticateJWT, requireAdmin } = require('./auth');
 
         // Make dbPool available to auth routes
         app.use((req, res, next) => {
@@ -460,6 +463,16 @@ setTimeout(async () => {
         app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit));
         logger.info('Sharing routes initialized');
 
+        // Admin routes (requires ADMIN role)
+        const adminRoutes = require('./routes/admin.routes');
+        app.use('/api/admin', adminRoutes(pool, authenticateJWT, requireAdmin));
+        logger.info('Admin routes initialized');
+
+        // Admin Email routes (requires ADMIN role)
+        const adminEmailRoutes = require('./routes/admin-email.routes');
+        app.use('/api/admin/email', adminEmailRoutes(pool, authenticateJWT, requireAdmin));
+        logger.info('Admin Email routes initialized');
+
         // AI suggestions endpoints
         try {
             logger.info('Initializing AI suggestion service...');
@@ -543,6 +556,10 @@ setTimeout(async () => {
 
         logger.info('Status endpoint initialized');
         logger.info('All API routes registered');
+
+        // Initialize background job scheduler
+        initScheduler(pool);
+        logger.info('Background job scheduler initialized');
 
         // 404 handler for undefined API routes
         app.use('/api/*', notFoundHandler);

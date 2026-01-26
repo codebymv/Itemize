@@ -286,6 +286,41 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_segments', runAllSegmentMigrations);
     await runMigrationOnce(pool, 'module_invoicing', runAllInvoicingMigrations);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
+    
+    // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
+    await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {
+      // Add source_invoice_id to recurring_invoice_templates
+      await p.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'recurring_invoice_templates' AND column_name = 'source_invoice_id'
+          ) THEN
+            ALTER TABLE recurring_invoice_templates ADD COLUMN source_invoice_id INTEGER REFERENCES invoices(id) ON DELETE SET NULL;
+          END IF;
+        END $$;
+      `);
+      // Add is_recurring_source to invoices
+      await p.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'invoices' AND column_name = 'is_recurring_source'
+          ) THEN
+            ALTER TABLE invoices ADD COLUMN is_recurring_source BOOLEAN DEFAULT FALSE;
+          END IF;
+        END $$;
+      `);
+      // Add indexes
+      await p.query(`
+        CREATE INDEX IF NOT EXISTS idx_recurring_templates_source_invoice ON recurring_invoice_templates(source_invoice_id);
+        CREATE INDEX IF NOT EXISTS idx_invoices_recurring_source ON invoices(is_recurring_source) WHERE is_recurring_source = true;
+      `);
+      return true;
+    });
+    
     await runMigrationOnce(pool, 'module_reputation', runAllReputationMigrations);
     
     // Social migrations + oauth_states table
@@ -313,6 +348,59 @@ const initializeDatabase = async (pool) => {
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
+    
+    // Admin email communications - extend email_logs for admin use
+    await runMigrationOnce(pool, 'admin_email_logs_columns', async (p) => {
+      // Make organization_id nullable for system-wide admin emails
+      await p.query(`
+        DO $$ 
+        BEGIN 
+          -- Make organization_id nullable if it's currently NOT NULL
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'email_logs' AND column_name = 'organization_id'
+            AND is_nullable = 'NO'
+          ) THEN
+            ALTER TABLE email_logs ALTER COLUMN organization_id DROP NOT NULL;
+          END IF;
+        END $$;
+      `);
+      
+      // Add recipient_name column
+      await p.query(`
+        ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS recipient_name VARCHAR(255);
+      `);
+      
+      // Add recipient_id column for user ID (different from contact_id)
+      await p.query(`
+        ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS recipient_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+      `);
+      
+      // Add sent_by column for admin user who sent the email
+      await p.query(`
+        ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS sent_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+      `);
+      
+      // Add created_at column if missing (some older schemas use only queued_at)
+      await p.query(`
+        ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      `);
+      
+      // Ensure recipient_email column exists (maps to to_email in existing schema)
+      await p.query(`
+        ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS recipient_email VARCHAR(255);
+      `);
+      
+      // Create indexes for admin queries
+      await p.query(`
+        CREATE INDEX IF NOT EXISTS idx_email_logs_sent_by ON email_logs(sent_by);
+        CREATE INDEX IF NOT EXISTS idx_email_logs_recipient_id ON email_logs(recipient_id);
+        CREATE INDEX IF NOT EXISTS idx_email_logs_created_at ON email_logs(created_at DESC);
+      `);
+      
+      console.log('✅ Admin email logs columns migration complete');
+      return true;
+    });
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

@@ -25,8 +25,7 @@ interface InvoicePreviewCardProps {
     issueDate?: string;
     dueDate?: string;
     
-    // For recurring: schedule info
-    frequency?: string;
+    // For recurring: next run date to calculate Issue/Due dates
     nextRunDate?: string;
     
     // Customer info
@@ -50,20 +49,12 @@ interface InvoicePreviewCardProps {
     className?: string;
 }
 
-const FREQUENCY_LABELS: Record<string, string> = {
-    weekly: 'Weekly',
-    monthly: 'Monthly',
-    quarterly: 'Quarterly',
-    yearly: 'Yearly',
-};
-
 export function InvoicePreviewCard({
     variant = 'invoice',
     business,
     documentNumber,
     issueDate,
     dueDate,
-    frequency,
     nextRunDate,
     customerName,
     customerEmail,
@@ -101,12 +92,21 @@ export function InvoicePreviewCard({
     const headerTitle = 'INVOICE';
     const headerColor = 'text-blue-600';
 
+    // Light mode color constants - invoice should always look professional/printable
+    const colors = {
+        bg: 'bg-white',
+        text: 'text-gray-900',
+        textMuted: 'text-gray-500',
+        border: 'border-gray-200',
+    };
+
     return (
         <div 
-            className={`bg-white dark:bg-gray-900 rounded-lg border p-6 pb-0 shadow-sm flex flex-col ${className}`}
+            className={`${colors.bg} ${colors.text} rounded-lg border ${colors.border} p-6 pb-0 shadow-sm flex flex-col ${className}`}
             style={{ 
                 fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                height: '850px'
+                height: '850px',
+                colorScheme: 'light', // Force light color scheme
             }}
         >
             <div className="flex-1">
@@ -124,10 +124,10 @@ export function InvoicePreviewCard({
                             <div className="text-sm">
                                 <p className="font-semibold">{business.name}</p>
                                 {business.email && (
-                                    <p className="text-muted-foreground">{business.email}</p>
+                                    <p className={colors.textMuted}>{business.email}</p>
                                 )}
                                 {business.phone && (
-                                    <p className="text-muted-foreground">{business.phone}</p>
+                                    <p className={colors.textMuted}>{business.phone}</p>
                                 )}
                             </div>
                         )}
@@ -135,7 +135,7 @@ export function InvoicePreviewCard({
                     <div className="text-right">
                         <h2 className={`text-2xl font-light ${headerColor} mb-1`}>{headerTitle}</h2>
                         {documentNumber && (
-                            <p className="text-sm text-muted-foreground">{documentNumber}</p>
+                            <p className={`text-sm ${colors.textMuted}`}>{documentNumber}</p>
                         )}
                     </div>
                 </div>
@@ -143,31 +143,42 @@ export function InvoicePreviewCard({
                 {/* Bill To & Dates/Schedule */}
                 <div className="flex justify-between mb-6">
                     <div className="w-1/2">
-                        <p className="text-xs text-muted-foreground uppercase mb-1">Bill To</p>
+                        <p className={`text-xs ${colors.textMuted} uppercase mb-1`}>Bill To</p>
                         <div className="text-sm">
                             {customerName && <p className="font-semibold">{customerName}</p>}
-                            {customerEmail && <p className="text-muted-foreground">{customerEmail}</p>}
-                            {customerPhone && <p className="text-muted-foreground">{customerPhone}</p>}
-                            {customerAddress && <p className="text-muted-foreground whitespace-pre-line">{customerAddress}</p>}
+                            {customerEmail && <p className={colors.textMuted}>{customerEmail}</p>}
+                            {customerPhone && <p className={colors.textMuted}>{customerPhone}</p>}
+                            {customerAddress && <p className={`${colors.textMuted} whitespace-pre-line`}>{customerAddress}</p>}
                             {!customerName && !customerEmail && (
-                                <p className="text-muted-foreground italic">No customer assigned</p>
+                                <p className={`${colors.textMuted} italic`}>No customer assigned</p>
                             )}
                         </div>
                     </div>
                     <div className="w-1/2 text-right text-sm space-y-1">
                         {isTemplate ? (
-                            // Template: show schedule info
+                            // Template: show what the actual generated invoice will show
+                            // Issue Date = next run date, Due Date = next run date + payment terms (default 30 days)
                             <>
-                                {frequency && (
+                                {nextRunDate && (
                                     <div className="flex justify-end gap-4">
-                                        <span className="text-muted-foreground">Frequency:</span>
-                                        <span className="font-medium">{FREQUENCY_LABELS[frequency] || frequency}</span>
+                                        <span className={colors.textMuted}>Issue Date:</span>
+                                        <span className="font-medium">{formatDate(nextRunDate)}</span>
                                     </div>
                                 )}
                                 {nextRunDate && (
                                     <div className="flex justify-end gap-4">
-                                        <span className="text-muted-foreground">Next Invoice:</span>
-                                        <span className="font-medium text-blue-600">{formatDate(nextRunDate)}</span>
+                                        <span className={colors.textMuted}>Due Date:</span>
+                                        <span className="font-medium">{(() => {
+                                            // Calculate due date as issue date + 30 days (default payment terms)
+                                            const [year, month, day] = nextRunDate.split('T')[0].split('-').map(Number);
+                                            const dueDate = new Date(year, month - 1, day);
+                                            dueDate.setDate(dueDate.getDate() + 30);
+                                            return dueDate.toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            });
+                                        })()}</span>
                                     </div>
                                 )}
                             </>
@@ -176,13 +187,13 @@ export function InvoicePreviewCard({
                             <>
                                 {issueDate && (
                                     <div className="flex justify-end gap-4">
-                                        <span className="text-muted-foreground">Issue Date:</span>
+                                        <span className={colors.textMuted}>Issue Date:</span>
                                         <span className="font-medium">{formatDate(issueDate)}</span>
                                     </div>
                                 )}
                                 {dueDate && (
                                     <div className="flex justify-end gap-4">
-                                        <span className="text-muted-foreground">Due Date:</span>
+                                        <span className={colors.textMuted}>Due Date:</span>
                                         <span className="font-medium">{formatDate(dueDate)}</span>
                                     </div>
                                 )}
@@ -194,7 +205,7 @@ export function InvoicePreviewCard({
                 {/* Line Items Table */}
                 <table className="w-full mb-6 text-sm">
                     <thead>
-                        <tr className="border-b-2 text-xs text-muted-foreground uppercase">
+                        <tr className={`border-b-2 ${colors.border} text-xs ${colors.textMuted} uppercase`}>
                             <th className="text-left py-2 w-1/2">Description</th>
                             <th className="text-right py-2">Qty</th>
                             <th className="text-right py-2">Unit Price</th>
@@ -204,10 +215,10 @@ export function InvoicePreviewCard({
                     <tbody>
                         {items.length > 0 ? (
                             items.map((item, idx) => (
-                                <tr key={idx} className="border-b">
+                                <tr key={idx} className={`border-b ${colors.border}`}>
                                     <td className="py-2">
                                         <p className="font-medium">{item.name}</p>
-                                        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                                        {item.description && <p className={`text-xs ${colors.textMuted}`}>{item.description}</p>}
                                     </td>
                                     <td className="text-right py-2">{item.quantity}</td>
                                     <td className="text-right py-2">{formatCurrency(item.unit_price)}</td>
@@ -216,7 +227,7 @@ export function InvoicePreviewCard({
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="py-4 text-center text-muted-foreground italic">
+                                <td colSpan={4} className={`py-4 text-center ${colors.textMuted} italic`}>
                                     No line items
                                 </td>
                             </tr>
@@ -243,7 +254,7 @@ export function InvoicePreviewCard({
                                 <span>-{formatCurrency(discountAmount)}</span>
                             </div>
                         )}
-                        <Separator />
+                        <Separator className="bg-gray-200" />
                         <div className="flex justify-between font-bold text-base">
                             <span>Total</span>
                             <span>{formatCurrency(total)}</span>
@@ -253,14 +264,14 @@ export function InvoicePreviewCard({
 
                 {/* Notes */}
                 {notes && (
-                    <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground uppercase mb-1">Notes</p>
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <p className={`text-xs ${colors.textMuted} uppercase mb-1`}>Notes</p>
                         <p className="text-sm whitespace-pre-line">{notes}</p>
                     </div>
                 )}
 
                 {/* Footer Message */}
-                <div className="text-center text-xs text-muted-foreground pt-4">
+                <div className={`text-center text-xs ${colors.textMuted} pt-4`}>
                     <p>Thank you for your business!</p>
                 </div>
             </div>

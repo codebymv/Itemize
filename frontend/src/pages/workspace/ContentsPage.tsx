@@ -634,8 +634,8 @@ export function ContentsPage() {
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               handleContentClick(content);
-                            }}>
-                              <ExternalLink className="h-4 w-4 mr-2" />
+                            }} className="group/menu">
+                              <ExternalLink className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                               Open
                             </DropdownMenuItem>
                             <DropdownMenuItem 

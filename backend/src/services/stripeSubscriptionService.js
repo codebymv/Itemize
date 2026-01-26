@@ -172,6 +172,64 @@ class StripeSubscriptionService extends BaseService {
     }
 
     /**
+     * Create a Stripe checkout session with priceId directly (gleamai.dev pattern)
+     * @param {number} organizationId - Organization ID
+     * @param {string} priceId - Stripe price ID
+     * @param {string} successUrl - URL to redirect on success
+     * @param {string} cancelUrl - URL to redirect on cancel
+     * @returns {Object} Checkout session
+     */
+    async createCheckoutSessionWithPriceId(organizationId, priceId, successUrl, cancelUrl) {
+        if (!this.isConfigured()) {
+            throw new Error('Stripe is not configured');
+        }
+
+        return this.withRetry(async () => {
+            // Get organization and customer
+            const orgResult = await this.pool.query(
+                'SELECT name, stripe_customer_id FROM organizations WHERE id = $1',
+                [organizationId]
+            );
+            const org = orgResult.rows[0];
+            if (!org) {
+                throw new Error('Organization not found');
+            }
+
+            // Get or create customer
+            let customerId = org.stripe_customer_id;
+            if (!customerId) {
+                const customer = await this.createOrGetCustomer(organizationId, { name: org.name });
+                customerId = customer.id;
+            }
+
+            // Create checkout session with priceId directly
+            const session = await this.stripe.checkout.sessions.create({
+                customer: customerId,
+                mode: 'subscription',
+                payment_method_types: ['card'],
+                line_items: [{
+                    price: priceId,
+                    quantity: 1
+                }],
+                success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: cancelUrl,
+                metadata: {
+                    organizationId: organizationId.toString(),
+                    priceId
+                }
+            });
+
+            this.logInfo('Created checkout session with priceId', { 
+                organizationId, 
+                priceId,
+                sessionId: session.id 
+            });
+
+            return session;
+        }, { organizationId, priceId });
+    }
+
+    /**
      * Create billing portal session for customer self-service
      * @param {number} organizationId - Organization ID
      * @param {string} returnUrl - URL to return to after portal

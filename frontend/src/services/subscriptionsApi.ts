@@ -90,7 +90,7 @@ export interface PortalSession {
  * Get all available subscription plans
  */
 export async function getPlans(): Promise<SubscriptionPlan[]> {
-  const response = await api.get('/subscriptions/plans');
+  const response = await api.get('/api/subscriptions/plans');
   return response.data.data;
 }
 
@@ -98,7 +98,7 @@ export async function getPlans(): Promise<SubscriptionPlan[]> {
  * Get current organization's subscription status
  */
 export async function getCurrentSubscription(): Promise<Subscription> {
-  const response = await api.get('/subscriptions/current');
+  const response = await api.get('/api/subscriptions/current');
   return response.data.data;
 }
 
@@ -106,7 +106,7 @@ export async function getCurrentSubscription(): Promise<Subscription> {
  * Get current usage stats
  */
 export async function getUsageStats(): Promise<UsageStats> {
-  const response = await api.get('/subscriptions/usage');
+  const response = await api.get('/api/subscriptions/usage');
   return response.data.data;
 }
 
@@ -121,22 +121,21 @@ export async function getUsageHistory(
   if (resourceType) params.append('resourceType', resourceType);
   if (months) params.append('months', months.toString());
   
-  const response = await api.get(`/subscriptions/usage/history?${params.toString()}`);
+  const response = await api.get(`/api/subscriptions/usage/history?${params.toString()}`);
   return response.data.data;
 }
 
 /**
  * Create checkout session for subscription
+ * Following gleamai.dev pattern - sends priceId directly
  */
 export async function createCheckoutSession(
-  planName: 'starter' | 'unlimited' | 'pro',
-  billingPeriod: 'monthly' | 'yearly',
+  priceId: string,
   successUrl: string,
   cancelUrl: string
 ): Promise<CheckoutSession> {
-  const response = await api.post('/subscriptions/checkout', {
-    planName,
-    billingPeriod,
+  const response = await api.post('/api/subscriptions/checkout', {
+    priceId,
     successUrl,
     cancelUrl
   });
@@ -147,7 +146,7 @@ export async function createCheckoutSession(
  * Create billing portal session
  */
 export async function createPortalSession(returnUrl: string): Promise<PortalSession> {
-  const response = await api.post('/subscriptions/portal', { returnUrl });
+  const response = await api.post('/api/subscriptions/portal', { returnUrl });
   return response.data.data;
 }
 
@@ -155,10 +154,10 @@ export async function createPortalSession(returnUrl: string): Promise<PortalSess
  * Change subscription plan
  */
 export async function updatePlan(
-  planName: 'starter' | 'unlimited' | 'pro',
+  planName: 'free' | 'starter' | 'unlimited' | 'pro',
   billingPeriod: 'monthly' | 'yearly'
 ): Promise<{ status: string; planName: string }> {
-  const response = await api.put('/subscriptions/plan', { planName, billingPeriod });
+  const response = await api.put('/api/subscriptions/plan', { planName, billingPeriod });
   return response.data.data;
 }
 
@@ -168,7 +167,7 @@ export async function updatePlan(
 export async function cancelSubscription(
   immediate: boolean = false
 ): Promise<{ status: string; cancelAtPeriodEnd: boolean; canceledAt?: string }> {
-  const response = await api.post('/subscriptions/cancel', { immediate });
+  const response = await api.post('/api/subscriptions/cancel', { immediate });
   return response.data.data;
 }
 
@@ -176,7 +175,7 @@ export async function cancelSubscription(
  * Resume a subscription set to cancel at period end
  */
 export async function resumeSubscription(): Promise<{ status: string; cancelAtPeriodEnd: boolean }> {
-  const response = await api.post('/subscriptions/resume');
+  const response = await api.post('/api/subscriptions/resume');
   return response.data.data;
 }
 
@@ -189,7 +188,7 @@ export async function getFeatures(): Promise<{
   features: Record<string, boolean>;
   limits: Record<string, number>;
 }> {
-  const response = await api.get('/subscriptions/features');
+  const response = await api.get('/api/subscriptions/features');
   return response.data.data;
 }
 

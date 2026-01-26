@@ -131,8 +131,8 @@ export function ContactDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowEditModal(true)}>
-                <Edit className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={() => setShowEditModal(true)} className="group/menu">
+                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                 Edit Contact
               </DropdownMenuItem>
               <DropdownMenuSeparator />

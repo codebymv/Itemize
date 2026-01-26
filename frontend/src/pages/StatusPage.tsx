@@ -318,7 +318,7 @@ const StatusPage: React.FC = () => {
                 <CardTitle className="text-lg font-semibold">Services</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {Object.entries(statusData.services).map(([service, status]) => (
+                {statusData.services && Object.entries(statusData.services).map(([service, status]) => (
                   <div key={service} className="flex justify-between">
                     <span className="text-muted-foreground">{formatServiceName(service)}:</span>
                     <div className="flex items-center">
@@ -339,7 +339,7 @@ const StatusPage: React.FC = () => {
                 <CardTitle className="text-lg font-semibold">Health Checks</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {Object.entries(statusData.healthChecks).map(([check, status]) => (
+                {statusData.healthChecks && Object.entries(statusData.healthChecks).map(([check, status]) => (
                   <div key={check} className="flex justify-between">
                     <span className="text-muted-foreground">{formatHealthCheckName(check)}:</span>
                     <div className="flex items-center">
@@ -366,10 +366,10 @@ const StatusPage: React.FC = () => {
               <CardContent className="space-y-2">
                 <div className="flex justify-between mb-3">
                   <span className="text-muted-foreground">Total Available:</span>
-                  <span className="font-medium text-green-500">{statusData.endpoints.total}</span>
+                  <span className="font-medium text-green-500">{statusData.endpoints?.total || 0}</span>
                 </div>
                 <div className="max-h-32 overflow-y-auto">
-                  {statusData.endpoints.available.map((endpoint, index) => (
+                  {statusData.endpoints?.available?.map((endpoint, index) => (
                     <div key={index} className="text-sm text-muted-foreground py-1">
                       {endpoint}
                     </div>

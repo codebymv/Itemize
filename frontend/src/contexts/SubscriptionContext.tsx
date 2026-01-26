@@ -12,6 +12,7 @@ import subscriptionsApi, {
   UsageStats,
   SubscriptionPlan
 } from '../services/subscriptionsApi';
+import { PLAN_PRICING } from '../lib/subscription';
 
 // Feature names for type safety
 export type FeatureName =
@@ -241,12 +242,21 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     billingPeriod: 'monthly' | 'yearly'
   ) => {
     try {
+      // Get price ID from plan pricing
+      const planPricing = PLAN_PRICING[planName];
+      const priceId = billingPeriod === 'yearly' 
+        ? planPricing.stripePriceIdYearly 
+        : planPricing.stripePriceIdMonthly;
+
+      if (!priceId) {
+        throw new Error(`Price ID not configured for ${planName} ${billingPeriod}`);
+      }
+
       const successUrl = `${window.location.origin}/settings?tab=billing&success=true`;
       const cancelUrl = `${window.location.origin}/settings?tab=billing&canceled=true`;
       
       const session = await subscriptionsApi.createCheckoutSession(
-        planName,
-        billingPeriod,
+        priceId,
         successUrl,
         cancelUrl
       );

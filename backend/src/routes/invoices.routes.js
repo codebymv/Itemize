@@ -1104,7 +1104,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 const invoice = invoiceResult.rows[0];
 
-                // Create payment record
+                // Prepare values ensuring correct JavaScript types
+                const orgId = parseInt(req.organizationId);
+                const invId = parseInt(id);
+                const contId = invoice.contact_id != null ? parseInt(invoice.contact_id) : null;
+                const payAmount = parseFloat(amount);
+                const payCurrency = invoice.currency || 'USD';
+                const payMethod = payment_method || 'other';
+                const payNotes = notes || null;
+
+                // Create payment record - simple parameterized query (NULL values handled by PostgreSQL)
                 const paymentResult = await client.query(`
                     INSERT INTO payments (
                         organization_id, invoice_id, contact_id, amount, currency,
@@ -1112,13 +1121,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     ) VALUES ($1, $2, $3, $4, $5, $6, 'succeeded', $7, CURRENT_TIMESTAMP)
                     RETURNING *
                 `, [
-                    req.organizationId,
-                    id,
-                    invoice.contact_id,
-                    amount,
-                    invoice.currency,
-                    payment_method || 'other',
-                    notes || null
+                    orgId,
+                    invId,
+                    contId,
+                    payAmount,
+                    payCurrency,
+                    payMethod,
+                    payNotes
                 ]);
 
                 // Update invoice
@@ -1130,8 +1139,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     UPDATE invoices SET
                         amount_paid = $1,
                         amount_due = $2,
-                        status = $3,
-                        paid_at = CASE WHEN $3 = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
+                        status = $3::VARCHAR(20),
+                        paid_at = CASE WHEN $3::VARCHAR(20) = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $4
                 `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, id]);
@@ -1159,7 +1168,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     });
 
     /**
-     * POST /api/invoices/:id/create-payment-link - Create Stripe payment link
+     * POST /api/invoices/:id/create-payment-link - Create Stripe Checkout Session
+     * Returns a URL to redirect the customer to Stripe's hosted checkout page
      */
     router.post('/:id/create-payment-link', authenticateJWT, requireOrganization, async (req, res) => {
         try {
@@ -1192,10 +1202,27 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Invoice already paid' });
             }
 
-            // Create Stripe payment intent
-            const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round(invoice.amount_due * 100), // Convert to cents
-                currency: invoice.currency.toLowerCase(),
+            // Get frontend URL for redirects
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+            // Create Stripe Checkout Session (hosted payment page)
+            const session = await stripe.checkout.sessions.create({
+                mode: 'payment',
+                payment_method_types: ['card'],
+                line_items: [{
+                    price_data: {
+                        currency: (invoice.currency || 'USD').toLowerCase(),
+                        product_data: {
+                            name: `Invoice ${invoice.invoice_number}`,
+                            description: invoice.customer_name || 'Invoice Payment'
+                        },
+                        unit_amount: Math.round(invoice.amount_due * 100) // Convert to cents
+                    },
+                    quantity: 1
+                }],
+                success_url: `${frontendUrl}/invoices?payment=success&invoice=${id}`,
+                cancel_url: `${frontendUrl}/invoices?payment=cancelled&invoice=${id}`,
+                customer_email: invoice.customer_email || undefined,
                 metadata: {
                     invoice_id: invoice.id.toString(),
                     invoice_number: invoice.invoice_number,
@@ -1203,19 +1230,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
             });
 
-            // Update invoice with Stripe info
+            // Store checkout session ID for reference
             await client.query(`
                 UPDATE invoices SET
                     stripe_payment_intent_id = $1,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $2
-            `, [paymentIntent.id, id]);
+            `, [session.id, id]);
 
             client.release();
 
+            // Return the checkout URL for redirect
             res.json({
-                client_secret: paymentIntent.client_secret,
-                payment_intent_id: paymentIntent.id
+                url: session.url,
+                session_id: session.id
             });
         } catch (error) {
             console.error('Error creating payment link:', error);
@@ -1919,28 +1947,36 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const client = await pool.connect();
 
         try {
-            switch (event.type) {
-                case 'payment_intent.succeeded':
-                    const paymentIntent = event.data.object;
-                    const invoiceId = paymentIntent.metadata?.invoice_id;
+            logger.info(`Processing Stripe webhook event: ${event.type}`);
 
-                    if (invoiceId) {
+            switch (event.type) {
+                // Checkout Session completed - customer finished the hosted checkout
+                case 'checkout.session.completed':
+                    const session = event.data.object;
+                    const invoiceId = session.metadata?.invoice_id;
+
+                    logger.info(`Checkout session completed for invoice ${invoiceId}`, {
+                        sessionId: session.id,
+                        paymentStatus: session.payment_status,
+                        amountTotal: session.amount_total
+                    });
+
+                    // Only process if payment was successful
+                    if (invoiceId && session.payment_status === 'paid') {
                         // Record payment
                         await client.query(`
                             INSERT INTO payments (
                                 organization_id, invoice_id, amount, currency, payment_method, status,
-                                stripe_payment_intent_id, card_last4, card_brand, paid_at
+                                stripe_payment_intent_id, paid_at
                             ) VALUES (
-                                $1, $2, $3, $4, 'stripe', 'succeeded', $5, $6, $7, CURRENT_TIMESTAMP
+                                $1, $2, $3, $4, 'stripe', 'succeeded', $5, CURRENT_TIMESTAMP
                             )
                         `, [
-                            paymentIntent.metadata.organization_id,
+                            session.metadata.organization_id,
                             invoiceId,
-                            paymentIntent.amount / 100,
-                            paymentIntent.currency.toUpperCase(),
-                            paymentIntent.id,
-                            paymentIntent.charges?.data[0]?.payment_method_details?.card?.last4,
-                            paymentIntent.charges?.data[0]?.payment_method_details?.card?.brand
+                            session.amount_total / 100,
+                            (session.currency || 'usd').toUpperCase(),
+                            session.payment_intent || session.id
                         ]);
 
                         // Update invoice
@@ -1951,7 +1987,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                         if (invoiceResult.rows.length > 0) {
                             const invoice = invoiceResult.rows[0];
-                            const newAmountPaid = parseFloat(invoice.amount_paid) + (paymentIntent.amount / 100);
+                            const newAmountPaid = parseFloat(invoice.amount_paid) + (session.amount_total / 100);
                             const newAmountDue = parseFloat(invoice.total) - newAmountPaid;
                             const newStatus = newAmountDue <= 0 ? 'paid' : 'partial';
 
@@ -1959,35 +1995,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                                 UPDATE invoices SET
                                     amount_paid = $1,
                                     amount_due = $2,
-                                    status = $3,
-                                    paid_at = CASE WHEN $3 = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
+                                    status = $3::VARCHAR(20),
+                                    paid_at = CASE WHEN $3::VARCHAR(20) = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
                                     updated_at = CURRENT_TIMESTAMP
                                 WHERE id = $4
                             `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, invoiceId]);
+
+                            logger.info(`Invoice ${invoiceId} updated: status=${newStatus}, amountPaid=${newAmountPaid}`);
                         }
                     }
                     break;
 
-                case 'payment_intent.payment_failed':
-                    const failedPayment = event.data.object;
-                    const failedInvoiceId = failedPayment.metadata?.invoice_id;
-
-                    if (failedInvoiceId) {
-                        await client.query(`
-                            INSERT INTO payments (
-                                organization_id, invoice_id, amount, currency, payment_method, status,
-                                stripe_payment_intent_id, description
-                            ) VALUES ($1, $2, $3, $4, 'stripe', 'failed', $5, $6)
-                        `, [
-                            failedPayment.metadata.organization_id,
-                            failedInvoiceId,
-                            failedPayment.amount / 100,
-                            failedPayment.currency.toUpperCase(),
-                            failedPayment.id,
-                            failedPayment.last_payment_error?.message || 'Payment failed'
-                        ]);
-                    }
+                // Checkout session expired - customer abandoned checkout (optional handling)
+                case 'checkout.session.expired':
+                    const expiredSession = event.data.object;
+                    logger.info(`Checkout session expired`, {
+                        sessionId: expiredSession.id,
+                        invoiceId: expiredSession.metadata?.invoice_id
+                    });
+                    // No action needed - invoice remains unpaid
                     break;
+
+                default:
+                    logger.debug(`Unhandled Stripe event type: ${event.type}`);
             }
 
             client.release();

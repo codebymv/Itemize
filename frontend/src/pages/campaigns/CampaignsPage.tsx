@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Mail, MoreHorizontal, Trash2, Copy, Play, Pause, Send, BarChart3, Clock } from 'lucide-react';
+import { Plus, Search, Mail, MoreHorizontal, Trash2, Copy, Play, Pause, Send, BarChart3, Clock, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -258,9 +258,11 @@ export function CampaignsPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDuplicate(campaign.id)}>
-                                                    <Copy className="h-4 w-4 mr-2" />Duplicate
+                                                <DropdownMenuItem className="group/menu">
+                                                    <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDuplicate(campaign.id)} className="group/menu">
+                                                    <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={() => handleDelete(campaign.id)} className="text-destructive">

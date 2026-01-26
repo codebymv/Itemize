@@ -8,9 +8,10 @@
 // Plan Definitions
 // ============================================
 
-export type Plan = 'starter' | 'unlimited' | 'pro';
+export type Plan = 'free' | 'starter' | 'unlimited' | 'pro';
 
 export const PLANS = {
+    FREE: 'free' as Plan,
     STARTER: 'starter' as Plan,
     UNLIMITED: 'unlimited' as Plan,
     PRO: 'pro' as Plan
@@ -20,6 +21,7 @@ export const PLANS = {
  * Plan tier order for comparison (higher = better)
  */
 export const PLAN_TIER_ORDER: Record<Plan, number> = {
+    free: 0,
     starter: 1,
     unlimited: 2,
     pro: 3
@@ -33,12 +35,22 @@ export const PLAN_METADATA: Record<Plan, {
     displayName: string;
     tagline: string;
     description: string;
-    icon: 'zap' | 'crown' | 'building';
+    icon: 'user' | 'zap' | 'crown' | 'building';
     color: string;
     bgColor: string;
     borderColor: string;
     popular?: boolean;
 }> = {
+    free: {
+        name: 'Free',
+        displayName: 'Free',
+        tagline: 'Get started for free',
+        description: 'Basic features to try out the platform.',
+        icon: 'user',
+        color: 'text-slate-600',
+        bgColor: 'bg-slate-50',
+        borderColor: 'border-slate-300'
+    },
     starter: {
         name: 'Starter',
         displayName: 'Starter',
@@ -79,21 +91,34 @@ export const PLAN_PRICING: Record<Plan, {
     monthly: number;
     yearly: number;
     yearlyMonthly: number;
+    stripePriceIdMonthly?: string;
+    stripePriceIdYearly?: string;
 }> = {
+    free: {
+        monthly: 0,
+        yearly: 0,
+        yearlyMonthly: 0
+    },
     starter: {
         monthly: 97,
         yearly: 970,
-        yearlyMonthly: 80.83
+        yearlyMonthly: 80.83,
+        stripePriceIdMonthly: 'price_1SthTHRxBJaRlFvtGlxgpg2n',
+        // stripePriceIdYearly: 'price_yearly_starter' // Add when created
     },
     unlimited: {
         monthly: 297,
         yearly: 2970,
-        yearlyMonthly: 247.50
+        yearlyMonthly: 247.50,
+        stripePriceIdMonthly: 'price_1SthTwRxBJaRlFvtg32SqjGf',
+        // stripePriceIdYearly: 'price_yearly_unlimited' // Add when created
     },
     pro: {
         monthly: 497,
         yearly: 4970,
-        yearlyMonthly: 414.17
+        yearlyMonthly: 414.17,
+        stripePriceIdMonthly: 'price_1SthUKRxBJaRlFvt2dc5DnSi',
+        // stripePriceIdYearly: 'price_yearly_pro' // Add when created
     }
 };
 
@@ -285,7 +310,7 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
 export function getRequiredPlan(featureKey: FeatureKey): Plan {
     const feature = FEATURES[featureKey];
     if (feature.allowedPlans.length > 0) {
-        const planOrder: Plan[] = ['starter', 'unlimited', 'pro'];
+        const planOrder: Plan[] = ['free', 'starter', 'unlimited', 'pro'];
         for (const plan of planOrder) {
             if (feature.allowedPlans.includes(plan)) {
                 return plan;
@@ -299,7 +324,7 @@ export function getRequiredPlan(featureKey: FeatureKey): Plan {
  * Get the next upgrade plan for a user
  */
 export function getNextUpgradePlan(currentPlan: Plan): Plan | null {
-    const planOrder: Plan[] = ['starter', 'unlimited', 'pro'];
+    const planOrder: Plan[] = ['free', 'starter', 'unlimited', 'pro'];
     const currentIndex = planOrder.indexOf(currentPlan);
     if (currentIndex < planOrder.length - 1) {
         return planOrder[currentIndex + 1];

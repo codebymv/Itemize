@@ -105,12 +105,12 @@ export function ContactsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowImportModal(true)}>
-                <Upload className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
+                <Upload className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                 Import CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)}>
-                <Download className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
+                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                 Export CSV
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -317,12 +317,12 @@ export function ContactsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowImportModal(true)}>
-                <Upload className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
+                <Upload className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                 Import CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)}>
-                <Download className="h-4 w-4 mr-2" />
+              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
+                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                 Export CSV
               </DropdownMenuItem>
             </DropdownMenuContent>

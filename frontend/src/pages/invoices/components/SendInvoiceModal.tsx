@@ -108,7 +108,7 @@ export function SendInvoiceModal({
             <DialogContent className="sm:max-w-[550px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Send className="h-5 w-5 text-blue-500" />
+                        <Send className="h-5 w-5 text-blue-600" />
                         Send Invoice
                     </DialogTitle>
                     <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

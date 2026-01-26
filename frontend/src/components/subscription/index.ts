@@ -11,6 +11,7 @@ export { UpgradePrompt } from './UpgradePrompt';
 // New components (gleamai pattern)
 export { PricingCards } from './PricingCards';
 export { BillingPanel } from './BillingPanel';
+export { SubscriptionStatus } from './SubscriptionStatus';
 export { 
     UpgradeCTA, 
     LockedFeatureBadge, 

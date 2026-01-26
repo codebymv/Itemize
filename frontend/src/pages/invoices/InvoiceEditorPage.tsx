@@ -503,7 +503,7 @@ export function InvoiceEditorPage() {
                                                         className="h-24 w-auto object-contain rounded border bg-white p-2"
                                                     />
                                                     <Link
-                                                        to="/invoices/settings"
+                                                        to="/settings/payments"
                                                         className="text-xs text-blue-600 hover:underline block"
                                                     >
                                                         Edit logo
@@ -511,7 +511,7 @@ export function InvoiceEditorPage() {
                                                 </div>
                                             ) : (
                                                 <Link
-                                                    to="/invoices/settings"
+                                                    to="/settings/payments"
                                                     className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed rounded-lg text-muted-foreground hover:border-blue-500 hover:text-blue-600 transition-colors"
                                                 >
                                                     <Building className="h-8 w-8 mb-1" />
@@ -594,7 +594,7 @@ export function InvoiceEditorPage() {
                                                 </p>
                                             )}
                                             <Link
-                                                to="/invoices/settings"
+                                                to="/settings/payments"
                                                 className="text-blue-600 hover:underline inline-block mt-2"
                                             >
                                                 {businesses.length > 0 ? 'Manage businesses' : 'Add a business profile'}

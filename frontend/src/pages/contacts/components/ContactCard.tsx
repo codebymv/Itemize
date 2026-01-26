@@ -108,12 +108,12 @@ export function ContactCard({
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(contact); }}>
-                                            <Eye className="h-4 w-4 mr-2" />
+                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(contact); }} className="group/menu">
+                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                                             View Details
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(contact); }}>
-                                            <Edit className="h-4 w-4 mr-2" />
+                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(contact); }} className="group/menu">
+                                            <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                                             Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />

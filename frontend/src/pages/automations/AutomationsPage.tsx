@@ -419,12 +419,12 @@ export function AutomationsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/automations/${workflow.id}`)}>
-                            <Zap className="h-4 w-4 mr-2" />
+                          <DropdownMenuItem onClick={() => navigate(`/automations/${workflow.id}`)} className="group/menu">
+                            <Zap className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                             Edit Workflow
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)}>
-                            <Copy className="h-4 w-4 mr-2" />
+                          <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)} className="group/menu">
+                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                             Duplicate
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />

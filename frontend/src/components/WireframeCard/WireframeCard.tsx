@@ -221,12 +221,12 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Edit3 className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu">
+                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareWireframe}>
-                        <Share2 className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem onClick={handleShareWireframe} className="group/menu">
+                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Share
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-red-600">

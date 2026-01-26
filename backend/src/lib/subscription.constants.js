@@ -12,6 +12,7 @@
  * Plan enum values
  */
 const PLANS = {
+    FREE: 'free',
     STARTER: 'starter',
     UNLIMITED: 'unlimited',
     PRO: 'pro'
@@ -21,6 +22,7 @@ const PLANS = {
  * Plan tier order for comparison (higher = better)
  */
 const PLAN_TIER_ORDER = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 1,
     [PLANS.UNLIMITED]: 2,
     [PLANS.PRO]: 3

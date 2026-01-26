@@ -22,6 +22,7 @@ interface VaultItemRowProps {
   onEditingValueChange: (value: string) => void;
   isDragging?: boolean;
   dragHandleProps?: any;
+  vaultColor?: string;
 }
 
 export const VaultItemRow: React.FC<VaultItemRowProps> = ({
@@ -39,7 +40,8 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
   onEditingLabelChange,
   onEditingValueChange,
   isDragging,
-  dragHandleProps
+  dragHandleProps,
+  vaultColor
 }) => {
   const isKeyValue = item.item_type === 'key_value';
   const maskedValue = '••••••••••••';
@@ -52,7 +54,7 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
       )}>
         <div className="flex items-center gap-2">
           {isKeyValue ? (
-            <Key className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Key className="h-4 w-4 flex-shrink-0" style={{ color: vaultColor || 'var(--muted-foreground)' }} />
           ) : (
             <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           )}
@@ -121,7 +123,7 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
       {/* Item type icon */}
       <div className="flex-shrink-0 pt-0.5">
         {isKeyValue ? (
-          <Key className="h-4 w-4 text-muted-foreground" />
+          <Key className="h-4 w-4" style={{ color: vaultColor || 'var(--muted-foreground)' }} />
         ) : (
           <FileText className="h-4 w-4 text-muted-foreground" />
         )}

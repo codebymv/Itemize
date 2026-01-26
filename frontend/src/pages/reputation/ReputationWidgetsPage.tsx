@@ -208,14 +208,14 @@ export function ReputationWidgetsPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Settings className="h-4 w-4 mr-2" />Configure
+                                                    <DropdownMenuItem className="group/menu">
+                                                        <Settings className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Configure
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Eye className="h-4 w-4 mr-2" />Preview
+                                                    <DropdownMenuItem className="group/menu">
+                                                        <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Preview
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleCopyEmbedCode(widget.id)}>
-                                                        <Copy className="h-4 w-4 mr-2" />Copy Embed Code
+                                                    <DropdownMenuItem onClick={() => handleCopyEmbedCode(widget.id)} className="group/menu">
+                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Embed Code
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem onClick={() => handleDelete(widget.id)} className="text-destructive">

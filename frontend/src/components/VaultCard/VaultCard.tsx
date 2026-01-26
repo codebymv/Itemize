@@ -349,12 +349,12 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)} style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        <Edit3 className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareVault} style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        <Share2 className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem onClick={handleShareVault} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Share
                       </DropdownMenuItem>
                       <DropdownMenuItem 
@@ -499,6 +499,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                             onDelete={() => handleDeleteItem(item.id)}
                             onEditingLabelChange={setEditingItemLabel}
                             onEditingValueChange={setEditingItemValue}
+                            vaultColor={vaultDisplayColor}
                           />
                         </SortableItem>
                       ))}
