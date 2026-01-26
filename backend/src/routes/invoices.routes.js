@@ -837,6 +837,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         try {
             const { id } = req.params;
             const { subject, message, ccEmails, includePaymentLink, resend } = req.body || {};
+            logger.info(`Send invoice ${id} - Request body:`, { subject: !!subject, message: !!message, ccEmails: ccEmails?.length || 0, includePaymentLink, resend });
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
@@ -951,6 +952,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Handle payment link if requested
                 let paymentUrl = null;
+                logger.info(`Payment link check - includePaymentLink: ${includePaymentLink}, amount_due: ${invoice.amount_due}, stripe: ${!!stripe}`);
                 if (includePaymentLink && invoice.amount_due > 0 && stripe) {
                     try {
                         // Check if we have an existing Stripe session
