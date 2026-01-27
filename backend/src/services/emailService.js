@@ -5,6 +5,7 @@
 
 const BaseService = require('./BaseService');
 const { logger } = require('../utils/logger');
+const { wrapInBrandedTemplate } = require('./email-template.service');
 
 // Check if Resend is available (optional dependency)
 let Resend = null;
@@ -76,9 +77,20 @@ class EmailService extends BaseService {
       ...additionalData,
     };
 
+    const subject = this.replaceVariables(template.subject, data);
+    let html = this.replaceVariables(template.body_html, data);
+    
+    // Wrap in branded template if not already a complete HTML document
+    if (!html.toLowerCase().includes('<!doctype') && !html.toLowerCase().includes('<html')) {
+      html = wrapInBrandedTemplate(html, {
+        subject,
+        showUnsubscribe: true  // Marketing/campaign emails should have unsubscribe
+      });
+    }
+
     return {
-      subject: this.replaceVariables(template.subject, data),
-      html: this.replaceVariables(template.body_html, data),
+      subject,
+      html,
       text: template.body_text ? this.replaceVariables(template.body_text, data) : null,
     };
   }
