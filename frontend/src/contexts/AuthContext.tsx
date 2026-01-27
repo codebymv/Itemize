@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
-import api, { getApiUrl } from '@/lib/api';
+import api, { getApiUrl, setAuthToken, getAuthToken } from '@/lib/api';
 import axios from 'axios'; // Keep axios for Google API calls
 import { toast } from '@/components/ui/use-toast'; // Import toast
 
@@ -54,28 +54,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Store redirect path for post-auth navigation
   const pendingRedirectRef = useRef<string | null>(null);
 
-  // Initialize authentication state from localStorage (user data only, token is in httpOnly cookie)
+  // Initialize authentication state from localStorage (Gleam-style approach)
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check for saved user data in localStorage (token is now in httpOnly cookie)
+        // Check for saved auth token and user data in localStorage
+        const savedToken = getAuthToken();
         const savedUser = localStorage.getItem('itemize_user');
         const expiryTime = localStorage.getItem('itemize_expiry');
         
-        // If we have user data and not expired, restore auth state
-        // The actual token is stored in httpOnly cookie and sent automatically
-        if (savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
+        // If we have token, user data, and not expired, restore auth state
+        if (savedToken && savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
           try {
             const userData = JSON.parse(savedUser);
-            setToken('httponly'); // Placeholder - actual token is in cookie
+            setToken(savedToken);
             setCurrentUser(userData);
           } catch (parseError) {
             // Clean up invalid data
+            setAuthToken(null);
             localStorage.removeItem('itemize_user');
             localStorage.removeItem('itemize_expiry');
           }
         } else {
           // Clean up expired data
+          setAuthToken(null);
           localStorage.removeItem('itemize_user');
           localStorage.removeItem('itemize_expiry');
         }
@@ -89,18 +91,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  // Helper to save user data after successful auth
-  const saveAuthState = (userData: User) => {
+  // Helper to save user data and token after successful auth (Gleam-style)
+  const saveAuthState = (userData: User, authToken: string) => {
     // Set expiry to match refresh token duration (30 days)
-    // The access token (15min) auto-refreshes via API interceptor
     const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
     
-    // Store user data only (token is in httpOnly cookie, not accessible to JS)
+    // Store token in localStorage (Gleam-style - works on mobile Safari)
+    setAuthToken(authToken);
+    
+    // Store user data
     localStorage.setItem('itemize_user', JSON.stringify(userData));
     localStorage.setItem('itemize_expiry', expiryTime.toString());
     
-    // Update state - token placeholder since actual token is in httpOnly cookie
-    setToken('httponly');
+    // Update React state
+    setToken(authToken);
     setCurrentUser(userData);
   };
 
@@ -134,8 +138,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log('Backend auth response:', response.data);
           
-          const { user: userData } = response.data;
-          saveAuthState(userData);
+          const { user: userData, token: authToken } = response.data;
+          
+          // Save auth state with token (Gleam-style)
+          if (!authToken) {
+            throw new Error('No token received from backend');
+          }
+          saveAuthState(userData, authToken);
           
           toast({
             title: 'Welcome!',
@@ -186,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * Login with email and password
+   * Login with email and password (Gleam-style)
    */
   const loginWithEmail = async (email: string, password: string): Promise<void> => {
     try {
@@ -194,7 +203,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.data.success || response.data.user) {
         const userData = response.data.user;
-        saveAuthState(userData);
+        const authToken = response.data.token;
+        
+        if (!authToken) {
+          throw new AuthError('No token received from server', 'NO_TOKEN');
+        }
+        
+        // Save auth state with token (Gleam-style)
+        saveAuthState(userData, authToken);
       } else {
         throw new AuthError(response.data.error || 'Login failed', response.data.code || 'UNKNOWN');
       }
@@ -238,7 +254,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setCurrentUser(null);
     
-    // Clear local storage (user data only, token is in httpOnly cookie)
+    // Clear all auth data from localStorage (Gleam-style)
+    setAuthToken(null);
     localStorage.removeItem('itemize_user');
     localStorage.removeItem('itemize_expiry');
     
@@ -249,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error signing out from Google:', googleError);
     }
     
-    // Backend logout clears the httpOnly cookie
+    // Backend logout (optional - mainly for clearing any server-side sessions)
     try {
       api.post('/api/auth/logout').catch((error) => {
         console.error('Backend logout failed:', error);
@@ -271,8 +288,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         credential: credentialResponse.credential
       }, { withCredentials: true });
 
-      const { user: userData } = response.data;
-      saveAuthState(userData);
+      const { user: userData, token: authToken } = response.data;
+      
+      if (!authToken) {
+        throw new Error('No token received from backend');
+      }
+      
+      // Save auth state with token (Gleam-style)
+      saveAuthState(userData, authToken);
       
       toast({
         title: 'Welcome!',

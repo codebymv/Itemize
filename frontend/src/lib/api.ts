@@ -72,9 +72,35 @@ const shouldRetry = (error: AxiosError, config: RetryConfig): boolean => {
 // Create axios instance with dynamic baseURL
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true,
+  withCredentials: true, // Still send cookies as fallback
   timeout: 30000, // 30 second timeout
 });
+
+// Token storage key (matching Gleam's approach)
+const AUTH_TOKEN_KEY = 'itemize_auth_token';
+
+/**
+ * Get the stored auth token
+ */
+export const getAuthToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  }
+  return null;
+};
+
+/**
+ * Set the auth token (called after login)
+ */
+export const setAuthToken = (token: string | null): void => {
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  }
+};
 
 // Add a request interceptor to handle dynamic baseURL, blocked endpoints, and authentication
 api.interceptors.request.use(
@@ -97,9 +123,13 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    // Authentication is now handled via httpOnly cookies
-    // which are automatically sent with `withCredentials: true`
-    // No need to manually inject Authorization header
+    // Add Bearer token authentication (Gleam-style approach)
+    // This works reliably on mobile Safari unlike httpOnly cookies
+    const token = getAuthToken();
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
 
     return config;
   },
@@ -145,7 +175,11 @@ api.interceptors.response.use(
 
       try {
         // Attempt to refresh the token
-        await api.post('/api/auth/refresh');
+        const refreshResponse = await api.post('/api/auth/refresh');
+        // If refresh returns a new token, save it
+        if (refreshResponse.data?.token) {
+          setAuthToken(refreshResponse.data.token);
+        }
         processQueue(null);
         isRefreshing = false;
         // Retry the original request
@@ -154,6 +188,8 @@ api.interceptors.response.use(
         // Refresh failed - clear auth state and redirect to login
         processQueue(refreshError as Error);
         isRefreshing = false;
+        // Clear all auth data (Gleam-style)
+        setAuthToken(null);
         localStorage.removeItem('itemize_user');
         localStorage.removeItem('itemize_expiry');
         // Optionally redirect to login
