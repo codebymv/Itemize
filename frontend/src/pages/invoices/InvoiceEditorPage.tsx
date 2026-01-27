@@ -921,7 +921,7 @@ export function InvoiceEditorPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="text-blue-600 hover:text-blue-700 p-0 h-auto"
-                                onClick={() => setTaxRate(10)}
+                                onClick={() => setTaxRate(settings?.default_tax_rate || 10)}
                             >
                                 <Plus className="h-3 w-3 mr-1" />
                                 Add tax

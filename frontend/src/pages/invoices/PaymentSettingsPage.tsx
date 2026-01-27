@@ -391,20 +391,11 @@ export function PaymentSettingsPage() {
             case 'business':
                 return (
                     <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-medium">Business Profiles</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Manage your business profiles for invoicing
-                                </p>
-                            </div>
-                            <Button
-                                onClick={() => openBusinessDialog()}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Business
-                            </Button>
+                        <div>
+                            <h3 className="text-lg font-medium">Business Profiles</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Manage your business profiles for invoicing
+                            </p>
                         </div>
                         <Separator />
                         <Card>
@@ -417,8 +408,8 @@ export function PaymentSettingsPage() {
                                             Add your first business to start creating invoices
                                         </p>
                                         <Button
-                                            variant="outline"
                                             onClick={() => openBusinessDialog()}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
                                             <Plus className="h-4 w-4 mr-2" />
                                             Add Business

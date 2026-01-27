@@ -1809,7 +1809,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     invoice_prefix: 'INV-',
                     next_invoice_number: 1,
                     default_payment_terms: 30,
-                    default_tax_rate: 0,
+                    default_tax_rate: 10,
                     default_currency: 'USD',
                     stripe_connected: false
                 });
@@ -1871,7 +1871,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 default_payment_terms || 30,
                 default_notes || null,
                 default_terms || null,
-                default_tax_rate || 0,
+                default_tax_rate ?? 10,
                 tax_id || null,
                 business_name || null,
                 business_address || null,

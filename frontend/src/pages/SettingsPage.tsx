@@ -262,7 +262,7 @@ function PreferencesSettings() {
     );
 }
 
-function PaymentsSettings() {
+function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.ReactNode) => void }) {
     const { toast } = useToast();
     
     const [loading, setLoading] = useState(true);
@@ -274,7 +274,7 @@ function PaymentsSettings() {
         invoice_prefix: 'INV-',
         next_invoice_number: 1,
         default_payment_terms: 30,
-        default_tax_rate: 0,
+        default_tax_rate: 10,
         default_currency: 'USD',
         stripe_connected: false,
     });
@@ -332,7 +332,7 @@ function PaymentsSettings() {
         fetchData();
     }, [fetchData]);
 
-    const handleSaveSettings = async () => {
+    const handleSaveSettings = useCallback(async () => {
         if (!organizationId) return;
         setSaving(true);
         try {
@@ -344,7 +344,7 @@ function PaymentsSettings() {
         } finally {
             setSaving(false);
         }
-    };
+    }, [organizationId, settings, toast]);
 
     const updateField = (field: keyof PaymentSettings, value: any) => {
         setSettings(prev => ({ ...prev, [field]: value }));
@@ -510,6 +510,28 @@ function PaymentsSettings() {
         }
     };
 
+    // Set save button in header (must be before early return)
+    useEffect(() => {
+        if (setSaveButton && !loading) {
+            setSaveButton(
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleSaveSettings}
+                    disabled={saving}
+                >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save Settings'}
+                </Button>
+            );
+        }
+        return () => {
+            if (setSaveButton) {
+                setSaveButton(null);
+            }
+        };
+    }, [saving, setSaveButton, loading, handleSaveSettings]);
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -526,42 +548,34 @@ function PaymentsSettings() {
         );
     }
 
+
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-medium">Payments</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Configure invoicing and payment settings
-                    </p>
-                </div>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={handleSaveSettings}
-                    disabled={saving}
-                >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Settings'}
-                </Button>
+            <div>
+                <h3 className="text-lg font-medium">Payments</h3>
+                <p className="text-sm text-muted-foreground">
+                    Configure invoicing and payment settings
+                </p>
             </div>
             <Separator />
 
             {/* Business Profiles Card */}
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <CardHeader className={businesses.length > 0 ? "flex flex-row items-center justify-between space-y-0 pb-4" : ""}>
                     <div>
                         <CardTitle className="text-base">Business Profiles</CardTitle>
                         <CardDescription>Manage your business profiles for invoicing</CardDescription>
                     </div>
-                    <Button
-                        size="sm"
-                        onClick={() => openBusinessDialog()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Business
-                    </Button>
+                    {businesses.length > 0 && (
+                        <Button
+                            size="sm"
+                            onClick={() => openBusinessDialog()}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Business
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {businesses.length === 0 ? (
@@ -571,7 +585,10 @@ function PaymentsSettings() {
                             <p className="text-sm text-muted-foreground mb-4">
                                 Add your first business to start creating invoices
                             </p>
-                            <Button variant="outline" onClick={() => openBusinessDialog()}>
+                            <Button
+                                onClick={() => openBusinessDialog()}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                            >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Business
                             </Button>
@@ -712,7 +729,7 @@ function PaymentsSettings() {
                                 min="0"
                                 max="100"
                                 step="0.1"
-                                value={settings.default_tax_rate || ''}
+                                value={settings.default_tax_rate ?? ''}
                                 onChange={(e) => updateField('default_tax_rate', e.target.value === '' ? 0 : parseFloat(e.target.value))}
                             />
                         </div>
@@ -978,6 +995,7 @@ export function SettingsPage() {
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
     const location = useLocation();
+    const [saveButton, setSaveButton] = useState<React.ReactNode>(null);
 
     // Find the active nav item based on current path
     const activeNavItem = settingsNav.find(item => item.path === location.pathname) || settingsNav[0];
@@ -995,21 +1013,22 @@ export function SettingsPage() {
                         SETTINGS | {activeNavItem.title}
                     </h1>
                 </div>
+                {saveButton && <div className="flex items-center gap-2">{saveButton}</div>}
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, activeNavItem.title]);
+    }, [theme, setHeaderContent, activeNavItem.title, saveButton]);
 
     return (
         <div className="container mx-auto p-6 max-w-8xl">
             <div className="grid gap-8 md:grid-cols-[200px_1fr]">
                 <SettingsNav />
 
-                <div className="min-w-0">
+                <div className="min-w-0" key={location.pathname}>
                     <Routes>
                         <Route index element={<AccountSettings />} />
                         <Route path="preferences" element={<PreferencesSettings />} />
-                        <Route path="payments" element={<PaymentsSettings />} />
+                        <Route path="payments" element={<PaymentsSettings setSaveButton={setSaveButton} />} />
                     </Routes>
                 </div>
             </div>
