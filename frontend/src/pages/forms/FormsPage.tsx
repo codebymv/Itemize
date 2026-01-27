@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Form } from '@/types';
 import { getForms, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 
 export function FormsPage() {
@@ -43,7 +44,7 @@ export function FormsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -52,8 +53,9 @@ export function FormsPage() {
                         PAGES & FORMS | Forms
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search forms..."
@@ -63,7 +65,7 @@ export function FormsPage() {
                         />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9 hidden sm:flex">
+                        <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -78,8 +80,8 @@ export function FormsPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={handleCreateForm}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Form</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Form
                     </Button>
                 </div>
             </div>
@@ -190,9 +192,41 @@ export function FormsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Forms content */}
-            <Card>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search forms..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[100px] h-9">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                    onClick={handleCreateForm}
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Forms content */}
+                <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -272,8 +306,9 @@ export function FormsPage() {
                         </div>
                     )}
                 </CardContent>
-            </Card>
-        </div>
+                </Card>
+            </div>
+        </>
     );
 }
 

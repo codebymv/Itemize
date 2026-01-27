@@ -259,9 +259,16 @@ export function AppSidebar() {
     const location = useLocation();
     const navigate = useNavigate();
     const { theme } = useTheme();
-    const { state, toggleSidebar } = useSidebar();
+    const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
 
     const isCollapsed = state === 'collapsed';
+
+    // Auto-close sidebar on mobile when route changes
+    React.useEffect(() => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    }, [location.pathname, isMobile, setOpenMobile]);
 
     const handleNavigate = (path: string, disabled?: boolean) => {
         if (disabled) return;

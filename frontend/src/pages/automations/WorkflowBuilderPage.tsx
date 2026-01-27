@@ -65,6 +65,7 @@ import {
   getEmailTemplates,
   EmailTemplate,
 } from '@/services/automationsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Custom node component for workflow steps
 const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
@@ -196,7 +197,8 @@ export function WorkflowBuilderPage() {
             AUTOMATIONS | {isNewWorkflow ? 'New Workflow' : name || 'Workflow'}
           </h1>
         </div>
-        <div className="flex items-center gap-2 mr-4">
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 mr-4">
           {!isNewWorkflow && (
             <Button
               variant="outline"
@@ -214,8 +216,8 @@ export function WorkflowBuilderPage() {
             onClick={handleSave}
             disabled={saving}
           >
-            <Save className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save'}</span>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
@@ -533,8 +535,32 @@ export function WorkflowBuilderPage() {
   }
 
   return (
-    <div className="h-full flex">
-      {/* Left sidebar - Step palette */}
+    <>
+      <MobileControlsBar>
+        {!isNewWorkflow && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleActive}
+            disabled={saving}
+            className="flex-1"
+          >
+            {isActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+            {isActive ? 'Deactivate' : 'Activate'}
+          </Button>
+        )}
+        <Button
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </MobileControlsBar>
+      <div className="h-full flex">
+        {/* Left sidebar - Step palette */}
       <div className="w-64 border-r bg-muted/20 p-4 overflow-y-auto">
         <h3 className="font-medium mb-4">Workflow Settings</h3>
         
@@ -763,6 +789,7 @@ export function WorkflowBuilderPage() {
         </SheetContent>
       </Sheet>
     </div>
+    </>
   );
 }
 

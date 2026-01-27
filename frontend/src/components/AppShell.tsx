@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
@@ -54,11 +53,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
     const getUserInitials = (name: string, email: string): string => {
         if (name && name.trim()) {
-            const nameParts = name.trim().split(' ');
-            if (nameParts.length >= 2) {
-                return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-            }
-            return nameParts[0][0].toUpperCase();
+            return name.trim()[0].toUpperCase();
         }
         return email ? email[0].toUpperCase() : 'U';
     };
@@ -115,11 +110,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                        {/* Theme toggle */}
+                        {/* Theme toggle - only visible on desktop */}
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            className="hidden md:flex"
                         >
                             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                         </Button>
@@ -149,6 +145,24 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                             </div>
                                         </div>
                                     </DropdownMenuLabel>
+
+                                    {/* Theme toggle - only visible on mobile */}
+                                    <div className="md:hidden">
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                                            {theme === 'dark' ? (
+                                                <>
+                                                    <Sun className="mr-2 h-4 w-4" />
+                                                    <span className="flex-1">Light mode</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Moon className="mr-2 h-4 w-4" />
+                                                    <span className="flex-1">Dark mode</span>
+                                                </>
+                                            )}
+                                        </DropdownMenuItem>
+                                    </div>
                                     
                                     {/* Admin Dashboard Collapsible - Only shown for ADMIN users */}
                                     {currentUser?.role === 'ADMIN' && (() => {
@@ -224,9 +238,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
                 )}
 
-                {/* Main content - add bottom padding on mobile for bottom nav */}
+                {/* Main content */}
                 <main className={cn(
-                    "flex-1 overflow-x-hidden overflow-y-auto pb-16 md:pb-0",
+                    "flex-1 overflow-x-hidden overflow-y-auto",
                     location.pathname.startsWith('/help') 
                         ? "h-[calc(100vh-3.5rem-2.5rem)]" 
                         : "h-[calc(100vh-3.5rem)]"
@@ -234,9 +248,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </SidebarInset>
-            
-            {/* Mobile bottom navigation */}
-            <MobileBottomNav />
         </SidebarProvider>
     );
 }

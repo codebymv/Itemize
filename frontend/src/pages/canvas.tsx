@@ -71,6 +71,7 @@ import { logger } from '../lib/logger';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 import { useHeader } from '../contexts/HeaderContext';
+import { MobileControlsBar } from '../components/MobileControlsBar';
 
 // Debounce utility function
 function debounce<T extends (...args: any[]) => any>(
@@ -353,10 +354,11 @@ const CanvasPage: React.FC = () => {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 md:gap-4 ml-4 flex-1 justify-end mr-4">
           {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -397,7 +399,7 @@ const CanvasPage: React.FC = () => {
 
           {/* Category filter */}
           <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
-            <SelectTrigger className="w-[180px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[180px] h-9 bg-muted/20 border-border/50">
               <Filter className="h-4 w-4 mr-2 flex-shrink-0" />
               <SelectValue placeholder="Category">
                 {categoryFilter === 'all' ? 'All Categories' : categoryFilter}
@@ -412,8 +414,8 @@ const CanvasPage: React.FC = () => {
             </SelectContent>
           </Select>
 
-          {/* Desktop search */}
-          <div className="relative hidden sm:block w-full max-w-xs">
+          {/* Search */}
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search canvas..."
@@ -448,8 +450,8 @@ const CanvasPage: React.FC = () => {
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
           >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add</span>
+            <Plus className="h-4 w-4 mr-2" />
+            Add
           </Button>
         </div>
       </div>
@@ -1965,21 +1967,21 @@ const CanvasPage: React.FC = () => {
         }
       `}</style>
       <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-[calc(100vh-4rem)] overflow-hidden'}`}>
-        {/* Mobile Search Bar - shown when not in desktop view */}
-        {isMobileView && (
-          <div className="px-4 py-2 border-b bg-background space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search canvas..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 w-full"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              />
-            </div>
+        {/* Mobile Controls */}
+        <MobileControlsBar className="flex-col items-stretch gap-2 sticky top-0 z-10">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search canvas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 w-full"
+              style={{ fontFamily: '"Raleway", sans-serif' }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
             <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
-              <SelectTrigger className="w-full h-9">
+              <SelectTrigger className="flex-1 h-9">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -1992,8 +1994,37 @@ const CanvasPage: React.FC = () => {
                 <SelectItem value="vault">Vaults</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
+              <SelectTrigger className="flex-1 h-9">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {getUniqueCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category === 'all' ? 'All Categories' : category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              id="mobile-new-canvas-button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const buttonElement = document.getElementById('mobile-new-canvas-button');
+                if (buttonElement) {
+                  const rect = buttonElement.getBoundingClientRect();
+                  setButtonMenuPosition({ x: rect.left + rect.width / 2, y: rect.bottom + 5 });
+                  setShowButtonContextMenu(true);
+                }
+              }}
+              size="icon"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-        )}
+        </MobileControlsBar>
 
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">

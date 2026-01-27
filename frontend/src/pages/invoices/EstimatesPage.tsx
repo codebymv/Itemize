@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import api from '@/lib/api';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface Estimate {
     id: number;
@@ -157,8 +158,8 @@ export function EstimatesPage() {
     // Set header content (after stats is defined)
     useEffect(() => {
         setHeaderContent(
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
-                <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center justify-between w-full min-w-0">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -167,31 +168,29 @@ export function EstimatesPage() {
                         SALES & PAYMENTS | Estimates
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Desktop Tabs - in header */}
-                    <div className="hidden md:flex items-center">
-                        <Tabs value={activeTab} onValueChange={setActiveTab}>
-                            <TabsList className="h-9">
-                                <TabsTrigger value="all" className="text-xs">
-                                    All estimates
-                                    <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="draft" className="text-xs">
-                                    Draft
-                                    <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="sent" className="text-xs">
-                                    Sent
-                                    <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="accepted" className="text-xs">
-                                    Accepted
-                                    <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                    </div>
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="h-9">
+                            <TabsTrigger value="all" className="text-xs">
+                                All estimates
+                                <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="draft" className="text-xs">
+                                Draft
+                                <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="sent" className="text-xs">
+                                Sent
+                                <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="accepted" className="text-xs">
+                                Accepted
+                                <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search estimates..."
@@ -205,8 +204,8 @@ export function EstimatesPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={() => navigate('/invoices/estimates/new')}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Estimate</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Estimate
                     </Button>
                 </div>
             </div>
@@ -263,8 +262,42 @@ export function EstimatesPage() {
     };
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Summary Cards */}
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar className="flex-col items-stretch">
+                <div className="flex items-center gap-2 w-full">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search estimates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => navigate('/invoices/estimates/new')}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="w-full h-9">
+                        <TabsTrigger value="all" className="flex-1 text-xs">
+                            All
+                            <Badge variant="secondary" className="ml-1">{estimates.length}</Badge>
+                        </TabsTrigger>
+                        <TabsTrigger value="draft" className="flex-1 text-xs">Draft</TabsTrigger>
+                        <TabsTrigger value="sent" className="flex-1 text-xs">Sent</TabsTrigger>
+                        <TabsTrigger value="accepted" className="flex-1 text-xs">Accepted</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card>
                     <CardContent className="p-4">
@@ -322,21 +355,6 @@ export function EstimatesPage() {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
-
-            {/* Tabs - Mobile only */}
-            <div className="mb-4 md:hidden">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList>
-                        <TabsTrigger value="all">
-                            All estimates
-                            <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="draft">Draft</TabsTrigger>
-                        <TabsTrigger value="sent">Sent</TabsTrigger>
-                        <TabsTrigger value="accepted">Accepted</TabsTrigger>
-                    </TabsList>
-                </Tabs>
             </div>
 
             {/* Estimates List */}
@@ -433,6 +451,7 @@ export function EstimatesPage() {
                 </CardContent>
             </Card>
         </div>
+        </>
     );
 }
 

@@ -43,6 +43,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import {
     getProducts,
     createProduct,
@@ -96,7 +97,7 @@ export function ProductsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <Package className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -105,9 +106,9 @@ export function ProductsPage() {
                         SALES & PAYMENTS | Products
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Show inactive toggle - Desktop */}
-                    <div className="hidden md:flex items-center gap-2">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="flex items-center gap-2">
                         <Switch
                             id="show-inactive-header"
                             checked={showInactive}
@@ -117,7 +118,7 @@ export function ProductsPage() {
                             Show inactive
                         </Label>
                     </div>
-                    <div className="relative hidden md:block w-full max-w-xs">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search products..."
@@ -131,8 +132,8 @@ export function ProductsPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={() => openCreateDialog()}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Add Product</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Product
                     </Button>
                 </div>
             </div>
@@ -242,30 +243,46 @@ export function ProductsPage() {
     );
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Mobile controls + product count */}
-            <div className="flex items-center justify-between mb-6">
-                {/* Show inactive toggle - Mobile only */}
-                <div className="flex items-center gap-4 md:hidden">
-                    <div className="flex items-center gap-2">
-                        <Switch
-                            id="show-inactive"
-                            checked={showInactive}
-                            onCheckedChange={setShowInactive}
-                        />
-                        <Label htmlFor="show-inactive" className="text-sm text-muted-foreground">
-                            Show inactive
-                        </Label>
-                    </div>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search products..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                    />
                 </div>
-                {/* Desktop spacer */}
-                <div className="hidden md:block" />
-                <p className="text-sm text-muted-foreground">
-                    {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
-                </p>
-            </div>
+                <div className="flex items-center gap-2">
+                    <Switch
+                        id="show-inactive-mobile"
+                        checked={showInactive}
+                        onCheckedChange={setShowInactive}
+                    />
+                    <Label htmlFor="show-inactive-mobile" className="text-sm text-muted-foreground whitespace-nowrap">
+                        Inactive
+                    </Label>
+                </div>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                    onClick={() => openCreateDialog()}
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </MobileControlsBar>
 
-            <Card>
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Product count */}
+                <div className="flex items-center justify-end mb-6">
+                    <p className="text-sm text-muted-foreground">
+                        {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
+
+                <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 space-y-4">
@@ -482,6 +499,7 @@ export function ProductsPage() {
                 </DialogContent>
             </Dialog>
         </div>
+        </>
     );
 }
 

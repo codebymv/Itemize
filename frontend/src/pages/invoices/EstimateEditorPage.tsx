@@ -32,6 +32,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization, getContacts } from '@/services/contactsApi';
 import { getProducts, Product } from '@/services/invoicesApi';
 import api from '@/lib/api';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface LineItem {
     id: string;
@@ -106,7 +107,8 @@ export function EstimateEditorPage() {
                         SALES & PAYMENTS | {isNew ? 'New Estimate' : 'Estimate'}
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 mr-4">
                     <Button
                         variant="outline"
                         size="sm"
@@ -379,9 +381,45 @@ export function EstimateEditorPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-4xl">
-            <div className="space-y-6">
-                {/* Customer Details */}
+        <>
+            <MobileControlsBar>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving || lineItems.filter(i => i.name).length === 0}
+                    className="flex-1"
+                >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save'}
+                </Button>
+                {!isNew && status === 'draft' && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSendEstimate}
+                        disabled={saving}
+                        className="flex-1"
+                    >
+                        <Send className="h-4 w-4 mr-2" />
+                        Send
+                    </Button>
+                )}
+                {!isNew && ['sent', 'accepted'].includes(status) && (
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                        onClick={handleConvertToInvoice}
+                        disabled={saving}
+                    >
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        Convert
+                    </Button>
+                )}
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-4xl">
+                <div className="space-y-6">
+                    {/* Customer Details */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -656,6 +694,7 @@ export function EstimateEditorPage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }
 

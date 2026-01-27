@@ -81,6 +81,7 @@ import {
   duplicateWorkflow,
   Workflow 
 } from '@/services/automationsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 const TRIGGER_TYPE_LABELS: Record<string, string> = {
   contact_added: 'Contact Added',
@@ -131,9 +132,10 @@ export function AutomationsPage() {
             AUTOMATIONS | All
           </h1>
         </div>
-        <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
           {/* Desktop search */}
-          <div className="relative hidden md:block w-full max-w-xs">
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search workflows..."
@@ -145,7 +147,7 @@ export function AutomationsPage() {
           </div>
           {/* Trigger filter */}
           <Select value={triggerFilter} onValueChange={setTriggerFilter}>
-            <SelectTrigger className="w-[150px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[150px] h-9 bg-muted/20 border-border/50">
               <Zap className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Trigger" />
             </SelectTrigger>
@@ -160,7 +162,7 @@ export function AutomationsPage() {
           </Select>
           {/* Status filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -175,8 +177,8 @@ export function AutomationsPage() {
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => navigate('/automations/new')}
           >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Create Workflow</span>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Workflow
           </Button>
         </div>
       </div>
@@ -315,21 +317,20 @@ export function AutomationsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Mobile controls */}
-      <div className="sm:hidden flex flex-col gap-3 mb-4">
-        <div className="relative">
+    <>
+      <MobileControlsBar className="flex-col items-stretch">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search workflows..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9"
           />
         </div>
         <div className="flex items-center gap-2">
           <Select value={triggerFilter} onValueChange={setTriggerFilter}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Trigger" />
             </SelectTrigger>
             <SelectContent>
@@ -340,7 +341,7 @@ export function AutomationsPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-[100px] h-9">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -349,10 +350,17 @@ export function AutomationsPage() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            size="icon"
+            className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+            onClick={() => navigate('/automations/new')}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
-      </div>
-
-      {/* Stats cards */}
+      </MobileControlsBar>
+      <div className="container mx-auto p-6 max-w-7xl">
+        {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-5 mb-6">
         {loading ? (
           <>
@@ -544,6 +552,7 @@ export function AutomationsPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
 

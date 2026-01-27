@@ -58,6 +58,7 @@ import {
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -344,8 +345,17 @@ export function ContactDetailPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl">
-      {/* Contact profile card */}
+    <>
+      <MobileControlsBar>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full">
+            <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
+            <TabsTrigger value="content" className="flex-1">Related Content</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </MobileControlsBar>
+      <div className="container mx-auto p-6 max-w-5xl">
+        {/* Contact profile card */}
       <div className="flex items-center gap-4 mb-6">
         <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-medium text-blue-700 dark:text-blue-300">
           {getInitials()}
@@ -674,6 +684,7 @@ export function ContactDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }
 

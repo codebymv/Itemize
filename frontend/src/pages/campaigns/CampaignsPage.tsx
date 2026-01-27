@@ -26,6 +26,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getCampaigns, deleteCampaign, duplicateCampaign, sendCampaign, pauseCampaign, resumeCampaign } from '@/services/campaignsApi';
 import { CreateCampaignModal } from './CreateCampaignModal';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface Campaign {
     id: number;
@@ -58,7 +59,7 @@ export function CampaignsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -67,8 +68,9 @@ export function CampaignsPage() {
                         CAMPAIGNS | All
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search campaigns..."
@@ -78,7 +80,7 @@ export function CampaignsPage() {
                         />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9 hidden sm:flex">
+                        <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -94,8 +96,8 @@ export function CampaignsPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={() => setShowCreateModal(true)}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Campaign</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Campaign
                     </Button>
                 </div>
             </div>
@@ -201,8 +203,41 @@ export function CampaignsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            <Card>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search campaigns..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[100px] h-9">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="sending">Sending</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                    onClick={() => setShowCreateModal(true)}
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 space-y-4">
@@ -288,7 +323,8 @@ export function CampaignsPage() {
                     }}
                 />
             )}
-        </div>
+            </div>
+        </>
     );
 }
 

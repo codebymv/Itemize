@@ -6,6 +6,7 @@ import {
     Search,
     Receipt,
     MoreHorizontal,
+    MoreVertical,
     Trash2,
     Send,
     Download,
@@ -61,6 +62,8 @@ import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
 import api from '@/lib/api';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { cn } from '@/lib/utils';
 
 interface Invoice {
     id: number;
@@ -506,8 +509,8 @@ export function InvoicesPage() {
     // Set header content (must be after stats is defined)
     useEffect(() => {
         setHeaderContent(
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
-                <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center justify-between w-full min-w-0">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -516,33 +519,31 @@ export function InvoicesPage() {
                         SALES & PAYMENTS | Invoices
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Desktop Tabs - in header */}
-                    <div className="hidden md:flex items-center">
-                        <Tabs value={activeTab} onValueChange={setActiveTab}>
-                            <TabsList className="h-9">
-                                <TabsTrigger value="all" className="text-xs">
-                                    All invoices
-                                    <Badge variant="secondary" className="ml-2">{invoices.length}</Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="unpaid" className="text-xs">
-                                    Unpaid
-                                    <Badge variant="secondary" className="ml-2">
-                                        {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
-                                    </Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="draft" className="text-xs">
-                                    Draft
-                                    <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="paid" className="text-xs">
-                                    Paid
-                                    <Badge variant="secondary" className="ml-2">{stats.paidCount}</Badge>
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                    </div>
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="h-9">
+                            <TabsTrigger value="all" className="text-xs">
+                                All invoices
+                                <Badge variant="secondary" className="ml-2">{invoices.length}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="unpaid" className="text-xs">
+                                Unpaid
+                                <Badge variant="secondary" className="ml-2">
+                                    {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
+                                </Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="draft" className="text-xs">
+                                Draft
+                                <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="paid" className="text-xs">
+                                Paid
+                                <Badge variant="secondary" className="ml-2">{stats.paidCount}</Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search invoices..."
@@ -556,8 +557,8 @@ export function InvoicesPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={handleCreateInvoice}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Invoice</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Invoice
                     </Button>
                 </div>
             </div>
@@ -650,8 +651,53 @@ export function InvoicesPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Summary Cards */}
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar className="flex-col items-stretch">
+                <div className="flex items-center gap-2 w-full">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search invoices..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={handleCreateInvoice}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="w-full h-9">
+                        <TabsTrigger value="all" className="flex-1 text-xs">
+                            All
+                            <Badge variant="secondary" className="ml-1">{invoices.length}</Badge>
+                        </TabsTrigger>
+                        <TabsTrigger value="unpaid" className="flex-1 text-xs">
+                            Unpaid
+                            <Badge variant="secondary" className="ml-1">
+                                {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
+                            </Badge>
+                        </TabsTrigger>
+                        <TabsTrigger value="draft" className="flex-1 text-xs">
+                            Draft
+                            <Badge variant="secondary" className="ml-1">{stats.draftCount}</Badge>
+                        </TabsTrigger>
+                        <TabsTrigger value="paid" className="flex-1 text-xs">
+                            Paid
+                            <Badge variant="secondary" className="ml-1">{stats.paidCount}</Badge>
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card>
                     <CardContent className="p-4">
@@ -711,32 +757,6 @@ export function InvoicesPage() {
                 </Card>
             </div>
 
-            {/* Tabs - Mobile only */}
-            <div className="mb-4 md:hidden">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList>
-                        <TabsTrigger value="all">
-                            All invoices
-                            <Badge variant="secondary" className="ml-2">{invoices.length}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="unpaid">
-                            Unpaid
-                            <Badge variant="secondary" className="ml-2">
-                                {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
-                            </Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="draft">
-                            Draft
-                            <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="paid">
-                            Paid
-                            <Badge variant="secondary" className="ml-2">{stats.paidCount}</Badge>
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
-            </div>
-
             {/* Invoice List */}
             <Card>
                 <CardContent className="p-0">
@@ -767,61 +787,51 @@ export function InvoicesPage() {
                         <div className="divide-y">
                             {filteredInvoices.map((invoice) => {
                                 const isExpanded = expandedInvoiceId === invoice.id;
+                                const effectiveStatus = isOverdue(invoice) ? 'overdue' : invoice.status;
                                 return (
                                     <div key={invoice.id}>
-                                        {/* Invoice Row */}
+                                        {/* Invoice Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(invoice.id, e)}
                                         >
+                                            {/* Header Row: Icon + Invoice # on left, Amount + Chevron + Menu on right */}
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    {/* Expand/Collapse Chevron */}
-                                                    <div className="w-6 h-6 flex items-center justify-center text-muted-foreground">
-                                                        {isExpanded ? (
-                                                            <ChevronDown className="h-4 w-4" />
-                                                        ) : (
-                                                            <ChevronRight className="h-4 w-4" />
-                                                        )}
+                                                {/* Left Side: Status Icon + Invoice Number */}
+                                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                    {/* Status Icon */}
+                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getStatusIconBg(effectiveStatus)}`}>
+                                                        {getStatusIcon(effectiveStatus)}
                                                     </div>
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusIconBg(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
-                                                        {getStatusIcon(isOverdue(invoice) ? 'overdue' : invoice.status)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <p className="font-medium">{invoice.invoice_number}</p>
-                                                            <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(isOverdue(invoice) ? 'overdue' : invoice.status)}`}>
-                                                                {(isOverdue(invoice) ? 'overdue' : invoice.status).charAt(0).toUpperCase() + (isOverdue(invoice) ? 'overdue' : invoice.status).slice(1)}
-                                                            </Badge>
-                                                            {invoice.is_recurring_source && (
-                                                                <>
-                                                                    <span className="text-muted-foreground">|</span>
-                                                                    <p className="text-xs text-muted-foreground">Recurring</p>
-                                                                </>
-                                                            )}
-                                                            {invoice.recurring_template_id && (
-                                                                <>
-                                                                    <span className="text-muted-foreground">|</span>
-                                                                    <p className="text-xs text-muted-foreground">Auto-generated</p>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-sm text-muted-foreground">{getContactName(invoice)}</p>
-                                                    </div>
+                                                    {/* Invoice Number */}
+                                                    <p className="font-medium text-sm md:text-base">{invoice.invoice_number}</p>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="text-right">
-                                                        <p className="font-medium">{formatCurrency(invoice.total)}</p>
-                                                        {(invoice.amount_due > 0 && invoice.status !== 'draft') && (
-                                                            <p className="text-xs text-muted-foreground">
-                                                                Due: {formatCurrency(invoice.amount_due)}
-                                                            </p>
-                                                        )}
+                                                
+                                                {/* Right Side: Amount + Chevron + Menu */}
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <div className="text-right hidden sm:block">
+                                                        <p className="font-semibold text-sm md:text-base">{formatCurrency(invoice.total)}</p>
                                                     </div>
+                                                    {/* Chevron - Collapsible Trigger */}
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleExpand(invoice.id, e);
+                                                        }}
+                                                    >
+                                                        <ChevronDown className={cn(
+                                                            "h-4 w-4 transition-transform",
+                                                            isExpanded ? "" : "transform rotate-180"
+                                                        )} />
+                                                    </Button>
+                                                    {/* Dropdown Menu */}
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                            <Button variant="ghost" size="icon">
-                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <MoreVertical className="h-4 w-4" />
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -868,11 +878,42 @@ export function InvoicesPage() {
                                                     </DropdownMenu>
                                                 </div>
                                             </div>
-                                            <div className="ml-20 mt-2 text-xs text-muted-foreground">
-                                                Due {new Date(invoice.due_date).toLocaleDateString()}
+                                            
+                                            {/* Middle Row: Contact Name + Status Badge + Due Date (horizontally distributed) */}
+                                            <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                                {/* Contact Name */}
+                                                <span className="text-sm text-muted-foreground font-medium">{getContactName(invoice)}</span>
+                                                
+                                                {/* Status Badge */}
+                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(effectiveStatus)}`}>
+                                                    {effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1)}
+                                                </Badge>
+                                                
+                                                {/* Due Date */}
+                                                <span className="text-xs text-muted-foreground">
+                                                    Due {new Date(invoice.due_date).toLocaleDateString()}
+                                                </span>
+                                                
+                                                {/* Recurring badges - inline */}
+                                                {invoice.is_recurring_source && (
+                                                    <Badge variant="outline" className="text-xs">Recurring</Badge>
+                                                )}
+                                                {invoice.recurring_template_id && (
+                                                    <Badge variant="outline" className="text-xs">Auto-generated</Badge>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Footer Row: Amount (on mobile) + Overdue status + Amount due */}
+                                            <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                                <span className="sm:hidden font-semibold">{formatCurrency(invoice.total)}</span>
                                                 {isOverdue(invoice) && (
-                                                    <span className="ml-2 text-red-600">
-                                                        ({Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))} days overdue)
+                                                    <span className="text-red-600 font-medium">
+                                                        {Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))}d overdue
+                                                    </span>
+                                                )}
+                                                {(invoice.amount_due > 0 && invoice.status !== 'draft') && (
+                                                    <span className="text-muted-foreground">
+                                                        Due: {formatCurrency(invoice.amount_due)}
                                                     </span>
                                                 )}
                                             </div>
@@ -1112,6 +1153,7 @@ export function InvoicesPage() {
                 />
             )}
         </div>
+        </>
     );
 }
 

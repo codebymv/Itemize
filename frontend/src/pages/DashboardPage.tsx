@@ -22,6 +22,7 @@ import {
     ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import {
     Users,
     TrendingUp,
@@ -652,7 +653,7 @@ export function DashboardPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <LayoutDashboard className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -661,7 +662,8 @@ export function DashboardPage() {
                         DASHBOARD
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     {/* Date Range Selector */}
                     <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
                         <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
@@ -680,8 +682,8 @@ export function DashboardPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
                         onClick={() => navigate('/workspace')}
                     >
-                        <Map className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Go to Workspace</span>
+                        <Map className="h-4 w-4 mr-2" />
+                        Go to Workspace
                     </Button>
                 </div>
             </div>
@@ -720,9 +722,34 @@ export function DashboardPage() {
     ];
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Main Content Card */}
-            <Card>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
+                    <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
+                        <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {Object.entries(periodLabels).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                                {label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1"
+                    onClick={() => navigate('/workspace')}
+                >
+                    <Map className="h-4 w-4 mr-2" />
+                    Go to Workspace
+                </Button>
+            </MobileControlsBar>
+            
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Main Content Card */}
+                <Card>
                 <CardContent className="p-6">
                     {/* Welcome Section */}
                     <div className="mb-8">
@@ -1064,6 +1091,7 @@ export function DashboardPage() {
                 </CardContent>
             </Card>
         </div>
+        </>
     );
 }
 

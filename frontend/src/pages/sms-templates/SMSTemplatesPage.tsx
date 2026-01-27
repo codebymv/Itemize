@@ -18,6 +18,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getSmsTemplates as getSMSTemplates, deleteSmsTemplate as deleteSMSTemplate, duplicateSmsTemplate as duplicateSMSTemplate, sendTestSms as sendTestSMS } from '@/services/smsApi';
 import { CreateSMSTemplateModal } from './CreateSMSTemplateModal';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface SMSTemplate {
     id: number;
@@ -46,7 +47,7 @@ export function SMSTemplatesPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <MessageSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -55,8 +56,9 @@ export function SMSTemplatesPage() {
                         CAMPAIGNS | SMS Templates
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search templates..."
@@ -70,8 +72,8 @@ export function SMSTemplatesPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={() => setShowCreateModal(true)}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Template</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Template
                     </Button>
                 </div>
             </div>
@@ -160,8 +162,29 @@ export function SMSTemplatesPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            <Card>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search templates..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                    />
+                </div>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                    onClick={() => setShowCreateModal(true)}
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -240,7 +263,8 @@ export function SMSTemplatesPage() {
                     }}
                 />
             )}
-        </div>
+            </div>
+        </>
     );
 }
 

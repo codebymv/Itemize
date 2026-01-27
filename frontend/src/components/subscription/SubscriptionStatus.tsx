@@ -108,8 +108,7 @@ export function SubscriptionStatus() {
 
                 {isPaidPlan && subscription?.status !== 'canceled' && (
                     <Button
-                        variant="outline"
-                        className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={handleManageSubscription}
                     >
                         Manage Subscription

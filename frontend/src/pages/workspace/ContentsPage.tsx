@@ -54,6 +54,7 @@ import { List, Note, Whiteboard, Wireframe, Vault, Category } from '@/types';
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import { ContentCard } from './components/ContentCard';
 import { ContentModal } from './components/ContentModal';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -339,9 +340,10 @@ export function ContentsPage() {
             WORKSPACE | Contents
           </h1>
         </div>
-        <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          {/* View toggle - First (visual layout) */}
-          <div className="hidden sm:flex border rounded-md">
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+          {/* View toggle */}
+          <div className="flex border rounded-md">
             <Button
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="sm"
@@ -360,9 +362,9 @@ export function ContentsPage() {
             </Button>
           </div>
 
-          {/* Category filter - Desktop */}
+          {/* Category filter */}
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50 hidden md:flex">
+            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -373,9 +375,9 @@ export function ContentsPage() {
             </SelectContent>
           </Select>
 
-          {/* Sort dropdown - Desktop */}
+          {/* Sort dropdown */}
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50 hidden md:flex">
+            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -387,7 +389,7 @@ export function ContentsPage() {
 
           {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -402,7 +404,7 @@ export function ContentsPage() {
           </Select>
 
           {/* Search */}
-          <div className="relative hidden md:block w-full max-w-xs">
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search content..."
@@ -419,8 +421,8 @@ export function ContentsPage() {
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => navigate('/workspace')}
           >
-            <Map className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Go to Canvas</span>
+            <Map className="h-4 w-4 mr-2" />
+            Go to Canvas
           </Button>
         </div>
       </div>
@@ -456,21 +458,20 @@ export function ContentsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Mobile filters */}
-      <div className="sm:hidden flex flex-col gap-3 mb-4">
-        <div className="relative">
+    <>
+      <MobileControlsBar className="flex-col items-stretch gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search content..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9"
           />
         </div>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-9">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -481,6 +482,17 @@ export function ContentsPage() {
               <SelectItem value="whiteboard">Whiteboards</SelectItem>
               <SelectItem value="wireframe">Wireframes</SelectItem>
               <SelectItem value="vault">Vaults</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="flex-1 h-9">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {uniqueCategories.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <div className="flex border rounded-md">
@@ -502,39 +514,9 @@ export function ContentsPage() {
             </Button>
           </div>
         </div>
-      </div>
-
-      {/* Filter bar - Mobile only */}
-      <div className="flex items-center justify-between mb-6 md:hidden">
-        <div className="flex items-center gap-2">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[150px] h-9">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {uniqueCategories.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[150px] h-9">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="updated">Last Updated</SelectItem>
-              <SelectItem value="created">Date Created</SelectItem>
-              <SelectItem value="title">Title A-Z</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <span className="text-sm text-muted-foreground">
-          {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'}
-        </span>
-      </div>
-
-      {/* Item count - Desktop only */}
+      </MobileControlsBar>
+      <div className="container mx-auto p-6 max-w-7xl">
+        {/* Item count - Desktop only */}
       <div className="hidden md:flex justify-end mb-4">
         <span className="text-sm text-muted-foreground">
           {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'}
@@ -669,6 +651,7 @@ export function ContentsPage() {
         />
       )}
     </div>
+    </>
   );
 }
 

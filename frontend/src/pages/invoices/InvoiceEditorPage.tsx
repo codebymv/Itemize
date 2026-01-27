@@ -53,6 +53,7 @@ import {
 } from '@/services/invoicesApi';
 import { InvoicePreview } from './components/InvoicePreview';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface LineItem {
     id: string;
@@ -175,7 +176,8 @@ export function InvoiceEditorPage() {
                         SALES & PAYMENTS | {isNew ? 'New Invoice' : 'Invoice'}
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 mr-4">
                     <Button
                         variant="outline"
                         size="sm"
@@ -473,8 +475,41 @@ export function InvoiceEditorPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-5xl">
-            <div className="space-y-6">
+        <>
+            <MobileControlsBar>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPreview(true)}
+                    className="flex-1"
+                >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving || lineItems.filter(i => i.name).length === 0}
+                    className="flex-1"
+                >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save'}
+                </Button>
+                {!isNew && (
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                        onClick={() => setShowSendModal(true)}
+                        disabled={saving}
+                    >
+                        <Send className="h-4 w-4 mr-2" />
+                        Send
+                    </Button>
+                )}
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-5xl">
+                <div className="space-y-6">
                 {/* Business Address, Contact Details, Title, Summary, and Logo - Collapsible */}
                 <Collapsible open={businessSectionOpen} onOpenChange={setBusinessSectionOpen}>
                     <Card>
@@ -1150,6 +1185,7 @@ export function InvoiceEditorPage() {
                 business={businesses.find(b => b.id === selectedBusinessId)}
             />
         </div>
+        </>
     );
 }
 

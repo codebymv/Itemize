@@ -22,6 +22,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 import { getPipelines, getPipeline, createPipeline, moveDealToStage } from '@/services/pipelinesApi';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
 import { CreatePipelineModal } from './components/CreatePipelineModal';
@@ -45,7 +46,7 @@ export function PipelinesPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-2 ml-2 min-w-0">
           <Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
             className="text-xl font-semibold italic truncate"
@@ -54,8 +55,8 @@ export function PipelinesPage() {
             PIPELINES
           </h1>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-1 justify-end mr-4">
-          {/* Pipeline selector */}
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
           {pipelines.length > 0 && (
             <Select
               value={selectedPipelineId?.toString() || ''}
@@ -73,7 +74,6 @@ export function PipelinesPage() {
               </SelectContent>
             </Select>
           )}
-          {/* More options */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="h-9 w-9">
@@ -91,14 +91,13 @@ export function PipelinesPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {/* Add Deal Button */}
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => setShowCreateDealModal(true)}
           >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add Deal</span>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Deal
           </Button>
         </div>
       </div>
@@ -272,9 +271,55 @@ export function PipelinesPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Stats bar */}
-      {currentPipeline && (
+    <>
+      {/* Mobile Controls Bar */}
+      <MobileControlsBar>
+        {pipelines.length > 0 && (
+          <Select
+            value={selectedPipelineId?.toString() || ''}
+            onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
+          >
+            <SelectTrigger className="flex-1 h-9">
+              <SelectValue placeholder="Select pipeline" />
+            </SelectTrigger>
+            <SelectContent>
+              {pipelines.map((pipeline) => (
+                <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                  {pipeline.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-9 w-9">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Pipeline
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+              <Settings className="h-4 w-4 mr-2" />
+              Pipeline Settings
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+          onClick={() => setShowCreateDealModal(true)}
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </MobileControlsBar>
+
+      <div className="h-full flex flex-col">
+        {/* Stats bar */}
+        {currentPipeline && (
         <div className="px-6 py-3 border-b bg-muted/20">
           <div className="flex gap-6">
             <div className="flex items-center gap-2 text-sm">
@@ -362,7 +407,8 @@ export function PipelinesPage() {
           onCreated={handlePipelineCreated}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

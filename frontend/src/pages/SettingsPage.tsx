@@ -78,6 +78,7 @@ import {
     XCircle,
     Save,
 } from 'lucide-react';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Settings navigation items
 const settingsNav = [
@@ -1003,7 +1004,7 @@ export function SettingsPage() {
     // Set header content with icon and title including active tab
     useEffect(() => {
         setHeaderContent(
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
+            <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2 ml-2">
                     <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
@@ -1013,26 +1014,33 @@ export function SettingsPage() {
                         SETTINGS | {activeNavItem.title}
                     </h1>
                 </div>
-                {saveButton && <div className="flex items-center gap-2">{saveButton}</div>}
+                {saveButton && <div className="hidden md:flex items-center gap-2 mr-4">{saveButton}</div>}
             </div>
         );
         return () => setHeaderContent(null);
     }, [theme, setHeaderContent, activeNavItem.title, saveButton]);
 
     return (
-        <div className="container mx-auto p-6 max-w-8xl">
-            <div className="grid gap-8 md:grid-cols-[200px_1fr]">
-                <SettingsNav />
+        <>
+            {saveButton && (
+                <MobileControlsBar>
+                    <div className="flex-1">{saveButton}</div>
+                </MobileControlsBar>
+            )}
+            <div className="container mx-auto p-6 max-w-8xl">
+                <div className="grid gap-8 md:grid-cols-[200px_1fr]">
+                    <SettingsNav />
 
-                <div className="min-w-0" key={location.pathname}>
-                    <Routes>
-                        <Route index element={<AccountSettings />} />
-                        <Route path="preferences" element={<PreferencesSettings />} />
-                        <Route path="payments" element={<PaymentsSettings setSaveButton={setSaveButton} />} />
-                    </Routes>
+                    <div className="min-w-0" key={location.pathname}>
+                        <Routes>
+                            <Route index element={<AccountSettings />} />
+                            <Route path="preferences" element={<PreferencesSettings />} />
+                            <Route path="payments" element={<PaymentsSettings setSaveButton={setSaveButton} />} />
+                        </Routes>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
 

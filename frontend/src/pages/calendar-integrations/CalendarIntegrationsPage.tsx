@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { 
     getCalendarConnections, 
     disconnectCalendar, 
@@ -48,7 +49,7 @@ export function CalendarIntegrationsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <Link2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -57,14 +58,15 @@ export function CalendarIntegrationsPage() {
                         SCHEDULING | Integrations
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={handleConnectGoogle}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Connect Calendar</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Connect Calendar
                     </Button>
                 </div>
             </div>
@@ -151,10 +153,23 @@ export function CalendarIntegrationsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Connected Calendars</CardTitle>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light flex-1"
+                    onClick={handleConnectGoogle}
+                >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Connect Calendar
+                </Button>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Connected Calendars</CardTitle>
                     <CardDescription>Sync your external calendars to manage availability and bookings</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -221,8 +236,9 @@ export function CalendarIntegrationsPage() {
                         </div>
                     )}
                 </CardContent>
-            </Card>
-        </div>
+                </Card>
+            </div>
+        </>
     );
 }
 

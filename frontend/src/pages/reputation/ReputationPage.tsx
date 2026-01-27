@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Color helper functions for stat cards (matching dashboard/invoice page visual language)
 const getStatBadgeClasses = (theme: string) => {
@@ -114,8 +115,9 @@ export function ReputationPage() {
                         REPUTATION | Reviews
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search reviews..."
@@ -125,7 +127,7 @@ export function ReputationPage() {
                         />
                     </div>
                     <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                        <SelectTrigger className="w-[120px] h-9 hidden sm:flex">
+                        <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Rating" />
                         </SelectTrigger>
                         <SelectContent>
@@ -227,8 +229,33 @@ export function ReputationPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Analytics Summary */}
+        <>
+            <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search reviews..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50"
+                    />
+                </div>
+                <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                    <SelectTrigger className="w-[120px] h-9">
+                        <SelectValue placeholder="Rating" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Ratings</SelectItem>
+                        <SelectItem value="5">5 Stars</SelectItem>
+                        <SelectItem value="4">4 Stars</SelectItem>
+                        <SelectItem value="3">3 Stars</SelectItem>
+                        <SelectItem value="2">2 Stars</SelectItem>
+                        <SelectItem value="1">1 Star</SelectItem>
+                    </SelectContent>
+                </Select>
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Analytics Summary */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 {loading ? (
                     <>
@@ -392,6 +419,7 @@ export function ReputationPage() {
                 </CardContent>
             </Card>
         </div>
+        </>
     );
 }
 

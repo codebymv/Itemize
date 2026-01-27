@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Booking } from '@/types';
 import { getBookings, cancelBooking, BookingsQueryParams } from '@/services/calendarsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 
 export function BookingsPage() {
@@ -50,7 +51,7 @@ export function BookingsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -59,9 +60,9 @@ export function BookingsPage() {
                         SCHEDULING | Bookings
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Search */}
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search bookings..."
@@ -71,9 +72,8 @@ export function BookingsPage() {
                             style={{ fontFamily: '"Raleway", sans-serif' }}
                         />
                     </div>
-                    {/* Status filter */}
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -195,22 +195,36 @@ export function BookingsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Mobile search */}
-            <div className="sm:hidden flex flex-col gap-3 mb-4">
-                <div className="relative">
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar>
+                <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search..."
+                        placeholder="Search bookings..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
+                        className="pl-9 h-9 w-full"
                     />
                 </div>
-            </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[120px] h-9">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="no_show">No Show</SelectItem>
+                    </SelectContent>
+                </Select>
+            </MobileControlsBar>
 
-            {/* Bookings list */}
-            <Card>
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Bookings list */}
+                <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 space-y-4">
@@ -326,8 +340,9 @@ export function BookingsPage() {
                         </Button>
                     </div>
                 </div>
-            )}
-        </div>
+                )}
+            </div>
+        </>
     );
 }
 

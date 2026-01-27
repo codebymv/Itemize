@@ -18,6 +18,7 @@ import {
     ExternalLink,
     Download,
     Copy,
+    MoreVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import api from '@/lib/api';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { cn } from '@/lib/utils';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Payment {
     id: number;
@@ -113,7 +122,7 @@ export function PaymentsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0">
                     <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
                         className="text-xl font-semibold italic truncate"
@@ -122,10 +131,10 @@ export function PaymentsPage() {
                         SALES & PAYMENTS | Payments
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Filters first */}
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <Select value={methodFilter} onValueChange={setMethodFilter}>
-                        <SelectTrigger className="w-[130px] h-9 hidden sm:flex">
+                        <SelectTrigger className="w-[130px] h-9">
                             <SelectValue placeholder="Method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -137,7 +146,7 @@ export function PaymentsPage() {
                         </SelectContent>
                     </Select>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9 hidden sm:flex">
+                        <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -148,8 +157,7 @@ export function PaymentsPage() {
                             <SelectItem value="refunded">Refunded</SelectItem>
                         </SelectContent>
                     </Select>
-                    {/* Search after filters */}
-                    <div className="relative hidden md:block w-full max-w-xs">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search payments..."
@@ -251,12 +259,23 @@ export function PaymentsPage() {
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'succeeded': return <CheckCircle className="h-5 w-5 text-green-600" />;
-            case 'failed': return <XCircle className="h-5 w-5 text-red-600" />;
-            case 'pending': return <Clock className="h-5 w-5 text-orange-600" />;
-            case 'processing': return <Clock className="h-5 w-5 text-blue-600" />;
-            case 'refunded': return <DollarSign className="h-5 w-5 text-purple-600" />;
-            default: return <DollarSign className="h-5 w-5 text-gray-400" />;
+            case 'succeeded': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
+            case 'failed': return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+            case 'pending': return <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
+            case 'processing': return <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
+            case 'refunded': return <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />;
+            default: return <DollarSign className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
+        }
+    };
+
+    const getStatusIconBg = (status: string) => {
+        switch (status) {
+            case 'succeeded': return 'bg-green-100 dark:bg-green-900';
+            case 'failed': return 'bg-red-100 dark:bg-red-900';
+            case 'pending': return 'bg-orange-100 dark:bg-orange-900';
+            case 'processing': return 'bg-blue-100 dark:bg-blue-900';
+            case 'refunded': return 'bg-purple-100 dark:bg-purple-900';
+            default: return 'bg-gray-100 dark:bg-gray-800';
         }
     };
 
@@ -294,10 +313,52 @@ export function PaymentsPage() {
     });
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
+        <>
+            {/* Mobile Controls Bar */}
+            <MobileControlsBar className="flex-col items-stretch">
+                <div className="flex items-center gap-2 w-full">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search payments..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 w-full">
+                    <Select value={methodFilter} onValueChange={setMethodFilter}>
+                        <SelectTrigger className="flex-1 h-9">
+                            <SelectValue placeholder="Method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Methods</SelectItem>
+                            <SelectItem value="card">Card</SelectItem>
+                            <SelectItem value="bank_transfer">Bank</SelectItem>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="check">Check</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="flex-1 h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="succeeded">Succeeded</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </MobileControlsBar>
+
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <Card>
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -386,51 +447,28 @@ export function PaymentsPage() {
                                 
                                 return (
                                     <div key={payment.id}>
-                                        {/* Payment Row */}
+                                        {/* Payment Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(payment.id, e)}
                                         >
+                                            {/* Header Row: Icon + Amount on left, Date + Chevron + Menu on right */}
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    {/* Expand/Collapse Chevron */}
-                                                    <div className="w-6 h-6 flex items-center justify-center text-muted-foreground">
-                                                        {isExpanded ? (
-                                                            <ChevronDown className="h-4 w-4" />
-                                                        ) : (
-                                                            <ChevronRight className="h-4 w-4" />
-                                                        )}
-                                                    </div>
-                                                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                                {/* Left Side: Status Icon + Amount */}
+                                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                    {/* Status Icon */}
+                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getStatusIconBg(payment.status)}`}>
                                                         {getStatusIcon(payment.status)}
                                                     </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <p className="font-medium">
-                                                                {formatCurrency(payment.amount, payment.currency)}
-                                                            </p>
-                                                            <Badge className={`text-xs ${getStatusBadge(payment.status)}`}>
-                                                                {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                                                            </Badge>
-                                                            <span className="text-muted-foreground">|</span>
-                                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                {PAYMENT_METHOD_ICONS[payment.payment_method]}
-                                                                {PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                                                            {payment.invoice_number && (
-                                                                <span className="flex items-center gap-1">
-                                                                    <Receipt className="h-3 w-3" />
-                                                                    {payment.invoice_number}
-                                                                </span>
-                                                            )}
-                                                            <span>{getContactName(payment)}</span>
-                                                        </div>
-                                                    </div>
+                                                    {/* Amount */}
+                                                    <p className="font-medium text-sm md:text-base">
+                                                        {formatCurrency(payment.amount, payment.currency)}
+                                                    </p>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="text-right">
+                                                
+                                                {/* Right Side: Date + Chevron + Menu */}
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <div className="text-right hidden sm:block">
                                                         <p className="text-sm text-muted-foreground">
                                                             {formatDateShort(payment.paid_at || payment.created_at)}
                                                         </p>
@@ -440,7 +478,82 @@ export function PaymentsPage() {
                                                             </p>
                                                         )}
                                                     </div>
+                                                    {/* Chevron - Collapsible Trigger */}
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleExpand(payment.id, e);
+                                                        }}
+                                                    >
+                                                        <ChevronDown className={cn(
+                                                            "h-4 w-4 transition-transform",
+                                                            isExpanded ? "" : "transform rotate-180"
+                                                        )} />
+                                                    </Button>
+                                                    {/* Dropdown Menu */}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                                            {payment.invoice_number && (
+                                                                <DropdownMenuItem 
+                                                                    onClick={() => navigate(`/invoices/${payment.invoice_id}`)}
+                                                                    className="group/menu"
+                                                                >
+                                                                    <Receipt className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                                    View Invoice
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuItem className="group/menu">
+                                                                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                                Download Receipt
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
+                                            </div>
+                                            
+                                            {/* Middle Row: Contact Name + Status Badge + Payment Method + Invoice # (horizontally distributed) */}
+                                            <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                                {/* Contact Name */}
+                                                <span className="text-sm text-muted-foreground font-medium">{getContactName(payment)}</span>
+                                                
+                                                {/* Status Badge */}
+                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(payment.status)}`}>
+                                                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                                </Badge>
+                                                
+                                                {/* Payment Method */}
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    {PAYMENT_METHOD_ICONS[payment.payment_method]}
+                                                    {PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method}
+                                                </span>
+                                                
+                                                {/* Invoice Number */}
+                                                {payment.invoice_number && (
+                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                        <Receipt className="h-3 w-3" />
+                                                        {payment.invoice_number}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Footer Row: Date (on mobile) + Card info */}
+                                            <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                                <span className="sm:hidden">
+                                                    {formatDateShort(payment.paid_at || payment.created_at)}
+                                                </span>
+                                                {payment.card_last4 && (
+                                                    <span>
+                                                        {payment.card_brand && <span className="capitalize">{payment.card_brand}</span>} •••• {payment.card_last4}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -601,8 +714,9 @@ export function PaymentsPage() {
                         </div>
                     )}
                 </CardContent>
-            </Card>
-        </div>
+                </Card>
+            </div>
+        </>
     );
 }
 

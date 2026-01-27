@@ -65,6 +65,7 @@ import {
     uploadBusinessLogo,
     deleteBusinessLogo,
 } from '@/services/invoicesApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Settings navigation items
 const settingsNav = [
@@ -149,15 +150,16 @@ export function PaymentSettingsPage() {
                         SALES & PAYMENTS | Settings
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={handleSaveSettings}
                         disabled={saving}
                     >
-                        <Save className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Settings'}</span>
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save Settings'}
                     </Button>
                 </div>
             </div>
@@ -689,10 +691,22 @@ export function PaymentSettingsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-8xl">
-            <div className="grid gap-8 md:grid-cols-[200px_1fr]">
-                {/* Sidebar Navigation */}
-                <SettingsNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        <>
+            <MobileControlsBar>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                    onClick={handleSaveSettings}
+                    disabled={saving}
+                >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save Settings'}
+                </Button>
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-8xl">
+                <div className="grid gap-8 md:grid-cols-[200px_1fr]">
+                    {/* Sidebar Navigation */}
+                    <SettingsNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
                 {/* Content Area */}
                 <div className="min-w-0">
@@ -894,6 +908,7 @@ export function PaymentSettingsPage() {
                 </AlertDialogContent>
             </AlertDialog>
         </div>
+        </>
     );
 }
 

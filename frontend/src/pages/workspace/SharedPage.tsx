@@ -62,6 +62,7 @@ import {
   unshareVault as apiUnshareVault,
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -393,10 +394,11 @@ export function SharedPage() {
             WORKSPACE | Shared
           </h1>
         </div>
-        <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          {/* Sort dropdown - Desktop */}
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+          {/* Sort dropdown */}
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden md:flex">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -407,7 +409,7 @@ export function SharedPage() {
 
           {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -421,8 +423,8 @@ export function SharedPage() {
             </SelectContent>
           </Select>
 
-          {/* Search - Desktop */}
-          <div className="relative hidden md:block w-full max-w-xs">
+          {/* Search */}
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search shared..."
@@ -438,8 +440,8 @@ export function SharedPage() {
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => navigate('/workspace')}
           >
-            <Map className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Go to Canvas</span>
+            <Map className="h-4 w-4 mr-2" />
+            Go to Canvas
           </Button>
         </div>
       </div>
@@ -448,21 +450,20 @@ export function SharedPage() {
   }, [theme, navigate, setHeaderContent, typeFilter, searchQuery, sortBy]);
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Mobile filters */}
-      <div className="md:hidden flex flex-col gap-3 mb-4">
-        <div className="relative">
+    <>
+      <MobileControlsBar className="flex-col items-stretch gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search shared..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9"
           />
         </div>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-9">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -476,7 +477,7 @@ export function SharedPage() {
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -485,9 +486,9 @@ export function SharedPage() {
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      {/* Summary */}
+      </MobileControlsBar>
+      <div className="container mx-auto p-6 max-w-7xl">
+        {/* Summary */}
       <div className="flex items-center justify-end mb-6">
         <span className="text-sm text-muted-foreground">
           {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
@@ -645,6 +646,7 @@ export function SharedPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }
 

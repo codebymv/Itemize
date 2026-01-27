@@ -72,7 +72,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   return (
     <div 
-      className="context-menu min-w-[180px] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      className="context-menu min-w-[180px] overflow-hidden rounded-md border border-sidebar-border bg-sidebar p-1 text-sidebar-foreground shadow-md"
       style={{
         position: isFromButton ? 'fixed' : 'absolute',
         ...positionStyle,
@@ -81,7 +81,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       <button 
-        className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+        className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left"
         onClick={(e) => handleClickItem(e, onAddList)}
         style={{ fontFamily: '"Raleway", sans-serif' }}
       >
@@ -90,7 +90,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       </button>
       {onAddNote && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left"
           onClick={(e) => handleClickItem(e, onAddNote)}
           style={{ fontFamily: '"Raleway", sans-serif' }}
         >
@@ -100,7 +100,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       )}
       {onAddWhiteboard && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left"
           onClick={(e) => handleClickItem(e, onAddWhiteboard)}
           style={{ fontFamily: '"Raleway", sans-serif' }}
         >
@@ -110,7 +110,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       )}
       {onAddWireframe && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left"
           onClick={(e) => handleClickItem(e, onAddWireframe)}
           style={{ fontFamily: '"Raleway", sans-serif' }}
         >
@@ -120,7 +120,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       )}
       {onAddVault && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground bg-transparent border-none text-left"
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left"
           onClick={(e) => handleClickItem(e, onAddVault)}
           style={{ fontFamily: '"Raleway", sans-serif' }}
         >

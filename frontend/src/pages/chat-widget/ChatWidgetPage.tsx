@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getChatWidget, createChatWidget, updateChatWidget, getEmbedCode } from '@/services/chatWidgetApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface LocalChatWidgetConfig {
     id?: number;
@@ -68,14 +69,15 @@ export function ChatWidgetPage() {
                             </TabsList>
                         </Tabs>
                     </div>
+                    {/* Desktop save button */}
                     <Button
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light hidden md:flex"
                         onClick={handleSave}
                         disabled={saving}
                     >
-                        <Save className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>
             </div>
@@ -207,20 +209,33 @@ export function ChatWidgetPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-4xl">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-                {/* Mobile only TabsList */}
-                <TabsList className="mb-6 md:hidden">
-                    <TabsTrigger value="settings">
-                        <Settings className="h-4 w-4 mr-2" />Settings
-                    </TabsTrigger>
-                    <TabsTrigger value="appearance">
-                        <Palette className="h-4 w-4 mr-2" />Appearance
-                    </TabsTrigger>
-                    <TabsTrigger value="install">
-                        <Code className="h-4 w-4 mr-2" />Install
-                    </TabsTrigger>
-                </TabsList>
+        <>
+            <MobileControlsBar className="flex-col items-stretch gap-3">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="w-full">
+                        <TabsTrigger value="settings" className="flex-1">
+                            <Settings className="h-4 w-4 mr-1" />Settings
+                        </TabsTrigger>
+                        <TabsTrigger value="appearance" className="flex-1">
+                            <Palette className="h-4 w-4 mr-1" />Style
+                        </TabsTrigger>
+                        <TabsTrigger value="install" className="flex-1">
+                            <Code className="h-4 w-4 mr-1" />Install
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+                    onClick={handleSave}
+                    disabled={saving}
+                >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-4xl">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
 
                 <TabsContent value="settings">
                     <Card>
@@ -346,6 +361,7 @@ export function ChatWidgetPage() {
                 </TabsContent>
             </Tabs>
         </div>
+        </>
     );
 }
 

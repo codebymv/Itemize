@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
 import { getPages, updatePage, deletePage, duplicatePage, createPage } from '@/services/pagesApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 interface LandingPage {
     id: number;
@@ -63,8 +64,9 @@ export function LandingPagesPage() {
                         PAGES & FORMS | Landing Pages
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative hidden md:block w-full max-w-xs">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search pages..."
@@ -74,7 +76,7 @@ export function LandingPagesPage() {
                         />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9 hidden sm:flex">
+                        <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -89,8 +91,8 @@ export function LandingPagesPage() {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={handleCreatePage}
                     >
-                        <Plus className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">New Page</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Page
                     </Button>
                 </div>
             </div>
@@ -216,8 +218,38 @@ export function LandingPagesPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            <Card>
+        <>
+            <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search pages..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50"
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[100px] h-9">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button
+                    size="icon"
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                    onClick={handleCreatePage}
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-7xl">
+                <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -299,6 +331,7 @@ export function LandingPagesPage() {
                 </CardContent>
             </Card>
         </div>
+        </>
     );
 }
 

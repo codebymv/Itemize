@@ -27,6 +27,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, ensureDefaultOrganization, exportContactsCSV } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { ContactCardList } from './components/ContactCard';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
@@ -63,7 +64,7 @@ export function ContactsPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-2 ml-2 min-w-0">
           <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
             className="text-xl font-semibold italic truncate"
@@ -72,9 +73,9 @@ export function ContactsPage() {
             CONTACTS
           </h1>
         </div>
-        <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          {/* Desktop search */}
-          <div className="relative hidden md:block w-full max-w-xs">
+        {/* Desktop-only controls */}
+        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search contacts..."
@@ -84,9 +85,8 @@ export function ContactsPage() {
               style={{ fontFamily: '"Raleway", sans-serif' }}
             />
           </div>
-          {/* Status filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50 hidden sm:flex">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -97,10 +97,9 @@ export function ContactsPage() {
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
-          {/* Actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9 hidden sm:flex">
+              <Button variant="outline" size="icon" className="h-9 w-9">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -115,14 +114,13 @@ export function ContactsPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {/* Add Contact Button */}
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => setShowCreateModal(true)}
           >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add Contact</span>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
           </Button>
         </div>
       </div>
@@ -285,21 +283,30 @@ export function ContactsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Mobile controls (hidden on desktop since controls are in header) */}
-      <div className="sm:hidden flex flex-col gap-3 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search contacts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+    <>
+      {/* Mobile Controls Bar */}
+      <MobileControlsBar className="flex-col items-stretch">
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 w-full"
+            />
+          </div>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-9">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -312,7 +319,7 @@ export function ContactsPage() {
           </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="h-9 w-9">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -328,9 +335,10 @@ export function ContactsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </MobileControlsBar>
 
-      {/* Bulk actions */}
+      <div className="container mx-auto p-6 max-w-7xl">
+        {/* Bulk actions */}
       {selectedContacts.length > 0 && (
         <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
           <CardContent className="py-3">
@@ -463,7 +471,8 @@ export function ContactsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

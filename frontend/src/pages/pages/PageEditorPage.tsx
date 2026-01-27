@@ -85,6 +85,7 @@ import {
     SectionType,
     SECTION_TEMPLATES,
 } from '@/services/pagesApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Icon mapping for section types
 const SECTION_ICONS: Record<SectionType, React.ReactNode> = {
@@ -198,7 +199,8 @@ export function PageEditorPage() {
                         </Badge>
                     )}
                 </div>
-                <div className="flex items-center gap-2 mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 mr-4">
                     {page?.status === 'published' && (
                         <Button variant="outline" size="sm" onClick={() => window.open(`/p/${page.slug}`, '_blank')}>
                             <ExternalLink className="h-4 w-4 mr-2" />
@@ -352,9 +354,27 @@ export function PageEditorPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Content - Sections */}
+        <>
+            <MobileControlsBar>
+                {page?.status === 'published' && (
+                    <Button variant="outline" size="sm" onClick={() => window.open(`/p/${page.slug}`, '_blank')} className="flex-1">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Preview
+                    </Button>
+                )}
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                    onClick={handleSave}
+                    disabled={saving}
+                >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save'}
+                </Button>
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-7xl">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Content - Sections */}
                 <div className="lg:col-span-2 space-y-4">
                     <Card>
                         <CardHeader className="pb-3">
@@ -580,6 +600,7 @@ export function PageEditorPage() {
                 </DialogContent>
             </Dialog>
         </div>
+        </>
     );
 }
 

@@ -35,6 +35,7 @@ import {
     ConversationsQueryParams,
 } from '@/services/conversationsApi';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 export function InboxPage() {
     const { toast } = useToast();
@@ -62,7 +63,8 @@ export function InboxPage() {
                         COMMUNICATIONS | Inbox
                     </h1>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                {/* Desktop-only controls */}
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
@@ -189,8 +191,22 @@ export function InboxPage() {
     };
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl h-[calc(100vh-64px)]">
-            <Card className="h-full overflow-hidden">
+        <>
+            <MobileControlsBar>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full h-9">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                        <SelectItem value="snoozed">Snoozed</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
+                    </SelectContent>
+                </Select>
+            </MobileControlsBar>
+            <div className="container mx-auto p-6 max-w-7xl h-[calc(100vh-64px)]">
+                <Card className="h-full overflow-hidden">
                 <div className="flex h-full">
                     {/* Conversations list */}
                     <div className="w-80 border-r flex flex-col">
@@ -381,6 +397,7 @@ export function InboxPage() {
                 </div>
             </Card>
         </div>
+        </>
     );
 }
 
