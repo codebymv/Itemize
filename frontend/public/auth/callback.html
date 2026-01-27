@@ -29,52 +29,68 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include', // Required for httpOnly cookies
                 body: JSON.stringify({ code })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.token) {
-                    // Store tokens in localStorage
-                    localStorage.setItem('auth_token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                // Backend now uses httpOnly cookies, so we just need user data
+                if (data.user) {
+                    // Store user data in localStorage (token is in httpOnly cookie)
+                    const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
+                    localStorage.setItem('itemize_user', JSON.stringify(data.user));
+                    localStorage.setItem('itemize_expiry', expiryTime.toString());
                     
-                    if (data.refreshToken) {
-                        localStorage.setItem('refresh_token', data.refreshToken);
+                    // Notify parent window of success if popup
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_SUCCESS',
+                            user: data.user
+                        }, window.location.origin);
+                        window.close();
+                    } else {
+                        // Mobile flow: redirect to dashboard
+                        window.location.href = '/dashboard';
                     }
-                    
-                    if (data.expiresIn) {
-                        const expiryTime = Date.now() + (data.expiresIn * 1000);
-                        localStorage.setItem('token_expiry', expiryTime.toString());
-                    }
-                    
-                    // Notify parent window of success
-                    window.opener?.postMessage({
-                        type: 'GOOGLE_AUTH_SUCCESS'
-                    }, window.location.origin);
                 } else {
                     // Notify parent window of error
-                    window.opener?.postMessage({
-                        type: 'GOOGLE_AUTH_ERROR',
-                        error: data.message || 'Authentication failed'
-                    }, window.location.origin);
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_ERROR',
+                            error: data.message || data.error || 'Authentication failed'
+                        }, window.location.origin);
+                        window.close();
+                    } else {
+                        // Mobile flow: redirect to login with error
+                        window.location.href = '/login?error=auth_failed';
+                    }
                 }
-                window.close();
             })
             .catch(error => {
                 console.error('Authentication error:', error);
-                window.opener?.postMessage({
-                    type: 'GOOGLE_AUTH_ERROR',
-                    error: 'Network error during authentication'
-                }, window.location.origin);
-                window.close();
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'GOOGLE_AUTH_ERROR',
+                        error: 'Network error during authentication'
+                    }, window.location.origin);
+                    window.close();
+                } else {
+                    // Mobile flow: redirect to login with error
+                    window.location.href = '/login?error=network_error';
+                }
             });
         } else {
             // No code or error, something went wrong
-            window.opener?.postMessage({
-                type: 'GOOGLE_AUTH_ERROR',
-                error: 'No authorization code received'
-            }, window.location.origin);
-            window.close();
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'GOOGLE_AUTH_ERROR',
+                    error: 'No authorization code received'
+                }, window.location.origin);
+                window.close();
+            } else {
+                // Mobile flow: redirect to login with error
+                window.location.href = '/login?error=no_code';
+            }
         }
     </script>
 </body>

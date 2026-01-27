@@ -59,6 +59,7 @@ const AuthCallback = () => {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Required for httpOnly cookies
           body: JSON.stringify({ code }),
         });
 
@@ -85,14 +86,19 @@ const AuthCallback = () => {
           }, window.location.origin);
           window.close();
         } else {
-          console.log('No opener window, navigating to home page');
-          // If not a popup, redirect to home page
-          navigate('/', { replace: true });
+          console.log('No opener window (mobile flow), saving auth state directly');
+          // Mobile flow: save user data to localStorage and redirect to dashboard
+          if (data.user) {
+            const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
+            localStorage.setItem('itemize_user', JSON.stringify(data.user));
+            localStorage.setItem('itemize_expiry', expiryTime.toString());
+          }
+          navigate('/dashboard', { replace: true });
         }
       } catch (error) {
         console.error('Error during auth callback:', error);
-        console.error('Response data:', error.response?.data);
-        console.error('Response status:', error.response?.status);
+        console.error('Response data:', (error as any).response?.data);
+        console.error('Response status:', (error as any).response?.status);
         
         // Send error to opener window if it exists
         if (window.opener) {
@@ -102,7 +108,8 @@ const AuthCallback = () => {
           }, window.location.origin);
           window.close();
         } else {
-          navigate('/', { replace: true });
+          // Mobile flow: redirect to login with error
+          navigate('/login?error=auth_failed', { replace: true });
         }
       }
     };
