@@ -222,7 +222,7 @@ export default function Register() {
                 id="terms"
                 checked={acceptedTerms}
                 onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-                className="mt-1"
+                className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
               />
               <label 
                 htmlFor="terms" 
