@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const register = async (email: string, password: string, name?: string): Promise<void> => {
     try {
-      const response = await api.post('/auth/register', { email, password, name });
+      const response = await api.post('/api/auth/register', { email, password, name });
       
       if (!response.data.success) {
         throw new AuthError(response.data.error || 'Registration failed', response.data.code || 'UNKNOWN');

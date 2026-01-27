@@ -9,6 +9,9 @@ const BLOCKED_ENDPOINTS = [
 // Production URL for the backend
 const PRODUCTION_URL = 'https://itemize-backend-production-92ad.up.railway.app';
 
+// Get API URL from environment variable or fall back to localhost
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Retry configuration
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
@@ -68,7 +71,7 @@ const shouldRetry = (error: AxiosError, config: RetryConfig): boolean => {
 
 // Create axios instance with dynamic baseURL
 const api = axios.create({
-  baseURL: 'http://localhost:3001', // Default to localhost
+  baseURL: API_BASE_URL,
   withCredentials: true,
   timeout: 30000, // 30 second timeout
 });
@@ -78,7 +81,7 @@ api.interceptors.request.use(
   (config) => {
     // Update baseURL based on current hostname
     const isProductionDomain = window.location.hostname === 'itemize.cloud';
-    config.baseURL = isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
+    config.baseURL = isProductionDomain ? PRODUCTION_URL : API_BASE_URL;
 
     // Check if the request URL matches any blocked endpoint
     const requestPath = config.url || '';
@@ -188,7 +191,7 @@ api.interceptors.response.use(
 // Export a function to get the current API URL
 export const getApiUrl = () => {
   const isProductionDomain = window.location.hostname === 'itemize.cloud';
-  return isProductionDomain ? PRODUCTION_URL : 'http://localhost:3001';
+  return isProductionDomain ? PRODUCTION_URL : API_BASE_URL;
 };
 
 /**

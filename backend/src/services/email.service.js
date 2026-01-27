@@ -12,7 +12,8 @@ const resend = process.env.RESEND_API_KEY
 
 // Email configuration
 const EMAIL_FROM = process.env.EMAIL_FROM || 'Itemize <noreply@itemize.cloud>';
-const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+// Always use production URL for email links so they work from any device
+const APP_URL = process.env.APP_URL || 'https://itemize.cloud';
 const APP_NAME = 'Itemize';
 
 /**
