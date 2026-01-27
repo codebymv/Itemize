@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
 import api, { getApiUrl } from '@/lib/api';
 import axios from 'axios'; // Keep axios for Google API calls
@@ -15,7 +16,7 @@ export interface User {
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  login: () => void;
+  login: (redirectTo?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
@@ -49,6 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  
+  // Store redirect path for post-auth navigation
+  const pendingRedirectRef = useRef<string | null>(null);
 
   // Initialize authentication state from localStorage (user data only, token is in httpOnly cookie)
   useEffect(() => {
@@ -137,6 +141,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: 'Welcome!',
             description: 'Successfully signed in with Google.',
           });
+
+          // Navigate to the pending redirect path after successful auth
+          const redirectTo = pendingRedirectRef.current || '/dashboard';
+          pendingRedirectRef.current = null;
+          console.log('Google auth complete, redirecting to:', redirectTo);
+          
+          // Use window.location for reliable navigation after auth state change
+          // This ensures the page reloads with fresh auth state
+          window.location.href = redirectTo;
         } catch (backendError) {
           console.error('Backend auth error:', backendError);
           throw new Error(`Backend authentication failed: ${backendError.message}`);
@@ -144,6 +157,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       } catch (error) {
         console.error('Google login failed:', error);
+        toast({
+          title: 'Login failed',
+          description: 'Failed to sign in with Google. Please try again.',
+          variant: 'destructive',
+        });
       } finally {
         setLoading(false);
       }
@@ -151,11 +169,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     onError: () => {
       console.error('Google login failed');
       setLoading(false);
+      toast({
+        title: 'Login failed',
+        description: 'Google sign-in was cancelled or failed. Please try again.',
+        variant: 'destructive',
+      });
     },
     scope: 'email profile'
   });
 
-  const login = () => {
+  const login = (redirectTo?: string) => {
+    // Store the redirect path for use after successful auth
+    pendingRedirectRef.current = redirectTo || '/dashboard';
+    console.log('Starting Google login, will redirect to:', pendingRedirectRef.current);
     googleLogin();
   };
 

@@ -95,20 +95,13 @@ export default function Register() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setGoogleLoading(true);
-    try {
-      await login();
-      navigate('/dashboard', { replace: true });
-    } catch (error: any) {
-      toast({
-        title: 'Sign up failed',
-        description: error.message || 'Failed to sign up with Google.',
-        variant: 'destructive',
-      });
-    } finally {
-      setGoogleLoading(false);
-    }
+    // Note: login() triggers the OAuth flow but doesn't return a promise
+    // Navigation happens in AuthContext after successful auth
+    login('/dashboard');
+    // Reset loading state after a short delay if popup was closed without completing
+    setTimeout(() => setGoogleLoading(false), 1000);
   };
 
   return (

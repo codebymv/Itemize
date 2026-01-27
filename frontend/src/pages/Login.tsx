@@ -73,20 +73,13 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setGoogleLoading(true);
-    try {
-      await login();
-      navigate(from, { replace: true });
-    } catch (error: any) {
-      toast({
-        title: 'Login failed',
-        description: error.message || 'Failed to sign in with Google.',
-        variant: 'destructive',
-      });
-    } finally {
-      setGoogleLoading(false);
-    }
+    // Note: login() triggers the OAuth flow but doesn't return a promise
+    // Navigation happens in AuthContext after successful auth via onAuthSuccess callback
+    login(from);
+    // Reset loading state after a short delay if popup was closed without completing
+    setTimeout(() => setGoogleLoading(false), 1000);
   };
 
   return (
