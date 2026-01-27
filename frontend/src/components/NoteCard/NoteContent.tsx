@@ -341,7 +341,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
               <div className="w-2 h-2 bg-orange-400 rounded-full" title="Unsaved changes (will autosave in a few seconds)"></div>
             )}
             {aiEnabled && isLoading && (
-              <Sparkles size={14} className="sparkles-icon text-blue-500 animate-pulse" />
+              <Sparkles size={14} className="sparkles-icon text-blue-600 animate-pulse" />
             )}
             {aiEnabled && error && (
               <span className="text-xs text-red-500" title={error}>⚠</span>

@@ -39,7 +39,7 @@ export const AISuggestToggle: React.FC<AISuggestToggleProps> = ({
                 id="ai-suggest-toggle"
               />
               <Label htmlFor="ai-suggest-toggle" className="text-sm font-medium cursor-pointer flex items-center">
-                <Sparkles size={14} className="mr-1 text-blue-500" />
+                <Sparkles size={14} className="mr-1 text-blue-600" />
                 <span className="hidden sm:inline" style={{ fontFamily: '"Raleway", sans-serif' }}>AI Suggest</span>
                 <span className="sm:hidden" style={{ fontFamily: '"Raleway", sans-serif' }}>AI</span>
               </Label>

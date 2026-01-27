@@ -58,7 +58,7 @@ const CircleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         relative w-16 h-16 rounded-full border-2
         flex items-center justify-center text-center
         transition-all duration-200
-        ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+        ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
       `}
       style={{
         backgroundColor: isLight ? '#ffffff' : '#1e293b',

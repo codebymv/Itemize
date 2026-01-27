@@ -932,7 +932,7 @@ export function RecurringInvoicesPage() {
                 <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <RefreshCw className="h-5 w-5 text-blue-500" />
+                            <RefreshCw className="h-5 w-5 text-blue-600" />
                             Create Recurring Invoice
                         </DialogTitle>
                         <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

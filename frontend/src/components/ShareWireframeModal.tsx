@@ -116,7 +116,7 @@ export const ShareWireframeModal: React.FC<ShareWireframeModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-blue-500" />
+            <Share2 className="h-5 w-5 text-blue-600" />
             Share Wireframe
           </DialogTitle>
           <DialogDescription>
@@ -130,7 +130,7 @@ export const ShareWireframeModal: React.FC<ShareWireframeModalProps> = ({
             <Label>Sharing</Label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
               <p className="font-medium text-sm flex items-center gap-2">
-                <GitBranch className="h-4 w-4 text-blue-500" />
+                <GitBranch className="h-4 w-4 text-blue-600" />
                 {wireframeTitle}
               </p>
             </div>

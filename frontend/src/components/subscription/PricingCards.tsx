@@ -174,7 +174,7 @@ export function PricingCards({
     
     // Highlighted card uses blue/indigo gradient
     const highlightedBg = 'bg-gradient-to-b from-blue-600 to-indigo-700';
-    const highlightedBorder = 'border-blue-500';
+    const highlightedBorder = 'border-blue-600';
     
     // Build plans array based on hide flags
     let plans: Plan[] = [PLANS.STARTER, PLANS.UNLIMITED, PLANS.PRO];

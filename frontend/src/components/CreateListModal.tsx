@@ -62,7 +62,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({ isOpen, onClose, onCr
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5 text-blue-500" />
+            <CheckSquare className="h-5 w-5 text-blue-600" />
             Create New List
           </DialogTitle>
         </DialogHeader>

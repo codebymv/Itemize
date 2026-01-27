@@ -66,7 +66,7 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       className={`
         relative px-3 py-2 rounded border
         transition-all duration-200 min-w-[60px]
-        ${selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
+        ${selected ? 'ring-2 ring-blue-600 ring-offset-1' : ''}
       `}
       style={{
         backgroundColor: isLight ? '#fafafa' : '#1e293b',

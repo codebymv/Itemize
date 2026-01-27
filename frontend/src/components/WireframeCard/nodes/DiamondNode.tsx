@@ -69,7 +69,7 @@ const DiamondNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       <div
         className={`
           absolute inset-0 border-2 rounded-sm
-          ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+          ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
         `}
         style={{
           transform: 'rotate(45deg)',

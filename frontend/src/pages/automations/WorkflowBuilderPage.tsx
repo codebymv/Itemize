@@ -92,7 +92,7 @@ const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
 
   return (
     <div 
-      className={`px-4 py-3 rounded-lg border-2 min-w-[180px] ${colorMap[data.step_type] || 'bg-muted border-border'} ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      className={`px-4 py-3 rounded-lg border-2 min-w-[180px] ${colorMap[data.step_type] || 'bg-muted border-border'} ${selected ? 'ring-2 ring-blue-600' : ''}`}
     >
       <div className="flex items-center gap-2">
         {iconMap[data.step_type] || <Zap className="h-4 w-4" />}
@@ -109,7 +109,7 @@ const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
 const TriggerNode = ({ data, selected }: { data: any; selected: boolean }) => {
   return (
     <div 
-      className={`px-4 py-3 rounded-lg border-2 min-w-[180px] bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      className={`px-4 py-3 rounded-lg border-2 min-w-[180px] bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 ${selected ? 'ring-2 ring-blue-600' : ''}`}
     >
       <div className="flex items-center gap-2">
         <Zap className="h-4 w-4" />

@@ -170,7 +170,7 @@ export function ReputationRequestsPage() {
                 <Card className="max-w-lg mx-auto mt-12">
                     <CardContent className="pt-6 text-center">
                         <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                        <Button onClick={() => window.location.reload()} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Retry</Button>
                     </CardContent>
                 </Card>
             </div>

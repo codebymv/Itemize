@@ -54,7 +54,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <StickyNote className="h-5 w-5 text-blue-500" />
+            <StickyNote className="h-5 w-5 text-blue-600" />
             Create New Note
           </DialogTitle>
         </DialogHeader>

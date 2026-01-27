@@ -380,7 +380,7 @@ export function ReputationPage() {
                                     </div>
                                     <p className="text-sm text-muted-foreground">{review.content}</p>
                                     {review.response && (
-                                        <div className="mt-3 pl-4 border-l-2 border-blue-500">
+                                        <div className="mt-3 pl-4 border-l-2 border-blue-600">
                                             <p className="text-sm font-medium">Your Response:</p>
                                             <p className="text-sm text-muted-foreground">{review.response}</p>
                                         </div>

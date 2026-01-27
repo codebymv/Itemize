@@ -395,7 +395,7 @@ export function CreateCampaignModal({
                               <p className="text-sm text-muted-foreground">{template.subject}</p>
                             </div>
                             {formData.template_id === template.id && (
-                              <Check className="h-5 w-5 text-blue-500" />
+                              <Check className="h-5 w-5 text-blue-600" />
                             )}
                           </div>
                         </div>
@@ -693,7 +693,7 @@ export function CreateCampaignModal({
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-blue-500" />
+            <Send className="h-5 w-5 text-blue-600" />
             Create Campaign
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

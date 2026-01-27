@@ -117,7 +117,7 @@ export function CreateDealModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-blue-500" />
+            <DollarSign className="h-5 w-5 text-blue-600" />
             Create New Deal
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

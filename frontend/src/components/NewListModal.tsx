@@ -150,7 +150,7 @@ export const NewListModal: React.FC<NewListModalProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5 text-blue-500" />
+            <CheckSquare className="h-5 w-5 text-blue-600" />
             Add List
           </DialogTitle>
         </DialogHeader>

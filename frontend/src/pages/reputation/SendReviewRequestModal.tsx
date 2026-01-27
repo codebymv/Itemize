@@ -252,7 +252,7 @@ export function SendReviewRequestModal({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-blue-500" />
+            <Send className="h-5 w-5 text-blue-600" />
             Send Review Request
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

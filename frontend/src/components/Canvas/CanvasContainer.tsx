@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
+import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
 import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -98,6 +99,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 }) => {
   const { theme } = useTheme();
   const { token } = useAuth();
+  const { state: sidebarState, isMobile } = useSidebar();
+  
+  // Calculate sidebar width for zoom controls positioning
+  const sidebarWidth = isMobile ? 0 : (sidebarState === 'expanded' ? 256 : 64);
+  
   const [loading, setLoading] = useState(false); // No longer need to load lists
   const [error, setError] = useState('');
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -746,7 +752,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         style={{
           position: 'fixed',
           bottom: '20px',
-          left: '50%',
+          left: isMobile ? '50%' : `calc(${sidebarWidth}px + (100vw - ${sidebarWidth}px) / 2)`,
           transform: 'translateX(-50%)',
           zIndex: 1002,
           display: 'flex',
@@ -757,7 +763,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           border: '1px solid var(--border)',
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          userSelect: 'none'
+          userSelect: 'none',
+          transition: 'left 0.2s ease-in-out'
         }}
       >
         {/* Zoom Out */}

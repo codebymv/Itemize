@@ -95,7 +95,7 @@ export const NewWireframeModal: React.FC<NewWireframeModalProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <GitBranch className="h-5 w-5 text-blue-500" />
+            <GitBranch className="h-5 w-5 text-blue-600" />
             Add Wireframe
           </DialogTitle>
         </DialogHeader>

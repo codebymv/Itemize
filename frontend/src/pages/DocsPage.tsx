@@ -98,13 +98,13 @@ const DocsPage: React.FC = () => {
             <Folder className={`h-4 w-4 mr-3 flex-shrink-0 ${
               docPath === item.path || (docPath === undefined && item.path === 'getting-started') 
                 ? (theme === 'dark' ? 'text-blue-300' : 'text-blue-600')
-                : (theme === 'dark' ? 'text-blue-400' : 'text-blue-500')
+                : (theme === 'dark' ? 'text-blue-400' : 'text-blue-600')
             }`} />
           ) : (
             <FileText className={`h-4 w-4 mr-3 flex-shrink-0 ${
               docPath === item.path || (docPath === undefined && item.path === 'getting-started') 
                 ? (theme === 'dark' ? 'text-blue-300' : 'text-blue-600')
-                : (theme === 'dark' ? 'text-blue-400' : 'text-blue-500')
+                : (theme === 'dark' ? 'text-blue-400' : 'text-blue-600')
             }`} />
           )}
           <span className="truncate font-medium">{formatName(item.name)}</span>
@@ -283,7 +283,7 @@ const DocsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search documentation... (Press / to focus)"
-                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} ${theme === 'dark' ? 'bg-slate-700 text-slate-100 placeholder-slate-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} ${theme === 'dark' ? 'bg-slate-700 text-slate-100 placeholder-slate-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors`}
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               />
               {searchQuery && (

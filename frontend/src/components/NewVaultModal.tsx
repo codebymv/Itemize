@@ -95,7 +95,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-blue-500" />
+            <KeyRound className="h-5 w-5 text-blue-600" />
             Add Vault
           </DialogTitle>
         </DialogHeader>

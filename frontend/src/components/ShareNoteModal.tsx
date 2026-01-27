@@ -117,7 +117,7 @@ export const ShareNoteModal: React.FC<ShareNoteModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-            <Share2 className="h-5 w-5 text-blue-500" />
+            <Share2 className="h-5 w-5 text-blue-600" />
             Share Note
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

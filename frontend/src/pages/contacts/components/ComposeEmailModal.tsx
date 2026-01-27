@@ -135,7 +135,7 @@ export function ComposeEmailModal({
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Send className="h-5 w-5 text-blue-500" />
+                        <Send className="h-5 w-5 text-blue-600" />
                         Send Email to {contactName}
                     </DialogTitle>
                     <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

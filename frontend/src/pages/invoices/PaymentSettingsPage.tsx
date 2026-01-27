@@ -714,7 +714,7 @@ export function PaymentSettingsPage() {
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Building className="h-5 w-5 text-blue-500" />
+                            <Building className="h-5 w-5 text-blue-600" />
                             {editingBusiness ? 'Edit Business' : 'Add Business'}
                         </DialogTitle>
                         <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

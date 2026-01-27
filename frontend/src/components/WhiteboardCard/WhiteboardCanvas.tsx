@@ -770,7 +770,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   } as React.CSSProperties}
                   className={`w-12 sm:w-24 ${isLight
                     ? '[&>*]:bg-gray-200 [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600'
-                    : '[&>*]:bg-gray-600 [&>*>*]:bg-blue-500 [&>*:last-child]:border-blue-500'
+                    : '[&>*]:bg-gray-600 [&>*>*]:bg-blue-500 [&>*:last-child]:border-blue-600'
                   } [&>*:last-child]:bg-[var(--slider-thumb-bg)]`}
                 />
               </div>

@@ -167,7 +167,7 @@ export function SocialPage() {
 
     const getPlatformIcon = (platform: string) => {
         switch (platform) {
-            case 'facebook': return <Facebook className="h-4 w-4 text-blue-500" />;
+            case 'facebook': return <Facebook className="h-4 w-4 text-blue-600" />;
             case 'instagram': return <Instagram className="h-4 w-4 text-pink-500" />;
             default: return <Share2 className="h-4 w-4" />;
         }

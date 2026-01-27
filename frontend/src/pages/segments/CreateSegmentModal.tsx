@@ -443,7 +443,7 @@ export function CreateSegmentModal({
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-blue-500" />
+            <Filter className="h-5 w-5 text-blue-600" />
             Create Segment
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -570,7 +570,7 @@ export function CreateSegmentModal({
                       <span className="text-sm text-muted-foreground">Calculating...</span>
                     ) : preview ? (
                       <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-500" />
+                        <Users className="h-4 w-4 text-blue-600" />
                         <span className="font-medium text-blue-600">{preview.count} contacts</span>
                       </div>
                     ) : (

@@ -384,7 +384,7 @@ export function PageEditorPage() {
                                     {page.sections.map((section, index) => (
                                         <div
                                             key={section.id}
-                                            className={`flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${selectedSection?.id === section.id ? 'ring-2 ring-blue-500' : ''}`}
+                                            className={`flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${selectedSection?.id === section.id ? 'ring-2 ring-blue-600' : ''}`}
                                             onClick={() => setSelectedSection(section)}
                                         >
                                             <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -554,7 +554,7 @@ export function PageEditorPage() {
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Plus className="h-5 w-5 text-blue-500" />
+                            <Plus className="h-5 w-5 text-blue-600" />
                             Add Section
                         </DialogTitle>
                         <DialogDescription>

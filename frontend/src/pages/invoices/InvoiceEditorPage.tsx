@@ -514,7 +514,7 @@ export function InvoiceEditorPage() {
                                             ) : (
                                                 <Link
                                                     to="/settings/payments"
-                                                    className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed rounded-lg text-muted-foreground hover:border-blue-500 hover:text-blue-600 transition-colors"
+                                                    className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed rounded-lg text-muted-foreground hover:border-blue-600 hover:text-blue-600 transition-colors"
                                                 >
                                                     <Building className="h-8 w-8 mb-1" />
                                                     <span className="text-xs text-center">Add logo</span>
