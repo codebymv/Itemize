@@ -12,6 +12,7 @@ const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
 const UsageTrackingService = require('../services/usageTrackingService');
+const { sendSuccess, sendCreated, sendPaginated, sendBadRequest, sendNotFound, sendError, getPaginationParams, buildPagination } = require('../utils/response');
 
 module.exports = (pool, authenticateJWT) => {
     // Use shared organization middleware (Phase 5.3)
@@ -27,11 +28,11 @@ module.exports = (pool, authenticateJWT) => {
     /**
      * GET /api/campaigns - List campaigns
      */
-    router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { status, page = 1, limit = 20, search } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+    router.get('/', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        const { status, search } = req.query;
+        const { page, limit, offset } = getPaginationParams(req.query);
 
+        const result = await withDbClient(pool, async (client) => {
             let whereClause = 'WHERE c.organization_id = $1';
             const params = [req.organizationId];
             let paramIndex = 2;
@@ -48,14 +49,12 @@ module.exports = (pool, authenticateJWT) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
-
             const countResult = await client.query(
                 `SELECT COUNT(*) FROM email_campaigns c ${whereClause}`,
                 params
             );
 
-            const result = await client.query(`
+            const campaignsResult = await client.query(`
                 SELECT c.*,
                     et.name as template_name,
                     u.name as created_by_name
@@ -65,34 +64,25 @@ module.exports = (pool, authenticateJWT) => {
                 ${whereClause}
                 ORDER BY c.created_at DESC
                 LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
+            `, [...params, limit, offset]);
 
-            client.release();
+            return {
+                campaigns: campaignsResult.rows,
+                total: parseInt(countResult.rows[0].count)
+            };
+        });
 
-            res.json({
-                campaigns: result.rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
-                }
-            });
-        } catch (error) {
-            console.error('Error fetching campaigns:', error);
-            res.status(500).json({ error: 'Failed to fetch campaigns' });
-        }
-    });
+        const pagination = buildPagination(page, limit, result.total);
+        return sendPaginated(res, result.campaigns, pagination);
+    }));
 
     /**
      * GET /api/campaigns/:id - Get campaign details
      */
-    router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
+    router.get('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                const campaignResult = await client.query(`
                 SELECT c.*,
                     et.name as template_name,
                     et.body_html as template_html,
@@ -103,34 +93,32 @@ module.exports = (pool, authenticateJWT) => {
                 LEFT JOIN users u ON c.created_by = u.id
                 LEFT JOIN users su ON c.sent_by = su.id
                 WHERE c.id = $1 AND c.organization_id = $2
-            `, [id, req.organizationId]);
+                `, [id, req.organizationId]);
 
-            if (result.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                if (campaignResult.rows.length === 0) {
+                    return { notFound: true };
+                }
+
+                const linksResult = await client.query(`
+                SELECT * FROM campaign_links WHERE campaign_id = $1 ORDER BY link_position
+                `, [id]);
+
+                const campaign = campaignResult.rows[0];
+                campaign.links = linksResult.rows;
+                return { campaign };
+            });
+
+            if (result.notFound) {
+                return sendNotFound(res, 'Campaign');
             }
 
-            // Get link stats
-            const linksResult = await client.query(`
-                SELECT * FROM campaign_links WHERE campaign_id = $1 ORDER BY link_position
-            `, [id]);
-
-            client.release();
-
-            const campaign = result.rows[0];
-            campaign.links = linksResult.rows;
-
-            res.json(campaign);
-        } catch (error) {
-            console.error('Error fetching campaign:', error);
-            res.status(500).json({ error: 'Failed to fetch campaign' });
-        }
-    });
+            return sendSuccess(res, result.campaign);
+    }));
 
     /**
      * POST /api/campaigns - Create campaign
      */
-    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const {
                 name,
@@ -184,12 +172,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error creating campaign:', error);
             res.status(500).json({ error: 'Failed to create campaign' });
         }
-    });
+    }));
 
     /**
      * PUT /api/campaigns/:id - Update campaign
      */
-    router.put('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+    router.put('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const {
@@ -265,12 +253,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error updating campaign:', error);
             res.status(500).json({ error: 'Failed to update campaign' });
         }
-    });
+    }));
 
     /**
      * DELETE /api/campaigns/:id - Delete campaign
      */
-    router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+    router.delete('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -302,12 +290,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error deleting campaign:', error);
             res.status(500).json({ error: 'Failed to delete campaign' });
         }
-    });
+    }));
 
     /**
      * POST /api/campaigns/:id/duplicate - Duplicate campaign
      */
-    router.post('/:id/duplicate', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/duplicate', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -355,7 +343,7 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error duplicating campaign:', error);
             res.status(500).json({ error: 'Failed to duplicate campaign' });
         }
-    });
+    }));
 
     // ======================
     // Campaign Actions
@@ -364,7 +352,7 @@ module.exports = (pool, authenticateJWT) => {
     /**
      * POST /api/campaigns/:id/schedule - Schedule campaign
      */
-    router.post('/:id/schedule', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/schedule', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const { scheduled_at, timezone } = req.body;
@@ -413,12 +401,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error scheduling campaign:', error);
             res.status(500).json({ error: 'Failed to schedule campaign' });
         }
-    });
+    }));
 
     /**
      * POST /api/campaigns/:id/unschedule - Unschedule campaign (back to draft)
      */
-    router.post('/:id/unschedule', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/unschedule', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -443,12 +431,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error unscheduling campaign:', error);
             res.status(500).json({ error: 'Failed to unschedule campaign' });
         }
-    });
+    }));
 
     /**
      * POST /api/campaigns/:id/send - Send campaign immediately
      */
-    router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/send', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -553,14 +541,34 @@ module.exports = (pool, authenticateJWT) => {
                     WHERE id = $3
                 `, [req.user.id, recipients.length, id]);
 
-                // Insert recipients
-                for (const recipient of recipients) {
-                    await client.query(`
-                        INSERT INTO campaign_recipients (
-                            campaign_id, contact_id, organization_id, email, first_name, last_name
-                        ) VALUES ($1, $2, $3, $4, $5, $6)
-                        ON CONFLICT (campaign_id, contact_id) DO NOTHING
-                    `, [id, recipient.id, req.organizationId, recipient.email, recipient.first_name, recipient.last_name]);
+                // Insert recipients in bulk
+                const recipientValues = [];
+                const recipientParams = [];
+                recipients.forEach((recipient, index) => {
+                    const baseIndex = index * 6;
+                    recipientParams.push(
+                        id,
+                        recipient.id,
+                        req.organizationId,
+                        recipient.email,
+                        recipient.first_name,
+                        recipient.last_name
+                    );
+                    recipientValues.push(
+                        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`
+                    );
+                });
+
+                if (recipientValues.length > 0) {
+                    await client.query(
+                        `
+                            INSERT INTO campaign_recipients (
+                                campaign_id, contact_id, organization_id, email, first_name, last_name
+                            ) VALUES ${recipientValues.join(', ')}
+                            ON CONFLICT (campaign_id, contact_id) DO NOTHING
+                        `,
+                        recipientParams
+                    );
                 }
 
                 await client.query('COMMIT');
@@ -594,12 +602,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error sending campaign:', error);
             res.status(500).json({ error: 'Failed to send campaign' });
         }
-    });
+    }));
 
     /**
      * POST /api/campaigns/:id/pause - Pause sending campaign
      */
-    router.post('/:id/pause', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/pause', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -623,12 +631,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error pausing campaign:', error);
             res.status(500).json({ error: 'Failed to pause campaign' });
         }
-    });
+    }));
 
     /**
      * POST /api/campaigns/:id/resume - Resume paused campaign
      */
-    router.post('/:id/resume', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/resume', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -684,7 +692,7 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error resuming campaign:', error);
             res.status(500).json({ error: 'Failed to resume campaign' });
         }
-    });
+    }));
 
     // ======================
     // Campaign Analytics
@@ -693,7 +701,7 @@ module.exports = (pool, authenticateJWT) => {
     /**
      * GET /api/campaigns/:id/recipients - Get campaign recipients
      */
-    router.get('/:id/recipients', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/:id/recipients', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const { status, page = 1, limit = 50 } = req.query;
@@ -753,12 +761,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error fetching campaign recipients:', error);
             res.status(500).json({ error: 'Failed to fetch recipients' });
         }
-    });
+    }));
 
     /**
      * GET /api/campaigns/:id/preview - Preview campaign recipient count
      */
-    router.get('/:id/preview', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/:id/preview', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const client = await pool.connect();
@@ -819,12 +827,12 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error previewing campaign:', error);
             res.status(500).json({ error: 'Failed to preview campaign' });
         }
-    });
+    }));
 
     /**
      * POST /api/campaigns/:id/send-test - Send test email
      */
-    router.post('/:id/send-test', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/send-test', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const { test_email } = req.body;
@@ -888,7 +896,7 @@ module.exports = (pool, authenticateJWT) => {
             console.error('Error sending test email:', error);
             res.status(500).json({ error: 'Failed to send test email' });
         }
-    });
+    }));
 
     return router;
 };
@@ -902,21 +910,65 @@ async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
     const client = await pool.connect();
     let sentCount = 0;
     let failedCount = 0;
+    let processedCount = 0;
+    const pendingUpdates = [];
 
     const htmlContent = campaign.content_html || campaign.template_html || '';
     const textContent = campaign.content_text || campaign.template_text || '';
 
+    const flushUpdates = async () => {
+        if (pendingUpdates.length === 0) {
+            return;
+        }
+
+        const updateValues = [];
+        const updateParams = [];
+        pendingUpdates.forEach((update, index) => {
+            const baseIndex = index * 6;
+            updateParams.push(
+                campaignId,
+                update.contactId,
+                update.status,
+                update.sentAt,
+                update.externalMessageId,
+                update.errorMessage
+            );
+            updateValues.push(
+                `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`
+            );
+        });
+
+        await client.query(
+            `
+                UPDATE campaign_recipients AS cr SET
+                    status = v.status,
+                    sent_at = v.sent_at,
+                    external_message_id = v.external_message_id,
+                    error_message = v.error_message,
+                    updated_at = CURRENT_TIMESTAMP
+                FROM (
+                    VALUES ${updateValues.join(', ')}
+                ) AS v(campaign_id, contact_id, status, sent_at, external_message_id, error_message)
+                WHERE cr.campaign_id = v.campaign_id AND cr.contact_id = v.contact_id
+            `,
+            updateParams
+        );
+
+        pendingUpdates.length = 0;
+    };
+
     for (const recipient of recipients) {
         try {
-            // Check if campaign was paused or cancelled
-            const statusCheck = await client.query(
-                'SELECT status FROM email_campaigns WHERE id = $1',
-                [campaignId]
-            );
+            if (processedCount % 10 === 0) {
+                const statusCheck = await client.query(
+                    'SELECT status FROM email_campaigns WHERE id = $1',
+                    [campaignId]
+                );
 
-            if (!statusCheck.rows.length || !['sending'].includes(statusCheck.rows[0].status)) {
-                console.log(`Campaign ${campaignId} stopped - status: ${statusCheck.rows[0]?.status}`);
-                break;
+                if (!statusCheck.rows.length || !['sending'].includes(statusCheck.rows[0].status)) {
+                    console.log(`Campaign ${campaignId} stopped - status: ${statusCheck.rows[0]?.status}`);
+                    break;
+                }
             }
 
             // Replace variables
@@ -946,17 +998,15 @@ async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
                 replyTo: campaign.reply_to
             });
 
-            // Update recipient status
-            await client.query(`
-                UPDATE campaign_recipients SET
-                    status = 'sent',
-                    sent_at = CURRENT_TIMESTAMP,
-                    external_message_id = $1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE campaign_id = $2 AND contact_id = $3
-            `, [result?.id || null, campaignId, recipient.contact_id || recipient.id]);
-
+            pendingUpdates.push({
+                contactId: recipient.contact_id || recipient.id,
+                status: 'sent',
+                sentAt: new Date(),
+                externalMessageId: result?.id || null,
+                errorMessage: null
+            });
             sentCount++;
+            processedCount++;
 
             // Update campaign stats periodically
             if (sentCount % 10 === 0) {
@@ -974,16 +1024,23 @@ async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
         } catch (error) {
             console.error(`Failed to send to ${recipient.email}:`, error.message);
             failedCount++;
+            processedCount++;
 
-            await client.query(`
-                UPDATE campaign_recipients SET
-                    status = 'failed',
-                    error_message = $1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE campaign_id = $2 AND contact_id = $3
-            `, [error.message, campaignId, recipient.contact_id || recipient.id]);
+            pendingUpdates.push({
+                contactId: recipient.contact_id || recipient.id,
+                status: 'failed',
+                sentAt: null,
+                externalMessageId: null,
+                errorMessage: error.message
+            });
+        }
+
+        if (pendingUpdates.length >= 10) {
+            await flushUpdates();
         }
     }
+
+    await flushUpdates();
 
     // Final update
     await client.query(`

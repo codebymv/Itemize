@@ -7,6 +7,9 @@ const router = express.Router();
 const crypto = require('crypto');
 const { encrypt, decrypt, hashMasterPassword, verifyMasterPassword, generateSalt } = require('../utils/encryption');
 const { logger } = require('../utils/logger');
+const { asyncHandler } = require('../middleware/errorHandler');
+const { withDbClient } = require('../utils/db');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError, sendPaginated, getPaginationParams, buildPagination } = require('../utils/response');
 
 /**
  * Create vaults routes with injected dependencies
@@ -21,98 +24,68 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     // =====================
 
     // Get all vaults for the current user with pagination
-    router.get('/vaults', authenticateJWT, async (req, res) => {
-        try {
-            const { 
-                page = 1, 
-                limit = 50, 
-                category,
-                search 
-            } = req.query;
-            
-            const pageNum = Math.max(1, parseInt(page));
-            const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-            const offset = (pageNum - 1) * limitNum;
+    router.get('/vaults', authenticateJWT, asyncHandler(async (req, res) => {
+        const { page, limit, offset } = getPaginationParams(req.query, { defaultLimit: 50, maxLimit: 100 });
+        const { category, search } = req.query;
 
-            const client = await pool.connect();
-            
-            try {
-                // Build query with optional filters
-                let whereClause = 'WHERE user_id = $1';
-                const params = [req.user.id];
-                let paramIndex = 2;
+        const result = await withDbClient(pool, async (client) => {
+            let whereClause = 'WHERE user_id = $1';
+            const params = [req.user.id];
+            let paramIndex = 2;
 
-                if (category) {
-                    whereClause += ` AND category = $${paramIndex}`;
-                    params.push(category);
-                    paramIndex++;
-                }
-
-                if (search) {
-                    whereClause += ` AND title ILIKE $${paramIndex}`;
-                    params.push(`%${search}%`);
-                    paramIndex++;
-                }
-
-                // Get total count
-                const countResult = await client.query(
-                    `SELECT COUNT(*) FROM vaults ${whereClause}`,
-                    params
-                );
-                const total = parseInt(countResult.rows[0].count);
-
-                // Get paginated results (excluding sensitive fields like master_password_hash)
-                const result = await client.query(
-                    `SELECT id, user_id, title, category, color_value, position_x, position_y, width, height, z_index, 
-                            is_locked, created_at, updated_at, share_token, is_public, shared_at 
-                     FROM vaults ${whereClause} 
-                     ORDER BY updated_at DESC 
-                     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-                    [...params, limitNum, offset]
-                );
-
-                // For each vault, get item count
-                const vaultsWithItemCount = await Promise.all(result.rows.map(async (vault) => {
-                    const itemCountResult = await client.query(
-                        'SELECT COUNT(*) FROM vault_items WHERE vault_id = $1',
-                        [vault.id]
-                    );
-                    return {
-                        ...vault,
-                        item_count: parseInt(itemCountResult.rows[0].count)
-                    };
-                }));
-
-                res.json({
-                    vaults: vaultsWithItemCount,
-                    pagination: {
-                        page: pageNum,
-                        limit: limitNum,
-                        total,
-                        totalPages: Math.ceil(total / limitNum),
-                        hasNext: pageNum * limitNum < total,
-                        hasPrev: pageNum > 1
-                    }
-                });
-            } finally {
-                client.release();
+            if (category) {
+                whereClause += ` AND category = $${paramIndex}`;
+                params.push(category);
+                paramIndex++;
             }
-        } catch (error) {
-            logger.error('Error fetching vaults:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while fetching vaults' });
-        }
-    });
+
+            if (search) {
+                whereClause += ` AND title ILIKE $${paramIndex}`;
+                params.push(`%${search}%`);
+                paramIndex++;
+            }
+
+            const countResult = await client.query(
+                `SELECT COUNT(*) FROM vaults ${whereClause}`,
+                params
+            );
+            const total = parseInt(countResult.rows[0].count);
+
+            const vaultsResult = await client.query(
+                `SELECT id, user_id, title, category, color_value, position_x, position_y, width, height, z_index, 
+                        is_locked, created_at, updated_at, share_token, is_public, shared_at 
+                 FROM vaults ${whereClause} 
+                 ORDER BY updated_at DESC 
+                 LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+                [...params, limit, offset]
+            );
+
+            const vaultsWithItemCount = await Promise.all(vaultsResult.rows.map(async (vault) => {
+                const itemCountResult = await client.query(
+                    'SELECT COUNT(*) FROM vault_items WHERE vault_id = $1',
+                    [vault.id]
+                );
+                return {
+                    ...vault,
+                    item_count: parseInt(itemCountResult.rows[0].count)
+                };
+            }));
+
+            return {
+                vaults: vaultsWithItemCount,
+                total
+            };
+        });
+
+        const pagination = buildPagination(page, limit, result.total);
+        return sendPaginated(res, result.vaults, pagination);
+    }));
 
     // Get a single vault with its items (decrypted)
-    router.get('/vaults/:vaultId', authenticateJWT, async (req, res) => {
-        try {
+    router.get('/vaults/:vaultId', authenticateJWT, asyncHandler(async (req, res) => {
             const { vaultId } = req.params;
             const { master_password } = req.query; // Optional for locked vaults
-
-            const client = await pool.connect();
-            
-            try {
-                // Get vault
+            const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
                     `SELECT id, user_id, title, category, color_value, position_x, position_y, width, height, z_index, 
                             is_locked, encryption_salt, master_password_hash, created_at, updated_at, share_token, is_public, shared_at 
@@ -121,7 +94,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 );
 
                 if (vaultResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { notFound: true };
                 }
 
                 const vault = vaultResult.rows[0];
@@ -129,20 +102,21 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 // If vault is locked and no master password provided, return vault without items
                 if (vault.is_locked && vault.master_password_hash) {
                     if (!master_password) {
-                        // Return vault info but indicate it needs unlocking
-                        return res.json({
-                            ...vault,
-                            master_password_hash: undefined, // Don't expose hash
-                            encryption_salt: undefined,
-                            items: [],
-                            requires_unlock: true
-                        });
+                        return {
+                            vault: {
+                                ...vault,
+                                master_password_hash: undefined,
+                                encryption_salt: undefined,
+                                items: [],
+                                requires_unlock: true
+                            }
+                        };
                     }
 
                     // Verify master password
                     const isValid = await verifyMasterPassword(master_password, vault.master_password_hash);
                     if (!isValid) {
-                        return res.status(401).json({ error: 'Invalid master password' });
+                        return { unauthorized: true };
                     }
                 }
 
@@ -178,25 +152,29 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     }
                 });
 
-                res.json({
-                    ...vault,
-                    master_password_hash: undefined, // Don't expose hash
-                    encryption_salt: vault.is_locked ? vault.encryption_salt : undefined,
-                    items: decryptedItems,
-                    requires_unlock: false
-                });
-            } finally {
-                client.release();
+                return {
+                    vault: {
+                        ...vault,
+                        master_password_hash: undefined,
+                        encryption_salt: vault.is_locked ? vault.encryption_salt : undefined,
+                        items: decryptedItems,
+                        requires_unlock: false
+                    }
+                };
+            });
+
+            if (result.notFound) {
+                return sendNotFound(res, 'Vault');
             }
-        } catch (error) {
-            logger.error('Error fetching vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while fetching vault' });
-        }
-    });
+            if (result.unauthorized) {
+                return sendError(res, 'Invalid master password', 401);
+            }
+
+            return sendSuccess(res, result.vault);
+    }));
 
     // Create a new vault
-    router.post('/vaults', authenticateJWT, async (req, res) => {
-        try {
+    router.post('/vaults', authenticateJWT, asyncHandler(async (req, res) => {
             const {
                 title = 'Untitled Vault',
                 category = 'General',
@@ -210,17 +188,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             } = req.body;
 
             if (typeof position_x !== 'number' || typeof position_y !== 'number') {
-                return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
+                return sendBadRequest(res, 'position_x and position_y are required and must be numbers.');
             }
 
-            const client = await pool.connect();
-            
-            try {
+            const vault = await withDbClient(pool, async (client) => {
                 let is_locked = false;
                 let encryption_salt = null;
                 let master_password_hash = null;
 
-                // If master password provided, set up locked vault
                 if (master_password && master_password.length >= 8) {
                     is_locked = true;
                     encryption_salt = generateSalt();
@@ -246,25 +221,19 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     ]
                 );
 
-                const vault = result.rows[0];
-                
-                res.status(201).json({
-                    ...vault,
-                    master_password_hash: undefined, // Don't expose hash
-                    item_count: 0,
-                    items: []
-                });
-            } finally {
-                client.release();
-            }
-        } catch (error) {
-            logger.error('Error creating vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while creating vault' });
-        }
-    });
+                return result.rows[0];
+            });
+
+            return sendCreated(res, {
+                ...vault,
+                master_password_hash: undefined,
+                item_count: 0,
+                items: []
+            });
+    }));
 
     // Update a vault
-    router.put('/vaults/:vaultId', authenticateJWT, async (req, res) => {
+    router.put('/vaults/:vaultId', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { title, category, color_value, position_x, position_y, width, height, z_index } = req.body;
@@ -312,10 +281,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error updating vault:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while updating vault' });
         }
-    });
+    }));
 
     // Update vault position only
-    router.put('/vaults/:vaultId/position', authenticateJWT, async (req, res) => {
+    router.put('/vaults/:vaultId/position', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { position_x, position_y } = req.body;
@@ -348,10 +317,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error updating vault position:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     // Delete a vault
-    router.delete('/vaults/:vaultId', authenticateJWT, async (req, res) => {
+    router.delete('/vaults/:vaultId', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const client = await pool.connect();
@@ -387,14 +356,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error deleting vault:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while deleting vault' });
         }
-    });
+    }));
 
     // =====================
     // VAULT ITEMS OPERATIONS
     // =====================
 
     // Reorder vault items (MUST come before :itemId routes to avoid matching 'reorder' as an itemId)
-    router.put('/vaults/:vaultId/items/reorder', authenticateJWT, async (req, res) => {
+    router.put('/vaults/:vaultId/items/reorder', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { item_ids } = req.body; // Array of item IDs in new order
@@ -438,10 +407,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error reordering vault items:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     // Add item to vault
-    router.post('/vaults/:vaultId/items', authenticateJWT, async (req, res) => {
+    router.post('/vaults/:vaultId/items', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { item_type, label, value } = req.body;
@@ -512,10 +481,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error adding vault item:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while adding vault item' });
         }
-    });
+    }));
 
     // Bulk add items to vault (for .env import)
-    router.post('/vaults/:vaultId/items/bulk', authenticateJWT, async (req, res) => {
+    router.post('/vaults/:vaultId/items/bulk', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { items } = req.body; // Array of { item_type, label, value }
@@ -592,10 +561,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error bulk adding vault items:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while adding vault items' });
         }
-    });
+    }));
 
     // Update a vault item
-    router.put('/vaults/:vaultId/items/:itemId', authenticateJWT, async (req, res) => {
+    router.put('/vaults/:vaultId/items/:itemId', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId, itemId } = req.params;
             const { label, value } = req.body;
@@ -671,10 +640,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error updating vault item:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while updating vault item' });
         }
-    });
+    }));
 
     // Delete a vault item
-    router.delete('/vaults/:vaultId/items/:itemId', authenticateJWT, async (req, res) => {
+    router.delete('/vaults/:vaultId/items/:itemId', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId, itemId } = req.params;
 
@@ -714,14 +683,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error deleting vault item:', { error: error.message });
             res.status(500).json({ error: 'Internal server error while deleting vault item' });
         }
-    });
+    }));
 
     // =====================
     // VAULT SHARING
     // =====================
 
     // Enable sharing for a vault
-    router.post('/vaults/:vaultId/share', authenticateJWT, async (req, res) => {
+    router.post('/vaults/:vaultId/share', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
 
@@ -767,10 +736,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error enabling vault sharing:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     // Disable sharing for a vault
-    router.delete('/vaults/:vaultId/share', authenticateJWT, async (req, res) => {
+    router.delete('/vaults/:vaultId/share', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
 
@@ -794,10 +763,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error disabling vault sharing:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     // Get shared vault (public endpoint)
-    router.get('/shared/vault/:token', async (req, res) => {
+    router.get('/shared/vault/:token', asyncHandler(async (req, res) => {
         try {
             const { token } = req.params;
 
@@ -869,14 +838,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error fetching shared vault:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     // =====================
     // MASTER PASSWORD MANAGEMENT
     // =====================
 
     // Set or change master password
-    router.post('/vaults/:vaultId/lock', authenticateJWT, async (req, res) => {
+    router.post('/vaults/:vaultId/lock', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { master_password, current_password } = req.body;
@@ -931,10 +900,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error locking vault:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     // Remove master password (unlock vault)
-    router.post('/vaults/:vaultId/unlock', authenticateJWT, async (req, res) => {
+    router.post('/vaults/:vaultId/unlock', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
             const { master_password } = req.body;
@@ -982,7 +951,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             logger.error('Error unlocking vault:', { error: error.message });
             res.status(500).json({ error: 'Internal server error' });
         }
-    });
+    }));
 
     return router;
 };

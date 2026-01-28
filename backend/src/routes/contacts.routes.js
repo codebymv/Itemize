@@ -419,15 +419,20 @@ module.exports = (pool, authenticateJWT) => {
     if (updates.tags && updates.tags_mode === 'add' && automationEngine) {
       try {
         const engine = automationEngine.getEngine();
-        // Fire trigger for each contact and each tag
-        for (const contactId of result.rows.map(r => r.id)) {
-          for (const tag of updates.tags) {
+        const triggerPromises = result.rows.flatMap((row) =>
+          updates.tags.map((tag) =>
             engine.handleTrigger('tag_added', {
-              contact: { id: contactId },
+              contact: { id: row.id },
               organizationId: req.organizationId,
               tag: tag,
-            }).catch(err => logger.error('Automation trigger error', { error: err.message }));
-          }
+            })
+          )
+        );
+
+        const triggerResults = await Promise.allSettled(triggerPromises);
+        const failedTriggers = triggerResults.filter(resultItem => resultItem.status === 'rejected');
+        if (failedTriggers.length > 0) {
+          logger.error('Automation trigger errors', { count: failedTriggers.length });
         }
       } catch (triggerError) {
         logger.debug('Automation engine not initialized yet');
@@ -571,23 +576,20 @@ module.exports = (pool, authenticateJWT) => {
         return { notFound: true };
       }
 
-      // Get linked lists
-      const listsResult = await client.query(
-        'SELECT id, title, category, created_at FROM lists WHERE contact_id = $1 ORDER BY created_at DESC',
-        [id]
-      );
-
-      // Get linked notes
-      const notesResult = await client.query(
-        'SELECT id, title, category, created_at FROM notes WHERE contact_id = $1 ORDER BY created_at DESC',
-        [id]
-      );
-
-      // Get linked whiteboards
-      const whiteboardsResult = await client.query(
-        'SELECT id, title, category, created_at FROM whiteboards WHERE contact_id = $1 ORDER BY created_at DESC',
-        [id]
-      );
+      const [listsResult, notesResult, whiteboardsResult] = await Promise.all([
+        client.query(
+          'SELECT id, title, category, created_at FROM lists WHERE contact_id = $1 ORDER BY created_at DESC',
+          [id]
+        ),
+        client.query(
+          'SELECT id, title, category, created_at FROM notes WHERE contact_id = $1 ORDER BY created_at DESC',
+          [id]
+        ),
+        client.query(
+          'SELECT id, title, category, created_at FROM whiteboards WHERE contact_id = $1 ORDER BY created_at DESC',
+          [id]
+        )
+      ]);
 
       return {
         lists: listsResult.rows,

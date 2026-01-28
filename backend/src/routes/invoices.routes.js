@@ -11,6 +11,7 @@ const fs = require('fs');
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError, sendPaginated, getPaginationParams, buildPagination } = require('../utils/response');
 
 // Email services for invoice sending
 const emailService = require('../services/emailService');
@@ -123,10 +124,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * GET /api/invoices/products - List products
      */
-    router.get('/products', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
+    router.get('/products', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
             const { is_active, search } = req.query;
-            const client = await pool.connect();
 
             let query = `
                 SELECT * FROM products WHERE organization_id = $1
@@ -147,30 +146,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             query += ' ORDER BY name ASC';
 
-            const result = await client.query(query, params);
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(query, params);
+            });
 
-            res.json(result.rows);
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            res.status(500).json({ error: 'Failed to fetch products' });
-        }
-    });
+            return sendSuccess(res, result.rows);
+    }));
 
     /**
      * POST /api/invoices/products - Create product
      */
-    router.post('/products', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
+    router.post('/products', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
             const { name, description, sku, price, currency, product_type, billing_period, tax_rate, taxable } = req.body;
 
             if (!name || price === undefined) {
-                return res.status(400).json({ error: 'Name and price are required' });
+                return sendBadRequest(res, 'Name and price are required');
             }
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
                 INSERT INTO products (
                     organization_id, name, description, sku, price, currency,
                     product_type, billing_period, tax_rate, taxable, created_by
@@ -189,26 +183,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 taxable !== false,
                 req.user.id
             ]);
+            });
 
-            client.release();
-            res.status(201).json(result.rows[0]);
-        } catch (error) {
-            console.error('Error creating product:', error);
-            res.status(500).json({ error: 'Failed to create product' });
-        }
-    });
+            return sendCreated(res, result.rows[0]);
+    }));
 
     /**
      * PUT /api/invoices/products/:id - Update product
      */
-    router.put('/products/:id', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
+    router.put('/products/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
             const { id } = req.params;
             const { name, description, sku, price, currency, product_type, billing_period, tax_rate, taxable, is_active } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
                 UPDATE products SET
                     name = COALESCE($1, name),
                     description = $2,
@@ -224,45 +212,33 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 WHERE id = $11 AND organization_id = $12
                 RETURNING *
             `, [name, description, sku, price, currency, product_type, billing_period, tax_rate, taxable, is_active, id, req.organizationId]);
-
-            client.release();
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Product not found' });
+                return sendNotFound(res, 'Product');
             }
 
-            res.json(result.rows[0]);
-        } catch (error) {
-            console.error('Error updating product:', error);
-            res.status(500).json({ error: 'Failed to update product' });
-        }
-    });
+            return sendSuccess(res, result.rows[0]);
+    }));
 
     /**
      * DELETE /api/invoices/products/:id - Delete product
      */
-    router.delete('/products/:id', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
+    router.delete('/products/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'DELETE FROM products WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'DELETE FROM products WHERE id = $1 AND organization_id = $2 RETURNING id',
+                    [id, req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Product not found' });
+                return sendNotFound(res, 'Product');
             }
 
-            res.json({ success: true });
-        } catch (error) {
-            console.error('Error deleting product:', error);
-            res.status(500).json({ error: 'Failed to delete product' });
-        }
-    });
+            return sendSuccess(res, { success: true });
+    }));
 
     // ======================
     // Invoice Email Preview
@@ -272,12 +248,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      * POST /api/invoices/email/preview - Generate invoice email preview
      * Returns the HTML that would be sent, wrapped in branded template
      */
-    router.post('/email/preview', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
+    router.post('/email/preview', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
             const { message, subject, includePaymentLink } = req.body;
 
             if (!message || !message.trim()) {
-                return res.status(400).json({ error: 'Message content is required' });
+                return sendBadRequest(res, 'Message content is required');
             }
 
             // Import the branded template wrapper
@@ -305,17 +280,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 showUnsubscribe: false // Transactional emails don't need unsubscribe
             });
 
-            res.json({
-                success: true,
-                data: {
-                    html: previewHtml
-                }
+            return sendSuccess(res, {
+                html: previewHtml
             });
-        } catch (error) {
-            logger.error('Error generating invoice email preview:', error);
-            res.status(500).json({ error: 'Failed to generate preview' });
-        }
-    });
+    }));
 
     // ======================
     // Invoice CRUD
@@ -324,10 +292,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * GET /api/invoices - List invoices
      */
-    router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { status, contact_id, page = 1, limit = 20, search } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+    router.get('/', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+            const { status, contact_id, search } = req.query;
+            const { page, limit, offset } = getPaginationParams(req.query);
 
             let whereClause = 'WHERE i.organization_id = $1';
             const params = [req.organizationId];
@@ -351,43 +318,35 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM invoices i ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM invoices i ${whereClause}`,
-                params
-            );
+                const invoicesResult = await client.query(`
+                    SELECT i.*, c.first_name as contact_first_name, c.last_name as contact_last_name
+                    FROM invoices i
+                    LEFT JOIN contacts c ON i.contact_id = c.id
+                    ${whereClause}
+                    ORDER BY i.created_at DESC
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, limit, offset]);
 
-            const result = await client.query(`
-                SELECT i.*, c.first_name as contact_first_name, c.last_name as contact_last_name
-                FROM invoices i
-                LEFT JOIN contacts c ON i.contact_id = c.id
-                ${whereClause}
-                ORDER BY i.created_at DESC
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
-
-            res.json({
-                invoices: result.rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
-                }
+                return {
+                    invoices: invoicesResult.rows,
+                    total: parseInt(countResult.rows[0].count)
+                };
             });
-        } catch (error) {
-            console.error('Error fetching invoices:', error);
-            res.status(500).json({ error: 'Failed to fetch invoices' });
-        }
-    });
+
+            const pagination = buildPagination(page, limit, result.total);
+            return sendPaginated(res, result.invoices, pagination);
+    }));
 
     /**
      * GET /api/invoices/:id - Get invoice details
      */
-    router.get('/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.get('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
 
@@ -452,12 +411,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error fetching invoice:', error);
             res.status(500).json({ error: 'Failed to fetch invoice' });
         }
-    });
+    }));
 
     /**
      * POST /api/invoices - Create invoice
      */
-    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const {
                 contact_id,
@@ -573,18 +532,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 const invoiceId = invoiceResult.rows[0].id;
 
-                // Create line items
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
+                // Create line items in bulk
+                const lineItemValues = [];
+                const lineItemParams = [];
+                items.forEach((item, index) => {
                     const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
                     const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+                    const baseIndex = index * 11;
 
-                    await client.query(`
-                        INSERT INTO invoice_items (
-                            invoice_id, organization_id, product_id, name, description,
-                            quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                    `, [
+                    lineItemParams.push(
                         invoiceId,
                         req.organizationId,
                         item.product_id || null,
@@ -595,9 +551,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         item.tax_rate || 0,
                         itemTax,
                         itemTotal + itemTax,
-                        i
-                    ]);
-                }
+                        index
+                    );
+
+                    lineItemValues.push(
+                        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10}, $${baseIndex + 11})`
+                    );
+                });
+
+                await client.query(
+                    `
+                        INSERT INTO invoice_items (
+                            invoice_id, organization_id, product_id, name, description,
+                            quantity, unit_price, tax_rate, tax_amount, total, sort_order
+                        ) VALUES ${lineItemValues.join(', ')}
+                    `,
+                    lineItemParams
+                );
 
                 await client.query('COMMIT');
 
@@ -625,12 +595,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error creating invoice:', error);
             res.status(500).json({ error: 'Failed to create invoice' });
         }
-    });
+    }));
 
     /**
      * PUT /api/invoices/:id - Update invoice
      */
-    router.put('/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.put('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
 
@@ -718,20 +688,17 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     updateFields.push(`amount_due = $${paramIndex++}`);
                     updateParams.push(total);
 
-                    // Delete existing items and recreate
+                    // Delete existing items and recreate in bulk
                     await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [id]);
 
-                    for (let i = 0; i < items.length; i++) {
-                        const item = items[i];
+                    const lineItemValues = [];
+                    const lineItemParams = [];
+                    items.forEach((item, index) => {
                         const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
                         const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+                        const baseIndex = index * 11;
 
-                        await client.query(`
-                            INSERT INTO invoice_items (
-                                invoice_id, organization_id, product_id, name, description,
-                                quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                        `, [
+                        lineItemParams.push(
                             id,
                             req.organizationId,
                             item.product_id || null,
@@ -742,9 +709,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             item.tax_rate || 0,
                             itemTax,
                             itemTotal + itemTax,
-                            i
-                        ]);
-                    }
+                            index
+                        );
+
+                        lineItemValues.push(
+                            `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10}, $${baseIndex + 11})`
+                        );
+                    });
+
+                    await client.query(
+                        `
+                            INSERT INTO invoice_items (
+                                invoice_id, organization_id, product_id, name, description,
+                                quantity, unit_price, tax_rate, tax_amount, total, sort_order
+                            ) VALUES ${lineItemValues.join(', ')}
+                        `,
+                        lineItemParams
+                    );
                 }
 
                 // Add other fields
@@ -836,12 +817,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error updating invoice:', error);
             res.status(500).json({ error: 'Failed to update invoice' });
         }
-    });
+    }));
 
     /**
      * DELETE /api/invoices/:id - Delete invoice
      */
-    router.delete('/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.delete('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
 
@@ -875,7 +856,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error deleting invoice:', error);
             res.status(500).json({ error: 'Failed to delete invoice' });
         }
-    });
+    }));
 
     // ======================
     // Invoice Actions
@@ -886,7 +867,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      * Accepts optional email customization: { subject, message, ccEmails, resend }
      * Set resend: true to resend an already-sent invoice without changing status
      */
-    router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/send', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
             const { subject, message, ccEmails, includePaymentLink, resend } = req.body || {};
@@ -1119,12 +1100,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             logger.error('Error sending invoice:', error);
             res.status(500).json({ error: 'Failed to send invoice' });
         }
-    });
+    }));
 
     /**
      * GET /api/invoices/:id/pdf - Generate and download invoice PDF
      */
-    router.get('/:id/pdf', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/:id/pdf', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -1184,12 +1165,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error generating PDF:', error);
             res.status(500).json({ error: 'Failed to generate PDF' });
         }
-    });
+    }));
 
     /**
      * POST /api/invoices/:id/record-payment - Record manual payment
      */
-    router.post('/:id/record-payment', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/record-payment', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -1284,13 +1265,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error recording payment:', error);
             res.status(500).json({ error: 'Failed to record payment' });
         }
-    });
+    }));
 
     /**
      * POST /api/invoices/:id/create-payment-link - Create Stripe Checkout Session
      * Returns a URL to redirect the customer to Stripe's hosted checkout page
      */
-    router.post('/:id/create-payment-link', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/:id/create-payment-link', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -1368,7 +1349,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error creating payment link:', error);
             res.status(500).json({ error: 'Failed to create payment link' });
         }
-    });
+    }));
 
     // ======================
     // Payments History
@@ -1377,7 +1358,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * GET /api/invoices/payments - List all payments
      */
-    router.get('/payments', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/payments', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { status, payment_method, page = 1, limit = 50 } = req.query;
             const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -1434,7 +1415,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error fetching payments:', error);
             res.status(500).json({ error: 'Failed to fetch payments' });
         }
-    });
+    }));
 
     // ======================
     // Businesses (Multi-Business Support)
@@ -1443,7 +1424,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * GET /api/invoices/businesses - List all businesses for organization
      */
-    router.get('/businesses', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/businesses', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const client = await pool.connect();
 
@@ -1460,12 +1441,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error fetching businesses:', error);
             res.status(500).json({ error: 'Failed to fetch businesses' });
         }
-    });
+    }));
 
     /**
      * GET /api/invoices/businesses/:id - Get single business
      */
-    router.get('/businesses/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.get('/businesses/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
 
@@ -1492,12 +1473,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error fetching business:', error);
             res.status(500).json({ error: 'Failed to fetch business' });
         }
-    });
+    }));
 
     /**
      * POST /api/invoices/businesses - Create new business
      */
-    router.post('/businesses', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/businesses', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { name, email, phone, address, tax_id, logo_url } = req.body;
 
@@ -1527,12 +1508,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error creating business:', error);
             res.status(500).json({ error: 'Failed to create business' });
         }
-    });
+    }));
 
     /**
      * PUT /api/invoices/businesses/:id - Update business
      */
-    router.put('/businesses/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.put('/businesses/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
 
@@ -1590,12 +1571,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error updating business:', error);
             res.status(500).json({ error: 'Failed to update business' });
         }
-    });
+    }));
 
     /**
      * DELETE /api/invoices/businesses/:id - Delete (soft) business
      */
-    router.delete('/businesses/:id', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.delete('/businesses/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
 
@@ -1629,12 +1610,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error deleting business:', error);
             res.status(500).json({ error: 'Failed to delete business' });
         }
-    });
+    }));
 
     /**
      * POST /api/invoices/businesses/:id/logo - Upload business logo
      */
-    router.post('/businesses/:id/logo', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.post('/businesses/:id/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         if (!upload) {
             return res.status(503).json({ error: 'File upload not available' });
         }
@@ -1724,12 +1705,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 res.status(500).json({ error: 'Failed to upload logo' });
             }
         });
-    });
+    }));
 
     /**
      * DELETE /api/invoices/businesses/:id/logo - Remove business logo
      */
-    router.delete('/businesses/:id/logo', authenticateJWT, requireOrganization, async (req, res, next) => {
+    router.delete('/businesses/:id/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         try {
             const { id } = req.params;
             if (isNaN(parseInt(id))) {
@@ -1784,7 +1765,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error removing business logo:', error);
             res.status(500).json({ error: 'Failed to remove logo' });
         }
-    });
+    }));
 
     // ======================
     // Payment Settings
@@ -1793,7 +1774,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * GET /api/invoices/settings - Get payment settings
      */
-    router.get('/settings', authenticateJWT, requireOrganization, async (req, res) => {
+    router.get('/settings', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const client = await pool.connect();
 
@@ -1820,12 +1801,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error fetching payment settings:', error);
             res.status(500).json({ error: 'Failed to fetch payment settings' });
         }
-    });
+    }));
 
     /**
      * PUT /api/invoices/settings - Update payment settings
      */
-    router.put('/settings', authenticateJWT, requireOrganization, async (req, res) => {
+    router.put('/settings', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const {
                 invoice_prefix,
@@ -1887,12 +1868,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error updating payment settings:', error);
             res.status(500).json({ error: 'Failed to update payment settings' });
         }
-    });
+    }));
 
     /**
      * POST /api/invoices/settings/logo - Upload business logo
      */
-    router.post('/settings/logo', authenticateJWT, requireOrganization, async (req, res) => {
+    router.post('/settings/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         if (!upload) {
             return res.status(503).json({ error: 'File upload not available. Please install multer: npm install multer' });
         }
@@ -1982,12 +1963,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 res.status(500).json({ error: 'Failed to upload logo' });
             }
         });
-    });
+    }));
 
     /**
      * DELETE /api/invoices/settings/logo - Remove business logo
      */
-    router.delete('/settings/logo', authenticateJWT, requireOrganization, async (req, res) => {
+    router.delete('/settings/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const client = await pool.connect();
 
@@ -2033,7 +2014,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error removing logo:', error);
             res.status(500).json({ error: 'Failed to remove logo' });
         }
-    });
+    }));
 
     // ======================
     // Stripe Webhooks
@@ -2042,7 +2023,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * POST /api/invoices/webhook/stripe - Stripe webhook handler
      */
-    router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    router.post('/webhook/stripe', express.raw({ type: 'application/json' }), asyncHandler(async (req, res) => {
         if (!stripe) {
             return res.status(400).json({ error: 'Stripe not configured' });
         }
@@ -2146,7 +2127,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             console.error('Error processing Stripe webhook:', error);
             res.status(500).json({ error: 'Webhook processing failed' });
         }
-    });
+    }));
 
     return router;
 };
