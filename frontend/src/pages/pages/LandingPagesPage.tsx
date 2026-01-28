@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, ExternalLink, Eye, EyeOff, BarChart3, Pencil } from 'lucide-react';
+import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -55,17 +55,17 @@ export function LandingPagesPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
                     <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
+                        className="text-xl font-semibold italic truncate min-w-0"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
                         PAGES & FORMS | Landing Pages
                     </h1>
                 </div>
                 {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4 flex-shrink-0">
                     <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
@@ -219,41 +219,45 @@ export function LandingPagesPage() {
 
     return (
         <>
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search pages..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
-                    />
+            <MobileControlsBar className="flex-col items-stretch">
+                <div className="flex items-center gap-2 w-full">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search pages..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        />
+                    </div>
+                    <Button
+                        size="icon"
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                        onClick={handleCreatePage}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[100px] h-9">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="icon"
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                    onClick={handleCreatePage}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2 w-full">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="flex-1 h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="published">Published</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </MobileControlsBar>
             <div className="container mx-auto p-6 max-w-7xl">
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
+                        <div className="p-6 space-y-4">
+                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
                         </div>
                     ) : filteredPages.length === 0 ? (
                         <div className="p-12 text-center">
@@ -267,21 +271,26 @@ export function LandingPagesPage() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="divide-y">
                             {filteredPages.map((page) => (
-                                <Card key={page.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/pages/${page.id}`)}>
-                                    <div className="h-32 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
-                                        <Layout className="h-12 w-12 text-blue-600/50" />
-                                    </div>
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{page.name}</CardTitle>
-                                                {page.description && <CardDescription className="line-clamp-1">{page.description}</CardDescription>}
+                                <div
+                                    key={page.id}
+                                    className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                                    onClick={() => navigate(`/pages/${page.id}`)}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                                <Layout className="h-4 w-4 text-blue-600" />
                                             </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-medium text-sm md:text-base truncate">{page.name}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -311,20 +320,21 @@ export function LandingPagesPage() {
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            <Badge className={`text-xs ${getStatusBadge(page.status)}`}>{page.status}</Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between pt-3 border-t text-sm text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <BarChart3 className="h-3 w-3" />
-                                                {page.views} views
-                                            </span>
-                                            <span>{page.conversions} conversions</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                    <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                        {page.description && (
+                                            <span className="text-sm text-muted-foreground truncate max-w-full">{page.description}</span>
+                                        )}
+                                        <Badge className={`text-xs ${getStatusBadge(page.status)}`}>{page.status}</Badge>
+                                    </div>
+                                    <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                            <BarChart3 className="h-3 w-3" />
+                                            {page.views} views
+                                        </span>
+                                        <span>{page.conversions} conversions</span>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     )}

@@ -123,17 +123,17 @@ export function AutomationsPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
           <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1 
-            className="text-xl font-semibold italic truncate" 
+            className="text-xl font-semibold italic truncate min-w-0" 
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
             AUTOMATIONS | All
           </h1>
         </div>
         {/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4 flex-shrink-0">
           {/* Desktop search */}
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -319,16 +319,18 @@ export function AutomationsPage() {
   return (
     <>
       <MobileControlsBar className="flex-col items-stretch">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search workflows..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
-          />
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search workflows..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 w-full"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full">
           <Select value={triggerFilter} onValueChange={setTriggerFilter}>
             <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Trigger" />
@@ -341,7 +343,7 @@ export function AutomationsPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[100px] h-9">
+            <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -361,7 +363,7 @@ export function AutomationsPage() {
       </MobileControlsBar>
       <div className="container mx-auto p-6 max-w-7xl">
         {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-5 mb-6">
+      <div className="grid gap-4 md:grid-cols-4 mb-6">
         {loading ? (
           <>
             {[...Array(5)].map((_, i) => (
@@ -496,18 +498,18 @@ export function AutomationsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 min-w-0 flex-1">
-                      <div className={`p-2 rounded-lg ${workflow.is_active ? 'bg-green-100 dark:bg-green-900/30' : 'bg-muted'}`}>
+                      <div className={`p-2 rounded-lg ${workflow.is_active ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
                         {TRIGGER_TYPE_ICONS[workflow.trigger_type] || <Zap className="h-4 w-4" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium truncate">{workflow.name}</h3>
-                          <Badge variant={workflow.is_active ? 'default' : 'secondary'} className={workflow.is_active ? 'bg-green-500' : ''}>
+                          <h3 className="font-medium text-sm md:text-base truncate">{workflow.name}</h3>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
+                          <span className="truncate">{TRIGGER_TYPE_LABELS[workflow.trigger_type]}</span>
+                          <Badge className={`text-xs ${getStatBadgeClasses(workflow.is_active ? 'green' : 'red')}`}>
                             {workflow.is_active ? 'Active' : 'Inactive'}
                           </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <span>{TRIGGER_TYPE_LABELS[workflow.trigger_type]}</span>
                           <span>{workflow.step_count || 0} steps</span>
                           <span>{workflow.active_enrollments || 0} active</span>
                         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Phone, MoreHorizontal, Trash2, Edit, Eye } from 'lucide-react';
+import { Mail, Phone, MoreHorizontal, Trash2, Edit, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Contact } from '@/types';
@@ -16,17 +15,21 @@ import { Contact } from '@/types';
 interface ContactCardProps {
     contact: Contact;
     isSelected: boolean;
+    isExpanded: boolean;
     onSelect: (id: number, selected: boolean) => void;
     onClick: (contact: Contact) => void;
     onDelete: (id: number) => void;
+    onToggleExpand: (id: number) => void;
 }
 
 export function ContactCard({
     contact,
     isSelected,
+    isExpanded,
     onSelect,
     onClick,
     onDelete,
+    onToggleExpand,
 }: ContactCardProps) {
     const getContactName = () => {
         if (contact.first_name || contact.last_name) {
@@ -45,28 +48,47 @@ export function ContactCard({
             .slice(0, 2);
     };
 
+    const getAddressLine = () => {
+        if (!contact.address) return '';
+        const { street, city, state, zip, country } = contact.address;
+        return [street, city, state, zip, country].filter(Boolean).join(', ');
+    };
+
+    const getContactStatusBadgeClasses = (status: string) => {
+        switch (status) {
+            case 'active':
+                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            case 'inactive':
+                return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+            case 'archived':
+                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            default:
+                return '';
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'active':
-                return <Badge variant="default" className="bg-green-500 text-xs">Active</Badge>;
+                return <Badge className={`text-xs ${getContactStatusBadgeClasses('active')}`}>Active</Badge>;
             case 'inactive':
-                return <Badge variant="secondary" className="text-xs">Inactive</Badge>;
+                return <Badge className={`text-xs ${getContactStatusBadgeClasses('inactive')}`}>Inactive</Badge>;
             case 'archived':
-                return <Badge variant="outline" className="text-xs">Archived</Badge>;
+                return <Badge className={`text-xs ${getContactStatusBadgeClasses('archived')}`}>Archived</Badge>;
             default:
                 return null;
         }
     };
 
     return (
-        <Card 
+        <Card
             className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => onClick(contact)}
+            onClick={() => onToggleExpand(contact.id)}
         >
             <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                     {/* Checkbox */}
-                    <div 
+                    <div
                         className="pt-1"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -83,24 +105,25 @@ export function ContactCard({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                                <h3 className="font-medium text-base truncate">
+                        {/* Header Row: Name on left, controls on right */}
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="font-medium text-sm md:text-base truncate">
                                     {getContactName()}
                                 </h3>
-                                {contact.job_title && (
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {contact.job_title}
-                                    </p>
-                                )}
-                                {contact.company && (
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {contact.company}
-                                    </p>
-                                )}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                {getStatusBadge(contact.status)}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleExpand(contact.id);
+                                    }}
+                                >
+                                    <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? '' : 'rotate-180'}`} />
+                                </Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -108,15 +131,24 @@ export function ContactCard({
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(contact); }} className="group/menu">
-                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                                            View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(contact); }} className="group/menu">
+                                        <DropdownMenuItem
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onClick(contact);
+                                            }}
+                                            className="group/menu"
+                                        >
                                             <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                                             Edit
                                         </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
+                                        {contact.email && (
+                                            <DropdownMenuItem className="group/menu" asChild>
+                                                <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
+                                                    <Mail className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                    Email
+                                                </a>
+                                            </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem
                                             className="text-destructive"
                                             onClick={(e) => {
@@ -134,27 +166,88 @@ export function ContactCard({
                             </div>
                         </div>
 
-                        {/* Quick Actions */}
-                        <div className="flex items-center gap-3 mt-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Middle Row: Company/Role + Status */}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0">
+                            {(contact.company || contact.job_title) && (
+                                <span className="text-sm text-muted-foreground truncate max-w-full">
+                                    {contact.company || 'Company'}
+                                    {contact.job_title && ` • ${contact.job_title}`}
+                                </span>
+                            )}
+                            {getStatusBadge(contact.status)}
+                        </div>
+
+                        {/* Footer Row: Email + Phone */}
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                             {contact.email && (
                                 <a
                                     href={`mailto:${contact.email}`}
-                                    className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                                    className="flex items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
-                                    <Mail className="h-4 w-4" />
-                                    <span className="truncate max-w-[120px]">{contact.email}</span>
+                                    <Mail className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                                    <span className="truncate max-w-[180px]">{contact.email}</span>
                                 </a>
                             )}
                             {contact.phone && (
                                 <a
                                     href={`tel:${contact.phone}`}
-                                    className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                                    className="flex items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
-                                    <Phone className="h-4 w-4" />
-                                    <span>{contact.phone}</span>
+                                    <Phone className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                                    <span className="truncate max-w-[150px]">{contact.phone}</span>
                                 </a>
                             )}
                         </div>
+
+                        {isExpanded && (
+                            <div className="mt-4 -mx-4 px-4 py-4 border-t bg-muted/30 w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="grid gap-2 text-sm text-muted-foreground w-full">
+                                    {getAddressLine() && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="mt-0.5 text-xs font-medium text-muted-foreground">Address</span>
+                                            <span className="text-sm">{getAddressLine()}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4 pt-4 border-t w-full">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onClick(contact);
+                                        }}
+                                        className="text-xs sm:text-sm"
+                                    >
+                                        <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                        Edit
+                                    </Button>
+                                    {contact.email && (
+                                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm" asChild>
+                                            <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
+                                                <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                Email
+                                            </a>
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('Are you sure you want to delete this contact?')) {
+                                                onDelete(contact.id);
+                                            }
+                                        }}
+                                        className="text-xs sm:text-sm"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </CardContent>
@@ -177,6 +270,12 @@ export function ContactCardList({
     onContactClick,
     onDeleteContact,
 }: ContactCardListProps) {
+    const [expandedContactId, setExpandedContactId] = React.useState<number | null>(null);
+
+    const handleToggleExpand = (contactId: number) => {
+        setExpandedContactId((prev) => (prev === contactId ? null : contactId));
+    };
+
     return (
         <div className="space-y-3 p-4">
             {contacts.map((contact) => (
@@ -184,9 +283,11 @@ export function ContactCardList({
                     key={contact.id}
                     contact={contact}
                     isSelected={selectedContacts.includes(contact.id)}
+                    isExpanded={expandedContactId === contact.id}
                     onSelect={onSelectContact}
                     onClick={onContactClick}
                     onDelete={onDeleteContact}
+                    onToggleExpand={handleToggleExpand}
                 />
             ))}
         </div>

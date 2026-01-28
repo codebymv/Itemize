@@ -182,13 +182,13 @@ export function PageEditorPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
                     <Button variant="ghost" size="icon" onClick={() => navigate('/pages')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
+                        className="text-xl font-semibold italic truncate min-w-0"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
                         PAGES & FORMS | {loading ? 'Loading...' : editedName || 'Page Editor'}
@@ -200,7 +200,7 @@ export function PageEditorPage() {
                     )}
                 </div>
                 {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 mr-4">
+                <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
                     {page?.status === 'published' && (
                         <Button variant="outline" size="sm" onClick={() => window.open(`/p/${page.slug}`, '_blank')}>
                             <ExternalLink className="h-4 w-4 mr-2" />

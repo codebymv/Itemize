@@ -683,7 +683,7 @@ export function DashboardPage() {
                         onClick={() => navigate('/canvas')}
                     >
                         <Map className="h-4 w-4 mr-2" />
-                        Go to Workspace
+                        Go to Canvas
                     </Button>
                 </div>
             </div>
@@ -743,7 +743,7 @@ export function DashboardPage() {
                     onClick={() => navigate('/canvas')}
                 >
                     <Map className="h-4 w-4 mr-2" />
-                    Go to Workspace
+                    Go to Canvas
                 </Button>
             </MobileControlsBar>
             

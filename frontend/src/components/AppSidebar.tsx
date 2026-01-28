@@ -42,8 +42,6 @@ import {
     Mail,
     Star,
     Receipt,
-    Filter,
-    Link,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -90,33 +88,41 @@ const mainNavItems: NavItem[] = [
         path: '/contacts',
     },
     {
-        title: 'Segments',
-        icon: Filter,
-        path: '/segments',
-    },
-    {
         title: 'Pipelines',
         icon: Kanban,
         path: '/pipelines',
     },
     {
-        title: 'Scheduling',
-        icon: Calendar,
-        path: '/calendars',
+        title: 'Sales & Payments',
+        icon: Receipt,
+        path: '/invoices',
         items: [
             {
-                title: 'Calendars',
-                path: '/calendars',
+                title: 'Invoices',
+                path: '/invoices',
             },
             {
-                title: 'Bookings',
-                path: '/bookings',
+                title: 'Estimates',
+                path: '/estimates',
             },
             {
-                title: 'Integrations',
-                path: '/calendar-integrations',
+                title: 'Recurring',
+                path: '/recurring-invoices',
+            },
+            {
+                title: 'Payments',
+                path: '/invoices/payments',
+            },
+            {
+                title: 'Products',
+                path: '/products',
             },
         ],
+    },
+    {
+        title: 'Automations',
+        icon: Zap,
+        path: '/automations',
     },
     {
         title: 'Campaigns',
@@ -126,6 +132,10 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Campaigns',
                 path: '/campaigns',
+            },
+            {
+                title: 'Segments',
+                path: '/segments',
             },
             {
                 title: 'Email Templates',
@@ -172,9 +182,23 @@ const mainNavItems: NavItem[] = [
         ],
     },
     {
-        title: 'Automations',
-        icon: Zap,
-        path: '/automations',
+        title: 'Scheduling',
+        icon: Calendar,
+        path: '/calendars',
+        items: [
+            {
+                title: 'Calendars',
+                path: '/calendars',
+            },
+            {
+                title: 'Bookings',
+                path: '/bookings',
+            },
+            {
+                title: 'Integrations',
+                path: '/calendar-integrations',
+            },
+        ],
     },
     {
         title: 'Reputation',
@@ -192,33 +216,6 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Widgets',
                 path: '/review-widgets',
-            },
-        ],
-    },
-    {
-        title: 'Sales & Payments',
-        icon: Receipt,
-        path: '/invoices',
-        items: [
-            {
-                title: 'Invoices',
-                path: '/invoices',
-            },
-            {
-                title: 'Estimates',
-                path: '/estimates',
-            },
-            {
-                title: 'Recurring',
-                path: '/recurring-invoices',
-            },
-            {
-                title: 'Payments',
-                path: '/invoices/payments',
-            },
-            {
-                title: 'Products',
-                path: '/products',
             },
         ],
     },
@@ -452,93 +449,95 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className={cn("border-t", isCollapsed && "flex items-center justify-center")}>
-                <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
-                    <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
-                        <SidebarMenu className={cn("gap-2", isCollapsed && "w-full items-center")}>
-                            {secondaryNavItems.map((item) => {
-                                const isActive = location.pathname === item.path ||
-                                    (item.path !== '/' && location.pathname.startsWith(item.path)) ||
-                                    (item.items?.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')));
+            {secondaryNavItems.length > 0 && (
+                <SidebarFooter className={cn("border-t", isCollapsed && "flex items-center justify-center")}>
+                    <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
+                        <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
+                            <SidebarMenu className={cn("gap-2", isCollapsed && "w-full items-center")}>
+                                {secondaryNavItems.map((item) => {
+                                    const isActive = location.pathname === item.path ||
+                                        (item.path !== '/' && location.pathname.startsWith(item.path)) ||
+                                        (item.items?.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')));
 
-                                if (item.items && item.items.length > 0) {
+                                    if (item.items && item.items.length > 0) {
+                                        return (
+                                            <Collapsible
+                                                key={item.title}
+                                                asChild
+                                                open={!!isActive}
+                                                onOpenChange={(open) => {
+                                                    // When opening, navigate to first sub-item
+                                                    if (open && !isActive && item.items && item.items.length > 0) {
+                                                        navigate(item.items[0].path);
+                                                    }
+                                                }}
+                                                className="group/collapsible"
+                                            >
+                                                <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
+                                                    <CollapsibleTrigger asChild>
+                                                        <SidebarMenuButton
+                                                            tooltip={item.title}
+                                                            isActive={isActive}
+                                                            className="h-9 group/item"
+                                                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                            onClick={(e) => {
+                                                                if (isCollapsed) {
+                                                                    e.preventDefault();
+                                                                    handleItemClick(item);
+                                                                }
+                                                                // When expanded, CollapsibleTrigger handles toggle via onOpenChange
+                                                            }}
+                                                        >
+                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                                            <span>{item.title}</span>
+                                                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
+                                                        </SidebarMenuButton>
+                                                    </CollapsibleTrigger>
+                                                    <CollapsibleContent>
+                                                        <SidebarMenuSub>
+                                                            {item.items.map((subItem) => (
+                                                                <SidebarMenuSubItem key={subItem.title}>
+                                                                    <SidebarMenuSubButton
+                                                                        asChild
+                                                                        isActive={location.pathname === subItem.path}
+                                                                        style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                                    >
+                                                                        <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
+                                                                            <span>{subItem.title}</span>
+                                                                        </div>
+                                                                    </SidebarMenuSubButton>
+                                                                </SidebarMenuSubItem>
+                                                            ))}
+                                                        </SidebarMenuSub>
+                                                    </CollapsibleContent>
+                                                </SidebarMenuItem>
+                                            </Collapsible>
+                                        );
+                                    }
+
                                     return (
-                                        <Collapsible
-                                            key={item.title}
-                                            asChild
-                                            open={!!isActive}
-                                            onOpenChange={(open) => {
-                                                // When opening, navigate to first sub-item
-                                                if (open && !isActive && item.items && item.items.length > 0) {
-                                                    navigate(item.items[0].path);
-                                                }
-                                            }}
-                                            className="group/collapsible"
-                                        >
-                                            <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
-                                                <CollapsibleTrigger asChild>
-                                                    <SidebarMenuButton
-                                                        tooltip={item.title}
-                                                        isActive={isActive}
-                                                        className="h-9 group/item"
-                                                        style={{ fontFamily: '"Raleway", sans-serif' }}
-                                                        onClick={(e) => {
-                                                            if (isCollapsed) {
-                                                                e.preventDefault();
-                                                                handleItemClick(item);
-                                                            }
-                                                            // When expanded, CollapsibleTrigger handles toggle via onOpenChange
-                                                        }}
-                                                    >
-                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
-                                                        <span>{item.title}</span>
-                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
-                                                    </SidebarMenuButton>
-                                                </CollapsibleTrigger>
-                                                <CollapsibleContent>
-                                                    <SidebarMenuSub>
-                                                        {item.items.map((subItem) => (
-                                                            <SidebarMenuSubItem key={subItem.title}>
-                                                                <SidebarMenuSubButton
-                                                                    asChild
-                                                                    isActive={location.pathname === subItem.path}
-                                                                    style={{ fontFamily: '"Raleway", sans-serif' }}
-                                                                >
-                                                                    <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
-                                                                        <span>{subItem.title}</span>
-                                                                    </div>
-                                                                </SidebarMenuSubButton>
-                                                            </SidebarMenuSubItem>
-                                                        ))}
-                                                    </SidebarMenuSub>
-                                                </CollapsibleContent>
-                                            </SidebarMenuItem>
-                                        </Collapsible>
+                                        <SidebarMenuItem key={item.title} className={cn(isCollapsed && "flex justify-center")}>
+                                            <SidebarMenuButton
+                                                tooltip={item.title}
+                                                isActive={isActive}
+                                                onClick={() => handleItemClick(item)}
+                                                className={cn(
+                                                    "h-9 group/item",
+                                                    isActive ? 'text-gray-900 dark:text-white font-medium' : ''
+                                                )}
+                                                style={{ fontFamily: '"Raleway", sans-serif' }}
+                                            >
+                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                                <span>{item.title}</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
                                     );
-                                }
-
-                                return (
-                                    <SidebarMenuItem key={item.title} className={cn(isCollapsed && "flex justify-center")}>
-                                        <SidebarMenuButton
-                                            tooltip={item.title}
-                                            isActive={isActive}
-                                            onClick={() => handleItemClick(item)}
-                                            className={cn(
-                                                "h-9 group/item",
-                                                isActive ? 'text-gray-900 dark:text-white font-medium' : ''
-                                            )}
-                                            style={{ fontFamily: '"Raleway", sans-serif' }}
-                                        >
-                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
-                                            <span>{item.title}</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                );
-                            })}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-            </SidebarFooter>
+                                })}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                </SidebarFooter>
+            )}
 
             <SidebarRail />
         </Sidebar>

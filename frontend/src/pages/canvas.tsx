@@ -452,7 +452,7 @@ const CanvasPage: React.FC = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add
+            Add Content
           </Button>
         </div>
       </div>

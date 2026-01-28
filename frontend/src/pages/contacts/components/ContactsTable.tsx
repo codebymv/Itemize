@@ -57,14 +57,27 @@ export function ContactsTable({
       .slice(0, 2);
   };
 
+  const getContactStatusBadgeClasses = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'inactive':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+      case 'archived':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      default:
+        return '';
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+        return <Badge className={getContactStatusBadgeClasses('active')}>Active</Badge>;
       case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>;
+        return <Badge className={getContactStatusBadgeClasses('inactive')}>Inactive</Badge>;
       case 'archived':
-        return <Badge variant="outline">Archived</Badge>;
+        return <Badge className={getContactStatusBadgeClasses('archived')}>Archived</Badge>;
       default:
         return null;
     }

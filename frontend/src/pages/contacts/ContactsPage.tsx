@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, CheckCircle, AlertCircle, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +35,88 @@ import { ImportContactsModal } from './components/ImportContactsModal';
 import { BulkTagModal } from './components/BulkTagModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+// Color helper functions for contact status badges and summary cards
+const getContactStatusBadgeClasses = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    case 'inactive':
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+    case 'archived':
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    default:
+      return '';
+  }
+};
+
+const getStatBadgeClasses = (theme: string) => {
+  switch (theme) {
+    case 'green':
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    case 'orange':
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+    case 'blue':
+      return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
+    case 'red':
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    case 'gray':
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  }
+};
+
+const getStatIconBgClasses = (theme: string) => {
+  switch (theme) {
+    case 'green':
+      return 'bg-green-100 dark:bg-green-900';
+    case 'orange':
+      return 'bg-orange-100 dark:bg-orange-900';
+    case 'blue':
+      return 'bg-sky-100 dark:bg-sky-900';
+    case 'red':
+      return 'bg-red-100 dark:bg-red-900';
+    case 'gray':
+      return 'bg-gray-100 dark:bg-gray-800';
+    default:
+      return 'bg-gray-100 dark:bg-gray-800';
+  }
+};
+
+const getStatValueColor = (theme: string) => {
+  switch (theme) {
+    case 'green':
+      return 'text-green-600';
+    case 'orange':
+      return 'text-orange-600';
+    case 'blue':
+      return 'text-sky-600';
+    case 'red':
+      return 'text-red-600';
+    case 'gray':
+      return 'text-gray-600';
+    default:
+      return 'text-gray-600';
+  }
+};
+
+const getStatIconColor = (theme: string) => {
+  switch (theme) {
+    case 'green':
+      return 'text-green-600 dark:text-green-400';
+    case 'orange':
+      return 'text-orange-600 dark:text-orange-400';
+    case 'blue':
+      return 'text-sky-600 dark:text-sky-400';
+    case 'red':
+      return 'text-red-600 dark:text-red-400';
+    case 'gray':
+      return 'text-gray-400 dark:text-gray-500';
+    default:
+      return 'text-gray-400 dark:text-gray-500';
+  }
+};
+
 export function ContactsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -59,6 +141,14 @@ export function ContactsPage() {
     total: 0,
     totalPages: 0,
   });
+
+  const contactStats = useMemo(() => {
+    const total = contacts.length;
+    const active = contacts.filter((contact) => contact.status === 'active').length;
+    const inactive = contacts.filter((contact) => contact.status === 'inactive').length;
+    const archived = contacts.filter((contact) => contact.status === 'archived').length;
+    return { total, active, inactive, archived };
+  }, [contacts]);
 
   // Set header content following workspace pattern
   useEffect(() => {
@@ -87,7 +177,6 @@ export function ContactsPage() {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -307,7 +396,6 @@ export function ContactsPage() {
         <div className="flex items-center gap-2 w-full">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="flex-1 h-9">
-              <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -338,79 +426,145 @@ export function ContactsPage() {
       </MobileControlsBar>
 
       <div className="container mx-auto p-6 max-w-7xl">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Archived</Badge>
+                  <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{contactStats.archived}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {contactStats.archived} contact{contactStats.archived !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
+                  <Archive className={`h-5 w-5 ${getStatIconColor('red')}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
+                  <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{contactStats.total}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {contactStats.total} contact{contactStats.total !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
+                  <Users className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Active</Badge>
+                  <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{contactStats.active}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {contactStats.active} contact{contactStats.active !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
+                  <CheckCircle className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Inactive</Badge>
+                  <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{contactStats.inactive}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {contactStats.inactive} contact{contactStats.inactive !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
+                  <AlertCircle className={`h-5 w-5 ${getStatIconColor('orange')}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
         {/* Bulk actions */}
-      {selectedContacts.length > 0 && (
-        <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {selectedContacts.length} contact{selectedContacts.length > 1 ? 's' : ''} selected
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowBulkTagModal(true)}>
-                  <Tag className="h-4 w-4 mr-2" />
-                  Tag
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Assign
-                </Button>
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+        {selectedContacts.length > 0 && (
+          <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
+            <CardContent className="py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  {selectedContacts.length} contact{selectedContacts.length > 1 ? 's' : ''} selected
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowBulkTagModal(true)}>
+                    <Tag className="h-4 w-4 mr-2" />
+                    Tag
+                  </Button>
+                  <Button variant="outline" size="sm" disabled>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Contacts table */}
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="p-6 space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <UserPlus className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">No contacts yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Get started by adding your first contact
+                </p>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
                 </Button>
               </div>
-            </div>
+            ) : isMobile ? (
+              <ContactCardList
+                contacts={contacts}
+                selectedContacts={selectedContacts}
+                onSelectContact={handleSelectContact}
+                onContactClick={handleContactClick}
+                onDeleteContact={handleDeleteContact}
+              />
+            ) : (
+              <ContactsTable
+                contacts={contacts}
+                selectedContacts={selectedContacts}
+                onSelectContact={handleSelectContact}
+                onSelectAll={handleSelectAll}
+                onContactClick={handleContactClick}
+                onDeleteContact={handleDeleteContact}
+              />
+            )}
           </CardContent>
         </Card>
-      )}
-
-      {/* Contacts table */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                <UserPlus className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">No contacts yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Get started by adding your first contact
-              </p>
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Contact
-              </Button>
-            </div>
-          ) : isMobile ? (
-            <ContactCardList
-              contacts={contacts}
-              selectedContacts={selectedContacts}
-              onSelectContact={handleSelectContact}
-              onContactClick={handleContactClick}
-              onDeleteContact={handleDeleteContact}
-            />
-          ) : (
-            <ContactsTable
-              contacts={contacts}
-              selectedContacts={selectedContacts}
-              onSelectContact={handleSelectContact}
-              onSelectAll={handleSelectAll}
-              onContactClick={handleContactClick}
-              onDeleteContact={handleDeleteContact}
-            />
-          )}
-        </CardContent>
-      </Card>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (

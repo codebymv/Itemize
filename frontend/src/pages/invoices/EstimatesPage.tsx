@@ -387,35 +387,19 @@ export function EstimatesPage() {
                                     onClick={() => navigate(`/estimates/${estimate.id}`)}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                                                 {getStatusIcon(estimate.status)}
                                             </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="font-medium">{estimate.estimate_number}</p>
-                                                    <Badge className={`text-xs ${getStatusBadge(estimate.status)}`}>
-                                                        {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
-                                                    </Badge>
-                                                    {estimate.converted_invoice_id && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            Converted
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm text-muted-foreground">{getContactName(estimate)}</p>
-                                            </div>
+                                            <p className="font-medium text-sm md:text-base truncate">{estimate.estimate_number}</p>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-right">
-                                                <p className="font-medium">{formatCurrency(estimate.total)}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Valid until {new Date(estimate.valid_until).toLocaleDateString()}
-                                                </p>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <div className="text-right hidden sm:block">
+                                                <p className="font-semibold text-sm md:text-base">{formatCurrency(estimate.total)}</p>
                                             </div>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -443,6 +427,23 @@ export function EstimatesPage() {
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
+                                    </div>
+                                    <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                        <span className="text-sm text-muted-foreground font-medium">{getContactName(estimate)}</span>
+                                        <Badge className={`text-xs ${getStatusBadge(estimate.status)}`}>
+                                            {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
+                                        </Badge>
+                                        {estimate.converted_invoice_id && (
+                                            <Badge variant="outline" className="text-xs">
+                                                Converted
+                                            </Badge>
+                                        )}
+                                        <span className="text-xs text-muted-foreground">
+                                            Valid until {new Date(estimate.valid_until).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                        <span className="sm:hidden font-semibold">{formatCurrency(estimate.total)}</span>
                                     </div>
                                 </div>
                             ))}

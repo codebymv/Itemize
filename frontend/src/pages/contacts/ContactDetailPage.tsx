@@ -59,6 +59,7 @@ import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +67,7 @@ export function ContactDetailPage() {
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
+  const isMobile = useIsMobile();
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<ContactActivity[]>([]);
@@ -96,8 +98,8 @@ export function ContactDetailPage() {
   // Set header content following workspace pattern
   useEffect(() => {
     setHeaderContent(
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between w-full min-w-0 gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="icon"
@@ -108,13 +110,13 @@ export function ContactDetailPage() {
           </Button>
           <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-xl font-semibold italic truncate"
+            className="text-xl font-semibold italic truncate min-w-0"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            CONTACTS | {getContactDisplayName(contact)}
+            {isMobile ? getContactDisplayName(contact) : `CONTACTS | ${getContactDisplayName(contact)}`}
           </h1>
         </div>
-        <div className="flex items-center gap-2 mr-4">
+        <div className="flex items-center gap-2 mr-4 flex-shrink-0">
           {/* Desktop Tabs - in header */}
           <div className="hidden md:flex items-center">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -159,7 +161,7 @@ export function ContactDetailPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [contact, theme, navigate, setHeaderContent, activeTab]);
+  }, [contact, theme, navigate, setHeaderContent, activeTab, isMobile]);
 
   // Initialize organization
   useEffect(() => {

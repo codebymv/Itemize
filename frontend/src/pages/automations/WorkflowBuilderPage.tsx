@@ -180,7 +180,7 @@ export function WorkflowBuilderPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="icon"
@@ -191,14 +191,14 @@ export function WorkflowBuilderPage() {
           </Button>
           <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1 
-            className="text-xl font-semibold italic truncate" 
+            className="text-xl font-semibold italic truncate min-w-0" 
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
             AUTOMATIONS | {isNewWorkflow ? 'New Workflow' : name || 'Workflow'}
           </h1>
         </div>
         {/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 mr-4">
+        <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
           {!isNewWorkflow && (
             <Button
               variant="outline"

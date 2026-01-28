@@ -15,6 +15,7 @@ import {
   Trash2,
   Share2,
   ExternalLink,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,11 @@ import {
   getWhiteboards,
   getWireframes,
   getVaults,
+  createList as apiCreateList,
+  createNote as apiCreateNote,
+  createWhiteboard as apiCreateWhiteboard,
+  createWireframe as apiCreateWireframe,
+  createVault as apiCreateVault,
   deleteList as apiDeleteList,
   deleteNote as apiDeleteNote,
   deleteWhiteboard as apiDeleteWhiteboard,
@@ -54,6 +60,12 @@ import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import { ContentCard } from './components/ContentCard';
 import { ContentModal } from './components/ContentModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { NewNoteModal } from '@/components/NewNoteModal';
+import { NewListModal } from '@/components/NewListModal';
+import { NewWhiteboardModal } from '@/components/NewWhiteboardModal';
+import { NewWireframeModal } from '@/components/NewWireframeModal';
+import { NewVaultModal } from '@/components/NewVaultModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -80,6 +92,7 @@ export function ContentsPage() {
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
   const { token } = useAuth();
+  const isMobile = useIsMobile();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -101,6 +114,13 @@ export function ContentsPage() {
   // Modal state
   const [selectedContent, setSelectedContent] = useState<UnifiedContent | null>(null);
   const [showModal, setShowModal] = useState(false);
+  
+  // Create content modals
+  const [showNewNoteModal, setShowNewNoteModal] = useState(false);
+  const [showNewListModal, setShowNewListModal] = useState(false);
+  const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
+  const [showNewWireframeModal, setShowNewWireframeModal] = useState(false);
+  const [showNewVaultModal, setShowNewVaultModal] = useState(false);
 
   // Categories
   const { categories: dbCategories } = useDatabaseCategories();
@@ -326,6 +346,161 @@ export function ContentsPage() {
     fetchAllContent();
   };
 
+  // Handle list creation for NewListModal
+  const handleCreateList = async (title: string, type: string, color: string, position: { x: number; y: number }) => {
+    if (!token) return undefined;
+
+    try {
+      const response = await apiCreateList({
+        title,
+        type,
+        items: [],
+        position_x: position.x,
+        position_y: position.y,
+        color_value: color
+      }, token);
+
+      const newList: List = {
+        id: response.id,
+        title: response.title,
+        type: response.type || 'General',
+        items: response.items || [],
+        createdAt: response.createdAt ? new Date(response.createdAt) : undefined,
+        updatedAt: response.updatedAt ? new Date(response.updatedAt) : undefined,
+        position_x: response.position_x || position.x,
+        position_y: response.position_y || position.y,
+        width: response.width,
+        height: response.height,
+        color_value: response.color_value || color,
+        share_token: response.share_token,
+        is_public: response.is_public,
+        shared_at: response.shared_at ? new Date(response.shared_at).toISOString() : undefined,
+      };
+
+      setLists(prev => [newList, ...prev]);
+      fetchAllContent();
+      return newList;
+    } catch (error) {
+      console.error('Failed to create list:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not create your list. Please try again.',
+        variant: 'destructive'
+      });
+      return undefined;
+    }
+  };
+
+  // Convert database categories to format expected by modals
+  const categoriesForModal = useMemo(() => {
+    return dbCategories.map(cat => ({
+      name: cat.name,
+      color_value: cat.color_value
+    }));
+  }, [dbCategories]);
+
+  // Handle note creation for NewNoteModal
+  const handleCreateNote = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    if (!token) return;
+
+    try {
+      await apiCreateNote({
+        title,
+        content: '',
+        color_value: color,
+        position_x: position.x,
+        position_y: position.y,
+        width: 570,
+        height: 350,
+        z_index: 0,
+      }, token);
+      fetchAllContent();
+    } catch (error) {
+      console.error('Failed to create note:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not create your note. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Handle whiteboard creation for NewWhiteboardModal
+  const handleCreateWhiteboard = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    if (!token) return;
+
+    try {
+      await apiCreateWhiteboard({
+        title,
+        color_value: color,
+        position_x: position.x,
+        position_y: position.y,
+        width: 800,
+        height: 600,
+        z_index: 0,
+      }, token);
+      fetchAllContent();
+    } catch (error) {
+      console.error('Failed to create whiteboard:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not create your whiteboard. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Handle wireframe creation for NewWireframeModal
+  const handleCreateWireframe = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    if (!token) return;
+
+    try {
+      await apiCreateWireframe({
+        title,
+        color_value: color,
+        position_x: position.x,
+        position_y: position.y,
+        width: 800,
+        height: 600,
+        z_index: 0,
+      }, token);
+      fetchAllContent();
+    } catch (error) {
+      console.error('Failed to create wireframe:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not create your wireframe. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Handle vault creation for NewVaultModal
+  const handleCreateVault = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    if (!token) return;
+
+    try {
+      await apiCreateVault({
+        title,
+        color_value: color,
+        position_x: position.x,
+        position_y: position.y,
+        width: 400,
+        height: 300,
+        z_index: 0,
+        is_locked: false,
+      }, token);
+      fetchAllContent();
+    } catch (error) {
+      console.error('Failed to create vault:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not create your vault. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   // Set header content
   useEffect(() => {
     setHeaderContent(
@@ -458,14 +633,46 @@ export function ContentsPage() {
   return (
     <>
       <MobileControlsBar className="flex-col items-stretch gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search content..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
-          />
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-3">
+                <Plus className="h-4 w-4" />
+                {!isMobile && <span className="ml-1.5">Add</span>}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setShowNewListModal(true)}>
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Add List
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowNewNoteModal(true)}>
+                <StickyNote className="h-4 w-4 mr-2" />
+                Add Note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowNewWhiteboardModal(true)}>
+                <Palette className="h-4 w-4 mr-2" />
+                Add Whiteboard
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowNewWireframeModal(true)}>
+                <GitBranch className="h-4 w-4 mr-2" />
+                Add Wireframe
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowNewVaultModal(true)}>
+                <KeyRound className="h-4 w-4 mr-2" />
+                Add Vault
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
@@ -543,15 +750,40 @@ export function ContentsPage() {
             <p className="text-muted-foreground mb-4">
               {searchQuery || typeFilter !== 'all' || categoryFilter !== 'all'
                 ? 'Try adjusting your filters'
-                : 'Get started by creating content on your canvas'}
+                : 'Get started by creating content'}
             </p>
-            <Button
-              onClick={() => navigate('/canvas')}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Map className="h-4 w-4 mr-2" />
-              Go to Canvas
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Content
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-48">
+                  <DropdownMenuItem onClick={() => setShowNewListModal(true)}>
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Add List
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowNewNoteModal(true)}>
+                    <StickyNote className="h-4 w-4 mr-2" />
+                    Add Note
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowNewWhiteboardModal(true)}>
+                    <Palette className="h-4 w-4 mr-2" />
+                    Add Whiteboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowNewWireframeModal(true)}>
+                    <GitBranch className="h-4 w-4 mr-2" />
+                    Add Wireframe
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowNewVaultModal(true)}>
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    Add Vault
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
@@ -651,6 +883,68 @@ export function ContentsPage() {
           content={selectedContent}
           onClose={handleModalClose}
           categories={dbCategories}
+        />
+      )}
+
+      {/* Create Content Modals */}
+      {showNewNoteModal && (
+        <NewNoteModal
+          isOpen={showNewNoteModal}
+          onClose={() => {
+            setShowNewNoteModal(false);
+            fetchAllContent();
+          }}
+          onCreateNote={handleCreateNote}
+          initialPosition={{ x: 0, y: 0 }}
+          existingCategories={categoriesForModal}
+        />
+      )}
+      {showNewListModal && (
+        <NewListModal
+          isOpen={showNewListModal}
+          onClose={() => {
+            setShowNewListModal(false);
+            fetchAllContent();
+          }}
+          onCreateList={handleCreateList}
+          existingCategories={categoriesForModal}
+          position={{ x: 0, y: 0 }}
+        />
+      )}
+      {showNewWhiteboardModal && (
+        <NewWhiteboardModal
+          isOpen={showNewWhiteboardModal}
+          onClose={() => {
+            setShowNewWhiteboardModal(false);
+            fetchAllContent();
+          }}
+          onCreateWhiteboard={handleCreateWhiteboard}
+          initialPosition={{ x: 0, y: 0 }}
+          existingCategories={categoriesForModal}
+        />
+      )}
+      {showNewWireframeModal && (
+        <NewWireframeModal
+          isOpen={showNewWireframeModal}
+          onClose={() => {
+            setShowNewWireframeModal(false);
+            fetchAllContent();
+          }}
+          onCreateWireframe={handleCreateWireframe}
+          initialPosition={{ x: 0, y: 0 }}
+          existingCategories={categoriesForModal}
+        />
+      )}
+      {showNewVaultModal && (
+        <NewVaultModal
+          isOpen={showNewVaultModal}
+          onClose={() => {
+            setShowNewVaultModal(false);
+            fetchAllContent();
+          }}
+          onCreateVault={handleCreateVault}
+          initialPosition={{ x: 0, y: 0 }}
+          existingCategories={categoriesForModal}
         />
       )}
     </div>
