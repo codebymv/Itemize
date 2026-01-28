@@ -60,11 +60,7 @@ import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import { ContentCard } from './components/ContentCard';
 import { ContentModal } from './components/ContentModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { NewNoteModal } from '@/components/NewNoteModal';
-import { NewListModal } from '@/components/NewListModal';
-import { NewWhiteboardModal } from '@/components/NewWhiteboardModal';
-import { NewWireframeModal } from '@/components/NewWireframeModal';
-import { NewVaultModal } from '@/components/NewVaultModal';
+import { CreateItemModal } from '@/components/CreateItemModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Content type definitions
@@ -888,62 +884,67 @@ export function ContentsPage() {
 
       {/* Create Content Modals */}
       {showNewNoteModal && (
-        <NewNoteModal
+        <CreateItemModal
           isOpen={showNewNoteModal}
           onClose={() => {
             setShowNewNoteModal(false);
             fetchAllContent();
           }}
-          onCreateNote={handleCreateNote}
-          initialPosition={{ x: 0, y: 0 }}
+          itemType="note"
+          onCreate={handleCreateNote}
+          position={{ x: 0, y: 0 }}
           existingCategories={categoriesForModal}
         />
       )}
       {showNewListModal && (
-        <NewListModal
+        <CreateItemModal
           isOpen={showNewListModal}
           onClose={() => {
             setShowNewListModal(false);
             fetchAllContent();
           }}
-          onCreateList={handleCreateList}
-          existingCategories={categoriesForModal}
+          itemType="list"
+          onCreate={handleCreateList}
           position={{ x: 0, y: 0 }}
+          existingCategories={categoriesForModal}
         />
       )}
       {showNewWhiteboardModal && (
-        <NewWhiteboardModal
+        <CreateItemModal
           isOpen={showNewWhiteboardModal}
           onClose={() => {
             setShowNewWhiteboardModal(false);
             fetchAllContent();
           }}
-          onCreateWhiteboard={handleCreateWhiteboard}
-          initialPosition={{ x: 0, y: 0 }}
+          itemType="whiteboard"
+          onCreate={handleCreateWhiteboard}
+          position={{ x: 0, y: 0 }}
           existingCategories={categoriesForModal}
         />
       )}
       {showNewWireframeModal && (
-        <NewWireframeModal
+        <CreateItemModal
           isOpen={showNewWireframeModal}
           onClose={() => {
             setShowNewWireframeModal(false);
             fetchAllContent();
           }}
-          onCreateWireframe={handleCreateWireframe}
-          initialPosition={{ x: 0, y: 0 }}
+          itemType="wireframe"
+          onCreate={handleCreateWireframe}
+          position={{ x: 0, y: 0 }}
           existingCategories={categoriesForModal}
         />
       )}
       {showNewVaultModal && (
-        <NewVaultModal
+        <CreateItemModal
           isOpen={showNewVaultModal}
           onClose={() => {
             setShowNewVaultModal(false);
             fetchAllContent();
           }}
-          onCreateVault={handleCreateVault}
-          initialPosition={{ x: 0, y: 0 }}
+          itemType="vault"
+          onCreate={handleCreateVault}
+          position={{ x: 0, y: 0 }}
           existingCategories={categoriesForModal}
         />
       )}

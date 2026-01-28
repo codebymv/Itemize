@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import CreateListModal from "@/components/CreateListModal";
 import { ListCard } from "@/components/ListCard";
-import { ShareListModal } from "@/components/ShareListModal";
+import { ShareModal } from "@/components/ShareModal";
 import QuickAddForm from "@/components/QuickAddForm";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import api from '@/lib/api';
@@ -34,8 +34,8 @@ const Index = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
   // Sharing modal states
-  const [showShareListModal, setShowShareListModal] = useState(false);
-  const [currentShareItem, setCurrentShareItem] = useState<{ id: string; title: string; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [currentShareItem, setCurrentShareItem] = useState<{ id: string; title: string; itemType: 'list'; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
 
   const { toast } = useToast();
   const { categories } = useDatabaseCategories();
@@ -142,8 +142,8 @@ const Index = () => {
     const list = lists.find(l => l.id === listId);
     if (!list) return;
 
-    setCurrentShareItem({ id: listId, title: list.title });
-    setShowShareListModal(true);
+    setCurrentShareItem({ id: listId, title: list.title, itemType: 'list' });
+    setShowShareModal(true);
   };
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
@@ -299,16 +299,17 @@ const Index = () => {
         existingCategories={categories}
       />
 
-      {/* Share List Modal */}
-      {showShareListModal && currentShareItem && (
-        <ShareListModal
-          isOpen={showShareListModal}
+      {/* Share Modal */}
+      {showShareModal && currentShareItem && (
+        <ShareModal
+          isOpen={showShareModal}
           onClose={() => {
-            setShowShareListModal(false);
+            setShowShareModal(false);
             setCurrentShareItem(null);
           }}
-          listId={currentShareItem.id}
-          listTitle={currentShareItem.title}
+          itemType="list"
+          itemId={currentShareItem.id}
+          itemTitle={currentShareItem.title}
           onShare={handleListShare}
           onUnshare={handleListUnshare}
           existingShareData={currentShareItem.shareData}

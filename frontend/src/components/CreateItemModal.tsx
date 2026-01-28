@@ -1,55 +1,111 @@
-import React, { useState, useEffect } from 'react';
-import { KeyRound } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StickyNote, CheckSquare, Palette, GitBranch, KeyRound } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ColorPicker } from './ui/color-picker';
-import { Category } from '@/types';
 
 interface LocalCategory {
   name: string;
   color_value?: string;
 }
 
-interface NewVaultModalProps {
+type ItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
+
+interface CreateItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateVault: (title: string, category: string, color: string, position: { x: number; y: number }) => void;
-  initialPosition: { x: number; y: number };
+  itemType: ItemType;
+  onCreate: (title: string, category: string, color: string, position: { x: number; y: number }) => Promise<unknown> | void;
   existingCategories: LocalCategory[];
+  position?: { x: number; y: number };
   updateCategory?: (categoryName: string, newColor: string) => void;
 }
 
-export const NewVaultModal: React.FC<NewVaultModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onCreateVault, 
-  initialPosition,
+const itemConfig = {
+  note: {
+    label: 'Note',
+    icon: StickyNote,
+    titlePlaceholder: 'Enter note title',
+    defaultColor: '#3B82F6',
+    requireResult: false,
+    showValidationError: false
+  },
+  list: {
+    label: 'List',
+    icon: CheckSquare,
+    titlePlaceholder: 'Enter list title',
+    defaultColor: '#3B82F6',
+    requireResult: true,
+    showValidationError: true
+  },
+  whiteboard: {
+    label: 'Whiteboard',
+    icon: Palette,
+    titlePlaceholder: 'Enter whiteboard title',
+    defaultColor: '#3B82F6',
+    requireResult: false,
+    showValidationError: false
+  },
+  wireframe: {
+    label: 'Wireframe',
+    icon: GitBranch,
+    titlePlaceholder: 'Enter wireframe title',
+    defaultColor: '#3B82F6',
+    requireResult: false,
+    showValidationError: false
+  },
+  vault: {
+    label: 'Vault',
+    icon: KeyRound,
+    titlePlaceholder: 'Enter vault title',
+    defaultColor: '#3B82F6',
+    requireResult: false,
+    showValidationError: false
+  }
+};
+
+export const CreateItemModal: React.FC<CreateItemModalProps> = ({
+  isOpen,
+  onClose,
+  itemType,
+  onCreate,
   existingCategories,
+  position,
   updateCategory
 }) => {
+  const config = itemConfig[itemType];
+  const Icon = config.icon;
+
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [color, setColor] = useState('#3B82F6'); // Default blue color for vaults
-  const [categoryColor, setCategoryColor] = useState('#808080'); // Default category color
+  const [color, setColor] = useState(config.defaultColor);
+  const [categoryColor, setCategoryColor] = useState('#808080');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Reset form when modal is reopened
     if (isOpen) {
       setTitle('');
       setCategory('');
       setNewCategory('');
       setIsAddingNewCategory(false);
-      setColor('#3B82F6');
+      setColor(config.defaultColor);
       setCategoryColor('#808080');
+      setError('');
+      setIsLoading(false);
     }
-  }, [isOpen]);
+  }, [isOpen, config.defaultColor]);
 
-  // Get the selected category's current color
+  const availableCategories = useMemo(() => {
+    const hasGeneral = existingCategories.some(cat => cat.name === 'General');
+    return hasGeneral ? existingCategories : [{ name: 'General', color_value: '#808080' }, ...existingCategories];
+  }, [existingCategories]);
+
   const getSelectedCategoryColor = () => {
     if (isAddingNewCategory) {
       return categoryColor;
@@ -60,80 +116,120 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
     return '#808080';
   };
 
-  // Handle category color change
   const handleCategoryColorChange = (newColor: string) => {
     setCategoryColor(newColor);
-    // Synchronize vault color with category color for non-General categories
     if (category !== 'General') {
       setColor(newColor);
     }
-    
-    // Update the existing category's color if it's an existing category
     if (category && !isAddingNewCategory && updateCategory) {
       updateCategory(category, newColor);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim()) {
+      if (config.showValidationError) {
+        setError('Please enter a title');
+      }
       return;
     }
-    
+
     const selectedCategory = isAddingNewCategory ? newCategory.trim() : category;
     const finalCategory = selectedCategory || 'General';
-    
-    onCreateVault(title.trim(), finalCategory, color, initialPosition);
-    onClose();
+
+    if (config.showValidationError && !finalCategory.trim()) {
+      setError('Please select or create a category');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const result = await onCreate(
+        title.trim(),
+        finalCategory,
+        color,
+        position || { x: 0, y: 0 }
+      );
+
+      if (config.requireResult && !result) {
+        setError(`Failed to create ${config.label.toLowerCase()}. Please try again.`);
+        return;
+      }
+
+      onClose();
+    } catch (err) {
+      setError(`Failed to create ${config.label.toLowerCase()}. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          setError('');
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-blue-600" />
-            Add Vault
+            <Icon className="h-5 w-5 text-blue-600" />
+            {`Add ${config.label}`}
           </DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Vault title */}
           <div className="space-y-2">
-            <Label htmlFor="vaultTitle" style={{ fontFamily: '"Raleway", sans-serif' }}>Title</Label>
+            <Label htmlFor={`${itemType}Title`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+              Title
+            </Label>
             <Input
-              id="vaultTitle"
+              id={`${itemType}Title`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter vault title"
+              placeholder={config.titlePlaceholder}
               autoFocus
             />
           </div>
-          
-          {/* Category and Color selection row */}
+
           <div className="grid grid-cols-[1fr_60px] gap-4 items-start">
-            {/* Category selection */}
             {!isAddingNewCategory ? (
               <div className="space-y-2">
-                <Label htmlFor="vaultCategory" style={{ fontFamily: '"Raleway", sans-serif' }}>Category</Label>
-                <Select value={category} onValueChange={(value) => {
-                  if (value === '__add_new__') {
-                    setIsAddingNewCategory(true);
-                    setCategory('');
-                  } else {
+                <Label htmlFor={`${itemType}Category`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  Category
+                </Label>
+                <Select
+                  value={category}
+                  onValueChange={(value) => {
+                    if (value === '__add_new__') {
+                      setIsAddingNewCategory(true);
+                      setCategory('');
+                      return;
+                    }
+
                     setCategory(value);
                     const selectedCat = existingCategories.find(cat => cat.name === value);
                     const categoryColorValue = value === 'General' ? '#808080' : (selectedCat?.color_value || '#808080');
                     setCategoryColor(categoryColorValue);
+                    setError('');
+
                     if (value === 'General') {
-                      setColor('#3B82F6'); // Default blue for General category vaults
+                      setColor(config.defaultColor);
                     } else {
                       setColor(categoryColorValue);
                     }
-                  }
-                }}>
+                  }}
+                >
                   <SelectTrigger>
                     {category ? (
                       <div className="flex items-center gap-2">
@@ -150,18 +246,11 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                     )}
                   </SelectTrigger>
                   <SelectContent>
-                    {!existingCategories.some(cat => cat.name === 'General') && (
-                      <SelectItem value="General">
-                        <div className="flex items-center gap-2">
-                          General
-                        </div>
-                      </SelectItem>
-                    )}
-                    {existingCategories.map((cat) => {
-                      const displayColor = (category === cat.name && !isAddingNewCategory) 
-                        ? categoryColor 
+                    {availableCategories.map((cat) => {
+                      const displayColor = (category === cat.name && !isAddingNewCategory)
+                        ? categoryColor
                         : (cat.color_value || '#808080');
-                      
+
                       return (
                         <SelectItem key={cat.name} value={cat.name}>
                           <div className="flex items-center gap-2">
@@ -182,13 +271,11 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  {existingCategories.length === 0 
-                    ? 'No categories yet. Leave empty to use "General" or create a new one.'
-                    : 'Select a category or leave empty to use "General".'
-                  }
+                  {existingCategories.length === 0
+                    ? 'No categories yet. Leave empty to use "General" or create a new one from the dropdown.'
+                    : 'Select a category or leave empty to use "General".'}
                 </p>
-                
-                {/* Category Color Picker */}
+
                 {category && category !== 'General' && (
                   <div className="mt-2">
                     <ColorPicker
@@ -214,10 +301,12 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="newVaultCategory" style={{ fontFamily: '"Raleway", sans-serif' }}>New Category</Label>
+                <Label htmlFor={`new${config.label}Category`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  New Category
+                </Label>
                 <div className="flex space-x-2">
                   <Input
-                    id="newVaultCategory"
+                    id={`new${config.label}Category`}
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     placeholder="Enter new category"
@@ -227,6 +316,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                         setCategory(newCategory.trim());
                         setIsAddingNewCategory(false);
                         setColor(categoryColor);
+                        setError('');
                       }
                     }}
                   />
@@ -238,6 +328,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                         setCategory(newCategory.trim());
                         setIsAddingNewCategory(false);
                         setColor(categoryColor);
+                        setError('');
                       }
                     }}
                     disabled={!newCategory.trim()}
@@ -257,8 +348,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                     Cancel
                   </Button>
                 </div>
-                
-                {/* Category Color Picker for new category */}
+
                 {newCategory.trim() && (
                   <div className="mt-2">
                     <ColorPicker
@@ -284,7 +374,6 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
               </div>
             )}
 
-            {/* Color selection */}
             <div className="space-y-2">
               <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Color</Label>
               <ColorPicker
@@ -297,7 +386,7 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
                   variant="outline"
                   size="icon"
                   className="h-10 w-10 p-0 rounded-full"
-                  aria-label="Change vault color"
+                  aria-label={`Change ${config.label.toLowerCase()} color`}
                 >
                   <span
                     className="inline-block w-6 h-6 rounded-full border border-gray-300"
@@ -308,17 +397,23 @@ export const NewVaultModal: React.FC<NewVaultModalProps> = ({
             </div>
           </div>
 
+          {error && (
+            <p className="text-red-500 text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              {error}
+            </p>
+          )}
+
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
               Cancel
             </Button>
-            <Button 
+            <Button
               type="submit"
-              disabled={!title.trim()}
+              disabled={!title.trim() || isLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
             >
-              Create Vault
+              {isLoading ? `Creating ${config.label}...` : `Create ${config.label}`}
             </Button>
           </div>
         </form>

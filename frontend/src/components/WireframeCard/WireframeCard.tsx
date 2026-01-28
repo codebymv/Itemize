@@ -16,8 +16,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useWireframeCardLogic } from '@/hooks/useWireframeCardLogic';
 import { WireframeCardProps } from '@/types';
 import WireframeCanvas from './WireframeCanvas';
-import { WireframeCategorySelector } from './WireframeCategorySelector';
-import { DeleteWireframeModal } from '../DeleteWireframeModal';
+import { CategorySelector } from '../CategorySelector';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 import { Node, Edge } from '@xyflow/react';
 
 const WireframeCard: React.FC<WireframeCardProps> = ({
@@ -76,9 +76,13 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
   };
 
   // Handle actual delete
-  const handleConfirmDelete = async (wireframeId: string) => {
-    await onDelete(parseInt(wireframeId));
-    return true;
+  const handleConfirmDelete = async () => {
+    try {
+      await onDelete(wireframe.id);
+      return true;
+    } catch (error) {
+      return false;
+    }
   };
 
   // Parse flow_data if it's a string
@@ -241,7 +245,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
           </div>
         </CardHeader>
 
-        <WireframeCategorySelector
+        <CategorySelector
           currentCategory={wireframe.category || ''}
           categoryColor={categoryColor}
           itemColor={wireframe.color_value}
@@ -275,13 +279,13 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteWireframeModal
+      <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        wireframeId={wireframe.id.toString()}
-        wireframeTitle={wireframe.title}
-        wireframeColor={wireframeDisplayColor}
-        onDelete={handleConfirmDelete}
+        itemType="wireframe"
+        itemTitle={wireframe.title}
+        itemColor={wireframeDisplayColor}
+        onConfirm={handleConfirmDelete}
       />
     </Collapsible>
   );

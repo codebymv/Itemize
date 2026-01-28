@@ -12,8 +12,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
 import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
-import { WhiteboardCategorySelector } from './WhiteboardCategorySelector';
-import { DeleteWhiteboardModal } from '../DeleteWhiteboardModal';
+import { CategorySelector } from '../CategorySelector';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 
 
 
@@ -75,7 +75,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
     isEditingCategory, setIsEditingCategory,
     showNewCategoryInput, setShowNewCategoryInput,
     newCategory, setNewCategory, 
-    handleEditCategory, handleAddCustomCategory,
+    handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
     
     // Canvas
     handleCanvasChange,
@@ -96,9 +96,13 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   };
 
   // Handle actual delete
-  const handleConfirmDelete = async (whiteboardId: string) => {
-    await onDelete(parseInt(whiteboardId));
-    return true; // Return true to indicate success
+  const handleConfirmDelete = async () => {
+    try {
+      await onDelete(whiteboard.id);
+      return true;
+    } catch (error) {
+      return false;
+    }
   };
 
   return (
@@ -244,7 +248,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           </div>
         </CardHeader>
 
-        <WhiteboardCategorySelector
+        <CategorySelector
           currentCategory={whiteboard.category || ''}
           categoryColor={categoryColor}
           itemColor={whiteboard.color_value}
@@ -257,7 +261,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           setShowNewCategoryInput={setShowNewCategoryInput}
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
-          handleUpdateCategoryColor={updateCategory}
+          handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
 
         <CollapsibleContent className="flex-1">
@@ -289,13 +293,13 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteWhiteboardModal
+      <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        whiteboardId={whiteboard.id.toString()}
-        whiteboardTitle={whiteboard.title}
-        whiteboardColor={whiteboardDisplayColor}
-        onDelete={handleConfirmDelete}
+        itemType="whiteboard"
+        itemTitle={whiteboard.title}
+        itemColor={whiteboardDisplayColor}
+        onConfirm={handleConfirmDelete}
       />
     </Collapsible>
   );

@@ -50,21 +50,12 @@ import {
 } from '../components/ui/select';
 
 import { useToast } from "../hooks/use-toast";
-import CreateListModal from "../components/CreateListModal";
-import CreateNoteModal from "../components/CreateNoteModal";
+import { CreateItemModal } from "../components/CreateItemModal";
 import { ListCard } from "../components/ListCard";
 import { useAuth } from "../contexts/AuthContext";
 import { NoteCard } from '../components/NoteCard';
 import { WhiteboardCard } from '../components/WhiteboardCard';
-import { NewNoteModal } from '../components/NewNoteModal';
-import { NewListModal } from '../components/NewListModal';
-import { NewWhiteboardModal } from '../components/NewWhiteboardModal';
-import { NewWireframeModal } from '../components/NewWireframeModal';
-import { NewVaultModal } from '../components/NewVaultModal';
-import { ShareListModal } from '../components/ShareListModal';
-import { ShareNoteModal } from '../components/ShareNoteModal';
-import { ShareWhiteboardModal } from '../components/ShareWhiteboardModal';
-import { ShareVaultModal } from '../components/ShareVaultModal';
+import { ShareModal } from '../components/ShareModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 import { useIsMobile } from '../hooks/use-mobile';
 import { logger } from '../lib/logger';
@@ -106,6 +97,8 @@ const CanvasPage: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateNoteModal, setShowCreateNoteModal] = useState(false);
+  const [mobileListInitialPosition, setMobileListInitialPosition] = useState<{ x: number; y: number } | null>(null);
+  const [mobileNoteInitialPosition, setMobileNoteInitialPosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const isMobileView = useIsMobile();
   const navigate = useNavigate();
@@ -121,12 +114,15 @@ const CanvasPage: React.FC = () => {
   const [showNewVaultModal, setShowNewVaultModal] = useState(false);
   const [newVaultInitialPosition, setNewVaultInitialPosition] = useState<{ x: number, y: number } | null>(null);
 
-  // Sharing modal states
-  const [showShareListModal, setShowShareListModal] = useState(false);
-  const [showShareNoteModal, setShowShareNoteModal] = useState(false);
-  const [showShareWhiteboardModal, setShowShareWhiteboardModal] = useState(false);
-  const [showShareVaultModal, setShowShareVaultModal] = useState(false);
-  const [currentShareItem, setCurrentShareItem] = useState<{ id: string | number; title: string; isLocked?: boolean; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
+  // Sharing modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [currentShareItem, setCurrentShareItem] = useState<{
+    id: string | number;
+    title: string;
+    itemType: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
+    isLocked?: boolean;
+    shareData?: { shareToken: string; shareUrl: string };
+  } | null>(null);
 
   const { toast } = useToast();
   const { token } = useAuth();
@@ -249,7 +245,7 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  // Wrapper function to match NewListModal's expected signature
+  // Wrapper function for category color updates
   const updateCategoryColor = (categoryName: string, newColor: string) => {
     editCategory(categoryName, { color_value: newColor });
   };
@@ -1219,64 +1215,6 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  // CRUD operations for lists (used by mobile view)
-  const createList = async (title: string, type: string, color: string) => {
-    try {
-      const position = getIntelligentPosition();
-
-      // Check if the category exists, if not create it
-      if (!isCategoryInUse(type) && type !== 'General') {
-        await addCategory({ name: type, color_value: color });
-      }
-
-      const response = await apiCreateList({
-        title,
-        type,
-        items: [],
-        position_x: position.x,
-        position_y: position.y
-      }, token);
-
-      // Handle the response properly based on the API response structure
-      const newList: List = {
-        id: response.id,
-        title: response.title,
-        type: response.type || 'General', // Use the type field directly
-        items: response.items || [], // Ensure items is an array
-        createdAt: new Date(response.createdAt),
-        position_x: response.position_x || position.x, // Ensure position is set
-        position_y: response.position_y || position.y,
-        // Add any other required List properties
-      };
-
-      // Track the created list ID to prevent WebSocket duplicates
-      recentlyCreatedListIds.current.add(newList.id);
-      console.log('📝 Mobile Creation: Tracking list ID to prevent duplicates:', newList.id);
-
-      // Remove from tracking after a short delay
-      setTimeout(() => {
-        recentlyCreatedListIds.current.delete(newList.id);
-        logger.log('📝 Mobile Creation: Stopped tracking list ID:', newList.id);
-      }, 2000);
-
-      setLists(prev => [newList, ...prev]);
-      setShowCreateModal(false);
-
-      // Update categories if needed
-      // Category is now managed by unified category system
-
-      // Removed success toast - no need to distract user for routine list creation
-    } catch (error) {
-      console.error('Failed to create list:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create list",
-        description: "Could not create your list. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const updateList = async (updatedList: List) => {
     try {
       // Make API call first (like Prototype2 approach)
@@ -1387,6 +1325,14 @@ const CanvasPage: React.FC = () => {
         shared_at: response.shared_at ? new Date(response.shared_at).toISOString() : undefined,
       };
 
+      // Track the created list ID to prevent WebSocket duplicates
+      recentlyCreatedListIds.current.add(newList.id);
+      logger.log('📝 Creation: Tracking list ID to prevent duplicates:', newList.id);
+      setTimeout(() => {
+        recentlyCreatedListIds.current.delete(newList.id);
+        logger.log('📝 Creation: Stopped tracking list ID:', newList.id);
+      }, 2000);
+
       // Update UI state after successful API call
       setLists(prev => [newList, ...prev]);
       setShowNewListModal(false);
@@ -1403,14 +1349,6 @@ const CanvasPage: React.FC = () => {
       });
       return undefined; // Return undefined to indicate failure
     }
-  };
-
-  // Handler for NewListModal list creation (legacy - kept for compatibility)
-  const handleNewListCreated = (newList: List) => {
-    // The newList parameter is already the properly transformed API response from createList
-    // This ensures the list has the correct position data and structure
-    setLists(prev => [newList, ...prev]);
-    setShowNewListModal(false);
   };
 
   const handleOpenNewNoteModal = (position: { x: number, y: number }) => {
@@ -1432,14 +1370,26 @@ const CanvasPage: React.FC = () => {
   // Handler for button context menu actions
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
-    setNewListInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
-    setShowNewListModal(true);
+    const position = getIntelligentPosition(); // Use intelligent positioning for button creation
+    if (isMobileView) {
+      setMobileListInitialPosition(position);
+      setShowCreateModal(true);
+    } else {
+      setNewListInitialPosition(position);
+      setShowNewListModal(true);
+    }
   };
 
   const handleButtonAddNote = () => {
     setShowButtonContextMenu(false);
-    setNewNoteInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
-    setShowNewNoteModal(true);
+    const position = getIntelligentPosition(); // Use intelligent positioning for button creation
+    if (isMobileView) {
+      setMobileNoteInitialPosition(position);
+      setShowCreateNoteModal(true);
+    } else {
+      setNewNoteInitialPosition(position);
+      setShowNewNoteModal(true);
+    }
   };
 
   const handleButtonAddWhiteboard = () => {
@@ -1468,9 +1418,10 @@ const CanvasPage: React.FC = () => {
     setCurrentShareItem({
       id: listId,
       title: list.title,
+      itemType: 'list',
       shareData: existingShareData
     });
-    setShowShareListModal(true);
+    setShowShareModal(true);
   };
 
   const handleShareNote = async (noteId: number) => {
@@ -1486,9 +1437,10 @@ const CanvasPage: React.FC = () => {
     setCurrentShareItem({
       id: noteId,
       title: note.title,
+      itemType: 'note',
       shareData: existingShareData
     });
-    setShowShareNoteModal(true);
+    setShowShareModal(true);
   };
 
   const handleShareWhiteboard = async (whiteboardId: number) => {
@@ -1504,9 +1456,10 @@ const CanvasPage: React.FC = () => {
     setCurrentShareItem({
       id: whiteboardId,
       title: whiteboard.title,
+      itemType: 'whiteboard',
       shareData: existingShareData
     });
-    setShowShareWhiteboardModal(true);
+    setShowShareModal(true);
   };
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
@@ -1578,39 +1531,16 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  // Mobile note creation function (mirrors createList)
-  const createNote = async (title: string, category: string, color: string) => {
-    try {
-      // Check if the category exists, if not create it
-      if (!isCategoryInUse(category) && category !== 'General') {
-        await addCategory({ name: category, color_value: color });
-      }
-
-      const position = getIntelligentPosition();
-
-      const response = await apiCreateNote({
-        title: title, // Set the note title properly
-        content: '', // Initialize with empty content
-        color_value: color, // Use selected color
-        position_x: position.x,
-        position_y: position.y,
-        width: 570, // Wider to accommodate rich text toolbar
-        height: 350, // Taller for better content editing
-        z_index: 0,
-      }, token);
-
-      setNotes(prev => [response, ...prev]);
-      setShowCreateNoteModal(false);
-
-      // Categories are now managed by database category system
-    } catch (error) {
-      console.error('Failed to create note:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create note",
-        description: "Could not create your note. Please try again.",
-        variant: "destructive"
-      });
+  const shareHandlers = {
+    list: { onShare: handleListShare, onUnshare: handleListUnshare },
+    note: { onShare: handleNoteShare, onUnshare: handleNoteUnshare },
+    whiteboard: { onShare: handleWhiteboardShare, onUnshare: handleWhiteboardUnshare },
+    vault: { onShare: handleShareVault, onUnshare: handleUnshareVault },
+    wireframe: {
+      onShare: async () => {
+        throw new Error('Wireframe sharing not implemented');
+      },
+      onUnshare: async () => undefined
     }
   };
 
@@ -1823,14 +1753,22 @@ const CanvasPage: React.FC = () => {
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button
-                      onClick={() => setShowNewListModal(true)}
+                      onClick={() => {
+                        const position = getIntelligentPosition();
+                        setMobileListInitialPosition(position);
+                        setShowCreateModal(true);
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add List
                     </Button>
                     <Button
-                      onClick={() => setShowCreateNoteModal(true)}
+                      onClick={() => {
+                        const position = getIntelligentPosition();
+                        setMobileNoteInitialPosition(position);
+                        setShowCreateNoteModal(true);
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -2088,13 +2026,14 @@ const CanvasPage: React.FC = () => {
                     setCurrentShareItem({
                       id: vaultId,
                       title: vault.title || 'Untitled Vault',
+                      itemType: 'vault',
                       isLocked: vault.is_locked,
                       shareData: vault.share_token && vault.is_public ? {
                         shareToken: vault.share_token,
                         shareUrl: `${window.location.origin}/shared/vault/${vault.share_token}`
                       } : undefined
                     });
-                    setShowShareVaultModal(true);
+                    setShowShareModal(true);
                   }
                 }}
                 onVaultPositionUpdate={handleVaultPositionChange}
@@ -2125,147 +2064,99 @@ const CanvasPage: React.FC = () => {
         )}
 
         {/* Mobile View Modals */}
-        {isMobileView ? (
-          <>
-            {/* Create List Modal - used by mobile view */}
-            <CreateListModal
-              isOpen={showCreateModal}
-              onClose={() => setShowCreateModal(false)}
-              onCreateList={createList}
-              existingCategories={dbCategories}
+        <>
+          <CreateItemModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            itemType="list"
+            onCreate={handleCreateList}
+            position={mobileListInitialPosition || undefined}
+            existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+            updateCategory={updateCategoryColor}
+          />
+          <CreateItemModal
+            isOpen={showCreateNoteModal}
+            onClose={() => setShowCreateNoteModal(false)}
+            itemType="note"
+            onCreate={handleCreateNote}
+            position={mobileNoteInitialPosition || undefined}
+            existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+            updateCategory={updateCategoryColor}
+          />
+          {showNewNoteModal && newNoteInitialPosition && (
+            <CreateItemModal
+              isOpen={showNewNoteModal}
+              onClose={() => setShowNewNoteModal(false)}
+              itemType="note"
+              onCreate={handleCreateNote}
+              position={newNoteInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
             />
-
-            {/* Create Note Modal - used by mobile view */}
-            <CreateNoteModal
-              isOpen={showCreateNoteModal}
-              onClose={() => setShowCreateNoteModal(false)}
-              onCreateNote={createNote}
-              existingCategories={categoryNames}
+          )}
+          {showNewWhiteboardModal && newWhiteboardInitialPosition && (
+            <CreateItemModal
+              isOpen={showNewWhiteboardModal}
+              onClose={() => setShowNewWhiteboardModal(false)}
+              itemType="whiteboard"
+              onCreate={handleCreateWhiteboard}
+              position={newWhiteboardInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
             />
-          </>
-        ) : (
-          <>
-            {/* Desktop Canvas Note Modal */}
-            {showNewNoteModal && newNoteInitialPosition && (
-              <NewNoteModal
-                isOpen={showNewNoteModal}
-                onClose={() => setShowNewNoteModal(false)}
-                onCreateNote={handleCreateNote}
-                initialPosition={newNoteInitialPosition}
-                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
-                updateCategory={updateCategoryColor}
-              />
-            )}
+          )}
+          {showNewWireframeModal && newWireframeInitialPosition && (
+            <CreateItemModal
+              isOpen={showNewWireframeModal}
+              onClose={() => setShowNewWireframeModal(false)}
+              itemType="wireframe"
+              onCreate={handleCreateWireframe}
+              position={newWireframeInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
+            />
+          )}
+          {showNewVaultModal && newVaultInitialPosition && (
+            <CreateItemModal
+              isOpen={showNewVaultModal}
+              onClose={() => setShowNewVaultModal(false)}
+              itemType="vault"
+              onCreate={handleCreateVault}
+              position={newVaultInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
+            />
+          )}
+          {showNewListModal && newListInitialPosition && (
+            <CreateItemModal
+              isOpen={showNewListModal}
+              onClose={() => setShowNewListModal(false)}
+              itemType="list"
+              onCreate={handleCreateList}
+              position={newListInitialPosition}
+              existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
+              updateCategory={updateCategoryColor}
+            />
+          )}
+        </>
 
-            {/* Desktop Canvas Whiteboard Modal */}
-            {showNewWhiteboardModal && newWhiteboardInitialPosition && (
-              <NewWhiteboardModal
-                isOpen={showNewWhiteboardModal}
-                onClose={() => setShowNewWhiteboardModal(false)}
-                onCreateWhiteboard={handleCreateWhiteboard}
-                initialPosition={newWhiteboardInitialPosition}
-                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
-                updateCategory={updateCategoryColor}
-              />
-            )}
-
-            {/* Desktop Canvas Wireframe Modal */}
-            {showNewWireframeModal && newWireframeInitialPosition && (
-              <NewWireframeModal
-                isOpen={showNewWireframeModal}
-                onClose={() => setShowNewWireframeModal(false)}
-                onCreateWireframe={handleCreateWireframe}
-                initialPosition={newWireframeInitialPosition}
-                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
-                updateCategory={updateCategoryColor}
-              />
-            )}
-
-            {/* Desktop Canvas Vault Modal */}
-            {showNewVaultModal && newVaultInitialPosition && (
-              <NewVaultModal
-                isOpen={showNewVaultModal}
-                onClose={() => setShowNewVaultModal(false)}
-                onCreateVault={handleCreateVault}
-                initialPosition={newVaultInitialPosition}
-                existingCategories={dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }))}
-                updateCategory={updateCategoryColor}
-              />
-            )}
-
-            {/* Desktop Canvas List Modal */}
-            {showNewListModal && newListInitialPosition && (
-              <NewListModal
-                isOpen={showNewListModal}
-                onClose={() => setShowNewListModal(false)}
-                onCreateList={handleCreateList}
-                existingCategories={dbCategories}
-                position={newListInitialPosition}
-                updateCategory={updateCategoryColor}
-              />
-            )}
-          </>
-        )}
-
-        {/* Share Modals */}
-        {showShareListModal && currentShareItem && (
-          <ShareListModal
-            isOpen={showShareListModal}
+        {/* Share Modal */}
+        {showShareModal && currentShareItem && (
+          <ShareModal
+            isOpen={showShareModal}
             onClose={() => {
-              setShowShareListModal(false);
+              setShowShareModal(false);
               setCurrentShareItem(null);
             }}
-            listId={currentShareItem.id as string}
-            listTitle={currentShareItem.title}
-            onShare={handleListShare}
-            onUnshare={handleListUnshare}
+            itemType={currentShareItem.itemType}
+            itemId={currentShareItem.id}
+            itemTitle={currentShareItem.title}
+            onShare={shareHandlers[currentShareItem.itemType].onShare}
+            onUnshare={shareHandlers[currentShareItem.itemType].onUnshare}
             existingShareData={currentShareItem.shareData}
-          />
-        )}
-
-        {showShareNoteModal && currentShareItem && (
-          <ShareNoteModal
-            isOpen={showShareNoteModal}
-            onClose={() => {
-              setShowShareNoteModal(false);
-              setCurrentShareItem(null);
-            }}
-            noteId={currentShareItem.id as number}
-            noteTitle={currentShareItem.title}
-            onShare={handleNoteShare}
-            onUnshare={handleNoteUnshare}
-            existingShareData={currentShareItem.shareData}
-          />
-        )}
-
-        {showShareWhiteboardModal && currentShareItem && (
-          <ShareWhiteboardModal
-            isOpen={showShareWhiteboardModal}
-            onClose={() => {
-              setShowShareWhiteboardModal(false);
-              setCurrentShareItem(null);
-            }}
-            whiteboardId={currentShareItem.id as number}
-            whiteboardTitle={currentShareItem.title}
-            onShare={handleWhiteboardShare}
-            onUnshare={handleWhiteboardUnshare}
-            existingShareData={currentShareItem.shareData}
-          />
-        )}
-
-        {showShareVaultModal && currentShareItem && (
-          <ShareVaultModal
-            isOpen={showShareVaultModal}
-            onClose={() => {
-              setShowShareVaultModal(false);
-              setCurrentShareItem(null);
-            }}
-            vaultId={currentShareItem.id as number}
-            vaultTitle={currentShareItem.title}
-            isLocked={currentShareItem.isLocked || false}
-            onShare={handleShareVault}
-            onUnshare={handleUnshareVault}
-            existingShareData={currentShareItem.shareData}
+            isLocked={currentShareItem.itemType === 'vault' ? currentShareItem.isLocked : undefined}
+            showWarning={currentShareItem.itemType === 'vault'}
+            autoGenerate={currentShareItem.itemType !== 'vault'}
           />
         )}
 

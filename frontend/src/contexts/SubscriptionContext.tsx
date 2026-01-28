@@ -6,7 +6,7 @@
  * Provides subscription state and feature gating throughout the app
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import subscriptionsApi, {
   Subscription,
   UsageStats,
@@ -281,7 +281,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     }
   }, []);
 
-  const value: SubscriptionContextType = {
+  const value: SubscriptionContextType = useMemo(() => ({
     subscription,
     usage,
     plans,
@@ -300,7 +300,26 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     refreshUsage,
     startCheckout,
     openBillingPortal
-  };
+  }), [
+    subscription,
+    usage,
+    plans,
+    isLoading,
+    error,
+    isSubscribed,
+    isTrialing,
+    isPastDue,
+    tierLevel,
+    planName,
+    hasFeature,
+    getUsageInfo,
+    requiresUpgrade,
+    getRequiredTier,
+    refreshSubscription,
+    refreshUsage,
+    startCheckout,
+    openBillingPortal
+  ]);
 
   return (
     <SubscriptionContext.Provider value={value}>

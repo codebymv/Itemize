@@ -6,11 +6,11 @@ const BLOCKED_ENDPOINTS = [
   '/api/subscription/tier-info'
 ];
 
-// Production URL for the backend
-const PRODUCTION_URL = 'https://itemize-backend-production-92ad.up.railway.app';
-
 // Get API URL from environment variable or fall back to localhost
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// Production URL for the backend (override via env)
+const PRODUCTION_URL = import.meta.env.VITE_PRODUCTION_API_URL || API_BASE_URL;
 
 // Retry configuration
 const MAX_RETRIES = 3;

@@ -11,11 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
 import { RichNoteContent } from './RichNoteContent';
-import { NoteCategorySelector } from './NoteCategorySelector';
+import { CategorySelector } from '../CategorySelector';
 import { useTheme } from 'next-themes';
 
 import { Category } from '@/types';
-import { DeleteNoteModal } from '../DeleteNoteModal';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 import { updateNoteContent } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -90,9 +90,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   // Handle actual delete
-  const handleConfirmDelete = async (noteId: string) => {
-    await onDelete(parseInt(noteId));
-    return true; // Return true to indicate success
+  const handleConfirmDelete = async () => {
+    try {
+      await onDelete(note.id);
+      return true;
+    } catch (error) {
+      return false;
+    }
   };
 
   // Get theme for styling
@@ -285,7 +289,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
           </div>
         </CardHeader>
 
-        <NoteCategorySelector
+        <CategorySelector
           currentCategory={note.category || ''}
           categoryColor={categoryColor}
           itemColor={note.color_value}
@@ -340,13 +344,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteNoteModal
+      <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        noteId={note.id.toString()}
-        noteTitle={note.title}
-        noteColor={noteDisplayColor}
-        onDelete={handleConfirmDelete}
+        itemType="note"
+        itemTitle={note.title}
+        itemColor={noteDisplayColor}
+        onConfirm={handleConfirmDelete}
       />
     </Collapsible>
   );

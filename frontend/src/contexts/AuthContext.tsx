@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
 import api, { getApiUrl, setAuthToken, getAuthToken } from '@/lib/api';
@@ -308,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     currentUser,
     loading,
     login,
@@ -319,7 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     token,
     isAuthenticated: !!currentUser && !!token,
     setCurrentUser,
-  };
+  }), [currentUser, loading, login, loginWithEmail, register, logout, handleGoogleSuccess, token, setCurrentUser]);
 
   return (
     <AuthContext.Provider value={value}>

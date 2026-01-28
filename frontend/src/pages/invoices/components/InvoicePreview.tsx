@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Eye } from 'lucide-react';
 import {
     Dialog,
@@ -61,6 +61,12 @@ export function InvoicePreview({
     notes,
     termsAndConditions,
 }: InvoicePreviewProps) {
+    const previewViewportRef = useRef<HTMLDivElement | null>(null);
+    const [previewScale, setPreviewScale] = useState(1);
+    const [previewHeight, setPreviewHeight] = useState(990);
+    const baseWidth = 768;
+    const baseHeight = 990;
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -82,6 +88,29 @@ export function InvoicePreview({
 
     const validItems = lineItems.filter(item => item.name.trim());
 
+    useEffect(() => {
+        if (!open) return;
+        const viewport = previewViewportRef.current;
+        if (!viewport) return;
+
+        const updateScale = () => {
+            const availableWidth = viewport.clientWidth;
+            if (!availableWidth) return;
+            const nextScale = Math.min(1, availableWidth / baseWidth);
+            const roundedScale = Number(nextScale.toFixed(3));
+            setPreviewScale(roundedScale);
+            setPreviewHeight(Math.round(baseHeight * roundedScale));
+        };
+
+        updateScale();
+        const resizeObserver = new ResizeObserver(updateScale);
+        resizeObserver.observe(viewport);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [open, baseWidth, baseHeight]);
+
     // These styles MUST match the backend pdf.service.js generateInvoiceHTML exactly
     // Any changes here should be mirrored in the backend
     return (
@@ -99,126 +128,33 @@ export function InvoicePreview({
 
                 {/* Invoice Preview Content - matches PDF exactly */}
                 {/* Note: Raleway font should be loaded in index.html for full parity */}
-                <style>{`
-                    @media (max-width: 768px) {
-                        .invoice-preview-container {
-                            padding: 20px !important;
-                            height: auto !important;
-                            min-height: auto !important;
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-header {
-                            flex-direction: column !important;
-                            gap: 16px !important;
-                            margin-bottom: 24px !important;
-                        }
-                        .invoice-preview-header > div:last-child {
-                            text-align: left !important;
-                        }
-                        .invoice-preview-header h1 {
-                            font-size: 24px !important;
-                        }
-                        .invoice-preview-header .invoice-preview-business-info {
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-header .invoice-preview-business-details {
-                            font-size: 11px !important;
-                        }
-                        .invoice-preview-header .invoice-preview-invoice-number {
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-addresses {
-                            flex-direction: column !important;
-                            gap: 16px !important;
-                            margin-bottom: 24px !important;
-                        }
-                        .invoice-preview-addresses > div {
-                            width: 100% !important;
-                        }
-                        .invoice-preview-addresses .invoice-preview-dates {
-                            text-align: left !important;
-                        }
-                        .invoice-preview-addresses .invoice-preview-date-row {
-                            justify-content: flex-start !important;
-                            flex-wrap: wrap !important;
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-addresses .invoice-preview-customer-details {
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-table {
-                            margin-bottom: 24px !important;
-                        }
-                        .invoice-preview-table th {
-                            font-size: 9px !important;
-                            padding: 6px 2px !important;
-                            white-space: normal !important;
-                            word-break: break-word !important;
-                            line-height: 1.3 !important;
-                        }
-                        .invoice-preview-table th:nth-child(3) {
-                            white-space: normal !important;
-                        }
-                        .invoice-preview-table td {
-                            padding: 8px 2px !important;
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-table td:first-child {
-                            min-width: 120px !important;
-                        }
-                        .invoice-preview-table .invoice-preview-item-description {
-                            font-size: 11px !important;
-                        }
-                        .invoice-preview-totals-container {
-                            justify-content: flex-start !important;
-                            margin-bottom: 24px !important;
-                        }
-                        .invoice-preview-totals {
-                            width: 100% !important;
-                            max-width: 100% !important;
-                        }
-                        .invoice-preview-totals .invoice-preview-total-row {
-                            font-size: 12px !important;
-                        }
-                        .invoice-preview-totals .invoice-preview-grand-total {
-                            font-size: 16px !important;
-                        }
-                        .invoice-preview-notes {
-                            font-size: 12px !important;
-                            margin-bottom: 12px !important;
-                        }
-                        .invoice-preview-notes .invoice-preview-notes-label {
-                            font-size: 10px !important;
-                        }
-                        .invoice-preview-footer {
-                            font-size: 11px !important;
-                            margin-top: 24px !important;
-                        }
-                        .invoice-preview-powered-footer {
-                            margin-left: -20px !important;
-                            margin-right: -20px !important;
-                            width: calc(100% + 40px) !important;
-                            padding: 12px 16px !important;
-                            font-size: 11px !important;
-                        }
-                    }
-                `}</style>
-                <div className="invoice-preview-container" style={{
-                    fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                    fontSize: '14px',
-                    lineHeight: 1.5,
-                    color: '#111827',
-                    background: 'white',
-                    padding: '40px',
-                    paddingBottom: 0,
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    /* Fixed height for Letter page (8.5x11) aspect ratio: width * (11/8.5) ≈ 990px for ~765px width */
-                    height: '990px',
-                    boxSizing: 'border-box'
-                }}>
+                <div ref={previewViewportRef} className="w-full overflow-auto">
+                    <div style={{ width: baseWidth * previewScale, height: previewHeight }}>
+                        <div
+                            style={{
+                                width: baseWidth,
+                                height: baseHeight,
+                                transform: `scale(${previewScale})`,
+                                transformOrigin: 'top left'
+                            }}
+                        >
+                            <div className="invoice-preview-container" style={{
+                                fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                fontSize: '14px',
+                                lineHeight: 1.5,
+                                color: '#111827',
+                                background: 'white',
+                                padding: '40px',
+                                paddingBottom: 0,
+                                borderRadius: '8px',
+                                border: '1px solid #e5e7eb',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                /* Fixed height for Letter page (8.5x11) aspect ratio: width * (11/8.5) ≈ 990px for ~765px width */
+                                width: `${baseWidth}px`,
+                                height: `${baseHeight}px`,
+                                boxSizing: 'border-box'
+                            }}>
                     <div style={{ flex: 1 }}>
                     {/* Header */}
                     <div className="invoice-preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -420,6 +356,9 @@ export function InvoicePreview({
                                     }
                                 }}
                             />
+                        </div>
+                    </div>
+                            </div>
                         </div>
                     </div>
                 </div>

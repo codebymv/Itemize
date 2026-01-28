@@ -53,7 +53,17 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
 import { ensureDefaultOrganization } from '@/services/contactsApi';
-import { getInvoices, getInvoice, deleteInvoice, sendInvoice, Invoice as ApiInvoice, Business } from '@/services/invoicesApi';
+import {
+    getInvoices,
+    getInvoice,
+    deleteInvoice,
+    sendInvoice,
+    recordPayment,
+    createPaymentLink,
+    createRecurringTemplateFromInvoice,
+    Invoice as ApiInvoice,
+    Business
+} from '@/services/invoicesApi';
 import { Separator } from '@/components/ui/separator';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
 import { MakeRecurringModal, RecurringOptions } from './components/MakeRecurringModal';
@@ -61,7 +71,6 @@ import { RecordPaymentModal, PaymentData } from './components/RecordPaymentModal
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
-import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { cn } from '@/lib/utils';
 
@@ -290,12 +299,16 @@ export function InvoicesPage() {
         
         setConverting(true);
         try {
-            await api.post(`/api/invoices/recurring/from-invoice/${selectedInvoiceForRecurring.id}`, {
-                template_name: options.template_name,
-                frequency: options.frequency,
-                start_date: options.start_date,
-                end_date: options.end_date,
-            });
+            await createRecurringTemplateFromInvoice(
+                selectedInvoiceForRecurring.id,
+                {
+                    template_name: options.template_name,
+                    frequency: options.frequency,
+                    start_date: options.start_date,
+                    end_date: options.end_date,
+                },
+                organizationId
+            );
             
             toast({ title: 'Template Created', description: 'Recurring template created. Original invoice has been preserved.' });
             setShowRecurringModal(false);
@@ -345,13 +358,15 @@ export function InvoicesPage() {
         
         setRecordingPayment(true);
         try {
-            await api.post(`/api/invoices/${selectedInvoiceForPayment.id}/record-payment`, {
-                amount: paymentData.amount,
-                payment_method: paymentData.payment_method,
-                notes: paymentData.notes,
-            }, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await recordPayment(
+                selectedInvoiceForPayment.id,
+                {
+                    amount: paymentData.amount,
+                    payment_method: paymentData.payment_method,
+                    notes: paymentData.notes,
+                },
+                organizationId
+            );
             
             toast({ title: 'Payment Recorded', description: `Payment of $${paymentData.amount.toFixed(2)} has been recorded.` });
             setShowPaymentModal(false);
@@ -387,11 +402,7 @@ export function InvoicesPage() {
     const generatePaymentLink = async (invoiceId: number): Promise<{ url: string }> => {
         if (!organizationId) throw new Error('Organization not found');
         
-        const response = await api.post(`/api/invoices/${invoiceId}/create-payment-link`, {}, {
-            headers: { 'x-organization-id': organizationId.toString() }
-        });
-        
-        const { url } = response.data;
+        const { url } = await createPaymentLink(invoiceId, organizationId);
         
         if (!url) {
             throw new Error('No checkout URL returned');

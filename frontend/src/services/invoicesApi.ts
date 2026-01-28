@@ -347,8 +347,24 @@ export const recordPayment = async (
 export const createPaymentLink = async (
     invoiceId: number,
     organizationId?: number
-): Promise<{ client_secret: string; payment_intent_id: string }> => {
+): Promise<{ url: string; session_id: string }> => {
     const response = await api.post(`/api/invoices/${invoiceId}/create-payment-link`, {}, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
+export const createRecurringTemplateFromInvoice = async (
+    invoiceId: number,
+    data: {
+        template_name: string;
+        frequency: string;
+        start_date: string;
+        end_date?: string;
+    },
+    organizationId?: number
+): Promise<{ recurring_template_id: number }> => {
+    const response = await api.post(`/api/invoices/recurring/from-invoice/${invoiceId}`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
     return response.data;
@@ -500,6 +516,7 @@ export default {
     sendInvoice,
     recordPayment,
     createPaymentLink,
+    createRecurringTemplateFromInvoice,
     // Settings
     getPaymentSettings,
     updatePaymentSettings,

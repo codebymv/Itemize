@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Category } from '@/types';
 
-interface ListCategorySelectorProps {
+interface CategorySelectorProps {
   currentCategory: string;
   categoryColor?: string;
-  itemColor?: string; // The list's own color as fallback
+  itemColor?: string;
   existingCategories: Category[];
   isEditingCategory: boolean;
   showNewCategoryInput: boolean;
@@ -23,7 +23,7 @@ interface ListCategorySelectorProps {
   handleUpdateCategoryColor: (categoryName: string, newColor: string) => void;
 }
 
-export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
+export const CategorySelector: React.FC<CategorySelectorProps> = ({
   currentCategory,
   categoryColor,
   itemColor,
@@ -36,14 +36,10 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
   setShowNewCategoryInput,
   handleEditCategory,
   handleAddCustomCategory,
-  handleUpdateCategoryColor,
+  handleUpdateCategoryColor
 }) => {
   const displayCategory = currentCategory && currentCategory !== '' ? currentCategory : 'General';
-  // For General category, always use grey. For other categories, use category color if available, otherwise fall back to item color, then default
-  // Always use grey for General category badge, regardless of the list's color
   const displayColor = displayCategory === 'General' ? '#808080' : (categoryColor || itemColor || '#808080');
-  
-  // Always use white text for consistency with other badges
   const getContrastColor = () => '#ffffff';
 
   return (
@@ -91,13 +87,11 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* General category first */}
                   <SelectItem value="General" style={{ fontFamily: '"Raleway", sans-serif' }}>
                     <div className="flex items-center gap-2">
                       General
                     </div>
                   </SelectItem>
-                  {/* Other categories */}
                   {existingCategories
                     .filter(cat => cat.name !== 'General')
                     .map((cat) => (
@@ -116,8 +110,7 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
                   </SelectItem>
                 </SelectContent>
               </Select>
-              
-              {/* Category Color Picker - only show for existing categories that are not General */}
+
               {displayCategory !== '__custom__' && displayCategory !== 'General' && (
                 <div className="flex items-center gap-2 ml-2">
                   <ColorPicker
@@ -139,7 +132,7 @@ export const ListCategorySelector: React.FC<ListCategorySelectorProps> = ({
                   </ColorPicker>
                 </div>
               )}
-              
+
               <Button
                 size="sm"
                 variant="ghost"

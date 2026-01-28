@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 
 interface HeaderContextType {
     headerContent: ReactNode;
@@ -10,8 +10,10 @@ const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
 export function HeaderProvider({ children }: { children: ReactNode }) {
     const [headerContent, setHeaderContent] = useState<ReactNode>(null);
 
+    const value = useMemo(() => ({ headerContent, setHeaderContent }), [headerContent, setHeaderContent]);
+
     return (
-        <HeaderContext.Provider value={{ headerContent, setHeaderContent }}>
+        <HeaderContext.Provider value={value}>
             {children}
         </HeaderContext.Provider>
     );

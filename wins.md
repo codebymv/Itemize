@@ -7,6 +7,8 @@ Keep entries concise and update as we learn more.
 
 ## Current Wins (Completed)
 
+Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `LandingPagesPage.tsx`, `EstimatesPage.tsx`, `InvoiceEditorPage.tsx`, `EstimateEditorPage.tsx`, `PageEditorPage.tsx`.
+
 - Sidebar ordering aligned to core workflows and moved Segments under Campaigns.
 - Contacts visual language aligned to invoices (stat cards, badges, list layout).
 - List→detail consistency improvements across Automations, Pages, Estimates.
@@ -141,29 +143,30 @@ Keep entries concise and update as we learn more.
 - (And 10+ more files)
 
 **Font family inline styles:**
-- `style={{ fontFamily: '"Raleway", sans-serif' }}` repeated 100+ times
+- `style={{ fontFamily: '"Raleway", sans-serif' }}` repeated 464 times across 98 files
 - Should use CSS class
 
-**Console.log statements (420 instances across 66 files):**
+**Console.log statements (802 instances across 72 files):**
 - `ProtectedRoute.tsx` (lines 12, 20, 28, 33) - Debug logs should be removed
 - `canvas.tsx` (56 instances) - Should use logger utility
 - Many pages/components have console.logs for debugging
-- Should replace with proper logger (`lib/logger.ts` exists) or remove in production
-- Consider environment-based logging (only log in DEV mode)
+- Should replace with proper logger (`lib/logger.ts` exists but underutilized)
+- Consider environment-based logging (dev only)
 
-**window.location usage (68 instances across 31 files):**
-- Direct `window.location.href` assignments scattered across codebase
-- `lib/api.ts` (5 instances) - Already has some abstraction
-- `AuthContext.tsx`, `ErrorBoundary.tsx`, `AuthCallback.tsx` - Direct navigation
-- Should create `useNavigation` hook or `navigationService` utility
-- Benefits: Easier testing, consistent navigation patterns, better error handling
+**Hardcoded production URL:**
+- `lib/api.ts` (line 10) - Production URL hardcoded: `https://itemize-backend-production-92ad.up.railway.app`
+- Should be in environment variable or config file
+- Domain check logic (line 109) could be abstracted
 
-**localStorage usage (26 instances across 8 files):**
+**localStorage usage (34 instances across 10 files):**
 - Multiple storage keys: `itemize_auth_token`, `itemize_user`, `itemize_expiry`
-- `lib/api.ts` has `getAuthToken`/`setAuthToken` helpers (good pattern)
-- Other files access localStorage directly
-- Should create `storageService` utility for consistent access patterns
-- Benefits: Type safety, error handling, easier migration to different storage
+- Should create centralized storage utility with consistent error handling
+- Missing try-catch blocks in some localStorage operations
+
+**window.location usage (89 instances across 36 files):**
+- Direct `window.location.href` assignments scattered across codebase
+- Should use React Router's `useNavigate` hook for SPA navigation
+- Only use `window.location` for external redirects or full page reloads
 
 **Hardcoded production URL:**
 - `lib/api.ts` (line 10) - `PRODUCTION_URL` hardcoded as string
@@ -188,6 +191,24 @@ Keep entries concise and update as we learn more.
 
 **Error Boundaries:**
 - All pages missing React Error Boundary components
+
+### Code Quality & Debugging
+
+**TODO comments indicating incomplete features:**
+- `canvas.tsx` (line 2079) - Wireframe sharing not implemented
+- `backend/index.js` (line 407) - Frontend migration incomplete
+- `ReputationRequestsPage.tsx` (line 140) - Resend functionality pending backend endpoint
+- `WhiteboardCanvas.tsx` (line 13, 907) - Mobile canvas support and AI functionality incomplete
+- `stripeSubscriptionService.js` (line 652) - Email notification not implemented
+- `estimates.routes.js` (line 499) - Email sending not implemented
+- `stripe.service.js` (line 366) - Upgrade email not implemented
+- `reputation.routes.js` (line 526) - Email/SMS sending not implemented
+
+**API Service Patterns:**
+- 22 API service files exist and follow consistent patterns (good!)
+- All use centralized `api` instance from `lib/api.ts` (good!)
+- Could benefit from shared error handling wrapper
+- Response typing could be more consistent (some use `response.data`, others destructure)
 
 ### Code Quality & Cleanup
 
@@ -246,9 +267,9 @@ Keep entries concise and update as we learn more.
 5. Remove hardcoded endpoints from InvoicesPage (move to invoicesApi)
 6. Add `asyncHandler` wrapper to backend routes
 7. Remove console.logs from `ProtectedRoute.tsx` (4 instances, 2 min)
-8. Create `storageService` utility for localStorage (30 min)
-9. Create `navigationService` utility for window.location (30 min)
-10. Move hardcoded `PRODUCTION_URL` to environment variable (5 min)
+8. Extract production URL to environment variable (5 min)
+9. Replace `window.location.href` with `useNavigate` in React components (89 instances, batch fix)
+10. Create centralized localStorage utility with error handling (30 min)
 
 ---
 
@@ -258,3 +279,7 @@ Keep entries concise and update as we learn more.
 - Draft badge color inconsistent (sky vs yellow) across modules
 - Backend has good foundations (error handler, response utilities, validators) but needs consistent application
 - ~2000+ lines of duplicate code in modal components alone
+- Logger utility exists (`lib/logger.ts`) but console.logs still used extensively (420 instances)
+- API services well-structured (22 files) but could benefit from shared error handling patterns
+- ProtectedRoute has debug console.logs that should be removed before production
+- Multiple incomplete features marked with TODO comments across codebase

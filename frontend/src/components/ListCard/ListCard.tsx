@@ -4,12 +4,12 @@ import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
 import { ListCardProps, Category } from '@/types';
 import { ListCardHeader } from './ListCardHeader';
-import { ListCategorySelector } from './ListCategorySelector';
+import { CategorySelector } from '../CategorySelector';
 import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
 import { ListAISuggestionButton } from './ListAISuggestionButton';
-import { DeleteListModal } from '../DeleteListModal';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 import {
   DndContext,
   closestCenter,
@@ -88,8 +88,8 @@ const ListCard: React.FC<ListCardProps> = ({
   };
 
   // Handle actual delete
-  const handleConfirmDelete = async (listId: string) => {
-    return await onDelete(listId);
+  const handleConfirmDelete = async () => {
+    return await onDelete(list.id);
   };
 
   // Drag and drop sensors
@@ -192,7 +192,7 @@ const ListCard: React.FC<ListCardProps> = ({
           isSavingColor={isSavingColor}     // New prop
         />
 
-        <ListCategorySelector
+        <CategorySelector
           currentCategory={list.type}
           categoryColor={categoryColor}
           itemColor={list.color_value}
@@ -268,13 +268,13 @@ const ListCard: React.FC<ListCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteListModal
+      <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        listId={list.id}
-        listTitle={list.title}
-        listColor={listDisplayColor}
-        onDelete={handleConfirmDelete}
+        itemType="list"
+        itemTitle={list.title}
+        itemColor={listDisplayColor}
+        onConfirm={handleConfirmDelete}
       />
     </Collapsible>
   );

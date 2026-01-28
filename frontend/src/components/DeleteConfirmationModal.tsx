@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trash2, CheckSquare, StickyNote, Palette, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2, CheckSquare, StickyNote, Palette, AlertTriangle, GitBranch, KeyRound } from 'lucide-react';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -10,14 +10,15 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from './ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
-  itemType: 'list' | 'note' | 'whiteboard';
+  onConfirm: () => Promise<boolean>;
+  itemType: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
   itemTitle: string;
-  isLoading?: boolean;
+  itemColor?: string;
 }
 
 export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
@@ -26,8 +27,11 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   onConfirm,
   itemType,
   itemTitle,
-  isLoading = false
+  itemColor
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
   // Get the appropriate icon and text based on item type
   const getItemConfig = () => {
     switch (itemType) {
@@ -35,34 +39,93 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
         return {
           icon: CheckSquare,
           typeLabel: 'List',
-          description: 'This will permanently delete the list and all its items. This action cannot be undone.'
+          description: 'This will permanently delete the list and all its items. This action cannot be undone.',
+          successTitle: 'List deleted',
+          successDescription: 'The list has been permanently deleted.',
+          errorDescription: 'Failed to delete the list. Please try again.',
+          fallbackColor: 'var(--list-color)'
         };
       case 'note':
         return {
           icon: StickyNote,
           typeLabel: 'Note',
-          description: 'This will permanently delete the note and all its content. This action cannot be undone.'
+          description: 'This will permanently delete the note and all its content. This action cannot be undone.',
+          successTitle: 'Note deleted',
+          successDescription: 'The note has been permanently deleted.',
+          errorDescription: 'Failed to delete the note. Please try again.',
+          fallbackColor: 'var(--muted-foreground)'
         };
       case 'whiteboard':
         return {
           icon: Palette,
           typeLabel: 'Whiteboard',
-          description: 'This will permanently delete the whiteboard and all its content. This action cannot be undone.'
+          description: 'This will permanently delete the whiteboard and all its content. This action cannot be undone.',
+          successTitle: 'Whiteboard deleted',
+          successDescription: 'The whiteboard has been permanently deleted.',
+          errorDescription: 'Failed to delete the whiteboard. Please try again.',
+          fallbackColor: 'var(--whiteboard-color)'
+        };
+      case 'wireframe':
+        return {
+          icon: GitBranch,
+          typeLabel: 'Wireframe',
+          description: 'This will permanently delete the wireframe and all its diagram data. This action cannot be undone.',
+          successTitle: 'Wireframe deleted',
+          successDescription: 'The wireframe has been permanently deleted.',
+          errorDescription: 'Failed to delete the wireframe. Please try again.',
+          fallbackColor: 'var(--wireframe-color)'
+        };
+      case 'vault':
+        return {
+          icon: KeyRound,
+          typeLabel: 'Vault',
+          description: 'This will permanently delete the vault and all its encrypted contents. This action cannot be undone.',
+          successTitle: 'Vault deleted',
+          successDescription: 'The vault and all its contents have been permanently deleted.',
+          errorDescription: 'Failed to delete the vault. Please try again.',
+          fallbackColor: '#3B82F6'
         };
       default:
         return {
           icon: Trash2,
           typeLabel: 'Item',
-          description: 'This will permanently delete this item. This action cannot be undone.'
+          description: 'This will permanently delete this item. This action cannot be undone.',
+          successTitle: 'Item deleted',
+          successDescription: 'The item has been permanently deleted.',
+          errorDescription: 'Failed to delete the item. Please try again.',
+          fallbackColor: 'var(--muted-foreground)'
         };
     }
   };
 
-  const { icon: ItemIcon, typeLabel, description } = getItemConfig();
+  const { icon: ItemIcon, typeLabel, description, successTitle, successDescription, errorDescription, fallbackColor } = getItemConfig();
 
-  const handleConfirm = () => {
-    onConfirm();
-    // Note: onClose will be called by parent after successful deletion
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      const success = await onConfirm();
+      if (success) {
+        toast({
+          title: successTitle,
+          description: successDescription
+        });
+        onClose();
+      } else {
+        toast({
+          title: 'Error',
+          description: errorDescription,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: errorDescription,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -86,8 +149,8 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             </label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md border">
               <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                <ItemIcon className="h-4 w-4 text-slate-500" />
-                {itemTitle}
+                <ItemIcon className="h-4 w-4" style={{ color: itemColor || fallbackColor }} />
+                {itemTitle || `Untitled ${typeLabel}`}
               </p>
             </div>
           </div>

@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { useVaultCardLogic } from '@/hooks/useVaultCardLogic';
 import { VaultCardProps, Category } from '@/types';
-import { VaultCategorySelector } from './VaultCategorySelector';
+import { CategorySelector } from '../CategorySelector';
 import { VaultItemRow } from './VaultItemRow';
-import { DeleteVaultModal } from '../DeleteVaultModal';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 import { useTheme } from 'next-themes';
 import {
   DndContext,
@@ -160,8 +160,13 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   };
 
   // Handle actual delete
-  const handleConfirmDelete = async (vaultId: string) => {
-    return await onDelete(parseInt(vaultId));
+  const handleConfirmDelete = async () => {
+    try {
+      await onDelete(vault.id);
+      return true;
+    } catch (error) {
+      return false;
+    }
   };
 
   // Handle paste in key-value input - detect .env format and bulk import
@@ -373,7 +378,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
           </div>
         </CardHeader>
 
-        <VaultCategorySelector
+        <CategorySelector
           currentCategory={vault.category || 'General'}
           categoryColor={categoryColor}
           itemColor={vault.color_value}
@@ -513,12 +518,13 @@ export const VaultCard: React.FC<VaultCardProps> = ({
       </Card>
 
       {/* Delete Confirmation Modal */}
-      <DeleteVaultModal
+      <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        itemType="vault"
+        itemTitle={vaultTitle}
+        itemColor={vaultDisplayColor}
         onConfirm={handleConfirmDelete}
-        vaultId={vault.id.toString()}
-        vaultTitle={vaultTitle}
       />
     </Collapsible>
   );
