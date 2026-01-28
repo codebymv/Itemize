@@ -723,28 +723,39 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
       }
 
       // Ensure Google users are marked as verified and have an organization
-      const client = await pool.connect();
-      try {
-        await client.query(
-          'UPDATE users SET email_verified = true WHERE id = $1 AND email_verified = false',
-          [user.id]
-        );
+      // Use pool.query instead of manual connect/release to prevent connection leaks
+      await pool.query(
+        'UPDATE users SET email_verified = true WHERE id = $1 AND email_verified = false',
+        [user.id]
+      );
 
-        // Check if user has an organization
-        const orgCheck = await client.query(
-          'SELECT default_organization_id FROM users WHERE id = $1',
-          [user.id]
-        );
+      // Check if user has an organization
+      const orgCheck = await pool.query(
+        'SELECT default_organization_id FROM users WHERE id = $1',
+        [user.id]
+      );
 
-        if (!orgCheck.rows[0].default_organization_id) {
-          // Create personal organization for new Google users
+      if (!orgCheck.rows[0]?.default_organization_id) {
+        // Create personal organization for new Google users
+        // Use a transaction to ensure atomicity
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
           await createPersonalOrganization(client, user.id, user.name);
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
         }
-      } finally {
-        client.release();
       }
     } catch (error) {
-      logger.error('Error handling user', { error: error.message });
+      logger.error('Error handling user', { error: error.message, stack: error.stack });
+      // Provide more specific error messages
+      if (error.message && error.message.includes('timeout')) {
+        return res.status(503).json({ error: 'Database connection timeout. Please try again.' });
+      }
       return res.status(500).json({ error: 'Database error occurred' });
     }
     
@@ -815,28 +826,39 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
       }
 
       // Ensure Google users are marked as verified and have an organization
-      const client = await pool.connect();
-      try {
-        await client.query(
-          'UPDATE users SET email_verified = true WHERE id = $1 AND email_verified = false',
-          [user.id]
-        );
+      // Use pool.query instead of manual connect/release to prevent connection leaks
+      await pool.query(
+        'UPDATE users SET email_verified = true WHERE id = $1 AND email_verified = false',
+        [user.id]
+      );
 
-        // Check if user has an organization
-        const orgCheck = await client.query(
-          'SELECT default_organization_id FROM users WHERE id = $1',
-          [user.id]
-        );
+      // Check if user has an organization
+      const orgCheck = await pool.query(
+        'SELECT default_organization_id FROM users WHERE id = $1',
+        [user.id]
+      );
 
-        if (!orgCheck.rows[0].default_organization_id) {
-          // Create personal organization for new Google users
+      if (!orgCheck.rows[0]?.default_organization_id) {
+        // Create personal organization for new Google users
+        // Use a transaction to ensure atomicity
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
           await createPersonalOrganization(client, user.id, user.name);
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
         }
-      } finally {
-        client.release();
       }
     } catch (error) {
-      logger.error('Error handling Google credential user', { error: error.message });
+      logger.error('Error handling Google credential user', { error: error.message, stack: error.stack });
+      // Provide more specific error messages
+      if (error.message && error.message.includes('timeout')) {
+        return res.status(503).json({ error: 'Database connection timeout. Please try again.' });
+      }
       return res.status(500).json({ error: 'Database error occurred' });
     }
     

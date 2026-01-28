@@ -107,14 +107,15 @@ const createDbConnection = () => {
       ssl: {
         rejectUnauthorized: false // Required for Supabase connections
       },
-      // More robust connection settings to handle network latency
-      max: 5,                     // Increase max connections slightly
-      min: 1,                     // Keep at least 1 connection alive
-      idleTimeoutMillis: 30000,   // 30 seconds idle timeout (increased)
-      connectionTimeoutMillis: 30000, // 30 seconds connection timeout (increased from 10s)
-      statement_timeout: 30000,   // 30 seconds statement timeout (increased)
-      query_timeout: 30000,      // 30 seconds query timeout (increased)
-      acquireTimeoutMillis: 30000, // 30 seconds to acquire connection from pool
+      // More robust connection settings to handle network latency and concurrent requests
+      max: 20,                    // Increased from 5 to handle more concurrent OAuth requests
+      min: 2,                     // Keep at least 2 connections alive for faster response
+      idleTimeoutMillis: 60000,   // 60 seconds idle timeout (increased for better connection reuse)
+      connectionTimeoutMillis: 10000, // 10 seconds connection timeout (reduced - fail fast if DB is down)
+      statement_timeout: 30000,   // 30 seconds statement timeout
+      query_timeout: 30000,       // 30 seconds query timeout
+      acquireTimeoutMillis: 10000, // 10 seconds to acquire connection from pool (fail fast if pool exhausted)
+      allowExitOnIdle: false,     // Keep pool alive even when idle
     });
 
     // Set up event handlers
@@ -127,6 +128,8 @@ const createDbConnection = () => {
     pool.on('error', (err, client) => {
       console.error('❌ Database pool error:', err.message);
       console.error('📊 Pool stats at error:', `Total=${pool.totalCount}, Idle=${pool.idleCount}, Waiting=${pool.waitingCount}`);
+      console.error('Error code:', err.code);
+      console.error('Error stack:', err.stack);
 
       // Don't crash the application on pool errors
       if (err.code === 'ENETUNREACH' || err.code === 'ENOTFOUND') {
@@ -134,15 +137,56 @@ const createDbConnection = () => {
         useInMemory = true;
       } else if (err.message && err.message.includes('timeout')) {
         console.warn('⏰ Database connection timeout detected. Pool may be exhausted.');
+        console.warn('Consider checking database connectivity and pool configuration.');
+      }
+      
+      // If client is provided and it's an error on a specific client, remove it from the pool
+      if (client && err.code !== 'ENETUNREACH' && err.code !== 'ENOTFOUND') {
+        console.warn('Removing errored client from pool');
+        client.end();
       }
     });
 
     pool.on('acquire', (client) => {
-      console.log('🔗 Client acquired from pool');
+      // Only log in development to reduce noise in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔗 Client acquired from pool');
+      }
     });
 
     pool.on('release', (client) => {
-      console.log('🔓 Client released back to pool');
+      // Only log in development to reduce noise in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔓 Client released back to pool');
+      }
+    });
+
+    // Monitor pool health periodically (every 5 minutes)
+    const healthCheckInterval = setInterval(() => {
+      const stats = {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount,
+        max: pool.options.max
+      };
+      
+      // Log warning if pool is getting exhausted
+      if (stats.total >= stats.max * 0.8) {
+        console.warn('⚠️ Database pool usage high:', stats);
+      }
+      
+      // Log warning if there are waiting clients
+      if (stats.waiting > 0) {
+        console.warn('⚠️ Clients waiting for database connections:', stats);
+      }
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    // Clean up interval on process exit
+    process.on('SIGINT', () => {
+      clearInterval(healthCheckInterval);
+    });
+    process.on('SIGTERM', () => {
+      clearInterval(healthCheckInterval);
     });
 
     // Test the connection immediately
@@ -411,46 +455,75 @@ const initializeDatabase = async (pool) => {
   }
 };
 
+// Retry helper for database operations
+const retryDbOperation = async (operation, maxRetries = 3, delayMs = 1000) => {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const isTimeout = error.message && (
+        error.message.includes('timeout') ||
+        error.message.includes('ETIMEDOUT') ||
+        error.code === 'ETIMEDOUT'
+      );
+      
+      // Only retry on timeout errors or connection errors
+      if (isTimeout || error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        if (attempt < maxRetries) {
+          console.warn(`Database operation failed (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`, error.message);
+          await new Promise(resolve => setTimeout(resolve, delayMs * attempt)); // Exponential backoff
+          continue;
+        }
+      }
+      // For non-retryable errors, throw immediately
+      throw error;
+    }
+  }
+  throw lastError;
+};
+
 // User operations
 const userOperations = {
   // Find a user by ID
   findById: async (pool, id) => {
-    try {
-      if (!pool) return null;
+    if (!pool) {
+      throw new Error('Database pool not available');
+    }
 
+    return retryDbOperation(async () => {
       const result = await pool.query(
         'SELECT * FROM public.users WHERE id = $1',
         [id]
       );
-
       return result.rows[0] || null;
-    } catch (error) {
-      console.error('Error finding user by ID:', error);
-      return null;
-    }
+    });
   },
 
   // Find a user by email
   findByEmail: async (pool, email) => {
-    try {
-      if (!pool) return null;
+    if (!pool) {
+      throw new Error('Database pool not available');
+    }
 
-      console.log('Looking up user by email:', email);
+    console.log('Looking up user by email:', email);
+    return retryDbOperation(async () => {
       const result = await pool.query(
         'SELECT * FROM public.users WHERE email = $1',
         [email]
       );
-
       return result.rows[0] || null;
-    } catch (error) {
-      console.error('Error finding user by email:', error);
-      return null;
-    }
+    });
   },
 
   // Find or create a user (for OAuth)
   findOrCreate: async (pool, userData) => {
-    try {
+    if (!pool) {
+      throw new Error('Database pool not available');
+    }
+
+    return retryDbOperation(async () => {
       // Try to find the user first
       let user = await userOperations.findByEmail(pool, userData.email);
 
@@ -476,10 +549,7 @@ const userOperations = {
       );
 
       return createResult.rows[0];
-    } catch (error) {
-      console.error('Error finding or creating user:', error);
-      return null;
-    }
+    });
   }
 };
 
