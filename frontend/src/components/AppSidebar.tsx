@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
     Sidebar,
     SidebarContent,
@@ -67,19 +68,19 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Workspace',
         icon: Map,
-        path: '/workspace',
+        path: '/canvas',
         items: [
             {
                 title: 'Canvas',
-                path: '/workspace',
+                path: '/canvas',
             },
             {
                 title: 'Contents',
-                path: '/workspace/contents',
+                path: '/contents',
             },
             {
                 title: 'Shared',
-                path: '/workspace/shared',
+                path: '/shared-items',
             },
         ],
     },
@@ -123,7 +124,7 @@ const mainNavItems: NavItem[] = [
         path: '/campaigns',
         items: [
             {
-                title: 'All Campaigns',
+                title: 'Campaigns',
                 path: '/campaigns',
             },
             {
@@ -142,7 +143,7 @@ const mainNavItems: NavItem[] = [
         path: '/pages',
         items: [
             {
-                title: 'Landing Pages',
+                title: 'Pages',
                 path: '/pages',
             },
             {
@@ -178,19 +179,19 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Reputation',
         icon: Star,
-        path: '/reputation',
+        path: '/reviews',
         items: [
             {
                 title: 'Reviews',
-                path: '/reputation',
+                path: '/reviews',
             },
             {
                 title: 'Requests',
-                path: '/reputation/requests',
+                path: '/review-requests',
             },
             {
                 title: 'Widgets',
-                path: '/reputation/widgets',
+                path: '/review-widgets',
             },
         ],
     },
@@ -205,11 +206,11 @@ const mainNavItems: NavItem[] = [
             },
             {
                 title: 'Estimates',
-                path: '/invoices/estimates',
+                path: '/estimates',
             },
             {
                 title: 'Recurring',
-                path: '/invoices/recurring',
+                path: '/recurring-invoices',
             },
             {
                 title: 'Payments',
@@ -217,7 +218,7 @@ const mainNavItems: NavItem[] = [
             },
             {
                 title: 'Products',
-                path: '/invoices/products',
+                path: '/products',
             },
         ],
     },
@@ -235,11 +236,11 @@ const secondaryNavItems: NavItem[] = [
             },
             {
                 title: 'Preferences',
-                path: '/settings/preferences',
+                path: '/preferences',
             },
             {
                 title: 'Payments',
-                path: '/settings/payments',
+                path: '/payment-settings',
             },
         ],
     },
@@ -260,8 +261,23 @@ export function AppSidebar() {
     const navigate = useNavigate();
     const { theme } = useTheme();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+    const isMobileDevice = useIsMobile();
 
     const isCollapsed = state === 'collapsed';
+
+    // Filter nav items based on mobile - remove Canvas from Workspace group on mobile
+    const filteredMainNavItems = React.useMemo(() => {
+        return mainNavItems.map(item => {
+            if (item.title === 'Workspace' && item.items && isMobileDevice) {
+                // Filter out Canvas sub-item on mobile
+                return {
+                    ...item,
+                    items: item.items.filter(subItem => subItem.title !== 'Canvas')
+                };
+            }
+            return item;
+        });
+    }, [isMobileDevice]);
 
     // Auto-close sidebar on mobile when route changes
     React.useEffect(() => {
@@ -347,7 +363,7 @@ export function AppSidebar() {
                     <SidebarGroupLabel style={{ fontFamily: '"Raleway", sans-serif' }}>Main</SidebarGroupLabel>
                     <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                         <SidebarMenu className={cn("gap-3", isCollapsed && "w-full items-center")}>
-                            {mainNavItems.map((item) => {
+                            {filteredMainNavItems.map((item) => {
                                 // Check if any child route is active for grouped items
                                 const isActive = location.pathname === item.path ||
                                     (item.path !== '/' && location.pathname.startsWith(item.path)) ||

@@ -86,7 +86,7 @@ export function InvoicePreview({
     // Any changes here should be mirrored in the backend
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Eye className="h-5 w-5 text-blue-600" />
@@ -99,7 +99,111 @@ export function InvoicePreview({
 
                 {/* Invoice Preview Content - matches PDF exactly */}
                 {/* Note: Raleway font should be loaded in index.html for full parity */}
-                <div style={{
+                <style>{`
+                    @media (max-width: 768px) {
+                        .invoice-preview-container {
+                            padding: 20px !important;
+                            height: auto !important;
+                            min-height: auto !important;
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-header {
+                            flex-direction: column !important;
+                            gap: 16px !important;
+                            margin-bottom: 24px !important;
+                        }
+                        .invoice-preview-header > div:last-child {
+                            text-align: left !important;
+                        }
+                        .invoice-preview-header h1 {
+                            font-size: 24px !important;
+                        }
+                        .invoice-preview-header .invoice-preview-business-info {
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-header .invoice-preview-business-details {
+                            font-size: 11px !important;
+                        }
+                        .invoice-preview-header .invoice-preview-invoice-number {
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-addresses {
+                            flex-direction: column !important;
+                            gap: 16px !important;
+                            margin-bottom: 24px !important;
+                        }
+                        .invoice-preview-addresses > div {
+                            width: 100% !important;
+                        }
+                        .invoice-preview-addresses .invoice-preview-dates {
+                            text-align: left !important;
+                        }
+                        .invoice-preview-addresses .invoice-preview-date-row {
+                            justify-content: flex-start !important;
+                            flex-wrap: wrap !important;
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-addresses .invoice-preview-customer-details {
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-table {
+                            margin-bottom: 24px !important;
+                        }
+                        .invoice-preview-table th {
+                            font-size: 9px !important;
+                            padding: 6px 2px !important;
+                            white-space: normal !important;
+                            word-break: break-word !important;
+                            line-height: 1.3 !important;
+                        }
+                        .invoice-preview-table th:nth-child(3) {
+                            white-space: normal !important;
+                        }
+                        .invoice-preview-table td {
+                            padding: 8px 2px !important;
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-table td:first-child {
+                            min-width: 120px !important;
+                        }
+                        .invoice-preview-table .invoice-preview-item-description {
+                            font-size: 11px !important;
+                        }
+                        .invoice-preview-totals-container {
+                            justify-content: flex-start !important;
+                            margin-bottom: 24px !important;
+                        }
+                        .invoice-preview-totals {
+                            width: 100% !important;
+                            max-width: 100% !important;
+                        }
+                        .invoice-preview-totals .invoice-preview-total-row {
+                            font-size: 12px !important;
+                        }
+                        .invoice-preview-totals .invoice-preview-grand-total {
+                            font-size: 16px !important;
+                        }
+                        .invoice-preview-notes {
+                            font-size: 12px !important;
+                            margin-bottom: 12px !important;
+                        }
+                        .invoice-preview-notes .invoice-preview-notes-label {
+                            font-size: 10px !important;
+                        }
+                        .invoice-preview-footer {
+                            font-size: 11px !important;
+                            margin-top: 24px !important;
+                        }
+                        .invoice-preview-powered-footer {
+                            margin-left: -20px !important;
+                            margin-right: -20px !important;
+                            width: calc(100% + 40px) !important;
+                            padding: 12px 16px !important;
+                            font-size: 11px !important;
+                        }
+                    }
+                `}</style>
+                <div className="invoice-preview-container" style={{
                     fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     fontSize: '14px',
                     lineHeight: 1.5,
@@ -117,8 +221,8 @@ export function InvoicePreview({
                 }}>
                     <div style={{ flex: 1 }}>
                     {/* Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
-                        <div style={{ fontSize: '14px' }}>
+                    <div className="invoice-preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+                        <div className="invoice-preview-business-info" style={{ fontSize: '14px' }}>
                             {business?.logo_url && (
                                 <img
                                     src={getAssetUrl(business.logo_url)}
@@ -129,7 +233,7 @@ export function InvoicePreview({
                             {business?.name && (
                                 <>
                                     <div style={{ fontWeight: 600, marginBottom: '4px' }}>{business.name}</div>
-                                    <div style={{ color: '#6b7280', fontSize: '12px' }}>
+                                    <div className="invoice-preview-business-details" style={{ color: '#6b7280', fontSize: '12px' }}>
                                         {business.address && (
                                             <div style={{ whiteSpace: 'pre-line' }}>{business.address}</div>
                                         )}
@@ -142,30 +246,30 @@ export function InvoicePreview({
                         <div style={{ textAlign: 'right' }}>
                             <h1 style={{ fontSize: '32px', fontWeight: 300, color: '#2563eb', margin: '0 0 4px 0' }}>INVOICE</h1>
                             {invoiceNumber && (
-                                <div style={{ fontSize: '14px', color: '#6b7280' }}>{invoiceNumber}</div>
+                                <div className="invoice-preview-invoice-number" style={{ fontSize: '14px', color: '#6b7280' }}>{invoiceNumber}</div>
                             )}
                         </div>
                     </div>
 
                     {/* Addresses and Dates */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
+                    <div className="invoice-preview-addresses" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
                         <div style={{ width: '50%' }}>
                             <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>
                                 Bill To
                             </div>
                             {customerName && <div style={{ fontWeight: 600, marginBottom: '4px' }}>{customerName}</div>}
-                            <div style={{ color: '#6b7280', fontSize: '14px' }}>
+                            <div className="invoice-preview-customer-details" style={{ color: '#6b7280', fontSize: '14px' }}>
                                 {customerEmail && <div>{customerEmail}</div>}
                                 {customerPhone && <div>{customerPhone}</div>}
                                 {customerAddress && <div style={{ whiteSpace: 'pre-line' }}>{customerAddress}</div>}
                             </div>
                         </div>
-                        <div style={{ width: '50%', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '4px', fontSize: '14px' }}>
+                        <div className="invoice-preview-dates" style={{ width: '50%', textAlign: 'right' }}>
+                            <div className="invoice-preview-date-row" style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '4px', fontSize: '14px' }}>
                                 <span style={{ color: '#6b7280' }}>Issue Date:</span>
                                 <span style={{ fontWeight: 500 }}>{formatDate(issueDate)}</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', fontSize: '14px' }}>
+                            <div className="invoice-preview-date-row" style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', fontSize: '14px' }}>
                                 <span style={{ color: '#6b7280' }}>Due Date:</span>
                                 <span style={{ fontWeight: 500 }}>{formatDate(dueDate)}</span>
                             </div>
@@ -173,12 +277,12 @@ export function InvoicePreview({
                     </div>
 
                     {/* Line Items Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
+                    <table className="invoice-preview-table" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
                         <thead>
                             <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
                                 <th style={{ padding: '8px 0', textAlign: 'left', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px', width: '50%' }}>Description</th>
                                 <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px' }}>Qty</th>
-                                <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px' }}>Unit Price</th>
+                                <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Unit Price</th>
                                 <th style={{ padding: '8px 0', textAlign: 'right', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.5px' }}>Amount</th>
                             </tr>
                         </thead>
@@ -191,7 +295,7 @@ export function InvoicePreview({
                                         <td style={{ padding: '12px 0' }}>
                                             <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
                                             {itemDesc && (
-                                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>{itemDesc}</p>
+                                                <p className="invoice-preview-item-description" style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>{itemDesc}</p>
                                             )}
                                         </td>
                                         <td style={{ padding: '12px 0', textAlign: 'right' }}>{item.quantity}</td>
@@ -204,26 +308,26 @@ export function InvoicePreview({
                     </table>
 
                     {/* Totals */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '32px' }}>
-                        <div style={{ width: '256px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
+                    <div className="invoice-preview-totals-container" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '32px' }}>
+                        <div className="invoice-preview-totals" style={{ width: '256px' }}>
+                            <div className="invoice-preview-total-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
                                 <span>Subtotal</span>
                                 <span>{formatCurrency(subtotal)}</span>
                             </div>
                             {taxAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
+                                <div className="invoice-preview-total-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
                                     <span>Tax</span>
                                     <span>{formatCurrency(taxAmount)}</span>
                                 </div>
                             )}
                             {discountAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
+                                <div className="invoice-preview-total-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px' }}>
                                     <span>Discount</span>
                                     <span>-{formatCurrency(discountAmount)}</span>
                                 </div>
                             )}
                             <div style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0' }} />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '18px', fontWeight: 700 }}>
+                            <div className="invoice-preview-grand-total" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '18px', fontWeight: 700 }}>
                                 <span>Total</span>
                                 <span>{formatCurrency(total)}</span>
                             </div>
@@ -232,22 +336,22 @@ export function InvoicePreview({
 
                     {/* Notes */}
                     {notes && (
-                        <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                            <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Notes</div>
+                        <div className="invoice-preview-notes" style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                            <div className="invoice-preview-notes-label" style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Notes</div>
                             <div style={{ fontSize: '14px', whiteSpace: 'pre-line' }}>{notes}</div>
                         </div>
                     )}
 
                     {/* Terms & Conditions */}
                     {termsAndConditions && (
-                        <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                            <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Terms & Conditions</div>
+                        <div className="invoice-preview-notes" style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                            <div className="invoice-preview-notes-label" style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Terms & Conditions</div>
                             <div style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'pre-line' }}>{termsAndConditions}</div>
                         </div>
                     )}
 
                     {/* Footer */}
-                    <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px', marginTop: '32px' }}>
+                    <div className="invoice-preview-footer" style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px', marginTop: '32px' }}>
                         {business?.tax_id && <div>Tax ID: {business.tax_id}</div>}
                         <div style={{ marginTop: '8px' }}>Thank you for your business!</div>
                     </div>
@@ -255,7 +359,7 @@ export function InvoicePreview({
                     {/* /.invoice-content */}
 
                     {/* Powered By Footer */}
-                    <div style={{
+                    <div className="invoice-preview-powered-footer" style={{
                         marginTop: 'auto',
                         marginLeft: '-40px',
                         marginRight: '-40px',

@@ -96,7 +96,7 @@ export function EstimateEditorPage() {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2 ml-2">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/invoices/estimates')}>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
@@ -311,7 +311,7 @@ export function EstimateEditorPage() {
                     headers: { 'x-organization-id': organizationId.toString() }
                 });
                 toast({ title: 'Created', description: 'Estimate created successfully' });
-                navigate(`/invoices/estimates/${response.data.id}`);
+                navigate(`/estimates/${response.data.id}`);
             } else if (id) {
                 await api.put(`/api/invoices/estimates/${id}`, estimateData, {
                     headers: { 'x-organization-id': organizationId.toString() }
@@ -680,7 +680,7 @@ export function EstimateEditorPage() {
 
                 {/* Actions */}
                 <div className="flex justify-end gap-4">
-                    <Button variant="outline" onClick={() => navigate('/invoices/estimates')}>
+                    <Button variant="outline" onClick={() => navigate('/estimates')}>
                         Cancel
                     </Button>
                     <Button

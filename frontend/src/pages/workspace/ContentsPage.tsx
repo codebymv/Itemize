@@ -5,7 +5,6 @@ import {
   LayoutGrid,
   List as ListIcon,
   Search,
-  Filter,
   Map,
   CheckSquare,
   StickyNote,
@@ -337,7 +336,7 @@ export function ContentsPage() {
             className="text-xl font-semibold italic truncate"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            WORKSPACE | Contents
+            CONTENTS
           </h1>
         </div>
         {/* Desktop-only controls */}
@@ -390,7 +389,6 @@ export function ContentsPage() {
           {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
             <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -419,7 +417,7 @@ export function ContentsPage() {
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => navigate('/workspace')}
+            onClick={() => navigate('/canvas')}
           >
             <Map className="h-4 w-4 mr-2" />
             Go to Canvas
@@ -471,8 +469,10 @@ export function ContentsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="flex-1 h-9">
-              <Filter className="h-4 w-4 mr-2" />
+            <SelectTrigger 
+              className="flex-1 flex-shrink h-9 pr-8 min-w-0"
+              style={{ paddingLeft: '0.375rem', flexBasis: 0 }}
+            >
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -485,7 +485,10 @@ export function ContentsPage() {
             </SelectContent>
           </Select>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="flex-1 h-9">
+            <SelectTrigger 
+              className="flex-1 flex-shrink h-9 pr-8 min-w-0"
+              style={{ paddingLeft: '0.375rem', flexBasis: 0 }}
+            >
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -543,7 +546,7 @@ export function ContentsPage() {
                 : 'Get started by creating content on your canvas'}
             </p>
             <Button
-              onClick={() => navigate('/workspace')}
+              onClick={() => navigate('/canvas')}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Map className="h-4 w-4 mr-2" />

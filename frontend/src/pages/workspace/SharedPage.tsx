@@ -391,7 +391,7 @@ export function SharedPage() {
             className="text-xl font-semibold italic truncate"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            WORKSPACE | Shared
+            SHARED ITEMS
           </h1>
         </div>
         {/* Desktop-only controls */}
@@ -438,7 +438,7 @@ export function SharedPage() {
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => navigate('/workspace')}
+            onClick={() => navigate('/canvas')}
           >
             <Map className="h-4 w-4 mr-2" />
             Go to Canvas
@@ -519,7 +519,7 @@ export function SharedPage() {
                 : 'Share lists, notes, whiteboards, or vaults to see them here'}
             </p>
             <Button
-              onClick={() => navigate('/workspace')}
+              onClick={() => navigate('/canvas')}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Map className="h-4 w-4 mr-2" />

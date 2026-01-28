@@ -202,7 +202,7 @@ export function EstimatesPage() {
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => navigate('/invoices/estimates/new')}
+                        onClick={() => navigate('/estimates/new')}
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         New Estimate
@@ -278,7 +278,7 @@ export function EstimatesPage() {
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => navigate('/invoices/estimates/new')}
+                        onClick={() => navigate('/estimates/new')}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -372,7 +372,7 @@ export function EstimatesPage() {
                             <h3 className="text-lg font-medium mb-2">No estimates yet</h3>
                             <p className="text-muted-foreground mb-4">Create estimates to send quotes to your customers</p>
                             <Button
-                                onClick={() => navigate('/invoices/estimates/new')}
+                                onClick={() => navigate('/estimates/new')}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                             >
                                 <Plus className="h-4 w-4 mr-2" />Create Estimate
@@ -384,7 +384,7 @@ export function EstimatesPage() {
                                 <div
                                     key={estimate.id}
                                     className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                                    onClick={() => navigate(`/invoices/estimates/${estimate.id}`)}
+                                    onClick={() => navigate(`/estimates/${estimate.id}`)}
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
@@ -420,7 +420,7 @@ export function EstimatesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => navigate(`/invoices/estimates/${estimate.id}`)} className="group/menu">
+                                                    <DropdownMenuItem onClick={() => navigate(`/estimates/${estimate.id}`)} className="group/menu">
                                                         <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
                                                     </DropdownMenuItem>
                                                     {estimate.status === 'draft' && (

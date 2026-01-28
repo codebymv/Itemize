@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useAISuggest } from '@/context/AISuggestContext';
@@ -83,8 +83,8 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 // Settings navigation items
 const settingsNav = [
     { title: 'Account', path: '/settings', icon: User },
-    { title: 'Preferences', path: '/settings/preferences', icon: Wrench },
-    { title: 'Payments', path: '/settings/payments', icon: CreditCard },
+    { title: 'Preferences', path: '/preferences', icon: Wrench },
+    { title: 'Payments', path: '/payment-settings', icon: CreditCard },
 ];
 
 function SettingsNav() {
@@ -1032,11 +1032,9 @@ export function SettingsPage() {
                     <SettingsNav />
 
                     <div className="min-w-0" key={location.pathname}>
-                        <Routes>
-                            <Route index element={<AccountSettings />} />
-                            <Route path="preferences" element={<PreferencesSettings />} />
-                            <Route path="payments" element={<PaymentsSettings setSaveButton={setSaveButton} />} />
-                        </Routes>
+                        {location.pathname === '/preferences' && <PreferencesSettings />}
+                        {location.pathname === '/payment-settings' && <PaymentsSettings setSaveButton={setSaveButton} />}
+                        {location.pathname === '/settings' && <AccountSettings />}
                     </div>
                 </div>
             </div>

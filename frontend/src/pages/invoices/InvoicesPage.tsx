@@ -306,7 +306,7 @@ export function InvoicesPage() {
             fetchInvoices();
             
             // Navigate to recurring invoices page to see the new template
-            navigate('/invoices/recurring');
+            navigate('/recurring-invoices');
         } catch (error: any) {
             const errorMessage = error?.response?.data?.error || 'Failed to create recurring template';
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
@@ -955,7 +955,7 @@ export function InvoicesPage() {
                                                         />
 
                                                         {/* Action Buttons */}
-                                                        <div className="flex justify-center gap-3 mt-6 pt-4 border-t">
+                                                        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-6 pt-4 border-t">
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
@@ -963,55 +963,67 @@ export function InvoicesPage() {
                                                                     e.stopPropagation();
                                                                     navigate(`/invoices/${invoice.id}`);
                                                                 }}
+                                                                className="text-xs sm:text-sm"
                                                             >
-                                                                <Pencil className="h-4 w-4 mr-2" />Edit
+                                                                <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                <span className="hidden xs:inline">Edit</span>
+                                                                <span className="xs:hidden">Edit</span>
                                                             </Button>
                                                             {invoice.status === 'draft' && (
                                                                 <Button
                                                                     size="sm"
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleOpenSendModal(invoice, false);
                                                                     }}
                                                                 >
-                                                                    <Send className="h-4 w-4 mr-2" />Send Invoice
+                                                                    <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                    <span className="hidden sm:inline">Send Invoice</span>
+                                                                    <span className="sm:hidden">Send</span>
                                                                 </Button>
                                                             )}
                                                             {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
                                                                 <Button
                                                                     size="sm"
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleOpenSendModal(invoice, true);
                                                                     }}
                                                                 >
-                                                                    <RefreshCw className="h-4 w-4 mr-2" />Resend Invoice
+                                                                    <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                    <span className="hidden sm:inline">Resend Invoice</span>
+                                                                    <span className="sm:hidden">Resend</span>
                                                                 </Button>
                                                             )}
                                                             <Button 
                                                                 size="sm"
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                             >
-                                                                <Download className="h-4 w-4 mr-2" />Download PDF
+                                                                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                <span className="hidden sm:inline">Download PDF</span>
+                                                                <span className="sm:hidden">PDF</span>
                                                             </Button>
                                                             {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
                                                                 <>
                                                                     <Button
                                                                         size="sm"
                                                                         onClick={(e) => handleOpenPaymentModal(invoice, e)}
-                                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                     >
-                                                                        <Wallet className="h-4 w-4 mr-2" />Record Payment
+                                                                        <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                        <span className="hidden sm:inline">Record Payment</span>
+                                                                        <span className="sm:hidden">Payment</span>
                                                                     </Button>
                                                                     <Button
                                                                         size="sm"
                                                                         onClick={(e) => handleCreatePaymentLink(invoice, e)}
-                                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                     >
-                                                                        <CreditCard className="h-4 w-4 mr-2" />
-                                                                        Payment Link
+                                                                        <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                        <span className="hidden sm:inline">Payment Link</span>
+                                                                        <span className="sm:hidden">Link</span>
                                                                     </Button>
                                                                 </>
                                                             )}
@@ -1019,9 +1031,11 @@ export function InvoicesPage() {
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={(e) => handleOpenRecurringModal(invoice, e)}
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                 >
-                                                                    <Repeat className="h-4 w-4 mr-2" />Make Recurring
+                                                                    <Repeat className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                    <span className="hidden sm:inline">Make Recurring</span>
+                                                                    <span className="sm:hidden">Recurring</span>
                                                                 </Button>
                                                             )}
                                                         </div>

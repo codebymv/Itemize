@@ -98,9 +98,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 {/* Top header bar */}
                 <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full overflow-hidden">
                     <div className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
-                        <div className="md:hidden flex items-center mr-1">
-                            <img src="/icon.png" alt="Itemize" className="h-6 w-auto" />
-                        </div>
                         <SidebarTrigger className="md:hidden" />
 
                         {/* Dynamic header content injected by pages */}

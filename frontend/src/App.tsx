@@ -192,10 +192,16 @@ const AppContent = () => {
         <Route path="/automations" element={<AuthenticatedLayout><AutomationsPage /></AuthenticatedLayout>} />
         <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
         <Route path="/automations/:id" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
-        <Route path="/workspace" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
-        <Route path="/workspace/contents" element={<AuthenticatedLayout><ContentsPage /></AuthenticatedLayout>} />
-        <Route path="/workspace/shared" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
-        <Route path="/settings/*" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        
+        {/* Workspace (Canvas, Contents, Shared) */}
+        <Route path="/canvas" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
+        <Route path="/contents" element={<AuthenticatedLayout><ContentsPage /></AuthenticatedLayout>} />
+        <Route path="/shared-items" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
+        
+        {/* Settings */}
+        <Route path="/settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/preferences" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/payment-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
         <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
 
@@ -219,24 +225,20 @@ const AppContent = () => {
         <Route path="/social" element={<AuthenticatedLayout><SocialPage /></AuthenticatedLayout>} />
 
         {/* Reputation Management */}
-        <Route path="/reputation" element={<AuthenticatedLayout><ReputationPage /></AuthenticatedLayout>} />
-        <Route path="/reputation/requests" element={<AuthenticatedLayout><ReputationRequestsPage /></AuthenticatedLayout>} />
-        <Route path="/reputation/widgets" element={<AuthenticatedLayout><ReputationWidgetsPage /></AuthenticatedLayout>} />
+        <Route path="/reviews" element={<AuthenticatedLayout><ReputationPage /></AuthenticatedLayout>} />
+        <Route path="/review-requests" element={<AuthenticatedLayout><ReputationRequestsPage /></AuthenticatedLayout>} />
+        <Route path="/review-widgets" element={<AuthenticatedLayout><ReputationWidgetsPage /></AuthenticatedLayout>} />
 
         {/* Sales & Payments */}
         <Route path="/invoices" element={<AuthenticatedLayout><InvoicesPage /></AuthenticatedLayout>} />
         <Route path="/invoices/new" element={<AuthenticatedLayout><InvoiceEditorPage /></AuthenticatedLayout>} />
         <Route path="/invoices/:id" element={<AuthenticatedLayout><InvoiceEditorPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/estimates" element={<AuthenticatedLayout><EstimatesPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/estimates/new" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/estimates/:id" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/recurring" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
+        <Route path="/estimates" element={<AuthenticatedLayout><EstimatesPage /></AuthenticatedLayout>} />
+        <Route path="/estimates/new" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
+        <Route path="/estimates/:id" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
+        <Route path="/recurring-invoices" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
         <Route path="/invoices/payments" element={<AuthenticatedLayout><PaymentsPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
-        {/* Legacy routes - redirect to new paths */}
-        <Route path="/invoices/settings" element={<Navigate to="/settings/payments" replace />} />
-        <Route path="/canvas" element={<Navigate to="/workspace" replace />} />
-        <Route path="/lists" element={<Navigate to="/workspace" replace />} />
+        <Route path="/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
       </Route>
 
       {/* Catch-all route */}

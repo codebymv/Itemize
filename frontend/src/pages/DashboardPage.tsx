@@ -680,7 +680,7 @@ export function DashboardPage() {
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-                        onClick={() => navigate('/workspace')}
+                        onClick={() => navigate('/canvas')}
                     >
                         <Map className="h-4 w-4 mr-2" />
                         Go to Workspace
@@ -717,7 +717,7 @@ export function DashboardPage() {
             title: 'Open Workspace',
             description: 'Continue organizing on your canvas',
             icon: Map,
-            action: () => navigate('/workspace'),
+            action: () => navigate('/canvas'),
         },
     ];
 
@@ -740,7 +740,7 @@ export function DashboardPage() {
                 <Button
                     size="sm"
                     className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1"
-                    onClick={() => navigate('/workspace')}
+                    onClick={() => navigate('/canvas')}
                 >
                     <Map className="h-4 w-4 mr-2" />
                     Go to Workspace
