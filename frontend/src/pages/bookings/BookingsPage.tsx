@@ -330,7 +330,8 @@ export function BookingsPage() {
                     </div>
                 </div>
                 )}
-            </div>
+            </PageSurface>
+            </PageContainer>
         </>
     );
 }
