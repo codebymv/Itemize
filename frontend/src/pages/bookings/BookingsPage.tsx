@@ -86,8 +86,7 @@ export function BookingsPage() {
                         </SelectContent>
                     </Select>
                 </div>
-            </PageSurface>
-            </PageContainer>
+            </div>
         );
         return () => setHeaderContent(null);
     }, [searchQuery, statusFilter, theme, setHeaderContent]);
