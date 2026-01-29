@@ -34,7 +34,7 @@ import {
     markConversationRead,
     ConversationsQueryParams,
 } from '@/services/conversationsApi';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 export function InboxPage() {
@@ -46,7 +46,7 @@ export function InboxPage() {
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
     const [loading, setLoading] = useState(true);
     const [messageLoading, setMessageLoading] = useState(false);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [statusFilter, setStatusFilter] = useState<string>('open');
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
@@ -83,16 +83,10 @@ export function InboxPage() {
     }, [statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!initError) return;
+        setLoading(false);
+        toast({ title: 'Error', description: initError, variant: 'destructive' });
+    }, [initError, toast]);
 
     const fetchConversations = useCallback(async () => {
         if (!organizationId) return;

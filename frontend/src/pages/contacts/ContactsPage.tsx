@@ -23,9 +23,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
+import { usePageHeader } from '@/hooks/usePageHeader';
 import { Contact, ContactsResponse } from '@/types';
-import { getContacts, deleteContact, bulkDeleteContacts, ensureDefaultOrganization, exportContactsCSV } from '@/services/contactsApi';
+import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { ContactCardList } from './components/ContactCard';
@@ -34,6 +34,7 @@ import { CreateContactModal } from './components/CreateContactModal';
 import { ImportContactsModal } from './components/ImportContactsModal';
 import { BulkTagModal } from './components/BulkTagModal';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOrganization } from '@/hooks/useOrganization';
 
 // Color helper functions for contact status badges and summary cards
 const getContactStatusBadgeClasses = (status: string) => {
@@ -120,15 +121,19 @@ const getStatIconColor = (theme: string) => {
 export function ContactsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
   const isMobile = useIsMobile();
 
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [initError, setInitError] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const { organizationId, isLoading: orgLoading, error: initError } = useOrganization({
+    onError: (error: any) => {
+      return error?.response?.status === 500
+        ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
+        : 'Failed to initialize organization. Please check your connection.';
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
@@ -150,21 +155,12 @@ export function ContactsPage() {
     return { total, active, inactive, archived };
   }, [contacts]);
 
-  // Set header content following workspace pattern
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1
-            className="text-xl font-semibold italic truncate"
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-          >
-            CONTACTS
-          </h1>
-        </div>
-        {/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+  usePageHeader(
+    {
+      title: 'CONTACTS',
+      icon: <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />,
+      rightContent: (
+        <>
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -211,30 +207,21 @@ export function ContactsPage() {
             <Plus className="h-4 w-4 mr-2" />
             Add Contact
           </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [searchQuery, statusFilter, theme, setHeaderContent]);
+        </>
+      ),
+      theme
+    },
+    [searchQuery, statusFilter, theme, organizationId]
+  );
 
-  // Initialize organization
   useEffect(() => {
-    const initOrg = async () => {
-      try {
-        const org = await ensureDefaultOrganization();
-        setOrganizationId(org.id);
-        setInitError(null);
-      } catch (error: any) {
-        console.error('Error initializing organization:', error);
-        const errorMsg = error.response?.status === 500
-          ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
-          : 'Failed to initialize organization. Please check your connection.';
-        setInitError(errorMsg);
-        setLoading(false);
-      }
-    };
-    initOrg();
-  }, []);
+    if (orgLoading && loading) {
+      return;
+    }
+    if (!orgLoading && !organizationId && !initError) {
+      setLoading(false);
+    }
+  }, [orgLoading, organizationId, initError, loading]);
 
   // Fetch contacts
   const fetchContacts = useCallback(async () => {

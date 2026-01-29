@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getChatWidget, createChatWidget, updateChatWidget, getEmbedCode } from '@/services/chatWidgetApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
@@ -36,8 +36,7 @@ export function ChatWidgetPage() {
     const [embedCode, setEmbedCode] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [activeTab, setActiveTab] = useState('settings');
 
     useEffect(() => {
@@ -86,17 +85,10 @@ export function ChatWidgetPage() {
     }, [theme, saving, setHeaderContent, activeTab]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!organizationId && initError) {
+            setLoading(false);
+        }
+    }, [organizationId, initError]);
 
     const fetchConfig = useCallback(async () => {
         if (!organizationId) return;

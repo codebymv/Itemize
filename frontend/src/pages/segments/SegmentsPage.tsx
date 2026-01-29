@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getSegments, deleteSegment, calculateSegment } from '@/services/segmentsApi';
 import { CreateSegmentModal } from './CreateSegmentModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -40,8 +40,7 @@ export function SegmentsPage() {
 
     const [segments, setSegments] = useState<Segment[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -83,17 +82,9 @@ export function SegmentsPage() {
     }, [searchQuery, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!initError) return;
+        setLoading(false);
+    }, [initError]);
 
     const fetchSegments = useCallback(async () => {
         if (!organizationId) return;

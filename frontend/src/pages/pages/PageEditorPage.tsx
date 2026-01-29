@@ -72,7 +72,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import {
     getPage,
     updatePage,
@@ -126,7 +126,13 @@ export function PageEditorPage() {
     const [page, setPage] = useState<Page | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId } = useOrganization({
+        onError: () => {
+            toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
+            navigate('/pages');
+            return 'Failed to initialize';
+        }
+    });
 
     // Edit states
     const [editedName, setEditedName] = useState('');
@@ -140,19 +146,11 @@ export function PageEditorPage() {
     const [selectedSection, setSelectedSection] = useState<PageSection | null>(null);
     const [activeTab, setActiveTab] = useState('sections');
 
-    // Initialize organization
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-                navigate('/pages');
-            }
-        };
-        initOrg();
-    }, []);
+        if (!organizationId) {
+            setLoading(false);
+        }
+    }, [organizationId]);
 
     // Load page data
     const loadPage = useCallback(async () => {

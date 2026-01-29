@@ -65,8 +65,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization, getContacts } from '@/services/contactsApi';
+import { getContacts } from '@/services/contactsApi';
 import { getProducts, Product, getBusinesses, Business } from '@/services/invoicesApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { cn } from '@/lib/utils';
@@ -137,7 +138,7 @@ export function RecurringInvoicesPage() {
 
     const [recurringInvoices, setRecurringInvoices] = useState<RecurringInvoice[]>([]);
     const [loading, setLoading] = useState(true);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
 
@@ -176,30 +177,32 @@ export function RecurringInvoicesPage() {
     ]);
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
+        if (!initError) return;
+        toast({ title: 'Error', description: initError, variant: 'destructive' });
+        setLoading(false);
+    }, [initError, toast]);
 
-                // Load contacts, products, and business for the form and preview
+    useEffect(() => {
+        if (!organizationId) return;
+        const loadSupportData = async () => {
+            try {
                 const [contactsData, productsData, businessesData] = await Promise.all([
-                    getContacts({}, org.id),
-                    getProducts({}, org.id),
-                    getBusinesses(org.id)
+                    getContacts({}, organizationId),
+                    getProducts({}, organizationId),
+                    getBusinesses(organizationId)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
                 setProducts(productsData || []);
-                // Use the first (default) business for previews
                 if (businessesData && businessesData.length > 0) {
                     setBusiness(businessesData[0]);
                 }
             } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
+                toast({ title: 'Error', description: 'Failed to load supporting data', variant: 'destructive' });
                 setLoading(false);
             }
         };
-        init();
-    }, [toast]);
+        loadSupportData();
+    }, [organizationId, toast]);
 
     const fetchRecurringInvoices = useCallback(async () => {
         if (!organizationId) return;

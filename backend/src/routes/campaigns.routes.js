@@ -170,7 +170,7 @@ module.exports = (pool, authenticateJWT) => {
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error creating campaign:', error);
-            res.status(500).json({ error: 'Failed to create campaign' });
+            return sendError(res, 'Failed to create campaign');
         }
     }));
 
@@ -251,7 +251,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating campaign:', error);
-            res.status(500).json({ error: 'Failed to update campaign' });
+            return sendError(res, 'Failed to update campaign');
         }
     }));
 
@@ -288,7 +288,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error deleting campaign:', error);
-            res.status(500).json({ error: 'Failed to delete campaign' });
+            return sendError(res, 'Failed to delete campaign');
         }
     }));
 
@@ -341,7 +341,7 @@ module.exports = (pool, authenticateJWT) => {
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error duplicating campaign:', error);
-            res.status(500).json({ error: 'Failed to duplicate campaign' });
+            return sendError(res, 'Failed to duplicate campaign');
         }
     }));
 
@@ -399,7 +399,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error scheduling campaign:', error);
-            res.status(500).json({ error: 'Failed to schedule campaign' });
+            return sendError(res, 'Failed to schedule campaign');
         }
     }));
 
@@ -429,7 +429,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error unscheduling campaign:', error);
-            res.status(500).json({ error: 'Failed to unschedule campaign' });
+            return sendError(res, 'Failed to unschedule campaign');
         }
     }));
 
@@ -543,10 +543,10 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Insert recipients in bulk
                 const recipientValues = [];
-                const recipientParams = [];
+                const recipientInsertParams = [];
                 recipients.forEach((recipient, index) => {
                     const baseIndex = index * 6;
-                    recipientParams.push(
+                    recipientInsertParams.push(
                         id,
                         recipient.id,
                         req.organizationId,
@@ -567,7 +567,7 @@ module.exports = (pool, authenticateJWT) => {
                             ) VALUES ${recipientValues.join(', ')}
                             ON CONFLICT (campaign_id, contact_id) DO NOTHING
                         `,
-                        recipientParams
+                        recipientInsertParams
                     );
                 }
 
@@ -600,7 +600,7 @@ module.exports = (pool, authenticateJWT) => {
             }
         } catch (error) {
             console.error('Error sending campaign:', error);
-            res.status(500).json({ error: 'Failed to send campaign' });
+            return sendError(res, 'Failed to send campaign');
         }
     }));
 
@@ -629,7 +629,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error pausing campaign:', error);
-            res.status(500).json({ error: 'Failed to pause campaign' });
+            return sendError(res, 'Failed to pause campaign');
         }
     }));
 
@@ -690,7 +690,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json({ message: 'Campaign resumed', pendingRecipients: recipients.length });
         } catch (error) {
             console.error('Error resuming campaign:', error);
-            res.status(500).json({ error: 'Failed to resume campaign' });
+            return sendError(res, 'Failed to resume campaign');
         }
     }));
 
@@ -759,7 +759,7 @@ module.exports = (pool, authenticateJWT) => {
             });
         } catch (error) {
             console.error('Error fetching campaign recipients:', error);
-            res.status(500).json({ error: 'Failed to fetch recipients' });
+            return sendError(res, 'Failed to fetch recipients');
         }
     }));
 
@@ -825,7 +825,7 @@ module.exports = (pool, authenticateJWT) => {
             });
         } catch (error) {
             console.error('Error previewing campaign:', error);
-            res.status(500).json({ error: 'Failed to preview campaign' });
+            return sendError(res, 'Failed to preview campaign');
         }
     }));
 
@@ -894,7 +894,7 @@ module.exports = (pool, authenticateJWT) => {
             });
         } catch (error) {
             console.error('Error sending test email:', error);
-            res.status(500).json({ error: 'Failed to send test email' });
+            return sendError(res, 'Failed to send test email');
         }
     }));
 

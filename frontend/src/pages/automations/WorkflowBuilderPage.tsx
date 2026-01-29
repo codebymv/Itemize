@@ -53,7 +53,7 @@ import {
 } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import {
   getWorkflow,
   createWorkflow,
@@ -153,7 +153,16 @@ export function WorkflowBuilderPage() {
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
 
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const { organizationId } = useOrganization({
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to initialize',
+        variant: 'destructive',
+      });
+      return 'Failed to initialize';
+    }
+  });
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -225,23 +234,11 @@ export function WorkflowBuilderPage() {
     return () => setHeaderContent(null);
   }, [name, isActive, saving, isNewWorkflow, theme, navigate, setHeaderContent]);
 
-  // Initialize organization
   useEffect(() => {
-    const initOrg = async () => {
-      try {
-        const org = await ensureDefaultOrganization();
-        setOrganizationId(org.id);
-      } catch (error) {
-        console.error('Error initializing organization:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to initialize',
-          variant: 'destructive',
-        });
-      }
-    };
-    initOrg();
-  }, []);
+    if (!organizationId) {
+      setLoading(false);
+    }
+  }, [organizationId]);
 
   // Fetch workflow and email templates
   useEffect(() => {

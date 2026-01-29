@@ -1,7 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Wireframe, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import React from 'react';
+import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
+import { useCardColorManagement } from '@/hooks/useCardColorManagement';
+import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 
 interface UseWireframeCardLogicProps {
   wireframe: Wireframe;
@@ -22,115 +24,76 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
   const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
   const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
   
-  // Title editing state
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(wireframe.title || 'Untitled Wireframe');
-  
-  // Color state
-  const [isSavingColor, setIsSavingColor] = useState(false);
-  
-  // Category editing state
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-  
-  // Refs
-  const titleEditRef = useRef<HTMLInputElement>(null);
-  
-  // Update title state when wireframe title changes
-  React.useEffect(() => {
-    setEditTitle(wireframe.title || 'Untitled Wireframe');
-  }, [wireframe.title]);
-  
-  // Title editing handlers
-  const handleEditTitle = useCallback(async () => {
-    if (editTitle.trim() !== wireframe.title) {
-      await onUpdate(wireframe.id, { title: editTitle.trim() });
-    }
-    setIsEditing(false);
-  }, [editTitle, wireframe.title, wireframe.id, onUpdate]);
+  const {
+    isEditing,
+    setIsEditing,
+    editTitle,
+    setEditTitle,
+    handleEditTitle,
+    titleEditRef
+  } = useCardTitleEditing({
+    title: wireframe.title || 'Untitled Wireframe',
+    compareTitle: wireframe.title,
+    onSave: (nextTitle) => onUpdate(wireframe.id, { title: nextTitle })
+  });
   
   // Wireframe operations
   const handleDeleteWireframe = useCallback(async () => {
     await onDelete(wireframe.id);
   }, [wireframe.id, onDelete]);
   
-  // Color operations
-  const handleSaveWireframeColor = useCallback(async (newColor: string) => {
-    setIsSavingColor(true);
-    try {
-      await onUpdate(wireframe.id, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to save wireframe color:', error);
+  const { isSavingColor, saveColor: handleSaveWireframeColor } = useCardColorManagement({
+    onSave: (newColor) => onUpdate(wireframe.id, { color_value: newColor }),
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to update color",
         variant: "destructive"
       });
-      throw error;
-    } finally {
-      setIsSavingColor(false);
     }
-  }, [wireframe.id, onUpdate, toast]);
+  });
   
-  // Category operations
-  const handleEditCategory = useCallback(async (category: string) => {
-    if (category === '__custom__') {
-      setShowNewCategoryInput(true);
-      return;
-    }
-    try {
-      await onUpdate(wireframe.id, { category: category });
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-    } catch (error) {
-      console.error('Failed to update wireframe category:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update category",
-        description: "Could not update wireframe category. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [wireframe.id, onUpdate, toast]);
-  
-  const handleAddCustomCategory = useCallback(async () => {
-    if (newCategory.trim() !== '') {
-      try {
-        await onUpdate(wireframe.id, { category: newCategory.trim() });
-        setIsEditingCategory(false);
-        setShowNewCategoryInput(false);
-        setNewCategory('');
-      } catch (error) {
-        console.error('Failed to add custom category:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add category",
-          variant: "destructive"
-        });
-      }
-    } else {
+  const {
+    isEditingCategory,
+    setIsEditingCategory,
+    showNewCategoryInput,
+    setShowNewCategoryInput,
+    newCategory,
+    setNewCategory,
+    handleEditCategory,
+    handleAddCustomCategory,
+    handleUpdateCategoryColor
+  } = useCardCategoryManagement({
+    onUpdateCategory: (category) => onUpdate(wireframe.id, { category }),
+    onAddCustomCategory: (category) => onUpdate(wireframe.id, { category }),
+    onUpdateCategoryColor: (categoryName, newColor) => {
+      if (!updateCategory) return;
+      return updateCategory(categoryName, { color_value: newColor });
+    },
+    onEmptyCategory: () => {
       toast({
         title: "Category cannot be empty",
         description: "Please enter a valid category name",
         variant: "destructive"
       });
-    }
-  }, [newCategory, wireframe.id, onUpdate, toast]);
-
-  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
-    if (!updateCategory) return;
-    try {
-      await updateCategory(categoryName, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to update category color:', error);
+    },
+    onError: (error, action) => {
+      console.error('Failed to update wireframe category:', error);
+      if (action === 'color') {
+        toast({
+          title: 'Error',
+          description: 'Could not update category color.',
+          variant: 'destructive'
+        });
+        return;
+      }
       toast({
-        title: 'Error',
-        description: 'Could not update category color.',
-        variant: 'destructive'
+        title: action === 'add' ? "Failed to add category" : "Failed to update category",
+        description: "Could not update wireframe category. Please try again.",
+        variant: "destructive"
       });
     }
-  };
+  });
   
   // Flow data operations
   const handleFlowDataChange = useCallback((flowData: any) => {

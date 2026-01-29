@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
@@ -55,22 +55,20 @@ export function EstimatesPage() {
 
     const [estimates, setEstimates] = useState<Estimate[]>([]);
     const [loading, setLoading] = useState(true);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId } = useOrganization({
+        onError: () => {
+            toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
+            return 'Failed to initialize';
+        }
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-                setLoading(false);
-            }
-        };
-        init();
-    }, [toast]);
+        if (!organizationId) {
+            setLoading(false);
+        }
+    }, [organizationId]);
 
     const fetchEstimates = useCallback(async () => {
         if (!organizationId) return;

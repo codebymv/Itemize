@@ -470,7 +470,17 @@ export const getVaults = async (token?: string) => {
   const response = await api.get('/api/vaults', {
     headers: getAuthHeaders(token)
   });
-  return response.data;
+  const payload = response.data;
+  if (payload?.data) {
+    return { vaults: payload.data, pagination: payload.pagination };
+  }
+  if (payload?.vaults) {
+    return payload;
+  }
+  if (Array.isArray(payload)) {
+    return { vaults: payload };
+  }
+  return payload;
 };
 
 // Get a single vault with decrypted items

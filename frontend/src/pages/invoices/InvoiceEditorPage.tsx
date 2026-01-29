@@ -36,7 +36,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getContacts } from '@/services/contactsApi';
 import {
     getInvoice,
@@ -84,7 +84,7 @@ export function InvoiceEditorPage() {
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -214,17 +214,14 @@ export function InvoiceEditorPage() {
 
     // Initialize
     useEffect(() => {
+        if (!organizationId) return;
         const init = async () => {
             try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-
-                // Load contacts, products, businesses, and settings
                 const [contactsData, productsData, businessesData, settingsData] = await Promise.all([
-                    getContacts({}, org.id),
-                    getProducts({}, org.id),
-                    getBusinesses(org.id),
-                    getPaymentSettings(org.id)
+                    getContacts({}, organizationId),
+                    getProducts({}, organizationId),
+                    getBusinesses(organizationId),
+                    getPaymentSettings(organizationId)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
                 setProducts(Array.isArray(productsData) ? productsData : productsData?.products || []);
@@ -233,7 +230,7 @@ export function InvoiceEditorPage() {
 
                 // Load existing invoice if editing
                 if (!isNew && id) {
-                    const invoice = await getInvoice(parseInt(id), org.id);
+                    const invoice = await getInvoice(parseInt(id), organizationId);
                     setInvoiceNumber(invoice.invoice_number || '');
                     setContactId(invoice.contact_id);
                     setSelectedBusinessId(invoice.business_id);
@@ -286,7 +283,7 @@ export function InvoiceEditorPage() {
             }
         };
         init();
-    }, [id, isNew, toast]);
+    }, [organizationId, id, isNew, toast]);
 
     // Handle contact selection
     const handleContactChange = (contactIdStr: string) => {

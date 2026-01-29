@@ -71,8 +71,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { usePageHeader } from '@/hooks/usePageHeader';
+import { useOrganization } from '@/hooks/useOrganization';
 import { 
   getWorkflows, 
   activateWorkflow, 
@@ -108,33 +108,26 @@ const TRIGGER_TYPE_ICONS: Record<string, React.ReactNode> = {
 export function AutomationsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [initError, setInitError] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const { organizationId, error: initError } = useOrganization({
+    onError: () => 'Failed to initialize. Please check your connection.'
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [triggerFilter, setTriggerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Set header content following workspace pattern
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
-          <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 
-            className="text-xl font-semibold italic truncate min-w-0" 
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-          >
-            AUTOMATIONS | All
-          </h1>
-        </div>
-        {/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4 flex-shrink-0">
-          {/* Desktop search */}
+  usePageHeader(
+    {
+      title: 'AUTOMATIONS | All',
+      icon: <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />,
+      leftClassName: 'min-w-0 flex-1',
+      rightClassName: 'flex-shrink-0',
+      titleClassName: 'min-w-0',
+      rightContent: (
+        <>
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -145,7 +138,6 @@ export function AutomationsPage() {
               style={{ fontFamily: '"Raleway", sans-serif' }}
             />
           </div>
-          {/* Trigger filter */}
           <Select value={triggerFilter} onValueChange={setTriggerFilter}>
             <SelectTrigger className="w-[150px] h-9 bg-muted/20 border-border/50">
               <Zap className="h-4 w-4 mr-2" />
@@ -160,7 +152,6 @@ export function AutomationsPage() {
               <SelectItem value="scheduled">Scheduled</SelectItem>
             </SelectContent>
           </Select>
-          {/* Status filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Status" />
@@ -171,7 +162,6 @@ export function AutomationsPage() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
-          {/* Create Workflow Button */}
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
@@ -180,27 +170,18 @@ export function AutomationsPage() {
             <Plus className="h-4 w-4 mr-2" />
             Create Workflow
           </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [searchQuery, triggerFilter, statusFilter, theme, navigate, setHeaderContent]);
+        </>
+      ),
+      theme
+    },
+    [searchQuery, triggerFilter, statusFilter, theme, navigate]
+  );
 
-  // Initialize organization
   useEffect(() => {
-    const initOrg = async () => {
-      try {
-        const org = await ensureDefaultOrganization();
-        setOrganizationId(org.id);
-        setInitError(null);
-      } catch (error: any) {
-        console.error('Error initializing organization:', error);
-        setInitError('Failed to initialize. Please check your connection.');
-        setLoading(false);
-      }
-    };
-    initOrg();
-  }, []);
+    if (!organizationId && initError) {
+      setLoading(false);
+    }
+  }, [organizationId, initError]);
 
   // Fetch workflows
   const fetchWorkflows = useCallback(async () => {

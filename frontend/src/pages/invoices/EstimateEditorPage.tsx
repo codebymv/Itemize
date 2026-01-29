@@ -29,7 +29,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization, getContacts } from '@/services/contactsApi';
+import { getContacts } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getProducts, Product } from '@/services/invoicesApi';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -63,7 +64,7 @@ export function EstimateEditorPage() {
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
 
@@ -148,15 +149,12 @@ export function EstimateEditorPage() {
 
     // Initialize
     useEffect(() => {
+        if (!organizationId) return;
         const init = async () => {
             try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-
-                // Load contacts and products
                 const [contactsData, productsData] = await Promise.all([
-                    getContacts({}, org.id),
-                    getProducts({}, org.id)
+                    getContacts({}, organizationId),
+                    getProducts({}, organizationId)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
                 setProducts(productsData || []);
@@ -164,7 +162,7 @@ export function EstimateEditorPage() {
                 // Load existing estimate if editing
                 if (!isNew && id) {
                     const response = await api.get(`/api/invoices/estimates/${id}`, {
-                        headers: { 'x-organization-id': org.id.toString() }
+                        headers: { 'x-organization-id': organizationId.toString() }
                     });
                     const estimate = response.data;
                     
@@ -198,7 +196,7 @@ export function EstimateEditorPage() {
             }
         };
         init();
-    }, [id, isNew, toast]);
+    }, [organizationId, id, isNew, toast]);
 
     // Handle contact selection
     const handleContactChange = (contactIdStr: string) => {

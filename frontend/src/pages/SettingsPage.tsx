@@ -44,7 +44,7 @@ import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus
 import { Plan } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { getAssetUrl } from '@/lib/api';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { 
     getPaymentSettings, 
     updatePaymentSettings, 
@@ -268,7 +268,12 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
     
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId } = useOrganization({
+        onError: () => {
+            toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
+            return 'Failed to initialize';
+        }
+    });
     
     // Settings state
     const [settings, setSettings] = useState<PaymentSettings>({
@@ -300,17 +305,10 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
     const businessFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-                setLoading(false);
-            }
-        };
-        init();
-    }, [toast]);
+        if (!organizationId) {
+            setLoading(false);
+        }
+    }, [organizationId]);
 
     const fetchData = useCallback(async () => {
         if (!organizationId) return;

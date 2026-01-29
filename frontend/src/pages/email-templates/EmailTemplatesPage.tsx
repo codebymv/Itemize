@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getEmailTemplates, deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail } from '@/services/emailApi';
 import { CreateEmailTemplateModal } from './CreateEmailTemplateModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -45,8 +45,7 @@ export function EmailTemplatesPage() {
 
     const [templates, setTemplates] = useState<EmailTemplate[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -89,17 +88,9 @@ export function EmailTemplatesPage() {
     }, [searchQuery, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!initError) return;
+        setLoading(false);
+    }, [initError]);
 
     const fetchTemplates = useCallback(async () => {
         if (!organizationId) return;

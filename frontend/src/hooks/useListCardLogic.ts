@@ -3,6 +3,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAISuggest } from "@/context/AISuggestContext";
 import { useAISuggestions } from "@/hooks/use-ai-suggestions";
 import { List, ListItem, Category } from '@/types';
+import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
+import { useCardColorManagement } from '@/hooks/useCardColorManagement';
+import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 
 interface UseListCardLogicProps {
   list: List;
@@ -66,11 +69,6 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   
   const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
   const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(list.title);
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
   const [newItemText, setNewItemText] = useState<string>('');
 
   // Debug AI suggestion state (reduced logging)
@@ -87,30 +85,31 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemText, setEditingItemText] = useState('');
-  const [isSavingColor, setIsSavingColor] = useState(false);
-  
   // Refs for click outside detection
-  const titleEditRef = useRef<HTMLInputElement>(null);
   const newItemInputRef = useRef<HTMLInputElement>(null);
   
-  // Keep title edit state in sync with list title
-  useEffect(() => {
-    setEditTitle(list.title);
-  }, [list.title]);
-
-  // Handle updating the list title
-  const handleEditTitle = () => {
-    if (editTitle.trim() !== '') {
-      onUpdate({ ...list, title: editTitle.trim() });
-      setIsEditing(false);
-    } else {
+  const {
+    isEditing,
+    setIsEditing,
+    editTitle,
+    setEditTitle,
+    handleEditTitle,
+    titleEditRef
+  } = useCardTitleEditing({
+    title: list.title,
+    compareTitle: list.title,
+    onSave: (nextTitle) => {
+      onUpdate({ ...list, title: nextTitle });
+    },
+    validateTitle: (nextTitle) => nextTitle.trim() !== '',
+    onInvalidTitle: () => {
       toast({
         title: "Title cannot be empty",
         description: "Please enter a valid list title",
         variant: "destructive"
       });
     }
-  };
+  });
   
   // Handle deleting the list
   const handleDeleteList = () => {
@@ -118,94 +117,82 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   };
   
   // Handle updating the list category/type
-  const handleEditCategory = async (category: string) => {
-    if (category === '__custom__') {
-      setShowNewCategoryInput(true);
-      return;
-    }
-    
-    // If it's a new category name that doesn't exist yet, create it in the database
-    if (category.trim() && !existingCategories.find(c => c.name === category) && addCategory) {
-      try {
-        await addCategory({ 
-          name: category.trim(), 
-          color_value: '#3B82F6' // Default blue color
-        });
-        // addCategory already triggers global refresh, so other components will update
-      } catch (error) {
-        console.error('Failed to create category in database:', error);
-        // Continue anyway to update the list locally
-      }
-    }
-    
-    // When changing to a non-General category, adopt that category's color
-    let updateData: Partial<List> = { type: category };
-    if (category !== 'General') {
-      const selectedCategory = existingCategories.find(c => c.name === category);
-      if (selectedCategory?.color_value) {
-        updateData.color_value = selectedCategory.color_value;
-      }
-    }
-    
-    onUpdate({ ...list, ...updateData });
-    setIsEditingCategory(false);
-    setShowNewCategoryInput(false);
-  };
-  
-  // Handle creating a new custom category
-  const handleAddCustomCategory = async () => {
-    if (newCategory.trim() !== '') {
-      try {
-        let newCategoryColor = '#3B82F6'; // Default blue color
-        
-        // First create the category in the database (only if addCategory is provided)
-        if (addCategory) {
-          await addCategory({ 
-            name: newCategory.trim(), 
-            color_value: newCategoryColor
+  const {
+    isEditingCategory,
+    setIsEditingCategory,
+    showNewCategoryInput,
+    setShowNewCategoryInput,
+    newCategory,
+    setNewCategory,
+    handleEditCategory,
+    handleAddCustomCategory,
+    handleUpdateCategoryColor
+  } = useCardCategoryManagement({
+    onUpdateCategory: async (category) => {
+      if (category.trim() && !existingCategories.find(c => c.name === category) && addCategory) {
+        try {
+          await addCategory({
+            name: category.trim(),
+            color_value: '#3B82F6'
           });
+        } catch (error) {
+          console.error('Failed to create category in database:', error);
         }
-        
-        // Then update the list to use this category and adopt its color
-        onUpdate({ 
-          ...list, 
-          type: newCategory.trim(),
-          color_value: newCategoryColor // Adopt the new category's color
-        });
-        setIsEditingCategory(false);
-        setShowNewCategoryInput(false);
-        setNewCategory('');
-        
-      } catch (error) {
-        console.error('Failed to create category:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create category",
-          description: "Could not create the category. Please try again.",
-          variant: "destructive"
+      }
+
+      let updateData: Partial<List> = { type: category };
+      if (category !== 'General') {
+        const selectedCategory = existingCategories.find(c => c.name === category);
+        if (selectedCategory?.color_value) {
+          updateData.color_value = selectedCategory.color_value;
+        }
+      }
+
+      onUpdate({ ...list, ...updateData });
+    },
+    onAddCustomCategory: async (category) => {
+      const newCategoryColor = '#3B82F6';
+      if (addCategory) {
+        await addCategory({
+          name: category,
+          color_value: newCategoryColor
         });
       }
-    } else {
+
+      onUpdate({
+        ...list,
+        type: category,
+        color_value: newCategoryColor
+      });
+    },
+    onUpdateCategoryColor: (categoryName, newColor) =>
+      updateCategory(categoryName, { color_value: newColor }),
+    onEmptyCategory: () => {
       toast({
         title: "Category cannot be empty",
         description: "Please enter a valid category name",
         variant: "destructive"
       });
-    }
-  };
-
-  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
-    try {
-      await updateCategory(categoryName, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to update category color:', error);
+    },
+    onError: (error, action) => {
+      console.error('Failed to update category:', error);
+      if (action === 'color') {
+        toast({
+          title: 'Error',
+          description: 'Could not update category color.',
+          variant: 'destructive'
+        });
+        return;
+      }
       toast({
-        title: 'Error',
-        description: 'Could not update category color.',
-        variant: 'destructive'
+        title: "Error",
+        description: action === 'add'
+          ? "Could not create the category. Please try again."
+          : "Could not update the category. Please try again.",
+        variant: "destructive"
       });
     }
-  };
+  });
   
   // Handle adding a new item
   const handleAddItem = () => {
@@ -337,29 +324,15 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   };
 
   // Handle saving the list color
-  const handleSaveListColor = async (newColor: string) => {
-    setIsSavingColor(true);
-    try {
-      // --- BEGIN Placeholder for backend API call ---
-      // In a real app, you would call your API service here:
-      // await api.updateListColor(list.id, newColor);
-      // For now, simulate a delay and potential error:
+  const { isSavingColor, saveColor: handleSaveListColor } = useCardColorManagement({
+    onSave: async (newColor) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      // if (Math.random() < 0.3) { // Simulate a 30% chance of error
-      //   throw new Error("Simulated API error saving color");
-      // }
-      // --- END Placeholder for backend API call ---
-
-      // Optimistically update the list in the parent component's state
       onUpdate({ ...list, color_value: newColor });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Failed to save list color:", error);
-      // Re-throw the error so ListCardHeader can revert the preview if needed
-      throw error; 
-    } finally {
-      setIsSavingColor(false);
     }
-  };
+  });
   
   return {
     // Collapsible

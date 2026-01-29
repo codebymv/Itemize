@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================
@@ -170,7 +177,7 @@ export const getProducts = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Product[]>(response.data);
 };
 
 export const createProduct = async (
@@ -180,7 +187,7 @@ export const createProduct = async (
     const response = await api.post('/api/invoices/products', product, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Product>(response.data);
 };
 
 export const updateProduct = async (
@@ -191,7 +198,7 @@ export const updateProduct = async (
     const response = await api.put(`/api/invoices/products/${productId}`, product, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Product>(response.data);
 };
 
 export const deleteProduct = async (
@@ -201,7 +208,7 @@ export const deleteProduct = async (
     const response = await api.delete(`/api/invoices/products/${productId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 // ======================
@@ -222,7 +229,15 @@ export const getInvoices = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    const payload = response.data;
+    const invoices = payload?.data ?? payload?.invoices ?? [];
+    const pagination = payload?.pagination ?? payload?.data?.pagination ?? {
+        page: params.page ?? 1,
+        limit: params.limit ?? 50,
+        total: Array.isArray(invoices) ? invoices.length : 0,
+        totalPages: 1
+    };
+    return { invoices, pagination };
 };
 
 export const getInvoice = async (
@@ -232,7 +247,7 @@ export const getInvoice = async (
     const response = await api.get(`/api/invoices/${invoiceId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Invoice>(response.data);
 };
 
 export const createInvoice = async (
@@ -258,7 +273,7 @@ export const createInvoice = async (
     const response = await api.post('/api/invoices', invoice, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Invoice>(response.data);
 };
 
 export const updateInvoice = async (
@@ -269,7 +284,7 @@ export const updateInvoice = async (
     const response = await api.put(`/api/invoices/${invoiceId}`, invoice, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Invoice>(response.data);
 };
 
 export const deleteInvoice = async (
@@ -279,7 +294,7 @@ export const deleteInvoice = async (
     const response = await api.delete(`/api/invoices/${invoiceId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 export interface SendInvoiceOptions {
@@ -303,7 +318,7 @@ export const sendInvoice = async (
     const response = await api.post(`/api/invoices/${invoiceId}/send`, options || {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<SendInvoiceResponse>(response.data);
 };
 
 /**
@@ -341,7 +356,7 @@ export const recordPayment = async (
     const response = await api.post(`/api/invoices/${invoiceId}/record-payment`, payment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ payment: Payment; invoice: { amount_paid: number; amount_due: number; status: string } }>(response.data);
 };
 
 export const createPaymentLink = async (
@@ -351,7 +366,7 @@ export const createPaymentLink = async (
     const response = await api.post(`/api/invoices/${invoiceId}/create-payment-link`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ url: string; session_id: string }>(response.data);
 };
 
 export const createRecurringTemplateFromInvoice = async (
@@ -367,7 +382,7 @@ export const createRecurringTemplateFromInvoice = async (
     const response = await api.post(`/api/invoices/recurring/from-invoice/${invoiceId}`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ recurring_template_id: number }>(response.data);
 };
 
 // ======================
@@ -378,7 +393,7 @@ export const getPaymentSettings = async (organizationId?: number): Promise<Payme
     const response = await api.get('/api/invoices/settings', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<PaymentSettings>(response.data);
 };
 
 export const updatePaymentSettings = async (
@@ -388,7 +403,7 @@ export const updatePaymentSettings = async (
     const response = await api.put('/api/invoices/settings', settings, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<PaymentSettings>(response.data);
 };
 
 export const uploadLogo = async (
@@ -403,14 +418,14 @@ export const uploadLogo = async (
             ...(organizationId ? { 'x-organization-id': organizationId.toString() } : {})
         }
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean; logo_url: string }>(response.data);
 };
 
 export const deleteLogo = async (organizationId?: number): Promise<{ success: boolean }> => {
     const response = await api.delete('/api/invoices/settings/logo', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 // ======================
@@ -421,16 +436,13 @@ export const getBusinesses = async (organizationId?: number): Promise<Business[]
     const response = await api.get('/api/invoices/businesses', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    // Handle case where response might be wrapped or not an array
-    const data = response.data;
+    const data = unwrapResponse<Business[] | { businesses?: Business[] }>(response.data);
     if (Array.isArray(data)) {
         return data;
     }
-    // If response has a businesses property (wrapped response)
     if (data && Array.isArray(data.businesses)) {
         return data.businesses;
     }
-    // Default to empty array
     return [];
 };
 
@@ -441,7 +453,7 @@ export const getBusiness = async (
     const response = await api.get(`/api/invoices/businesses/${businessId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Business>(response.data);
 };
 
 export const createBusiness = async (
@@ -451,7 +463,7 @@ export const createBusiness = async (
     const response = await api.post('/api/invoices/businesses', business, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Business>(response.data);
 };
 
 export const updateBusiness = async (
@@ -462,7 +474,7 @@ export const updateBusiness = async (
     const response = await api.put(`/api/invoices/businesses/${businessId}`, business, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Business>(response.data);
 };
 
 export const deleteBusiness = async (
@@ -472,7 +484,7 @@ export const deleteBusiness = async (
     const response = await api.delete(`/api/invoices/businesses/${businessId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 export const uploadBusinessLogo = async (

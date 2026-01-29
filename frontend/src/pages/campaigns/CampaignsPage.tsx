@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getCampaigns, deleteCampaign, duplicateCampaign, sendCampaign, pauseCampaign, resumeCampaign } from '@/services/campaignsApi';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -50,8 +50,7 @@ export function CampaignsPage() {
 
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -106,17 +105,10 @@ export function CampaignsPage() {
     }, [searchQuery, statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!organizationId && initError) {
+            setLoading(false);
+        }
+    }, [organizationId, initError]);
 
     const fetchCampaigns = useCallback(async () => {
         if (!organizationId) return;

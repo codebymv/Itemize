@@ -20,8 +20,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { usePageHeader } from '@/hooks/usePageHeader';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
@@ -92,31 +92,21 @@ interface Analytics {
 
 export function ReputationPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
 
     const [reviews, setReviews] = useState<Review[]>([]);
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [ratingFilter, setRatingFilter] = useState<string>('all');
 
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
-                    <Star className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-                    >
-                        REPUTATION | Reviews
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+    usePageHeader(
+        {
+            title: 'REPUTATION | Reviews',
+            icon: <Star className="h-5 w-5 text-blue-600 flex-shrink-0" />,
+            rightContent: (
+                <>
                     <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
@@ -139,24 +129,17 @@ export function ReputationPage() {
                             <SelectItem value="1">1 Star</SelectItem>
                         </SelectContent>
                     </Select>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, ratingFilter, theme, setHeaderContent]);
+                </>
+            ),
+            theme
+        },
+        [searchQuery, ratingFilter, theme]
+    );
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!initError) return;
+        setLoading(false);
+    }, [initError]);
 
     const fetchData = useCallback(async () => {
         if (!organizationId) return;

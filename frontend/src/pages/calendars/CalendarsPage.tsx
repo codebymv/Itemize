@@ -20,7 +20,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Calendar } from '@/types';
 import { getCalendars, updateCalendar, deleteCalendar } from '@/services/calendarsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { CreateCalendarModal } from './components/CreateCalendarModal';
 import { CalendarIntegrations } from './components/CalendarIntegrations';
 
@@ -33,8 +33,9 @@ export function CalendarsPage() {
     // State
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({
+        onError: () => 'Failed to initialize organization.'
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -77,21 +78,11 @@ export function CalendarsPage() {
         return () => setHeaderContent(null);
     }, [searchQuery, theme, setHeaderContent]);
 
-    // Initialize organization
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-                setInitError(null);
-            } catch (error: any) {
-                console.error('Error initializing organization:', error);
-                setInitError('Failed to initialize organization.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!organizationId && initError) {
+            setLoading(false);
+        }
+    }, [organizationId, initError]);
 
     // Fetch calendars
     const fetchCalendars = useCallback(async () => {

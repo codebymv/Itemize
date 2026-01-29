@@ -409,7 +409,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(invoice);
         } catch (error) {
             console.error('Error fetching invoice:', error);
-            res.status(500).json({ error: 'Failed to fetch invoice' });
+            return sendError(res, 'Failed to fetch invoice');
         }
     }));
 
@@ -593,7 +593,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
         } catch (error) {
             console.error('Error creating invoice:', error);
-            res.status(500).json({ error: 'Failed to create invoice' });
+            return sendError(res, 'Failed to create invoice');
         }
     }));
 
@@ -815,7 +815,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
         } catch (error) {
             console.error('Error updating invoice:', error);
-            res.status(500).json({ error: 'Failed to update invoice' });
+            return sendError(res, 'Failed to update invoice');
         }
     }));
 
@@ -854,7 +854,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true, invoice_number: checkResult.rows[0].invoice_number });
         } catch (error) {
             console.error('Error deleting invoice:', error);
-            res.status(500).json({ error: 'Failed to delete invoice' });
+            return sendError(res, 'Failed to delete invoice');
         }
     }));
 
@@ -1098,7 +1098,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
         } catch (error) {
             logger.error('Error sending invoice:', error);
-            res.status(500).json({ error: 'Failed to send invoice' });
+            return sendError(res, 'Failed to send invoice');
         }
     }));
 
@@ -1163,7 +1163,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.send(pdf);
         } catch (error) {
             console.error('Error generating PDF:', error);
-            res.status(500).json({ error: 'Failed to generate PDF' });
+            return sendError(res, 'Failed to generate PDF');
         }
     }));
 
@@ -1263,7 +1263,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
         } catch (error) {
             console.error('Error recording payment:', error);
-            res.status(500).json({ error: 'Failed to record payment' });
+            return sendError(res, 'Failed to record payment');
         }
     }));
 
@@ -1347,7 +1347,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
         } catch (error) {
             console.error('Error creating payment link:', error);
-            res.status(500).json({ error: 'Failed to create payment link' });
+            return sendError(res, 'Failed to create payment link');
         }
     }));
 
@@ -1413,7 +1413,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
         } catch (error) {
             console.error('Error fetching payments:', error);
-            res.status(500).json({ error: 'Failed to fetch payments' });
+            return sendError(res, 'Failed to fetch payments');
         }
     }));
 
@@ -1439,7 +1439,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows);
         } catch (error) {
             console.error('Error fetching businesses:', error);
-            res.status(500).json({ error: 'Failed to fetch businesses' });
+            return sendError(res, 'Failed to fetch businesses');
         }
     }));
 
@@ -1471,7 +1471,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error fetching business:', error);
-            res.status(500).json({ error: 'Failed to fetch business' });
+            return sendError(res, 'Failed to fetch business');
         }
     }));
 
@@ -1506,7 +1506,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error creating business:', error);
-            res.status(500).json({ error: 'Failed to create business' });
+            return sendError(res, 'Failed to create business');
         }
     }));
 
@@ -1569,7 +1569,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating business:', error);
-            res.status(500).json({ error: 'Failed to update business' });
+            return sendError(res, 'Failed to update business');
         }
     }));
 
@@ -1608,7 +1608,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true, message: 'Business deleted' });
         } catch (error) {
             console.error('Error deleting business:', error);
-            res.status(500).json({ error: 'Failed to delete business' });
+            return sendError(res, 'Failed to delete business');
         }
     }));
 
@@ -1702,7 +1702,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 res.json({ logo_url: logoUrl });
             } catch (error) {
                 console.error('Error uploading business logo:', error);
-                res.status(500).json({ error: 'Failed to upload logo' });
+                return sendError(res, 'Failed to upload logo');
             }
         });
     }));
@@ -1763,7 +1763,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error removing business logo:', error);
-            res.status(500).json({ error: 'Failed to remove logo' });
+            return sendError(res, 'Failed to remove logo');
         }
     }));
 
@@ -1799,7 +1799,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error fetching payment settings:', error);
-            res.status(500).json({ error: 'Failed to fetch payment settings' });
+            return sendError(res, 'Failed to fetch payment settings');
         }
     }));
 
@@ -1866,7 +1866,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating payment settings:', error);
-            res.status(500).json({ error: 'Failed to update payment settings' });
+            return sendError(res, 'Failed to update payment settings');
         }
     }));
 
@@ -1960,7 +1960,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     fs.unlinkSync(req.file.path);
                 }
                 console.error('Error uploading logo:', error);
-                res.status(500).json({ error: 'Failed to upload logo' });
+                return sendError(res, 'Failed to upload logo');
             }
         });
     }));
@@ -2012,7 +2012,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error removing logo:', error);
-            res.status(500).json({ error: 'Failed to remove logo' });
+            return sendError(res, 'Failed to remove logo');
         }
     }));
 
@@ -2125,7 +2125,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         } catch (error) {
             client.release();
             console.error('Error processing Stripe webhook:', error);
-            res.status(500).json({ error: 'Webhook processing failed' });
+            return sendError(res, 'Webhook processing failed');
         }
     }));
 

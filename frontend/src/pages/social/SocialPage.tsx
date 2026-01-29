@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl } from '@/services/socialApi';
 import { cn } from '@/lib/utils';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -51,8 +51,7 @@ export function SocialPage() {
     const [channels, setChannels] = useState<SocialChannel[]>([]);
     const [conversations, setConversations] = useState<SocialConversation[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('conversations');
 
@@ -94,17 +93,9 @@ export function SocialPage() {
     }, [searchQuery, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!initError) return;
+        setLoading(false);
+    }, [initError]);
 
     const fetchData = useCallback(async () => {
         if (!organizationId) return;

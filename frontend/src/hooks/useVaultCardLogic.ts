@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Vault, VaultItem, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
+import { useCardColorManagement } from '@/hooks/useCardColorManagement';
+import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 import { 
   updateVault, 
   addVaultItem, 
@@ -40,17 +43,7 @@ export const useVaultCardLogic = ({
   const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
   const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
   
-  // Title editing state
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(vault.title || 'Untitled Vault');
-  
-  // Color state
-  const [isSavingColor, setIsSavingColor] = useState(false);
-  
-  // Category editing state
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
+  // Category editing state is handled via hook
   
   // Items state
   const [items, setItems] = useState<VaultItem[]>(vault.items || []);
@@ -76,13 +69,7 @@ export const useVaultCardLogic = ({
   const [masterPasswordInput, setMasterPasswordInput] = useState('');
   
   // Refs
-  const titleEditRef = useRef<HTMLInputElement>(null);
   const newItemLabelRef = useRef<HTMLInputElement>(null);
-  
-  // Update title state when vault title changes
-  useEffect(() => {
-    setEditTitle(vault.title || 'Untitled Vault');
-  }, [vault.title]);
   
   // Update items when vault items change
   useEffect(() => {
@@ -115,103 +102,91 @@ export const useVaultCardLogic = ({
     }
   }, [vault.id, token, itemsLoaded, isLoadingItems, toast]);
   
-  // Title editing handlers
-  const handleEditTitle = useCallback(async () => {
-    if (editTitle.trim() !== vault.title) {
-      try {
-        await onUpdate(vault.id, { title: editTitle.trim() });
-      } catch (error) {
-        console.error('Failed to update vault title:', error);
-        toast({
-          title: "Error",
-          description: "Could not update vault title. Please try again.",
-          variant: "destructive"
-        });
+  const {
+    isEditing,
+    setIsEditing,
+    editTitle,
+    setEditTitle,
+    handleEditTitle,
+    titleEditRef
+  } = useCardTitleEditing({
+    title: vault.title || 'Untitled Vault',
+    compareTitle: vault.title,
+    onSave: async (nextTitle) => {
+      if (nextTitle !== vault.title) {
+        try {
+          await onUpdate(vault.id, { title: nextTitle });
+        } catch (error) {
+          console.error('Failed to update vault title:', error);
+          toast({
+            title: "Error",
+            description: "Could not update vault title. Please try again.",
+            variant: "destructive"
+          });
+        }
       }
     }
-    setIsEditing(false);
-  }, [editTitle, vault.title, vault.id, onUpdate, toast]);
+  });
   
   // Vault operations
   const handleDeleteVault = useCallback(async () => {
     return await onDelete(vault.id);
   }, [vault.id, onDelete]);
   
-  // Color operations
-  const handleSaveVaultColor = useCallback(async (newColor: string) => {
-    setIsSavingColor(true);
-    try {
-      await onUpdate(vault.id, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to save vault color:', error);
+  const { isSavingColor, saveColor: handleSaveVaultColor } = useCardColorManagement({
+    onSave: (newColor) => onUpdate(vault.id, { color_value: newColor }),
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to update vault color",
         variant: "destructive"
       });
-      throw error;
-    } finally {
-      setIsSavingColor(false);
     }
-  }, [vault.id, onUpdate, toast]);
+  });
   
-  // Category operations
-  const handleEditCategory = useCallback(async (category: string) => {
-    if (category === '__custom__') {
-      setShowNewCategoryInput(true);
-      return;
-    }
-    try {
-      await onUpdate(vault.id, { category });
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-    } catch (error) {
-      console.error('Failed to update vault category:', error);
-      toast({
-        title: "Error",
-        description: "Could not update vault category. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [vault.id, onUpdate, toast]);
-  
-  const handleAddCustomCategory = useCallback(async () => {
-    if (newCategory.trim() !== '') {
-      try {
-        await onUpdate(vault.id, { category: newCategory.trim() });
-        setIsEditingCategory(false);
-        setShowNewCategoryInput(false);
-        setNewCategory('');
-      } catch (error) {
-        console.error('Failed to add custom category:', error);
-        toast({
-          title: "Error",
-          description: "Could not add custom category. Please try again.",
-          variant: "destructive"
-        });
-      }
-    } else {
+  const {
+    isEditingCategory,
+    setIsEditingCategory,
+    showNewCategoryInput,
+    setShowNewCategoryInput,
+    newCategory,
+    setNewCategory,
+    handleEditCategory,
+    handleAddCustomCategory,
+    handleUpdateCategoryColor
+  } = useCardCategoryManagement({
+    onUpdateCategory: (category) => onUpdate(vault.id, { category }),
+    onAddCustomCategory: (category) => onUpdate(vault.id, { category }),
+    onUpdateCategoryColor: (categoryName, newColor) => {
+      if (!updateCategory) return;
+      return updateCategory(categoryName, { color_value: newColor });
+    },
+    onEmptyCategory: () => {
       toast({
         title: "Category cannot be empty",
         description: "Please enter a valid category name",
         variant: "destructive"
       });
-    }
-  }, [newCategory, vault.id, onUpdate, toast]);
-
-  const handleUpdateCategoryColor = useCallback(async (categoryName: string, newColor: string) => {
-    if (!updateCategory) return;
-    try {
-      await updateCategory(categoryName, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to update category color:', error);
+    },
+    onError: (error, action) => {
+      console.error('Failed to update vault category:', error);
+      if (action === 'color') {
+        toast({
+          title: 'Error',
+          description: 'Could not update category color.',
+          variant: 'destructive'
+        });
+        return;
+      }
       toast({
-        title: 'Error',
-        description: 'Could not update category color.',
-        variant: 'destructive'
+        title: "Error",
+        description: action === 'add'
+          ? "Could not add custom category. Please try again."
+          : "Could not update vault category. Please try again.",
+        variant: "destructive"
       });
     }
-  }, [updateCategory, toast]);
+  });
   
   // Item visibility toggle
   const toggleItemVisibility = useCallback((itemId: number) => {

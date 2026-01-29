@@ -53,13 +53,13 @@ import {
   getContactActivities,
   addContactActivity,
   getContactContent,
-  ensureDefaultOrganization,
 } from '@/services/contactsApi';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOrganization } from '@/hooks/useOrganization';
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -77,7 +77,7 @@ export function ContactDetailPage() {
     whiteboards: any[];
   }>({ lists: [], notes: [], whiteboards: [] });
   const [loading, setLoading] = useState(true);
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const { organizationId } = useOrganization();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -163,18 +163,11 @@ export function ContactDetailPage() {
     return () => setHeaderContent(null);
   }, [contact, theme, navigate, setHeaderContent, activeTab, isMobile]);
 
-  // Initialize organization
   useEffect(() => {
-    const initOrg = async () => {
-      try {
-        const org = await ensureDefaultOrganization();
-        setOrganizationId(org.id);
-      } catch (error) {
-        console.error('Error initializing organization:', error);
-      }
-    };
-    initOrg();
-  }, []);
+    if (!organizationId) {
+      setLoading(false);
+    }
+  }, [organizationId]);
 
   // Fetch contact data
   const fetchContact = useCallback(async () => {

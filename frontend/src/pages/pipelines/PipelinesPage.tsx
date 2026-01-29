@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 import { getPipelines, getPipeline, createPipeline, moveDealToStage } from '@/services/pipelinesApi';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
@@ -36,8 +36,13 @@ export function PipelinesPage() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null);
   const [currentPipeline, setCurrentPipeline] = useState<(Pipeline & { deals: Deal[] }) | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initError, setInitError] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const { organizationId, error: initError } = useOrganization({
+    onError: (error: any) => {
+      return error?.response?.status === 500
+        ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
+        : 'Failed to initialize organization. Please check your connection.';
+    }
+  });
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
   const [showCreatePipelineModal, setShowCreatePipelineModal] = useState(false);
   const [initialStageId, setInitialStageId] = useState<string | undefined>();
@@ -105,24 +110,11 @@ export function PipelinesPage() {
     return () => setHeaderContent(null);
   }, [pipelines, selectedPipelineId, theme, setHeaderContent]);
 
-  // Initialize organization
   useEffect(() => {
-    const initOrg = async () => {
-      try {
-        const org = await ensureDefaultOrganization();
-        setOrganizationId(org.id);
-        setInitError(null);
-      } catch (error: any) {
-        console.error('Error initializing organization:', error);
-        const errorMsg = error.response?.status === 500
-          ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
-          : 'Failed to initialize organization. Please check your connection.';
-        setInitError(errorMsg);
-        setLoading(false);
-      }
-    };
-    initOrg();
-  }, []);
+    if (!organizationId && initError) {
+      setLoading(false);
+    }
+  }, [organizationId, initError]);
 
   // Fetch pipelines
   const fetchPipelines = useCallback(async () => {

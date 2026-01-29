@@ -52,7 +52,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import {
     getInvoices,
     getInvoice,
@@ -114,8 +114,9 @@ export function InvoicesPage() {
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
+        onError: () => 'Failed to initialize.'
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -151,20 +152,15 @@ export function InvoicesPage() {
     const [selectedInvoiceForPaymentLink, setSelectedInvoiceForPaymentLink] = useState<Invoice | null>(null);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!orgLoading && !organizationId) {
+            setLoading(false);
+        }
+    }, [orgLoading, organizationId]);
 
     const fetchInvoices = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId || orgLoading) {
+            return;
+        }
         setLoading(true);
         try {
             const response = await getInvoices({}, organizationId);
@@ -174,7 +170,7 @@ export function InvoicesPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId, toast]);
+    }, [organizationId, orgLoading, toast]);
 
     useEffect(() => {
         fetchInvoices();

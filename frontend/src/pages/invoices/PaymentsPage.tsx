@@ -35,7 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { cn } from '@/lib/utils';
@@ -103,7 +103,7 @@ export function PaymentsPage() {
 
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [methodFilter, setMethodFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -173,17 +173,10 @@ export function PaymentsPage() {
     }, [searchQuery, methodFilter, statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-                setLoading(false);
-            }
-        };
-        init();
-    }, [toast]);
+        if (!initError) return;
+        toast({ title: 'Error', description: initError, variant: 'destructive' });
+        setLoading(false);
+    }, [initError, toast]);
 
     const fetchPayments = useCallback(async () => {
         if (!organizationId) return;

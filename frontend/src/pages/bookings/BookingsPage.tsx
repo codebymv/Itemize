@@ -26,7 +26,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Booking } from '@/types';
 import { getBookings, cancelBooking, BookingsQueryParams } from '@/services/calendarsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 
 export function BookingsPage() {
     const { toast } = useToast();
@@ -36,8 +36,7 @@ export function BookingsPage() {
     // State
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [pagination, setPagination] = useState({
@@ -91,21 +90,11 @@ export function BookingsPage() {
         return () => setHeaderContent(null);
     }, [searchQuery, statusFilter, theme, setHeaderContent]);
 
-    // Initialize organization
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-                setInitError(null);
-            } catch (error: any) {
-                console.error('Error initializing organization:', error);
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!organizationId && initError) {
+            setLoading(false);
+        }
+    }, [organizationId, initError]);
 
     // Fetch bookings
     const fetchBookings = useCallback(async () => {

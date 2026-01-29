@@ -52,7 +52,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { 
     getPaymentSettings, 
     updatePaymentSettings, 
@@ -105,7 +105,7 @@ export function PaymentSettingsPage() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [activeTab, setActiveTab] = useState('business');
     
     // Settings state
@@ -168,17 +168,10 @@ export function PaymentSettingsPage() {
     }, [theme, setHeaderContent, saving]);
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-                setLoading(false);
-            }
-        };
-        init();
-    }, [toast]);
+        if (!initError) return;
+        toast({ title: 'Error', description: initError, variant: 'destructive' });
+        setLoading(false);
+    }, [initError, toast]);
 
     const fetchData = useCallback(async () => {
         if (!organizationId) return;

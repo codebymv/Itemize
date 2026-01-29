@@ -25,11 +25,11 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
     // Get all vaults for the current user with pagination
     router.get('/vaults', authenticateJWT, asyncHandler(async (req, res) => {
-        const { page, limit, offset } = getPaginationParams(req.query, { defaultLimit: 50, maxLimit: 100 });
+        const { page, limit, offset } = getPaginationParams(req.query, { page: 1, limit: 50, maxLimit: 100 });
         const { category, search } = req.query;
 
         const result = await withDbClient(pool, async (client) => {
-            let whereClause = 'WHERE user_id = $1';
+            let whereClause = 'WHERE v.user_id = $1';
             const params = [req.user.id];
             let paramIndex = 2;
 
@@ -46,33 +46,27 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
 
             const countResult = await client.query(
-                `SELECT COUNT(*) FROM vaults ${whereClause}`,
+                `SELECT COUNT(*) FROM vaults v ${whereClause}`,
                 params
             );
             const total = parseInt(countResult.rows[0].count);
 
             const vaultsResult = await client.query(
-                `SELECT id, user_id, title, category, color_value, position_x, position_y, width, height, z_index, 
-                        is_locked, created_at, updated_at, share_token, is_public, shared_at 
-                 FROM vaults ${whereClause} 
-                 ORDER BY updated_at DESC 
+                `SELECT v.id, v.user_id, v.title, v.category, v.color_value, v.position_x, v.position_y, v.width, v.height, v.z_index, 
+                        v.is_locked, v.created_at, v.updated_at, v.share_token, v.is_public, v.shared_at,
+                        COUNT(vi.id)::int as item_count
+                 FROM vaults v
+                 LEFT JOIN vault_items vi ON vi.vault_id = v.id
+                 ${whereClause}
+                 GROUP BY v.id, v.user_id, v.title, v.category, v.color_value, v.position_x, v.position_y, v.width, v.height, v.z_index,
+                          v.is_locked, v.created_at, v.updated_at, v.share_token, v.is_public, v.shared_at
+                 ORDER BY v.updated_at DESC 
                  LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
                 [...params, limit, offset]
             );
 
-            const vaultsWithItemCount = await Promise.all(vaultsResult.rows.map(async (vault) => {
-                const itemCountResult = await client.query(
-                    'SELECT COUNT(*) FROM vault_items WHERE vault_id = $1',
-                    [vault.id]
-                );
-                return {
-                    ...vault,
-                    item_count: parseInt(itemCountResult.rows[0].count)
-                };
-            }));
-
             return {
-                vaults: vaultsWithItemCount,
+                vaults: vaultsResult.rows,
                 total
             };
         });
@@ -279,7 +273,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error updating vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while updating vault' });
+            return sendError(res, 'Internal server error while updating vault');
         }
     }));
 
@@ -315,7 +309,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error updating vault position:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 
@@ -354,7 +348,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error deleting vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while deleting vault' });
+            return sendError(res, 'Internal server error while deleting vault');
         }
     }));
 
@@ -405,7 +399,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error reordering vault items:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 
@@ -479,7 +473,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error adding vault item:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while adding vault item' });
+            return sendError(res, 'Internal server error while adding vault item');
         }
     }));
 
@@ -559,7 +553,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error bulk adding vault items:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while adding vault items' });
+            return sendError(res, 'Internal server error while adding vault items');
         }
     }));
 
@@ -638,7 +632,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error updating vault item:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while updating vault item' });
+            return sendError(res, 'Internal server error while updating vault item');
         }
     }));
 
@@ -681,7 +675,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error deleting vault item:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error while deleting vault item' });
+            return sendError(res, 'Internal server error while deleting vault item');
         }
     }));
 
@@ -734,7 +728,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error enabling vault sharing:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 
@@ -761,7 +755,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error disabling vault sharing:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 
@@ -836,7 +830,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error fetching shared vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 
@@ -898,7 +892,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error locking vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 
@@ -949,7 +943,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
         } catch (error) {
             logger.error('Error unlocking vault:', { error: error.message });
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     }));
 

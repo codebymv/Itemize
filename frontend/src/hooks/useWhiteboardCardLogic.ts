@@ -1,7 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Whiteboard, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import React from 'react';
+import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
+import { useCardColorManagement } from '@/hooks/useCardColorManagement';
+import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 
 interface UseWhiteboardCardLogicProps {
   whiteboard: Whiteboard;
@@ -22,115 +24,76 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
   const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
   const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
   
-  // Title editing state - uses whiteboard.title directly
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(whiteboard.title || 'Untitled Whiteboard');
-  
-  // Color state
-  const [isSavingColor, setIsSavingColor] = useState(false);
-  
-  // Category editing state
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-  
-  // Refs
-  const titleEditRef = useRef<HTMLInputElement>(null);
-  
-  // Update title state when whiteboard title changes
-  React.useEffect(() => {
-    setEditTitle(whiteboard.title || 'Untitled Whiteboard');
-  }, [whiteboard.title]);
-  
-  // Title editing handlers - updates whiteboard.title
-  const handleEditTitle = useCallback(async () => {
-    if (editTitle.trim() !== whiteboard.title) {
-      await onUpdate(whiteboard.id, { title: editTitle.trim() });
-    }
-    setIsEditing(false);
-  }, [editTitle, whiteboard.title, whiteboard.id, onUpdate]);
+  const {
+    isEditing,
+    setIsEditing,
+    editTitle,
+    setEditTitle,
+    handleEditTitle,
+    titleEditRef
+  } = useCardTitleEditing({
+    title: whiteboard.title || 'Untitled Whiteboard',
+    compareTitle: whiteboard.title,
+    onSave: (nextTitle) => onUpdate(whiteboard.id, { title: nextTitle })
+  });
   
   // Whiteboard operations
   const handleDeleteWhiteboard = useCallback(async () => {
     await onDelete(whiteboard.id);
   }, [whiteboard.id, onDelete]);
   
-  // Color operations
-  const handleSaveWhiteboardColor = useCallback(async (newColor: string) => {
-    setIsSavingColor(true);
-    try {
-      await onUpdate(whiteboard.id, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to save whiteboard color:', error);
+  const { isSavingColor, saveColor: handleSaveWhiteboardColor } = useCardColorManagement({
+    onSave: (newColor) => onUpdate(whiteboard.id, { color_value: newColor }),
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update color",
         description: "Could not update whiteboard color. Please try again.",
         variant: "destructive"
       });
-      throw error; // Re-throw to let the component handle UI reversion
-    } finally {
-      setIsSavingColor(false);
     }
-  }, [whiteboard.id, onUpdate, toast]);
+  });
   
-  // Category operations
-  const handleEditCategory = useCallback(async (category: string) => {
-    if (category === '__custom__') {
-      setShowNewCategoryInput(true);
-      return;
-    }
-    try {
-      await onUpdate(whiteboard.id, { category: category });
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-    } catch (error) {
-      console.error('Failed to update whiteboard category:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update category",
-        variant: "destructive"
-      });
-    }
-  }, [whiteboard.id, onUpdate, toast]);
-  
-  const handleAddCustomCategory = useCallback(async () => {
-    if (newCategory.trim() !== '') {
-      try {
-        await onUpdate(whiteboard.id, { category: newCategory.trim() });
-        setIsEditingCategory(false);
-        setShowNewCategoryInput(false);
-        setNewCategory('');
-      } catch (error) {
-        console.error('Failed to add custom category:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add category",
-          description: "Could not add custom category. Please try again.",
-          variant: "destructive"
-        });
-      }
-    } else {
+  const {
+    isEditingCategory,
+    setIsEditingCategory,
+    showNewCategoryInput,
+    setShowNewCategoryInput,
+    newCategory,
+    setNewCategory,
+    handleEditCategory,
+    handleAddCustomCategory,
+    handleUpdateCategoryColor
+  } = useCardCategoryManagement({
+    onUpdateCategory: (category) => onUpdate(whiteboard.id, { category }),
+    onAddCustomCategory: (category) => onUpdate(whiteboard.id, { category }),
+    onUpdateCategoryColor: (categoryName, newColor) =>
+      updateCategory(categoryName, { color_value: newColor }),
+    onEmptyCategory: () => {
       toast({
         title: "Category cannot be empty",
         description: "Please enter a valid category name",
         variant: "destructive"
       });
-    }
-  }, [newCategory, whiteboard.id, onUpdate, toast]);
-
-  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
-    try {
-      await updateCategory(categoryName, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to update category color:', error);
+    },
+    onError: (error, action) => {
+      console.error('Failed to update whiteboard category:', error);
+      if (action === 'color') {
+        toast({
+          title: 'Error',
+          description: 'Could not update category color.',
+          variant: 'destructive'
+        });
+        return;
+      }
       toast({
-        title: 'Error',
-        description: 'Could not update category color.',
-        variant: 'destructive'
+        title: action === 'add' ? "Failed to add category" : "Failed to update category",
+        description: action === 'add'
+          ? "Could not add custom category. Please try again."
+          : "Failed to update category",
+        variant: "destructive"
       });
     }
-  };
+  });
   
   // Canvas operations
   const handleCanvasChange = useCallback((canvasData: any) => {

@@ -26,7 +26,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { Form } from '@/types';
 import { getForms, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 
 export function FormsPage() {
     const navigate = useNavigate();
@@ -36,8 +36,7 @@ export function FormsPage() {
 
     const [forms, setForms] = useState<Form[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -90,17 +89,9 @@ export function FormsPage() {
     }, [searchQuery, statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!initError) return;
+        setLoading(false);
+    }, [initError]);
 
     const fetchForms = useCallback(async () => {
         if (!organizationId) return;

@@ -1,9 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Note, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateNoteTitle, updateNoteCategory, updateNoteContent } from '@/services/api';
-import React from 'react';
+import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
+import { useCardColorManagement } from '@/hooks/useCardColorManagement';
+import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 
 interface UseNoteCardLogicProps {
   note: Note;
@@ -25,50 +27,40 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
   const isCollapsibleOpen = isCollapsed !== undefined ? !isCollapsed : internalCollapsibleOpen;
   const setIsCollapsibleOpen = onToggleCollapsed || setInternalCollapsibleOpen;
   
-  // Title editing state - now uses note.title directly
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(note.title || 'Untitled Note');
-  
   // Content editing state - uses note.content
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editContent, setEditContent] = useState(note.content || '');
   
-  // Color state
-  const [isSavingColor, setIsSavingColor] = useState(false);
-  
-  // Category editing state
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-  
   // Refs
-  const titleEditRef = useRef<HTMLInputElement>(null);
   const contentEditRef = useRef<HTMLTextAreaElement>(null);
   
-  // Update title state when note title changes
-  React.useEffect(() => {
-    setEditTitle(note.title || 'Untitled Note');
-  }, [note.title]);
-  
   // Update content state when note content changes
-  React.useEffect(() => {
+  useEffect(() => {
     setEditContent(note.content || '');
   }, [note.content]);
   
-  // Title editing handlers - updates note.title using granular API
-  const handleEditTitle = useCallback(async () => {
-    if (editTitle.trim() !== note.title) {
-      try {
-        await updateNoteTitle(note.id, editTitle.trim(), token);
-        console.log('✅ Granular title update successful');
-      } catch (error) {
-        console.error('❌ Granular title update failed, falling back:', error);
-        // Fallback to full update if granular fails
-        await onUpdate(note.id, { title: editTitle.trim() });
+  const {
+    isEditing,
+    setIsEditing,
+    editTitle,
+    setEditTitle,
+    handleEditTitle,
+    titleEditRef
+  } = useCardTitleEditing({
+    title: note.title || 'Untitled Note',
+    compareTitle: note.title,
+    onSave: async (nextTitle) => {
+      if (nextTitle !== note.title) {
+        try {
+          await updateNoteTitle(note.id, nextTitle, token);
+          console.log('✅ Granular title update successful');
+        } catch (error) {
+          console.error('❌ Granular title update failed, falling back:', error);
+          await onUpdate(note.id, { title: nextTitle });
+        }
       }
     }
-    setIsEditing(false);
-  }, [editTitle, note.title, note.id, onUpdate, token]);
+  });
   
   // Content editing handlers - updates note.content using granular API
   const handleEditContent = useCallback(async () => {
@@ -90,102 +82,74 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     await onDelete(note.id);
   }, [note.id, onDelete]);
   
-  // Color operations
-  const handleSaveNoteColor = useCallback(async (newColor: string) => {
-    setIsSavingColor(true);
-    try {
-      await onUpdate(note.id, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to save note color:', error);
+  const { isSavingColor, saveColor: handleSaveNoteColor } = useCardColorManagement({
+    onSave: (newColor) => onUpdate(note.id, { color_value: newColor }),
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update color",
         description: "Could not update note color. Please try again.",
         variant: "destructive"
       });
-      throw error; // Re-throw to let the component handle UI reversion
-    } finally {
-      setIsSavingColor(false);
     }
-  }, [note.id, onUpdate, toast]);
+  });
   
-  // Category operations
-  const handleEditCategory = useCallback(async (category: string) => {
-    if (category === '__custom__') {
-      setShowNewCategoryInput(true);
-      return;
-    }
-    try {
-      await updateNoteCategory(note.id, category, token);
-      console.log('✅ Granular category update successful');
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-    } catch (error) {
-      console.error('❌ Granular category update failed, falling back:', error);
+  const {
+    isEditingCategory,
+    setIsEditingCategory,
+    showNewCategoryInput,
+    setShowNewCategoryInput,
+    newCategory,
+    setNewCategory,
+    handleEditCategory,
+    handleAddCustomCategory,
+    handleUpdateCategoryColor
+  } = useCardCategoryManagement({
+    onUpdateCategory: async (category) => {
       try {
-        // Fallback to full update if granular fails
-        await onUpdate(note.id, { category: category });
-        setIsEditingCategory(false);
-        setShowNewCategoryInput(false);
-      } catch (fallbackError) {
-        console.error('Failed to update note category:', fallbackError);
-        toast({
-          title: "Error",
-          description: "Failed to update category",
-          description: "Could not update note category. Please try again.",
-          variant: "destructive"
-        });
+        await updateNoteCategory(note.id, category, token);
+        console.log('✅ Granular category update successful');
+      } catch (error) {
+        console.error('❌ Granular category update failed, falling back:', error);
+        await onUpdate(note.id, { category });
       }
-    }
-  }, [note.id, onUpdate, toast, token]);
-  
-  const handleAddCustomCategory = useCallback(async () => {
-    if (newCategory.trim() !== '') {
+    },
+    onAddCustomCategory: async (category) => {
       try {
-        await updateNoteCategory(note.id, newCategory.trim(), token);
+        await updateNoteCategory(note.id, category, token);
         console.log('✅ Granular custom category update successful');
-        setIsEditingCategory(false);
-        setShowNewCategoryInput(false);
-        setNewCategory('');
       } catch (error) {
         console.error('❌ Granular custom category update failed, falling back:', error);
-        try {
-          // Fallback to full update if granular fails
-          await onUpdate(note.id, { category: newCategory.trim() });
-          setIsEditingCategory(false);
-          setShowNewCategoryInput(false);
-          setNewCategory('');
-        } catch (fallbackError) {
-          console.error('Failed to add custom category:', fallbackError);
-          toast({
-            title: "Error",
-            description: "Failed to add category",
-            description: "Could not add custom category. Please try again.",
-            variant: "destructive"
-          });
-        }
+        await onUpdate(note.id, { category });
       }
-    } else {
+    },
+    onUpdateCategoryColor: (categoryName, newColor) =>
+      updateCategory(categoryName, { color_value: newColor }),
+    onEmptyCategory: () => {
       toast({
         title: "Category cannot be empty",
         description: "Please enter a valid category name",
         variant: "destructive"
       });
-    }
-  }, [newCategory, note.id, onUpdate, toast, token]);
-
-  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
-    try {
-      await updateCategory(categoryName, { color_value: newColor });
-    } catch (error) {
-      console.error('Failed to update category color:', error);
+    },
+    onError: (error, action) => {
+      console.error('Failed to update note category:', error);
+      if (action === 'color') {
+        toast({
+          title: 'Error',
+          description: 'Could not update category color.',
+          variant: 'destructive'
+        });
+        return;
+      }
       toast({
-        title: 'Error',
-        description: 'Could not update category color.',
-        variant: 'destructive'
+        title: action === 'add' ? "Failed to add category" : "Failed to update category",
+        description: action === 'add'
+          ? "Could not add custom category. Please try again."
+          : "Could not update note category. Please try again.",
+        variant: "destructive"
       });
     }
-  };
+  });
   
   return {
     // Title for display

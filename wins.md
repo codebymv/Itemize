@@ -20,11 +20,10 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Frontend - Component Consolidation (Critical)
 
-**Duplicate Modals (~2000+ lines of duplicate code):**
-- `Delete*Modal.tsx` (5 files) → Consolidate into generic `DeleteConfirmationModal`
-- `New*Modal.tsx` (7 files) → Consolidate into generic `CreateItemModal`
-- `Share*Modal.tsx` (5 files) → Consolidate into generic `ShareModal`
-- `*CategorySelector.tsx` (5 files) → Consolidate into generic `CategorySelector`
+**Duplicate Modals (status: mostly resolved in codebase):**
+- Generic components exist: `DeleteConfirmationModal`, `ShareModal`, `CategorySelector`
+- No `Delete*Modal.tsx`, `Share*Modal.tsx`, or `*CategorySelector.tsx` duplicates found
+- No `New*Modal.tsx` files found; `CreateItemModal` not present yet (confirm desired standard)
 
 **Duplicate Hooks:**
 - Category editing logic duplicated in 5 `use*CardLogic.ts` files → Extract `useCategoryManagement`
@@ -33,24 +32,21 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Backend - Error Handling (Critical)
 
-**Missing `asyncHandler`:**
-- `invoices.routes.js` (lines 126-1122) - Most routes lack asyncHandler
-- `organizations.routes.js` (lines 65-183) - All routes lack asyncHandler
-- `campaigns.routes.js` (lines 30-264) - All routes lack asyncHandler
-- `vaults.routes.js` - All routes use try-catch without asyncHandler
+**`asyncHandler` coverage (status: already applied in these files):**
+- `invoices.routes.js`, `organizations.routes.js`, `campaigns.routes.js`, `vaults.routes.js` all import and use `asyncHandler`
+- Remaining work is standardizing response utilities and removing ad-hoc `res.status(...).json(...)` patterns
 
-**N+1 Query Problems:**
-- `contacts.routes.js` (lines 423-431) - Nested loops causing N+1
-- `invoices.routes.js` (lines 577-600) - Loop with individual inserts (should bulk insert)
-- `campaigns.routes.js` (lines 557-572) - Loop sending emails (should batch/queue)
-- `contacts.routes.js` (lines 574-590) - Sequential queries (should use Promise.all)
+**N+1 Query Problems (status: original items resolved in code):**
+- `contacts.routes.js` tag triggers use `Promise.allSettled` (no nested N+1)
+- `contacts.routes.js` related content fetch uses `Promise.all`
+- `invoices.routes.js` items insertion uses bulk insert values
+- `campaigns.routes.js` recipients insertion uses bulk insert; sending is queued
+- `vaults.routes.js` vault list item counts now use a single join/group query (resolved)
 
 ### Context Performance (Critical)
 
-**Missing useMemo on context values (causes unnecessary re-renders):**
-- `AuthContext.tsx` (lines 311-322) - Value object recreated every render
-- `SubscriptionContext.tsx` (lines 284-303) - Value object recreated every render
-- `HeaderContext.tsx` (line 14) - Value object recreated every render
+**useMemo on context values (status: already in code):**
+- `AuthContext`, `SubscriptionContext`, `HeaderContext` already memoize value objects
 
 **Should split contexts:**
 - `AuthContext` → `AuthStateContext` + `AuthActionsContext`
@@ -260,7 +256,7 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ## Quick Wins (Fast to Implement)
 
-1. Add `useMemo` to context values (3 files, 10 min each)
+1. Add `useMemo` to context values (Done - already applied)
 2. Fix duplicate `description` in toast calls (15+ files, 1 min each)
 3. Add missing aria-labels to icon buttons (pattern: `aria-label="Close"`)
 4. Replace inline font styles with CSS class

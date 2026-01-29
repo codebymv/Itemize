@@ -42,7 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import {
     getProducts,
@@ -84,7 +84,12 @@ export function ProductsPage() {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId } = useOrganization({
+        onError: () => {
+            toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
+            return 'Failed to initialize';
+        }
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [showInactive, setShowInactive] = useState(false);
 
@@ -142,17 +147,10 @@ export function ProductsPage() {
     }, [searchQuery, theme, setHeaderContent, showInactive]);
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-                setLoading(false);
-            }
-        };
-        init();
-    }, [toast]);
+        if (!organizationId) {
+            setLoading(false);
+        }
+    }, [organizationId]);
 
     const fetchProducts = useCallback(async () => {
         if (!organizationId) return;

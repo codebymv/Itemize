@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useOrganization } from '@/hooks/useOrganization';
 import { getReviewWidgets, deleteReviewWidget, createReviewWidget, getWidgetEmbedCode } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
@@ -38,8 +38,7 @@ export function ReputationWidgetsPage() {
 
     const [widgets, setWidgets] = useState<ReviewWidget[]>([]);
     const [loading, setLoading] = useState(true);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [organizationId, setOrganizationId] = useState<number | null>(null);
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
@@ -80,17 +79,10 @@ export function ReputationWidgetsPage() {
     }, [searchQuery, theme, setHeaderContent]);
 
     useEffect(() => {
-        const initOrg = async () => {
-            try {
-                const org = await ensureDefaultOrganization();
-                setOrganizationId(org.id);
-            } catch (error: any) {
-                setInitError('Failed to initialize.');
-                setLoading(false);
-            }
-        };
-        initOrg();
-    }, []);
+        if (!organizationId && initError) {
+            setLoading(false);
+        }
+    }, [organizationId, initError]);
 
     const fetchWidgets = useCallback(async () => {
         if (!organizationId) return;
