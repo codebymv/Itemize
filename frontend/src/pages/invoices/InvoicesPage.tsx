@@ -73,6 +73,7 @@ import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { cn } from '@/lib/utils';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface Invoice {
     id: number;
@@ -646,14 +647,12 @@ export function InvoicesPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -703,7 +702,8 @@ export function InvoicesPage() {
                 </Tabs>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card>
@@ -1173,7 +1173,8 @@ export function InvoicesPage() {
                     onGenerateLink={() => generatePaymentLink(selectedInvoiceForPaymentLink.id)}
                 />
             )}
-        </div>
+        </PageSurface>
+        </PageContainer>
         </>
     );
 }

@@ -19,6 +19,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getSmsTemplates as getSMSTemplates, deleteSmsTemplate as deleteSMSTemplate, duplicateSmsTemplate as duplicateSMSTemplate, sendTestSms as sendTestSMS } from '@/services/smsApi';
 import { CreateSMSTemplateModal } from './CreateSMSTemplateModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface SMSTemplate {
     id: number;
@@ -141,14 +142,12 @@ export function SMSTemplatesPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -174,7 +173,8 @@ export function SMSTemplatesPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
@@ -243,6 +243,7 @@ export function SMSTemplatesPage() {
                     )}
                 </CardContent>
             </Card>
+            </PageSurface>
 
             {showCreateModal && organizationId && (
                 <CreateSMSTemplateModal
@@ -254,7 +255,7 @@ export function SMSTemplatesPage() {
                     }}
                 />
             )}
-            </div>
+            </PageContainer>
         </>
     );
 }

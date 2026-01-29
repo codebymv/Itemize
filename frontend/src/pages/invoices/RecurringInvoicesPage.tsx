@@ -70,6 +70,7 @@ import { getProducts, Product, getBusinesses, Business } from '@/services/invoic
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 
@@ -597,7 +598,8 @@ export function RecurringInvoicesPage() {
                 </Tabs>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card>
@@ -1144,7 +1146,8 @@ export function RecurringInvoicesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </PageSurface>
+        </PageContainer>
         </>
     );
 }

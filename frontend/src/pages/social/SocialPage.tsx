@@ -20,6 +20,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl } from '@/services/socialApi';
 import { cn } from '@/lib/utils';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface SocialChannel {
     id: number;
@@ -173,14 +174,12 @@ export function SocialPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -204,7 +203,8 @@ export function SocialPage() {
                     <Plus className="h-4 w-4" />
                 </Button>
             </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-6">
                     <TabsTrigger value="conversations">
@@ -326,7 +326,8 @@ export function SocialPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-        </div>
+            </PageSurface>
+        </PageContainer>
         </>
     );
 }

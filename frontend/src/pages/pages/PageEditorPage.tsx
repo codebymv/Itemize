@@ -86,6 +86,7 @@ import {
     SECTION_TEMPLATES,
 } from '@/services/pagesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 // Icon mapping for section types
 const SECTION_ICONS: Record<SectionType, React.ReactNode> = {
@@ -323,31 +324,31 @@ export function PageEditorPage() {
 
     if (loading) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-4">
-                        <Skeleton className="h-48" />
-                        <Skeleton className="h-32" />
-                        <Skeleton className="h-32" />
+            <PageContainer>
+                <PageSurface>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-4">
+                            <Skeleton className="h-48" />
+                            <Skeleton className="h-32" />
+                            <Skeleton className="h-32" />
+                        </div>
+                        <div>
+                            <Skeleton className="h-96" />
+                        </div>
                     </div>
-                    <div>
-                        <Skeleton className="h-96" />
-                    </div>
-                </div>
-            </div>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
     if (!page) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">Page not found</p>
-                        <Button onClick={() => navigate('/pages')} className="mt-4">Back to Pages</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">Page not found</p>
+                    <Button onClick={() => navigate('/pages')} className="mt-4">Back to Pages</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -370,7 +371,8 @@ export function PageEditorPage() {
                     {saving ? 'Saving...' : 'Save'}
                 </Button>
             </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content - Sections */}
                 <div className="lg:col-span-2 space-y-4">
@@ -597,7 +599,8 @@ export function PageEditorPage() {
                     </ScrollArea>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageSurface>
+        </PageContainer>
         </>
     );
 }

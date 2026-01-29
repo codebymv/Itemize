@@ -24,6 +24,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Segment } from '@/types/segments';
 import { StatCard } from '@/components/StatCard';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 export function SegmentsPage() {
     const navigate = useNavigate();
@@ -133,17 +134,15 @@ export function SegmentsPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6">
-                        <ErrorState
-                            title="Unable to load segments"
-                            description={initError}
-                            onAction={() => window.location.reload()}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6">
+                    <ErrorState
+                        title="Unable to load segments"
+                        description={initError}
+                        onAction={() => window.location.reload()}
+                    />
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -169,113 +168,115 @@ export function SegmentsPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <StatCard
-                        title="Total Segments"
-                        badgeText="Total"
-                        value={stats.total}
-                        icon={Filter}
-                        colorTheme="blue"
-                        isLoading={loading}
-                    />
-                    <StatCard
-                        title="Dynamic"
-                        badgeText="Dynamic"
-                        value={stats.dynamic}
-                        icon={RefreshCw}
-                        colorTheme="orange"
-                        isLoading={loading}
-                    />
-                    <StatCard
-                        title="Static"
-                        badgeText="Static"
-                        value={stats.staticCount}
-                        icon={Users}
-                        colorTheme="gray"
-                        isLoading={loading}
-                    />
-                    <StatCard
-                        title="Contacts"
-                        badgeText="Total"
-                        value={stats.contacts}
-                        icon={Users}
-                        colorTheme="green"
-                        isLoading={loading}
-                    />
-                </div>
-                <Card>
-                <CardContent className="p-0">
-                    {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
-                        </div>
-                    ) : filteredSegments.length === 0 ? (
-                        <EmptyState
-                            title="No segments yet"
-                            description="Create segments to group and target contacts"
+            <PageContainer>
+                <PageSurface>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <StatCard
+                            title="Total Segments"
+                            badgeText="Total"
+                            value={stats.total}
                             icon={Filter}
-                            actionLabel="Create Segment"
-                            onAction={() => setShowCreateModal(true)}
-                            className="p-12"
+                            colorTheme="blue"
+                            isLoading={loading}
                         />
-                    ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredSegments.map((segment) => (
-                                <Card key={segment.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{segment.name}</CardTitle>
-                                                {segment.description && <CardDescription className="line-clamp-2">{segment.description}</CardDescription>}
+                        <StatCard
+                            title="Dynamic"
+                            badgeText="Dynamic"
+                            value={stats.dynamic}
+                            icon={RefreshCw}
+                            colorTheme="orange"
+                            isLoading={loading}
+                        />
+                        <StatCard
+                            title="Static"
+                            badgeText="Static"
+                            value={stats.staticCount}
+                            icon={Users}
+                            colorTheme="gray"
+                            isLoading={loading}
+                        />
+                        <StatCard
+                            title="Contacts"
+                            badgeText="Total"
+                            value={stats.contacts}
+                            icon={Users}
+                            colorTheme="green"
+                            isLoading={loading}
+                        />
+                    </div>
+                    <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
+                            </div>
+                        ) : filteredSegments.length === 0 ? (
+                            <EmptyState
+                                title="No segments yet"
+                                description="Create segments to group and target contacts"
+                                icon={Filter}
+                                actionLabel="Create Segment"
+                                onAction={() => setShowCreateModal(true)}
+                                className="p-12"
+                            />
+                        ) : (
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filteredSegments.map((segment) => (
+                                    <Card key={segment.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 min-w-0">
+                                                    <CardTitle className="text-lg truncate">{segment.name}</CardTitle>
+                                                    {segment.description && <CardDescription className="line-clamp-2">{segment.description}</CardDescription>}
+                                                </div>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" aria-label="Segment actions">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleRecalculate(segment.id)}>
+                                                            <RefreshCw className="h-4 w-4 mr-2" />Recalculate
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={() => handleDelete(segment.id)} className="text-destructive">
+                                                            <Trash2 className="h-4 w-4 mr-2" />Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" aria-label="Segment actions">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleRecalculate(segment.id)}>
-                                                        <RefreshCw className="h-4 w-4 mr-2" />Recalculate
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(segment.id)} className="text-destructive">
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Badge variant={segment.type === 'dynamic' ? 'default' : 'secondary'}>
-                                                {segment.type}
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Users className="h-4 w-4" />
-                                            <span>{segment.contact_count} contacts</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Badge variant={segment.type === 'dynamic' ? 'default' : 'secondary'}>
+                                                    {segment.type}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <Users className="h-4 w-4" />
+                                                <span>{segment.contact_count} contacts</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                </PageSurface>
 
-            {showCreateModal && organizationId && (
-                <CreateSegmentModal
-                    organizationId={organizationId}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreated={(segment) => {
-                        setSegments(prev => [segment, ...prev]);
-                        setShowCreateModal(false);
-                    }}
-                />
-            )}
-            </div>
+                {showCreateModal && organizationId && (
+                    <CreateSegmentModal
+                        organizationId={organizationId}
+                        onClose={() => setShowCreateModal(false)}
+                        onCreated={(segment) => {
+                            setSegments(prev => [segment, ...prev]);
+                            setShowCreateModal(false);
+                        }}
+                    />
+                )}
+            </PageContainer>
         </>
     );
 }

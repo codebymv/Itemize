@@ -28,6 +28,7 @@ import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { ContactCardList } from './components/ContactCard';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
@@ -350,20 +351,18 @@ export function ContactsPage() {
   // Show error state if initialization failed
   if (initError) {
     return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <Card className="max-w-lg mx-auto mt-12">
-          <CardContent className="pt-6 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <UserPlus className="h-6 w-6 text-destructive" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">CRM Not Ready</h3>
-            <p className="text-muted-foreground mb-4">{initError}</p>
-            <Button onClick={() => window.location.reload()}>
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageContainer>
+        <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <UserPlus className="h-6 w-6 text-destructive" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">CRM Not Ready</h3>
+          <p className="text-muted-foreground mb-4">{initError}</p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </PageSurface>
+      </PageContainer>
     );
   }
 
@@ -421,175 +420,177 @@ export function ContactsPage() {
         </div>
       </MobileControlsBar>
 
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Archived</Badge>
-                  <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{contactStats.archived}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {contactStats.archived} contact{contactStats.archived !== 1 ? 's' : ''}
-                  </p>
+      <PageContainer>
+        <PageSurface>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Archived</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{contactStats.archived}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {contactStats.archived} contact{contactStats.archived !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
+                    <Archive className={`h-5 w-5 ${getStatIconColor('red')}`} />
+                  </div>
                 </div>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
-                  <Archive className={`h-5 w-5 ${getStatIconColor('red')}`} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{contactStats.total}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {contactStats.total} contact{contactStats.total !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
+                    <Users className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
-                  <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{contactStats.total}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {contactStats.total} contact{contactStats.total !== 1 ? 's' : ''}
-                  </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Active</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{contactStats.active}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {contactStats.active} contact{contactStats.active !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
+                    <CheckCircle className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                  </div>
                 </div>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
-                  <Users className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Inactive</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{contactStats.inactive}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {contactStats.inactive} contact{contactStats.inactive !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
+                    <AlertCircle className={`h-5 w-5 ${getStatIconColor('orange')}`} />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Active</Badge>
-                  <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{contactStats.active}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {contactStats.active} contact{contactStats.active !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
-                  <CheckCircle className={`h-5 w-5 ${getStatIconColor('green')}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Inactive</Badge>
-                  <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{contactStats.inactive}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {contactStats.inactive} contact{contactStats.inactive !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
-                  <AlertCircle className={`h-5 w-5 ${getStatIconColor('orange')}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        {/* Bulk actions */}
-        {selectedContacts.length > 0 && (
-          <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
-            <CardContent className="py-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  {selectedContacts.length} contact{selectedContacts.length > 1 ? 's' : ''} selected
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowBulkTagModal(true)}>
-                    <Tag className="h-4 w-4 mr-2" />
-                    Tag
-                  </Button>
-                  <Button variant="outline" size="sm" disabled>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Assign
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Contacts table */}
-        <Card>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="p-6 space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : contacts.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <UserPlus className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No contacts yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Get started by adding your first contact
-                </p>
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Contact
-                </Button>
-              </div>
-            ) : isMobile ? (
-              <ContactCardList
-                contacts={contacts}
-                selectedContacts={selectedContacts}
-                onSelectContact={handleSelectContact}
-                onContactClick={handleContactClick}
-                onDeleteContact={handleDeleteContact}
-              />
-            ) : (
-              <ContactsTable
-                contacts={contacts}
-                selectedContacts={selectedContacts}
-                onSelectContact={handleSelectContact}
-                onSelectAll={handleSelectAll}
-                onContactClick={handleContactClick}
-                onDeleteContact={handleDeleteContact}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-muted-foreground">
-            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-            {pagination.total} contacts
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-              disabled={pagination.page === 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-              disabled={pagination.page === pagination.totalPages}
-            >
-              Next
-            </Button>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      )}
+          {/* Bulk actions */}
+          {selectedContacts.length > 0 && (
+            <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
+              <CardContent className="py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {selectedContacts.length} contact{selectedContacts.length > 1 ? 's' : ''} selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowBulkTagModal(true)}>
+                      <Tag className="h-4 w-4 mr-2" />
+                      Tag
+                    </Button>
+                    <Button variant="outline" size="sm" disabled>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Assign
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Contacts table */}
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-6 space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : contacts.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <UserPlus className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No contacts yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Get started by adding your first contact
+                  </p>
+                  <Button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Contact
+                  </Button>
+                </div>
+              ) : isMobile ? (
+                <ContactCardList
+                  contacts={contacts}
+                  selectedContacts={selectedContacts}
+                  onSelectContact={handleSelectContact}
+                  onContactClick={handleContactClick}
+                  onDeleteContact={handleDeleteContact}
+                />
+              ) : (
+                <ContactsTable
+                  contacts={contacts}
+                  selectedContacts={selectedContacts}
+                  onSelectContact={handleSelectContact}
+                  onSelectAll={handleSelectAll}
+                  onContactClick={handleContactClick}
+                  onDeleteContact={handleDeleteContact}
+                />
+              )}
+            </CardContent>
+          </Card>
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+              {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+              {pagination.total} contacts
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                disabled={pagination.page === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                disabled={pagination.page === pagination.totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+        </PageSurface>
 
       {/* Create contact modal */}
       {showCreateModal && organizationId && (
@@ -621,7 +622,7 @@ export function ContactsPage() {
           }}
         />
       )}
-      </div>
+      </PageContainer>
     </>
   );
 }

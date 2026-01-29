@@ -36,6 +36,7 @@ import {
 } from '@/services/conversationsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 export function InboxPage() {
     const { toast } = useToast();
@@ -199,8 +200,8 @@ export function InboxPage() {
                     </SelectContent>
                 </Select>
             </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-7xl h-[calc(100vh-64px)]">
-                <Card className="h-full overflow-hidden">
+            <PageContainer className="h-[calc(100vh-64px)]">
+                <PageSurface className="h-full" contentClassName="p-0 h-full">
                 <div className="flex h-full">
                     {/* Conversations list */}
                     <div className="w-80 border-r flex flex-col">
@@ -389,8 +390,8 @@ export function InboxPage() {
                         )}
                     </div>
                 </div>
-            </Card>
-        </div>
+            </PageSurface>
+        </PageContainer>
         </>
     );
 }

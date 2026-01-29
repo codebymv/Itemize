@@ -24,6 +24,7 @@ import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 // Color helper functions for stat cards (matching dashboard/invoice page visual language)
 const getStatBadgeClasses = (theme: string) => {
@@ -200,14 +201,12 @@ export function ReputationPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -237,7 +236,8 @@ export function ReputationPage() {
                     </SelectContent>
                 </Select>
             </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 {/* Analytics Summary */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 {loading ? (
@@ -401,7 +401,8 @@ export function ReputationPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </PageSurface>
+        </PageContainer>
         </>
     );
 }

@@ -62,6 +62,7 @@ import { ContentModal } from './components/ContentModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { CreateItemModal } from '@/components/CreateItemModal';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -721,7 +722,8 @@ export function ContentsPage() {
           </div>
         </div>
       </MobileControlsBar>
-      <div className="container mx-auto p-6 max-w-7xl">
+      <PageContainer>
+        <PageSurface>
         {/* Item count - Desktop only */}
       <div className="hidden md:flex justify-end mb-4">
         <span className="text-sm text-muted-foreground">
@@ -872,6 +874,7 @@ export function ContentsPage() {
           </CardContent>
         </Card>
       )}
+      </PageSurface>
 
       {/* Content Modal */}
       {showModal && selectedContent && (
@@ -948,7 +951,7 @@ export function ContentsPage() {
           existingCategories={categoriesForModal}
         />
       )}
-    </div>
+    </PageContainer>
     </>
   );
 }

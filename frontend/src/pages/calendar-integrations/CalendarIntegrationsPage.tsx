@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { 
     getCalendarConnections, 
     disconnectCalendar, 
@@ -133,14 +134,12 @@ export function CalendarIntegrationsPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -158,7 +157,8 @@ export function CalendarIntegrationsPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <Card>
                     <CardHeader>
                         <CardTitle>Connected Calendars</CardTitle>
@@ -229,7 +229,8 @@ export function CalendarIntegrationsPage() {
                     )}
                 </CardContent>
                 </Card>
-            </div>
+            </PageSurface>
+            </PageContainer>
         </>
     );
 }

@@ -38,6 +38,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
@@ -348,7 +349,8 @@ export function PaymentsPage() {
                 </div>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <Card>
@@ -708,7 +710,8 @@ export function PaymentsPage() {
                     )}
                 </CardContent>
                 </Card>
-            </div>
+            </PageSurface>
+            </PageContainer>
         </>
     );
 }

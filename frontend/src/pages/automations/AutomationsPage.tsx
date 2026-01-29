@@ -82,6 +82,7 @@ import {
   Workflow 
 } from '@/services/automationsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 const TRIGGER_TYPE_LABELS: Record<string, string> = {
   contact_added: 'Contact Added',
@@ -282,20 +283,18 @@ export function AutomationsPage() {
   // Show error state
   if (initError) {
     return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <Card className="max-w-lg mx-auto mt-12">
-          <CardContent className="pt-6 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <Zap className="h-6 w-6 text-destructive" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">Automations Not Ready</h3>
-            <p className="text-muted-foreground mb-4">{initError}</p>
-            <Button onClick={() => window.location.reload()}>
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageContainer>
+        <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <Zap className="h-6 w-6 text-destructive" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Automations Not Ready</h3>
+          <p className="text-muted-foreground mb-4">{initError}</p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </PageSurface>
+      </PageContainer>
     );
   }
 
@@ -353,7 +352,8 @@ export function AutomationsPage() {
           </Button>
         </div>
       </MobileControlsBar>
-      <div className="container mx-auto p-6 max-w-7xl">
+      <PageContainer>
+        <PageSurface>
         {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-4 mb-6">
         {loading ? (
@@ -545,7 +545,8 @@ export function AutomationsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageSurface>
+    </PageContainer>
     </>
   );
 }

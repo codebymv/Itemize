@@ -32,6 +32,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface Estimate {
     id: number;
@@ -294,7 +295,8 @@ export function EstimatesPage() {
                 </Tabs>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card>
@@ -449,7 +451,8 @@ export function EstimatesPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </PageSurface>
+        </PageContainer>
         </>
     );
 }

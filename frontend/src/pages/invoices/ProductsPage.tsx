@@ -44,6 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import {
     getProducts,
     createProduct,
@@ -272,7 +273,8 @@ export function ProductsPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 {/* Product count */}
                 <div className="flex items-center justify-end mb-6">
                     <p className="text-sm text-muted-foreground">
@@ -363,6 +365,8 @@ export function ProductsPage() {
             </Card>
 
             {/* Create/Edit Product Dialog */}
+            </PageSurface>
+
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
@@ -496,7 +500,7 @@ export function ProductsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageContainer>
         </>
     );
 }

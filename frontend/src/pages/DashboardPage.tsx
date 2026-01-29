@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/chart';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import {
     Users,
     TrendingUp,
@@ -652,10 +653,8 @@ export function DashboardPage() {
                 </Button>
             </MobileControlsBar>
             
-            <div className="container mx-auto p-6 max-w-7xl">
-                {/* Main Content Card */}
-                <Card>
-                <CardContent className="p-6">
+            <PageContainer>
+                <PageSurface>
                     {/* Welcome Section */}
                     <div className="mb-8">
                         <h2 className="text-2xl font-light tracking-tight mb-2">
@@ -993,9 +992,8 @@ export function DashboardPage() {
                             </p>
                         </CardContent>
                     </Card>
-                </CardContent>
-            </Card>
-        </div>
+                </PageSurface>
+            </PageContainer>
         </>
     );
 }

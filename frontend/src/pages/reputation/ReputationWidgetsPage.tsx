@@ -18,6 +18,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getReviewWidgets, deleteReviewWidget, createReviewWidget, getWidgetEmbedCode } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface ReviewWidget {
     id: number;
@@ -153,14 +154,12 @@ export function ReputationWidgetsPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -184,7 +183,8 @@ export function ReputationWidgetsPage() {
                     <Plus className="h-4 w-4" />
                 </Button>
             </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
@@ -257,7 +257,8 @@ export function ReputationWidgetsPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </PageSurface>
+        </PageContainer>
         </>
     );
 }

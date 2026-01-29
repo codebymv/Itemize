@@ -14,6 +14,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getChatWidget, createChatWidget, updateChatWidget, getEmbedCode } from '@/services/chatWidgetApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface LocalChatWidgetConfig {
     id?: number;
@@ -181,22 +182,22 @@ export function ChatWidgetPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
     if (loading) {
         return (
-            <div className="container mx-auto p-6 max-w-4xl">
-                <Skeleton className="h-96" />
-            </div>
+            <PageContainer className="max-w-4xl">
+                <PageSurface contentClassName="p-0">
+                    <Skeleton className="h-96" />
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -226,7 +227,8 @@ export function ChatWidgetPage() {
                     {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
             </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-4xl">
+            <PageContainer className="max-w-4xl">
+                <PageSurface>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
 
                 <TabsContent value="settings">
@@ -352,7 +354,8 @@ export function ChatWidgetPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-        </div>
+            </PageSurface>
+        </PageContainer>
         </>
     );
 }

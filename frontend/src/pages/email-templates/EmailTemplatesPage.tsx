@@ -26,6 +26,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getEmailTemplates, deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail } from '@/services/emailApi';
 import { CreateEmailTemplateModal } from './CreateEmailTemplateModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 interface EmailTemplate {
     id: number;
@@ -148,14 +149,12 @@ export function EmailTemplatesPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -181,7 +180,8 @@ export function EmailTemplatesPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
@@ -255,6 +255,7 @@ export function EmailTemplatesPage() {
                     )}
                 </CardContent>
             </Card>
+            </PageSurface>
 
             {showCreateModal && organizationId && (
                 <CreateEmailTemplateModal
@@ -266,7 +267,7 @@ export function EmailTemplatesPage() {
                     }}
                 />
             )}
-            </div>
+            </PageContainer>
         </>
     );
 }

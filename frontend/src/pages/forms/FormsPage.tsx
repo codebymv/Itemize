@@ -27,6 +27,7 @@ import { Form } from '@/types';
 import { getForms, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useOrganization } from '@/hooks/useOrganization';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 export function FormsPage() {
     const navigate = useNavigate();
@@ -183,14 +184,12 @@ export function FormsPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
+                    <p className="text-muted-foreground">{initError}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -227,90 +226,92 @@ export function FormsPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
-                {/* Forms content */}
-                <Card>
-                <CardContent className="p-0">
-                    {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
-                        </div>
-                    ) : filteredForms.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <FileText className="h-6 w-6 text-muted-foreground" />
+            <PageContainer>
+                <PageSurface>
+                    {/* Forms content */}
+                    <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
                             </div>
-                            <h3 className="text-lg font-medium mb-2">No forms yet</h3>
-                            <p className="text-muted-foreground mb-4">Create a form to start collecting leads</p>
-                            <Button onClick={handleCreateForm} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Create Form
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredForms.map((form) => (
-                                <Card key={form.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/forms/${form.id}`)}>
-                                    <div className="h-2" style={{ backgroundColor: form.theme?.primaryColor || '#3B82F6' }} />
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{form.name}</CardTitle>
-                                                {form.description && <CardDescription className="line-clamp-1">{form.description}</CardDescription>}
+                        ) : filteredForms.length === 0 ? (
+                            <div className="p-12 text-center">
+                                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                                    <FileText className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                                <h3 className="text-lg font-medium mb-2">No forms yet</h3>
+                                <p className="text-muted-foreground mb-4">Create a form to start collecting leads</p>
+                                <Button onClick={handleCreateForm} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Plus className="h-4 w-4 mr-2" />Create Form
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filteredForms.map((form) => (
+                                    <Card key={form.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/forms/${form.id}`)}>
+                                        <div className="h-2" style={{ backgroundColor: form.theme?.primaryColor || '#3B82F6' }} />
+                                        <CardHeader className="pb-3">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 min-w-0">
+                                                    <CardTitle className="text-lg truncate">{form.name}</CardTitle>
+                                                    {form.description && <CardDescription className="line-clamp-1">{form.description}</CardDescription>}
+                                                </div>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                                        <DropdownMenuItem onClick={() => navigate(`/forms/${form.id}`)} className="group/menu">
+                                                            <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                        </DropdownMenuItem>
+                                                        {form.status === 'published' ? (
+                                                            <DropdownMenuItem onClick={() => handleToggleStatus(form, 'draft')} className="group/menu">
+                                                                <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Unpublish
+                                                            </DropdownMenuItem>
+                                                        ) : (
+                                                            <DropdownMenuItem onClick={() => handleToggleStatus(form, 'published')} className="group/menu">
+                                                                <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Publish
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem onClick={() => copyFormLink(form.slug)} className="group/menu">
+                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Link
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleDuplicate(form.id)} className="group/menu">
+                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={() => handleDelete(form.id)} className="text-destructive">
+                                                            <Trash2 className="h-4 w-4 mr-2" />Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => navigate(`/forms/${form.id}`)} className="group/menu">
-                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
-                                                    </DropdownMenuItem>
-                                                    {form.status === 'published' ? (
-                                                        <DropdownMenuItem onClick={() => handleToggleStatus(form, 'draft')} className="group/menu">
-                                                            <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Unpublish
-                                                        </DropdownMenuItem>
-                                                    ) : (
-                                                        <DropdownMenuItem onClick={() => handleToggleStatus(form, 'published')} className="group/menu">
-                                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Publish
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuItem onClick={() => copyFormLink(form.slug)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Link
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDuplicate(form.id)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(form.id)} className="text-destructive">
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            <Badge className={`text-xs ${getStatusBadge(form.status)}`}>{form.status}</Badge>
-                                            <Badge variant="outline" className="text-xs">{form.type}</Badge>
-                                            <Badge variant="outline" className="text-xs">{form.field_count || 0} fields</Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between pt-3 border-t text-sm text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <BarChart3 className="h-3 w-3" />
-                                                {form.submission_count || 0} submissions
-                                            </span>
-                                            <span className="truncate max-w-[100px]">/form/{form.slug}</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-                </Card>
-            </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                <Badge className={`text-xs ${getStatusBadge(form.status)}`}>{form.status}</Badge>
+                                                <Badge variant="outline" className="text-xs">{form.type}</Badge>
+                                                <Badge variant="outline" className="text-xs">{form.field_count || 0} fields</Badge>
+                                            </div>
+                                            <div className="flex items-center justify-between pt-3 border-t text-sm text-muted-foreground">
+                                                <span className="flex items-center gap-1">
+                                                    <BarChart3 className="h-3 w-3" />
+                                                    {form.submission_count || 0} submissions
+                                                </span>
+                                                <span className="truncate max-w-[100px]">/form/{form.slug}</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                    </Card>
+                </PageSurface>
+            </PageContainer>
         </>
     );
 }

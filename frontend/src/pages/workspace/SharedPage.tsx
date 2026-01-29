@@ -63,6 +63,7 @@ import {
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -487,7 +488,8 @@ export function SharedPage() {
           </Select>
         </div>
       </MobileControlsBar>
-      <div className="container mx-auto p-6 max-w-7xl">
+      <PageContainer>
+        <PageSurface>
         {/* Summary */}
       <div className="flex items-center justify-end mb-6">
         <span className="text-sm text-muted-foreground">
@@ -645,7 +647,8 @@ export function SharedPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageSurface>
+    </PageContainer>
     </>
   );
 }

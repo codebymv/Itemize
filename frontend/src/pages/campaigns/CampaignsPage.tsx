@@ -31,6 +31,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Campaign } from '@/types/campaigns';
 import { StatCard } from '@/components/StatCard';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 export function CampaignsPage() {
     const navigate = useNavigate();
@@ -181,17 +182,15 @@ export function CampaignsPage() {
 
     if (initError) {
         return (
-            <div className="container mx-auto p-6 max-w-7xl">
-                <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6">
-                        <ErrorState
-                            title="Unable to load campaigns"
-                            description={initError}
-                            onAction={() => window.location.reload()}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
+            <PageContainer>
+                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6">
+                    <ErrorState
+                        title="Unable to load campaigns"
+                        description={initError}
+                        onAction={() => window.location.reload()}
+                    />
+                </PageSurface>
+            </PageContainer>
         );
     }
 
@@ -229,7 +228,8 @@ export function CampaignsPage() {
                 </Button>
             </MobileControlsBar>
 
-            <div className="container mx-auto p-6 max-w-7xl">
+            <PageContainer>
+                <PageSurface>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                     <StatCard
                         title="Total Campaigns"
@@ -337,6 +337,7 @@ export function CampaignsPage() {
                     )}
                 </CardContent>
             </Card>
+                </PageSurface>
 
             {showCreateModal && organizationId && (
                 <CreateCampaignModal
@@ -348,7 +349,7 @@ export function CampaignsPage() {
                     }}
                 />
             )}
-            </div>
+            </PageContainer>
         </>
     );
 }
