@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getApiUrl } from '@/lib/api';
+import { storage } from '@/lib/storage';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -90,8 +91,8 @@ const AuthCallback = () => {
           // Mobile flow: save user data to localStorage and redirect to dashboard
           if (data.user) {
             const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
-            localStorage.setItem('itemize_user', JSON.stringify(data.user));
-            localStorage.setItem('itemize_expiry', expiryTime.toString());
+            storage.setJson('itemize_user', data.user);
+            storage.setItem('itemize_expiry', expiryTime.toString());
           }
           navigate('/dashboard', { replace: true });
         }

@@ -11,6 +11,7 @@ import {
   AlertDialogTitle 
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { UI_COLORS, UI_LABELS } from '@/constants/ui';
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -83,7 +84,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
           successTitle: 'Vault deleted',
           successDescription: 'The vault and all its contents have been permanently deleted.',
           errorDescription: 'Failed to delete the vault. Please try again.',
-          fallbackColor: '#3B82F6'
+          fallbackColor: UI_COLORS.brandBlue
         };
       default:
         return {
@@ -132,11 +133,11 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
       <AlertDialogContent className="sm:max-w-[425px]">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+          <AlertDialogTitle className="flex items-center gap-2 font-raleway">
             <AlertTriangle className="h-5 w-5 text-red-500" />
             Delete {typeLabel}
           </AlertDialogTitle>
-          <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
+          <AlertDialogDescription className="font-raleway">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -144,11 +145,11 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
         <div className="space-y-4">
           {/* Item display */}
           <div className="space-y-2">
-            <label className="text-sm font-medium" style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <label className="text-sm font-medium font-raleway">
               {typeLabel} to delete
             </label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md border">
-              <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <p className="font-medium text-sm flex items-center gap-2 font-raleway">
                 <ItemIcon className="h-4 w-4" style={{ color: itemColor || fallbackColor }} />
                 {itemTitle || `Untitled ${typeLabel}`}
               </p>
@@ -160,17 +161,16 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
           <AlertDialogCancel 
             onClick={onClose}
             disabled={isLoading}
-            style={{ fontFamily: '"Raleway", sans-serif' }}
+            className="font-raleway"
           >
-            Cancel
+            {UI_LABELS.cancel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700 text-white"
-            style={{ fontFamily: '"Raleway", sans-serif' }}
+            className="bg-red-600 hover:bg-red-700 text-white font-raleway"
           >
-            {isLoading ? 'Deleting...' : `Delete ${typeLabel}`}
+            {isLoading ? 'Deleting...' : `${UI_LABELS.delete} ${typeLabel}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

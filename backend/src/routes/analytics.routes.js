@@ -7,6 +7,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendSuccess, sendError } = require('../utils/response');
 
 /**
  * Create analytics routes with injected dependencies
@@ -26,8 +27,8 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/dashboard', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
             const orgId = req.organizationId;
+            const analytics = await withDbClient(pool, async (client) => {
 
             // Run all queries in parallel for performance
             const [
@@ -149,8 +150,6 @@ module.exports = (pool, authenticateJWT) => {
         `, [orgId])
             ]);
 
-            client.release();
-
             // Process deals by stage into funnel data
             const dealsByStage = dealsByStageResult.rows;
             const funnelData = [];
@@ -242,10 +241,12 @@ module.exports = (pool, authenticateJWT) => {
                 }))
             };
 
-            res.json(analytics);
+            return analytics;
+            });
+            return sendSuccess(res, analytics);
         } catch (error) {
             console.error('Error fetching dashboard analytics:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -260,7 +261,6 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/contacts/trends', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { period = '6months' } = req.query;
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
             let interval;
@@ -283,7 +283,8 @@ module.exports = (pool, authenticateJWT) => {
                     groupBy = 'month';
             }
 
-            const result = await client.query(`
+            const data = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
         SELECT 
           DATE_TRUNC($1, created_at) as period,
           COUNT(*) as new_contacts,
@@ -295,19 +296,19 @@ module.exports = (pool, authenticateJWT) => {
         ORDER BY period ASC
       `, [groupBy, orgId]);
 
-            client.release();
-
-            res.json({
-                period,
-                data: result.rows.map(row => ({
-                    period: row.period,
-                    newContacts: parseInt(row.new_contacts),
-                    withSource: parseInt(row.with_source)
-                }))
+                return {
+                    period,
+                    data: result.rows.map(row => ({
+                        period: row.period,
+                        newContacts: parseInt(row.new_contacts),
+                        withSource: parseInt(row.with_source)
+                    }))
+                };
             });
+            return sendSuccess(res, data);
         } catch (error) {
             console.error('Error fetching contact trends:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -318,7 +319,6 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/deals/performance', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { period = '6months' } = req.query;
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
             let interval;
@@ -333,7 +333,8 @@ module.exports = (pool, authenticateJWT) => {
                     interval = '6 months';
             }
 
-            const result = await client.query(`
+            const data = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
         SELECT 
           COUNT(*) FILTER (WHERE won_at IS NOT NULL OR lost_at IS NOT NULL) as closed_total,
           COUNT(*) FILTER (WHERE won_at IS NOT NULL) as won_count,
@@ -350,27 +351,27 @@ module.exports = (pool, authenticateJWT) => {
           AND (won_at >= NOW() - INTERVAL '${interval}' OR lost_at >= NOW() - INTERVAL '${interval}')
       `, [orgId]);
 
-            client.release();
+                const metricsRow = result.rows[0];
+                const closedTotal = parseInt(metricsRow.closed_total) || 1; // Prevent division by zero
+                const wonCount = parseInt(metricsRow.won_count);
 
-            const data = result.rows[0];
-            const closedTotal = parseInt(data.closed_total) || 1; // Prevent division by zero
-            const wonCount = parseInt(data.won_count);
-
-            res.json({
-                period,
-                metrics: {
-                    closedTotal: parseInt(data.closed_total),
-                    wonCount: wonCount,
-                    lostCount: parseInt(data.lost_count),
-                    winRate: Math.round((wonCount / closedTotal) * 100),
-                    avgDealValue: parseFloat(data.avg_deal_value).toFixed(2),
-                    totalRevenue: parseFloat(data.total_revenue).toFixed(2),
-                    avgDaysToClose: Math.round(parseFloat(data.avg_days_to_close))
-                }
+                return {
+                    period,
+                    metrics: {
+                        closedTotal: parseInt(metricsRow.closed_total),
+                        wonCount: wonCount,
+                        lostCount: parseInt(metricsRow.lost_count),
+                        winRate: Math.round((wonCount / closedTotal) * 100),
+                        avgDealValue: parseFloat(metricsRow.avg_deal_value).toFixed(2),
+                        totalRevenue: parseFloat(metricsRow.total_revenue).toFixed(2),
+                        avgDaysToClose: Math.round(parseFloat(metricsRow.avg_days_to_close))
+                    }
+                };
             });
+            return sendSuccess(res, data);
         } catch (error) {
             console.error('Error fetching deal performance:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -380,10 +381,10 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/bookings/summary', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
-            const result = await client.query(`
+            const summary = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
         SELECT 
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE status = 'confirmed') as confirmed,
@@ -396,27 +397,28 @@ module.exports = (pool, authenticateJWT) => {
         WHERE organization_id = $1
       `, [orgId]);
 
-            client.release();
+                const data = result.rows[0];
+                const totalCompleted = parseInt(data.completed) + parseInt(data.no_show);
+                const completionRate = totalCompleted > 0
+                    ? Math.round((parseInt(data.completed) / totalCompleted) * 100)
+                    : 0;
 
-            const data = result.rows[0];
-            const totalCompleted = parseInt(data.completed) + parseInt(data.no_show);
-            const completionRate = totalCompleted > 0
-                ? Math.round((parseInt(data.completed) / totalCompleted) * 100)
-                : 0;
-
-            res.json({
-                total: parseInt(data.total),
-                confirmed: parseInt(data.confirmed),
-                completed: parseInt(data.completed),
-                cancelled: parseInt(data.cancelled),
-                noShow: parseInt(data.no_show),
-                createdThisMonth: parseInt(data.created_this_month),
-                upcoming: parseInt(data.upcoming),
-                completionRate
+                return {
+                    total: parseInt(data.total),
+                    confirmed: parseInt(data.confirmed),
+                    completed: parseInt(data.completed),
+                    cancelled: parseInt(data.cancelled),
+                    noShow: parseInt(data.no_show),
+                    createdThisMonth: parseInt(data.created_this_month),
+                    upcoming: parseInt(data.upcoming),
+                    completionRate
+                };
             });
+
+            return sendSuccess(res, summary);
         } catch (error) {
             console.error('Error fetching booking summary:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -431,7 +433,6 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/conversion-rates', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { period = '30days' } = req.query;
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
             let interval;
@@ -450,14 +451,15 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             // Run all queries in parallel
-            const [
-                leadToCustomerResult,
-                dealConversionResult,
-                formConversionResult,
-                stageConversionResult
-            ] = await Promise.all([
-                // Lead to Customer conversion rate
-                client.query(`
+            const conversions = await withDbClient(pool, async (client) => {
+                const [
+                    leadToCustomerResult,
+                    dealConversionResult,
+                    formConversionResult,
+                    stageConversionResult
+                ] = await Promise.all([
+                    // Lead to Customer conversion rate
+                    client.query(`
                     SELECT 
                         COUNT(*) FILTER (WHERE status = 'lead' OR status = 'customer') as total_leads_customers,
                         COUNT(*) FILTER (WHERE status = 'customer') as customers,
@@ -508,66 +510,66 @@ module.exports = (pool, authenticateJWT) => {
                     )
                     SELECT * FROM stage_counts
                 `, [orgId])
-            ]);
+                ]);
 
-            client.release();
+                // Calculate lead to customer conversion rate
+                const leadData = leadToCustomerResult.rows[0];
+                const totalLeadsAndCustomers = parseInt(leadData.total_leads_customers) || 1;
+                const leadToCustomerRate = Math.round((parseInt(leadData.customers) / totalLeadsAndCustomers) * 100);
 
-            // Calculate lead to customer conversion rate
-            const leadData = leadToCustomerResult.rows[0];
-            const totalLeadsAndCustomers = parseInt(leadData.total_leads_customers) || 1;
-            const leadToCustomerRate = Math.round((parseInt(leadData.customers) / totalLeadsAndCustomers) * 100);
+                // Calculate deal win rate
+                const dealData = dealConversionResult.rows[0];
+                const totalClosed = parseInt(dealData.total_closed) || 1;
+                const dealWinRate = Math.round((parseInt(dealData.won) / totalClosed) * 100);
 
-            // Calculate deal win rate
-            const dealData = dealConversionResult.rows[0];
-            const totalClosed = parseInt(dealData.total_closed) || 1;
-            const dealWinRate = Math.round((parseInt(dealData.won) / totalClosed) * 100);
+                // Calculate form conversion rate
+                const formData = formConversionResult.rows[0];
+                const totalSubmissions = parseInt(formData.total_submissions) || 1;
+                const formConversionRate = Math.round((parseInt(formData.with_contact) / totalSubmissions) * 100);
 
-            // Calculate form conversion rate
-            const formData = formConversionResult.rows[0];
-            const totalSubmissions = parseInt(formData.total_submissions) || 1;
-            const formConversionRate = Math.round((parseInt(formData.with_contact) / totalSubmissions) * 100);
+                // Process pipeline stage conversions
+                const pipelineConversions = {};
+                stageConversionResult.rows.forEach(row => {
+                    if (!pipelineConversions[row.pipeline_id]) {
+                        pipelineConversions[row.pipeline_id] = {
+                            pipelineName: row.pipeline_name,
+                            stages: row.stages,
+                            stageCounts: {}
+                        };
+                    }
+                    pipelineConversions[row.pipeline_id].stageCounts[row.stage_id] = parseInt(row.deal_count);
+                });
 
-            // Process pipeline stage conversions
-            const pipelineConversions = {};
-            stageConversionResult.rows.forEach(row => {
-                if (!pipelineConversions[row.pipeline_id]) {
-                    pipelineConversions[row.pipeline_id] = {
-                        pipelineName: row.pipeline_name,
-                        stages: row.stages,
-                        stageCounts: {}
-                    };
-                }
-                pipelineConversions[row.pipeline_id].stageCounts[row.stage_id] = parseInt(row.deal_count);
+                return {
+                    period,
+                    conversions: {
+                        leadToCustomer: {
+                            rate: leadToCustomerRate,
+                            leads: parseInt(leadData.leads),
+                            customers: parseInt(leadData.customers),
+                            total: parseInt(leadData.total_leads_customers)
+                        },
+                        dealWinRate: {
+                            rate: dealWinRate,
+                            won: parseInt(dealData.won),
+                            lost: parseInt(dealData.lost),
+                            totalClosed: parseInt(dealData.total_closed),
+                            wonValue: parseFloat(dealData.won_value),
+                            lostValue: parseFloat(dealData.lost_value)
+                        },
+                        formToContact: {
+                            rate: formConversionRate,
+                            submissions: parseInt(formData.total_submissions),
+                            converted: parseInt(formData.with_contact)
+                        },
+                        pipelines: Object.values(pipelineConversions)
+                    }
+                };
             });
-
-            res.json({
-                period,
-                conversions: {
-                    leadToCustomer: {
-                        rate: leadToCustomerRate,
-                        leads: parseInt(leadData.leads),
-                        customers: parseInt(leadData.customers),
-                        total: parseInt(leadData.total_leads_customers)
-                    },
-                    dealWinRate: {
-                        rate: dealWinRate,
-                        won: parseInt(dealData.won),
-                        lost: parseInt(dealData.lost),
-                        totalClosed: parseInt(dealData.total_closed),
-                        wonValue: parseFloat(dealData.won_value),
-                        lostValue: parseFloat(dealData.lost_value)
-                    },
-                    formToContact: {
-                        rate: formConversionRate,
-                        submissions: parseInt(formData.total_submissions),
-                        converted: parseInt(formData.with_contact)
-                    },
-                    pipelines: Object.values(pipelineConversions)
-                }
-            });
+            return sendSuccess(res, conversions);
         } catch (error) {
             console.error('Error fetching conversion rates:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -578,7 +580,6 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/revenue-trends', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { period = '6months' } = req.query;
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
             let interval;
@@ -598,9 +599,10 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             // Get revenue from both deals and invoice payments
-            const [dealsResult, paymentsResult] = await Promise.all([
-                // Deals revenue
-                client.query(`
+            const revenue = await withDbClient(pool, async (client) => {
+                const [dealsResult, paymentsResult] = await Promise.all([
+                    // Deals revenue
+                    client.query(`
                     SELECT 
                         DATE_TRUNC($1, won_at) as period,
                         COUNT(*) as deals_won,
@@ -614,7 +616,7 @@ module.exports = (pool, authenticateJWT) => {
                 `, [groupBy, orgId]),
 
                 // Invoice payments revenue
-                client.query(`
+                    client.query(`
                     SELECT 
                         DATE_TRUNC($1, COALESCE(paid_at, created_at)) as period,
                         COUNT(*) as payments_count,
@@ -626,85 +628,85 @@ module.exports = (pool, authenticateJWT) => {
                     GROUP BY DATE_TRUNC($1, COALESCE(paid_at, created_at))
                     ORDER BY period ASC
                 `, [groupBy, orgId])
-            ]);
+                ]);
 
-            client.release();
+                // Combine deals and payments data by period
+                const revenueMap = new Map();
+                
+                // Add deals revenue
+                dealsResult.rows.forEach(row => {
+                    const period = row.period;
+                    if (!revenueMap.has(period)) {
+                        revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                    }
+                    const dataPoint = revenueMap.get(period);
+                    dataPoint.dealsWon = parseInt(row.deals_won);
+                    dataPoint.revenue += parseFloat(row.revenue);
+                });
 
-            // Combine deals and payments data by period
-            const revenueMap = new Map();
-            
-            // Add deals revenue
-            dealsResult.rows.forEach(row => {
-                const period = row.period;
-                if (!revenueMap.has(period)) {
-                    revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                // Add payments revenue
+                paymentsResult.rows.forEach(row => {
+                    const period = row.period;
+                    if (!revenueMap.has(period)) {
+                        revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                    }
+                    const dataPoint = revenueMap.get(period);
+                    dataPoint.paymentsCount = parseInt(row.payments_count);
+                    dataPoint.revenue += parseFloat(row.revenue);
+                });
+
+                // Convert map to sorted array
+                const sortedPeriods = Array.from(revenueMap.keys()).sort((a, b) => a - b);
+                
+                // Calculate totals from map before creating data array
+                let totalDeals = 0;
+                let totalPayments = 0;
+                revenueMap.forEach(periodData => {
+                    totalDeals += periodData.dealsWon;
+                    totalPayments += periodData.paymentsCount;
+                });
+                
+                // Calculate cumulative revenue
+                let cumulativeRevenue = 0;
+                const data = sortedPeriods.map(period => {
+                    const periodData = revenueMap.get(period);
+                    cumulativeRevenue += periodData.revenue;
+                    return {
+                        period: period,
+                        dealsWon: periodData.dealsWon,
+                        revenue: periodData.revenue,
+                        cumulativeRevenue: cumulativeRevenue
+                    };
+                });
+
+                // Calculate growth rate
+                let growthRate = 0;
+                if (data.length >= 2) {
+                    const previousPeriod = data[data.length - 2].revenue;
+                    const currentPeriod = data[data.length - 1].revenue;
+                    if (previousPeriod > 0) {
+                        growthRate = Math.round(((currentPeriod - previousPeriod) / previousPeriod) * 100);
+                    }
                 }
-                const data = revenueMap.get(period);
-                data.dealsWon = parseInt(row.deals_won);
-                data.revenue += parseFloat(row.revenue);
-            });
 
-            // Add payments revenue
-            paymentsResult.rows.forEach(row => {
-                const period = row.period;
-                if (!revenueMap.has(period)) {
-                    revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
-                }
-                const data = revenueMap.get(period);
-                data.paymentsCount = parseInt(row.payments_count);
-                data.revenue += parseFloat(row.revenue);
-            });
+                const totalRevenueSources = totalDeals + totalPayments;
 
-            // Convert map to sorted array
-            const sortedPeriods = Array.from(revenueMap.keys()).sort((a, b) => a - b);
-            
-            // Calculate totals from map before creating data array
-            let totalDeals = 0;
-            let totalPayments = 0;
-            revenueMap.forEach(periodData => {
-                totalDeals += periodData.dealsWon;
-                totalPayments += periodData.paymentsCount;
-            });
-            
-            // Calculate cumulative revenue
-            let cumulativeRevenue = 0;
-            const data = sortedPeriods.map(period => {
-                const periodData = revenueMap.get(period);
-                cumulativeRevenue += periodData.revenue;
                 return {
-                    period: period,
-                    dealsWon: periodData.dealsWon,
-                    revenue: periodData.revenue,
-                    cumulativeRevenue: cumulativeRevenue
+                    period,
+                    data,
+                    summary: {
+                        totalRevenue: cumulativeRevenue,
+                        totalDeals: totalDeals,
+                        totalPayments: totalPayments,
+                        avgDealValue: totalRevenueSources > 0 ? cumulativeRevenue / totalRevenueSources : 0,
+                        growthRate
+                    }
                 };
             });
-
-            // Calculate growth rate
-            let growthRate = 0;
-            if (data.length >= 2) {
-                const previousPeriod = data[data.length - 2].revenue;
-                const currentPeriod = data[data.length - 1].revenue;
-                if (previousPeriod > 0) {
-                    growthRate = Math.round(((currentPeriod - previousPeriod) / previousPeriod) * 100);
-                }
-            }
-
-            const totalRevenueSources = totalDeals + totalPayments;
-
-            res.json({
-                period,
-                data,
-                summary: {
-                    totalRevenue: cumulativeRevenue,
-                    totalDeals: totalDeals,
-                    totalPayments: totalPayments,
-                    avgDealValue: totalRevenueSources > 0 ? cumulativeRevenue / totalRevenueSources : 0,
-                    growthRate
-                }
-            });
+            return sendSuccess(res, revenue);
         } catch (error) {
             console.error('Error fetching revenue trends:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -715,8 +717,8 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/pipeline-velocity', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { pipeline_id } = req.query;
-            const client = await pool.connect();
             const orgId = req.organizationId;
+            const velocity = await withDbClient(pool, async (client) => {
 
             // Get pipeline info
             let pipelineQuery = `
@@ -735,12 +737,11 @@ module.exports = (pool, authenticateJWT) => {
             const pipelineResult = await client.query(pipelineQuery, pipelineParams);
 
             if (pipelineResult.rows.length === 0) {
-                client.release();
-                return res.json({
+                return {
                     pipeline: null,
                     velocity: [],
                     summary: {}
-                });
+                };
             }
 
             const pipeline = pipelineResult.rows[0];
@@ -773,8 +774,6 @@ module.exports = (pool, authenticateJWT) => {
                 GROUP BY stage_id
             `, [orgId, pipeline.id]);
 
-            client.release();
-
             // Build velocity data for each stage
             const stages = pipeline.stages || [];
             const stageMap = new Map();
@@ -802,7 +801,7 @@ module.exports = (pool, authenticateJWT) => {
 
             const metrics = metricsResult.rows[0];
 
-            res.json({
+            return {
                 pipeline: {
                     id: pipeline.id,
                     name: pipeline.name
@@ -819,10 +818,12 @@ module.exports = (pool, authenticateJWT) => {
                         ? Math.round((parseInt(metrics.won_count) / (parseInt(metrics.won_count) + parseInt(metrics.lost_count))) * 100)
                         : 0
                 }
+            };
             });
+            return sendSuccess(res, velocity);
         } catch (error) {
             console.error('Error fetching pipeline velocity:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -833,7 +834,6 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/communication-stats', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { period = '30days' } = req.query;
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
             let interval;
@@ -849,9 +849,10 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             // Run email and SMS queries in parallel
-            const [emailResult, smsResult] = await Promise.all([
-                // Email stats
-                client.query(`
+            const stats = await withDbClient(pool, async (client) => {
+                const [emailResult, smsResult] = await Promise.all([
+                    // Email stats
+                    client.query(`
                     SELECT 
                         COUNT(*) as total,
                         COUNT(*) FILTER (WHERE status = 'sent') as sent,
@@ -865,8 +866,8 @@ module.exports = (pool, authenticateJWT) => {
                         AND queued_at >= NOW() - INTERVAL '${interval}'
                 `, [orgId]),
 
-                // SMS stats
-                client.query(`
+                    // SMS stats
+                    client.query(`
                     SELECT 
                         COUNT(*) as total,
                         COUNT(*) FILTER (WHERE direction = 'outbound') as outbound,
@@ -879,56 +880,56 @@ module.exports = (pool, authenticateJWT) => {
                     WHERE organization_id = $1
                         AND queued_at >= NOW() - INTERVAL '${interval}'
                 `, [orgId])
-            ]);
+                ]);
 
-            client.release();
+                const email = emailResult.rows[0];
+                const sms = smsResult.rows[0];
 
-            const email = emailResult.rows[0];
-            const sms = smsResult.rows[0];
+                // Calculate email rates
+                const emailTotal = parseInt(email.total) || 1;
+                const emailDelivered = parseInt(email.delivered) || parseInt(email.sent) || 0;
+                const deliveryRate = Math.round((emailDelivered / emailTotal) * 100);
+                const openRate = emailDelivered > 0 ? Math.round((parseInt(email.opened) / emailDelivered) * 100) : 0;
+                const clickRate = parseInt(email.opened) > 0 ? Math.round((parseInt(email.clicked) / parseInt(email.opened)) * 100) : 0;
 
-            // Calculate email rates
-            const emailTotal = parseInt(email.total) || 1;
-            const emailDelivered = parseInt(email.delivered) || parseInt(email.sent) || 0;
-            const deliveryRate = Math.round((emailDelivered / emailTotal) * 100);
-            const openRate = emailDelivered > 0 ? Math.round((parseInt(email.opened) / emailDelivered) * 100) : 0;
-            const clickRate = parseInt(email.opened) > 0 ? Math.round((parseInt(email.clicked) / parseInt(email.opened)) * 100) : 0;
+                // Calculate SMS rates
+                const smsOutbound = parseInt(sms.outbound) || 1;
+                const smsDeliveryRate = Math.round((parseInt(sms.delivered) / smsOutbound) * 100);
 
-            // Calculate SMS rates
-            const smsOutbound = parseInt(sms.outbound) || 1;
-            const smsDeliveryRate = Math.round((parseInt(sms.delivered) / smsOutbound) * 100);
-
-            res.json({
-                period,
-                email: {
-                    total: parseInt(email.total),
-                    sent: parseInt(email.sent),
-                    delivered: parseInt(email.delivered),
-                    opened: parseInt(email.opened),
-                    clicked: parseInt(email.clicked),
-                    bounced: parseInt(email.bounced),
-                    failed: parseInt(email.failed),
-                    rates: {
-                        delivery: deliveryRate,
-                        open: openRate,
-                        click: clickRate
+                return {
+                    period,
+                    email: {
+                        total: parseInt(email.total),
+                        sent: parseInt(email.sent),
+                        delivered: parseInt(email.delivered),
+                        opened: parseInt(email.opened),
+                        clicked: parseInt(email.clicked),
+                        bounced: parseInt(email.bounced),
+                        failed: parseInt(email.failed),
+                        rates: {
+                            delivery: deliveryRate,
+                            open: openRate,
+                            click: clickRate
+                        }
+                    },
+                    sms: {
+                        total: parseInt(sms.total),
+                        outbound: parseInt(sms.outbound),
+                        inbound: parseInt(sms.inbound),
+                        sent: parseInt(sms.sent),
+                        delivered: parseInt(sms.delivered),
+                        failed: parseInt(sms.failed),
+                        segments: parseInt(sms.total_segments),
+                        rates: {
+                            delivery: smsDeliveryRate
+                        }
                     }
-                },
-                sms: {
-                    total: parseInt(sms.total),
-                    outbound: parseInt(sms.outbound),
-                    inbound: parseInt(sms.inbound),
-                    sent: parseInt(sms.sent),
-                    delivered: parseInt(sms.delivered),
-                    failed: parseInt(sms.failed),
-                    segments: parseInt(sms.total_segments),
-                    rates: {
-                        delivery: smsDeliveryRate
-                    }
-                }
+                };
             });
+            return sendSuccess(res, stats);
         } catch (error) {
             console.error('Error fetching communication stats:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -938,10 +939,10 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/workflow-performance', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
             const orgId = req.organizationId;
 
-            const result = await client.query(`
+            const performance = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
                 SELECT 
                     w.id,
                     w.name,
@@ -959,48 +960,48 @@ module.exports = (pool, authenticateJWT) => {
                 ORDER BY total_enrollments DESC
             `, [orgId]);
 
-            client.release();
+                const workflows = result.rows.map(row => {
+                    const total = parseInt(row.total_enrollments) || 1;
+                    const completed = parseInt(row.completed);
+                    return {
+                        id: row.id,
+                        name: row.name,
+                        triggerType: row.trigger_type,
+                        isActive: row.is_active,
+                        enrollments: {
+                            total: parseInt(row.total_enrollments),
+                            completed: completed,
+                            active: parseInt(row.active),
+                            failed: parseInt(row.failed)
+                        },
+                        completionRate: Math.round((completed / total) * 100),
+                        stats: row.stats
+                    };
+                });
 
-            const workflows = result.rows.map(row => {
-                const total = parseInt(row.total_enrollments) || 1;
-                const completed = parseInt(row.completed);
+                // Summary stats
+                const totalEnrollments = workflows.reduce((sum, w) => sum + w.enrollments.total, 0);
+                const totalCompleted = workflows.reduce((sum, w) => sum + w.enrollments.completed, 0);
+                const totalActive = workflows.reduce((sum, w) => sum + w.enrollments.active, 0);
+                const totalFailed = workflows.reduce((sum, w) => sum + w.enrollments.failed, 0);
+
                 return {
-                    id: row.id,
-                    name: row.name,
-                    triggerType: row.trigger_type,
-                    isActive: row.is_active,
-                    enrollments: {
-                        total: parseInt(row.total_enrollments),
-                        completed: completed,
-                        active: parseInt(row.active),
-                        failed: parseInt(row.failed)
-                    },
-                    completionRate: Math.round((completed / total) * 100),
-                    stats: row.stats
+                    workflows,
+                    summary: {
+                        totalWorkflows: workflows.length,
+                        activeWorkflows: workflows.filter(w => w.isActive).length,
+                        totalEnrollments,
+                        completedEnrollments: totalCompleted,
+                        activeEnrollments: totalActive,
+                        failedEnrollments: totalFailed,
+                        overallCompletionRate: totalEnrollments > 0 ? Math.round((totalCompleted / totalEnrollments) * 100) : 0
+                    }
                 };
             });
-
-            // Summary stats
-            const totalEnrollments = workflows.reduce((sum, w) => sum + w.enrollments.total, 0);
-            const totalCompleted = workflows.reduce((sum, w) => sum + w.enrollments.completed, 0);
-            const totalActive = workflows.reduce((sum, w) => sum + w.enrollments.active, 0);
-            const totalFailed = workflows.reduce((sum, w) => sum + w.enrollments.failed, 0);
-
-            res.json({
-                workflows,
-                summary: {
-                    totalWorkflows: workflows.length,
-                    activeWorkflows: workflows.filter(w => w.isActive).length,
-                    totalEnrollments,
-                    completedEnrollments: totalCompleted,
-                    activeEnrollments: totalActive,
-                    failedEnrollments: totalFailed,
-                    overallCompletionRate: totalEnrollments > 0 ? Math.round((totalCompleted / totalEnrollments) * 100) : 0
-                }
-            });
+            return sendSuccess(res, performance);
         } catch (error) {
             console.error('Error fetching workflow performance:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 

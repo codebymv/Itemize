@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import {
   updateList as apiUpdateList,
   updateNote as apiUpdateNote,
@@ -47,7 +47,7 @@ interface ContentModalProps {
 
 export function ContentModal({ content, onClose, categories }: ContentModalProps) {
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { token } = useAuthState();
 
   // Local state for the content data
   const [localData, setLocalData] = useState(content.originalData);

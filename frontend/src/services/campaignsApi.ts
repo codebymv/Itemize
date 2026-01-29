@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================
@@ -152,7 +159,7 @@ export const getCampaigns = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
 };
 
 /**
@@ -165,7 +172,7 @@ export const getCampaign = async (
     const response = await api.get(`/api/campaigns/${campaignId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -178,7 +185,7 @@ export const createCampaign = async (
     const response = await api.post('/api/campaigns', campaign, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -192,7 +199,7 @@ export const updateCampaign = async (
     const response = await api.put(`/api/campaigns/${campaignId}`, campaign, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -205,7 +212,7 @@ export const deleteCampaign = async (
     const response = await api.delete(`/api/campaigns/${campaignId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 /**
@@ -218,7 +225,7 @@ export const duplicateCampaign = async (
     const response = await api.post(`/api/campaigns/${campaignId}/duplicate`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -236,7 +243,7 @@ export const scheduleCampaign = async (
     }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -249,7 +256,7 @@ export const unscheduleCampaign = async (
     const response = await api.post(`/api/campaigns/${campaignId}/unschedule`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -262,7 +269,7 @@ export const sendCampaign = async (
     const response = await api.post(`/api/campaigns/${campaignId}/send`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ campaign: EmailCampaign; recipientCount: number; message: string }>(response.data);
 };
 
 /**
@@ -275,7 +282,7 @@ export const pauseCampaign = async (
     const response = await api.post(`/api/campaigns/${campaignId}/pause`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailCampaign>(response.data);
 };
 
 /**
@@ -288,7 +295,7 @@ export const resumeCampaign = async (
     const response = await api.post(`/api/campaigns/${campaignId}/resume`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ message: string; pendingRecipients?: number }>(response.data);
 };
 
 /**
@@ -307,7 +314,7 @@ export const getCampaignRecipients = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
 };
 
 /**
@@ -320,7 +327,7 @@ export const previewCampaign = async (
     const response = await api.get(`/api/campaigns/${campaignId}/preview`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<CampaignPreview>(response.data);
 };
 
 /**
@@ -336,7 +343,7 @@ export const sendTestEmail = async (
     }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean; message: string; emailId?: string }>(response.data);
 };
 
 export default {

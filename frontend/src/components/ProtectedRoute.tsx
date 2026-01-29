@@ -1,13 +1,13 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { currentUser, loading, isAuthenticated } = useAuth();
+  const { currentUser, loading } = useAuthState();
   
   if (loading) {
     // You could render a loading spinner here

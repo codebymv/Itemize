@@ -112,7 +112,7 @@ export function AutomationsPage() {
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { organizationId, error: initError } = useOrganization({
+  const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
     onError: () => 'Failed to initialize. Please check your connection.'
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,14 +178,25 @@ export function AutomationsPage() {
   );
 
   useEffect(() => {
-    if (!organizationId && initError) {
+    if (orgLoading) {
+      setLoading(true);
+      return;
+    }
+
+    if (!organizationId) {
       setLoading(false);
     }
-  }, [organizationId, initError]);
+  }, [organizationId, initError, orgLoading]);
 
   // Fetch workflows
   const fetchWorkflows = useCallback(async () => {
-    if (!organizationId) return;
+    if (!organizationId) {
+      if (!orgLoading) {
+        setWorkflows([]);
+        setLoading(false);
+      }
+      return;
+    }
 
     setLoading(true);
     try {
@@ -206,7 +217,7 @@ export function AutomationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId, triggerFilter, statusFilter, searchQuery]);
+  }, [organizationId, orgLoading, triggerFilter, statusFilter, searchQuery, toast]);
 
   useEffect(() => {
     fetchWorkflows();

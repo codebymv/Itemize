@@ -17,7 +17,7 @@ import { useTheme } from 'next-themes';
 import { Category } from '@/types';
 import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 import { updateNoteContent } from '@/services/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 
 interface NoteCardProps {
   note: Note;
@@ -46,7 +46,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   // Get auth token
-  const { token } = useAuth();
+  const { token } = useAuthState();
 
   const {
     // Title for display

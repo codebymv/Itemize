@@ -1,7 +1,7 @@
-import React, { createContext, useState, useContext, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
 import api, { getApiUrl, setAuthToken, getAuthToken } from '@/lib/api';
+import { storage } from '@/lib/storage';
 import axios from 'axios'; // Keep axios for Google API calls
 import { toast } from '@/components/ui/use-toast'; // Import toast
 
@@ -13,16 +13,19 @@ export interface User {
   role?: 'USER' | 'ADMIN';
 }
 
-interface AuthContextType {
+interface AuthStateContextType {
   currentUser: User | null;
   loading: boolean;
+  token: string | null;
+  isAuthenticated: boolean;
+}
+
+interface AuthActionsContextType {
   login: (redirectTo?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   handleGoogleSuccess: (credentialResponse: CredentialResponse) => void;
-  token: string | null;
-  isAuthenticated: boolean;
   setCurrentUser: (user: User | null) => void;
 }
 
@@ -36,14 +39,29 @@ export class AuthError extends Error {
   }
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthStateContext = createContext<AuthStateContextType | undefined>(undefined);
+const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
+export const useAuthState = () => {
+  const context = useContext(AuthStateContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuthState must be used within an AuthProvider');
   }
   return context;
+};
+
+export const useAuthActions = () => {
+  const context = useContext(AuthActionsContext);
+  if (context === undefined) {
+    throw new Error('useAuthActions must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const useAuth = () => {
+  const state = useAuthState();
+  const actions = useAuthActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -60,8 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Check for saved auth token and user data in localStorage
         const savedToken = getAuthToken();
-        const savedUser = localStorage.getItem('itemize_user');
-        const expiryTime = localStorage.getItem('itemize_expiry');
+        const savedUser = storage.getItem('itemize_user');
+        const expiryTime = storage.getItem('itemize_expiry');
         
         // If we have token, user data, and not expired, restore auth state
         if (savedToken && savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
@@ -72,14 +90,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (parseError) {
             // Clean up invalid data
             setAuthToken(null);
-            localStorage.removeItem('itemize_user');
-            localStorage.removeItem('itemize_expiry');
+            storage.removeItem('itemize_user');
+            storage.removeItem('itemize_expiry');
           }
         } else {
           // Clean up expired data
           setAuthToken(null);
-          localStorage.removeItem('itemize_user');
-          localStorage.removeItem('itemize_expiry');
+          storage.removeItem('itemize_user');
+          storage.removeItem('itemize_expiry');
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -92,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Helper to save user data and token after successful auth (Gleam-style)
-  const saveAuthState = (userData: User, authToken: string) => {
+  const saveAuthState = useCallback((userData: User, authToken: string) => {
     // Set expiry to match refresh token duration (30 days)
     const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
     
@@ -100,13 +118,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(authToken);
     
     // Store user data
-    localStorage.setItem('itemize_user', JSON.stringify(userData));
-    localStorage.setItem('itemize_expiry', expiryTime.toString());
+    storage.setJson('itemize_user', userData);
+    storage.setItem('itemize_expiry', expiryTime.toString());
     
     // Update React state
     setToken(authToken);
     setCurrentUser(userData);
-  };
+  }, []);
 
   // Use Google Login hook
   const googleLogin = useGoogleLogin({
@@ -187,17 +205,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     scope: 'email profile'
   });
 
-  const login = (redirectTo?: string) => {
+  const login = useCallback((redirectTo?: string) => {
     // Store the redirect path for use after successful auth
     pendingRedirectRef.current = redirectTo || '/dashboard';
     console.log('Starting Google login, will redirect to:', pendingRedirectRef.current);
     googleLogin();
-  };
+  }, [googleLogin]);
 
   /**
    * Login with email and password (Gleam-style)
    */
-  const loginWithEmail = async (email: string, password: string): Promise<void> => {
+  const loginWithEmail = useCallback(async (email: string, password: string): Promise<void> => {
     try {
       const response = await api.post('/api/auth/login', { email, password });
       
@@ -224,12 +242,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       throw error;
     }
-  };
+  }, [saveAuthState]);
 
   /**
    * Register a new account with email and password
    */
-  const register = async (email: string, password: string, name?: string): Promise<void> => {
+  const register = useCallback(async (email: string, password: string, name?: string): Promise<void> => {
     try {
       const response = await api.post('/api/auth/register', { email, password, name });
       
@@ -247,17 +265,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       throw error;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     // Clear state
     setToken(null);
     setCurrentUser(null);
     
     // Clear all auth data from localStorage (Gleam-style)
     setAuthToken(null);
-    localStorage.removeItem('itemize_user');
-    localStorage.removeItem('itemize_expiry');
+    storage.removeItem('itemize_user');
+    storage.removeItem('itemize_expiry');
     
     // Sign out from Google
     try {
@@ -274,10 +292,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Backend logout failed:', error);
     }
-  };
+  }, []);
 
   // For handling credential response from Google One Tap
-  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+  const handleGoogleSuccess = useCallback(async (credentialResponse: CredentialResponse) => {
     setLoading(true);
     try {
       console.log('Google One Tap login successful');
@@ -306,24 +324,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, [saveAuthState]);
 
-  const value: AuthContextType = useMemo(() => ({
+  const stateValue = useMemo<AuthStateContextType>(() => ({
     currentUser,
     loading,
+    token,
+    isAuthenticated: !!currentUser && !!token,
+  }), [currentUser, loading, token]);
+
+  const actionsValue = useMemo<AuthActionsContextType>(() => ({
     login,
     loginWithEmail,
     register,
     logout,
     handleGoogleSuccess,
-    token,
-    isAuthenticated: !!currentUser && !!token,
     setCurrentUser,
-  }), [currentUser, loading, login, loginWithEmail, register, logout, handleGoogleSuccess, token, setCurrentUser]);
+  }), [login, loginWithEmail, register, logout, handleGoogleSuccess, setCurrentUser]);
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+    <AuthStateContext.Provider value={stateValue}>
+      <AuthActionsContext.Provider value={actionsValue}>
+        {children}
+      </AuthActionsContext.Provider>
+    </AuthStateContext.Provider>
   );
 };

@@ -3,6 +3,13 @@
  * Handles all calendar and booking-related API calls
  */
 import api from '@/lib/api';
+
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
 import {
     Calendar,
     CalendarsResponse,
@@ -42,21 +49,21 @@ export const getCalendars = async (organizationId?: number): Promise<CalendarsRe
     const response = await api.get('/api/calendars', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<CalendarsResponse>(response.data);
 };
 
 export const getCalendar = async (id: number, organizationId?: number): Promise<Calendar> => {
     const response = await api.get(`/api/calendars/${id}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Calendar>(response.data);
 };
 
 export const createCalendar = async (data: CalendarCreateData): Promise<Calendar> => {
     const response = await api.post('/api/calendars', data, {
         headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Calendar>(response.data);
 };
 
 export const updateCalendar = async (
@@ -67,7 +74,7 @@ export const updateCalendar = async (
     const response = await api.put(`/api/calendars/${id}`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Calendar>(response.data);
 };
 
 export const deleteCalendar = async (id: number, organizationId?: number): Promise<void> => {
@@ -88,7 +95,7 @@ export const updateCalendarAvailability = async (
             headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
         }
     );
-    return response.data;
+    return unwrapResponse<{ availability_windows: AvailabilityWindow[] }>(response.data);
 };
 
 export const addDateOverride = async (
@@ -105,7 +112,7 @@ export const addDateOverride = async (
     const response = await api.post(`/api/calendars/${calendarId}/date-override`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<CalendarDateOverride>(response.data);
 };
 
 export const removeDateOverride = async (
@@ -139,14 +146,14 @@ export const getBookings = async (params: BookingsQueryParams = {}): Promise<Boo
         params,
         headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<BookingsResponse>(response.data);
 };
 
 export const getBooking = async (id: number, organizationId?: number): Promise<Booking> => {
     const response = await api.get(`/api/bookings/${id}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Booking>(response.data);
 };
 
 export interface BookingCreateData {
@@ -170,7 +177,7 @@ export const createBooking = async (data: BookingCreateData): Promise<Booking> =
     const response = await api.post('/api/bookings', data, {
         headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Booking>(response.data);
 };
 
 export const cancelBooking = async (
@@ -185,7 +192,7 @@ export const cancelBooking = async (
             headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
         }
     );
-    return response.data;
+    return unwrapResponse<Booking>(response.data);
 };
 
 export const rescheduleBooking = async (
@@ -196,7 +203,7 @@ export const rescheduleBooking = async (
     const response = await api.patch(`/api/bookings/${id}/reschedule`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Booking>(response.data);
 };
 
 // ======================
@@ -205,7 +212,7 @@ export const rescheduleBooking = async (
 
 export const getPublicCalendar = async (slug: string): Promise<PublicCalendarInfo> => {
     const response = await api.get(`/api/public/book/${slug}`);
-    return response.data;
+    return unwrapResponse<PublicCalendarInfo>(response.data);
 };
 
 export const getAvailableSlots = async (
@@ -216,7 +223,7 @@ export const getAvailableSlots = async (
     const response = await api.get(`/api/public/book/${slug}/slots`, {
         params: { start_date: startDate, end_date: endDate },
     });
-    return response.data;
+    return unwrapResponse<AvailableSlotsResponse>(response.data);
 };
 
 export interface PublicBookingData {
@@ -235,7 +242,7 @@ export const submitPublicBooking = async (
     data: PublicBookingData
 ): Promise<{ success: boolean; booking: Booking; message: string }> => {
     const response = await api.post(`/api/public/book/${slug}`, data);
-    return response.data;
+    return unwrapResponse<{ success: boolean; booking: Booking; message: string }>(response.data);
 };
 
 export const cancelPublicBooking = async (
@@ -244,7 +251,7 @@ export const cancelPublicBooking = async (
     reason?: string
 ): Promise<{ success: boolean; message: string }> => {
     const response = await api.post(`/api/public/book/${slug}/cancel/${token}`, { reason });
-    return response.data;
+    return unwrapResponse<{ success: boolean; message: string }>(response.data);
 };
 
 // Export all

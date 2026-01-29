@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================
@@ -61,7 +68,7 @@ export const getEmailTemplates = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ templates: EmailTemplate[]; total: number }>(response.data);
 };
 
 /**
@@ -74,7 +81,7 @@ export const getEmailTemplate = async (
     const response = await api.get(`/api/email-templates/${templateId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<EmailTemplate>(response.data);
 };
 
 /**
@@ -87,7 +94,7 @@ export const sendEmailToContact = async (
     const response = await api.post('/api/email-templates/send-to-contact', params, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<SendEmailResult>(response.data);
 };
 
 /**
@@ -104,7 +111,7 @@ export const sendTestEmail = async (
         { to_email: toEmail, sample_data: sampleData },
         { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
     );
-    return response.data;
+    return unwrapResponse<SendEmailResult>(response.data);
 };
 
 /**
@@ -131,7 +138,7 @@ export const duplicateEmailTemplate = async (
         {},
         { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
     );
-    return response.data;
+    return unwrapResponse<EmailTemplate>(response.data);
 };
 
 export default {

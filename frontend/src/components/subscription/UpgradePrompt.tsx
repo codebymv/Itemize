@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useSubscription, FeatureName } from '../../contexts/SubscriptionContext';
+import { useSubscriptionFeatures, useSubscriptionState, FeatureName } from '../../contexts/SubscriptionContext';
 import { Sparkles, ArrowRight, X, Check } from 'lucide-react';
 
 interface UpgradePromptProps {
@@ -78,7 +78,8 @@ export function UpgradePrompt({
   onDismiss,
   className = ''
 }: UpgradePromptProps) {
-  const { startCheckout, tierLevel, planName } = useSubscription();
+  const { tierLevel, planName } = useSubscriptionState();
+  const { startCheckout } = useSubscriptionFeatures();
   
   // Determine which plan to promote
   const suggestedPlan: 'unlimited' | 'pro' = tierLevel < 2 ? 'unlimited' : 'pro';

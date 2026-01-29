@@ -2,6 +2,13 @@
  * Forms API Service
  */
 import api from '@/lib/api';
+
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
 import {
     Form,
     FormsResponse,
@@ -35,21 +42,21 @@ export const getForms = async (organizationId?: number, status?: string): Promis
         params: { status },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<FormsResponse>(response.data);
 };
 
 export const getForm = async (id: number, organizationId?: number): Promise<Form> => {
     const response = await api.get(`/api/forms/${id}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Form>(response.data);
 };
 
 export const createForm = async (data: FormCreateData): Promise<Form> => {
     const response = await api.post('/api/forms', data, {
         headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Form>(response.data);
 };
 
 export const updateForm = async (
@@ -60,7 +67,7 @@ export const updateForm = async (
     const response = await api.put(`/api/forms/${id}`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Form>(response.data);
 };
 
 export const deleteForm = async (id: number, organizationId?: number): Promise<void> => {
@@ -77,14 +84,14 @@ export const updateFormFields = async (
     const response = await api.put(`/api/forms/${id}/fields`, { fields }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<{ fields: FormField[] }>(response.data);
 };
 
 export const duplicateForm = async (id: number, organizationId?: number): Promise<Form> => {
     const response = await api.post(`/api/forms/${id}/duplicate`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<Form>(response.data);
 };
 
 // ======================
@@ -100,7 +107,7 @@ export const getFormSubmissions = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
-    return response.data;
+    return unwrapResponse<FormSubmissionsResponse>(response.data);
 };
 
 export const deleteFormSubmission = async (
@@ -133,7 +140,7 @@ export interface PublicFormData {
 
 export const getPublicForm = async (slug: string): Promise<PublicFormData> => {
     const response = await api.get(`/api/public/form/${slug}`);
-    return response.data;
+    return unwrapResponse<PublicFormData>(response.data);
 };
 
 export const submitPublicForm = async (
@@ -141,7 +148,7 @@ export const submitPublicForm = async (
     data: Record<string, any>
 ): Promise<{ success: boolean; message: string; redirect_url?: string }> => {
     const response = await api.post(`/api/public/form/${slug}`, { data });
-    return response.data;
+    return unwrapResponse<{ success: boolean; message: string; redirect_url?: string }>(response.data);
 };
 
 export default {

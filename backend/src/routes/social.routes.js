@@ -6,9 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 // Facebook Graph API base URL
 const FB_GRAPH_API = 'https://graph.facebook.com/v18.0';
@@ -36,16 +35,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             const state = crypto.randomBytes(32).toString('hex');
             
             // Store state temporarily (in production, use Redis or similar)
-            const client = await pool.connect();
-            await client.query(`
+            await withDbClient(pool, async (client) => client.query(`
                 INSERT INTO oauth_states (state, organization_id, user_id, provider, expires_at)
                 VALUES ($1, $2, $3, 'facebook', NOW() + INTERVAL '10 minutes')
                 ON CONFLICT (state) DO UPDATE SET 
                     organization_id = EXCLUDED.organization_id,
                     user_id = EXCLUDED.user_id,
                     expires_at = EXCLUDED.expires_at
-            `, [state, req.organizationId, req.user.id]);
-            client.release();
+            `, [state, req.organizationId, req.user.id]));
 
             const scopes = [
                 'pages_show_list',
@@ -62,7 +59,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             res.json({ auth_url: authUrl });
         } catch (error) {
             console.error('Error generating Facebook OAuth URL:', error);
-            res.status(500).json({ error: 'Failed to generate OAuth URL' });
+            return sendError(res, 'Failed to generate OAuth URL');
         }
     });
 
@@ -82,23 +79,30 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
                 return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=missing_params`);
             }
 
-            const client = await pool.connect();
+            const stateData = await withDbClient(pool, async (client) => {
+                // Validate state
+                const stateResult = await client.query(`
+                    SELECT organization_id, user_id FROM oauth_states 
+                    WHERE state = $1 AND provider = 'facebook' AND expires_at > NOW()
+                `, [state]);
 
-            // Validate state
-            const stateResult = await client.query(`
-                SELECT organization_id, user_id FROM oauth_states 
-                WHERE state = $1 AND provider = 'facebook' AND expires_at > NOW()
-            `, [state]);
+                if (stateResult.rows.length === 0) {
+                    return { error: 'invalid_state' };
+                }
 
-            if (stateResult.rows.length === 0) {
-                client.release();
+                const { organization_id, user_id } = stateResult.rows[0];
+
+                // Delete used state
+                await client.query('DELETE FROM oauth_states WHERE state = $1', [state]);
+
+                return { organization_id, user_id };
+            });
+
+            if (stateData.error) {
                 return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=invalid_state`);
             }
 
-            const { organization_id, user_id } = stateResult.rows[0];
-
-            // Delete used state
-            await client.query('DELETE FROM oauth_states WHERE state = $1', [state]);
+            const { organization_id, user_id } = stateData;
 
             // Exchange code for token
             const appId = process.env.FACEBOOK_APP_ID;
@@ -109,7 +113,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             const tokenData = await tokenResponse.json();
 
             if (tokenData.error) {
-                client.release();
                 console.error('Facebook token error:', tokenData.error);
                 return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=token_exchange_failed`);
             }
@@ -121,7 +124,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             const pagesData = await pagesResponse.json();
 
             if (pagesData.error) {
-                client.release();
                 console.error('Facebook pages error:', pagesData.error);
                 return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=pages_fetch_failed`);
             }
@@ -130,48 +132,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             const meResponse = await fetch(`${FB_GRAPH_API}/me?access_token=${userAccessToken}`);
             const meData = await meResponse.json();
 
-            // Store each page as a channel
-            for (const page of pagesData.data || []) {
-                // Store Facebook Page
-                await client.query(`
-                    INSERT INTO social_channels (
-                        organization_id, channel_type, external_id, name, username,
-                        page_id, page_access_token, user_id, user_access_token,
-                        is_connected, created_by
-                    ) VALUES ($1, 'facebook', $2, $3, $4, $5, $6, $7, $8, TRUE, $9)
-                    ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
-                        name = EXCLUDED.name,
-                        page_access_token = EXCLUDED.page_access_token,
-                        user_access_token = EXCLUDED.user_access_token,
-                        is_connected = TRUE,
-                        connection_error = NULL,
-                        updated_at = CURRENT_TIMESTAMP
-                `, [
-                    organization_id,
-                    page.id,
-                    page.name,
-                    page.name,
-                    page.id,
-                    page.access_token,
-                    meData.id,
-                    userAccessToken,
-                    user_id
-                ]);
-
-                // Store Instagram if connected
-                if (page.instagram_business_account) {
-                    const ig = page.instagram_business_account;
+            await withDbClient(pool, async (client) => {
+                // Store each page as a channel
+                for (const page of pagesData.data || []) {
+                    // Store Facebook Page
                     await client.query(`
                         INSERT INTO social_channels (
                             organization_id, channel_type, external_id, name, username,
-                            profile_picture_url, instagram_business_account_id,
                             page_id, page_access_token, user_id, user_access_token,
                             is_connected, created_by
-                        ) VALUES ($1, 'instagram', $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11)
+                        ) VALUES ($1, 'facebook', $2, $3, $4, $5, $6, $7, $8, TRUE, $9)
                         ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
                             name = EXCLUDED.name,
-                            username = EXCLUDED.username,
-                            profile_picture_url = EXCLUDED.profile_picture_url,
                             page_access_token = EXCLUDED.page_access_token,
                             user_access_token = EXCLUDED.user_access_token,
                             is_connected = TRUE,
@@ -179,21 +151,52 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
                             updated_at = CURRENT_TIMESTAMP
                     `, [
                         organization_id,
-                        ig.id,
-                        ig.username || 'Instagram',
-                        ig.username,
-                        ig.profile_picture_url,
-                        ig.id,
+                        page.id,
+                        page.name,
+                        page.name,
                         page.id,
                         page.access_token,
                         meData.id,
                         userAccessToken,
                         user_id
                     ]);
-                }
-            }
 
-            client.release();
+                    // Store Instagram if connected
+                    if (page.instagram_business_account) {
+                        const ig = page.instagram_business_account;
+                        await client.query(`
+                            INSERT INTO social_channels (
+                                organization_id, channel_type, external_id, name, username,
+                                profile_picture_url, instagram_business_account_id,
+                                page_id, page_access_token, user_id, user_access_token,
+                                is_connected, created_by
+                            ) VALUES ($1, 'instagram', $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11)
+                            ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
+                                name = EXCLUDED.name,
+                                username = EXCLUDED.username,
+                                profile_picture_url = EXCLUDED.profile_picture_url,
+                                page_access_token = EXCLUDED.page_access_token,
+                                user_access_token = EXCLUDED.user_access_token,
+                                is_connected = TRUE,
+                                connection_error = NULL,
+                                updated_at = CURRENT_TIMESTAMP
+                        `, [
+                            organization_id,
+                            ig.id,
+                            ig.username || 'Instagram',
+                            ig.username,
+                            ig.profile_picture_url,
+                            ig.id,
+                            page.id,
+                            page.access_token,
+                            meData.id,
+                            userAccessToken,
+                            user_id
+                        ]);
+                    }
+                }
+            });
+
             res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?success=facebook_connected`);
         } catch (error) {
             console.error('Error in Facebook callback:', error);
@@ -211,8 +214,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
     router.get('/channels', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { channel_type } = req.query;
-            const client = await pool.connect();
-
             let query = `
                 SELECT sc.*, u.name as created_by_name
                 FROM social_channels sc
@@ -228,13 +229,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
 
             query += ' ORDER BY sc.channel_type, sc.name';
 
-            const result = await client.query(query, params);
-            client.release();
+            const result = await withDbClient(pool, async (client) => client.query(query, params));
 
             res.json(result.rows);
         } catch (error) {
             console.error('Error fetching channels:', error);
-            res.status(500).json({ error: 'Failed to fetch channels' });
+            return sendError(res, 'Failed to fetch channels');
         }
     });
 
@@ -244,9 +244,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
     router.delete('/channels/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE social_channels SET
                     is_connected = FALSE,
                     page_access_token = NULL,
@@ -254,9 +252,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $1 AND organization_id = $2
                 RETURNING id
-            `, [id, req.organizationId]);
-
-            client.release();
+            `, [id, req.organizationId]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Channel not found' });
@@ -265,7 +261,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error disconnecting channel:', error);
-            res.status(500).json({ error: 'Failed to disconnect channel' });
+            return sendError(res, 'Failed to disconnect channel');
         }
     });
 
@@ -309,29 +305,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const { countResult, result } = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(`
+                    SELECT COUNT(*) FROM social_conversations sc
+                    JOIN social_channels ch ON sc.channel_id = ch.id
+                    ${whereClause}
+                `, params);
 
-            const countResult = await client.query(`
-                SELECT COUNT(*) FROM social_conversations sc
-                JOIN social_channels ch ON sc.channel_id = ch.id
-                ${whereClause}
-            `, params);
+                const result = await client.query(`
+                    SELECT sc.*, 
+                           ch.channel_type, ch.name as channel_name,
+                           c.first_name as contact_first_name, c.last_name as contact_last_name,
+                           u.name as assigned_to_name
+                    FROM social_conversations sc
+                    JOIN social_channels ch ON sc.channel_id = ch.id
+                    LEFT JOIN contacts c ON sc.contact_id = c.id
+                    LEFT JOIN users u ON sc.assigned_to = u.id
+                    ${whereClause}
+                    ORDER BY sc.last_message_at DESC NULLS LAST
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-                SELECT sc.*, 
-                       ch.channel_type, ch.name as channel_name,
-                       c.first_name as contact_first_name, c.last_name as contact_last_name,
-                       u.name as assigned_to_name
-                FROM social_conversations sc
-                JOIN social_channels ch ON sc.channel_id = ch.id
-                LEFT JOIN contacts c ON sc.contact_id = c.id
-                LEFT JOIN users u ON sc.assigned_to = u.id
-                ${whereClause}
-                ORDER BY sc.last_message_at DESC NULLS LAST
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
+                return { countResult, result };
+            });
 
             res.json({
                 conversations: result.rows,
@@ -344,7 +340,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             });
         } catch (error) {
             console.error('Error fetching conversations:', error);
-            res.status(500).json({ error: 'Failed to fetch conversations' });
+            return sendError(res, 'Failed to fetch conversations');
         }
     });
 
@@ -354,50 +350,53 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
     router.get('/conversations/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const convResult = await client.query(`
+                    SELECT sc.*, 
+                           ch.channel_type, ch.name as channel_name, ch.page_access_token,
+                           c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
+                    FROM social_conversations sc
+                    JOIN social_channels ch ON sc.channel_id = ch.id
+                    LEFT JOIN contacts c ON sc.contact_id = c.id
+                    WHERE sc.id = $1 AND sc.organization_id = $2
+                `, [id, req.organizationId]);
 
-            const convResult = await client.query(`
-                SELECT sc.*, 
-                       ch.channel_type, ch.name as channel_name, ch.page_access_token,
-                       c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
-                FROM social_conversations sc
-                JOIN social_channels ch ON sc.channel_id = ch.id
-                LEFT JOIN contacts c ON sc.contact_id = c.id
-                WHERE sc.id = $1 AND sc.organization_id = $2
-            `, [id, req.organizationId]);
+                if (convResult.rows.length === 0) {
+                    return { status: 404, error: 'Conversation not found' };
+                }
 
-            if (convResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Conversation not found' });
+                const conversation = convResult.rows[0];
+
+                // Get messages
+                const messagesResult = await client.query(`
+                    SELECT sm.*, u.name as sent_by_name
+                    FROM social_messages sm
+                    LEFT JOIN users u ON sm.sent_by = u.id
+                    WHERE sm.conversation_id = $1
+                    ORDER BY sm.message_timestamp ASC
+                `, [id]);
+
+                // Mark as read
+                await client.query(`
+                    UPDATE social_conversations SET unread_count = 0, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1
+                `, [id]);
+
+                return { status: 200, conversation, messagesResult };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
 
-            const conversation = convResult.rows[0];
-
-            // Get messages
-            const messagesResult = await client.query(`
-                SELECT sm.*, u.name as sent_by_name
-                FROM social_messages sm
-                LEFT JOIN users u ON sm.sent_by = u.id
-                WHERE sm.conversation_id = $1
-                ORDER BY sm.message_timestamp ASC
-            `, [id]);
-
-            // Mark as read
-            await client.query(`
-                UPDATE social_conversations SET unread_count = 0, updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1
-            `, [id]);
-
-            client.release();
-
             // Remove sensitive token from response
-            delete conversation.page_access_token;
-            conversation.messages = messagesResult.rows;
+            delete data.conversation.page_access_token;
+            data.conversation.messages = data.messagesResult.rows;
 
-            res.json(conversation);
+            res.json(data.conversation);
         } catch (error) {
             console.error('Error fetching conversation:', error);
-            res.status(500).json({ error: 'Failed to fetch conversation' });
+            return sendError(res, 'Failed to fetch conversation');
         }
     });
 
@@ -408,8 +407,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
         try {
             const { id } = req.params;
             const { status, assigned_to, contact_id, tags } = req.body;
-
-            const client = await pool.connect();
 
             const updates = [];
             const params = [];
@@ -438,13 +435,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             updates.push('updated_at = CURRENT_TIMESTAMP');
             params.push(id, req.organizationId);
 
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE social_conversations SET ${updates.join(', ')}
                 WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
                 RETURNING *
-            `, params);
-
-            client.release();
+            `, params));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Conversation not found' });
@@ -453,7 +448,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating conversation:', error);
-            res.status(500).json({ error: 'Failed to update conversation' });
+            return sendError(res, 'Failed to update conversation');
         }
     });
 
@@ -473,109 +468,110 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
                 return res.status(400).json({ error: 'Message text is required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Get conversation and channel
+                const convResult = await client.query(`
+                    SELECT sc.*, ch.channel_type, ch.page_access_token, ch.page_id
+                    FROM social_conversations sc
+                    JOIN social_channels ch ON sc.channel_id = ch.id
+                    WHERE sc.id = $1 AND sc.organization_id = $2
+                `, [id, req.organizationId]);
 
-            // Get conversation and channel
-            const convResult = await client.query(`
-                SELECT sc.*, ch.channel_type, ch.page_access_token, ch.page_id
-                FROM social_conversations sc
-                JOIN social_channels ch ON sc.channel_id = ch.id
-                WHERE sc.id = $1 AND sc.organization_id = $2
-            `, [id, req.organizationId]);
+                if (convResult.rows.length === 0) {
+                    return { status: 404, error: 'Conversation not found' };
+                }
 
-            if (convResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Conversation not found' });
-            }
+                const conversation = convResult.rows[0];
 
-            const conversation = convResult.rows[0];
+                // Send via Facebook/Instagram API
+                let externalMessageId = null;
+                let messageStatus = 'pending';
+                let errorMessage = null;
 
-            // Send via Facebook/Instagram API
-            let externalMessageId = null;
-            let messageStatus = 'pending';
-            let errorMessage = null;
+                if (conversation.page_access_token) {
+                    try {
+                        const apiUrl = conversation.channel_type === 'instagram'
+                            ? `${FB_GRAPH_API}/${conversation.page_id}/messages`
+                            : `${FB_GRAPH_API}/${conversation.page_id}/messages`;
 
-            if (conversation.page_access_token) {
-                try {
-                    const apiUrl = conversation.channel_type === 'instagram'
-                        ? `${FB_GRAPH_API}/${conversation.page_id}/messages`
-                        : `${FB_GRAPH_API}/${conversation.page_id}/messages`;
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                recipient: { id: conversation.participant_id },
+                                message: { text: text.trim() },
+                                messaging_type: 'RESPONSE',
+                                access_token: conversation.page_access_token
+                            })
+                        });
 
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            recipient: { id: conversation.participant_id },
-                            message: { text: text.trim() },
-                            messaging_type: 'RESPONSE',
-                            access_token: conversation.page_access_token
-                        })
-                    });
+                        const responseData = await response.json();
 
-                    const responseData = await response.json();
-
-                    if (responseData.message_id) {
-                        externalMessageId = responseData.message_id;
-                        messageStatus = 'sent';
-                    } else if (responseData.error) {
-                        errorMessage = responseData.error.message;
+                        if (responseData.message_id) {
+                            externalMessageId = responseData.message_id;
+                            messageStatus = 'sent';
+                        } else if (responseData.error) {
+                            errorMessage = responseData.error.message;
+                            messageStatus = 'failed';
+                        }
+                    } catch (apiError) {
+                        console.error('Error sending to Facebook API:', apiError);
+                        errorMessage = apiError.message;
                         messageStatus = 'failed';
                     }
-                } catch (apiError) {
-                    console.error('Error sending to Facebook API:', apiError);
-                    errorMessage = apiError.message;
-                    messageStatus = 'failed';
+                } else {
+                    // No token - store as pending (for demo/testing)
+                    messageStatus = 'pending';
                 }
-            } else {
-                // No token - store as pending (for demo/testing)
-                messageStatus = 'pending';
+
+                // Store message
+                const messageResult = await client.query(`
+                    INSERT INTO social_messages (
+                        organization_id, conversation_id, channel_id, external_message_id,
+                        message_type, text_content, direction, sent_by, status, error_message
+                    ) VALUES ($1, $2, $3, $4, 'text', $5, 'outbound', $6, $7, $8)
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    id,
+                    conversation.channel_id,
+                    externalMessageId,
+                    text.trim(),
+                    req.user.id,
+                    messageStatus,
+                    errorMessage
+                ]);
+
+                // Update conversation
+                await client.query(`
+                    UPDATE social_conversations SET
+                        last_message_text = $1,
+                        last_message_at = CURRENT_TIMESTAMP,
+                        last_message_from = 'agent',
+                        message_count = message_count + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $2
+                `, [text.trim().substring(0, 100), id]);
+
+                return { status: 201, message: messageResult.rows[0] };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
-
-            // Store message
-            const messageResult = await client.query(`
-                INSERT INTO social_messages (
-                    organization_id, conversation_id, channel_id, external_message_id,
-                    message_type, text_content, direction, sent_by, status, error_message
-                ) VALUES ($1, $2, $3, $4, 'text', $5, 'outbound', $6, $7, $8)
-                RETURNING *
-            `, [
-                req.organizationId,
-                id,
-                conversation.channel_id,
-                externalMessageId,
-                text.trim(),
-                req.user.id,
-                messageStatus,
-                errorMessage
-            ]);
-
-            // Update conversation
-            await client.query(`
-                UPDATE social_conversations SET
-                    last_message_text = $1,
-                    last_message_at = CURRENT_TIMESTAMP,
-                    last_message_from = 'agent',
-                    message_count = message_count + 1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $2
-            `, [text.trim().substring(0, 100), id]);
-
-            client.release();
-
-            const message = messageResult.rows[0];
 
             // Emit via WebSocket
             if (io) {
                 io.to(`org_${req.organizationId}`).emit('social_message', {
                     conversation_id: parseInt(id),
-                    message
+                    message: data.message
                 });
             }
 
-            res.status(201).json(message);
+            res.status(201).json(data.message);
         } catch (error) {
             console.error('Error sending message:', error);
-            res.status(500).json({ error: 'Failed to send message' });
+            return sendError(res, 'Failed to send message');
         }
     });
 
@@ -645,142 +641,149 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
         const message = event.message;
 
         if (!senderId || !message) return;
-
-        const client = await pool.connect();
-
         try {
-            // Find the channel
-            const channelResult = await client.query(`
-                SELECT * FROM social_channels 
-                WHERE page_id = $1 AND channel_type = $2 AND is_connected = TRUE
-            `, [pageId, channelType === 'instagram' ? 'instagram' : 'facebook']);
+            const data = await withDbClient(pool, async (client) => {
+                // Find the channel
+                const channelResult = await client.query(`
+                    SELECT * FROM social_channels 
+                    WHERE page_id = $1 AND channel_type = $2 AND is_connected = TRUE
+                `, [pageId, channelType === 'instagram' ? 'instagram' : 'facebook']);
 
-            if (channelResult.rows.length === 0) {
-                console.log('No connected channel found for page:', pageId);
-                client.release();
-                return;
-            }
-
-            const channel = channelResult.rows[0];
-
-            // Get or create conversation
-            let conversationResult = await client.query(`
-                SELECT * FROM social_conversations
-                WHERE channel_id = $1 AND participant_id = $2
-            `, [channel.id, senderId]);
-
-            let conversationId;
-
-            if (conversationResult.rows.length === 0) {
-                // Get sender info from Facebook
-                let senderName = 'Unknown';
-                let senderUsername = null;
-                let senderProfilePic = null;
-
-                try {
-                    const profileResponse = await fetch(`${FB_GRAPH_API}/${senderId}?fields=name,profile_pic&access_token=${channel.page_access_token}`);
-                    const profileData = await profileResponse.json();
-                    if (profileData.name) senderName = profileData.name;
-                    if (profileData.profile_pic) senderProfilePic = profileData.profile_pic;
-                } catch (e) {
-                    console.log('Could not fetch sender profile');
+                if (channelResult.rows.length === 0) {
+                    console.log('No connected channel found for page:', pageId);
+                    return { status: 'skip' };
                 }
 
-                // Create conversation
-                const newConvResult = await client.query(`
-                    INSERT INTO social_conversations (
-                        organization_id, channel_id, participant_id, participant_name,
-                        participant_username, participant_profile_pic, status, unread_count
-                    ) VALUES ($1, $2, $3, $4, $5, $6, 'open', 1)
+                const channel = channelResult.rows[0];
+
+                // Get or create conversation
+                let conversationResult = await client.query(`
+                    SELECT * FROM social_conversations
+                    WHERE channel_id = $1 AND participant_id = $2
+                `, [channel.id, senderId]);
+
+                let conversationId;
+
+                if (conversationResult.rows.length === 0) {
+                    // Get sender info from Facebook
+                    let senderName = 'Unknown';
+                    let senderUsername = null;
+                    let senderProfilePic = null;
+
+                    try {
+                        const profileResponse = await fetch(`${FB_GRAPH_API}/${senderId}?fields=name,profile_pic&access_token=${channel.page_access_token}`);
+                        const profileData = await profileResponse.json();
+                        if (profileData.name) senderName = profileData.name;
+                        if (profileData.profile_pic) senderProfilePic = profileData.profile_pic;
+                    } catch (e) {
+                        console.log('Could not fetch sender profile');
+                    }
+
+                    // Create conversation
+                    const newConvResult = await client.query(`
+                        INSERT INTO social_conversations (
+                            organization_id, channel_id, participant_id, participant_name,
+                            participant_username, participant_profile_pic, status, unread_count
+                        ) VALUES ($1, $2, $3, $4, $5, $6, 'open', 1)
+                        RETURNING *
+                    `, [
+                        channel.organization_id,
+                        channel.id,
+                        senderId,
+                        senderName,
+                        senderUsername,
+                        senderProfilePic
+                    ]);
+
+                    conversationId = newConvResult.rows[0].id;
+                } else {
+                    conversationId = conversationResult.rows[0].id;
+
+                    // Update unread count
+                    await client.query(`
+                        UPDATE social_conversations SET
+                            unread_count = unread_count + 1,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = $1
+                    `, [conversationId]);
+                }
+
+                // Determine message type
+                let messageType = 'text';
+                let textContent = message.text || null;
+                let mediaUrl = null;
+                let mediaType = null;
+
+                if (message.attachments && message.attachments.length > 0) {
+                    const attachment = message.attachments[0];
+                    messageType = attachment.type || 'file';
+                    mediaUrl = attachment.payload?.url;
+                    mediaType = attachment.type;
+                }
+
+                if (message.sticker_id) {
+                    messageType = 'sticker';
+                }
+
+                // Store message
+                const messageResult = await client.query(`
+                    INSERT INTO social_messages (
+                        organization_id, conversation_id, channel_id, external_message_id,
+                        message_type, text_content, media_url, media_type,
+                        direction, sender_id, sender_name, status, message_timestamp
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'inbound', $9, $10, 'delivered', $11)
                     RETURNING *
                 `, [
                     channel.organization_id,
+                    conversationId,
                     channel.id,
+                    message.mid,
+                    messageType,
+                    textContent,
+                    mediaUrl,
+                    mediaType,
                     senderId,
-                    senderName,
-                    senderUsername,
-                    senderProfilePic
+                    conversationResult.rows[0]?.participant_name || 'Unknown',
+                    new Date(event.timestamp)
                 ]);
 
-                conversationId = newConvResult.rows[0].id;
-            } else {
-                conversationId = conversationResult.rows[0].id;
-
-                // Update unread count
+                // Update conversation last message
                 await client.query(`
                     UPDATE social_conversations SET
-                        unread_count = unread_count + 1,
+                        last_message_text = $1,
+                        last_message_at = $2,
+                        last_message_from = 'contact',
+                        message_count = message_count + 1,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $1
-                `, [conversationId]);
+                    WHERE id = $3
+                `, [
+                    (textContent || `[${messageType}]`).substring(0, 100),
+                    new Date(event.timestamp),
+                    conversationId
+                ]);
+
+                return {
+                    status: 'ok',
+                    channel,
+                    conversationId,
+                    isNewConversation: conversationResult.rows.length === 0,
+                    message: messageResult.rows[0]
+                };
+            });
+
+            if (data.status === 'skip') {
+                return;
             }
-
-            // Determine message type
-            let messageType = 'text';
-            let textContent = message.text || null;
-            let mediaUrl = null;
-            let mediaType = null;
-
-            if (message.attachments && message.attachments.length > 0) {
-                const attachment = message.attachments[0];
-                messageType = attachment.type || 'file';
-                mediaUrl = attachment.payload?.url;
-                mediaType = attachment.type;
-            }
-
-            if (message.sticker_id) {
-                messageType = 'sticker';
-            }
-
-            // Store message
-            const messageResult = await client.query(`
-                INSERT INTO social_messages (
-                    organization_id, conversation_id, channel_id, external_message_id,
-                    message_type, text_content, media_url, media_type,
-                    direction, sender_id, sender_name, status, message_timestamp
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'inbound', $9, $10, 'delivered', $11)
-                RETURNING *
-            `, [
-                channel.organization_id,
-                conversationId,
-                channel.id,
-                message.mid,
-                messageType,
-                textContent,
-                mediaUrl,
-                mediaType,
-                senderId,
-                conversationResult.rows[0]?.participant_name || 'Unknown',
-                new Date(event.timestamp)
-            ]);
-
-            // Update conversation last message
-            await client.query(`
-                UPDATE social_conversations SET
-                    last_message_text = $1,
-                    last_message_at = $2,
-                    last_message_from = 'contact',
-                    message_count = message_count + 1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3
-            `, [
-                (textContent || `[${messageType}]`).substring(0, 100),
-                new Date(event.timestamp),
-                conversationId
-            ]);
-
-            client.release();
 
             // Emit via WebSocket
             if (io) {
-                io.to(`org_${channel.organization_id}`).emit('social_message', {
-                    conversation_id: conversationId,
-                    message: messageResult.rows[0],
-                    is_new_conversation: conversationResult.rows.length === 0
+                io.to(`org_${data.channel.organization_id}`).emit('social_message', {
+                    conversation_id: data.conversationId,
+                    message: data.message,
+                    is_new_conversation: data.isNewConversation
                 });
             }
         } catch (error) {
-            client.release();
             console.error('Error handling messaging event:', error);
         }
     }
@@ -796,59 +799,58 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
         try {
             const { period = '30' } = req.query;
             const days = parseInt(period);
+            const { channelStats, responseStats, messagesOverTime, statusDist } = await withDbClient(pool, async (client) => {
+                // Channel stats
+                const channelStats = await client.query(`
+                    SELECT 
+                        ch.channel_type,
+                        COUNT(DISTINCT sc.id) as conversation_count,
+                        COUNT(sm.id) as message_count,
+                        COUNT(sm.id) FILTER (WHERE sm.direction = 'inbound') as inbound_count,
+                        COUNT(sm.id) FILTER (WHERE sm.direction = 'outbound') as outbound_count
+                    FROM social_channels ch
+                    LEFT JOIN social_conversations sc ON ch.id = sc.channel_id
+                    LEFT JOIN social_messages sm ON sc.id = sm.conversation_id 
+                        AND sm.created_at >= NOW() - INTERVAL '${days} days'
+                    WHERE ch.organization_id = $1 AND ch.is_connected = TRUE
+                    GROUP BY ch.channel_type
+                `, [req.organizationId]);
 
-            const client = await pool.connect();
+                // Response time
+                const responseStats = await client.query(`
+                    SELECT 
+                        AVG(EXTRACT(EPOCH FROM (outbound.message_timestamp - inbound.message_timestamp)) / 60) as avg_response_minutes
+                    FROM social_messages inbound
+                    JOIN social_messages outbound ON inbound.conversation_id = outbound.conversation_id
+                    WHERE inbound.organization_id = $1
+                        AND inbound.direction = 'inbound'
+                        AND outbound.direction = 'outbound'
+                        AND outbound.message_timestamp > inbound.message_timestamp
+                        AND inbound.created_at >= NOW() - INTERVAL '${days} days'
+                `, [req.organizationId]);
 
-            // Channel stats
-            const channelStats = await client.query(`
-                SELECT 
-                    ch.channel_type,
-                    COUNT(DISTINCT sc.id) as conversation_count,
-                    COUNT(sm.id) as message_count,
-                    COUNT(sm.id) FILTER (WHERE sm.direction = 'inbound') as inbound_count,
-                    COUNT(sm.id) FILTER (WHERE sm.direction = 'outbound') as outbound_count
-                FROM social_channels ch
-                LEFT JOIN social_conversations sc ON ch.id = sc.channel_id
-                LEFT JOIN social_messages sm ON sc.id = sm.conversation_id 
-                    AND sm.created_at >= NOW() - INTERVAL '${days} days'
-                WHERE ch.organization_id = $1 AND ch.is_connected = TRUE
-                GROUP BY ch.channel_type
-            `, [req.organizationId]);
+                // Messages over time
+                const messagesOverTime = await client.query(`
+                    SELECT 
+                        DATE_TRUNC('day', message_timestamp) as date,
+                        COUNT(*) FILTER (WHERE direction = 'inbound') as inbound,
+                        COUNT(*) FILTER (WHERE direction = 'outbound') as outbound
+                    FROM social_messages
+                    WHERE organization_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
+                    GROUP BY DATE_TRUNC('day', message_timestamp)
+                    ORDER BY date
+                `, [req.organizationId]);
 
-            // Response time
-            const responseStats = await client.query(`
-                SELECT 
-                    AVG(EXTRACT(EPOCH FROM (outbound.message_timestamp - inbound.message_timestamp)) / 60) as avg_response_minutes
-                FROM social_messages inbound
-                JOIN social_messages outbound ON inbound.conversation_id = outbound.conversation_id
-                WHERE inbound.organization_id = $1
-                    AND inbound.direction = 'inbound'
-                    AND outbound.direction = 'outbound'
-                    AND outbound.message_timestamp > inbound.message_timestamp
-                    AND inbound.created_at >= NOW() - INTERVAL '${days} days'
-            `, [req.organizationId]);
+                // Conversation status distribution
+                const statusDist = await client.query(`
+                    SELECT status, COUNT(*) as count
+                    FROM social_conversations
+                    WHERE organization_id = $1
+                    GROUP BY status
+                `, [req.organizationId]);
 
-            // Messages over time
-            const messagesOverTime = await client.query(`
-                SELECT 
-                    DATE_TRUNC('day', message_timestamp) as date,
-                    COUNT(*) FILTER (WHERE direction = 'inbound') as inbound,
-                    COUNT(*) FILTER (WHERE direction = 'outbound') as outbound
-                FROM social_messages
-                WHERE organization_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
-                GROUP BY DATE_TRUNC('day', message_timestamp)
-                ORDER BY date
-            `, [req.organizationId]);
-
-            // Conversation status distribution
-            const statusDist = await client.query(`
-                SELECT status, COUNT(*) as count
-                FROM social_conversations
-                WHERE organization_id = $1
-                GROUP BY status
-            `, [req.organizationId]);
-
-            client.release();
+                return { channelStats, responseStats, messagesOverTime, statusDist };
+            });
 
             res.json({
                 period: days,
@@ -859,7 +861,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             });
         } catch (error) {
             console.error('Error fetching social analytics:', error);
-            res.status(500).json({ error: 'Failed to fetch analytics' });
+            return sendError(res, 'Failed to fetch analytics');
         }
     });
 

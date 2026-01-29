@@ -9,6 +9,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -113,17 +114,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Get total count
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM bookings b ${whereClause}`,
+                    params
+                );
+                const total = parseInt(countResult.rows[0].count);
 
-            // Get total count
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM bookings b ${whereClause}`,
-                params
-            );
-            const total = parseInt(countResult.rows[0].count);
-
-            // Get bookings
-            const result = await client.query(`
+                // Get bookings
+                const result = await client.query(`
         SELECT b.*,
                c.name as calendar_name, c.color as calendar_color,
                ct.first_name as contact_first_name, ct.last_name as contact_last_name, ct.email as contact_email,
@@ -136,21 +136,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         ORDER BY b.start_time DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `, [...params, parseInt(limit), offset]);
-
-            client.release();
+                return { total, result };
+            });
 
             res.json({
-                bookings: result.rows,
+                bookings: data.result.rows,
                 pagination: {
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    total,
-                    totalPages: Math.ceil(total / parseInt(limit))
+                    total: data.total,
+                    totalPages: Math.ceil(data.total / parseInt(limit))
                 }
             });
         } catch (error) {
             console.error('Error fetching bookings:', error);
-            res.status(500).json({ error: 'Failed to fetch bookings' });
+            return sendError(res, 'Failed to fetch bookings');
         }
     });
 
@@ -161,9 +161,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         SELECT b.*,
                c.name as calendar_name, c.slug as calendar_slug,
                ct.first_name as contact_first_name, ct.last_name as contact_last_name, 
@@ -174,9 +172,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         LEFT JOIN contacts ct ON b.contact_id = ct.id
         LEFT JOIN users u ON b.assigned_to = u.id
         WHERE b.id = $1 AND b.organization_id = $2
-      `, [id, req.organizationId]);
-
-            client.release();
+      `, [id, req.organizationId]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Booking not found' });
@@ -185,7 +181,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error fetching booking:', error);
-            res.status(500).json({ error: 'Failed to fetch booking' });
+            return sendError(res, 'Failed to fetch booking');
         }
     });
 
@@ -215,30 +211,27 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'calendar_id, start_time, and end_time are required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Verify calendar exists
+                const calendarCheck = await client.query(
+                    'SELECT id, assigned_to FROM calendars WHERE id = $1 AND organization_id = $2',
+                    [calendar_id, req.organizationId]
+                );
 
-            // Verify calendar exists
-            const calendarCheck = await client.query(
-                'SELECT id, assigned_to FROM calendars WHERE id = $1 AND organization_id = $2',
-                [calendar_id, req.organizationId]
-            );
+                if (calendarCheck.rows.length === 0) {
+                    return { error: 'Calendar not found', status: 404, result: null };
+                }
 
-            if (calendarCheck.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
+                // Check slot availability
+                const available = await isSlotAvailable(client, calendar_id, start_time, end_time);
+                if (!available) {
+                    return { error: 'Time slot is not available', status: 409, result: null };
+                }
 
-            // Check slot availability
-            const available = await isSlotAvailable(client, calendar_id, start_time, end_time);
-            if (!available) {
-                client.release();
-                return res.status(409).json({ error: 'Time slot is not available' });
-            }
+                const cancellationToken = generateCancellationToken();
+                const bookingAssignedTo = assigned_to || calendarCheck.rows[0].assigned_to;
 
-            const cancellationToken = generateCancellationToken();
-            const bookingAssignedTo = assigned_to || calendarCheck.rows[0].assigned_to;
-
-            const result = await client.query(`
+                const result = await client.query(`
         INSERT INTO bookings (
           organization_id, calendar_id, contact_id, title,
           start_time, end_time, timezone,
@@ -263,16 +256,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 internal_notes || null,
                 JSON.stringify(custom_fields || {}),
                 cancellationToken
-            ]);
+                ]);
+                return { error: null, status: 201, result };
+            });
 
-            client.release();
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
+            }
 
             // Fire automation trigger
             if (automationEngine) {
                 try {
                     const engine = automationEngine.getEngine();
                     engine.handleTrigger('booking_created', {
-                        booking: result.rows[0],
+                        booking: data.result.rows[0],
                         contact: contact_id ? { id: contact_id } : null,
                         organizationId: req.organizationId,
                         calendar: { id: calendar_id }
@@ -282,10 +279,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
             }
 
-            res.status(201).json(result.rows[0]);
+            res.status(201).json(data.result.rows[0]);
         } catch (error) {
             console.error('Error creating booking:', error);
-            res.status(500).json({ error: 'Failed to create booking' });
+            return sendError(res, 'Failed to create booking');
         }
     });
 
@@ -298,9 +295,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { id } = req.params;
             const { reason } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         UPDATE bookings SET
           status = 'cancelled',
           cancelled_at = CURRENT_TIMESTAMP,
@@ -308,9 +303,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2 AND organization_id = $3
         RETURNING *
-      `, [reason || null, id, req.organizationId]);
-
-            client.release();
+      `, [reason || null, id, req.organizationId]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Booking not found' });
@@ -335,7 +328,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error cancelling booking:', error);
-            res.status(500).json({ error: 'Failed to cancel booking' });
+            return sendError(res, 'Failed to cancel booking');
         }
     });
 
@@ -352,29 +345,26 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'start_time and end_time are required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Get current booking
+                const currentBooking = await client.query(
+                    'SELECT * FROM bookings WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Get current booking
-            const currentBooking = await client.query(
-                'SELECT * FROM bookings WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (currentBooking.rows.length === 0) {
+                    return { error: 'Booking not found', status: 404, result: null, oldBooking: null };
+                }
 
-            if (currentBooking.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Booking not found' });
-            }
+                const oldBooking = currentBooking.rows[0];
 
-            const oldBooking = currentBooking.rows[0];
+                // Check new slot availability
+                const available = await isSlotAvailable(client, oldBooking.calendar_id, start_time, end_time);
+                if (!available) {
+                    return { error: 'New time slot is not available', status: 409, result: null, oldBooking: null };
+                }
 
-            // Check new slot availability
-            const available = await isSlotAvailable(client, oldBooking.calendar_id, start_time, end_time);
-            if (!available) {
-                client.release();
-                return res.status(409).json({ error: 'New time slot is not available' });
-            }
-
-            const result = await client.query(`
+                const result = await client.query(`
         UPDATE bookings SET
           start_time = $1,
           end_time = $2,
@@ -383,19 +373,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         WHERE id = $4 AND organization_id = $5
         RETURNING *
       `, [start_time, end_time, timezone, id, req.organizationId]);
+                return { error: null, status: 200, result, oldBooking };
+            });
 
-            client.release();
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
+            }
 
             // Fire automation trigger
             if (automationEngine) {
                 try {
                     const engine = automationEngine.getEngine();
-                    const booking = result.rows[0];
+                    const booking = data.result.rows[0];
                     engine.handleTrigger('booking_rescheduled', {
                         booking,
                         contact: booking.contact_id ? { id: booking.contact_id } : null,
                         organizationId: req.organizationId,
-                        oldTime: { start: oldBooking.start_time, end: oldBooking.end_time },
+                        oldTime: { start: data.oldBooking.start_time, end: data.oldBooking.end_time },
                         newTime: { start: start_time, end: end_time }
                     }).catch(err => console.error('Booking reschedule trigger error:', err));
                 } catch (triggerError) {
@@ -403,10 +397,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
             }
 
-            res.json(result.rows[0]);
+            res.json(data.result.rows[0]);
         } catch (error) {
             console.error('Error rescheduling booking:', error);
-            res.status(500).json({ error: 'Failed to reschedule booking' });
+            return sendError(res, 'Failed to reschedule booking');
         }
     });
 
@@ -421,9 +415,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/public/book/:slug', publicRateLimit, async (req, res) => {
         try {
             const { slug } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const data = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
         SELECT 
           c.id, c.name, c.description, c.slug, c.timezone,
           c.duration_minutes, c.min_notice_hours, c.max_future_days,
@@ -434,28 +427,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         WHERE c.slug = $1 AND c.is_active = TRUE
       `, [slug]);
 
-            if (result.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
+                if (result.rows.length === 0) {
+                    return { calendar: null, availability: [] };
+                }
 
-            // Get availability windows
-            const calendar = result.rows[0];
-            const availabilityResult = await client.query(`
+                // Get availability windows
+                const calendar = result.rows[0];
+                const availabilityResult = await client.query(`
         SELECT day_of_week, start_time, end_time
         FROM availability_windows
         WHERE calendar_id = $1 AND is_active = TRUE
         ORDER BY day_of_week, start_time
       `, [calendar.id]);
 
-            client.release();
+                return { calendar, availability: availabilityResult.rows };
+            });
 
-            calendar.availability = availabilityResult.rows;
+            if (!data.calendar) {
+                return res.status(404).json({ error: 'Calendar not found' });
+            }
 
-            res.json(calendar);
+            data.calendar.availability = data.availability;
+            res.json(data.calendar);
         } catch (error) {
             console.error('Error fetching public calendar:', error);
-            res.status(500).json({ error: 'Failed to load booking page' });
+            return sendError(res, 'Failed to load booking page');
         }
     });
 
@@ -472,39 +468,37 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'start_date is required' });
             }
 
-            const client = await pool.connect();
-
-            // Get calendar
-            const calendarResult = await client.query(`
+            const data = await withDbClient(pool, async (client) => {
+                // Get calendar
+                const calendarResult = await client.query(`
         SELECT id, duration_minutes, buffer_before_minutes, buffer_after_minutes,
                min_notice_hours, timezone
         FROM calendars
         WHERE slug = $1 AND is_active = TRUE
       `, [slug]);
 
-            if (calendarResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
+                if (calendarResult.rows.length === 0) {
+                    return { calendar: null, availability: [], overrides: [], bookings: [] };
+                }
 
-            const calendar = calendarResult.rows[0];
+                const calendar = calendarResult.rows[0];
 
-            // Get availability windows
-            const availabilityResult = await client.query(`
+                // Get availability windows
+                const availabilityResult = await client.query(`
         SELECT day_of_week, start_time, end_time
         FROM availability_windows
         WHERE calendar_id = $1 AND is_active = TRUE
       `, [calendar.id]);
 
-            // Get date overrides
-            const overridesResult = await client.query(`
+                // Get date overrides
+                const overridesResult = await client.query(`
         SELECT override_date, is_available, start_time, end_time
         FROM calendar_date_overrides
         WHERE calendar_id = $1 AND override_date >= $2 AND override_date <= COALESCE($3, $2 + INTERVAL '30 days')
       `, [calendar.id, start_date, end_date]);
 
-            // Get existing bookings
-            const bookingsResult = await client.query(`
+                // Get existing bookings
+                const bookingsResult = await client.query(`
         SELECT start_time, end_time
         FROM bookings
         WHERE calendar_id = $1 
@@ -512,26 +506,35 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           AND start_time >= $2
           AND start_time <= COALESCE($3, $2::date + INTERVAL '30 days')
       `, [calendar.id, start_date, end_date]);
+                return {
+                    calendar,
+                    availability: availabilityResult.rows,
+                    overrides: overridesResult.rows,
+                    bookings: bookingsResult.rows
+                };
+            });
 
-            client.release();
+            if (!data.calendar) {
+                return res.status(404).json({ error: 'Calendar not found' });
+            }
 
             // Return raw data for frontend to compute slots
             res.json({
                 calendar: {
-                    id: calendar.id,
-                    duration_minutes: calendar.duration_minutes,
-                    buffer_before: calendar.buffer_before_minutes,
-                    buffer_after: calendar.buffer_after_minutes,
-                    min_notice_hours: calendar.min_notice_hours,
-                    timezone: calendar.timezone
+                    id: data.calendar.id,
+                    duration_minutes: data.calendar.duration_minutes,
+                    buffer_before: data.calendar.buffer_before_minutes,
+                    buffer_after: data.calendar.buffer_after_minutes,
+                    min_notice_hours: data.calendar.min_notice_hours,
+                    timezone: data.calendar.timezone
                 },
-                availability: availabilityResult.rows,
-                overrides: overridesResult.rows,
-                booked_slots: bookingsResult.rows
+                availability: data.availability,
+                overrides: data.overrides,
+                booked_slots: data.bookings
             });
         } catch (error) {
             console.error('Error fetching available slots:', error);
-            res.status(500).json({ error: 'Failed to fetch available slots' });
+            return sendError(res, 'Failed to fetch available slots');
         }
     });
 
@@ -560,66 +563,63 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 });
             }
 
-            const client = await pool.connect();
-
-            // Get calendar
-            const calendarResult = await client.query(`
+            const data = await withDbClient(pool, async (client) => {
+                // Get calendar
+                const calendarResult = await client.query(`
         SELECT id, organization_id, duration_minutes, assigned_to, min_notice_hours
         FROM calendars
         WHERE slug = $1 AND is_active = TRUE
       `, [slug]);
 
-            if (calendarResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
+                if (calendarResult.rows.length === 0) {
+                    return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
+                }
 
-            const calendar = calendarResult.rows[0];
+                const calendar = calendarResult.rows[0];
 
-            // Calculate end_time if not provided
-            const bookingEndTime = end_time || new Date(
-                new Date(start_time).getTime() + calendar.duration_minutes * 60000
-            ).toISOString();
+                // Calculate end_time if not provided
+                const bookingEndTime = end_time || new Date(
+                    new Date(start_time).getTime() + calendar.duration_minutes * 60000
+                ).toISOString();
 
-            // Check slot availability
-            const available = await isSlotAvailable(client, calendar.id, start_time, bookingEndTime);
-            if (!available) {
-                client.release();
-                return res.status(409).json({ error: 'This time slot is no longer available' });
-            }
+                // Check slot availability
+                const available = await isSlotAvailable(client, calendar.id, start_time, bookingEndTime);
+                if (!available) {
+                    return { error: 'This time slot is no longer available', status: 409, booking: null, calendar: null, contactId: null };
+                }
 
-            const cancellationToken = generateCancellationToken();
+                const cancellationToken = generateCancellationToken();
 
-            // Try to find or create contact
-            let contactId = null;
-            try {
-                const existingContact = await client.query(
-                    'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
-                    [calendar.organization_id, attendee_email]
-                );
+                // Try to find or create contact
+                let contactId = null;
+                try {
+                    const existingContact = await client.query(
+                        'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
+                        [calendar.organization_id, attendee_email]
+                    );
 
-                if (existingContact.rows.length > 0) {
-                    contactId = existingContact.rows[0].id;
-                } else {
-                    // Create new contact
-                    const nameParts = attendee_name.trim().split(' ');
-                    const firstName = nameParts[0] || '';
-                    const lastName = nameParts.slice(1).join(' ') || '';
+                    if (existingContact.rows.length > 0) {
+                        contactId = existingContact.rows[0].id;
+                    } else {
+                        // Create new contact
+                        const nameParts = attendee_name.trim().split(' ');
+                        const firstName = nameParts[0] || '';
+                        const lastName = nameParts.slice(1).join(' ') || '';
 
-                    const newContact = await client.query(`
+                        const newContact = await client.query(`
             INSERT INTO contacts (organization_id, first_name, last_name, email, phone, source)
             VALUES ($1, $2, $3, $4, $5, 'form')
             RETURNING id
           `, [calendar.organization_id, firstName, lastName, attendee_email, attendee_phone]);
 
-                    contactId = newContact.rows[0].id;
+                        contactId = newContact.rows[0].id;
+                    }
+                } catch (contactError) {
+                    console.warn('Could not create/find contact:', contactError.message);
                 }
-            } catch (contactError) {
-                console.warn('Could not create/find contact:', contactError.message);
-            }
 
-            // Create booking
-            const result = await client.query(`
+                // Create booking
+                const result = await client.query(`
         INSERT INTO bookings (
           organization_id, calendar_id, contact_id,
           start_time, end_time, timezone,
@@ -629,32 +629,37 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'booking_page')
         RETURNING id, start_time, end_time, timezone, attendee_name, attendee_email, cancellation_token
       `, [
-                calendar.organization_id,
-                calendar.id,
-                contactId,
-                start_time,
-                bookingEndTime,
-                timezone || 'America/New_York',
-                attendee_name,
-                attendee_email,
-                attendee_phone || null,
-                calendar.assigned_to,
-                notes || null,
-                JSON.stringify(custom_fields || {}),
-                cancellationToken
-            ]);
+                    calendar.organization_id,
+                    calendar.id,
+                    contactId,
+                    start_time,
+                    bookingEndTime,
+                    timezone || 'America/New_York',
+                    attendee_name,
+                    attendee_email,
+                    attendee_phone || null,
+                    calendar.assigned_to,
+                    notes || null,
+                    JSON.stringify(custom_fields || {}),
+                    cancellationToken
+                ]);
 
-            client.release();
+                return { error: null, status: 201, booking: result.rows[0], calendar, contactId };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
+            }
 
             // Fire automation trigger
             if (automationEngine) {
                 try {
                     const engine = automationEngine.getEngine();
                     engine.handleTrigger('booking_created', {
-                        booking: result.rows[0],
-                        contact: contactId ? { id: contactId } : null,
-                        organizationId: calendar.organization_id,
-                        calendar: { id: calendar.id }
+                        booking: data.booking,
+                        contact: data.contactId ? { id: data.contactId } : null,
+                        organizationId: data.calendar.organization_id,
+                        calendar: { id: data.calendar.id }
                     }).catch(err => console.error('Public booking trigger error:', err));
                 } catch (triggerError) {
                     console.log('Automation engine not initialized yet');
@@ -663,12 +668,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             res.status(201).json({
                 success: true,
-                booking: result.rows[0],
+                booking: data.booking,
                 message: 'Booking confirmed! Check your email for confirmation details.'
             });
         } catch (error) {
             console.error('Error creating public booking:', error);
-            res.status(500).json({ error: 'Failed to create booking' });
+            return sendError(res, 'Failed to create booking');
         }
     });
 
@@ -681,9 +686,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { slug, token } = req.params;
             const { reason } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         UPDATE bookings SET
           status = 'cancelled',
           cancelled_at = CURRENT_TIMESTAMP,
@@ -695,9 +698,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           AND bookings.cancellation_token = $3
           AND bookings.status = 'confirmed'
         RETURNING bookings.*
-      `, [reason || 'Cancelled by attendee', slug, token]);
-
-            client.release();
+      `, [reason || 'Cancelled by attendee', slug, token]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Booking not found or already cancelled' });
@@ -709,7 +710,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
         } catch (error) {
             console.error('Error cancelling booking:', error);
-            res.status(500).json({ error: 'Failed to cancel booking' });
+            return sendError(res, 'Failed to cancel booking');
         }
     });
 

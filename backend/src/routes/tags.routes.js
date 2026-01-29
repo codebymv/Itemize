@@ -8,6 +8,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 /**
  * Create tags routes with injected dependencies
@@ -21,8 +22,8 @@ module.exports = (pool, authenticateJWT) => {
   // Get all tags for the organization
   router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
     try {
-      const client = await pool.connect();
-      const result = await client.query(`
+      const tagsWithCounts = await withDbClient(pool, async (client) => {
+        const result = await client.query(`
         SELECT t.*, 
                (SELECT COUNT(*) FROM contacts WHERE $1 = ANY(tags)) as contact_count
         FROM tags t
@@ -30,23 +31,24 @@ module.exports = (pool, authenticateJWT) => {
         ORDER BY t.name ASC
       `, [null, req.organizationId]); // Note: This count query is simplified, see below for proper implementation
       
-      // Get tag usage counts properly
-      const tagsWithCounts = await Promise.all(result.rows.map(async (tag) => {
-        const countResult = await client.query(`
+        // Get tag usage counts properly
+        const counts = await Promise.all(result.rows.map(async (tag) => {
+          const countResult = await client.query(`
           SELECT COUNT(*) FROM contacts 
           WHERE organization_id = $1 AND $2 = ANY(tags)
         `, [req.organizationId, tag.name]);
-        return {
-          ...tag,
-          contact_count: parseInt(countResult.rows[0].count)
-        };
-      }));
-      
-      client.release();
+          return {
+            ...tag,
+            contact_count: parseInt(countResult.rows[0].count)
+          };
+        }));
+        return counts;
+      });
+
       res.json(tagsWithCounts);
     } catch (error) {
       console.error('Error fetching tags:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return sendError(res, 'Internal server error');
     }
   });
 
@@ -59,30 +61,33 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Tag name is required' });
       }
 
-      const client = await pool.connect();
-      
-      // Check if tag already exists
-      const existingTag = await client.query(
-        'SELECT id FROM tags WHERE organization_id = $1 AND LOWER(name) = LOWER($2)',
-        [req.organizationId, name.trim()]
-      );
+      const data = await withDbClient(pool, async (client) => {
+        // Check if tag already exists
+        const existingTag = await client.query(
+          'SELECT id FROM tags WHERE organization_id = $1 AND LOWER(name) = LOWER($2)',
+          [req.organizationId, name.trim()]
+        );
 
-      if (existingTag.rows.length > 0) {
-        client.release();
-        return res.status(400).json({ error: 'Tag with this name already exists' });
-      }
+        if (existingTag.rows.length > 0) {
+          return { error: 'Tag with this name already exists', status: 400, result: null };
+        }
 
-      const result = await client.query(`
+        const result = await client.query(`
         INSERT INTO tags (organization_id, name, color)
         VALUES ($1, $2, $3)
         RETURNING *
       `, [req.organizationId, name.trim(), color || '#3B82F6']);
+        return { error: null, status: 201, result };
+      });
 
-      client.release();
-      res.status(201).json(result.rows[0]);
+      if (data.error) {
+        return res.status(data.status).json({ error: data.error });
+      }
+
+      res.status(201).json(data.result.rows[0]);
     } catch (error) {
       console.error('Error creating tag:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return sendError(res, 'Internal server error');
     }
   });
 
@@ -92,23 +97,21 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { name, color } = req.body;
 
-      const client = await pool.connect();
+      const data = await withDbClient(pool, async (client) => {
+        // Get current tag
+        const currentTag = await client.query(
+          'SELECT * FROM tags WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
 
-      // Get current tag
-      const currentTag = await client.query(
-        'SELECT * FROM tags WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
+        if (currentTag.rows.length === 0) {
+          return { error: 'Tag not found', status: 404, result: null };
+        }
 
-      if (currentTag.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'Tag not found' });
-      }
+        const oldName = currentTag.rows[0].name;
 
-      const oldName = currentTag.rows[0].name;
-
-      // Update tag
-      const result = await client.query(`
+        // Update tag
+        const result = await client.query(`
         UPDATE tags 
         SET name = COALESCE($1, name),
             color = COALESCE($2, color)
@@ -116,20 +119,26 @@ module.exports = (pool, authenticateJWT) => {
         RETURNING *
       `, [name?.trim(), color, id, req.organizationId]);
 
-      // If name changed, update all contacts with this tag
-      if (name && name.trim() !== oldName) {
-        await client.query(`
+        // If name changed, update all contacts with this tag
+        if (name && name.trim() !== oldName) {
+          await client.query(`
           UPDATE contacts 
           SET tags = array_replace(tags, $1, $2)
           WHERE organization_id = $3 AND $1 = ANY(tags)
         `, [oldName, name.trim(), req.organizationId]);
+        }
+
+        return { error: null, status: 200, result };
+      });
+
+      if (data.error) {
+        return res.status(data.status).json({ error: data.error });
       }
 
-      client.release();
-      res.json(result.rows[0]);
+      res.json(data.result.rows[0]);
     } catch (error) {
       console.error('Error updating tag:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return sendError(res, 'Internal server error');
     }
   });
 
@@ -139,60 +148,62 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { removeFromContacts } = req.query;
 
-      const client = await pool.connect();
+      const data = await withDbClient(pool, async (client) => {
+        // Get tag to delete
+        const tagResult = await client.query(
+          'SELECT name FROM tags WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
 
-      // Get tag to delete
-      const tagResult = await client.query(
-        'SELECT name FROM tags WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
+        if (tagResult.rows.length === 0) {
+          return { error: 'Tag not found', status: 404 };
+        }
 
-      if (tagResult.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'Tag not found' });
-      }
+        const tagName = tagResult.rows[0].name;
 
-      const tagName = tagResult.rows[0].name;
-
-      // Remove tag from all contacts if requested
-      if (removeFromContacts === 'true') {
-        await client.query(`
+        // Remove tag from all contacts if requested
+        if (removeFromContacts === 'true') {
+          await client.query(`
           UPDATE contacts 
           SET tags = array_remove(tags, $1)
           WHERE organization_id = $2 AND $1 = ANY(tags)
         `, [tagName, req.organizationId]);
+        }
+
+        // Delete the tag
+        await client.query(
+          'DELETE FROM tags WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
+
+        return { error: null, status: 200 };
+      });
+
+      if (data.error) {
+        return res.status(data.status).json({ error: data.error });
       }
 
-      // Delete the tag
-      await client.query(
-        'DELETE FROM tags WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
-
-      client.release();
       res.json({ message: 'Tag deleted successfully' });
     } catch (error) {
       console.error('Error deleting tag:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return sendError(res, 'Internal server error');
     }
   });
 
   // Get all unique tags from contacts (for suggestions)
   router.get('/suggestions', authenticateJWT, requireOrganization, async (req, res) => {
     try {
-      const client = await pool.connect();
-      const result = await client.query(`
+      const result = await withDbClient(pool, async (client) => client.query(`
         SELECT DISTINCT unnest(tags) as tag
         FROM contacts
         WHERE organization_id = $1
         ORDER BY tag ASC
-      `, [req.organizationId]);
-      client.release();
+      `, [req.organizationId]));
 
       res.json(result.rows.map(r => r.tag));
     } catch (error) {
       console.error('Error fetching tag suggestions:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return sendError(res, 'Internal server error');
     }
   });
 

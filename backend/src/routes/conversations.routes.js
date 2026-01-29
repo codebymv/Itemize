@@ -5,9 +5,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -46,28 +45,28 @@ module.exports = (pool, authenticateJWT) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const { countResult, result } = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM conversations c ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM conversations c ${whereClause}`,
-                params
-            );
+                const result = await client.query(`
+            SELECT c.*,
+                   ct.first_name as contact_first_name,
+                   ct.last_name as contact_last_name,
+                   ct.email as contact_email,
+                   u.name as assigned_to_name
+            FROM conversations c
+            LEFT JOIN contacts ct ON c.contact_id = ct.id
+            LEFT JOIN users u ON c.assigned_to = u.id
+            ${whereClause}
+            ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+          `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-        SELECT c.*,
-               ct.first_name as contact_first_name,
-               ct.last_name as contact_last_name,
-               ct.email as contact_email,
-               u.name as assigned_to_name
-        FROM conversations c
-        LEFT JOIN contacts ct ON c.contact_id = ct.id
-        LEFT JOIN users u ON c.assigned_to = u.id
-        ${whereClause}
-        ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `, [...params, parseInt(limit), offset]);
-
-            client.release();
+                return { countResult, result };
+            });
 
             res.json({
                 conversations: result.rows,
@@ -80,7 +79,7 @@ module.exports = (pool, authenticateJWT) => {
             });
         } catch (error) {
             console.error('Error fetching conversations:', error);
-            res.status(500).json({ error: 'Failed to fetch conversations' });
+            return sendError(res, 'Failed to fetch conversations');
         }
     });
 
@@ -90,47 +89,48 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const convResult = await client.query(`
+            SELECT c.*,
+                   ct.first_name as contact_first_name,
+                   ct.last_name as contact_last_name,
+                   ct.email as contact_email,
+                   ct.phone as contact_phone,
+                   u.name as assigned_to_name
+            FROM conversations c
+            LEFT JOIN contacts ct ON c.contact_id = ct.id
+            LEFT JOIN users u ON c.assigned_to = u.id
+            WHERE c.id = $1 AND c.organization_id = $2
+          `, [id, req.organizationId]);
 
-            const convResult = await client.query(`
-        SELECT c.*,
-               ct.first_name as contact_first_name,
-               ct.last_name as contact_last_name,
-               ct.email as contact_email,
-               ct.phone as contact_phone,
-               u.name as assigned_to_name
-        FROM conversations c
-        LEFT JOIN contacts ct ON c.contact_id = ct.id
-        LEFT JOIN users u ON c.assigned_to = u.id
-        WHERE c.id = $1 AND c.organization_id = $2
-      `, [id, req.organizationId]);
+                if (convResult.rows.length === 0) {
+                    return { status: 404, payload: { error: 'Conversation not found' } };
+                }
 
-            if (convResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Conversation not found' });
+                const messagesResult = await client.query(`
+            SELECT m.*,
+                   u.name as sender_user_name,
+                   ct.first_name as sender_contact_first_name,
+                   ct.last_name as sender_contact_last_name
+            FROM messages m
+            LEFT JOIN users u ON m.sender_user_id = u.id
+            LEFT JOIN contacts ct ON m.sender_contact_id = ct.id
+            WHERE m.conversation_id = $1
+            ORDER BY m.created_at ASC
+          `, [id]);
+
+                return { status: 200, conversation: convResult.rows[0], messages: messagesResult.rows };
+            });
+
+            if (data.payload) {
+                return res.status(data.status).json(data.payload);
             }
 
-            const messagesResult = await client.query(`
-        SELECT m.*,
-               u.name as sender_user_name,
-               ct.first_name as sender_contact_first_name,
-               ct.last_name as sender_contact_last_name
-        FROM messages m
-        LEFT JOIN users u ON m.sender_user_id = u.id
-        LEFT JOIN contacts ct ON m.sender_contact_id = ct.id
-        WHERE m.conversation_id = $1
-        ORDER BY m.created_at ASC
-      `, [id]);
-
-            client.release();
-
-            const conversation = convResult.rows[0];
-            conversation.messages = messagesResult.rows;
-
-            res.json(conversation);
+            data.conversation.messages = data.messages;
+            res.json(data.conversation);
         } catch (error) {
             console.error('Error fetching conversation:', error);
-            res.status(500).json({ error: 'Failed to fetch conversation' });
+            return sendError(res, 'Failed to fetch conversation');
         }
     });
 
@@ -145,11 +145,7 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).json({ error: 'contact_id is required' });
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const data = await withTransaction(pool, async (client) => {
                 // Check for existing open conversation with contact
                 const existingResult = await client.query(`
           SELECT id FROM conversations
@@ -192,8 +188,6 @@ module.exports = (pool, authenticateJWT) => {
           `, [initial_message.substring(0, 200), conversationId]);
                 }
 
-                await client.query('COMMIT');
-
                 // Fetch full conversation
                 const result = await client.query(`
           SELECT c.*,
@@ -205,16 +199,13 @@ module.exports = (pool, authenticateJWT) => {
           WHERE c.id = $1
         `, [conversationId]);
 
-                client.release();
-                res.status(201).json(result.rows[0]);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+                return { conversation: result.rows[0] };
+            });
+
+            res.status(201).json(data.conversation);
         } catch (error) {
             console.error('Error creating conversation:', error);
-            res.status(500).json({ error: 'Failed to create conversation' });
+            return sendError(res, 'Failed to create conversation');
         }
     });
 
@@ -226,18 +217,14 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const { status, snoozed_until } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         UPDATE conversations SET
           status = COALESCE($1, status),
           snoozed_until = $2,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $3 AND organization_id = $4
         RETURNING *
-      `, [status, snoozed_until || null, id, req.organizationId]);
-
-            client.release();
+      `, [status, snoozed_until || null, id, req.organizationId]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Conversation not found' });
@@ -246,7 +233,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating conversation:', error);
-            res.status(500).json({ error: 'Failed to update conversation' });
+            return sendError(res, 'Failed to update conversation');
         }
     });
 
@@ -258,17 +245,13 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const { assigned_to } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         UPDATE conversations SET
           assigned_to = $1,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2 AND organization_id = $3
         RETURNING *
-      `, [assigned_to || null, id, req.organizationId]);
-
-            client.release();
+      `, [assigned_to || null, id, req.organizationId]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Conversation not found' });
@@ -277,7 +260,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error assigning conversation:', error);
-            res.status(500).json({ error: 'Failed to assign conversation' });
+            return sendError(res, 'Failed to assign conversation');
         }
     });
 
@@ -297,21 +280,16 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).json({ error: 'Message content is required' });
             }
 
-            const client = await pool.connect();
+            const data = await withTransaction(pool, async (client) => {
+                // Verify conversation
+                const convCheck = await client.query(
+                    'SELECT id FROM conversations WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify conversation
-            const convCheck = await client.query(
-                'SELECT id FROM conversations WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            if (convCheck.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Conversation not found' });
-            }
-
-            try {
-                await client.query('BEGIN');
+                if (convCheck.rows.length === 0) {
+                    return { status: 404, payload: { error: 'Conversation not found' } };
+                }
 
                 const messageResult = await client.query(`
           INSERT INTO messages (conversation_id, organization_id, sender_type, sender_user_id, channel, content, content_html, metadata)
@@ -337,8 +315,6 @@ module.exports = (pool, authenticateJWT) => {
           WHERE id = $2
         `, [content.substring(0, 200), id]);
 
-                await client.query('COMMIT');
-
                 // Fetch message with sender info
                 const fullMessage = await client.query(`
           SELECT m.*, u.name as sender_user_name
@@ -347,16 +323,17 @@ module.exports = (pool, authenticateJWT) => {
           WHERE m.id = $1
         `, [messageResult.rows[0].id]);
 
-                client.release();
-                res.status(201).json(fullMessage.rows[0]);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { status: 201, message: fullMessage.rows[0] };
+            });
+
+            if (data.payload) {
+                return res.status(data.status).json(data.payload);
             }
+
+            res.status(201).json(data.message);
         } catch (error) {
             console.error('Error sending message:', error);
-            res.status(500).json({ error: 'Failed to send message' });
+            return sendError(res, 'Failed to send message');
         }
     });
 
@@ -366,22 +343,20 @@ module.exports = (pool, authenticateJWT) => {
     router.patch('/:id/read', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            // Mark all messages as read
-            await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                // Mark all messages as read
+                await client.query(`
         UPDATE messages SET is_read = TRUE
         WHERE conversation_id = $1 AND is_read = FALSE
       `, [id]);
 
-            // Reset unread count
-            const result = await client.query(`
+                // Reset unread count
+                return client.query(`
         UPDATE conversations SET unread_count = 0, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1 AND organization_id = $2
         RETURNING *
       `, [id, req.organizationId]);
-
-            client.release();
+            });
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Conversation not found' });
@@ -390,7 +365,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error marking read:', error);
-            res.status(500).json({ error: 'Failed to mark as read' });
+            return sendError(res, 'Failed to mark as read');
         }
     });
 

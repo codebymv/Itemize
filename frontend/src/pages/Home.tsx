@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { 
@@ -48,7 +48,8 @@ import {
 } from "@/components/ui/carousel";
 
 const Home: React.FC = () => {
-  const { login, currentUser, isAuthenticated, token } = useAuth();
+  const { currentUser, isAuthenticated, token } = useAuthState();
+  const { login } = useAuthActions();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);

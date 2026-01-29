@@ -215,17 +215,26 @@ export function ContactsPage() {
   );
 
   useEffect(() => {
-    if (orgLoading && loading) {
+    if (orgLoading) {
+      setLoading(true);
       return;
     }
-    if (!orgLoading && !organizationId && !initError) {
+
+    if (!organizationId) {
       setLoading(false);
     }
-  }, [orgLoading, organizationId, initError, loading]);
+  }, [orgLoading, organizationId, initError]);
 
   // Fetch contacts
   const fetchContacts = useCallback(async () => {
-    if (!organizationId) return;
+    if (!organizationId) {
+      if (!orgLoading) {
+        setContacts([]);
+        setPagination(prev => ({ ...prev, total: 0, totalPages: 1 }));
+        setLoading(false);
+      }
+      return;
+    }
 
     setLoading(true);
     try {
@@ -251,7 +260,7 @@ export function ContactsPage() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId, searchQuery, statusFilter, pagination.page, pagination.limit]);
+  }, [organizationId, orgLoading, searchQuery, statusFilter, pagination.page, pagination.limit, toast]);
 
   useEffect(() => {
     fetchContacts();

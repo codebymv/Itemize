@@ -205,20 +205,20 @@ export const ShareModal = <TId extends string | number>({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+          <DialogTitle className="flex items-center gap-2 font-raleway">
             <Share2 className="h-5 w-5 text-blue-600" />
             {`Share ${config.label}`}
           </DialogTitle>
-          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
+          <DialogDescription className="font-raleway">
             {config.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Sharing</Label>
+            <Label className="font-raleway">Sharing</Label>
             <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
-              <p className="font-medium text-sm flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <p className="font-medium text-sm flex items-center gap-2 font-raleway">
                 <Icon className={`h-4 w-4 ${config.iconClassName}`} />
                 {itemTitle}
               </p>
@@ -254,7 +254,7 @@ export const ShareModal = <TId extends string | number>({
           {shareData ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Share Link</Label>
+                <Label className="font-raleway">Share Link</Label>
                 <div className="flex space-x-2">
                   <Input value={shareData.shareUrl || ''} readOnly className="flex-1" />
                   <Button
@@ -278,7 +278,7 @@ export const ShareModal = <TId extends string | number>({
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <p className="text-xs text-gray-500 font-raleway">
                   {config.shareHelp}
                 </p>
               </div>
@@ -288,16 +288,14 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   onClick={handleUnshare}
                   disabled={isLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="bg-red-600 hover:bg-red-700 text-white font-raleway"
                 >
                   Revoke Sharing
                 </Button>
                 <Button
                   type="button"
                   onClick={onClose}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
                 >
                   Done
                 </Button>
@@ -309,7 +307,7 @@ export const ShareModal = <TId extends string | number>({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="font-raleway"
               >
                 Close
               </Button>
@@ -321,7 +319,7 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="font-raleway"
                 >
                   Cancel
                 </Button>
@@ -329,8 +327,7 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   onClick={handleShare}
                   disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
                 >
                   I understand, Share
                 </Button>
@@ -339,7 +336,7 @@ export const ShareModal = <TId extends string | number>({
           ) : isLoading ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Share Link</Label>
+                <Label className="font-raleway">Share Link</Label>
                 <div className="flex space-x-2">
                   <Input value="Generating share link..." readOnly className="flex-1" placeholder="Generating share link..." />
                   <Button type="button" variant="outline" size="icon" disabled aria-label="Copy link">
@@ -349,7 +346,7 @@ export const ShareModal = <TId extends string | number>({
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <p className="text-xs text-gray-500 font-raleway">
                   {config.shareHelp}
                 </p>
               </div>
@@ -358,7 +355,7 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="font-raleway"
                 >
                   Cancel
                 </Button>
@@ -370,7 +367,7 @@ export const ShareModal = <TId extends string | number>({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="font-raleway"
               >
                 Cancel
               </Button>
@@ -378,8 +375,7 @@ export const ShareModal = <TId extends string | number>({
                 type="button"
                 onClick={handleShare}
                 disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
               >
                 Share
               </Button>

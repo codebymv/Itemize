@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useHeader } from '@/contexts/HeaderContext';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -844,7 +844,7 @@ function StatisticsSection() {
 
 // Change Tier Section (Admin Testing)
 function ChangeTierSection() {
-    const { subscription } = useSubscription();
+    const { subscription } = useSubscriptionState();
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
     const { toast } = useToast();
 
@@ -927,7 +927,7 @@ function ChangeTierSection() {
 }
 
 export function AdminPage() {
-    const { currentUser } = useAuth();
+    const { currentUser } = useAuthState();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
     const navigate = useNavigate();

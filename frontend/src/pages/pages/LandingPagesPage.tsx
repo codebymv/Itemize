@@ -47,7 +47,7 @@ export function LandingPagesPage() {
 
     const [pages, setPages] = useState<LandingPage[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -100,13 +100,24 @@ export function LandingPagesPage() {
     }, [searchQuery, statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
-        if (!organizationId && initError) {
+        if (orgLoading) {
+            setLoading(true);
+            return;
+        }
+
+        if (!organizationId) {
             setLoading(false);
         }
-    }, [organizationId, initError]);
+    }, [organizationId, initError, orgLoading]);
 
     const fetchPages = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId) {
+            if (!orgLoading) {
+                setPages([]);
+                setLoading(false);
+            }
+            return;
+        }
         setLoading(true);
         try {
             const response = await getPages(
@@ -129,7 +140,7 @@ export function LandingPagesPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId, statusFilter]);
+    }, [organizationId, orgLoading, statusFilter, toast]);
 
     useEffect(() => {
         fetchPages();

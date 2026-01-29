@@ -5,6 +5,13 @@
 
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T;
+  }
+  return payload as T;
+};
+
 // Types
 export interface SmsTemplate {
   id: number;
@@ -95,7 +102,7 @@ export const getSmsTemplates = async (
   const response = await api.get(`/api/sms-templates?${params.toString()}`, {
     headers: getOrgHeader(organizationId),
   });
-  return response.data;
+  return unwrapResponse(response.data);
 };
 
 /**
@@ -105,7 +112,7 @@ export const getSmsTemplate = async (id: number, organizationId?: number) => {
   const response = await api.get(`/api/sms-templates/${id}`, {
     headers: getOrgHeader(organizationId),
   });
-  return response.data as SmsTemplate;
+  return unwrapResponse<SmsTemplate>(response.data);
 };
 
 /**
@@ -115,7 +122,7 @@ export const createSmsTemplate = async (data: CreateSmsTemplateData) => {
   const response = await api.post('/api/sms-templates', data, {
     headers: getOrgHeader(data.organization_id),
   });
-  return response.data as SmsTemplate;
+  return unwrapResponse<SmsTemplate>(response.data);
 };
 
 /**
@@ -125,7 +132,7 @@ export const updateSmsTemplate = async (id: number, data: UpdateSmsTemplateData)
   const response = await api.put(`/api/sms-templates/${id}`, data, {
     headers: getOrgHeader(data.organization_id),
   });
-  return response.data as SmsTemplate;
+  return unwrapResponse<SmsTemplate>(response.data);
 };
 
 /**
@@ -135,7 +142,7 @@ export const deleteSmsTemplate = async (id: number, organizationId?: number) => 
   const response = await api.delete(`/api/sms-templates/${id}`, {
     headers: getOrgHeader(organizationId),
   });
-  return response.data;
+  return unwrapResponse(response.data);
 };
 
 /**
@@ -157,7 +164,7 @@ export const sendTestSms = async (
       headers: getOrgHeader(organizationId),
     }
   );
-  return response.data;
+  return unwrapResponse(response.data);
 };
 
 /**
@@ -171,7 +178,7 @@ export const duplicateSmsTemplate = async (id: number, organizationId?: number) 
       headers: getOrgHeader(organizationId),
     }
   );
-  return response.data as SmsTemplate;
+  return unwrapResponse<SmsTemplate>(response.data);
 };
 
 /**
@@ -181,7 +188,7 @@ export const sendSmsToContact = async (data: SendSmsToContactData) => {
   const response = await api.post('/api/sms-templates/send-to-contact', data, {
     headers: getOrgHeader(data.organization_id),
   });
-  return response.data;
+  return unwrapResponse(response.data);
 };
 
 /**
@@ -189,7 +196,7 @@ export const sendSmsToContact = async (data: SendSmsToContactData) => {
  */
 export const getMessageInfo = async (message: string): Promise<MessageInfo> => {
   const response = await api.post('/api/sms-templates/message-info', { message });
-  return response.data;
+  return unwrapResponse<MessageInfo>(response.data);
 };
 
 /**
@@ -199,7 +206,7 @@ export const getSmsTemplateCategories = async (organizationId?: number) => {
   const response = await api.get('/api/sms-templates/categories/list', {
     headers: getOrgHeader(organizationId),
   });
-  return response.data;
+  return unwrapResponse(response.data);
 };
 
 export default {

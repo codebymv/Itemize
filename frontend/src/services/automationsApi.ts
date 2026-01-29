@@ -5,6 +5,13 @@
 
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T;
+  }
+  return payload as T;
+};
+
 // ===================
 // Types
 // ===================
@@ -95,14 +102,14 @@ export const getWorkflows = async (organizationId: number, params?: {
   const response = await api.get('/api/workflows', {
     params: { organization_id: organizationId, ...params },
   });
-  return response.data;
+  return unwrapResponse<{ workflows: Workflow[]; total: number }>(response.data);
 };
 
 export const getWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
   const response = await api.get(`/api/workflows/${id}`, {
     params: { organization_id: organizationId },
   });
-  return response.data;
+  return unwrapResponse<Workflow>(response.data);
 };
 
 export const createWorkflow = async (data: {
@@ -114,7 +121,7 @@ export const createWorkflow = async (data: {
   steps?: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
 }): Promise<Workflow> => {
   const response = await api.post('/api/workflows', data);
-  return response.data;
+  return unwrapResponse<Workflow>(response.data);
 };
 
 export const updateWorkflow = async (
@@ -129,7 +136,7 @@ export const updateWorkflow = async (
   }>
 ): Promise<Workflow> => {
   const response = await api.put(`/api/workflows/${id}`, data);
-  return response.data;
+  return unwrapResponse<Workflow>(response.data);
 };
 
 export const deleteWorkflow = async (id: number, organizationId: number): Promise<void> => {
@@ -142,14 +149,14 @@ export const activateWorkflow = async (id: number, organizationId: number): Prom
   const response = await api.post(`/api/workflows/${id}/activate`, {
     organization_id: organizationId,
   });
-  return response.data;
+  return unwrapResponse<Workflow>(response.data);
 };
 
 export const deactivateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
   const response = await api.post(`/api/workflows/${id}/deactivate`, {
     organization_id: organizationId,
   });
-  return response.data;
+  return unwrapResponse<Workflow>(response.data);
 };
 
 export const enrollContact = async (
@@ -163,7 +170,7 @@ export const enrollContact = async (
     contact_id: contactId,
     trigger_data: triggerData,
   });
-  return response.data;
+  return unwrapResponse<WorkflowEnrollment>(response.data);
 };
 
 export const getWorkflowEnrollments = async (
@@ -181,7 +188,10 @@ export const getWorkflowEnrollments = async (
   const response = await api.get(`/api/workflows/${workflowId}/enrollments`, {
     params: { organization_id: organizationId, ...params },
   });
-  return response.data;
+  return unwrapResponse<{
+    enrollments: WorkflowEnrollment[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>(response.data);
 };
 
 export const cancelEnrollment = async (
@@ -192,14 +202,14 @@ export const cancelEnrollment = async (
   const response = await api.delete(`/api/workflows/${workflowId}/enrollments/${enrollmentId}`, {
     params: { organization_id: organizationId },
   });
-  return response.data;
+  return unwrapResponse<WorkflowEnrollment>(response.data);
 };
 
 export const duplicateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
   const response = await api.post(`/api/workflows/${id}/duplicate`, {
     organization_id: organizationId,
   });
-  return response.data;
+  return unwrapResponse<Workflow>(response.data);
 };
 
 // ===================
@@ -214,14 +224,14 @@ export const getEmailTemplates = async (organizationId: number, params?: {
   const response = await api.get('/api/email-templates', {
     params: { organization_id: organizationId, ...params },
   });
-  return response.data;
+  return unwrapResponse<{ templates: EmailTemplate[]; total: number }>(response.data);
 };
 
 export const getEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {
   const response = await api.get(`/api/email-templates/${id}`, {
     params: { organization_id: organizationId },
   });
-  return response.data;
+  return unwrapResponse<EmailTemplate>(response.data);
 };
 
 export const createEmailTemplate = async (data: {
@@ -234,7 +244,7 @@ export const createEmailTemplate = async (data: {
   is_active?: boolean;
 }): Promise<EmailTemplate> => {
   const response = await api.post('/api/email-templates', data);
-  return response.data;
+  return unwrapResponse<EmailTemplate>(response.data);
 };
 
 export const updateEmailTemplate = async (
@@ -250,7 +260,7 @@ export const updateEmailTemplate = async (
   }>
 ): Promise<EmailTemplate> => {
   const response = await api.put(`/api/email-templates/${id}`, data);
-  return response.data;
+  return unwrapResponse<EmailTemplate>(response.data);
 };
 
 export const deleteEmailTemplate = async (id: number, organizationId: number): Promise<void> => {
@@ -270,14 +280,14 @@ export const sendTestEmail = async (
     to_email: toEmail,
     sample_data: sampleData,
   });
-  return response.data;
+  return unwrapResponse<{ success: boolean; message: string; simulated?: boolean }>(response.data);
 };
 
 export const duplicateEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {
   const response = await api.post(`/api/email-templates/${id}/duplicate`, {
     organization_id: organizationId,
   });
-  return response.data;
+  return unwrapResponse<EmailTemplate>(response.data);
 };
 
 export const getTemplateCategories = async (organizationId: number): Promise<{
@@ -286,5 +296,5 @@ export const getTemplateCategories = async (organizationId: number): Promise<{
   const response = await api.get('/api/email-templates/categories/list', {
     params: { organization_id: organizationId },
   });
-  return response.data;
+  return unwrapResponse<{ categories: { category: string; count: number }[] }>(response.data);
 };

@@ -36,7 +36,7 @@ export function FormsPage() {
 
     const [forms, setForms] = useState<Form[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -89,12 +89,24 @@ export function FormsPage() {
     }, [searchQuery, statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
-        if (!initError) return;
-        setLoading(false);
-    }, [initError]);
+        if (orgLoading) {
+            setLoading(true);
+            return;
+        }
+
+        if (!organizationId) {
+            setLoading(false);
+        }
+    }, [organizationId, initError, orgLoading]);
 
     const fetchForms = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId) {
+            if (!orgLoading) {
+                setForms([]);
+                setLoading(false);
+            }
+            return;
+        }
         setLoading(true);
         try {
             const response = await getForms(organizationId, statusFilter !== 'all' ? statusFilter : undefined);
@@ -104,7 +116,7 @@ export function FormsPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId, statusFilter]);
+    }, [organizationId, orgLoading, statusFilter, toast]);
 
     useEffect(() => {
         fetchForms();

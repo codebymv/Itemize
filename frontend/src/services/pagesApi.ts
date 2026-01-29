@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================
@@ -309,7 +316,7 @@ export const getPages = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ pages: Page[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
 };
 
 export const getPage = async (
@@ -319,7 +326,7 @@ export const getPage = async (
     const response = await api.get(`/api/pages/${pageId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Page>(response.data);
 };
 
 export const createPage = async (
@@ -340,7 +347,7 @@ export const createPage = async (
     const response = await api.post('/api/pages', page, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Page>(response.data);
 };
 
 export const updatePage = async (
@@ -351,7 +358,7 @@ export const updatePage = async (
     const response = await api.put(`/api/pages/${pageId}`, page, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Page>(response.data);
 };
 
 export const deletePage = async (
@@ -361,7 +368,7 @@ export const deletePage = async (
     const response = await api.delete(`/api/pages/${pageId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 export const duplicatePage = async (
@@ -371,7 +378,7 @@ export const duplicatePage = async (
     const response = await api.post(`/api/pages/${pageId}/duplicate`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Page>(response.data);
 };
 
 // ======================
@@ -386,7 +393,7 @@ export const updatePageSections = async (
     const response = await api.put(`/api/pages/${pageId}/sections`, { sections }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ sections: PageSection[] }>(response.data);
 };
 
 export const addSection = async (
@@ -403,7 +410,7 @@ export const addSection = async (
     const response = await api.post(`/api/pages/${pageId}/sections`, section, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<PageSection>(response.data);
 };
 
 export const updateSection = async (
@@ -415,7 +422,7 @@ export const updateSection = async (
     const response = await api.put(`/api/pages/${pageId}/sections/${sectionId}`, section, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<PageSection>(response.data);
 };
 
 export const deleteSection = async (
@@ -426,7 +433,7 @@ export const deleteSection = async (
     const response = await api.delete(`/api/pages/${pageId}/sections/${sectionId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 export const reorderSections = async (
@@ -437,7 +444,7 @@ export const reorderSections = async (
     const response = await api.post(`/api/pages/${pageId}/sections/reorder`, { section_ids: sectionIds }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ sections: PageSection[] }>(response.data);
 };
 
 // ======================
@@ -453,7 +460,7 @@ export const getPageAnalytics = async (
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<PageAnalytics>(response.data);
 };
 
 // ======================
@@ -464,7 +471,7 @@ export const getPublicPage = async (slug: string, password?: string): Promise<Pu
     const response = await api.get(`/api/pages/public/page/${slug}`, {
         headers: password ? { 'x-page-password': password } : {}
     });
-    return response.data;
+    return unwrapResponse<PublicPage>(response.data);
 };
 
 export const updatePublicPageAnalytics = async (
@@ -480,7 +487,7 @@ export const updatePublicPageAnalytics = async (
     }
 ): Promise<{ success: boolean }> => {
     const response = await api.post(`/api/pages/public/page/${slug}/analytics`, data);
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 // ======================

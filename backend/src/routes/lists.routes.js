@@ -5,6 +5,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
+const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 /**
  * Create lists routes with injected dependencies
@@ -28,9 +30,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
             const offset = (pageNum - 1) * limitNum;
 
-            const client = await pool.connect();
-            
-            try {
+            const data = await withDbClient(pool, async (client) => {
                 // Build query with optional filters
                 let whereClause = 'WHERE user_id = $1';
                 const params = [req.user.id];
@@ -64,23 +64,23 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     [...params, limitNum, offset]
                 );
 
-                res.json({
-                    lists: result.rows,
-                    pagination: {
-                        page: pageNum,
-                        limit: limitNum,
-                        total,
-                        totalPages: Math.ceil(total / limitNum),
-                        hasNext: pageNum * limitNum < total,
-                        hasPrev: pageNum > 1
-                    }
-                });
-            } finally {
-                client.release();
-            }
+                return { total, result };
+            });
+
+            res.json({
+                lists: data.result.rows,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total: data.total,
+                    totalPages: Math.ceil(data.total / limitNum),
+                    hasNext: pageNum * limitNum < data.total,
+                    hasPrev: pageNum > 1
+                }
+            });
         } catch (error) {
             console.error('Error fetching lists:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -96,8 +96,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             // Handle both 'category' and 'type' field names for compatibility
             const categoryValue = category || type || 'General';
 
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y, width, height) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
                 [
                     title,
@@ -110,8 +109,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     width || 340,
                     height || 265
                 ]
-            );
-            client.release();
+            ));
 
             // Map database field 'category' to frontend field 'type' for consistency
             const mappedResult = {
@@ -122,7 +120,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.status(201).json(mappedResult);
         } catch (error) {
             console.error('Error creating list:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -135,12 +133,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             // Handle both 'category' and 'type' field names for compatibility
             const categoryValue = category || type || 'General';
 
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4, width = $5, height = $6 WHERE id = $7 AND user_id = $8 RETURNING *',
                 [title, categoryValue, JSON.stringify(items), color_value, width, height, id, req.user.id]
-            );
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'List not found' });
@@ -172,7 +168,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.json(mappedResult);
         } catch (error) {
             console.error('Error updating list:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -181,12 +177,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         try {
             const { id } = req.params;
 
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'DELETE FROM lists WHERE id = $1 AND user_id = $2 RETURNING id',
                 [id, req.user.id]
-            );
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'List not found' });
@@ -200,19 +194,17 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.json({ message: 'List deleted successfully' });
         } catch (error) {
             console.error('Error deleting list:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
     // Get all lists for canvas view with positions
     router.get('/canvas/lists', authenticateJWT, async (req, res) => {
         try {
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
                 [req.user.id]
-            );
-            client.release();
+            ));
 
             // Map database field 'category' to frontend field 'type'
             const mappedLists = result.rows.map(list => ({
@@ -223,7 +215,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.json(mappedLists);
         } catch (error) {
             console.error('Error fetching lists for canvas:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -237,12 +229,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 return res.status(400).json({ error: 'Invalid position coordinates' });
             }
 
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'UPDATE lists SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
                 [x, y, id, req.user.id]
-            );
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'List not found' });
@@ -260,7 +250,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating list position:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -268,47 +258,49 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     router.put('/lists/:id/items/:itemId/toggle', authenticateJWT, async (req, res) => {
         try {
             const { id, itemId } = req.params;
+            const data = await withDbClient(pool, async (client) => {
+                // Get current list
+                const listResult = await client.query(
+                    'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+                    [id, req.user.id]
+                );
 
-            const client = await pool.connect();
+                if (listResult.rows.length === 0) {
+                    return { status: 404, payload: { error: 'List not found' } };
+                }
 
-            // Get current list
-            const listResult = await client.query(
-                'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
-                [id, req.user.id]
-            );
+                const list = listResult.rows[0];
+                const items = list.items || [];
 
-            if (listResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'List not found' });
+                // Find and toggle the item
+                const itemIndex = items.findIndex(item => item.id === itemId);
+                if (itemIndex === -1) {
+                    return { status: 404, payload: { error: 'Item not found' } };
+                }
+
+                items[itemIndex].completed = !items[itemIndex].completed;
+
+                // Update the list
+                const updateResult = await client.query(
+                    'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                    [JSON.stringify(items), id, req.user.id]
+                );
+
+                return { status: 200, updatedList: updateResult.rows[0], items, itemIndex };
+            });
+
+            if (data.payload) {
+                return res.status(data.status).json(data.payload);
             }
 
-            const list = listResult.rows[0];
-            const items = list.items || [];
-
-            // Find and toggle the item
-            const itemIndex = items.findIndex(item => item.id === itemId);
-            if (itemIndex === -1) {
-                client.release();
-                return res.status(404).json({ error: 'Item not found' });
-            }
-
-            items[itemIndex].completed = !items[itemIndex].completed;
-
-            // Update the list
-            const updateResult = await client.query(
-                'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
-                [JSON.stringify(items), id, req.user.id]
-            );
-            client.release();
-
-            const updatedList = updateResult.rows[0];
+            const updatedList = data.updatedList;
 
             // Broadcast to shared viewers if list is public
             if (updatedList.is_public && updatedList.share_token && broadcast.listUpdate) {
                 broadcast.listUpdate(updatedList.share_token, 'ITEM_TOGGLED', {
                     id: updatedList.id,
                     itemId: itemId,
-                    completed: items[itemIndex].completed,
+                    completed: data.items[data.itemIndex].completed,
                     items: updatedList.items
                 });
             }
@@ -325,7 +317,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.json(mappedResult);
         } catch (error) {
             console.error('Error toggling item:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -339,45 +331,49 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 return res.status(400).json({ error: 'Item text is required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Get current list
+                const listResult = await client.query(
+                    'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+                    [id, req.user.id]
+                );
 
-            // Get current list
-            const listResult = await client.query(
-                'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
-                [id, req.user.id]
-            );
+                if (listResult.rows.length === 0) {
+                    return { status: 404, payload: { error: 'List not found' } };
+                }
 
-            if (listResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'List not found' });
+                const list = listResult.rows[0];
+                const items = list.items || [];
+
+                // Create new item
+                const newItem = {
+                    id: crypto.randomUUID(),
+                    text: text.trim(),
+                    completed: completed
+                };
+
+                items.push(newItem);
+
+                // Update the list
+                const updateResult = await client.query(
+                    'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                    [JSON.stringify(items), id, req.user.id]
+                );
+
+                return { status: 200, updatedList: updateResult.rows[0], newItem };
+            });
+
+            if (data.payload) {
+                return res.status(data.status).json(data.payload);
             }
 
-            const list = listResult.rows[0];
-            const items = list.items || [];
-
-            // Create new item
-            const newItem = {
-                id: crypto.randomUUID(),
-                text: text.trim(),
-                completed: completed
-            };
-
-            items.push(newItem);
-
-            // Update the list
-            const updateResult = await client.query(
-                'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
-                [JSON.stringify(items), id, req.user.id]
-            );
-            client.release();
-
-            const updatedList = updateResult.rows[0];
+            const updatedList = data.updatedList;
 
             // Broadcast to shared viewers if list is public
             if (updatedList.is_public && updatedList.share_token && broadcast.listUpdate) {
                 broadcast.listUpdate(updatedList.share_token, 'ITEM_ADDED', {
                     id: updatedList.id,
-                    newItem: newItem,
+                    newItem: data.newItem,
                     items: updatedList.items
                 });
             }
@@ -394,7 +390,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             res.json(mappedResult);
         } catch (error) {
             console.error('Error adding item:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -402,40 +398,42 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     router.delete('/lists/:id/items/:itemId', authenticateJWT, async (req, res) => {
         try {
             const { id, itemId } = req.params;
+            const data = await withDbClient(pool, async (client) => {
+                // Get current list
+                const listResult = await client.query(
+                    'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+                    [id, req.user.id]
+                );
 
-            const client = await pool.connect();
+                if (listResult.rows.length === 0) {
+                    return { status: 404, payload: { error: 'List not found' } };
+                }
 
-            // Get current list
-            const listResult = await client.query(
-                'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
-                [id, req.user.id]
-            );
+                const list = listResult.rows[0];
+                const items = list.items || [];
 
-            if (listResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'List not found' });
+                // Find and remove the item
+                const itemIndex = items.findIndex(item => item.id === itemId);
+                if (itemIndex === -1) {
+                    return { status: 404, payload: { error: 'Item not found' } };
+                }
+
+                items.splice(itemIndex, 1);
+
+                // Update the list
+                const updateResult = await client.query(
+                    'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                    [JSON.stringify(items), id, req.user.id]
+                );
+
+                return { status: 200, updatedList: updateResult.rows[0] };
+            });
+
+            if (data.payload) {
+                return res.status(data.status).json(data.payload);
             }
 
-            const list = listResult.rows[0];
-            const items = list.items || [];
-
-            // Find and remove the item
-            const itemIndex = items.findIndex(item => item.id === itemId);
-            if (itemIndex === -1) {
-                client.release();
-                return res.status(404).json({ error: 'Item not found' });
-            }
-
-            items.splice(itemIndex, 1);
-
-            // Update the list
-            const updateResult = await client.query(
-                'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
-                [JSON.stringify(items), id, req.user.id]
-            );
-            client.release();
-
-            const updatedList = updateResult.rows[0];
+            const updatedList = data.updatedList;
 
             // Broadcast to shared viewers if list is public
             if (updatedList.is_public && updatedList.share_token && broadcast.listUpdate) {
@@ -452,7 +450,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             });
         } catch (error) {
             console.error('Error removing item:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 
@@ -466,12 +464,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 return res.status(400).json({ error: 'Title is required' });
             }
 
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'UPDATE lists SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
                 [title.trim(), id, req.user.id]
-            );
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'List not found' });
@@ -493,7 +489,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             });
         } catch (error) {
             console.error('Error updating title:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return sendError(res, 'Internal server error');
         }
     });
 

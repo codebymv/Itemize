@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext'; // Import auth context
 import { getApiUrl } from '@/lib/api';
+import { storage } from '@/lib/storage';
 
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
@@ -58,10 +59,10 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
   const getCachedSuggestions = useCallback(() => {
     try {
       const cacheKey = `itemize-suggestions-${listTitle}-${existingItems.join(',')}`;
-      const cachedData = localStorage.getItem(cacheKey);
+      const cachedData = storage.getJson<{ suggestions: string[]; timestamp: number }>(cacheKey);
       
       if (cachedData) {
-        const { suggestions, timestamp } = JSON.parse(cachedData);
+        const { suggestions, timestamp } = cachedData;
         // Check if cache is still valid
         if (Date.now() - timestamp < CACHE_DURATION && suggestions && suggestions.length > 0) {
           return suggestions;
@@ -84,7 +85,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         timestamp: Date.now()
       };
       
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      storage.setJson(cacheKey, cacheData);
     } catch (err) {
       console.warn('Failed to cache suggestions:', err);
     }

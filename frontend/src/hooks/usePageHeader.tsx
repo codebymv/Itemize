@@ -27,9 +27,8 @@ export const usePageHeader = (
                     {options.icon}
                     {options.title ? (
                         <h1
-                            className={cn('text-xl font-semibold italic truncate', options.titleClassName)}
+                            className={cn('text-xl font-semibold italic truncate font-raleway', options.titleClassName)}
                             style={{
-                                fontFamily: '"Raleway", sans-serif',
                                 color: options.theme === 'dark' ? '#ffffff' : '#000000'
                             }}
                         >

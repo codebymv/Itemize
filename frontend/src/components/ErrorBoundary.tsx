@@ -1,10 +1,12 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onGoHome?: () => void;
 }
 
 interface State {
@@ -51,7 +53,11 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = (): void => {
-    window.location.href = '/';
+    if (this.props.onGoHome) {
+      this.props.onGoHome();
+    } else {
+      window.location.href = '/';
+    }
   };
 
   handleRetry = (): void => {
@@ -136,4 +142,14 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default ErrorBoundary;
+const ErrorBoundaryWithNavigate = ({ children, fallback }: Props) => {
+  const navigate = useNavigate();
+  return (
+    <ErrorBoundary onGoHome={() => navigate('/')} fallback={fallback}>
+      {children}
+    </ErrorBoundary>
+  );
+};
+
+export { ErrorBoundary };
+export default ErrorBoundaryWithNavigate;

@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================
@@ -246,7 +253,7 @@ export const getDashboardAnalytics = async (organizationId?: number): Promise<Da
     const response = await api.get('/api/analytics/dashboard', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<DashboardAnalytics>(response.data);
 };
 
 /**
@@ -260,7 +267,7 @@ export const getContactTrends = async (
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<ContactTrends>(response.data);
 };
 
 /**
@@ -274,7 +281,7 @@ export const getDealPerformance = async (
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<DealPerformance>(response.data);
 };
 
 /**
@@ -284,7 +291,7 @@ export const getBookingSummary = async (organizationId?: number): Promise<Bookin
     const response = await api.get('/api/analytics/bookings/summary', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<BookingSummary>(response.data);
 };
 
 /**
@@ -298,7 +305,7 @@ export const getConversionRates = async (
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<ConversionRates>(response.data);
 };
 
 /**
@@ -312,7 +319,7 @@ export const getRevenueTrends = async (
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<RevenueTrends>(response.data);
 };
 
 /**
@@ -326,7 +333,7 @@ export const getPipelineVelocity = async (
         params: pipelineId ? { pipeline_id: pipelineId } : {},
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<PipelineVelocity>(response.data);
 };
 
 /**
@@ -340,7 +347,7 @@ export const getCommunicationStats = async (
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<CommunicationStats>(response.data);
 };
 
 /**
@@ -350,7 +357,7 @@ export const getWorkflowPerformance = async (organizationId?: number): Promise<W
     const response = await api.get('/api/analytics/workflow-performance', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<WorkflowPerformance>(response.data);
 };
 
 export default {

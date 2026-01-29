@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { storage } from '@/lib/storage';
 
 // Local storage key
 const LOCAL_STORAGE_KEY = 'itemize-ai-suggest-enabled';
@@ -20,7 +21,7 @@ export const AISuggestProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Initialize from localStorage if available
   const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
     try {
-      const savedValue = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const savedValue = storage.getItem(LOCAL_STORAGE_KEY);
       return savedValue ? JSON.parse(savedValue) : true;
     } catch (e) {
       return true;
@@ -29,7 +30,7 @@ export const AISuggestProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Update localStorage when state changes
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(aiEnabled));
+    storage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(aiEnabled));
   }, [aiEnabled]);
 
   return (

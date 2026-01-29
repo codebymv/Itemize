@@ -4,6 +4,8 @@
  */
 const express = require('express');
 const router = express.Router();
+const { withDbClient } = require('../utils/db');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 
 /**
  * Create whiteboards routes with injected dependencies
@@ -27,10 +29,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
             const offset = (pageNum - 1) * limitNum;
 
-            const client = await pool.connect();
-            
-            try {
-                // Build query with optional filters
+            const result = await withDbClient(pool, async (client) => {
                 let whereClause = 'WHERE user_id = $1';
                 const params = [req.user.id];
                 let paramIndex = 2;
@@ -47,15 +46,13 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     paramIndex++;
                 }
 
-                // Get total count
                 const countResult = await client.query(
                     `SELECT COUNT(*) FROM whiteboards ${whereClause}`,
                     params
                 );
                 const total = parseInt(countResult.rows[0].count);
 
-                // Get paginated results
-                const result = await client.query(
+                const rowsResult = await client.query(
                     `SELECT id, user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value, created_at, updated_at, share_token, is_public, shared_at 
                      FROM whiteboards ${whereClause} 
                      ORDER BY updated_at DESC 
@@ -63,23 +60,23 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     [...params, limitNum, offset]
                 );
 
-                res.json({
-                    whiteboards: result.rows,
-                    pagination: {
-                        page: pageNum,
-                        limit: limitNum,
-                        total,
-                        totalPages: Math.ceil(total / limitNum),
-                        hasNext: pageNum * limitNum < total,
-                        hasPrev: pageNum > 1
-                    }
-                });
-            } finally {
-                client.release();
-            }
+                return { rows: rowsResult.rows, total };
+            });
+
+            sendSuccess(res, {
+                whiteboards: result.rows,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total: result.total,
+                    totalPages: Math.ceil(result.total / limitNum),
+                    hasNext: pageNum * limitNum < result.total,
+                    hasPrev: pageNum > 1
+                }
+            });
         } catch (error) {
             console.error('Error fetching whiteboards:', error);
-            res.status(500).json({ error: 'Internal server error while fetching whiteboards' });
+            sendError(res, 'Internal server error while fetching whiteboards');
         }
     });
 
@@ -100,7 +97,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             } = req.body;
 
             if (typeof position_x !== 'number' || typeof position_y !== 'number') {
-                return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
+                return sendBadRequest(res, 'position_x and position_y are required and must be numbers.');
             }
 
             // Validate and process canvas_data
@@ -116,32 +113,32 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
             } catch (jsonError) {
                 console.error('Invalid canvas data JSON on create:', jsonError, { canvas_data });
-                return res.status(400).json({ error: 'Invalid canvas data format' });
+                return sendBadRequest(res, 'Invalid canvas data format');
             }
 
-            const client = await pool.connect();
-            const result = await client.query(
-                `INSERT INTO whiteboards (user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value)
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    `INSERT INTO whiteboards (user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-                [
-                    req.user.id,
-                    title,
-                    category,
-                    processedCanvasData,
-                    canvas_width,
-                    canvas_height,
-                    background_color,
-                    position_x,
-                    position_y,
-                    z_index,
-                    color_value
-                ]
-            );
-            client.release();
-            res.status(201).json(result.rows[0]);
+                    [
+                        req.user.id,
+                        title,
+                        category,
+                        processedCanvasData,
+                        canvas_width,
+                        canvas_height,
+                        background_color,
+                        position_x,
+                        position_y,
+                        z_index,
+                        color_value
+                    ]
+                );
+            });
+            sendCreated(res, result.rows[0]);
         } catch (error) {
             console.error('Error creating whiteboard:', error);
-            res.status(500).json({ error: 'Internal server error while creating whiteboard' });
+            sendError(res, 'Internal server error while creating whiteboard');
         }
     });
 
@@ -151,55 +148,64 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { whiteboardId } = req.params;
             const { title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value } = req.body;
 
-            const client = await pool.connect();
-            const currentWhiteboardResult = await client.query('SELECT * FROM whiteboards WHERE id = $1 AND user_id = $2', [whiteboardId, req.user.id]);
+            const result = await withDbClient(pool, async (client) => {
+                const currentWhiteboardResult = await client.query(
+                    'SELECT * FROM whiteboards WHERE id = $1 AND user_id = $2',
+                    [whiteboardId, req.user.id]
+                );
 
-            if (currentWhiteboardResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Whiteboard not found or access denied' });
-            }
-
-            const currentWhiteboard = currentWhiteboardResult.rows[0];
-
-            const newTitle = title !== undefined ? title : currentWhiteboard.title;
-            const newCategory = category !== undefined ? category : currentWhiteboard.category;
-
-            // Properly handle canvas_data with validation
-            let newCanvasData = currentWhiteboard.canvas_data;
-            if (canvas_data !== undefined) {
-                try {
-                    if (typeof canvas_data === 'string') {
-                        JSON.parse(canvas_data);
-                        newCanvasData = canvas_data;
-                    } else {
-                        const jsonString = JSON.stringify(canvas_data);
-                        JSON.parse(jsonString);
-                        newCanvasData = jsonString;
-                    }
-                } catch (jsonError) {
-                    console.error('Invalid canvas data JSON:', jsonError, { canvas_data });
-                    client.release();
-                    return res.status(400).json({ error: 'Invalid canvas data format' });
+                if (currentWhiteboardResult.rows.length === 0) {
+                    return { status: 'not_found' };
                 }
-            }
 
-            const newCanvasWidth = canvas_width !== undefined ? canvas_width : currentWhiteboard.canvas_width;
-            const newCanvasHeight = canvas_height !== undefined ? canvas_height : currentWhiteboard.canvas_height;
-            const newBackgroundColor = background_color !== undefined ? background_color : currentWhiteboard.background_color;
-            const newPositionX = position_x !== undefined ? position_x : currentWhiteboard.position_x;
-            const newPositionY = position_y !== undefined ? position_y : currentWhiteboard.position_y;
-            const newZIndex = z_index !== undefined ? z_index : currentWhiteboard.z_index;
-            const newColorValue = color_value !== undefined ? color_value : currentWhiteboard.color_value;
+                const currentWhiteboard = currentWhiteboardResult.rows[0];
 
-            const updateResult = await client.query(
-                `UPDATE whiteboards
+                const newTitle = title !== undefined ? title : currentWhiteboard.title;
+                const newCategory = category !== undefined ? category : currentWhiteboard.category;
+
+                let newCanvasData = currentWhiteboard.canvas_data;
+                if (canvas_data !== undefined) {
+                    try {
+                        if (typeof canvas_data === 'string') {
+                            JSON.parse(canvas_data);
+                            newCanvasData = canvas_data;
+                        } else {
+                            const jsonString = JSON.stringify(canvas_data);
+                            JSON.parse(jsonString);
+                            newCanvasData = jsonString;
+                        }
+                    } catch (jsonError) {
+                        console.error('Invalid canvas data JSON:', jsonError, { canvas_data });
+                        return { status: 'invalid_canvas' };
+                    }
+                }
+
+                const newCanvasWidth = canvas_width !== undefined ? canvas_width : currentWhiteboard.canvas_width;
+                const newCanvasHeight = canvas_height !== undefined ? canvas_height : currentWhiteboard.canvas_height;
+                const newBackgroundColor = background_color !== undefined ? background_color : currentWhiteboard.background_color;
+                const newPositionX = position_x !== undefined ? position_x : currentWhiteboard.position_x;
+                const newPositionY = position_y !== undefined ? position_y : currentWhiteboard.position_y;
+                const newZIndex = z_index !== undefined ? z_index : currentWhiteboard.z_index;
+                const newColorValue = color_value !== undefined ? color_value : currentWhiteboard.color_value;
+
+                const updateResult = await client.query(
+                    `UPDATE whiteboards
          SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10
          WHERE id = $11 AND user_id = $12 RETURNING *`,
-                [newTitle, newCategory, newCanvasData, newCanvasWidth, newCanvasHeight, newBackgroundColor, newPositionX, newPositionY, newZIndex, newColorValue, whiteboardId, req.user.id]
-            );
-            client.release();
+                    [newTitle, newCategory, newCanvasData, newCanvasWidth, newCanvasHeight, newBackgroundColor, newPositionX, newPositionY, newZIndex, newColorValue, whiteboardId, req.user.id]
+                );
 
-            const updatedWhiteboard = updateResult.rows[0];
+                return { status: 'ok', whiteboard: updateResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Whiteboard');
+            }
+            if (result.status === 'invalid_canvas') {
+                return sendBadRequest(res, 'Invalid canvas data format');
+            }
+
+            const updatedWhiteboard = result.whiteboard;
 
             // Broadcast to shared viewers if whiteboard is public
             if (updatedWhiteboard.is_public && updatedWhiteboard.share_token && broadcast.whiteboardUpdate) {
@@ -216,10 +222,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 });
             }
 
-            res.json(updatedWhiteboard);
+            sendSuccess(res, updatedWhiteboard);
         } catch (error) {
             console.error('Error updating whiteboard:', error);
-            res.status(500).json({ error: 'Internal server error while updating whiteboard' });
+            sendError(res, 'Internal server error while updating whiteboard');
         }
     });
 
@@ -230,18 +236,18 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { x, y } = req.body;
 
             if (typeof x !== 'number' || typeof y !== 'number') {
-                return res.status(400).json({ error: 'Invalid position coordinates' });
+                return sendBadRequest(res, 'Invalid position coordinates');
             }
 
-            const client = await pool.connect();
-            const result = await client.query(
-                'UPDATE whiteboards SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
-                [x, y, id, req.user.id]
-            );
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'UPDATE whiteboards SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+                    [x, y, id, req.user.id]
+                );
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Whiteboard not found' });
+                return sendNotFound(res, 'Whiteboard');
             }
 
             // Broadcast position update to shared viewers if whiteboard is public
@@ -253,10 +259,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 });
             }
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error updating whiteboard position:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            sendError(res, 'Internal server error');
         }
     });
 
@@ -264,44 +270,47 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     router.delete('/whiteboards/:whiteboardId', authenticateJWT, async (req, res) => {
         try {
             const { whiteboardId } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const checkResult = await client.query(
+                    'SELECT id, title, share_token, is_public FROM whiteboards WHERE id = $1 AND user_id = $2',
+                    [whiteboardId, req.user.id]
+                );
 
-            const checkResult = await client.query(
-                'SELECT id, title, share_token, is_public FROM whiteboards WHERE id = $1 AND user_id = $2',
-                [whiteboardId, req.user.id]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+                const whiteboardInfo = checkResult.rows[0];
+                console.log(`🗑️ Deleting whiteboard ${whiteboardId} (${whiteboardInfo.title}).`);
+
+                const deleteResult = await client.query(
+                    'DELETE FROM whiteboards WHERE id = $1 AND user_id = $2 RETURNING id',
+                    [whiteboardId, req.user.id]
+                );
+
+                return { status: 'ok', info: whiteboardInfo, result: deleteResult };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Whiteboard');
             }
 
-            const whiteboardInfo = checkResult.rows[0];
-            console.log(`🗑️ Deleting whiteboard ${whiteboardId} (${whiteboardInfo.title}).`);
-
-            const result = await client.query(
-                'DELETE FROM whiteboards WHERE id = $1 AND user_id = $2 RETURNING id',
-                [whiteboardId, req.user.id]
-            );
-            client.release();
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Whiteboard not found or access denied' });
+            if (result.result.rows.length === 0) {
+                return sendNotFound(res, 'Whiteboard');
             }
 
-            // Broadcast deletion to shared viewers if whiteboard was public
-            if (whiteboardInfo.is_public && whiteboardInfo.share_token && broadcast.whiteboardUpdate) {
-                broadcast.whiteboardUpdate(whiteboardInfo.share_token, 'whiteboardDeleted', {
-                    id: whiteboardInfo.id,
+            if (result.info.is_public && result.info.share_token && broadcast.whiteboardUpdate) {
+                broadcast.whiteboardUpdate(result.info.share_token, 'whiteboardDeleted', {
+                    id: result.info.id,
                     message: 'This whiteboard has been deleted by the owner.'
                 });
             }
 
             console.log(`✅ Whiteboard ${whiteboardId} deleted successfully.`);
-            res.status(200).json({ message: 'Whiteboard deleted successfully' });
+            sendSuccess(res, { message: 'Whiteboard deleted successfully' });
         } catch (error) {
             console.error('Error deleting whiteboard:', error);
-            res.status(500).json({ error: 'Internal server error while deleting whiteboard' });
+            sendError(res, 'Internal server error while deleting whiteboard');
         }
     });
 

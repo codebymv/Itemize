@@ -1,11 +1,11 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 
 // Higher-order component to protect routes that require authentication
 export const withAuth = <P extends object>(Component: React.ComponentType<P>) => {
   return (props: P) => {
-    const { currentUser, loading, isAuthenticated } = useAuth();
+    const { currentUser, loading, isAuthenticated } = useAuthState();
     
     // Show loading indicator while checking auth status
     if (loading) {

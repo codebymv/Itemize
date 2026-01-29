@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -506,7 +506,7 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
 }
 
 export function DashboardPage() {
-    const { currentUser } = useAuth();
+    const { currentUser } = useAuthState();
     const navigate = useNavigate();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();

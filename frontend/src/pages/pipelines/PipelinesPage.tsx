@@ -36,7 +36,7 @@ export function PipelinesPage() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null);
   const [currentPipeline, setCurrentPipeline] = useState<(Pipeline & { deals: Deal[] }) | null>(null);
   const [loading, setLoading] = useState(true);
-  const { organizationId, error: initError } = useOrganization({
+  const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
     onError: (error: any) => {
       return error?.response?.status === 500
         ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
@@ -111,14 +111,27 @@ export function PipelinesPage() {
   }, [pipelines, selectedPipelineId, theme, setHeaderContent]);
 
   useEffect(() => {
-    if (!organizationId && initError) {
+    if (orgLoading) {
+      setLoading(true);
+      return;
+    }
+
+    if (!organizationId) {
       setLoading(false);
     }
-  }, [organizationId, initError]);
+  }, [organizationId, initError, orgLoading]);
 
   // Fetch pipelines
   const fetchPipelines = useCallback(async () => {
-    if (!organizationId) return;
+    if (!organizationId) {
+      if (!orgLoading) {
+        setPipelines([]);
+        setSelectedPipelineId(null);
+        setCurrentPipeline(null);
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       const data = await getPipelines(organizationId);
@@ -141,7 +154,7 @@ export function PipelinesPage() {
         variant: 'destructive',
       });
     }
-  }, [organizationId]);
+  }, [organizationId, orgLoading, toast]);
 
   useEffect(() => {
     fetchPipelines();

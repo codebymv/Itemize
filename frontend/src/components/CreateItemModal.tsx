@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { StickyNote, CheckSquare, Palette, GitBranch, KeyRound } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
@@ -6,6 +8,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ColorPicker } from './ui/color-picker';
+import { UI_COLORS, UI_LABELS } from '@/constants/ui';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from './ui/form';
+import { createItemFormSchema, type CreateItemFormValues } from '@/lib/formSchemas';
 
 interface LocalCategory {
   name: string;
@@ -29,7 +34,7 @@ const itemConfig = {
     label: 'Note',
     icon: StickyNote,
     titlePlaceholder: 'Enter note title',
-    defaultColor: '#3B82F6',
+    defaultColor: UI_COLORS.brandBlue,
     requireResult: false,
     showValidationError: false
   },
@@ -37,7 +42,7 @@ const itemConfig = {
     label: 'List',
     icon: CheckSquare,
     titlePlaceholder: 'Enter list title',
-    defaultColor: '#3B82F6',
+    defaultColor: UI_COLORS.brandBlue,
     requireResult: true,
     showValidationError: true
   },
@@ -45,7 +50,7 @@ const itemConfig = {
     label: 'Whiteboard',
     icon: Palette,
     titlePlaceholder: 'Enter whiteboard title',
-    defaultColor: '#3B82F6',
+    defaultColor: UI_COLORS.brandBlue,
     requireResult: false,
     showValidationError: false
   },
@@ -53,7 +58,7 @@ const itemConfig = {
     label: 'Wireframe',
     icon: GitBranch,
     titlePlaceholder: 'Enter wireframe title',
-    defaultColor: '#3B82F6',
+    defaultColor: UI_COLORS.brandBlue,
     requireResult: false,
     showValidationError: false
   },
@@ -61,7 +66,7 @@ const itemConfig = {
     label: 'Vault',
     icon: KeyRound,
     titlePlaceholder: 'Enter vault title',
-    defaultColor: '#3B82F6',
+    defaultColor: UI_COLORS.brandBlue,
     requireResult: false,
     showValidationError: false
   }
@@ -79,31 +84,45 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   const config = itemConfig[itemType];
   const Icon = config.icon;
 
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('');
-  const [newCategory, setNewCategory] = useState('');
-  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [color, setColor] = useState(config.defaultColor);
-  const [categoryColor, setCategoryColor] = useState('#808080');
+  const form = useForm<CreateItemFormValues>({
+    resolver: zodResolver(createItemFormSchema),
+    defaultValues: {
+      title: '',
+      category: '',
+      newCategory: '',
+      isAddingNewCategory: false,
+      color: config.defaultColor,
+      categoryColor: UI_COLORS.neutralGray,
+    },
+  });
+
+  const title = form.watch('title') || '';
+  const category = form.watch('category') || '';
+  const newCategory = form.watch('newCategory') || '';
+  const isAddingNewCategory = form.watch('isAddingNewCategory');
+  const color = form.watch('color') || config.defaultColor;
+  const categoryColor = form.watch('categoryColor') || UI_COLORS.neutralGray;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setTitle('');
-      setCategory('');
-      setNewCategory('');
-      setIsAddingNewCategory(false);
-      setColor(config.defaultColor);
-      setCategoryColor('#808080');
+      form.reset({
+        title: '',
+        category: '',
+        newCategory: '',
+        isAddingNewCategory: false,
+        color: config.defaultColor,
+        categoryColor: UI_COLORS.neutralGray,
+      });
       setError('');
       setIsLoading(false);
     }
-  }, [isOpen, config.defaultColor]);
+  }, [isOpen, config.defaultColor, form]);
 
   const availableCategories = useMemo(() => {
     const hasGeneral = existingCategories.some(cat => cat.name === 'General');
-    return hasGeneral ? existingCategories : [{ name: 'General', color_value: '#808080' }, ...existingCategories];
+    return hasGeneral ? existingCategories : [{ name: 'General', color_value: UI_COLORS.neutralGray }, ...existingCategories];
   }, [existingCategories]);
 
   const getSelectedCategoryColor = () => {
@@ -113,45 +132,33 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     if (category) {
       return categoryColor;
     }
-    return '#808080';
+    return UI_COLORS.neutralGray;
   };
 
   const handleCategoryColorChange = (newColor: string) => {
-    setCategoryColor(newColor);
+    form.setValue('categoryColor', newColor, { shouldDirty: true });
     if (category !== 'General') {
-      setColor(newColor);
+      form.setValue('color', newColor, { shouldDirty: true });
     }
     if (category && !isAddingNewCategory && updateCategory) {
       updateCategory(category, newColor);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!title.trim()) {
-      if (config.showValidationError) {
-        setError('Please enter a title');
-      }
-      return;
-    }
-
-    const selectedCategory = isAddingNewCategory ? newCategory.trim() : category;
+  const handleSubmit = async (values: CreateItemFormValues) => {
+    const selectedCategory = values.isAddingNewCategory
+      ? values.newCategory?.trim()
+      : values.category?.trim();
     const finalCategory = selectedCategory || 'General';
-
-    if (config.showValidationError && !finalCategory.trim()) {
-      setError('Please select or create a category');
-      return;
-    }
 
     setIsLoading(true);
     setError('');
 
     try {
       const result = await onCreate(
-        title.trim(),
+        values.title.trim(),
         finalCategory,
-        color,
+        values.color || config.defaultColor,
         position || { x: 0, y: 0 }
       );
 
@@ -188,45 +195,54 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${itemType}Title`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Title
-            </Label>
-            <Input
-              id={`${itemType}Title`}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={config.titlePlaceholder}
-              autoFocus
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                <FormLabel className="font-raleway">Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      id={`${itemType}Title`}
+                      placeholder={config.titlePlaceholder}
+                      autoFocus
+                      {...field}
+                    />
+                  </FormControl>
+                  {config.showValidationError ? <FormMessage /> : null}
+                </FormItem>
+              )}
             />
-          </div>
 
           <div className="grid grid-cols-[1fr_60px] gap-4 items-start">
             {!isAddingNewCategory ? (
               <div className="space-y-2">
-                <Label htmlFor={`${itemType}Category`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label htmlFor={`${itemType}Category`} className="font-raleway">
                   Category
                 </Label>
                 <Select
                   value={category}
                   onValueChange={(value) => {
                     if (value === '__add_new__') {
-                      setIsAddingNewCategory(true);
-                      setCategory('');
+                      form.setValue('isAddingNewCategory', true);
+                      form.setValue('category', '');
+                      form.setValue('newCategory', '');
                       return;
                     }
 
-                    setCategory(value);
+                    form.setValue('category', value, { shouldDirty: true });
+                    form.setValue('isAddingNewCategory', false);
                     const selectedCat = existingCategories.find(cat => cat.name === value);
-                    const categoryColorValue = value === 'General' ? '#808080' : (selectedCat?.color_value || '#808080');
-                    setCategoryColor(categoryColorValue);
+                    const categoryColorValue = value === 'General' ? UI_COLORS.neutralGray : (selectedCat?.color_value || UI_COLORS.neutralGray);
+                    form.setValue('categoryColor', categoryColorValue, { shouldDirty: true });
                     setError('');
 
                     if (value === 'General') {
-                      setColor(config.defaultColor);
+                      form.setValue('color', config.defaultColor, { shouldDirty: true });
                     } else {
-                      setColor(categoryColorValue);
+                      form.setValue('color', categoryColorValue, { shouldDirty: true });
                     }
                   }}
                 >
@@ -270,7 +286,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <p className="text-xs text-gray-500 font-raleway">
                   {existingCategories.length === 0
                     ? 'No categories yet. Leave empty to use "General" or create a new one from the dropdown.'
                     : 'Select a category or leave empty to use "General".'}
@@ -301,21 +317,21 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor={`new${config.label}Category`} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label htmlFor={`new${config.label}Category`} className="font-raleway">
                   New Category
                 </Label>
                 <div className="flex space-x-2">
                   <Input
                     id={`new${config.label}Category`}
                     value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    onChange={(e) => form.setValue('newCategory', e.target.value, { shouldDirty: true })}
                     placeholder="Enter new category"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newCategory.trim()) {
-                        setCategory(newCategory.trim());
-                        setIsAddingNewCategory(false);
-                        setColor(categoryColor);
+                        form.setValue('category', newCategory.trim(), { shouldDirty: true });
+                        form.setValue('isAddingNewCategory', false);
+                        form.setValue('color', categoryColor, { shouldDirty: true });
                         setError('');
                       }
                     }}
@@ -325,14 +341,14 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                     variant="outline"
                     onClick={() => {
                       if (newCategory.trim()) {
-                        setCategory(newCategory.trim());
-                        setIsAddingNewCategory(false);
-                        setColor(categoryColor);
+                        form.setValue('category', newCategory.trim(), { shouldDirty: true });
+                        form.setValue('isAddingNewCategory', false);
+                        form.setValue('color', categoryColor, { shouldDirty: true });
                         setError('');
                       }
                     }}
                     disabled={!newCategory.trim()}
-                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    className="font-raleway"
                   >
                     Add
                   </Button>
@@ -340,10 +356,10 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      setIsAddingNewCategory(false);
-                      setNewCategory('');
+                      form.setValue('isAddingNewCategory', false);
+                      form.setValue('newCategory', '');
                     }}
-                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    className="font-raleway"
                   >
                     Cancel
                   </Button>
@@ -375,11 +391,11 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             )}
 
             <div className="space-y-2">
-              <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Color</Label>
+              <Label className="font-raleway">Color</Label>
               <ColorPicker
                 color={color}
-                onChange={setColor}
-                onSave={setColor}
+                onChange={(newColor) => form.setValue('color', newColor, { shouldDirty: true })}
+                onSave={(newColor) => form.setValue('color', newColor, { shouldDirty: true })}
               >
                 <Button
                   type="button"
@@ -398,25 +414,25 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <p className="text-red-500 text-sm font-raleway">
               {error}
             </p>
           )}
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Cancel
+            <Button type="button" variant="outline" onClick={onClose} className="font-raleway">
+              {UI_LABELS.cancel}
             </Button>
             <Button
               type="submit"
               disabled={!title.trim() || isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
             >
-              {isLoading ? `Creating ${config.label}...` : `Create ${config.label}`}
+              {isLoading ? `Creating ${config.label}...` : `${UI_LABELS.create} ${config.label}`}
             </Button>
           </div>
-        </form>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

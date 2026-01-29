@@ -46,8 +46,7 @@ export type UsageType =
   | 'api_calls_per_day'
   | 'forms';
 
-interface SubscriptionContextType {
-  // State
+interface SubscriptionStateContextType {
   subscription: Subscription | null;
   usage: UsageStats | null;
   plans: SubscriptionPlan[];
@@ -60,8 +59,9 @@ interface SubscriptionContextType {
   isPastDue: boolean;
   tierLevel: number;
   planName: string | null;
+}
 
-  // Feature checking
+interface SubscriptionFeaturesContextType {
   hasFeature: (feature: FeatureName) => boolean;
   getUsageInfo: (usageType: UsageType) => {
     current: number;
@@ -74,15 +74,14 @@ interface SubscriptionContextType {
   } | null;
   requiresUpgrade: (feature: FeatureName) => boolean;
   getRequiredTier: (feature: FeatureName) => number;
-
-  // Actions
   refreshSubscription: () => Promise<void>;
   refreshUsage: () => Promise<void>;
   startCheckout: (planName: 'starter' | 'unlimited' | 'pro', billingPeriod: 'monthly' | 'yearly') => Promise<void>;
   openBillingPortal: () => Promise<void>;
 }
 
-const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
+const SubscriptionStateContext = createContext<SubscriptionStateContextType | null>(null);
+const SubscriptionFeaturesContext = createContext<SubscriptionFeaturesContextType | null>(null);
 
 // Feature tier requirements
 const FEATURE_TIERS: Record<FeatureName, number> = {
@@ -281,7 +280,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     }
   }, []);
 
-  const value: SubscriptionContextType = useMemo(() => ({
+  const stateValue: SubscriptionStateContextType = useMemo(() => ({
     subscription,
     usage,
     plans,
@@ -292,14 +291,6 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     isPastDue,
     tierLevel,
     planName,
-    hasFeature,
-    getUsageInfo,
-    requiresUpgrade,
-    getRequiredTier,
-    refreshSubscription,
-    refreshUsage,
-    startCheckout,
-    openBillingPortal
   }), [
     subscription,
     usage,
@@ -311,6 +302,18 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     isPastDue,
     tierLevel,
     planName,
+  ]);
+
+  const featuresValue: SubscriptionFeaturesContextType = useMemo(() => ({
+    hasFeature,
+    getUsageInfo,
+    requiresUpgrade,
+    getRequiredTier,
+    refreshSubscription,
+    refreshUsage,
+    startCheckout,
+    openBillingPortal
+  }), [
     hasFeature,
     getUsageInfo,
     requiresUpgrade,
@@ -322,19 +325,35 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
   ]);
 
   return (
-    <SubscriptionContext.Provider value={value}>
-      {children}
-    </SubscriptionContext.Provider>
+    <SubscriptionStateContext.Provider value={stateValue}>
+      <SubscriptionFeaturesContext.Provider value={featuresValue}>
+        {children}
+      </SubscriptionFeaturesContext.Provider>
+    </SubscriptionStateContext.Provider>
   );
 }
 
 // Hook to use subscription context
-export function useSubscription() {
-  const context = useContext(SubscriptionContext);
+export function useSubscriptionState() {
+  const context = useContext(SubscriptionStateContext);
   if (!context) {
-    throw new Error('useSubscription must be used within a SubscriptionProvider');
+    throw new Error('useSubscriptionState must be used within a SubscriptionProvider');
   }
   return context;
 }
 
-export default SubscriptionContext;
+export function useSubscriptionFeatures() {
+  const context = useContext(SubscriptionFeaturesContext);
+  if (!context) {
+    throw new Error('useSubscriptionFeatures must be used within a SubscriptionProvider');
+  }
+  return context;
+}
+
+export function useSubscription() {
+  const state = useSubscriptionState();
+  const features = useSubscriptionFeatures();
+  return useMemo(() => ({ ...state, ...features }), [state, features]);
+}
+
+export default SubscriptionStateContext;

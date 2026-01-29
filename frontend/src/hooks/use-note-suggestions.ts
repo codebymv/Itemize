@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrl } from '@/lib/api';
+import { storage } from '@/lib/storage';
 
 // Shorter debounce for better responsiveness (was 3000ms)
 const NOTES_DEBOUNCE_DELAY = 1000;
@@ -141,10 +142,10 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       // Use hash of full context instead of just last 50 chars for better cache sensitivity
       const contextHash = context.replace(/\s+/g, ' ').trim().split(' ').slice(-20).join(' ');
       const cacheKey = `note-suggestions-${btoa(contextHash).slice(-50)}-${noteCategory || 'general'}`;
-      const cachedData = localStorage.getItem(cacheKey);
+      const cachedData = storage.getJson<{ suggestions: string[]; continuations: string[]; timestamp: number }>(cacheKey);
       
       if (cachedData) {
-        const { suggestions, continuations, timestamp } = JSON.parse(cachedData);
+        const { suggestions, continuations, timestamp } = cachedData;
         if (Date.now() - timestamp < CACHE_DURATION) {
           console.log('📦 Found cached suggestions for context:', contextHash.substring(0, 50));
           return { suggestions: suggestions || [], continuations: continuations || [] };
@@ -167,7 +168,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         continuations: newContinuations,
         timestamp: Date.now()
       };
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      storage.setJson(cacheKey, cacheData);
       console.log('💾 Cached suggestions for context:', contextHash.substring(0, 50));
     } catch (err) {
       console.warn('Failed to cache note suggestions:', err);

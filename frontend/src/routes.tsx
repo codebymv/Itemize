@@ -15,10 +15,10 @@ import SharedWhiteboardPage from './pages/SharedWhiteboardPage';
 
 // Import layout
 import Layout from './components/Layout';
-import { useAuth } from './contexts/AuthContext';
+import { useAuthState } from './contexts/AuthContext';
 
 const AppRoutes: React.FC = () => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading } = useAuthState();
   
   // Show loading state while auth is being determined
   if (loading) {

@@ -2,12 +2,12 @@ import React, { useEffect } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
 import {
     DropdownMenu,
@@ -39,13 +39,14 @@ const adminNavItems = [
 
 // Internal component that accesses the useHeader hook
 function AppShellContent({ children }: { children: React.ReactNode }) {
-    const { currentUser, logout } = useAuth();
+    const { currentUser } = useAuthState();
+    const { logout } = useAuthActions();
     const { theme, setTheme } = useTheme();
     const { toast } = useToast();
     const { headerContent } = useHeader();
     const navigate = useNavigate();
     const location = useLocation();
-    const { subscription } = useSubscription();
+    const { subscription } = useSubscriptionState();
 
     // Clear header content on unmount/change
     // This helps when navigating away from a page with custom header

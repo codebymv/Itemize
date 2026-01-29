@@ -40,15 +40,22 @@ function sendPaginated(res, items, pagination, statusCode = 200) {
  * @param {string} message - Error message
  * @param {number} statusCode - HTTP status code (default: 500)
  * @param {string} code - Error code (default: 'ERROR')
+ * @param {Object} details - Optional error details
  */
-function sendError(res, message, statusCode = 500, code = 'ERROR') {
-    res.status(statusCode).json({
+function sendError(res, message, statusCode = 500, code = 'ERROR', details = null) {
+    const response = {
         success: false,
         error: {
             message,
             code
         }
-    });
+    };
+
+    if (details) {
+        response.error.details = details;
+    }
+
+    res.status(statusCode).json(response);
 }
 
 /**

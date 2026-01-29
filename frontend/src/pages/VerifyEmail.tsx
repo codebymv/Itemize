@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthActions } from '@/contexts/AuthContext';
 import { Mail, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
@@ -14,7 +14,7 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { theme } = useTheme();
-  const { setCurrentUser } = useAuth();
+  const { setCurrentUser } = useAuthActions();
   
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);

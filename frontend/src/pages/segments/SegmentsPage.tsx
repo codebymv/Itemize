@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { Plus, Search, Filter, MoreHorizontal, Trash2, Copy, Users, RefreshCw } from 'lucide-react';
@@ -15,79 +15,81 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
+import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getSegments, deleteSegment, calculateSegment } from '@/services/segmentsApi';
 import { CreateSegmentModal } from './CreateSegmentModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-
-interface Segment {
-    id: number;
-    name: string;
-    description?: string;
-    type: 'dynamic' | 'static';
-    contact_count: number;
-    filters?: any;
-    created_at: string;
-    updated_at: string;
-}
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { Segment } from '@/types/segments';
+import { StatCard } from '@/components/StatCard';
 
 export function SegmentsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
 
     const [segments, setSegments] = useState<Segment[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
 
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-                    >
-                        SEGMENTS
-                    </h1>
+    const stats = useMemo(() => {
+        const total = segments.length;
+        const dynamic = segments.filter(s => s.type === 'dynamic').length;
+        const staticCount = segments.filter(s => s.type === 'static').length;
+        const contacts = segments.reduce((sum, s) => sum + (s.contact_count || 0), 0);
+        return { total, dynamic, staticCount, contacts };
+    }, [segments]);
+
+    usePageHeader({
+        title: 'SEGMENTS',
+        icon: <Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />,
+        rightContent: (
+            <>
+                <div className="relative w-full max-w-xs">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search segments..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50"
+                    />
                 </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search segments..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Segment
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                    onClick={() => setShowCreateModal(true)}
+                >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Segment
+                </Button>
+            </>
+        ),
+        theme
+    }, [searchQuery, theme]);
 
     useEffect(() => {
-        if (!initError) return;
-        setLoading(false);
-    }, [initError]);
+        if (orgLoading) {
+            setLoading(true);
+            return;
+        }
+
+        if (!organizationId) {
+            setLoading(false);
+        }
+    }, [organizationId, initError, orgLoading]);
 
     const fetchSegments = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId) {
+            if (!orgLoading) {
+                setSegments([]);
+                setLoading(false);
+            }
+            return;
+        }
         setLoading(true);
         try {
             const segments = await getSegments({}, organizationId);
@@ -97,7 +99,7 @@ export function SegmentsPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId, toast]);
+    }, [organizationId, orgLoading, toast]);
 
     useEffect(() => {
         fetchSegments();
@@ -133,9 +135,12 @@ export function SegmentsPage() {
         return (
             <div className="container mx-auto p-6 max-w-7xl">
                 <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                    <CardContent className="pt-6">
+                        <ErrorState
+                            title="Unable to load segments"
+                            description={initError}
+                            onAction={() => window.location.reload()}
+                        />
                     </CardContent>
                 </Card>
             </div>
@@ -165,6 +170,40 @@ export function SegmentsPage() {
             </MobileControlsBar>
 
             <div className="container mx-auto p-6 max-w-7xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <StatCard
+                        title="Total Segments"
+                        badgeText="Total"
+                        value={stats.total}
+                        icon={Filter}
+                        colorTheme="blue"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Dynamic"
+                        badgeText="Dynamic"
+                        value={stats.dynamic}
+                        icon={RefreshCw}
+                        colorTheme="orange"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Static"
+                        badgeText="Static"
+                        value={stats.staticCount}
+                        icon={Users}
+                        colorTheme="gray"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Contacts"
+                        badgeText="Total"
+                        value={stats.contacts}
+                        icon={Users}
+                        colorTheme="green"
+                        isLoading={loading}
+                    />
+                </div>
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
@@ -172,16 +211,14 @@ export function SegmentsPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
                         </div>
                     ) : filteredSegments.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Filter className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No segments yet</h3>
-                            <p className="text-muted-foreground mb-4">Create segments to group and target contacts</p>
-                            <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Create Segment
-                            </Button>
-                        </div>
+                        <EmptyState
+                            title="No segments yet"
+                            description="Create segments to group and target contacts"
+                            icon={Filter}
+                            actionLabel="Create Segment"
+                            onAction={() => setShowCreateModal(true)}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredSegments.map((segment) => (
@@ -194,7 +231,7 @@ export function SegmentsPage() {
                                             </div>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" aria-label="Segment actions">
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>

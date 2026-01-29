@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useAISuggest } from '@/context/AISuggestContext';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,8 +113,8 @@ function SettingsNav() {
 }
 
 function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
-    const { currentUser } = useAuth();
-    const { startCheckout } = useSubscription();
+    const { currentUser } = useAuthState();
+    const { startCheckout } = useSubscriptionFeatures();
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -178,7 +178,7 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
 }
 
 function AccountSettings() {
-    const { planName } = useSubscription();
+    const { planName } = useSubscriptionState();
 
     return (
         <div className="space-y-6">

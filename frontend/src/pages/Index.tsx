@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import CreateListModal from "@/components/CreateListModal";
+import { CreateItemModal } from "@/components/CreateItemModal";
 import { ListCard } from "@/components/ListCard";
 import { ShareModal } from "@/components/ShareModal";
 import QuickAddForm from "@/components/QuickAddForm";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
-import api from '@/lib/api';
+import api, { getAuthToken } from '@/lib/api';
 
 interface ListItem {
   id: string;
@@ -59,6 +59,15 @@ const Index = () => {
     });
   };
 
+  const handleCreateList = async (
+    title: string,
+    category: string,
+    _color: string
+  ) => {
+    createList(title, category);
+    return true;
+  };
+
   const deleteList = async (listId: string): Promise<boolean> => {
     try {
       setLists(prev => prev.filter(list => list.id !== listId));
@@ -71,7 +80,6 @@ const Index = () => {
       console.error('Failed to delete list:', error);
       toast({
         title: "Error",
-        description: "Failed to delete list",
         description: "Could not delete your list. Please try again.",
         variant: "destructive"
       });
@@ -149,7 +157,7 @@ const Index = () => {
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
       const response = await api.post(`/api/lists/${listId}/share`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${getAuthToken()}` }
       });
       return response.data;
     } catch (error) {
@@ -161,7 +169,7 @@ const Index = () => {
   const handleListUnshare = async (listId: string): Promise<void> => {
     try {
       await api.delete(`/api/lists/${listId}/share`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${getAuthToken()}` }
       });
     } catch (error) {
       console.error('Error unsharing list:', error);
@@ -292,11 +300,13 @@ const Index = () => {
       </div>
 
       {/* Create List Modal */}
-      <CreateListModal
+      <CreateItemModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreateList={createList}
+        itemType="list"
+        onCreate={handleCreateList}
         existingCategories={categories}
+        position={{ x: 0, y: 0 }}
       />
 
       {/* Share Modal */}

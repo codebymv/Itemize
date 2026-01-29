@@ -5,6 +5,13 @@
 import api from '@/lib/api';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 
+const unwrapResponse = <T>(payload: any): T => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T;
+  }
+  return payload as T;
+};
+
 // ======================
 // Pipelines API
 // ======================
@@ -13,14 +20,14 @@ export const getPipelines = async (organizationId?: number): Promise<Pipeline[]>
   const response = await api.get('/api/pipelines', {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Pipeline[]>(response.data);
 };
 
 export const getPipeline = async (id: number, organizationId?: number): Promise<Pipeline & { deals: Deal[] }> => {
   const response = await api.get(`/api/pipelines/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Pipeline & { deals: Deal[] }>(response.data);
 };
 
 export interface CreatePipelineData {
@@ -35,14 +42,14 @@ export const createPipeline = async (data: CreatePipelineData): Promise<Pipeline
   const response = await api.post('/api/pipelines', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Pipeline>(response.data);
 };
 
 export const updatePipeline = async (id: number, data: Partial<CreatePipelineData>): Promise<Pipeline> => {
   const response = await api.put(`/api/pipelines/${id}`, data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Pipeline>(response.data);
 };
 
 export const deletePipeline = async (id: number, organizationId?: number): Promise<void> => {
@@ -83,14 +90,14 @@ export const getDeals = async (params: DealsQueryParams = {}): Promise<DealsResp
     params,
     headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<DealsResponse>(response.data);
 };
 
 export const getDeal = async (id: number, organizationId?: number): Promise<Deal> => {
   const response = await api.get(`/api/pipelines/deals/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export interface CreateDealData {
@@ -112,14 +119,14 @@ export const createDeal = async (data: CreateDealData): Promise<Deal> => {
   const response = await api.post('/api/pipelines/deals', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export const updateDeal = async (id: number, data: Partial<CreateDealData>): Promise<Deal> => {
   const response = await api.put(`/api/pipelines/deals/${id}`, data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export const moveDealToStage = async (id: number, stageId: string, organizationId?: number): Promise<Deal> => {
@@ -127,28 +134,28 @@ export const moveDealToStage = async (id: number, stageId: string, organizationI
     { stage_id: stageId },
     { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
   );
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export const markDealWon = async (id: number, organizationId?: number): Promise<Deal> => {
   const response = await api.post(`/api/pipelines/deals/${id}/won`, {}, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export const markDealLost = async (id: number, reason?: string, organizationId?: number): Promise<Deal> => {
   const response = await api.post(`/api/pipelines/deals/${id}/lost`, { reason }, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export const reopenDeal = async (id: number, organizationId?: number): Promise<Deal> => {
   const response = await api.post(`/api/pipelines/deals/${id}/reopen`, {}, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return response.data;
+  return unwrapResponse<Deal>(response.data);
 };
 
 export const deleteDeal = async (id: number, organizationId?: number): Promise<void> => {

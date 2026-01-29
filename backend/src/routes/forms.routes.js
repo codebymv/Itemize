@@ -9,8 +9,9 @@ const crypto = require('crypto');
 const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const UsageTrackingService = require('../services/usageTrackingService');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 const { 
     FORM_LIMITS, 
     ERROR_CODES,
@@ -77,31 +78,30 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { status } = req.query;
-            const client = await pool.connect();
-
-            let query = `
+            const result = await withDbClient(pool, async (client) => {
+                let query = `
         SELECT f.*,
                (SELECT COUNT(*) FROM form_submissions WHERE form_id = f.id) as submission_count,
                (SELECT COUNT(*) FROM form_fields WHERE form_id = f.id) as field_count
         FROM forms f
         WHERE f.organization_id = $1
       `;
-            const params = [req.organizationId];
+                const params = [req.organizationId];
 
-            if (status && status !== 'all') {
-                query += ` AND f.status = $2`;
-                params.push(status);
-            }
+                if (status && status !== 'all') {
+                    query += ` AND f.status = $2`;
+                    params.push(status);
+                }
 
-            query += ` ORDER BY f.created_at DESC`;
+                query += ` ORDER BY f.created_at DESC`;
 
-            const result = await client.query(query, params);
-            client.release();
+                return client.query(query, params);
+            });
 
-            res.json({ forms: result.rows });
+            sendSuccess(res, { forms: result.rows });
         } catch (error) {
             console.error('Error fetching forms:', error);
-            res.status(500).json({ error: 'Failed to fetch forms' });
+            sendError(res, 'Failed to fetch forms');
         }
     });
 
@@ -111,32 +111,34 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const formResult = await client.query(
+                    'SELECT * FROM forms WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            const formResult = await client.query(
-                'SELECT * FROM forms WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (formResult.rows.length === 0) {
+                    return null;
+                }
 
-            if (formResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Form not found' });
+                const fieldsResult = await client.query(
+                    'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
+                    [id]
+                );
+
+                const form = formResult.rows[0];
+                form.fields = fieldsResult.rows;
+                return form;
+            });
+
+            if (!result) {
+                return sendNotFound(res, 'Form');
             }
 
-            const fieldsResult = await client.query(
-                'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
-                [id]
-            );
-
-            client.release();
-
-            const form = formResult.rows[0];
-            form.fields = fieldsResult.rows;
-
-            res.json(form);
+            sendSuccess(res, result);
         } catch (error) {
             console.error('Error fetching form:', error);
-            res.status(500).json({ error: 'Failed to fetch form' });
+            sendError(res, 'Failed to fetch form');
         }
     });
 
@@ -149,17 +151,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             // Check form limit
             const limitCheck = await checkFormLimit(req.organizationId);
             if (!limitCheck.allowed) {
-                return res.status(403).json({
-                    success: false,
-                    error: {
-                        message: `You've reached your form limit (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.`,
-                        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+                return sendError(
+                    res,
+                    `You've reached your form limit (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.`,
+                    403,
+                    ERROR_CODES.PLAN_LIMIT_REACHED,
+                    {
                         resourceType: 'forms',
                         current: limitCheck.current,
                         limit: limitCheck.limit,
                         plan: limitCheck.plan
                     }
-                });
+                );
             }
 
             const {
@@ -178,15 +181,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             } = req.body;
 
             if (!name || name.trim().length === 0) {
-                return res.status(400).json({ error: 'Form name is required' });
+                return sendBadRequest(res, 'Form name is required');
             }
 
             const slug = generateSlug(name);
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const form = await withTransaction(pool, async (client) => {
                 const formResult = await client.query(`
           INSERT INTO forms (
             organization_id, name, description, slug, type,
@@ -212,7 +211,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     req.user.id
                 ]);
 
-                const form = formResult.rows[0];
+                const createdForm = formResult.rows[0];
 
                 // Add default fields if none provided
                 if (fields && Array.isArray(fields) && fields.length > 0) {
@@ -225,7 +224,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 conditions, map_to_contact_field
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             `, [
-                            form.id,
+                            createdForm.id,
                             field.field_type,
                             field.label,
                             field.placeholder || null,
@@ -244,36 +243,30 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     await client.query(`
             INSERT INTO form_fields (form_id, field_type, label, is_required, field_order, map_to_contact_field)
             VALUES ($1, 'text', 'Name', true, 0, 'first_name')
-          `, [form.id]);
+          `, [createdForm.id]);
                     await client.query(`
             INSERT INTO form_fields (form_id, field_type, label, is_required, field_order, map_to_contact_field)
             VALUES ($1, 'email', 'Email', true, 1, 'email')
-          `, [form.id]);
+          `, [createdForm.id]);
                 }
-
-                await client.query('COMMIT');
 
                 // Fetch fields
                 const fieldsResult = await client.query(
                     'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
-                    [form.id]
+                    [createdForm.id]
                 );
-                form.fields = fieldsResult.rows;
+                createdForm.fields = fieldsResult.rows;
 
-                client.release();
-                
-                // Track usage
-                await usageService.incrementUsage(req.organizationId, 'forms');
+                return createdForm;
+            });
 
-                res.status(201).json(form);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+            // Track usage
+            await usageService.incrementUsage(req.organizationId, 'forms');
+
+            sendCreated(res, form);
         } catch (error) {
             console.error('Error creating form:', error);
-            res.status(500).json({ error: 'Failed to create form' });
+            sendError(res, 'Failed to create form');
         }
     });
 
@@ -298,9 +291,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 contact_tags
             } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
         UPDATE forms SET
           name = COALESCE($1, name),
           description = COALESCE($2, description),
@@ -333,17 +325,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 id,
                 req.organizationId
             ]);
-
-            client.release();
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Form not found' });
+                return sendNotFound(res, 'Form');
             }
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error updating form:', error);
-            res.status(500).json({ error: 'Failed to update form' });
+            sendError(res, 'Failed to update form');
         }
     });
 
@@ -356,24 +347,19 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { fields } = req.body;
 
             if (!Array.isArray(fields)) {
-                return res.status(400).json({ error: 'fields must be an array' });
+                return sendBadRequest(res, 'fields must be an array');
             }
 
-            const client = await pool.connect();
+            const result = await withTransaction(pool, async (client) => {
+                // Verify form exists
+                const formCheck = await client.query(
+                    'SELECT id FROM forms WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify form exists
-            const formCheck = await client.query(
-                'SELECT id FROM forms WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            if (formCheck.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Form not found' });
-            }
-
-            try {
-                await client.query('BEGIN');
+                if (formCheck.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
                 // Delete existing fields
                 await client.query('DELETE FROM form_fields WHERE form_id = $1', [id]);
@@ -403,24 +389,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     ]);
                 }
 
-                await client.query('COMMIT');
-
                 // Fetch updated fields
-                const result = await client.query(
+                const fieldsResult = await client.query(
                     'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
                     [id]
                 );
 
-                client.release();
-                res.json({ fields: result.rows });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { status: 'ok', fields: fieldsResult.rows };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Form');
             }
+
+            sendSuccess(res, { fields: result.fields });
         } catch (error) {
             console.error('Error updating form fields:', error);
-            res.status(500).json({ error: 'Failed to update form fields' });
+            sendError(res, 'Failed to update form fields');
         }
     });
 
@@ -430,23 +415,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'DELETE FROM forms WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'DELETE FROM forms WHERE id = $1 AND organization_id = $2 RETURNING id',
+                    [id, req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Form not found' });
+                return sendNotFound(res, 'Form');
             }
 
-            res.json({ message: 'Form deleted successfully' });
+            sendSuccess(res, { message: 'Form deleted successfully' });
         } catch (error) {
             console.error('Error deleting form:', error);
-            res.status(500).json({ error: 'Failed to delete form' });
+            sendError(res, 'Failed to delete form');
         }
     });
 
@@ -456,24 +439,19 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/:id/duplicate', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withTransaction(pool, async (client) => {
+                // Get original form
+                const formResult = await client.query(
+                    'SELECT * FROM forms WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Get original form
-            const formResult = await client.query(
-                'SELECT * FROM forms WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (formResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (formResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Form not found' });
-            }
-
-            const original = formResult.rows[0];
-            const newSlug = generateSlug(original.name + ' Copy');
-
-            try {
-                await client.query('BEGIN');
+                const original = formResult.rows[0];
+                const newSlug = generateSlug(original.name + ' Copy');
 
                 // Create new form
                 const newFormResult = await client.query(`
@@ -532,8 +510,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     ]);
                 }
 
-                await client.query('COMMIT');
-
                 // Fetch new fields
                 const newFieldsResult = await client.query(
                     'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
@@ -541,16 +517,17 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
                 newForm.fields = newFieldsResult.rows;
 
-                client.release();
-                res.status(201).json(newForm);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { status: 'ok', form: newForm };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Form');
             }
+
+            sendCreated(res, result.form);
         } catch (error) {
             console.error('Error duplicating form:', error);
-            res.status(500).json({ error: 'Failed to duplicate form' });
+            sendError(res, 'Failed to duplicate form');
         }
     });
 
@@ -567,25 +544,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { page = 1, limit = 50 } = req.query;
             const offset = (parseInt(page) - 1) * parseInt(limit);
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                // Verify form access
+                const formCheck = await client.query(
+                    'SELECT id FROM forms WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify form access
-            const formCheck = await client.query(
-                'SELECT id FROM forms WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (formCheck.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (formCheck.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Form not found' });
-            }
+                const countResult = await client.query(
+                    'SELECT COUNT(*) FROM form_submissions WHERE form_id = $1',
+                    [id]
+                );
 
-            const countResult = await client.query(
-                'SELECT COUNT(*) FROM form_submissions WHERE form_id = $1',
-                [id]
-            );
-
-            const result = await client.query(`
+                const submissionsResult = await client.query(`
         SELECT fs.*,
                c.first_name as contact_first_name,
                c.last_name as contact_last_name,
@@ -597,20 +572,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         LIMIT $2 OFFSET $3
       `, [id, parseInt(limit), offset]);
 
-            client.release();
+                return {
+                    status: 'ok',
+                    submissions: submissionsResult.rows,
+                    total: parseInt(countResult.rows[0].count)
+                };
+            });
 
-            res.json({
-                submissions: result.rows,
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Form');
+            }
+
+            sendSuccess(res, {
+                submissions: result.submissions,
                 pagination: {
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                    total: result.total,
+                    totalPages: Math.ceil(result.total / parseInt(limit))
                 }
             });
         } catch (error) {
             console.error('Error fetching submissions:', error);
-            res.status(500).json({ error: 'Failed to fetch submissions' });
+            sendError(res, 'Failed to fetch submissions');
         }
     });
 
@@ -620,24 +604,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/:id/submissions/:subId', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id, subId } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
         DELETE FROM form_submissions 
         WHERE id = $1 AND form_id = $2 AND organization_id = $3
         RETURNING id
       `, [subId, id, req.organizationId]);
-
-            client.release();
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Submission not found' });
+                return sendNotFound(res, 'Submission');
             }
 
-            res.json({ message: 'Submission deleted' });
+            sendSuccess(res, { message: 'Submission deleted' });
         } catch (error) {
             console.error('Error deleting submission:', error);
-            res.status(500).json({ error: 'Failed to delete submission' });
+            sendError(res, 'Failed to delete submission');
         }
     });
 
@@ -651,9 +633,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/public/form/:slug', publicRateLimit, async (req, res) => {
         try {
             const { slug } = req.params;
-            const client = await pool.connect();
-
-            const formResult = await client.query(`
+            const result = await withDbClient(pool, async (client) => {
+                const formResult = await client.query(`
         SELECT f.id, f.name, f.description, f.slug, f.type,
                f.submit_button_text, f.success_message, f.redirect_url, f.theme,
                o.name as organization_name
@@ -662,14 +643,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         WHERE f.slug = $1 AND f.status = 'published'
       `, [slug]);
 
-            if (formResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Form not found' });
-            }
+                if (formResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            const form = formResult.rows[0];
+                const form = formResult.rows[0];
 
-            const fieldsResult = await client.query(`
+                const fieldsResult = await client.query(`
         SELECT id, field_type, label, placeholder, help_text,
                is_required, validation, options, field_order, width
         FROM form_fields
@@ -677,13 +657,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         ORDER BY field_order
       `, [form.id]);
 
-            form.fields = fieldsResult.rows;
-            client.release();
+                form.fields = fieldsResult.rows;
+                return { status: 'ok', form };
+            });
 
-            res.json(form);
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Form');
+            }
+
+            sendSuccess(res, result.form);
         } catch (error) {
             console.error('Error fetching public form:', error);
-            res.status(500).json({ error: 'Failed to load form' });
+            sendError(res, 'Failed to load form');
         }
     });
 
@@ -696,107 +681,113 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { data } = req.body;
 
             if (!data || typeof data !== 'object') {
-                return res.status(400).json({ error: 'Form data is required' });
+                return sendBadRequest(res, 'Form data is required');
             }
 
-            const client = await pool.connect();
-
-            // Get form
-            const formResult = await client.query(`
+            const outcome = await withDbClient(pool, async (client) => {
+                // Get form
+                const formResult = await client.query(`
         SELECT f.*, o.id as org_id
         FROM forms f
         JOIN organizations o ON f.organization_id = o.id
         WHERE f.slug = $1 AND f.status = 'published'
       `, [slug]);
 
-            if (formResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Form not found' });
-            }
-
-            const form = formResult.rows[0];
-
-            // Get fields for validation and contact mapping
-            const fieldsResult = await client.query(
-                'SELECT * FROM form_fields WHERE form_id = $1',
-                [form.id]
-            );
-            const fields = fieldsResult.rows;
-
-            // Validate required fields
-            for (const field of fields) {
-                if (field.is_required && !data[field.id]) {
-                    client.release();
-                    return res.status(400).json({ error: `${field.label} is required` });
+                if (formResult.rows.length === 0) {
+                    return { status: 'not_found' };
                 }
-            }
 
-            let contactId = null;
+                const form = formResult.rows[0];
 
-            // Create/update contact if enabled
-            if (form.create_contact) {
-                const contactData = { organization_id: form.organization_id };
+                // Get fields for validation and contact mapping
+                const fieldsResult = await client.query(
+                    'SELECT * FROM form_fields WHERE form_id = $1',
+                    [form.id]
+                );
+                const fields = fieldsResult.rows;
 
+                // Validate required fields
                 for (const field of fields) {
-                    if (field.map_to_contact_field && data[field.id]) {
-                        contactData[field.map_to_contact_field] = data[field.id];
+                    if (field.is_required && !data[field.id]) {
+                        return { status: 'missing_field', label: field.label };
                     }
                 }
 
-                // Check for existing contact by email
-                if (contactData.email) {
-                    const existingContact = await client.query(
-                        'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
-                        [form.organization_id, contactData.email]
-                    );
+                let contactId = null;
 
-                    if (existingContact.rows.length > 0) {
-                        contactId = existingContact.rows[0].id;
-                    } else {
-                        const newContact = await client.query(`
+                // Create/update contact if enabled
+                if (form.create_contact) {
+                    const contactData = { organization_id: form.organization_id };
+
+                    for (const field of fields) {
+                        if (field.map_to_contact_field && data[field.id]) {
+                            contactData[field.map_to_contact_field] = data[field.id];
+                        }
+                    }
+
+                    // Check for existing contact by email
+                    if (contactData.email) {
+                        const existingContact = await client.query(
+                            'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
+                            [form.organization_id, contactData.email]
+                        );
+
+                        if (existingContact.rows.length > 0) {
+                            contactId = existingContact.rows[0].id;
+                        } else {
+                            const newContact = await client.query(`
               INSERT INTO contacts (organization_id, first_name, last_name, email, phone, company, source, tags)
               VALUES ($1, $2, $3, $4, $5, $6, 'form', $7)
               RETURNING id
             `, [
-                            form.organization_id,
-                            contactData.first_name || null,
-                            contactData.last_name || null,
-                            contactData.email,
-                            contactData.phone || null,
-                            contactData.company || null,
-                            form.contact_tags || []
-                        ]);
-                        contactId = newContact.rows[0].id;
+                                form.organization_id,
+                                contactData.first_name || null,
+                                contactData.last_name || null,
+                                contactData.email,
+                                contactData.phone || null,
+                                contactData.company || null,
+                                form.contact_tags || []
+                            ]);
+                            contactId = newContact.rows[0].id;
+                        }
                     }
                 }
-            }
 
-            // Create submission
-            const submissionResult = await client.query(`
+                // Create submission
+                const submissionResult = await client.query(`
         INSERT INTO form_submissions (form_id, organization_id, contact_id, data, ip_address, user_agent, referrer)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
       `, [
-                form.id,
-                form.organization_id,
-                contactId,
-                JSON.stringify(data),
-                req.ip,
-                req.get('user-agent'),
-                req.get('referrer')
-            ]);
+                    form.id,
+                    form.organization_id,
+                    contactId,
+                    JSON.stringify(data),
+                    req.ip,
+                    req.get('user-agent'),
+                    req.get('referrer')
+                ]);
 
-            client.release();
+                return { status: 'ok', form, submission: submissionResult.rows[0], contactId };
+            });
+
+            if (outcome.status === 'not_found') {
+                return sendNotFound(res, 'Form');
+            }
+
+            if (outcome.status === 'missing_field') {
+                return sendBadRequest(res, `${outcome.label} is required`);
+            }
 
             // Fire automation trigger
             if (automationEngine) {
                 try {
                     const engine = automationEngine.getEngine();
                     engine.handleTrigger('form_submitted', {
-                        form: { id: form.id, name: form.name, slug: form.slug },
-                        submission: submissionResult.rows[0],
-                        contact: contactId ? { id: contactId } : null,
-                        organizationId: form.organization_id,
+                        form: { id: outcome.form.id, name: outcome.form.name, slug: outcome.form.slug },
+                        submission: outcome.submission,
+                        contact: outcome.contactId ? { id: outcome.contactId } : null,
+                        organizationId: outcome.form.organization_id,
                         fields: data
                     }).catch(err => console.error('Form submission trigger error:', err));
                 } catch (triggerError) {
@@ -804,14 +795,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
             }
 
-            res.status(201).json({
+            sendCreated(res, {
                 success: true,
-                message: form.success_message,
-                redirect_url: form.redirect_url
+                message: outcome.form.success_message,
+                redirect_url: outcome.form.redirect_url
             });
         } catch (error) {
             console.error('Error submitting form:', error);
-            res.status(500).json({ error: 'Failed to submit form' });
+            sendError(res, 'Failed to submit form');
         }
     });
 

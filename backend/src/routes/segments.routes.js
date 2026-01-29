@@ -5,9 +5,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -273,8 +272,6 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { is_active, search } = req.query;
-            const client = await pool.connect();
-
             let query = `
                 SELECT s.*, u.name as created_by_name
                 FROM segments s
@@ -298,13 +295,12 @@ module.exports = (pool, authenticateJWT) => {
 
             query += ' ORDER BY s.name ASC';
 
-            const result = await client.query(query, params);
-            client.release();
+            const result = await withDbClient(pool, async (client) => client.query(query, params));
 
             res.json(result.rows);
         } catch (error) {
             console.error('Error fetching segments:', error);
-            res.status(500).json({ error: 'Failed to fetch segments' });
+            return sendError(res, 'Failed to fetch segments');
         }
     });
 
@@ -314,37 +310,39 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
+                    SELECT s.*, u.name as created_by_name
+                    FROM segments s
+                    LEFT JOIN users u ON s.created_by = u.id
+                    WHERE s.id = $1 AND s.organization_id = $2
+                `, [id, req.organizationId]);
 
-            const result = await client.query(`
-                SELECT s.*, u.name as created_by_name
-                FROM segments s
-                LEFT JOIN users u ON s.created_by = u.id
-                WHERE s.id = $1 AND s.organization_id = $2
-            `, [id, req.organizationId]);
+                if (result.rows.length === 0) {
+                    return { status: 404, error: 'Segment not found' };
+                }
 
-            if (result.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Segment not found' });
+                // Get recent history
+                const historyResult = await client.query(`
+                    SELECT * FROM segment_history 
+                    WHERE segment_id = $1 
+                    ORDER BY calculated_at DESC 
+                    LIMIT 30
+                `, [id]);
+
+                return { status: 200, segment: result.rows[0], history: historyResult.rows };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
 
-            // Get recent history
-            const historyResult = await client.query(`
-                SELECT * FROM segment_history 
-                WHERE segment_id = $1 
-                ORDER BY calculated_at DESC 
-                LIMIT 30
-            `, [id]);
+            data.segment.history = data.history;
 
-            client.release();
-
-            const segment = result.rows[0];
-            segment.history = historyResult.rows;
-
-            res.json(segment);
+            res.json(data.segment);
         } catch (error) {
             console.error('Error fetching segment:', error);
-            res.status(500).json({ error: 'Failed to fetch segment' });
+            return sendError(res, 'Failed to fetch segment');
         }
     });
 
@@ -372,37 +370,38 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).json({ error: 'At least one filter is required' });
             }
 
-            const client = await pool.connect();
+            const segment = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
+                    INSERT INTO segments (
+                        organization_id, name, description, color, icon,
+                        filter_type, filters, segment_type, static_contact_ids,
+                        created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    name,
+                    description || null,
+                    color || '#6366F1',
+                    icon || 'users',
+                    filter_type || 'and',
+                    JSON.stringify(filters),
+                    segment_type || 'dynamic',
+                    static_contact_ids || [],
+                    req.user.id
+                ]);
 
-            const result = await client.query(`
-                INSERT INTO segments (
-                    organization_id, name, description, color, icon,
-                    filter_type, filters, segment_type, static_contact_ids,
-                    created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                RETURNING *
-            `, [
-                req.organizationId,
-                name,
-                description || null,
-                color || '#6366F1',
-                icon || 'users',
-                filter_type || 'and',
-                JSON.stringify(filters),
-                segment_type || 'dynamic',
-                static_contact_ids || [],
-                req.user.id
-            ]);
+                // Calculate initial contact count
+                const segment = result.rows[0];
+                await calculateSegmentCount(client, segment);
 
-            // Calculate initial contact count
-            const segment = result.rows[0];
-            await calculateSegmentCount(client, segment);
+                return segment;
+            });
 
-            client.release();
             res.status(201).json(segment);
         } catch (error) {
             console.error('Error creating segment:', error);
-            res.status(500).json({ error: 'Failed to create segment' });
+            return sendError(res, 'Failed to create segment');
         }
     });
 
@@ -422,47 +421,51 @@ module.exports = (pool, authenticateJWT) => {
                 is_active
             } = req.body;
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
+                    UPDATE segments SET
+                        name = COALESCE($1, name),
+                        description = $2,
+                        color = COALESCE($3, color),
+                        icon = COALESCE($4, icon),
+                        filter_type = COALESCE($5, filter_type),
+                        filters = COALESCE($6, filters),
+                        is_active = COALESCE($7, is_active),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $8 AND organization_id = $9
+                    RETURNING *
+                `, [
+                    name,
+                    description,
+                    color,
+                    icon,
+                    filter_type,
+                    filters ? JSON.stringify(filters) : null,
+                    is_active,
+                    id,
+                    req.organizationId
+                ]);
 
-            const result = await client.query(`
-                UPDATE segments SET
-                    name = COALESCE($1, name),
-                    description = $2,
-                    color = COALESCE($3, color),
-                    icon = COALESCE($4, icon),
-                    filter_type = COALESCE($5, filter_type),
-                    filters = COALESCE($6, filters),
-                    is_active = COALESCE($7, is_active),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $8 AND organization_id = $9
-                RETURNING *
-            `, [
-                name,
-                description,
-                color,
-                icon,
-                filter_type,
-                filters ? JSON.stringify(filters) : null,
-                is_active,
-                id,
-                req.organizationId
-            ]);
+                if (result.rows.length === 0) {
+                    return { status: 404, error: 'Segment not found' };
+                }
 
-            if (result.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Segment not found' });
+                // Recalculate contact count if filters changed
+                if (filters) {
+                    await calculateSegmentCount(client, result.rows[0]);
+                }
+
+                return { status: 200, segment: result.rows[0] };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
 
-            // Recalculate contact count if filters changed
-            if (filters) {
-                await calculateSegmentCount(client, result.rows[0]);
-            }
-
-            client.release();
-            res.json(result.rows[0]);
+            res.json(data.segment);
         } catch (error) {
             console.error('Error updating segment:', error);
-            res.status(500).json({ error: 'Failed to update segment' });
+            return sendError(res, 'Failed to update segment');
         }
     });
 
@@ -472,14 +475,10 @@ module.exports = (pool, authenticateJWT) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'DELETE FROM segments WHERE id = $1 AND organization_id = $2 RETURNING id',
                 [id, req.organizationId]
-            );
-
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Segment not found' });
@@ -488,7 +487,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error deleting segment:', error);
-            res.status(500).json({ error: 'Failed to delete segment' });
+            return sendError(res, 'Failed to delete segment');
         }
     });
 
@@ -502,32 +501,36 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/calculate', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const segmentResult = await client.query(
+                    'SELECT * FROM segments WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            const segmentResult = await client.query(
-                'SELECT * FROM segments WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (segmentResult.rows.length === 0) {
+                    return { status: 404, error: 'Segment not found' };
+                }
 
-            if (segmentResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Segment not found' });
+                const segment = segmentResult.rows[0];
+                await calculateSegmentCount(client, segment);
+
+                // Get updated segment
+                const updatedResult = await client.query(
+                    'SELECT * FROM segments WHERE id = $1',
+                    [id]
+                );
+
+                return { status: 200, segment: updatedResult.rows[0] };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
 
-            const segment = segmentResult.rows[0];
-            await calculateSegmentCount(client, segment);
-
-            // Get updated segment
-            const updatedResult = await client.query(
-                'SELECT * FROM segments WHERE id = $1',
-                [id]
-            );
-
-            client.release();
-            res.json(updatedResult.rows[0]);
+            res.json(data.segment);
         } catch (error) {
             console.error('Error calculating segment:', error);
-            res.status(500).json({ error: 'Failed to calculate segment' });
+            return sendError(res, 'Failed to calculate segment');
         }
     });
 
@@ -539,64 +542,66 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const { page = 1, limit = 50 } = req.query;
             const offset = (parseInt(page) - 1) * parseInt(limit);
+            const data = await withDbClient(pool, async (client) => {
+                // Get segment
+                const segmentResult = await client.query(
+                    'SELECT * FROM segments WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            const client = await pool.connect();
+                if (segmentResult.rows.length === 0) {
+                    return { status: 404, error: 'Segment not found' };
+                }
 
-            // Get segment
-            const segmentResult = await client.query(
-                'SELECT * FROM segments WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                const segment = segmentResult.rows[0];
 
-            if (segmentResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Segment not found' });
+                // Build filter query
+                const { whereClause, params } = buildFilterQuery(segment.filters, segment.filter_type);
+
+                let baseQuery = `
+                    SELECT c.* FROM contacts c
+                    WHERE c.organization_id = $1
+                `;
+                const queryParams = [req.organizationId];
+
+                if (whereClause) {
+                    // Adjust param indices
+                    const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
+                        return `$${parseInt(num) + 1}`;
+                    });
+                    baseQuery += ` AND ${adjustedWhereClause}`;
+                    queryParams.push(...params);
+                }
+
+                // Count query
+                const countQuery = baseQuery.replace('SELECT c.*', 'SELECT COUNT(*)');
+                const countResult = await client.query(countQuery, queryParams);
+
+                // Data query with pagination
+                baseQuery += ` ORDER BY c.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+                queryParams.push(parseInt(limit), offset);
+
+                const contactsResult = await client.query(baseQuery, queryParams);
+
+                return { status: 200, contactsResult, countResult };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
-
-            const segment = segmentResult.rows[0];
-
-            // Build filter query
-            const { whereClause, params } = buildFilterQuery(segment.filters, segment.filter_type);
-
-            let baseQuery = `
-                SELECT c.* FROM contacts c
-                WHERE c.organization_id = $1
-            `;
-            const queryParams = [req.organizationId];
-
-            if (whereClause) {
-                // Adjust param indices
-                const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                    return `$${parseInt(num) + 1}`;
-                });
-                baseQuery += ` AND ${adjustedWhereClause}`;
-                queryParams.push(...params);
-            }
-
-            // Count query
-            const countQuery = baseQuery.replace('SELECT c.*', 'SELECT COUNT(*)');
-            const countResult = await client.query(countQuery, queryParams);
-
-            // Data query with pagination
-            baseQuery += ` ORDER BY c.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-            queryParams.push(parseInt(limit), offset);
-
-            const contactsResult = await client.query(baseQuery, queryParams);
-
-            client.release();
 
             res.json({
-                contacts: contactsResult.rows,
+                contacts: data.contactsResult.rows,
                 pagination: {
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                    total: parseInt(data.countResult.rows[0].count),
+                    totalPages: Math.ceil(parseInt(data.countResult.rows[0].count) / parseInt(limit))
                 }
             });
         } catch (error) {
             console.error('Error fetching segment contacts:', error);
-            res.status(500).json({ error: 'Failed to fetch segment contacts' });
+            return sendError(res, 'Failed to fetch segment contacts');
         }
     });
 
@@ -611,52 +616,52 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).json({ error: 'Filters array is required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const { whereClause, params } = buildFilterQuery(filters, filter_type || 'and');
 
-            const { whereClause, params } = buildFilterQuery(filters, filter_type || 'and');
+                let query = `
+                    SELECT COUNT(*) as total FROM contacts c
+                    WHERE c.organization_id = $1
+                `;
+                const queryParams = [req.organizationId];
 
-            let query = `
-                SELECT COUNT(*) as total FROM contacts c
-                WHERE c.organization_id = $1
-            `;
-            const queryParams = [req.organizationId];
+                if (whereClause) {
+                    const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
+                        return `$${parseInt(num) + 1}`;
+                    });
+                    query += ` AND ${adjustedWhereClause}`;
+                    queryParams.push(...params);
+                }
 
-            if (whereClause) {
-                const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                    return `$${parseInt(num) + 1}`;
-                });
-                query += ` AND ${adjustedWhereClause}`;
-                queryParams.push(...params);
-            }
+                const result = await client.query(query, queryParams);
 
-            const result = await client.query(query, queryParams);
+                // Get sample contacts
+                let sampleQuery = `
+                    SELECT c.id, c.first_name, c.last_name, c.email, c.status
+                    FROM contacts c
+                    WHERE c.organization_id = $1
+                `;
 
-            // Get sample contacts
-            let sampleQuery = `
-                SELECT c.id, c.first_name, c.last_name, c.email, c.status
-                FROM contacts c
-                WHERE c.organization_id = $1
-            `;
+                if (whereClause) {
+                    const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
+                        return `$${parseInt(num) + 1}`;
+                    });
+                    sampleQuery += ` AND ${adjustedWhereClause}`;
+                }
+                sampleQuery += ' LIMIT 5';
 
-            if (whereClause) {
-                const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                    return `$${parseInt(num) + 1}`;
-                });
-                sampleQuery += ` AND ${adjustedWhereClause}`;
-            }
-            sampleQuery += ' LIMIT 5';
+                const sampleResult = await client.query(sampleQuery, queryParams.slice(0, -0) || queryParams);
 
-            const sampleResult = await client.query(sampleQuery, queryParams.slice(0, -0) || queryParams);
-
-            client.release();
+                return { result, sampleResult };
+            });
 
             res.json({
-                count: parseInt(result.rows[0].total),
-                sample: sampleResult.rows
+                count: parseInt(data.result.rows[0].total),
+                sample: data.sampleResult.rows
             });
         } catch (error) {
             console.error('Error previewing segment:', error);
-            res.status(500).json({ error: 'Failed to preview segment' });
+            return sendError(res, 'Failed to preview segment');
         }
     });
 
@@ -665,31 +670,31 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/filter-options', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
+            const { tagsResult, usersResult, stagesResult } = await withDbClient(pool, async (client) => {
+                // Get tags
+                const tagsResult = await client.query(
+                    'SELECT id, name, color FROM tags WHERE organization_id = $1 ORDER BY name',
+                    [req.organizationId]
+                );
 
-            // Get tags
-            const tagsResult = await client.query(
-                'SELECT id, name, color FROM tags WHERE organization_id = $1 ORDER BY name',
-                [req.organizationId]
-            );
+                // Get users for assignment filter
+                const usersResult = await client.query(`
+                    SELECT u.id, u.name FROM users u
+                    JOIN organization_members om ON u.id = om.user_id
+                    WHERE om.organization_id = $1
+                    ORDER BY u.name
+                `, [req.organizationId]);
 
-            // Get users for assignment filter
-            const usersResult = await client.query(`
-                SELECT u.id, u.name FROM users u
-                JOIN organization_members om ON u.id = om.user_id
-                WHERE om.organization_id = $1
-                ORDER BY u.name
-            `, [req.organizationId]);
+                // Get pipeline stages
+                const stagesResult = await client.query(`
+                    SELECT p.id as pipeline_id, p.name as pipeline_name, p.stages
+                    FROM pipelines p
+                    WHERE p.organization_id = $1
+                    ORDER BY p.is_default DESC, p.name
+                `, [req.organizationId]);
 
-            // Get pipeline stages
-            const stagesResult = await client.query(`
-                SELECT p.id as pipeline_id, p.name as pipeline_name, p.stages
-                FROM pipelines p
-                WHERE p.organization_id = $1
-                ORDER BY p.is_default DESC, p.name
-            `, [req.organizationId]);
-
-            client.release();
+                return { tagsResult, usersResult, stagesResult };
+            });
 
             res.json({
                 fields: [
@@ -717,7 +722,7 @@ module.exports = (pool, authenticateJWT) => {
             });
         } catch (error) {
             console.error('Error fetching filter options:', error);
-            res.status(500).json({ error: 'Failed to fetch filter options' });
+            return sendError(res, 'Failed to fetch filter options');
         }
     });
 

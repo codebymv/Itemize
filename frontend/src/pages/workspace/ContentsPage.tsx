@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import {
   fetchCanvasLists,
   getNotes,
@@ -87,7 +87,7 @@ export function ContentsPage() {
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
-  const { token } = useAuth();
+  const { token } = useAuthState();
   const isMobile = useIsMobile();
 
   // View state

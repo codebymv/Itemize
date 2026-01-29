@@ -190,6 +190,9 @@ export interface WireframeCardProps {
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
+export * from './campaigns';
+export * from './segments';
+
 // ======================
 // Vault Types (Encrypted Storage)
 // ======================

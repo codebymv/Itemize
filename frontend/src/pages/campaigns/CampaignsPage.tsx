@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { Plus, Search, Mail, MoreHorizontal, Trash2, Copy, Play, Pause, Send, BarChart3, Clock, Pencil } from 'lucide-react';
@@ -22,96 +22,94 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
+import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getCampaigns, deleteCampaign, duplicateCampaign, sendCampaign, pauseCampaign, resumeCampaign } from '@/services/campaignsApi';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-
-interface Campaign {
-    id: number;
-    name: string;
-    subject: string;
-    status: 'draft' | 'scheduled' | 'sending' | 'paused' | 'sent' | 'failed';
-    recipient_count: number;
-    sent_count: number;
-    open_rate?: number;
-    click_rate?: number;
-    scheduled_at?: string;
-    sent_at?: string;
-    created_at: string;
-}
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { Campaign } from '@/types/campaigns';
+import { StatCard } from '@/components/StatCard';
 
 export function CampaignsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
 
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
 
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-                    >
-                        CAMPAIGNS | All
-                    </h1>
+    const stats = useMemo(() => {
+        const total = campaigns.length;
+        const draft = campaigns.filter(c => c.status === 'draft').length;
+        const scheduled = campaigns.filter(c => c.status === 'scheduled' || c.status === 'sending').length;
+        const sent = campaigns.filter(c => c.status === 'sent').length;
+        return { total, draft, scheduled, sent };
+    }, [campaigns]);
+
+    usePageHeader({
+        title: 'CAMPAIGNS | All',
+        icon: <Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />,
+        rightContent: (
+            <>
+                <div className="relative w-full max-w-xs">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                        placeholder="Search campaigns..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 bg-muted/20 border-border/50"
+                    />
                 </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search campaigns..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="sending">Sending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Campaign
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, statusFilter, theme, setHeaderContent]);
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[120px] h-9">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="sending">Sending</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                    onClick={() => setShowCreateModal(true)}
+                >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Campaign
+                </Button>
+            </>
+        ),
+        theme
+    }, [searchQuery, statusFilter, theme]);
 
     useEffect(() => {
-        if (!organizationId && initError) {
+        if (orgLoading) {
+            setLoading(true);
+            return;
+        }
+
+        if (!organizationId) {
             setLoading(false);
         }
-    }, [organizationId, initError]);
+    }, [organizationId, initError, orgLoading]);
 
     const fetchCampaigns = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId) {
+            if (!orgLoading) {
+                setCampaigns([]);
+                setLoading(false);
+            }
+            return;
+        }
         setLoading(true);
         try {
             const response = await getCampaigns(
@@ -136,7 +134,7 @@ export function CampaignsPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId, statusFilter]);
+    }, [organizationId, orgLoading, statusFilter, toast]);
 
     useEffect(() => {
         fetchCampaigns();
@@ -185,9 +183,12 @@ export function CampaignsPage() {
         return (
             <div className="container mx-auto p-6 max-w-7xl">
                 <Card className="max-w-lg mx-auto mt-12">
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">{initError}</p>
-                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+                    <CardContent className="pt-6">
+                        <ErrorState
+                            title="Unable to load campaigns"
+                            description={initError}
+                            onAction={() => window.location.reload()}
+                        />
                     </CardContent>
                 </Card>
             </div>
@@ -229,6 +230,40 @@ export function CampaignsPage() {
             </MobileControlsBar>
 
             <div className="container mx-auto p-6 max-w-7xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <StatCard
+                        title="Total Campaigns"
+                        badgeText="Total"
+                        value={stats.total}
+                        icon={Mail}
+                        colorTheme="blue"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Drafts"
+                        badgeText="Draft"
+                        value={stats.draft}
+                        icon={Pencil}
+                        colorTheme="gray"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Scheduled/Sending"
+                        badgeText="In Progress"
+                        value={stats.scheduled}
+                        icon={Clock}
+                        colorTheme="orange"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Sent"
+                        badgeText="Delivered"
+                        value={stats.sent}
+                        icon={Send}
+                        colorTheme="green"
+                        isLoading={loading}
+                    />
+                </div>
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
@@ -236,16 +271,14 @@ export function CampaignsPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
                         </div>
                     ) : filteredCampaigns.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Mail className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No campaigns yet</h3>
-                            <p className="text-muted-foreground mb-4">Create your first email campaign to engage your contacts</p>
-                            <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Create Campaign
-                            </Button>
-                        </div>
+                        <EmptyState
+                            title="No campaigns yet"
+                            description="Create your first email campaign to engage your contacts"
+                            icon={Mail}
+                            actionLabel="Create Campaign"
+                            onAction={() => setShowCreateModal(true)}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredCampaigns.map((campaign) => (
@@ -280,7 +313,7 @@ export function CampaignsPage() {
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
+                                                <Button variant="ghost" size="icon" aria-label="Campaign actions">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>

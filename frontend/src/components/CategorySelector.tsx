@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Category } from '@/types';
+import { UI_COLORS } from '@/constants/ui';
 
 interface CategorySelectorProps {
   currentCategory: string;
@@ -39,7 +40,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   handleUpdateCategoryColor
 }) => {
   const displayCategory = currentCategory && currentCategory !== '' ? currentCategory : 'General';
-  const displayColor = displayCategory === 'General' ? '#808080' : (categoryColor || itemColor || '#808080');
+  const displayColor = displayCategory === 'General' ? UI_COLORS.neutralGray : (categoryColor || itemColor || UI_COLORS.neutralGray);
   const getContrastColor = () => '#ffffff';
 
   return (
@@ -65,6 +66,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 variant="ghost"
                 onClick={handleAddCustomCategory}
                 className="h-8 w-8 p-0"
+                aria-label="Save category"
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -76,6 +78,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   setNewCategory('');
                 }}
                 className="h-8 w-8 p-0"
+                aria-label="Cancel category"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -83,11 +86,11 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           ) : (
             <div className="flex flex-col space-y-2">
               <Select onValueChange={handleEditCategory} defaultValue={displayCategory}>
-                <SelectTrigger className="h-8" style={{ fontFamily: '"Raleway", sans-serif' }}>
+              <SelectTrigger className="h-8 font-raleway">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="General" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <SelectItem value="General" className="font-raleway">
                     <div className="flex items-center gap-2">
                       General
                     </div>
@@ -95,7 +98,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   {existingCategories
                     .filter(cat => cat.name !== 'General')
                     .map((cat) => (
-                      <SelectItem key={cat.name} value={cat.name} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <SelectItem key={cat.name} value={cat.name} className="font-raleway">
                         <div className="flex items-center gap-2">
                           <span
                             className="inline-block w-3 h-3 rounded-full border"
@@ -105,7 +108,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                         </div>
                       </SelectItem>
                     ))}
-                  <SelectItem value="__custom__" className="text-blue-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <SelectItem value="__custom__" className="text-blue-600 font-raleway">
                     + Add new category
                   </SelectItem>
                 </SelectContent>
@@ -136,8 +139,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
               <Button
                 size="sm"
                 variant="ghost"
-                className="self-start"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
+                className="self-start font-raleway"
                 onClick={() => setIsEditingCategory(false)}
               >
                 Cancel
@@ -148,13 +150,13 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       ) : (
         <Badge
           variant="outline"
-          className="cursor-pointer hover:opacity-80 transition-opacity border-none"
+          className="cursor-pointer hover:opacity-80 transition-opacity border-none font-raleway"
           style={{ 
-            fontFamily: '"Raleway", sans-serif', 
             backgroundColor: displayColor,
             color: getContrastColor()
           }}
           onClick={() => setIsEditingCategory(true)}
+          role="button"
         >
           {displayCategory}
         </Badge>

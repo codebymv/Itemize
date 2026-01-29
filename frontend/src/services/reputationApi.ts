@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================

@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import {
   fetchCanvasLists,
   getNotes,
@@ -84,7 +84,7 @@ export function SharedPage() {
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
-  const { token } = useAuth();
+  const { token } = useAuthState();
 
   // Filter state
   const [typeFilter, setTypeFilter] = useState<ContentType>('all');

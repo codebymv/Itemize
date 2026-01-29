@@ -9,7 +9,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validators } = require('../validators');
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const { 
     CONTACTS_LIMITS, 
     ERROR_CODES,
@@ -686,16 +686,12 @@ module.exports = (pool, authenticateJWT) => {
       return res.status(400).json({ error: 'No contacts data provided' });
     }
 
-    const results = {
-      imported: 0,
-      skipped: 0,
-      errors: []
-    };
-
-    const client = await pool.connect();
-
-    try {
-      await client.query('BEGIN');
+    const results = await withTransaction(pool, async (client) => {
+      const outcome = {
+        imported: 0,
+        skipped: 0,
+        errors: []
+      };
 
       // Step 1: Get all existing emails in one query (bulk duplicate check)
       let existingEmails = new Set();
@@ -703,7 +699,7 @@ module.exports = (pool, authenticateJWT) => {
         const emails = importData
           .map(row => row.email)
           .filter(Boolean);
-        
+
         if (emails.length > 0) {
           const existingResult = await client.query(
             'SELECT email FROM contacts WHERE organization_id = $1 AND email = ANY($2::text[])',
@@ -719,11 +715,11 @@ module.exports = (pool, authenticateJWT) => {
 
       for (let i = 0; i < importData.length; i++) {
         const row = importData[i];
-        
+
         try {
           // Skip duplicates based on pre-fetched data
           if (skipDuplicates && row.email && existingEmails.has(row.email.toLowerCase())) {
-            results.skipped++;
+            outcome.skipped++;
             continue;
           }
 
@@ -758,7 +754,7 @@ module.exports = (pool, authenticateJWT) => {
             rowIndex: i
           });
         } catch (rowError) {
-          results.errors.push({
+          outcome.errors.push({
             row: i + 1,
             error: rowError.message
           });
@@ -768,7 +764,7 @@ module.exports = (pool, authenticateJWT) => {
       // Step 3: Bulk insert in batches
       for (let batchStart = 0; batchStart < contactsToInsert.length; batchStart += BATCH_SIZE) {
         const batch = contactsToInsert.slice(batchStart, batchStart + BATCH_SIZE);
-        
+
         if (batch.length === 0) continue;
 
         // Build bulk insert query
@@ -801,16 +797,11 @@ module.exports = (pool, authenticateJWT) => {
           ) VALUES ${placeholders.join(', ')}
         `, values);
 
-        results.imported += batch.length;
+        outcome.imported += batch.length;
       }
 
-      await client.query('COMMIT');
-    } catch (txError) {
-      await client.query('ROLLBACK');
-      throw txError;
-    } finally {
-      client.release();
-    }
+      return outcome;
+    });
 
     logger.info('Contact import completed', { 
       organizationId: req.organizationId, 

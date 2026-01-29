@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useSubscription, UsageType } from '../../contexts/SubscriptionContext';
+import { useSubscriptionFeatures, UsageType } from '../../contexts/SubscriptionContext';
 import { AlertTriangle, CheckCircle, Infinity, TrendingUp } from 'lucide-react';
 
 interface UsageMeterProps {
@@ -53,7 +53,7 @@ export function UsageMeter({
   showNumbers = true,
   className = ''
 }: UsageMeterProps) {
-  const { getUsageInfo } = useSubscription();
+  const { getUsageInfo } = useSubscriptionFeatures();
   
   const usage = getUsageInfo(resource);
   const displayLabel = label || RESOURCE_LABELS[resource] || resource;

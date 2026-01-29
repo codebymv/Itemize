@@ -5,14 +5,14 @@ import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Book, MessageSquare, Twitter, Github, Mail, ArrowUp, Palette, Activity, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 
 const Footer: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuthState();
 
   const currentYear = new Date().getFullYear();
 

@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { logger } = require('../utils/logger');
+const { withDbClient } = require('../utils/db');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -40,12 +41,12 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/preview-invoice-number', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
-            
-            const settingsResult = await client.query(
-                'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
-                [req.organizationId]
-            );
+            const settingsResult = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
+                    [req.organizationId]
+                );
+            });
 
             let prefix = 'INV-';
             let nextNumber = 1;
@@ -57,7 +58,6 @@ module.exports = (pool, authenticateJWT) => {
 
             const previewNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
             
-            client.release();
             res.json({ invoice_number: previewNumber });
         } catch (error) {
             console.error('Error getting preview invoice number:', error);
@@ -71,34 +71,30 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { status } = req.query;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                let whereClause = 'WHERE r.organization_id = $1';
+                const params = [req.organizationId];
 
-            let whereClause = 'WHERE r.organization_id = $1';
-            const params = [req.organizationId];
+                if (status && status !== 'all') {
+                    whereClause += ' AND r.status = $2';
+                    params.push(status);
+                }
 
-            if (status && status !== 'all') {
-                whereClause += ' AND r.status = $2';
-                params.push(status);
-            }
-
-            const result = await client.query(`
-                SELECT r.*, 
-                    c.first_name as contact_first_name, 
-                    c.last_name as contact_last_name,
-                    (SELECT COUNT(*) FROM invoices i WHERE i.recurring_template_id = r.id) as invoices_generated,
-                    si.invoice_number as source_invoice_number
-                FROM recurring_invoice_templates r
-                LEFT JOIN contacts c ON r.contact_id = c.id
-                LEFT JOIN invoices si ON r.source_invoice_id = si.id
-                ${whereClause}
-                ORDER BY r.created_at DESC
-            `, params);
-
-            client.release();
-
-            res.json({
-                recurring: result.rows
+                return client.query(`
+                    SELECT r.*, 
+                        c.first_name as contact_first_name, 
+                        c.last_name as contact_last_name,
+                        (SELECT COUNT(*) FROM invoices i WHERE i.recurring_template_id = r.id) as invoices_generated,
+                        si.invoice_number as source_invoice_number
+                    FROM recurring_invoice_templates r
+                    LEFT JOIN contacts c ON r.contact_id = c.id
+                    LEFT JOIN invoices si ON r.source_invoice_id = si.id
+                    ${whereClause}
+                    ORDER BY r.created_at DESC
+                `, params);
             });
+
+            res.json({ recurring: result.rows });
         } catch (error) {
             console.error('Error fetching recurring invoices:', error);
             res.status(500).json({ error: 'Failed to fetch recurring invoices' });
@@ -111,25 +107,23 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
-                SELECT r.*, 
-                    c.first_name as contact_first_name, 
-                    c.last_name as contact_last_name,
-                    si.invoice_number as source_invoice_number
-                FROM recurring_invoice_templates r
-                LEFT JOIN contacts c ON r.contact_id = c.id
-                LEFT JOIN invoices si ON r.source_invoice_id = si.id
-                WHERE r.id = $1 AND r.organization_id = $2
-            `, [id, req.organizationId]);
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    SELECT r.*, 
+                        c.first_name as contact_first_name, 
+                        c.last_name as contact_last_name,
+                        si.invoice_number as source_invoice_number
+                    FROM recurring_invoice_templates r
+                    LEFT JOIN contacts c ON r.contact_id = c.id
+                    LEFT JOIN invoices si ON r.source_invoice_id = si.id
+                    WHERE r.id = $1 AND r.organization_id = $2
+                `, [id, req.organizationId]);
+            });
 
             if (result.rows.length === 0) {
-                client.release();
                 return res.status(404).json({ error: 'Recurring invoice not found' });
             }
 
-            client.release();
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error fetching recurring invoice:', error);
@@ -187,39 +181,38 @@ module.exports = (pool, authenticateJWT) => {
 
             const total = subtotal + taxAmount - discountAmount;
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    INSERT INTO recurring_invoice_templates (
+                        organization_id, template_name, contact_id, customer_name, customer_email,
+                        frequency, start_date, end_date, next_run_date,
+                        items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
+                        notes, payment_terms, created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    template_name,
+                    contact_id || null,
+                    customer_name || null,
+                    customer_email || null,
+                    frequency,
+                    start_date,
+                    end_date || null,
+                    start_date, // First run is on start date
+                    JSON.stringify(items),
+                    subtotal,
+                    taxAmount,
+                    discountAmount,
+                    discount_type || null,
+                    discount_value || 0,
+                    total,
+                    notes || null,
+                    payment_terms || null,
+                    req.user.id
+                ]);
+            });
 
-            const result = await client.query(`
-                INSERT INTO recurring_invoice_templates (
-                    organization_id, template_name, contact_id, customer_name, customer_email,
-                    frequency, start_date, end_date, next_run_date,
-                    items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
-                    notes, payment_terms, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-                RETURNING *
-            `, [
-                req.organizationId,
-                template_name,
-                contact_id || null,
-                customer_name || null,
-                customer_email || null,
-                frequency,
-                start_date,
-                end_date || null,
-                start_date, // First run is on start date
-                JSON.stringify(items),
-                subtotal,
-                taxAmount,
-                discountAmount,
-                discount_type || null,
-                discount_value || 0,
-                total,
-                notes || null,
-                payment_terms || null,
-                req.user.id
-            ]);
-
-            client.release();
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error creating recurring invoice:', error);
@@ -247,22 +240,20 @@ module.exports = (pool, authenticateJWT) => {
                 payment_terms
             } = req.body;
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                // Check if exists
+                const checkResult = await client.query(
+                    'SELECT * FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if exists
-            const checkResult = await client.query(
-                'SELECT * FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return null;
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Recurring invoice not found' });
-            }
-
-            let updateFields = [];
-            let updateParams = [];
-            let paramIndex = 1;
+                let updateFields = [];
+                let updateParams = [];
+                let paramIndex = 1;
 
             if (template_name) {
                 updateFields.push(`template_name = $${paramIndex++}`);
@@ -342,16 +333,22 @@ module.exports = (pool, authenticateJWT) => {
 
             updateFields.push('updated_at = CURRENT_TIMESTAMP');
 
-            updateParams.push(id, req.organizationId);
-            const result = await client.query(`
-                UPDATE recurring_invoice_templates 
-                SET ${updateFields.join(', ')}
-                WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
-                RETURNING *
-            `, updateParams);
+                updateParams.push(id, req.organizationId);
+                const updated = await client.query(`
+                    UPDATE recurring_invoice_templates 
+                    SET ${updateFields.join(', ')}
+                    WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
+                    RETURNING *
+                `, updateParams);
 
-            client.release();
-            res.json(result.rows[0]);
+                return updated.rows[0] || null;
+            });
+
+            if (!result) {
+                return res.status(404).json({ error: 'Recurring invoice not found' });
+            }
+
+            res.json(result);
         } catch (error) {
             console.error('Error updating recurring invoice:', error);
             res.status(500).json({ error: 'Failed to update recurring invoice' });
@@ -364,14 +361,12 @@ module.exports = (pool, authenticateJWT) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'DELETE FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'DELETE FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2 RETURNING id',
+                    [id, req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Recurring invoice not found' });
@@ -390,16 +385,14 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/pause', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
-                UPDATE recurring_invoice_templates 
-                SET status = 'paused', updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND organization_id = $2 AND status = 'active'
-                RETURNING *
-            `, [id, req.organizationId]);
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    UPDATE recurring_invoice_templates 
+                    SET status = 'paused', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1 AND organization_id = $2 AND status = 'active'
+                    RETURNING *
+                `, [id, req.organizationId]);
+            });
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Recurring invoice not found or not active' });
@@ -418,45 +411,50 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/resume', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const template = await client.query(
+                    'SELECT * FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Get current template
-            const template = await client.query(
-                'SELECT * FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (template.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (template.rows.length === 0) {
-                client.release();
+                // Calculate new next run date if it's in the past
+                let nextRunDate = template.rows[0].next_run_date;
+                const today = new Date();
+
+                while (new Date(nextRunDate) < today) {
+                    nextRunDate = calculateNextRunDate(
+                        template.rows[0].start_date,
+                        template.rows[0].frequency,
+                        nextRunDate
+                    );
+                }
+
+                const updated = await client.query(`
+                    UPDATE recurring_invoice_templates 
+                    SET status = 'active', next_run_date = $3, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1 AND organization_id = $2 AND status = 'paused'
+                    RETURNING *
+                `, [id, req.organizationId, nextRunDate]);
+
+                if (updated.rows.length === 0) {
+                    return { status: 'not_paused' };
+                }
+
+                return { status: 'ok', data: updated.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
                 return res.status(404).json({ error: 'Recurring invoice not found' });
             }
-
-            // Calculate new next run date if it's in the past
-            let nextRunDate = template.rows[0].next_run_date;
-            const today = new Date();
-            
-            while (new Date(nextRunDate) < today) {
-                nextRunDate = calculateNextRunDate(
-                    template.rows[0].start_date, 
-                    template.rows[0].frequency, 
-                    nextRunDate
-                );
-            }
-
-            const result = await client.query(`
-                UPDATE recurring_invoice_templates 
-                SET status = 'active', next_run_date = $3, updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND organization_id = $2 AND status = 'paused'
-                RETURNING *
-            `, [id, req.organizationId, nextRunDate]);
-
-            client.release();
-
-            if (result.rows.length === 0) {
+            if (result.status === 'not_paused') {
                 return res.status(404).json({ error: 'Recurring invoice not found or not paused' });
             }
 
-            res.json(result.rows[0]);
+            res.json(result.data);
         } catch (error) {
             console.error('Error resuming recurring invoice:', error);
             res.status(500).json({ error: 'Failed to resume recurring invoice' });
@@ -468,173 +466,168 @@ module.exports = (pool, authenticateJWT) => {
      * Generates an invoice immediately and advances the next_run_date
      */
     router.post('/:id/generate-now', authenticateJWT, requireOrganization, async (req, res) => {
-        const client = await pool.connect();
-        
-        try {
-            const { id } = req.params;
+        await withDbClient(pool, async (client) => {
+            try {
+                const { id } = req.params;
 
-            await client.query('BEGIN');
+                await client.query('BEGIN');
 
-            // Get the template
-            const templateResult = await client.query(`
-                SELECT r.*, c.email as contact_email
-                FROM recurring_invoice_templates r
-                LEFT JOIN contacts c ON r.contact_id = c.id
-                WHERE r.id = $1 AND r.organization_id = $2
-            `, [id, req.organizationId]);
+                // Get the template
+                const templateResult = await client.query(`
+                    SELECT r.*, c.email as contact_email
+                    FROM recurring_invoice_templates r
+                    LEFT JOIN contacts c ON r.contact_id = c.id
+                    WHERE r.id = $1 AND r.organization_id = $2
+                `, [id, req.organizationId]);
 
-            if (templateResult.rows.length === 0) {
-                await client.query('ROLLBACK');
-                client.release();
-                return res.status(404).json({ error: 'Recurring template not found' });
-            }
+                if (templateResult.rows.length === 0) {
+                    await client.query('ROLLBACK');
+                    return res.status(404).json({ error: 'Recurring template not found' });
+                }
 
-            const template = templateResult.rows[0];
+                const template = templateResult.rows[0];
 
-            // Check if template is completed
-            if (template.status === 'completed') {
-                await client.query('ROLLBACK');
-                client.release();
-                return res.status(400).json({ error: 'Cannot generate invoice from completed template' });
-            }
+                // Check if template is completed
+                if (template.status === 'completed') {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Cannot generate invoice from completed template' });
+                }
 
-            // Get next invoice number
-            const settingsResult = await client.query(
-                'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
-                [req.organizationId]
-            );
-
-            let prefix = 'INV-';
-            let nextNumber = 1;
-
-            if (settingsResult.rows.length > 0) {
-                prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
-                nextNumber = settingsResult.rows[0].next_invoice_number || 1;
-
-                await client.query(
-                    'UPDATE payment_settings SET next_invoice_number = $1, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $2',
-                    [nextNumber + 1, req.organizationId]
+                // Get next invoice number
+                const settingsResult = await client.query(
+                    'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
+                    [req.organizationId]
                 );
-            } else {
-                await client.query(`
-                    INSERT INTO payment_settings (organization_id, next_invoice_number)
-                    VALUES ($1, 2)
-                `, [req.organizationId]);
-            }
 
-            const invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+                let prefix = 'INV-';
+                let nextNumber = 1;
 
-            // Calculate due date based on payment terms (default 30 days)
-            const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + (template.payment_terms ? parseInt(template.payment_terms) : 30));
+                if (settingsResult.rows.length > 0) {
+                    prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
+                    nextNumber = settingsResult.rows[0].next_invoice_number || 1;
 
-            // Parse items from JSON
-            const items = typeof template.items === 'string' ? JSON.parse(template.items) : template.items;
+                    await client.query(
+                        'UPDATE payment_settings SET next_invoice_number = $1, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $2',
+                        [nextNumber + 1, req.organizationId]
+                    );
+                } else {
+                    await client.query(`
+                        INSERT INTO payment_settings (organization_id, next_invoice_number)
+                        VALUES ($1, 2)
+                    `, [req.organizationId]);
+                }
 
-            // Create the invoice
-            const invoiceResult = await client.query(`
-                INSERT INTO invoices (
-                    organization_id, invoice_number, contact_id,
-                    customer_name, customer_email,
-                    due_date, subtotal, tax_amount, discount_amount, discount_type, discount_value,
-                    total, amount_due, notes, recurring_template_id, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                RETURNING *
-            `, [
-                req.organizationId,
-                invoiceNumber,
-                template.contact_id,
-                template.customer_name,
-                template.customer_email || template.contact_email,
-                dueDate.toISOString().split('T')[0],
-                template.subtotal,
-                template.tax_amount,
-                template.discount_amount,
-                template.discount_type,
-                template.discount_value,
-                template.total,
-                template.total, // amount_due
-                template.notes,
-                template.id,
-                req.user.id
-            ]);
+                const invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
 
-            const invoiceId = invoiceResult.rows[0].id;
+                // Calculate due date based on payment terms (default 30 days)
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + (template.payment_terms ? parseInt(template.payment_terms) : 30));
 
-            // Create invoice items
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-                const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+                // Parse items from JSON
+                const items = typeof template.items === 'string' ? JSON.parse(template.items) : template.items;
 
-                await client.query(`
-                    INSERT INTO invoice_items (
-                        invoice_id, organization_id, product_id, name, description,
-                        quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                // Create the invoice
+                const invoiceResult = await client.query(`
+                    INSERT INTO invoices (
+                        organization_id, invoice_number, contact_id,
+                        customer_name, customer_email,
+                        due_date, subtotal, tax_amount, discount_amount, discount_type, discount_value,
+                        total, amount_due, notes, recurring_template_id, created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                    RETURNING *
                 `, [
-                    invoiceId,
                     req.organizationId,
-                    item.product_id || null,
-                    item.name,
-                    item.description || null,
-                    item.quantity || 1,
-                    item.unit_price || 0,
-                    item.tax_rate || 0,
-                    itemTax,
-                    itemTotal + itemTax,
-                    i
+                    invoiceNumber,
+                    template.contact_id,
+                    template.customer_name,
+                    template.customer_email || template.contact_email,
+                    dueDate.toISOString().split('T')[0],
+                    template.subtotal,
+                    template.tax_amount,
+                    template.discount_amount,
+                    template.discount_type,
+                    template.discount_value,
+                    template.total,
+                    template.total, // amount_due
+                    template.notes,
+                    template.id,
+                    req.user.id
                 ]);
+
+                const invoiceId = invoiceResult.rows[0].id;
+
+                // Create invoice items
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
+                    const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+
+                    await client.query(`
+                        INSERT INTO invoice_items (
+                            invoice_id, organization_id, product_id, name, description,
+                            quantity, unit_price, tax_rate, tax_amount, total, sort_order
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    `, [
+                        invoiceId,
+                        req.organizationId,
+                        item.product_id || null,
+                        item.name,
+                        item.description || null,
+                        item.quantity || 1,
+                        item.unit_price || 0,
+                        item.tax_rate || 0,
+                        itemTax,
+                        itemTotal + itemTax,
+                        i
+                    ]);
+                }
+
+                // Calculate next run date
+                const nextRunDate = calculateNextRunDate(template.next_run_date, template.frequency);
+
+                // Check if completed (past end_date)
+                const isCompleted = template.end_date && new Date(nextRunDate) > new Date(template.end_date);
+
+                // Update template
+                await client.query(`
+                    UPDATE recurring_invoice_templates 
+                    SET 
+                        next_run_date = $1, 
+                        last_generated_at = CURRENT_TIMESTAMP,
+                        status = $2,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $3
+                `, [
+                    isCompleted ? template.end_date : nextRunDate,
+                    isCompleted ? 'completed' : template.status,
+                    template.id
+                ]);
+
+                await client.query('COMMIT');
+
+                logger.info('Invoice generated manually from recurring template', {
+                    templateId: template.id,
+                    templateName: template.template_name,
+                    invoiceId: invoiceId,
+                    invoiceNumber: invoiceNumber,
+                    organizationId: req.organizationId,
+                    userId: req.user.id
+                });
+
+                return res.status(201).json({
+                    success: true,
+                    invoice_id: invoiceId,
+                    invoice_number: invoiceNumber,
+                    next_run_date: isCompleted ? null : nextRunDate,
+                    template_status: isCompleted ? 'completed' : template.status,
+                    message: `Invoice ${invoiceNumber} generated successfully`
+                });
+            } catch (error) {
+                await client.query('ROLLBACK');
+                logger.error('Error generating invoice from template:', error);
+                return res.status(500).json({ error: 'Failed to generate invoice' });
             }
-
-            // Calculate next run date
-            const nextRunDate = calculateNextRunDate(template.next_run_date, template.frequency);
-
-            // Check if completed (past end_date)
-            const isCompleted = template.end_date && new Date(nextRunDate) > new Date(template.end_date);
-
-            // Update template
-            await client.query(`
-                UPDATE recurring_invoice_templates 
-                SET 
-                    next_run_date = $1, 
-                    last_generated_at = CURRENT_TIMESTAMP,
-                    status = $2,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3
-            `, [
-                isCompleted ? template.end_date : nextRunDate,
-                isCompleted ? 'completed' : template.status,
-                template.id
-            ]);
-
-            await client.query('COMMIT');
-
-            logger.info('Invoice generated manually from recurring template', {
-                templateId: template.id,
-                templateName: template.template_name,
-                invoiceId: invoiceId,
-                invoiceNumber: invoiceNumber,
-                organizationId: req.organizationId,
-                userId: req.user.id
-            });
-
-            res.status(201).json({
-                success: true,
-                invoice_id: invoiceId,
-                invoice_number: invoiceNumber,
-                next_run_date: isCompleted ? null : nextRunDate,
-                template_status: isCompleted ? 'completed' : template.status,
-                message: `Invoice ${invoiceNumber} generated successfully`
-            });
-
-        } catch (error) {
-            await client.query('ROLLBACK');
-            logger.error('Error generating invoice from template:', error);
-            res.status(500).json({ error: 'Failed to generate invoice' });
-        } finally {
-            client.release();
-        }
+        });
     });
 
     /**
@@ -643,16 +636,15 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id/history', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    SELECT i.id, i.invoice_number, i.total, i.status, i.created_at
+                    FROM invoices i
+                    WHERE i.recurring_template_id = $1 AND i.organization_id = $2
+                    ORDER BY i.created_at DESC
+                `, [id, req.organizationId]);
+            });
 
-            const result = await client.query(`
-                SELECT i.id, i.invoice_number, i.total, i.status, i.created_at
-                FROM invoices i
-                WHERE i.recurring_template_id = $1 AND i.organization_id = $2
-                ORDER BY i.created_at DESC
-            `, [id, req.organizationId]);
-
-            client.release();
             res.json({ invoices: result.rows });
         } catch (error) {
             console.error('Error fetching recurring invoice history:', error);
@@ -665,164 +657,161 @@ module.exports = (pool, authenticateJWT) => {
      * Creates a recurring template based on an existing invoice (non-destructive - invoice is preserved)
      */
     router.post('/from-invoice/:invoiceId', authenticateJWT, requireOrganization, async (req, res) => {
-        const client = await pool.connect();
-        
-        try {
-            const { invoiceId } = req.params;
-            const {
-                template_name,
-                frequency,
-                start_date,
-                end_date
-            } = req.body;
+        await withDbClient(pool, async (client) => {
+            try {
+                const { invoiceId } = req.params;
+                const {
+                    template_name,
+                    frequency,
+                    start_date,
+                    end_date
+                } = req.body;
 
-            // Validate required fields
-            if (!template_name || !frequency || !start_date) {
-                return res.status(400).json({ error: 'Template name, frequency, and start date are required' });
-            }
-
-            if (!['weekly', 'monthly', 'quarterly', 'yearly'].includes(frequency)) {
-                return res.status(400).json({ error: 'Invalid frequency. Must be weekly, monthly, quarterly, or yearly' });
-            }
-
-            // Start transaction
-            await client.query('BEGIN');
-
-            // Fetch the invoice
-            const invoiceResult = await client.query(`
-                SELECT i.*, 
-                    c.first_name as contact_first_name, 
-                    c.last_name as contact_last_name,
-                    c.email as contact_email
-                FROM invoices i
-                LEFT JOIN contacts c ON i.contact_id = c.id
-                WHERE i.id = $1 AND i.organization_id = $2
-            `, [invoiceId, req.organizationId]);
-
-            if (invoiceResult.rows.length === 0) {
-                await client.query('ROLLBACK');
-                return res.status(404).json({ error: 'Invoice not found' });
-            }
-
-            const invoice = invoiceResult.rows[0];
-
-            // Check if invoice status allows conversion (exclude cancelled/refunded)
-            if (['cancelled', 'refunded'].includes(invoice.status)) {
-                await client.query('ROLLBACK');
-                return res.status(400).json({ error: 'Cannot convert cancelled or refunded invoices' });
-            }
-
-            // Fetch invoice line items
-            const itemsResult = await client.query(`
-                SELECT name, description, quantity, unit_price, tax_rate, product_id
-                FROM invoice_items
-                WHERE invoice_id = $1
-                ORDER BY id
-            `, [invoiceId]);
-
-            const items = itemsResult.rows.map(item => ({
-                name: item.name,
-                description: item.description || '',
-                quantity: parseFloat(item.quantity) || 1,
-                unit_price: parseFloat(item.unit_price) || 0,
-                tax_rate: parseFloat(item.tax_rate) || 0,
-                product_id: item.product_id || null
-            }));
-
-            if (items.length === 0) {
-                await client.query('ROLLBACK');
-                return res.status(400).json({ error: 'Invoice has no line items' });
-            }
-
-            // Calculate totals
-            let subtotal = 0;
-            let taxAmount = 0;
-
-            for (const item of items) {
-                const itemTotal = item.quantity * item.unit_price;
-                const itemTax = itemTotal * (item.tax_rate / 100);
-                subtotal += itemTotal;
-                taxAmount += itemTax;
-            }
-
-            let discountAmount = 0;
-            const discountType = invoice.discount_type;
-            const discountValue = parseFloat(invoice.discount_value) || 0;
-
-            if (discountValue > 0) {
-                if (discountType === 'percent') {
-                    discountAmount = subtotal * (discountValue / 100);
-                } else {
-                    discountAmount = discountValue;
+                // Validate required fields
+                if (!template_name || !frequency || !start_date) {
+                    return res.status(400).json({ error: 'Template name, frequency, and start date are required' });
                 }
+
+                if (!['weekly', 'monthly', 'quarterly', 'yearly'].includes(frequency)) {
+                    return res.status(400).json({ error: 'Invalid frequency. Must be weekly, monthly, quarterly, or yearly' });
+                }
+
+                // Start transaction
+                await client.query('BEGIN');
+
+                // Fetch the invoice
+                const invoiceResult = await client.query(`
+                    SELECT i.*, 
+                        c.first_name as contact_first_name, 
+                        c.last_name as contact_last_name,
+                        c.email as contact_email
+                    FROM invoices i
+                    LEFT JOIN contacts c ON i.contact_id = c.id
+                    WHERE i.id = $1 AND i.organization_id = $2
+                `, [invoiceId, req.organizationId]);
+
+                if (invoiceResult.rows.length === 0) {
+                    await client.query('ROLLBACK');
+                    return res.status(404).json({ error: 'Invoice not found' });
+                }
+
+                const invoice = invoiceResult.rows[0];
+
+                // Check if invoice status allows conversion (exclude cancelled/refunded)
+                if (['cancelled', 'refunded'].includes(invoice.status)) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Cannot convert cancelled or refunded invoices' });
+                }
+
+                // Fetch invoice line items
+                const itemsResult = await client.query(`
+                    SELECT name, description, quantity, unit_price, tax_rate, product_id
+                    FROM invoice_items
+                    WHERE invoice_id = $1
+                    ORDER BY id
+                `, [invoiceId]);
+
+                const items = itemsResult.rows.map(item => ({
+                    name: item.name,
+                    description: item.description || '',
+                    quantity: parseFloat(item.quantity) || 1,
+                    unit_price: parseFloat(item.unit_price) || 0,
+                    tax_rate: parseFloat(item.tax_rate) || 0,
+                    product_id: item.product_id || null
+                }));
+
+                if (items.length === 0) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Invoice has no line items' });
+                }
+
+                // Calculate totals
+                let subtotal = 0;
+                let taxAmount = 0;
+
+                for (const item of items) {
+                    const itemTotal = item.quantity * item.unit_price;
+                    const itemTax = itemTotal * (item.tax_rate / 100);
+                    subtotal += itemTotal;
+                    taxAmount += itemTax;
+                }
+
+                let discountAmount = 0;
+                const discountType = invoice.discount_type;
+                const discountValue = parseFloat(invoice.discount_value) || 0;
+
+                if (discountValue > 0) {
+                    if (discountType === 'percent') {
+                        discountAmount = subtotal * (discountValue / 100);
+                    } else {
+                        discountAmount = discountValue;
+                    }
+                }
+
+                const total = subtotal + taxAmount - discountAmount;
+
+                // Create the recurring template with reference to source invoice
+                const templateResult = await client.query(`
+                    INSERT INTO recurring_invoice_templates (
+                        organization_id, template_name, contact_id, customer_name, customer_email,
+                        frequency, start_date, end_date, next_run_date,
+                        items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
+                        notes, payment_terms, created_by, status, source_invoice_id
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'active', $20)
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    template_name,
+                    invoice.contact_id || null,
+                    invoice.customer_name || null,
+                    invoice.customer_email || null,
+                    frequency,
+                    start_date,
+                    end_date || null,
+                    start_date, // First run is on start date
+                    JSON.stringify(items),
+                    subtotal,
+                    taxAmount,
+                    discountAmount,
+                    discountType || null,
+                    discountValue,
+                    total,
+                    invoice.notes || null,
+                    invoice.payment_terms || null,
+                    req.user.id,
+                    invoiceId // source_invoice_id - reference to the original invoice
+                ]);
+
+                const newTemplate = templateResult.rows[0];
+
+                // Mark the source invoice as a recurring source (non-destructive - invoice is preserved)
+                await client.query(
+                    'UPDATE invoices SET is_recurring_source = true WHERE id = $1 AND organization_id = $2',
+                    [invoiceId, req.organizationId]
+                );
+
+                // Commit transaction
+                await client.query('COMMIT');
+
+                logger.info('Recurring template created from invoice', {
+                    sourceInvoiceId: invoiceId,
+                    templateId: newTemplate.id,
+                    organizationId: req.organizationId,
+                    userId: req.user.id
+                });
+
+                return res.status(201).json({
+                    success: true,
+                    template: newTemplate,
+                    sourceInvoicePreserved: true,
+                    message: 'Recurring template created successfully. Original invoice has been preserved.'
+                });
+            } catch (error) {
+                await client.query('ROLLBACK');
+                logger.error('Error creating recurring template from invoice:', error);
+                return res.status(500).json({ error: 'Failed to create recurring template from invoice' });
             }
-
-            const total = subtotal + taxAmount - discountAmount;
-
-            // Create the recurring template with reference to source invoice
-            const templateResult = await client.query(`
-                INSERT INTO recurring_invoice_templates (
-                    organization_id, template_name, contact_id, customer_name, customer_email,
-                    frequency, start_date, end_date, next_run_date,
-                    items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
-                    notes, payment_terms, created_by, status, source_invoice_id
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'active', $20)
-                RETURNING *
-            `, [
-                req.organizationId,
-                template_name,
-                invoice.contact_id || null,
-                invoice.customer_name || null,
-                invoice.customer_email || null,
-                frequency,
-                start_date,
-                end_date || null,
-                start_date, // First run is on start date
-                JSON.stringify(items),
-                subtotal,
-                taxAmount,
-                discountAmount,
-                discountType || null,
-                discountValue,
-                total,
-                invoice.notes || null,
-                invoice.payment_terms || null,
-                req.user.id,
-                invoiceId // source_invoice_id - reference to the original invoice
-            ]);
-
-            const newTemplate = templateResult.rows[0];
-
-            // Mark the source invoice as a recurring source (non-destructive - invoice is preserved)
-            await client.query(
-                'UPDATE invoices SET is_recurring_source = true WHERE id = $1 AND organization_id = $2',
-                [invoiceId, req.organizationId]
-            );
-
-            // Commit transaction
-            await client.query('COMMIT');
-
-            logger.info('Recurring template created from invoice', {
-                sourceInvoiceId: invoiceId,
-                templateId: newTemplate.id,
-                organizationId: req.organizationId,
-                userId: req.user.id
-            });
-
-            res.status(201).json({
-                success: true,
-                template: newTemplate,
-                sourceInvoicePreserved: true,
-                message: 'Recurring template created successfully. Original invoice has been preserved.'
-            });
-
-        } catch (error) {
-            await client.query('ROLLBACK');
-            logger.error('Error creating recurring template from invoice:', error);
-            res.status(500).json({ error: 'Failed to create recurring template from invoice' });
-        } finally {
-            client.release();
-        }
+        });
     });
 
     return router;

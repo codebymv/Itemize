@@ -21,14 +21,13 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 ### Frontend - Component Consolidation (Critical)
 
 **Duplicate Modals (status: mostly resolved in codebase):**
-- Generic components exist: `DeleteConfirmationModal`, `ShareModal`, `CategorySelector`
+- Generic components exist: `DeleteConfirmationModal`, `ShareModal`, `CategorySelector`, `CreateItemModal`
 - No `Delete*Modal.tsx`, `Share*Modal.tsx`, or `*CategorySelector.tsx` duplicates found
-- No `New*Modal.tsx` files found; `CreateItemModal` not present yet (confirm desired standard)
+- Remaining work: route legacy create flows through `CreateItemModal` where possible
 
-**Duplicate Hooks:**
-- Category editing logic duplicated in 5 `use*CardLogic.ts` files → Extract `useCategoryManagement`
-- Color saving logic duplicated in 5 files → Extract `useColorManagement`
-- Title editing logic duplicated → Extract `useTitleEditing`
+**Duplicate Hooks (status: resolved):**
+- Extracted `useCardCategoryManagement`, `useCardColorManagement`, `useCardTitleEditing`
+- `use*CardLogic.ts` hooks now route through shared helpers
 
 ### Backend - Error Handling (Critical)
 
@@ -58,20 +57,19 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Frontend - Shared Utilities
 
-**Extract shared hooks:**
-- `useOrganization` - Org initialization duplicated in 5+ pages
-- `usePageHeader` - Header content pattern duplicated across pages
-- `useStatStyles` - Stat helper functions duplicated (ContactsPage, AutomationsPage)
+**Extract shared hooks (status: resolved):**
+- `useOrganization` now centralized and used across pages
+- `usePageHeader` created for header content pattern
+- `useStatStyles` extracted for stat card styling
 
-**Extract shared components:**
-- `<ErrorState>` - Error state rendering duplicated
-- `<EmptyState>` - Empty state pattern varies (PipelinesPage wrapped in Card)
-- `<StatCard>` - Stat card pattern should be reusable
+**Extract shared components (status: partially resolved):**
+- `<ErrorState>` and `<EmptyState>` exist; usage still inconsistent across pages
+- `<StatCard>` exists and used in multiple pages; remaining pages still to adopt
 
 **Hardcoded strings to extract (~100+ instances):**
 - "Cancel", "Delete", "Create" button labels
 - "This action cannot be undone" warning text
-- Color values: `#3B82F6`, `#808080`, `#ffffff`
+- Color values: `#3B82F6`, `#808080`, `#ffffff` (partial progress via `constants/ui.ts`)
 - Toast messages duplicated across files
 
 ### Backend - Code Consistency
@@ -138,9 +136,9 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 - `ShareListModal.tsx` (lines 45-46, 48-49)
 - (And 10+ more files)
 
-**Font family inline styles:**
-- `style={{ fontFamily: '"Raleway", sans-serif' }}` repeated 464 times across 98 files
-- Should use CSS class
+**Font family inline styles (status: partially resolved):**
+- Global `font-raleway` class exists; several key components updated
+- Remaining inline styles still need cleanup
 
 **Console.log statements (802 instances across 72 files):**
 - `ProtectedRoute.tsx` (lines 12, 20, 28, 33) - Debug logs should be removed
@@ -150,14 +148,12 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 - Consider environment-based logging (dev only)
 
 **Hardcoded production URL:**
-- `lib/api.ts` (line 10) - Production URL hardcoded: `https://itemize-backend-production-92ad.up.railway.app`
+- `lib/api.ts` still uses a hardcoded production URL
 - Should be in environment variable or config file
-- Domain check logic (line 109) could be abstracted
 
-**localStorage usage (34 instances across 10 files):**
-- Multiple storage keys: `itemize_auth_token`, `itemize_user`, `itemize_expiry`
-- Should create centralized storage utility with consistent error handling
-- Missing try-catch blocks in some localStorage operations
+**localStorage usage (status: mostly resolved):**
+- Centralized `storage` utility created and adopted in key auth/AI paths
+- Remaining usages should migrate to `storage` utility
 
 **window.location usage (89 instances across 36 files):**
 - Direct `window.location.href` assignments scattered across codebase
@@ -203,8 +199,8 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 **API Service Patterns:**
 - 22 API service files exist and follow consistent patterns (good!)
 - All use centralized `api` instance from `lib/api.ts` (good!)
-- Could benefit from shared error handling wrapper
-- Response typing could be more consistent (some use `response.data`, others destructure)
+- Response unwrapping now centralized in `api` interceptor
+- Response typing still needs consistency pass in some services
 
 ### Code Quality & Cleanup
 
@@ -265,7 +261,7 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 7. Remove console.logs from `ProtectedRoute.tsx` (4 instances, 2 min)
 8. Extract production URL to environment variable (5 min)
 9. Replace `window.location.href` with `useNavigate` in React components (89 instances, batch fix)
-10. Create centralized localStorage utility with error handling (30 min)
+10. Create centralized localStorage utility with error handling (Done - created `storage` utility)
 
 ---
 

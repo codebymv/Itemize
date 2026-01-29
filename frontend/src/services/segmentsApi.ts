@@ -4,6 +4,13 @@
  */
 import api from '@/lib/api';
 
+const unwrapResponse = <T>(payload: any): T => {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+        return payload.data as T;
+    }
+    return payload as T;
+};
+
 // ======================
 // Types
 // ======================
@@ -94,7 +101,7 @@ export const getSegments = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Segment[]>(response.data);
 };
 
 /**
@@ -107,7 +114,7 @@ export const getSegment = async (
     const response = await api.get(`/api/segments/${segmentId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Segment>(response.data);
 };
 
 /**
@@ -120,7 +127,7 @@ export const createSegment = async (
     const response = await api.post('/api/segments', segment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Segment>(response.data);
 };
 
 /**
@@ -134,7 +141,7 @@ export const updateSegment = async (
     const response = await api.put(`/api/segments/${segmentId}`, segment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Segment>(response.data);
 };
 
 /**
@@ -147,7 +154,7 @@ export const deleteSegment = async (
     const response = await api.delete(`/api/segments/${segmentId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ success: boolean }>(response.data);
 };
 
 /**
@@ -160,7 +167,7 @@ export const calculateSegment = async (
     const response = await api.post(`/api/segments/${segmentId}/calculate`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<Segment>(response.data);
 };
 
 /**
@@ -175,7 +182,7 @@ export const getSegmentContacts = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<{ contacts: any[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
 };
 
 /**
@@ -192,7 +199,7 @@ export const previewSegment = async (
     }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<SegmentPreview>(response.data);
 };
 
 /**
@@ -202,7 +209,7 @@ export const getFilterOptions = async (organizationId?: number): Promise<FilterO
     const response = await api.get('/api/segments/filter-options', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    return unwrapResponse<FilterOptions>(response.data);
 };
 
 export default {

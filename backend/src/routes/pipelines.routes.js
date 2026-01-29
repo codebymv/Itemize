@@ -35,8 +35,8 @@ module.exports = (pool, authenticateJWT) => {
   // Get all pipelines
   router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
     try {
-      const client = await pool.connect();
-      const result = await client.query(`
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(`
         SELECT p.*, 
                (SELECT COUNT(*) FROM deals WHERE pipeline_id = p.id) as deal_count,
                (SELECT COALESCE(SUM(value), 0) FROM deals WHERE pipeline_id = p.id AND won_at IS NULL AND lost_at IS NULL) as total_value
@@ -44,7 +44,7 @@ module.exports = (pool, authenticateJWT) => {
         WHERE p.organization_id = $1
         ORDER BY p.is_default DESC, p.name ASC
       `, [req.organizationId]);
-      client.release();
+      });
 
       res.json(result.rows);
     } catch (error) {
@@ -58,36 +58,37 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const { id } = req.params;
 
-      const client = await pool.connect();
-      
-      // Get pipeline
-      const pipelineResult = await client.query(
-        'SELECT * FROM pipelines WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
+      const result = await withDbClient(pool, async (client) => {
+        const pipelineResult = await client.query(
+          'SELECT * FROM pipelines WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
 
-      if (pipelineResult.rows.length === 0) {
-        client.release();
+        if (pipelineResult.rows.length === 0) {
+          return { status: 'not_found' };
+        }
+
+        const dealsResult = await client.query(`
+          SELECT d.*, 
+                 c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
+                 u.name as assigned_to_name
+          FROM deals d
+          LEFT JOIN contacts c ON d.contact_id = c.id
+          LEFT JOIN users u ON d.assigned_to = u.id
+          WHERE d.pipeline_id = $1 AND d.organization_id = $2
+          ORDER BY d.created_at DESC
+        `, [id, req.organizationId]);
+
+        return { status: 'ok', pipeline: pipelineResult.rows[0], deals: dealsResult.rows };
+      });
+
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Pipeline not found' });
       }
 
-      // Get deals for this pipeline
-      const dealsResult = await client.query(`
-        SELECT d.*, 
-               c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
-               u.name as assigned_to_name
-        FROM deals d
-        LEFT JOIN contacts c ON d.contact_id = c.id
-        LEFT JOIN users u ON d.assigned_to = u.id
-        WHERE d.pipeline_id = $1 AND d.organization_id = $2
-        ORDER BY d.created_at DESC
-      `, [id, req.organizationId]);
-
-      client.release();
-
       res.json({
-        ...pipelineResult.rows[0],
-        deals: dealsResult.rows
+        ...result.pipeline,
+        deals: result.deals
       });
     } catch (error) {
       console.error('Error fetching pipeline:', error);
@@ -114,30 +115,28 @@ module.exports = (pool, authenticateJWT) => {
         { id: crypto.randomUUID(), name: 'Closed Lost', order: 5, color: '#EF4444' },
       ];
 
-      const client = await pool.connect();
+      const result = await withDbClient(pool, async (client) => {
+        if (is_default) {
+          await client.query(
+            'UPDATE pipelines SET is_default = FALSE WHERE organization_id = $1',
+            [req.organizationId]
+          );
+        }
 
-      // If this is the default, unset other defaults
-      if (is_default) {
-        await client.query(
-          'UPDATE pipelines SET is_default = FALSE WHERE organization_id = $1',
-          [req.organizationId]
-        );
-      }
+        return client.query(`
+          INSERT INTO pipelines (organization_id, name, description, stages, is_default, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *
+        `, [
+          req.organizationId,
+          name.trim(),
+          description || null,
+          JSON.stringify(defaultStages),
+          is_default || false,
+          req.user.id
+        ]);
+      });
 
-      const result = await client.query(`
-        INSERT INTO pipelines (organization_id, name, description, stages, is_default, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-      `, [
-        req.organizationId,
-        name.trim(),
-        description || null,
-        JSON.stringify(defaultStages),
-        is_default || false,
-        req.user.id
-      ]);
-
-      client.release();
       res.status(201).json(result.rows[0]);
     } catch (error) {
       console.error('Error creating pipeline:', error);
@@ -151,35 +150,32 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { name, description, stages, is_default } = req.body;
 
-      const client = await pool.connect();
+      const result = await withDbClient(pool, async (client) => {
+        if (is_default) {
+          await client.query(
+            'UPDATE pipelines SET is_default = FALSE WHERE organization_id = $1 AND id != $2',
+            [req.organizationId, id]
+          );
+        }
 
-      // If setting as default, unset other defaults
-      if (is_default) {
-        await client.query(
-          'UPDATE pipelines SET is_default = FALSE WHERE organization_id = $1 AND id != $2',
-          [req.organizationId, id]
-        );
-      }
-
-      const result = await client.query(`
-        UPDATE pipelines SET
-          name = COALESCE($1, name),
-          description = COALESCE($2, description),
-          stages = COALESCE($3, stages),
-          is_default = COALESCE($4, is_default),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5 AND organization_id = $6
-        RETURNING *
-      `, [
-        name?.trim(),
-        description,
-        stages ? JSON.stringify(stages) : null,
-        is_default,
-        id,
-        req.organizationId
-      ]);
-
-      client.release();
+        return client.query(`
+          UPDATE pipelines SET
+            name = COALESCE($1, name),
+            description = COALESCE($2, description),
+            stages = COALESCE($3, stages),
+            is_default = COALESCE($4, is_default),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $5 AND organization_id = $6
+          RETURNING *
+        `, [
+          name?.trim(),
+          description,
+          stages ? JSON.stringify(stages) : null,
+          is_default,
+          id,
+          req.organizationId
+        ]);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Pipeline not found' });
@@ -197,29 +193,31 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const { id } = req.params;
 
-      const client = await pool.connect();
+      const result = await withDbClient(pool, async (client) => {
+        const dealCheck = await client.query(
+          'SELECT COUNT(*) FROM deals WHERE pipeline_id = $1',
+          [id]
+        );
 
-      // Check if pipeline has deals
-      const dealCheck = await client.query(
-        'SELECT COUNT(*) FROM deals WHERE pipeline_id = $1',
-        [id]
-      );
+        if (parseInt(dealCheck.rows[0].count) > 0) {
+          return { status: 'has_deals' };
+        }
 
-      if (parseInt(dealCheck.rows[0].count) > 0) {
-        client.release();
-        return res.status(400).json({ 
-          error: 'Cannot delete pipeline with existing deals. Move or delete deals first.' 
+        const deleteResult = await client.query(
+          'DELETE FROM pipelines WHERE id = $1 AND organization_id = $2 RETURNING id',
+          [id, req.organizationId]
+        );
+
+        return { status: 'ok', result: deleteResult };
+      });
+
+      if (result.status === 'has_deals') {
+        return res.status(400).json({
+          error: 'Cannot delete pipeline with existing deals. Move or delete deals first.'
         });
       }
 
-      const result = await client.query(
-        'DELETE FROM pipelines WHERE id = $1 AND organization_id = $2 RETURNING id',
-        [id, req.organizationId]
-      );
-
-      client.release();
-
-      if (result.rows.length === 0) {
+      if (result.result.rows.length === 0) {
         return res.status(404).json({ error: 'Pipeline not found' });
       }
 
@@ -290,39 +288,37 @@ module.exports = (pool, authenticateJWT) => {
       const sortColumn = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
       const sortDirection = sort_order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
-      const client = await pool.connect();
+      const result = await withDbClient(pool, async (client) => {
+        const countResult = await client.query(
+          `SELECT COUNT(*) FROM deals d ${whereClause}`,
+          params
+        );
+        const totalCount = parseInt(countResult.rows[0].count);
 
-      // Get total count
-      const countResult = await client.query(
-        `SELECT COUNT(*) FROM deals d ${whereClause}`,
-        params
-      );
-      const totalCount = parseInt(countResult.rows[0].count);
+        const dealsResult = await client.query(`
+          SELECT d.*, 
+                 c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.company as contact_company,
+                 u.name as assigned_to_name,
+                 p.name as pipeline_name
+          FROM deals d
+          LEFT JOIN contacts c ON d.contact_id = c.id
+          LEFT JOIN users u ON d.assigned_to = u.id
+          LEFT JOIN pipelines p ON d.pipeline_id = p.id
+          ${whereClause}
+          ORDER BY d.${sortColumn} ${sortDirection}
+          LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `, [...params, parseInt(limit), offset]);
 
-      // Get deals
-      const dealsResult = await client.query(`
-        SELECT d.*, 
-               c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.company as contact_company,
-               u.name as assigned_to_name,
-               p.name as pipeline_name
-        FROM deals d
-        LEFT JOIN contacts c ON d.contact_id = c.id
-        LEFT JOIN users u ON d.assigned_to = u.id
-        LEFT JOIN pipelines p ON d.pipeline_id = p.id
-        ${whereClause}
-        ORDER BY d.${sortColumn} ${sortDirection}
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `, [...params, parseInt(limit), offset]);
-
-      client.release();
+        return { deals: dealsResult.rows, total: totalCount };
+      });
 
       res.json({
-        deals: dealsResult.rows,
+        deals: result.deals,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: totalCount,
-          totalPages: Math.ceil(totalCount / parseInt(limit))
+          total: result.total,
+          totalPages: Math.ceil(result.total / parseInt(limit))
         }
       });
     } catch (error) {
@@ -336,20 +332,19 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const { id } = req.params;
 
-      const client = await pool.connect();
-      const result = await client.query(`
-        SELECT d.*, 
-               c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.company as contact_company,
-               u.name as assigned_to_name,
-               p.name as pipeline_name, p.stages as pipeline_stages
-        FROM deals d
-        LEFT JOIN contacts c ON d.contact_id = c.id
-        LEFT JOIN users u ON d.assigned_to = u.id
-        LEFT JOIN pipelines p ON d.pipeline_id = p.id
-        WHERE d.id = $1 AND d.organization_id = $2
-      `, [id, req.organizationId]);
-
-      client.release();
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(`
+          SELECT d.*, 
+                 c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.company as contact_company,
+                 u.name as assigned_to_name,
+                 p.name as pipeline_name, p.stages as pipeline_stages
+          FROM deals d
+          LEFT JOIN contacts c ON d.contact_id = c.id
+          LEFT JOIN users u ON d.assigned_to = u.id
+          LEFT JOIN pipelines p ON d.pipeline_id = p.id
+          WHERE d.id = $1 AND d.organization_id = $2
+        `, [id, req.organizationId]);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });
@@ -387,47 +382,50 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Deal title is required' });
       }
 
-      const client = await pool.connect();
+      const result = await withDbClient(pool, async (client) => {
+        const pipelineResult = await client.query(
+          'SELECT stages FROM pipelines WHERE id = $1 AND organization_id = $2',
+          [pipeline_id, req.organizationId]
+        );
 
-      // Verify pipeline exists and get first stage if stage_id not provided
-      const pipelineResult = await client.query(
-        'SELECT stages FROM pipelines WHERE id = $1 AND organization_id = $2',
-        [pipeline_id, req.organizationId]
-      );
+        if (pipelineResult.rows.length === 0) {
+          return { status: 'pipeline_not_found' };
+        }
 
-      if (pipelineResult.rows.length === 0) {
-        client.release();
+        const stages = pipelineResult.rows[0].stages;
+        const dealStageId = stage_id || (stages[0] ? stages[0].id : 'lead');
+
+        const insertResult = await client.query(`
+          INSERT INTO deals (
+            organization_id, pipeline_id, contact_id, stage_id, title,
+            value, currency, probability, expected_close_date,
+            assigned_to, created_by, custom_fields, tags
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          RETURNING *
+        `, [
+          req.organizationId,
+          pipeline_id,
+          contact_id || null,
+          dealStageId,
+          title.trim(),
+          value || 0,
+          currency || 'USD',
+          probability || 0,
+          expected_close_date || null,
+          assigned_to || null,
+          req.user.id,
+          JSON.stringify(custom_fields || {}),
+          tags || []
+        ]);
+
+        return { status: 'ok', deal: insertResult.rows[0] };
+      });
+
+      if (result.status === 'pipeline_not_found') {
         return res.status(404).json({ error: 'Pipeline not found' });
       }
 
-      const stages = pipelineResult.rows[0].stages;
-      const dealStageId = stage_id || (stages[0] ? stages[0].id : 'lead');
-
-      const result = await client.query(`
-        INSERT INTO deals (
-          organization_id, pipeline_id, contact_id, stage_id, title,
-          value, currency, probability, expected_close_date,
-          assigned_to, created_by, custom_fields, tags
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING *
-      `, [
-        req.organizationId,
-        pipeline_id,
-        contact_id || null,
-        dealStageId,
-        title.trim(),
-        value || 0,
-        currency || 'USD',
-        probability || 0,
-        expected_close_date || null,
-        assigned_to || null,
-        req.user.id,
-        JSON.stringify(custom_fields || {}),
-        tags || []
-      ]);
-
-      client.release();
-      res.status(201).json(result.rows[0]);
+      res.status(201).json(result.deal);
     } catch (error) {
       console.error('Error creating deal:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -452,41 +450,39 @@ module.exports = (pool, authenticateJWT) => {
         tags
       } = req.body;
 
-      const client = await pool.connect();
-
-      const result = await client.query(`
-        UPDATE deals SET
-          pipeline_id = COALESCE($1, pipeline_id),
-          contact_id = $2,
-          stage_id = COALESCE($3, stage_id),
-          title = COALESCE($4, title),
-          value = COALESCE($5, value),
-          currency = COALESCE($6, currency),
-          probability = COALESCE($7, probability),
-          expected_close_date = $8,
-          assigned_to = $9,
-          custom_fields = COALESCE($10, custom_fields),
-          tags = COALESCE($11, tags),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $12 AND organization_id = $13
-        RETURNING *
-      `, [
-        pipeline_id,
-        contact_id,
-        stage_id,
-        title?.trim(),
-        value,
-        currency,
-        probability,
-        expected_close_date,
-        assigned_to,
-        custom_fields ? JSON.stringify(custom_fields) : null,
-        tags,
-        id,
-        req.organizationId
-      ]);
-
-      client.release();
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(`
+          UPDATE deals SET
+            pipeline_id = COALESCE($1, pipeline_id),
+            contact_id = $2,
+            stage_id = COALESCE($3, stage_id),
+            title = COALESCE($4, title),
+            value = COALESCE($5, value),
+            currency = COALESCE($6, currency),
+            probability = COALESCE($7, probability),
+            expected_close_date = $8,
+            assigned_to = $9,
+            custom_fields = COALESCE($10, custom_fields),
+            tags = COALESCE($11, tags),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $12 AND organization_id = $13
+          RETURNING *
+        `, [
+          pipeline_id,
+          contact_id,
+          stage_id,
+          title?.trim(),
+          value,
+          currency,
+          probability,
+          expected_close_date,
+          assigned_to,
+          custom_fields ? JSON.stringify(custom_fields) : null,
+          tags,
+          id,
+          req.organizationId
+        ]);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });
@@ -509,25 +505,24 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Stage ID is required' });
       }
 
-      const client = await pool.connect();
+      const result = await withDbClient(pool, async (client) => {
+        const currentDeal = await client.query(
+          'SELECT * FROM deals WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
 
-      // Get current deal to track stage change
-      const currentDeal = await client.query(
-        'SELECT * FROM deals WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
+        const oldStageId = currentDeal.rows[0]?.stage_id;
 
-      const oldStageId = currentDeal.rows[0]?.stage_id;
+        const updateResult = await client.query(`
+          UPDATE deals SET
+            stage_id = $1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2 AND organization_id = $3
+          RETURNING *
+        `, [stage_id, id, req.organizationId]);
 
-      const result = await client.query(`
-        UPDATE deals SET
-          stage_id = $1,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2 AND organization_id = $3
-        RETURNING *
-      `, [stage_id, id, req.organizationId]);
-
-      client.release();
+        return { rows: updateResult.rows, oldStageId };
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });
@@ -536,14 +531,14 @@ module.exports = (pool, authenticateJWT) => {
       const deal = result.rows[0];
 
       // Fire deal_stage_changed trigger
-      if (automationEngine && oldStageId !== stage_id) {
+      if (automationEngine && result.oldStageId !== stage_id) {
         try {
           const engine = automationEngine.getEngine();
           engine.handleTrigger('deal_stage_changed', {
             deal: deal,
             contact: deal.contact_id ? { id: deal.contact_id } : null,
             organizationId: req.organizationId,
-            oldStageId: oldStageId,
+            oldStageId: result.oldStageId,
             newStageId: stage_id,
             pipelineId: deal.pipeline_id,
           }).catch(err => console.error('Automation trigger error:', err));
@@ -563,20 +558,17 @@ module.exports = (pool, authenticateJWT) => {
   router.post('/deals/:id/won', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { id } = req.params;
-
-      const client = await pool.connect();
-
-      const result = await client.query(`
-        UPDATE deals SET
-          won_at = CURRENT_TIMESTAMP,
-          lost_at = NULL,
-          lost_reason = NULL,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1 AND organization_id = $2
-        RETURNING *
-      `, [id, req.organizationId]);
-
-      client.release();
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(`
+          UPDATE deals SET
+            won_at = CURRENT_TIMESTAMP,
+            lost_at = NULL,
+            lost_reason = NULL,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1 AND organization_id = $2
+          RETURNING *
+        `, [id, req.organizationId]);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });
@@ -594,20 +586,17 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-
-      const client = await pool.connect();
-
-      const result = await client.query(`
-        UPDATE deals SET
-          lost_at = CURRENT_TIMESTAMP,
-          lost_reason = $1,
-          won_at = NULL,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2 AND organization_id = $3
-        RETURNING *
-      `, [reason || null, id, req.organizationId]);
-
-      client.release();
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(`
+          UPDATE deals SET
+            lost_at = CURRENT_TIMESTAMP,
+            lost_reason = $1,
+            won_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2 AND organization_id = $3
+          RETURNING *
+        `, [reason || null, id, req.organizationId]);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });
@@ -624,20 +613,17 @@ module.exports = (pool, authenticateJWT) => {
   router.post('/deals/:id/reopen', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { id } = req.params;
-
-      const client = await pool.connect();
-
-      const result = await client.query(`
-        UPDATE deals SET
-          won_at = NULL,
-          lost_at = NULL,
-          lost_reason = NULL,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1 AND organization_id = $2
-        RETURNING *
-      `, [id, req.organizationId]);
-
-      client.release();
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(`
+          UPDATE deals SET
+            won_at = NULL,
+            lost_at = NULL,
+            lost_reason = NULL,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1 AND organization_id = $2
+          RETURNING *
+        `, [id, req.organizationId]);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });
@@ -654,13 +640,12 @@ module.exports = (pool, authenticateJWT) => {
   router.delete('/deals/:id', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { id } = req.params;
-
-      const client = await pool.connect();
-      const result = await client.query(
-        'DELETE FROM deals WHERE id = $1 AND organization_id = $2 RETURNING id',
-        [id, req.organizationId]
-      );
-      client.release();
+      const result = await withDbClient(pool, async (client) => {
+        return client.query(
+          'DELETE FROM deals WHERE id = $1 AND organization_id = $2 RETURNING id',
+          [id, req.organizationId]
+        );
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' });

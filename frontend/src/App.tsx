@@ -9,8 +9,7 @@ import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
@@ -91,13 +90,13 @@ const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 // Subscription provider wrapper that gets auth state
 const SubscriptionProviderWrapper = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuthState();
   return <SubscriptionProvider isAuthenticated={isAuthenticated}>{children}</SubscriptionProvider>;
 };
 
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading } = useAuthState();
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">

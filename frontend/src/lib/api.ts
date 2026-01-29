@@ -1,4 +1,5 @@
 import axios, { AxiosHeaders, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { storage } from '@/lib/storage';
 
 // Create a list of blocked endpoint patterns that shouldn't be called
 const BLOCKED_ENDPOINTS = [
@@ -83,22 +84,17 @@ const AUTH_TOKEN_KEY = 'itemize_auth_token';
  * Get the stored auth token
  */
 export const getAuthToken = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
-  }
-  return null;
+  return storage.getItem(AUTH_TOKEN_KEY);
 };
 
 /**
  * Set the auth token (called after login)
  */
 export const setAuthToken = (token: string | null): void => {
-  if (typeof window !== 'undefined') {
-    if (token) {
-      localStorage.setItem(AUTH_TOKEN_KEY, token);
-    } else {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-    }
+  if (token) {
+    storage.setItem(AUTH_TOKEN_KEY, token);
+  } else {
+    storage.removeItem(AUTH_TOKEN_KEY);
   }
 };
 
@@ -158,7 +154,13 @@ const processQueue = (error: Error | null) => {
 
 // Add a response interceptor for error handling and retry logic
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const payload = response.data;
+    if (payload && typeof payload === 'object' && 'data' in payload && 'success' in payload) {
+      response.data = payload.data;
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const config = error.config as RetryConfig | undefined;
     
@@ -190,8 +192,8 @@ api.interceptors.response.use(
         isRefreshing = false;
         // Clear all auth data (Gleam-style)
         setAuthToken(null);
-        localStorage.removeItem('itemize_user');
-        localStorage.removeItem('itemize_expiry');
+        storage.removeItem('itemize_user');
+        storage.removeItem('itemize_expiry');
         // Optionally redirect to login
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login';

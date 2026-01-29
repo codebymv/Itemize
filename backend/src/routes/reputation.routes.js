@@ -6,9 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -31,18 +30,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/platforms', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 SELECT * FROM review_platforms
                 WHERE organization_id = $1
                 ORDER BY platform ASC
-            `, [req.organizationId]);
-            client.release();
+            `, [req.organizationId]));
 
             res.json(result.rows);
         } catch (error) {
             console.error('Error fetching platforms:', error);
-            res.status(500).json({ error: 'Failed to fetch platforms' });
+            return sendError(res, 'Failed to fetch platforms');
         }
     });
 
@@ -57,8 +54,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Platform is required' });
             }
 
-            const client = await pool.connect();
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 INSERT INTO review_platforms (
                     organization_id, platform, platform_name, place_id, page_id,
                     business_url, review_url, is_connected
@@ -79,13 +75,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 page_id || null,
                 business_url || null,
                 review_url || null
-            ]);
-
-            client.release();
+            ]));
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error adding platform:', error);
-            res.status(500).json({ error: 'Failed to add platform' });
+            return sendError(res, 'Failed to add platform');
         }
     });
 
@@ -95,14 +89,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/platforms/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-            
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'DELETE FROM review_platforms WHERE id = $1 AND organization_id = $2 RETURNING id',
                 [id, req.organizationId]
-            );
-
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Platform not found' });
@@ -111,7 +101,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error removing platform:', error);
-            res.status(500).json({ error: 'Failed to remove platform' });
+            return sendError(res, 'Failed to remove platform');
         }
     });
 
@@ -161,25 +151,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const { countResult, result } = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM reviews r ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM reviews r ${whereClause}`,
-                params
-            );
+                const result = await client.query(`
+                    SELECT r.*, rp.platform_name,
+                           c.first_name as contact_first_name, c.last_name as contact_last_name
+                    FROM reviews r
+                    LEFT JOIN review_platforms rp ON r.platform_id = rp.id
+                    LEFT JOIN contacts c ON r.contact_id = c.id
+                    ${whereClause}
+                    ORDER BY r.review_date DESC
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-                SELECT r.*, rp.platform_name,
-                       c.first_name as contact_first_name, c.last_name as contact_last_name
-                FROM reviews r
-                LEFT JOIN review_platforms rp ON r.platform_id = rp.id
-                LEFT JOIN contacts c ON r.contact_id = c.id
-                ${whereClause}
-                ORDER BY r.review_date DESC
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
+                return { countResult, result };
+            });
 
             res.json({
                 reviews: result.rows,
@@ -192,7 +182,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
         } catch (error) {
             console.error('Error fetching reviews:', error);
-            res.status(500).json({ error: 'Failed to fetch reviews' });
+            return sendError(res, 'Failed to fetch reviews');
         }
     });
 
@@ -202,18 +192,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/reviews/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 SELECT r.*, rp.platform_name, rp.review_url,
                        c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
                 FROM reviews r
                 LEFT JOIN review_platforms rp ON r.platform_id = rp.id
                 LEFT JOIN contacts c ON r.contact_id = c.id
                 WHERE r.id = $1 AND r.organization_id = $2
-            `, [id, req.organizationId]);
-
-            client.release();
+            `, [id, req.organizationId]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Review not found' });
@@ -222,7 +208,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error fetching review:', error);
-            res.status(500).json({ error: 'Failed to fetch review' });
+            return sendError(res, 'Failed to fetch review');
         }
     });
 
@@ -247,9 +233,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Valid rating (1-5) is required' });
             }
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 INSERT INTO reviews (
                     organization_id, platform_id, platform, rating, review_text,
                     reviewer_name, reviewer_email, reviewer_phone, contact_id,
@@ -268,13 +252,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 contact_id || null,
                 getSentiment(rating),
                 review_date || new Date()
-            ]);
-
-            client.release();
+            ]));
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error creating review:', error);
-            res.status(500).json({ error: 'Failed to create review' });
+            return sendError(res, 'Failed to create review');
         }
     });
 
@@ -285,8 +267,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         try {
             const { id } = req.params;
             const { status, response_text, internal_notes, contact_id } = req.body;
-
-            const client = await pool.connect();
 
             const updates = [];
             const params = [];
@@ -322,13 +302,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             params.push(id, req.organizationId);
 
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE reviews SET ${updates.join(', ')}
                 WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
                 RETURNING *
-            `, params);
-
-            client.release();
+            `, params));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Review not found' });
@@ -337,7 +315,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating review:', error);
-            res.status(500).json({ error: 'Failed to update review' });
+            return sendError(res, 'Failed to update review');
         }
     });
 
@@ -347,14 +325,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/reviews/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'DELETE FROM reviews WHERE id = $1 AND organization_id = $2 RETURNING id',
                 [id, req.organizationId]
-            );
-
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Review not found' });
@@ -363,7 +337,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error deleting review:', error);
-            res.status(500).json({ error: 'Failed to delete review' });
+            return sendError(res, 'Failed to delete review');
         }
     });
 
@@ -389,23 +363,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const { countResult, result } = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM review_requests rr ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM review_requests rr ${whereClause}`,
-                params
-            );
+                const result = await client.query(`
+                    SELECT rr.*, c.first_name, c.last_name, c.email
+                    FROM review_requests rr
+                    LEFT JOIN contacts c ON rr.contact_id = c.id
+                    ${whereClause}
+                    ORDER BY rr.created_at DESC
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-                SELECT rr.*, c.first_name, c.last_name, c.email
-                FROM review_requests rr
-                LEFT JOIN contacts c ON rr.contact_id = c.id
-                ${whereClause}
-                ORDER BY rr.created_at DESC
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
+                return { countResult, result };
+            });
 
             res.json({
                 requests: result.rows,
@@ -418,7 +392,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
         } catch (error) {
             console.error('Error fetching review requests:', error);
-            res.status(500).json({ error: 'Failed to fetch review requests' });
+            return sendError(res, 'Failed to fetch review requests');
         }
     });
 
@@ -447,91 +421,91 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Channel (email/sms/both) required' });
             }
 
-            const client = await pool.connect();
+            const request = await withDbClient(pool, async (client) => {
+                // Get contact info if contact_id provided
+                let contactInfo = {
+                    email: contact_email,
+                    phone: contact_phone,
+                    name: contact_name
+                };
 
-            // Get contact info if contact_id provided
-            let contactInfo = {
-                email: contact_email,
-                phone: contact_phone,
-                name: contact_name
-            };
+                if (contact_id) {
+                    const contactResult = await client.query(
+                        'SELECT email, phone, first_name, last_name FROM contacts WHERE id = $1 AND organization_id = $2',
+                        [contact_id, req.organizationId]
+                    );
 
-            if (contact_id) {
-                const contactResult = await client.query(
-                    'SELECT email, phone, first_name, last_name FROM contacts WHERE id = $1 AND organization_id = $2',
-                    [contact_id, req.organizationId]
-                );
-
-                if (contactResult.rows.length > 0) {
-                    const c = contactResult.rows[0];
-                    contactInfo.email = contactInfo.email || c.email;
-                    contactInfo.phone = contactInfo.phone || c.phone;
-                    contactInfo.name = contactInfo.name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+                    if (contactResult.rows.length > 0) {
+                        const c = contactResult.rows[0];
+                        contactInfo.email = contactInfo.email || c.email;
+                        contactInfo.phone = contactInfo.phone || c.phone;
+                        contactInfo.name = contactInfo.name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+                    }
                 }
-            }
 
-            // Generate unique token
-            const uniqueToken = crypto.randomBytes(32).toString('hex');
+                // Generate unique token
+                const uniqueToken = crypto.randomBytes(32).toString('hex');
 
-            // Get default redirect URL from settings
-            let reviewUrl = redirect_url;
-            if (!reviewUrl) {
-                const settingsResult = await client.query(
-                    'SELECT default_review_url FROM reputation_settings WHERE organization_id = $1',
-                    [req.organizationId]
-                );
-                reviewUrl = settingsResult.rows[0]?.default_review_url;
-            }
+                // Get default redirect URL from settings
+                let reviewUrl = redirect_url;
+                if (!reviewUrl) {
+                    const settingsResult = await client.query(
+                        'SELECT default_review_url FROM reputation_settings WHERE organization_id = $1',
+                        [req.organizationId]
+                    );
+                    reviewUrl = settingsResult.rows[0]?.default_review_url;
+                }
 
-            const result = await client.query(`
-                INSERT INTO review_requests (
-                    organization_id, contact_id, contact_email, contact_phone, contact_name,
-                    channel, custom_message, preferred_platform, redirect_url,
-                    scheduled_at, unique_token, status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                RETURNING *
-            `, [
-                req.organizationId,
-                contact_id || null,
-                contactInfo.email,
-                contactInfo.phone,
-                contactInfo.name,
-                channel,
-                custom_message || null,
-                preferred_platform || null,
-                reviewUrl,
-                scheduled_at || null,
-                uniqueToken,
-                scheduled_at ? 'pending' : 'sent'
-            ]);
-
-            const request = result.rows[0];
-
-            // If not scheduled, send immediately
-            if (!scheduled_at) {
-                // Mark as sent
-                await client.query(`
-                    UPDATE review_requests SET
-                        email_sent = $1,
-                        email_sent_at = CASE WHEN $1 THEN CURRENT_TIMESTAMP ELSE NULL END,
-                        sms_sent = $2,
-                        sms_sent_at = CASE WHEN $2 THEN CURRENT_TIMESTAMP ELSE NULL END
-                    WHERE id = $3
+                const result = await client.query(`
+                    INSERT INTO review_requests (
+                        organization_id, contact_id, contact_email, contact_phone, contact_name,
+                        channel, custom_message, preferred_platform, redirect_url,
+                        scheduled_at, unique_token, status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    RETURNING *
                 `, [
-                    channel === 'email' || channel === 'both',
-                    channel === 'sms' || channel === 'both',
-                    request.id
+                    req.organizationId,
+                    contact_id || null,
+                    contactInfo.email,
+                    contactInfo.phone,
+                    contactInfo.name,
+                    channel,
+                    custom_message || null,
+                    preferred_platform || null,
+                    reviewUrl,
+                    scheduled_at || null,
+                    uniqueToken,
+                    scheduled_at ? 'pending' : 'sent'
                 ]);
 
-                // TODO: Actually send email/SMS
-                // For now, just update status
-            }
+                const request = result.rows[0];
 
-            client.release();
+                // If not scheduled, send immediately
+                if (!scheduled_at) {
+                    // Mark as sent
+                    await client.query(`
+                        UPDATE review_requests SET
+                            email_sent = $1,
+                            email_sent_at = CASE WHEN $1 THEN CURRENT_TIMESTAMP ELSE NULL END,
+                            sms_sent = $2,
+                            sms_sent_at = CASE WHEN $2 THEN CURRENT_TIMESTAMP ELSE NULL END
+                        WHERE id = $3
+                    `, [
+                        channel === 'email' || channel === 'both',
+                        channel === 'sms' || channel === 'both',
+                        request.id
+                    ]);
+
+                    // TODO: Actually send email/SMS
+                    // For now, just update status
+                }
+
+                return request;
+            });
             res.status(201).json(request);
         } catch (error) {
             console.error('Error creating review request:', error);
-            res.status(500).json({ error: 'Failed to create review request' });
+            return sendError(res, 'Failed to create review request');
         }
     });
 
@@ -546,51 +520,51 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Contact IDs array required' });
             }
 
-            const client = await pool.connect();
+            const requests = await withDbClient(pool, async (client) => {
+                // Get contacts
+                const contactsResult = await client.query(`
+                    SELECT id, email, phone, first_name, last_name
+                    FROM contacts
+                    WHERE id = ANY($1) AND organization_id = $2
+                `, [contact_ids, req.organizationId]);
 
-            // Get contacts
-            const contactsResult = await client.query(`
-                SELECT id, email, phone, first_name, last_name
-                FROM contacts
-                WHERE id = ANY($1) AND organization_id = $2
-            `, [contact_ids, req.organizationId]);
+                const requests = [];
+                
+                for (const contact of contactsResult.rows) {
+                    const uniqueToken = crypto.randomBytes(32).toString('hex');
 
-            const requests = [];
-            
-            for (const contact of contactsResult.rows) {
-                const uniqueToken = crypto.randomBytes(32).toString('hex');
+                    const result = await client.query(`
+                        INSERT INTO review_requests (
+                            organization_id, contact_id, contact_email, contact_phone, contact_name,
+                            channel, custom_message, preferred_platform, unique_token, status,
+                            email_sent, email_sent_at, sms_sent, sms_sent_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'sent', $10, $11, $12, $13)
+                        RETURNING id
+                    `, [
+                        req.organizationId,
+                        contact.id,
+                        contact.email,
+                        contact.phone,
+                        `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
+                        channel || 'email',
+                        custom_message || null,
+                        preferred_platform || null,
+                        uniqueToken,
+                        channel === 'email' || channel === 'both',
+                        (channel === 'email' || channel === 'both') ? new Date() : null,
+                        channel === 'sms' || channel === 'both',
+                        (channel === 'sms' || channel === 'both') ? new Date() : null
+                    ]);
 
-                const result = await client.query(`
-                    INSERT INTO review_requests (
-                        organization_id, contact_id, contact_email, contact_phone, contact_name,
-                        channel, custom_message, preferred_platform, unique_token, status,
-                        email_sent, email_sent_at, sms_sent, sms_sent_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'sent', $10, $11, $12, $13)
-                    RETURNING id
-                `, [
-                    req.organizationId,
-                    contact.id,
-                    contact.email,
-                    contact.phone,
-                    `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
-                    channel || 'email',
-                    custom_message || null,
-                    preferred_platform || null,
-                    uniqueToken,
-                    channel === 'email' || channel === 'both',
-                    (channel === 'email' || channel === 'both') ? new Date() : null,
-                    channel === 'sms' || channel === 'both',
-                    (channel === 'sms' || channel === 'both') ? new Date() : null
-                ]);
+                    requests.push(result.rows[0]);
+                }
 
-                requests.push(result.rows[0]);
-            }
-
-            client.release();
+                return requests;
+            });
             res.status(201).json({ sent: requests.length, requests });
         } catch (error) {
             console.error('Error sending bulk requests:', error);
-            res.status(500).json({ error: 'Failed to send bulk requests' });
+            return sendError(res, 'Failed to send bulk requests');
         }
     });
 
@@ -603,16 +577,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/widgets', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'SELECT * FROM review_widgets WHERE organization_id = $1 ORDER BY name ASC',
                 [req.organizationId]
-            );
-            client.release();
+            ));
             res.json(result.rows);
         } catch (error) {
             console.error('Error fetching widgets:', error);
-            res.status(500).json({ error: 'Failed to fetch widgets' });
+            return sendError(res, 'Failed to fetch widgets');
         }
     });
 
@@ -645,9 +617,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             const widgetKey = crypto.randomBytes(16).toString('hex');
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 INSERT INTO review_widgets (
                     organization_id, widget_key, name, widget_type, theme,
                     primary_color, background_color, text_color, border_radius,
@@ -673,13 +643,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 platforms || [],
                 max_reviews || 10,
                 hide_no_text_reviews || false
-            ]);
-
-            client.release();
+            ]));
             res.status(201).json(result.rows[0]);
         } catch (error) {
             console.error('Error creating widget:', error);
-            res.status(500).json({ error: 'Failed to create widget' });
+            return sendError(res, 'Failed to create widget');
         }
     });
 
@@ -690,8 +658,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         try {
             const { id } = req.params;
             const updates = req.body;
-
-            const client = await pool.connect();
 
             const fields = [];
             const params = [];
@@ -714,13 +680,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             fields.push('updated_at = CURRENT_TIMESTAMP');
             params.push(id, req.organizationId);
 
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE review_widgets SET ${fields.join(', ')}
                 WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
                 RETURNING *
-            `, params);
-
-            client.release();
+            `, params));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Widget not found' });
@@ -729,7 +693,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating widget:', error);
-            res.status(500).json({ error: 'Failed to update widget' });
+            return sendError(res, 'Failed to update widget');
         }
     });
 
@@ -739,14 +703,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/widgets/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'DELETE FROM review_widgets WHERE id = $1 AND organization_id = $2 RETURNING id',
                 [id, req.organizationId]
-            );
-
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Widget not found' });
@@ -755,7 +715,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ success: true });
         } catch (error) {
             console.error('Error deleting widget:', error);
-            res.status(500).json({ error: 'Failed to delete widget' });
+            return sendError(res, 'Failed to delete widget');
         }
     });
 
@@ -765,14 +725,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/widgets/:id/embed-code', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'SELECT widget_key FROM review_widgets WHERE id = $1 AND organization_id = $2',
                 [id, req.organizationId]
-            );
-
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Widget not found' });
@@ -788,7 +744,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json({ embed_code: embedCode, widget_key: widgetKey });
         } catch (error) {
             console.error('Error getting embed code:', error);
-            res.status(500).json({ error: 'Failed to get embed code' });
+            return sendError(res, 'Failed to get embed code');
         }
     });
 
@@ -801,12 +757,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/settings', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
-            const result = await client.query(
+            const result = await withDbClient(pool, async (client) => client.query(
                 'SELECT * FROM reputation_settings WHERE organization_id = $1',
                 [req.organizationId]
-            );
-            client.release();
+            ));
 
             if (result.rows.length === 0) {
                 return res.json({
@@ -822,7 +776,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error fetching settings:', error);
-            res.status(500).json({ error: 'Failed to fetch settings' });
+            return sendError(res, 'Failed to fetch settings');
         }
     });
 
@@ -832,9 +786,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.put('/settings', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const settings = req.body;
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
                 INSERT INTO reputation_settings (
                     organization_id, auto_request_enabled, auto_request_delay_days, auto_request_channel,
                     auto_request_trigger, email_template_id, sms_template_text, negative_threshold,
@@ -876,13 +828,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 settings.new_review_notify_email,
                 settings.new_review_notify_slack,
                 settings.slack_webhook_url
-            ]);
-
-            client.release();
+            ]));
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating settings:', error);
-            res.status(500).json({ error: 'Failed to update settings' });
+            return sendError(res, 'Failed to update settings');
         }
     });
 
@@ -898,71 +848,85 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { period = '30' } = req.query;
             const days = parseInt(period);
             
-            const client = await pool.connect();
+            const {
+                overallStats,
+                periodStats,
+                ratingDist,
+                platformDist,
+                reviewsOverTime,
+                requestStats
+            } = await withDbClient(pool, async (client) => {
+                // Overall stats
+                const overallStats = await client.query(`
+                    SELECT 
+                        COUNT(*) as total_reviews,
+                        COALESCE(AVG(rating), 0) as average_rating,
+                        COUNT(*) FILTER (WHERE rating >= 4) as positive_reviews,
+                        COUNT(*) FILTER (WHERE rating <= 2) as negative_reviews,
+                        COUNT(*) FILTER (WHERE status = 'new') as new_reviews,
+                        COUNT(*) FILTER (WHERE status = 'responded') as responded_reviews
+                    FROM reviews
+                    WHERE organization_id = $1
+                `, [req.organizationId]);
 
-            // Overall stats
-            const overallStats = await client.query(`
-                SELECT 
-                    COUNT(*) as total_reviews,
-                    COALESCE(AVG(rating), 0) as average_rating,
-                    COUNT(*) FILTER (WHERE rating >= 4) as positive_reviews,
-                    COUNT(*) FILTER (WHERE rating <= 2) as negative_reviews,
-                    COUNT(*) FILTER (WHERE status = 'new') as new_reviews,
-                    COUNT(*) FILTER (WHERE status = 'responded') as responded_reviews
-                FROM reviews
-                WHERE organization_id = $1
-            `, [req.organizationId]);
+                // Period stats
+                const periodStats = await client.query(`
+                    SELECT 
+                        COUNT(*) as reviews_count,
+                        COALESCE(AVG(rating), 0) as average_rating
+                    FROM reviews
+                    WHERE organization_id = $1 AND review_date >= NOW() - INTERVAL '${days} days'
+                `, [req.organizationId]);
 
-            // Period stats
-            const periodStats = await client.query(`
-                SELECT 
-                    COUNT(*) as reviews_count,
-                    COALESCE(AVG(rating), 0) as average_rating
-                FROM reviews
-                WHERE organization_id = $1 AND review_date >= NOW() - INTERVAL '${days} days'
-            `, [req.organizationId]);
+                // Rating distribution
+                const ratingDist = await client.query(`
+                    SELECT rating, COUNT(*) as count
+                    FROM reviews
+                    WHERE organization_id = $1
+                    GROUP BY rating
+                    ORDER BY rating DESC
+                `, [req.organizationId]);
 
-            // Rating distribution
-            const ratingDist = await client.query(`
-                SELECT rating, COUNT(*) as count
-                FROM reviews
-                WHERE organization_id = $1
-                GROUP BY rating
-                ORDER BY rating DESC
-            `, [req.organizationId]);
+                // Platform distribution
+                const platformDist = await client.query(`
+                    SELECT platform, COUNT(*) as count, COALESCE(AVG(rating), 0) as avg_rating
+                    FROM reviews
+                    WHERE organization_id = $1
+                    GROUP BY platform
+                    ORDER BY count DESC
+                `, [req.organizationId]);
 
-            // Platform distribution
-            const platformDist = await client.query(`
-                SELECT platform, COUNT(*) as count, COALESCE(AVG(rating), 0) as avg_rating
-                FROM reviews
-                WHERE organization_id = $1
-                GROUP BY platform
-                ORDER BY count DESC
-            `, [req.organizationId]);
+                // Reviews over time (last 30 days)
+                const reviewsOverTime = await client.query(`
+                    SELECT 
+                        DATE_TRUNC('day', review_date) as date,
+                        COUNT(*) as count,
+                        AVG(rating) as avg_rating
+                    FROM reviews
+                    WHERE organization_id = $1 AND review_date >= NOW() - INTERVAL '30 days'
+                    GROUP BY DATE_TRUNC('day', review_date)
+                    ORDER BY date
+                `, [req.organizationId]);
 
-            // Reviews over time (last 30 days)
-            const reviewsOverTime = await client.query(`
-                SELECT 
-                    DATE_TRUNC('day', review_date) as date,
-                    COUNT(*) as count,
-                    AVG(rating) as avg_rating
-                FROM reviews
-                WHERE organization_id = $1 AND review_date >= NOW() - INTERVAL '30 days'
-                GROUP BY DATE_TRUNC('day', review_date)
-                ORDER BY date
-            `, [req.organizationId]);
+                // Request stats
+                const requestStats = await client.query(`
+                    SELECT 
+                        COUNT(*) as total_sent,
+                        COUNT(*) FILTER (WHERE clicked = TRUE) as clicked,
+                        COUNT(*) FILTER (WHERE review_submitted = TRUE) as converted
+                    FROM review_requests
+                    WHERE organization_id = $1 AND created_at >= NOW() - INTERVAL '${days} days'
+                `, [req.organizationId]);
 
-            // Request stats
-            const requestStats = await client.query(`
-                SELECT 
-                    COUNT(*) as total_sent,
-                    COUNT(*) FILTER (WHERE clicked = TRUE) as clicked,
-                    COUNT(*) FILTER (WHERE review_submitted = TRUE) as converted
-                FROM review_requests
-                WHERE organization_id = $1 AND created_at >= NOW() - INTERVAL '${days} days'
-            `, [req.organizationId]);
-
-            client.release();
+                return {
+                    overallStats,
+                    periodStats,
+                    ratingDist,
+                    platformDist,
+                    reviewsOverTime,
+                    requestStats
+                };
+            });
 
             res.json({
                 overall: overallStats.rows[0],
@@ -977,7 +941,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
         } catch (error) {
             console.error('Error fetching analytics:', error);
-            res.status(500).json({ error: 'Failed to fetch analytics' });
+            return sendError(res, 'Failed to fetch analytics');
         }
     });
 
@@ -991,63 +955,66 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/public/widget/:widgetKey', publicRateLimit, async (req, res) => {
         try {
             const { widgetKey } = req.params;
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Get widget config
+                const widgetResult = await client.query(`
+                    SELECT * FROM review_widgets
+                    WHERE widget_key = $1 AND is_active = TRUE
+                `, [widgetKey]);
 
-            // Get widget config
-            const widgetResult = await client.query(`
-                SELECT * FROM review_widgets
-                WHERE widget_key = $1 AND is_active = TRUE
-            `, [widgetKey]);
+                if (widgetResult.rows.length === 0) {
+                    return { status: 404, error: 'Widget not found' };
+                }
 
-            if (widgetResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Widget not found' });
+                const widget = widgetResult.rows[0];
+
+                // Get reviews based on widget config
+                let platformFilter = '';
+                if (widget.platforms && widget.platforms.length > 0) {
+                    platformFilter = `AND platform = ANY($4)`;
+                }
+
+                const reviewsResult = await client.query(`
+                    SELECT 
+                        rating, review_text, reviewer_name, reviewer_avatar_url,
+                        platform, review_date
+                    FROM reviews
+                    WHERE organization_id = $1 
+                        AND rating >= $2
+                        ${widget.hide_no_text_reviews ? "AND review_text IS NOT NULL AND review_text != ''" : ''}
+                        ${platformFilter}
+                    ORDER BY review_date DESC
+                    LIMIT $3
+                `, widget.platforms && widget.platforms.length > 0 
+                    ? [widget.organization_id, widget.min_rating, widget.max_reviews, widget.platforms]
+                    : [widget.organization_id, widget.min_rating, widget.max_reviews]
+                );
+
+                return { status: 200, widget, reviewsResult };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
-
-            const widget = widgetResult.rows[0];
-
-            // Get reviews based on widget config
-            let platformFilter = '';
-            if (widget.platforms && widget.platforms.length > 0) {
-                platformFilter = `AND platform = ANY($4)`;
-            }
-
-            const reviewsResult = await client.query(`
-                SELECT 
-                    rating, review_text, reviewer_name, reviewer_avatar_url,
-                    platform, review_date
-                FROM reviews
-                WHERE organization_id = $1 
-                    AND rating >= $2
-                    ${widget.hide_no_text_reviews ? "AND review_text IS NOT NULL AND review_text != ''" : ''}
-                    ${platformFilter}
-                ORDER BY review_date DESC
-                LIMIT $3
-            `, widget.platforms && widget.platforms.length > 0 
-                ? [widget.organization_id, widget.min_rating, widget.max_reviews, widget.platforms]
-                : [widget.organization_id, widget.min_rating, widget.max_reviews]
-            );
-
-            client.release();
 
             res.json({
                 config: {
-                    widget_type: widget.widget_type,
-                    theme: widget.theme,
-                    primary_color: widget.primary_color,
-                    background_color: widget.background_color,
-                    text_color: widget.text_color,
-                    border_radius: widget.border_radius,
-                    show_rating_stars: widget.show_rating_stars,
-                    show_reviewer_photo: widget.show_reviewer_photo,
-                    show_review_date: widget.show_review_date,
-                    show_platform_icon: widget.show_platform_icon
+                    widget_type: data.widget.widget_type,
+                    theme: data.widget.theme,
+                    primary_color: data.widget.primary_color,
+                    background_color: data.widget.background_color,
+                    text_color: data.widget.text_color,
+                    border_radius: data.widget.border_radius,
+                    show_rating_stars: data.widget.show_rating_stars,
+                    show_reviewer_photo: data.widget.show_reviewer_photo,
+                    show_review_date: data.widget.show_review_date,
+                    show_platform_icon: data.widget.show_platform_icon
                 },
-                reviews: reviewsResult.rows
+                reviews: data.reviewsResult.rows
             });
         } catch (error) {
             console.error('Error fetching widget data:', error);
-            res.status(500).json({ error: 'Failed to fetch widget data' });
+            return sendError(res, 'Failed to fetch widget data');
         }
     });
 
@@ -1057,42 +1024,45 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/public/review/:token', publicRateLimit, async (req, res) => {
         try {
             const { token } = req.params;
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const result = await client.query(`
+                    SELECT rr.*, o.name as organization_name
+                    FROM review_requests rr
+                    JOIN organizations o ON rr.organization_id = o.id
+                    WHERE rr.unique_token = $1 AND rr.status NOT IN ('completed', 'unsubscribed')
+                `, [token]);
 
-            const result = await client.query(`
-                SELECT rr.*, o.name as organization_name
-                FROM review_requests rr
-                JOIN organizations o ON rr.organization_id = o.id
-                WHERE rr.unique_token = $1 AND rr.status NOT IN ('completed', 'unsubscribed')
-            `, [token]);
+                if (result.rows.length === 0) {
+                    return { status: 404, error: 'Review request not found or expired' };
+                }
 
-            if (result.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Review request not found or expired' });
+                const request = result.rows[0];
+
+                // Mark as clicked
+                await client.query(`
+                    UPDATE review_requests SET
+                        clicked = TRUE,
+                        clicked_at = COALESCE(clicked_at, CURRENT_TIMESTAMP),
+                        status = CASE WHEN status = 'sent' THEN 'clicked' ELSE status END
+                    WHERE id = $1
+                `, [request.id]);
+
+                return { status: 200, request };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
 
-            const request = result.rows[0];
-
-            // Mark as clicked
-            await client.query(`
-                UPDATE review_requests SET
-                    clicked = TRUE,
-                    clicked_at = COALESCE(clicked_at, CURRENT_TIMESTAMP),
-                    status = CASE WHEN status = 'sent' THEN 'clicked' ELSE status END
-                WHERE id = $1
-            `, [request.id]);
-
-            client.release();
-
             res.json({
-                organization_name: request.organization_name,
-                contact_name: request.contact_name,
-                redirect_url: request.redirect_url,
-                preferred_platform: request.preferred_platform
+                organization_name: data.request.organization_name,
+                contact_name: data.request.contact_name,
+                redirect_url: data.request.redirect_url,
+                preferred_platform: data.request.preferred_platform
             });
         } catch (error) {
             console.error('Error fetching review request:', error);
-            res.status(500).json({ error: 'Failed to fetch review request' });
+            return sendError(res, 'Failed to fetch review request');
         }
     });
 
@@ -1108,60 +1078,63 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Valid rating (1-5) required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                const requestResult = await client.query(`
+                    SELECT * FROM review_requests WHERE unique_token = $1 AND status NOT IN ('completed', 'unsubscribed')
+                `, [token]);
 
-            const requestResult = await client.query(`
-                SELECT * FROM review_requests WHERE unique_token = $1 AND status NOT IN ('completed', 'unsubscribed')
-            `, [token]);
+                if (requestResult.rows.length === 0) {
+                    return { status: 404, error: 'Review request not found' };
+                }
 
-            if (requestResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Review request not found' });
+                const request = requestResult.rows[0];
+
+                // Create review
+                const reviewResult = await client.query(`
+                    INSERT INTO reviews (
+                        organization_id, platform, rating, review_text,
+                        reviewer_name, reviewer_email, reviewer_phone, contact_id,
+                        sentiment, source, review_request_id
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'request', $10)
+                    RETURNING *
+                `, [
+                    request.organization_id,
+                    platform || request.preferred_platform || 'custom',
+                    rating,
+                    review_text || null,
+                    request.contact_name,
+                    request.contact_email,
+                    request.contact_phone,
+                    request.contact_id,
+                    getSentiment(rating),
+                    request.id
+                ]);
+
+                // Update request
+                await client.query(`
+                    UPDATE review_requests SET
+                        rating_given = $1,
+                        review_submitted = TRUE,
+                        review_submitted_at = CURRENT_TIMESTAMP,
+                        review_id = $2,
+                        status = 'completed'
+                    WHERE id = $3
+                `, [rating, reviewResult.rows[0].id, request.id]);
+
+                return { status: 200, request };
+            });
+
+            if (data.error) {
+                return res.status(data.status).json({ error: data.error });
             }
-
-            const request = requestResult.rows[0];
-
-            // Create review
-            const reviewResult = await client.query(`
-                INSERT INTO reviews (
-                    organization_id, platform, rating, review_text,
-                    reviewer_name, reviewer_email, reviewer_phone, contact_id,
-                    sentiment, source, review_request_id
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'request', $10)
-                RETURNING *
-            `, [
-                request.organization_id,
-                platform || request.preferred_platform || 'custom',
-                rating,
-                review_text || null,
-                request.contact_name,
-                request.contact_email,
-                request.contact_phone,
-                request.contact_id,
-                getSentiment(rating),
-                request.id
-            ]);
-
-            // Update request
-            await client.query(`
-                UPDATE review_requests SET
-                    rating_given = $1,
-                    review_submitted = TRUE,
-                    review_submitted_at = CURRENT_TIMESTAMP,
-                    review_id = $2,
-                    status = 'completed'
-                WHERE id = $3
-            `, [rating, reviewResult.rows[0].id, request.id]);
-
-            client.release();
 
             res.json({ 
                 success: true, 
-                redirect_url: rating >= 4 ? request.redirect_url : null
+                redirect_url: rating >= 4 ? data.request.redirect_url : null
             });
         } catch (error) {
             console.error('Error submitting review:', error);
-            res.status(500).json({ error: 'Failed to submit review' });
+            return sendError(res, 'Failed to submit review');
         }
     });
 

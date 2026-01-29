@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { withDbClient, withTransaction } = require('../utils/db');
 const UsageTrackingService = require('../services/usageTrackingService');
 const { 
     LANDING_PAGE_LIMITS, 
@@ -142,33 +143,33 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM pages p ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM pages p ${whereClause}`,
-                params
-            );
+                const pagesResult = await client.query(`
+                    SELECT p.*, 
+                           u.name as created_by_name,
+                           (SELECT COUNT(*) FROM page_sections WHERE page_id = p.id) as section_count
+                    FROM pages p
+                    LEFT JOIN users u ON p.created_by = u.id
+                    ${whereClause}
+                    ORDER BY p.updated_at DESC
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-                SELECT p.*, 
-                       u.name as created_by_name,
-                       (SELECT COUNT(*) FROM page_sections WHERE page_id = p.id) as section_count
-                FROM pages p
-                LEFT JOIN users u ON p.created_by = u.id
-                ${whereClause}
-                ORDER BY p.updated_at DESC
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
+                return { pages: pagesResult.rows, total: parseInt(countResult.rows[0].count) };
+            });
 
             res.json({
-                pages: result.rows,
+                pages: result.pages,
                 pagination: {
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                    total: result.total,
+                    totalPages: Math.ceil(result.total / parseInt(limit))
                 }
             });
         } catch (error) {
@@ -183,33 +184,34 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const pageResult = await client.query(`
+                    SELECT p.*, u.name as created_by_name
+                    FROM pages p
+                    LEFT JOIN users u ON p.created_by = u.id
+                    WHERE p.id = $1 AND p.organization_id = $2
+                `, [id, req.organizationId]);
 
-            const pageResult = await client.query(`
-                SELECT p.*, u.name as created_by_name
-                FROM pages p
-                LEFT JOIN users u ON p.created_by = u.id
-                WHERE p.id = $1 AND p.organization_id = $2
-            `, [id, req.organizationId]);
+                if (pageResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (pageResult.rows.length === 0) {
-                client.release();
+                const sectionsResult = await client.query(`
+                    SELECT * FROM page_sections
+                    WHERE page_id = $1
+                    ORDER BY section_order ASC
+                `, [id]);
+
+                const page = pageResult.rows[0];
+                page.sections = sectionsResult.rows;
+                return { status: 'ok', page };
+            });
+
+            if (result.status === 'not_found') {
                 return res.status(404).json({ error: 'Page not found' });
             }
 
-            // Get sections
-            const sectionsResult = await client.query(`
-                SELECT * FROM page_sections
-                WHERE page_id = $1
-                ORDER BY section_order ASC
-            `, [id]);
-
-            client.release();
-
-            const page = pageResult.rows[0];
-            page.sections = sectionsResult.rows;
-
-            res.json(page);
+            res.json(result.page);
         } catch (error) {
             logger.error('Error fetching page', { error: error.message });
             res.status(500).json({ error: 'Failed to fetch page' });
@@ -255,11 +257,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Name is required' });
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const page = await withTransaction(pool, async (client) => {
                 // Generate slug
                 const slug = customSlug || await generateSlug(client, req.organizationId, name);
 
@@ -284,7 +282,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     req.user.id
                 ]);
 
-                const page = pageResult.rows[0];
+                const createdPage = pageResult.rows[0];
 
                 // Create sections if provided
                 if (sections && Array.isArray(sections) && sections.length > 0) {
@@ -295,7 +293,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                                 page_id, organization_id, section_type, name, content, settings, section_order
                             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                         `, [
-                            page.id,
+                            createdPage.id,
                             req.organizationId,
                             section.section_type,
                             section.name || null,
@@ -306,26 +304,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     }
                 }
 
-                await client.query('COMMIT');
-
                 // Fetch complete page with sections
                 const sectionsResult = await client.query(
                     'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order',
-                    [page.id]
+                    [createdPage.id]
                 );
+                createdPage.sections = sectionsResult.rows;
 
-                client.release();
+                return createdPage;
+            });
 
-                // Track usage
-                await usageService.incrementUsage(req.organizationId, 'landing_pages');
+            // Track usage
+            await usageService.incrementUsage(req.organizationId, 'landing_pages');
 
-                page.sections = sectionsResult.rows;
-                res.status(201).json(page);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+            res.status(201).json(page);
         } catch (error) {
             console.error('Error creating page:', error);
             if (error.code === '23505') {
@@ -358,108 +350,111 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 custom_head
             } = req.body;
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                // Build update query dynamically
+                const updates = [];
+                const params = [];
+                let paramIndex = 1;
 
-            // Build update query dynamically
-            const updates = [];
-            const params = [];
-            let paramIndex = 1;
+                if (name !== undefined) {
+                    updates.push(`name = $${paramIndex++}`);
+                    params.push(name);
+                }
+                if (description !== undefined) {
+                    updates.push(`description = $${paramIndex++}`);
+                    params.push(description);
+                }
+                if (slug !== undefined) {
+                    // Validate slug uniqueness
+                    const slugCheck = await client.query(
+                        'SELECT id FROM pages WHERE organization_id = $1 AND slug = $2 AND id != $3',
+                        [req.organizationId, slug, id]
+                    );
+                    if (slugCheck.rows.length > 0) {
+                        return { status: 'slug_exists' };
+                    }
+                    updates.push(`slug = $${paramIndex++}`);
+                    params.push(slug);
+                }
+                if (status !== undefined) {
+                    updates.push(`status = $${paramIndex++}`);
+                    params.push(status);
+                    if (status === 'published') {
+                        updates.push(`published_at = COALESCE(published_at, CURRENT_TIMESTAMP)`);
+                    }
+                }
+                if (theme !== undefined) {
+                    updates.push(`theme = $${paramIndex++}`);
+                    params.push(JSON.stringify(theme));
+                }
+                if (settings !== undefined) {
+                    updates.push(`settings = $${paramIndex++}`);
+                    params.push(JSON.stringify(settings));
+                }
+                if (seo_title !== undefined) {
+                    updates.push(`seo_title = $${paramIndex++}`);
+                    params.push(seo_title);
+                }
+                if (seo_description !== undefined) {
+                    updates.push(`seo_description = $${paramIndex++}`);
+                    params.push(seo_description);
+                }
+                if (seo_keywords !== undefined) {
+                    updates.push(`seo_keywords = $${paramIndex++}`);
+                    params.push(seo_keywords);
+                }
+                if (og_image !== undefined) {
+                    updates.push(`og_image = $${paramIndex++}`);
+                    params.push(og_image);
+                }
+                if (favicon_url !== undefined) {
+                    updates.push(`favicon_url = $${paramIndex++}`);
+                    params.push(favicon_url);
+                }
+                if (custom_css !== undefined) {
+                    updates.push(`custom_css = $${paramIndex++}`);
+                    params.push(custom_css);
+                }
+                if (custom_js !== undefined) {
+                    updates.push(`custom_js = $${paramIndex++}`);
+                    params.push(custom_js);
+                }
+                if (custom_head !== undefined) {
+                    updates.push(`custom_head = $${paramIndex++}`);
+                    params.push(custom_head);
+                }
 
-            if (name !== undefined) {
-                updates.push(`name = $${paramIndex++}`);
-                params.push(name);
-            }
-            if (description !== undefined) {
-                updates.push(`description = $${paramIndex++}`);
-                params.push(description);
-            }
-            if (slug !== undefined) {
-                // Validate slug uniqueness
-                const slugCheck = await client.query(
-                    'SELECT id FROM pages WHERE organization_id = $1 AND slug = $2 AND id != $3',
-                    [req.organizationId, slug, id]
+                updates.push('updated_at = CURRENT_TIMESTAMP');
+                params.push(id, req.organizationId);
+
+                const updateResult = await client.query(`
+                    UPDATE pages SET ${updates.join(', ')}
+                    WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
+                    RETURNING *
+                `, params);
+
+                if (updateResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
+
+                const sectionsResult = await client.query(
+                    'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order',
+                    [id]
                 );
-                if (slugCheck.rows.length > 0) {
-                    client.release();
-                    return res.status(400).json({ error: 'Slug already exists' });
-                }
-                updates.push(`slug = $${paramIndex++}`);
-                params.push(slug);
-            }
-            if (status !== undefined) {
-                updates.push(`status = $${paramIndex++}`);
-                params.push(status);
-                if (status === 'published') {
-                    updates.push(`published_at = COALESCE(published_at, CURRENT_TIMESTAMP)`);
-                }
-            }
-            if (theme !== undefined) {
-                updates.push(`theme = $${paramIndex++}`);
-                params.push(JSON.stringify(theme));
-            }
-            if (settings !== undefined) {
-                updates.push(`settings = $${paramIndex++}`);
-                params.push(JSON.stringify(settings));
-            }
-            if (seo_title !== undefined) {
-                updates.push(`seo_title = $${paramIndex++}`);
-                params.push(seo_title);
-            }
-            if (seo_description !== undefined) {
-                updates.push(`seo_description = $${paramIndex++}`);
-                params.push(seo_description);
-            }
-            if (seo_keywords !== undefined) {
-                updates.push(`seo_keywords = $${paramIndex++}`);
-                params.push(seo_keywords);
-            }
-            if (og_image !== undefined) {
-                updates.push(`og_image = $${paramIndex++}`);
-                params.push(og_image);
-            }
-            if (favicon_url !== undefined) {
-                updates.push(`favicon_url = $${paramIndex++}`);
-                params.push(favicon_url);
-            }
-            if (custom_css !== undefined) {
-                updates.push(`custom_css = $${paramIndex++}`);
-                params.push(custom_css);
-            }
-            if (custom_js !== undefined) {
-                updates.push(`custom_js = $${paramIndex++}`);
-                params.push(custom_js);
-            }
-            if (custom_head !== undefined) {
-                updates.push(`custom_head = $${paramIndex++}`);
-                params.push(custom_head);
-            }
 
-            updates.push('updated_at = CURRENT_TIMESTAMP');
-            params.push(id, req.organizationId);
+                const page = updateResult.rows[0];
+                page.sections = sectionsResult.rows;
+                return { status: 'ok', page };
+            });
 
-            const result = await client.query(`
-                UPDATE pages SET ${updates.join(', ')}
-                WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
-                RETURNING *
-            `, params);
-
-            if (result.rows.length === 0) {
-                client.release();
+            if (result.status === 'slug_exists') {
+                return res.status(400).json({ error: 'Slug already exists' });
+            }
+            if (result.status === 'not_found') {
                 return res.status(404).json({ error: 'Page not found' });
             }
 
-            // Get sections
-            const sectionsResult = await client.query(
-                'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order',
-                [id]
-            );
-
-            client.release();
-
-            const page = result.rows[0];
-            page.sections = sectionsResult.rows;
-
-            res.json(page);
+            res.json(result.page);
         } catch (error) {
             logger.error('Error updating page', { error: error.message });
             res.status(500).json({ error: 'Failed to update page' });
@@ -472,14 +467,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'DELETE FROM pages WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'DELETE FROM pages WHERE id = $1 AND organization_id = $2 RETURNING id',
+                    [id, req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Page not found' });
@@ -498,11 +491,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/:id/duplicate', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const result = await withTransaction(pool, async (client) => {
                 // Get original page
                 const originalResult = await client.query(
                     'SELECT * FROM pages WHERE id = $1 AND organization_id = $2',
@@ -510,9 +499,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 if (originalResult.rows.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(404).json({ error: 'Page not found' });
+                    return { status: 'not_found' };
                 }
 
                 const original = originalResult.rows[0];
@@ -569,24 +556,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         section.section_order
                     ]);
                 }
-
-                await client.query('COMMIT');
-
-                // Get new sections
                 const newSectionsResult = await client.query(
                     'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order',
                     [newPage.id]
                 );
 
-                client.release();
-
                 newPage.sections = newSectionsResult.rows;
-                res.status(201).json(newPage);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { status: 'ok', page: newPage };
+            });
+
+            if (result.status === 'not_found') {
+                return res.status(404).json({ error: 'Page not found' });
             }
+
+            res.status(201).json(result.page);
         } catch (error) {
             logger.error('Error duplicating page', { error: error.message });
             res.status(500).json({ error: 'Failed to duplicate page' });
@@ -609,11 +592,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Sections array is required' });
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const result = await withTransaction(pool, async (client) => {
                 // Verify page exists
                 const pageCheck = await client.query(
                     'SELECT id FROM pages WHERE id = $1 AND organization_id = $2',
@@ -621,9 +600,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 if (pageCheck.rows.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(404).json({ error: 'Page not found' });
+                    return { status: 'not_found' };
                 }
 
                 // Delete existing sections
@@ -653,21 +630,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     [id]
                 );
 
-                await client.query('COMMIT');
-
                 // Fetch updated sections
-                const result = await client.query(
+                const sectionsResult = await client.query(
                     'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order',
                     [id]
                 );
 
-                client.release();
-                res.json({ sections: result.rows });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { status: 'ok', sections: sectionsResult.rows };
+            });
+
+            if (result.status === 'not_found') {
+                return res.status(404).json({ error: 'Page not found' });
             }
+
+            res.json({ sections: result.sections });
         } catch (error) {
             logger.error('Error updating sections', { error: error.message });
             res.status(500).json({ error: 'Failed to update sections' });
@@ -686,11 +662,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Section type is required' });
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const result = await withTransaction(pool, async (client) => {
                 // Verify page exists
                 const pageCheck = await client.query(
                     'SELECT id FROM pages WHERE id = $1 AND organization_id = $2',
@@ -698,9 +670,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 if (pageCheck.rows.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(404).json({ error: 'Page not found' });
+                    return { status: 'not_found' };
                 }
 
                 // Get current max order
@@ -720,7 +690,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
 
                 // Insert new section
-                const result = await client.query(`
+                const insertResult = await client.query(`
                     INSERT INTO page_sections (
                         page_id, organization_id, section_type, name, content, settings, section_order
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -741,15 +711,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     [id]
                 );
 
-                await client.query('COMMIT');
-                client.release();
+                return { status: 'ok', section: insertResult.rows[0] };
+            });
 
-                res.status(201).json(result.rows[0]);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+            if (result.status === 'not_found') {
+                return res.status(404).json({ error: 'Page not found' });
             }
+
+            res.status(201).json(result.section);
         } catch (error) {
             logger.error('Error adding section', { error: error.message });
             res.status(500).json({ error: 'Failed to add section' });
@@ -764,51 +733,54 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { id, sectionId } = req.params;
             const { section_type, name, content, settings } = req.body;
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const updates = [];
+                const params = [];
+                let paramIndex = 1;
 
-            const updates = [];
-            const params = [];
-            let paramIndex = 1;
+                if (section_type !== undefined) {
+                    updates.push(`section_type = $${paramIndex++}`);
+                    params.push(section_type);
+                }
+                if (name !== undefined) {
+                    updates.push(`name = $${paramIndex++}`);
+                    params.push(name);
+                }
+                if (content !== undefined) {
+                    updates.push(`content = $${paramIndex++}`);
+                    params.push(JSON.stringify(content));
+                }
+                if (settings !== undefined) {
+                    updates.push(`settings = $${paramIndex++}`);
+                    params.push(JSON.stringify(settings));
+                }
 
-            if (section_type !== undefined) {
-                updates.push(`section_type = $${paramIndex++}`);
-                params.push(section_type);
-            }
-            if (name !== undefined) {
-                updates.push(`name = $${paramIndex++}`);
-                params.push(name);
-            }
-            if (content !== undefined) {
-                updates.push(`content = $${paramIndex++}`);
-                params.push(JSON.stringify(content));
-            }
-            if (settings !== undefined) {
-                updates.push(`settings = $${paramIndex++}`);
-                params.push(JSON.stringify(settings));
-            }
+                updates.push('updated_at = CURRENT_TIMESTAMP');
+                params.push(sectionId, id, req.organizationId);
 
-            updates.push('updated_at = CURRENT_TIMESTAMP');
-            params.push(sectionId, id, req.organizationId);
+                const updateResult = await client.query(`
+                    UPDATE page_sections SET ${updates.join(', ')}
+                    WHERE id = $${paramIndex++} AND page_id = $${paramIndex++} AND organization_id = $${paramIndex}
+                    RETURNING *
+                `, params);
 
-            const result = await client.query(`
-                UPDATE page_sections SET ${updates.join(', ')}
-                WHERE id = $${paramIndex++} AND page_id = $${paramIndex++} AND organization_id = $${paramIndex}
-                RETURNING *
-            `, params);
+                if (updateResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (result.rows.length === 0) {
-                client.release();
+                await client.query(
+                    'UPDATE pages SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                    [id]
+                );
+
+                return { status: 'ok', section: updateResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
                 return res.status(404).json({ error: 'Section not found' });
             }
 
-            // Update page timestamp
-            await client.query(
-                'UPDATE pages SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-                [id]
-            );
-
-            client.release();
-            res.json(result.rows[0]);
+            res.json(result.section);
         } catch (error) {
             console.error('Error updating section:', error);
             res.status(500).json({ error: 'Failed to update section' });
@@ -821,33 +793,35 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/:id/sections/:sectionId', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id, sectionId } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const deleteResult = await client.query(`
+                    DELETE FROM page_sections 
+                    WHERE id = $1 AND page_id = $2 AND organization_id = $3
+                    RETURNING section_order
+                `, [sectionId, id, req.organizationId]);
 
-            const result = await client.query(`
-                DELETE FROM page_sections 
-                WHERE id = $1 AND page_id = $2 AND organization_id = $3
-                RETURNING section_order
-            `, [sectionId, id, req.organizationId]);
+                if (deleteResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (result.rows.length === 0) {
-                client.release();
+                const deletedOrder = deleteResult.rows[0].section_order;
+                await client.query(`
+                    UPDATE page_sections SET section_order = section_order - 1
+                    WHERE page_id = $1 AND section_order > $2
+                `, [id, deletedOrder]);
+
+                await client.query(
+                    'UPDATE pages SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                    [id]
+                );
+
+                return { status: 'ok' };
+            });
+
+            if (result.status === 'not_found') {
                 return res.status(404).json({ error: 'Section not found' });
             }
 
-            // Reorder remaining sections
-            const deletedOrder = result.rows[0].section_order;
-            await client.query(`
-                UPDATE page_sections SET section_order = section_order - 1
-                WHERE page_id = $1 AND section_order > $2
-            `, [id, deletedOrder]);
-
-            // Update page timestamp
-            await client.query(
-                'UPDATE pages SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-                [id]
-            );
-
-            client.release();
             res.json({ success: true });
         } catch (error) {
             logger.error('Error deleting section', { error: error.message });
@@ -867,12 +841,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Section IDs array is required' });
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
-                // Update order for each section
+            const result = await withTransaction(pool, async (client) => {
                 for (let i = 0; i < section_ids.length; i++) {
                     await client.query(`
                         UPDATE page_sections SET section_order = $1, updated_at = CURRENT_TIMESTAMP
@@ -880,27 +849,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     `, [i, section_ids[i], id, req.organizationId]);
                 }
 
-                // Update page timestamp
                 await client.query(
                     'UPDATE pages SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
                     [id]
                 );
 
-                await client.query('COMMIT');
-
-                // Fetch updated sections
-                const result = await client.query(
+                const sectionsResult = await client.query(
                     'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order',
                     [id]
                 );
 
-                client.release();
-                res.json({ sections: result.rows });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+                return sectionsResult.rows;
+            });
+
+            res.json({ sections: result });
         } catch (error) {
             console.error('Error reordering sections:', error);
             res.status(500).json({ error: 'Failed to reorder sections' });
@@ -920,85 +882,89 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { period = '30' } = req.query;
             const days = parseInt(period);
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const pageCheck = await client.query(
+                    'SELECT id, view_count, unique_visitors FROM pages WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify page exists
-            const pageCheck = await client.query(
-                'SELECT id, view_count, unique_visitors FROM pages WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (pageCheck.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (pageCheck.rows.length === 0) {
-                client.release();
+                const overallStats = await client.query(`
+                    SELECT 
+                        COUNT(*) as total_views,
+                        COUNT(DISTINCT visitor_id) as unique_visitors,
+                        AVG(time_on_page) as avg_time_on_page,
+                        AVG(scroll_depth) as avg_scroll_depth,
+                        COUNT(*) FILTER (WHERE converted = TRUE) as conversions
+                    FROM page_analytics
+                    WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
+                `, [id]);
+
+                const viewsOverTime = await client.query(`
+                    SELECT 
+                        DATE_TRUNC('day', viewed_at) as date,
+                        COUNT(*) as views,
+                        COUNT(DISTINCT visitor_id) as unique_visitors
+                    FROM page_analytics
+                    WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
+                    GROUP BY DATE_TRUNC('day', viewed_at)
+                    ORDER BY date
+                `, [id]);
+
+                const deviceStats = await client.query(`
+                    SELECT device_type, COUNT(*) as count
+                    FROM page_analytics
+                    WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
+                    GROUP BY device_type
+                `, [id]);
+
+                const referrerStats = await client.query(`
+                    SELECT 
+                        COALESCE(referrer, 'Direct') as referrer,
+                        COUNT(*) as count
+                    FROM page_analytics
+                    WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
+                    GROUP BY referrer
+                    ORDER BY count DESC
+                    LIMIT 10
+                `, [id]);
+
+                const utmStats = await client.query(`
+                    SELECT 
+                        utm_source, utm_medium, utm_campaign,
+                        COUNT(*) as count
+                    FROM page_analytics
+                    WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
+                        AND utm_source IS NOT NULL
+                    GROUP BY utm_source, utm_medium, utm_campaign
+                    ORDER BY count DESC
+                    LIMIT 10
+                `, [id]);
+
+                return {
+                    status: 'ok',
+                    overall: overallStats.rows[0],
+                    views_over_time: viewsOverTime.rows,
+                    devices: deviceStats.rows,
+                    referrers: referrerStats.rows,
+                    utm_sources: utmStats.rows
+                };
+            });
+
+            if (result.status === 'not_found') {
                 return res.status(404).json({ error: 'Page not found' });
             }
 
-            // Overall stats
-            const overallStats = await client.query(`
-                SELECT 
-                    COUNT(*) as total_views,
-                    COUNT(DISTINCT visitor_id) as unique_visitors,
-                    AVG(time_on_page) as avg_time_on_page,
-                    AVG(scroll_depth) as avg_scroll_depth,
-                    COUNT(*) FILTER (WHERE converted = TRUE) as conversions
-                FROM page_analytics
-                WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
-            `, [id]);
-
-            // Views over time
-            const viewsOverTime = await client.query(`
-                SELECT 
-                    DATE_TRUNC('day', viewed_at) as date,
-                    COUNT(*) as views,
-                    COUNT(DISTINCT visitor_id) as unique_visitors
-                FROM page_analytics
-                WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
-                GROUP BY DATE_TRUNC('day', viewed_at)
-                ORDER BY date
-            `, [id]);
-
-            // Device distribution
-            const deviceStats = await client.query(`
-                SELECT device_type, COUNT(*) as count
-                FROM page_analytics
-                WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
-                GROUP BY device_type
-            `, [id]);
-
-            // Referrer distribution
-            const referrerStats = await client.query(`
-                SELECT 
-                    COALESCE(referrer, 'Direct') as referrer,
-                    COUNT(*) as count
-                FROM page_analytics
-                WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
-                GROUP BY referrer
-                ORDER BY count DESC
-                LIMIT 10
-            `, [id]);
-
-            // UTM sources
-            const utmStats = await client.query(`
-                SELECT 
-                    utm_source, utm_medium, utm_campaign,
-                    COUNT(*) as count
-                FROM page_analytics
-                WHERE page_id = $1 AND viewed_at >= NOW() - INTERVAL '${days} days'
-                    AND utm_source IS NOT NULL
-                GROUP BY utm_source, utm_medium, utm_campaign
-                ORDER BY count DESC
-                LIMIT 10
-            `, [id]);
-
-            client.release();
-
             res.json({
                 period: days,
-                overall: overallStats.rows[0],
-                views_over_time: viewsOverTime.rows,
-                devices: deviceStats.rows,
-                referrers: referrerStats.rows,
-                utm_sources: utmStats.rows
+                overall: result.overall,
+                views_over_time: result.views_over_time,
+                devices: result.devices,
+                referrers: result.referrers,
+                utm_sources: result.utm_sources
             });
         } catch (error) {
             logger.error('Error fetching analytics', { error: error.message });
@@ -1021,23 +987,17 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             return res.status(400).json({ error: 'Password must be at least 4 characters' });
         }
 
-        const client = await pool.connect();
-
-        try {
-            // Verify page exists and belongs to organization
+        const result = await withDbClient(pool, async (client) => {
             const pageResult = await client.query(
                 'SELECT id, settings FROM pages WHERE id = $1 AND organization_id = $2',
                 [id, req.organizationId]
             );
 
             if (pageResult.rows.length === 0) {
-                return res.status(404).json({ error: 'Page not found' });
+                return { status: 'not_found' };
             }
 
-            // Hash the password
             const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-            // Update settings with hashed password
             const currentSettings = pageResult.rows[0].settings || {};
             const newSettings = { ...currentSettings, password: hashedPassword };
 
@@ -1046,11 +1006,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 [JSON.stringify(newSettings), id]
             );
 
-            logger.info('Page password updated', { pageId: id, organizationId: req.organizationId });
-            res.json({ success: true, message: 'Password set successfully' });
-        } finally {
-            client.release();
+            return { status: 'ok' };
+        });
+
+        if (result.status === 'not_found') {
+            return res.status(404).json({ error: 'Page not found' });
         }
+
+        logger.info('Page password updated', { pageId: id, organizationId: req.organizationId });
+        res.json({ success: true, message: 'Password set successfully' });
     }));
 
     /**
@@ -1058,20 +1022,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.delete('/:id/password', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         const { id } = req.params;
-        const client = await pool.connect();
-
-        try {
-            // Verify page exists and belongs to organization
+        const result = await withDbClient(pool, async (client) => {
             const pageResult = await client.query(
                 'SELECT id, settings FROM pages WHERE id = $1 AND organization_id = $2',
                 [id, req.organizationId]
             );
 
             if (pageResult.rows.length === 0) {
-                return res.status(404).json({ error: 'Page not found' });
+                return { status: 'not_found' };
             }
 
-            // Remove password from settings
             const currentSettings = pageResult.rows[0].settings || {};
             delete currentSettings.password;
 
@@ -1080,11 +1040,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 [JSON.stringify(currentSettings), id]
             );
 
-            logger.info('Page password removed', { pageId: id, organizationId: req.organizationId });
-            res.json({ success: true, message: 'Password removed successfully' });
-        } finally {
-            client.release();
+            return { status: 'ok' };
+        });
+
+        if (result.status === 'not_found') {
+            return res.status(404).json({ error: 'Page not found' });
         }
+
+        logger.info('Page password removed', { pageId: id, organizationId: req.organizationId });
+        res.json({ success: true, message: 'Password removed successfully' });
     }));
 
     /**
@@ -1098,25 +1062,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             return res.status(400).json({ error: 'Password required' });
         }
 
-        const client = await pool.connect();
-
-        try {
+        const result = await withDbClient(pool, async (client) => {
             const pageResult = await client.query(
                 'SELECT settings FROM pages WHERE id = $1 AND status = $2',
                 [id, 'published']
             );
 
             if (pageResult.rows.length === 0) {
-                return res.status(404).json({ error: 'Page not found' });
+                return { status: 'not_found' };
             }
 
             const settings = pageResult.rows[0].settings || {};
-            
+
             if (!settings.password) {
-                return res.json({ valid: true, message: 'Page is not password protected' });
+                return { status: 'no_password' };
             }
 
-            // Verify password
             let isValid = false;
             if (settings.password.startsWith('$2')) {
                 isValid = await bcrypt.compare(password, settings.password);
@@ -1124,13 +1085,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 isValid = password === settings.password;
             }
 
-            if (isValid) {
-                res.json({ valid: true });
-            } else {
-                res.status(401).json({ valid: false, error: 'Invalid password' });
-            }
-        } finally {
-            client.release();
+            return { status: 'ok', isValid };
+        });
+
+        if (result.status === 'not_found') {
+            return res.status(404).json({ error: 'Page not found' });
+        }
+        if (result.status === 'no_password') {
+            return res.json({ valid: true, message: 'Page is not password protected' });
+        }
+
+        if (result.isValid) {
+            res.json({ valid: true });
+        } else {
+            res.status(401).json({ valid: false, error: 'Invalid password' });
         }
     }));
 
@@ -1144,117 +1112,116 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/public/page/:slug', publicRateLimit, async (req, res) => {
         try {
             const { slug } = req.params;
-            const client = await pool.connect();
+            const outcome = await withDbClient(pool, async (client) => {
+                const pageResult = await client.query(`
+                    SELECT p.*, o.name as organization_name
+                    FROM pages p
+                    JOIN organizations o ON p.organization_id = o.id
+                    WHERE p.slug = $1 AND p.status = 'published'
+                `, [slug]);
 
-            const pageResult = await client.query(`
-                SELECT p.*, o.name as organization_name
-                FROM pages p
-                JOIN organizations o ON p.organization_id = o.id
-                WHERE p.slug = $1 AND p.status = 'published'
-            `, [slug]);
+                if (pageResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (pageResult.rows.length === 0) {
-                client.release();
+                const page = pageResult.rows[0];
+                const settings = page.settings || {};
+
+                if (settings.password) {
+                    const providedPassword = req.headers['x-page-password'] || req.query.password;
+                    if (!providedPassword) {
+                        return { status: 'password_required' };
+                    }
+
+                    let isValidPassword = false;
+                    if (settings.password.startsWith('$2')) {
+                        isValidPassword = await bcrypt.compare(providedPassword, settings.password);
+                    } else {
+                        isValidPassword = providedPassword === settings.password;
+                    }
+
+                    if (!isValidPassword) {
+                        return { status: 'invalid_password' };
+                    }
+                }
+
+                if (settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
+                    return { status: 'expired' };
+                }
+
+                const sectionsResult = await client.query(`
+                    SELECT id, section_type, name, content, settings, section_order
+                    FROM page_sections
+                    WHERE page_id = $1
+                    ORDER BY section_order
+                `, [page.id]);
+
+                if (settings.enableAnalytics !== false) {
+                    const { deviceType, browser, os } = parseDeviceInfo(req.headers['user-agent']);
+                    const visitorId = req.cookies?.visitor_id || crypto.randomBytes(16).toString('hex');
+
+                    await client.query(`
+                        INSERT INTO page_analytics (
+                            page_id, organization_id, visitor_id, session_id,
+                            ip_address, user_agent, referrer,
+                            utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+                            device_type, browser, os
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    `, [
+                        page.id,
+                        page.organization_id,
+                        visitorId,
+                        crypto.randomBytes(8).toString('hex'),
+                        req.ip,
+                        req.headers['user-agent'],
+                        req.headers['referer'] || null,
+                        req.query.utm_source || null,
+                        req.query.utm_medium || null,
+                        req.query.utm_campaign || null,
+                        req.query.utm_term || null,
+                        req.query.utm_content || null,
+                        deviceType,
+                        browser,
+                        os
+                    ]);
+
+                    await client.query(
+                        'UPDATE pages SET view_count = view_count + 1 WHERE id = $1',
+                        [page.id]
+                    );
+                }
+
+                return { status: 'ok', page, sections: sectionsResult.rows };
+            });
+
+            if (outcome.status === 'not_found') {
                 return res.status(404).json({ error: 'Page not found' });
             }
-
-            const page = pageResult.rows[0];
-
-            // Check if password protected (Phase 1.2 - use bcrypt)
-            const settings = page.settings || {};
-            if (settings.password) {
-                const providedPassword = req.headers['x-page-password'] || req.query.password;
-                
-                if (!providedPassword) {
-                    client.release();
-                    return res.status(401).json({ error: 'Password required', password_protected: true });
-                }
-                
-                // Support both hashed and legacy plaintext passwords
-                let isValidPassword = false;
-                if (settings.password.startsWith('$2')) {
-                    // Bcrypt hashed password
-                    isValidPassword = await bcrypt.compare(providedPassword, settings.password);
-                } else {
-                    // Legacy plaintext comparison (will be migrated on next password set)
-                    isValidPassword = providedPassword === settings.password;
-                }
-                
-                if (!isValidPassword) {
-                    client.release();
-                    return res.status(401).json({ error: 'Invalid password', password_protected: true });
-                }
+            if (outcome.status === 'password_required') {
+                return res.status(401).json({ error: 'Password required', password_protected: true });
             }
-
-            // Check expiration
-            if (settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
-                client.release();
+            if (outcome.status === 'invalid_password') {
+                return res.status(401).json({ error: 'Invalid password', password_protected: true });
+            }
+            if (outcome.status === 'expired') {
                 return res.status(410).json({ error: 'Page has expired' });
             }
 
-            // Get sections
-            const sectionsResult = await client.query(`
-                SELECT id, section_type, name, content, settings, section_order
-                FROM page_sections
-                WHERE page_id = $1
-                ORDER BY section_order
-            `, [page.id]);
-
-            // Track analytics
-            if (settings.enableAnalytics !== false) {
-                const { deviceType, browser, os } = parseDeviceInfo(req.headers['user-agent']);
-                const visitorId = req.cookies?.visitor_id || crypto.randomBytes(16).toString('hex');
-
-                await client.query(`
-                    INSERT INTO page_analytics (
-                        page_id, organization_id, visitor_id, session_id,
-                        ip_address, user_agent, referrer,
-                        utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-                        device_type, browser, os
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-                `, [
-                    page.id,
-                    page.organization_id,
-                    visitorId,
-                    crypto.randomBytes(8).toString('hex'),
-                    req.ip,
-                    req.headers['user-agent'],
-                    req.headers['referer'] || null,
-                    req.query.utm_source || null,
-                    req.query.utm_medium || null,
-                    req.query.utm_campaign || null,
-                    req.query.utm_term || null,
-                    req.query.utm_content || null,
-                    deviceType,
-                    browser,
-                    os
-                ]);
-
-                // Update view count
-                await client.query(
-                    'UPDATE pages SET view_count = view_count + 1 WHERE id = $1',
-                    [page.id]
-                );
-            }
-
-            client.release();
-
-            // Return public page data
             res.json({
-                id: page.id,
-                name: page.name,
-                slug: page.slug,
-                seo_title: page.seo_title,
-                seo_description: page.seo_description,
-                seo_keywords: page.seo_keywords,
-                og_image: page.og_image,
-                favicon_url: page.favicon_url,
-                theme: page.theme,
-                custom_css: page.custom_css,
-                custom_js: page.custom_js,
-                custom_head: page.custom_head,
-                organization_name: page.organization_name,
-                sections: sectionsResult.rows
+                id: outcome.page.id,
+                name: outcome.page.name,
+                slug: outcome.page.slug,
+                seo_title: outcome.page.seo_title,
+                seo_description: outcome.page.seo_description,
+                seo_keywords: outcome.page.seo_keywords,
+                og_image: outcome.page.og_image,
+                favicon_url: outcome.page.favicon_url,
+                theme: outcome.page.theme,
+                custom_css: outcome.page.custom_css,
+                custom_js: outcome.page.custom_js,
+                custom_head: outcome.page.custom_head,
+                organization_name: outcome.page.organization_name,
+                sections: outcome.sections
             });
         } catch (error) {
             console.error('Error fetching public page:', error);
@@ -1274,20 +1241,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(400).json({ error: 'Visitor and session IDs required' });
             }
 
-            const client = await pool.connect();
-
-            await client.query(`
-                UPDATE page_analytics SET
-                    time_on_page = COALESCE($1, time_on_page),
-                    scroll_depth = GREATEST(COALESCE($2, 0), scroll_depth),
-                    converted = COALESCE($3, converted),
-                    conversion_type = COALESCE($4, conversion_type),
-                    conversion_value = COALESCE($5, conversion_value),
-                    left_at = CURRENT_TIMESTAMP
-                WHERE visitor_id = $6 AND session_id = $7
-            `, [time_on_page, scroll_depth, converted, conversion_type, conversion_value, visitor_id, session_id]);
-
-            client.release();
+            await withDbClient(pool, async (client) => {
+                await client.query(`
+                    UPDATE page_analytics SET
+                        time_on_page = COALESCE($1, time_on_page),
+                        scroll_depth = GREATEST(COALESCE($2, 0), scroll_depth),
+                        converted = COALESCE($3, converted),
+                        conversion_type = COALESCE($4, conversion_type),
+                        conversion_value = COALESCE($5, conversion_value),
+                        left_at = CURRENT_TIMESTAMP
+                    WHERE visitor_id = $6 AND session_id = $7
+                `, [time_on_page, scroll_depth, converted, conversion_type, conversion_value, visitor_id, session_id]);
+            });
             res.json({ success: true });
         } catch (error) {
             logger.error('Error updating analytics', { error: error.message });

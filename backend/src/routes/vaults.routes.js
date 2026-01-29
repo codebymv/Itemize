@@ -232,16 +232,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { vaultId } = req.params;
             const { title, category, color_value, position_x, position_y, width, height, z_index } = req.body;
 
-            const client = await pool.connect();
-            
-            try {
+            const result = await withDbClient(pool, async (client) => {
                 const currentVaultResult = await client.query(
                     'SELECT * FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (currentVaultResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
                 const currentVault = currentVaultResult.rows[0];
@@ -262,15 +260,17 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     [newTitle, newCategory, newColorValue, newPositionX, newPositionY, newWidth, newHeight, newZIndex, vaultId, req.user.id]
                 );
 
-                const updatedVault = updateResult.rows[0];
+                return { status: 'ok', vault: updateResult.rows[0] };
+            });
 
-                res.json({
-                    ...updatedVault,
-                    master_password_hash: undefined
-                });
-            } finally {
-                client.release();
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+
+            sendSuccess(res, {
+                ...result.vault,
+                master_password_hash: undefined
+            });
         } catch (error) {
             logger.error('Error updating vault:', { error: error.message });
             return sendError(res, 'Internal server error while updating vault');
@@ -284,29 +284,25 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { position_x, position_y } = req.body;
 
             if (typeof position_x !== 'number' || typeof position_y !== 'number') {
-                return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
+                return sendBadRequest(res, 'position_x and position_y are required and must be numbers.');
             }
 
-            const client = await pool.connect();
-            
-            try {
-                const result = await client.query(
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
                     `UPDATE vaults SET position_x = $1, position_y = $2, updated_at = CURRENT_TIMESTAMP 
                      WHERE id = $3 AND user_id = $4 RETURNING *`,
                     [position_x, position_y, vaultId, req.user.id]
                 );
+            });
 
-                if (result.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
-                }
-
-                res.json({
-                    ...result.rows[0],
-                    master_password_hash: undefined
-                });
-            } finally {
-                client.release();
+            if (result.rows.length === 0) {
+                return sendNotFound(res, 'Vault');
             }
+
+            sendSuccess(res, {
+                ...result.rows[0],
+                master_password_hash: undefined
+            });
         } catch (error) {
             logger.error('Error updating vault position:', { error: error.message });
             return sendError(res, 'Internal server error');
@@ -317,35 +313,35 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     router.delete('/vaults/:vaultId', authenticateJWT, asyncHandler(async (req, res) => {
         try {
             const { vaultId } = req.params;
-            const client = await pool.connect();
-
-            try {
+            const result = await withDbClient(pool, async (client) => {
                 const checkResult = await client.query(
                     'SELECT id, title, share_token, is_public FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (checkResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
                 const vaultInfo = checkResult.rows[0];
 
-                // Delete vault (cascade will delete items)
-                const result = await client.query(
+                const deleteResult = await client.query(
                     'DELETE FROM vaults WHERE id = $1 AND user_id = $2 RETURNING id',
                     [vaultId, req.user.id]
                 );
 
-                if (result.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
-                }
+                return { status: 'ok', info: vaultInfo, result: deleteResult };
+            });
 
-                logger.info(`Vault ${vaultId} deleted`, { title: vaultInfo.title, userId: req.user.id });
-                res.status(200).json({ message: 'Vault deleted successfully' });
-            } finally {
-                client.release();
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+            if (result.result.rows.length === 0) {
+                return sendNotFound(res, 'Vault');
+            }
+
+            logger.info(`Vault ${vaultId} deleted`, { title: result.info.title, userId: req.user.id });
+            sendSuccess(res, { message: 'Vault deleted successfully' });
         } catch (error) {
             logger.error('Error deleting vault:', { error: error.message });
             return sendError(res, 'Internal server error while deleting vault');
@@ -363,23 +359,19 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { item_ids } = req.body; // Array of item IDs in new order
 
             if (!Array.isArray(item_ids)) {
-                return res.status(400).json({ error: 'item_ids array is required' });
+                return sendBadRequest(res, 'item_ids array is required');
             }
 
-            const client = await pool.connect();
-            
-            try {
-                // Verify ownership through vault
+            const result = await withDbClient(pool, async (client) => {
                 const vaultCheck = await client.query(
                     'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultCheck.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
-                // Update order_index for each item
                 for (let i = 0; i < item_ids.length; i++) {
                     await client.query(
                         'UPDATE vault_items SET order_index = $1 WHERE id = $2 AND vault_id = $3',
@@ -387,16 +379,19 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     );
                 }
 
-                // Update vault's updated_at
                 await client.query(
                     'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
                     [vaultId]
                 );
 
-                res.json({ message: 'Items reordered successfully' });
-            } finally {
-                client.release();
+                return { status: 'ok' };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+
+            sendSuccess(res, { message: 'Items reordered successfully' });
         } catch (error) {
             logger.error('Error reordering vault items:', { error: error.message });
             return sendError(res, 'Internal server error');
@@ -410,67 +405,63 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { item_type, label, value } = req.body;
 
             if (!item_type || !['key_value', 'secure_note'].includes(item_type)) {
-                return res.status(400).json({ error: 'item_type must be "key_value" or "secure_note"' });
+                return sendBadRequest(res, 'item_type must be "key_value" or "secure_note"');
             }
 
             if (!label || label.trim() === '') {
-                return res.status(400).json({ error: 'label is required' });
+                return sendBadRequest(res, 'label is required');
             }
 
             if (value === undefined || value === null) {
-                return res.status(400).json({ error: 'value is required' });
+                return sendBadRequest(res, 'value is required');
             }
 
-            const client = await pool.connect();
-            
-            try {
-                // Verify vault ownership
+            const result = await withDbClient(pool, async (client) => {
                 const vaultCheck = await client.query(
                     'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultCheck.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
-                // Get next order_index
                 const orderResult = await client.query(
                     'SELECT COALESCE(MAX(order_index), -1) + 1 as next_order FROM vault_items WHERE vault_id = $1',
                     [vaultId]
                 );
                 const nextOrder = orderResult.rows[0].next_order;
 
-                // Encrypt the value
                 const { encrypted, iv } = encrypt(value);
 
-                const result = await client.query(
+                const insertResult = await client.query(
                     `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index) 
                      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
                     [vaultId, item_type, label.trim(), encrypted, iv, nextOrder]
                 );
 
-                const item = result.rows[0];
-
-                // Update vault's updated_at
                 await client.query(
                     'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
                     [vaultId]
                 );
 
-                res.status(201).json({
-                    id: item.id,
-                    vault_id: item.vault_id,
-                    item_type: item.item_type,
-                    label: item.label,
-                    value: value, // Return unencrypted for immediate use
-                    order_index: item.order_index,
-                    created_at: item.created_at,
-                    updated_at: item.updated_at
-                });
-            } finally {
-                client.release();
+                return { status: 'ok', item: insertResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+
+            sendCreated(res, {
+                id: result.item.id,
+                vault_id: result.item.vault_id,
+                item_type: result.item.item_type,
+                label: result.item.label,
+                value: value,
+                order_index: result.item.order_index,
+                created_at: result.item.created_at,
+                updated_at: result.item.updated_at
+            });
         } catch (error) {
             logger.error('Error adding vault item:', { error: error.message });
             return sendError(res, 'Internal server error while adding vault item');
@@ -484,23 +475,19 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { items } = req.body; // Array of { item_type, label, value }
 
             if (!Array.isArray(items) || items.length === 0) {
-                return res.status(400).json({ error: 'items array is required and must not be empty' });
+                return sendBadRequest(res, 'items array is required and must not be empty');
             }
 
-            const client = await pool.connect();
-            
-            try {
-                // Verify vault ownership
+            const result = await withDbClient(pool, async (client) => {
                 const vaultCheck = await client.query(
                     'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultCheck.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
-                // Get starting order_index
                 const orderResult = await client.query(
                     'SELECT COALESCE(MAX(order_index), -1) + 1 as next_order FROM vault_items WHERE vault_id = $1',
                     [vaultId]
@@ -513,19 +500,18 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     const { item_type = 'key_value', label, value } = item;
 
                     if (!label || !value) {
-                        continue; // Skip invalid items
+                        continue;
                     }
 
-                    // Encrypt the value
                     const { encrypted, iv } = encrypt(value);
 
-                    const result = await client.query(
+                    const insertResult = await client.query(
                         `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index) 
                          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
                         [vaultId, item_type, label.trim(), encrypted, iv, nextOrder++]
                     );
 
-                    const createdItem = result.rows[0];
+                    const createdItem = insertResult.rows[0];
                     createdItems.push({
                         id: createdItem.id,
                         vault_id: createdItem.vault_id,
@@ -538,19 +524,22 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     });
                 }
 
-                // Update vault's updated_at
                 await client.query(
                     'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
                     [vaultId]
                 );
 
-                res.status(201).json({
-                    items: createdItems,
-                    count: createdItems.length
-                });
-            } finally {
-                client.release();
+                return { status: 'ok', items: createdItems };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+
+            sendCreated(res, {
+                items: result.items,
+                count: result.items.length
+            });
         } catch (error) {
             logger.error('Error bulk adding vault items:', { error: error.message });
             return sendError(res, 'Internal server error while adding vault items');
@@ -563,73 +552,72 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { vaultId, itemId } = req.params;
             const { label, value } = req.body;
 
-            const client = await pool.connect();
-            
-            try {
-                // Verify ownership through vault
+            const result = await withDbClient(pool, async (client) => {
                 const vaultCheck = await client.query(
                     'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultCheck.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'vault_not_found' };
                 }
 
-                // Get current item
                 const currentItemResult = await client.query(
                     'SELECT * FROM vault_items WHERE id = $1 AND vault_id = $2',
                     [itemId, vaultId]
                 );
 
                 if (currentItemResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Item not found' });
+                    return { status: 'item_not_found' };
                 }
 
                 const currentItem = currentItemResult.rows[0];
                 const newLabel = label !== undefined ? label.trim() : currentItem.label;
-                
+
                 let newEncryptedValue = currentItem.encrypted_value;
                 let newIv = currentItem.iv;
                 let returnValue;
 
                 if (value !== undefined) {
-                    // Re-encrypt with new value
                     const encrypted = encrypt(value);
                     newEncryptedValue = encrypted.encrypted;
                     newIv = encrypted.iv;
                     returnValue = value;
                 } else {
-                    // Decrypt existing value for response
                     returnValue = decrypt(currentItem.encrypted_value, currentItem.iv);
                 }
 
-                const result = await client.query(
+                const updateResult = await client.query(
                     `UPDATE vault_items SET label = $1, encrypted_value = $2, iv = $3, updated_at = CURRENT_TIMESTAMP 
                      WHERE id = $4 AND vault_id = $5 RETURNING *`,
                     [newLabel, newEncryptedValue, newIv, itemId, vaultId]
                 );
 
-                // Update vault's updated_at
                 await client.query(
                     'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
                     [vaultId]
                 );
 
-                const item = result.rows[0];
-                res.json({
-                    id: item.id,
-                    vault_id: item.vault_id,
-                    item_type: item.item_type,
-                    label: item.label,
-                    value: returnValue,
-                    order_index: item.order_index,
-                    created_at: item.created_at,
-                    updated_at: item.updated_at
-                });
-            } finally {
-                client.release();
+                return { status: 'ok', item: updateResult.rows[0], value: returnValue };
+            });
+
+            if (result.status === 'vault_not_found') {
+                return sendNotFound(res, 'Vault');
             }
+            if (result.status === 'item_not_found') {
+                return sendNotFound(res, 'Item');
+            }
+
+            sendSuccess(res, {
+                id: result.item.id,
+                vault_id: result.item.vault_id,
+                item_type: result.item.item_type,
+                label: result.item.label,
+                value: result.value,
+                order_index: result.item.order_index,
+                created_at: result.item.created_at,
+                updated_at: result.item.updated_at
+            });
         } catch (error) {
             logger.error('Error updating vault item:', { error: error.message });
             return sendError(res, 'Internal server error while updating vault item');
@@ -641,38 +629,41 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         try {
             const { vaultId, itemId } = req.params;
 
-            const client = await pool.connect();
-            
-            try {
-                // Verify ownership through vault
+            const result = await withDbClient(pool, async (client) => {
                 const vaultCheck = await client.query(
                     'SELECT id FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultCheck.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'vault_not_found' };
                 }
 
-                const result = await client.query(
+                const deleteResult = await client.query(
                     'DELETE FROM vault_items WHERE id = $1 AND vault_id = $2 RETURNING id',
                     [itemId, vaultId]
                 );
 
-                if (result.rows.length === 0) {
-                    return res.status(404).json({ error: 'Item not found' });
+                if (deleteResult.rows.length === 0) {
+                    return { status: 'item_not_found' };
                 }
 
-                // Update vault's updated_at
                 await client.query(
                     'UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
                     [vaultId]
                 );
 
-                res.status(200).json({ message: 'Item deleted successfully' });
-            } finally {
-                client.release();
+                return { status: 'ok' };
+            });
+
+            if (result.status === 'vault_not_found') {
+                return sendNotFound(res, 'Vault');
             }
+            if (result.status === 'item_not_found') {
+                return sendNotFound(res, 'Item');
+            }
+
+            sendSuccess(res, { message: 'Item deleted successfully' });
         } catch (error) {
             logger.error('Error deleting vault item:', { error: error.message });
             return sendError(res, 'Internal server error while deleting vault item');
@@ -688,44 +679,43 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         try {
             const { vaultId } = req.params;
 
-            const client = await pool.connect();
-            
-            try {
-                // Get vault
+            const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
                     'SELECT * FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
                 const vault = vaultResult.rows[0];
 
-                // Generate share token if not exists
                 let shareToken = vault.share_token;
                 if (!shareToken) {
                     shareToken = crypto.randomUUID();
                 }
 
-                // Update vault to enable sharing
                 await client.query(
                     `UPDATE vaults SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP 
                      WHERE id = $2 AND user_id = $3`,
                     [shareToken, vaultId, req.user.id]
                 );
 
-                const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared/vault/${shareToken}`;
+                return { status: 'ok', shareToken };
+            });
 
-                res.json({
-                    shareToken,
-                    shareUrl,
-                    message: 'Vault sharing enabled'
-                });
-            } finally {
-                client.release();
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+
+            const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared/vault/${result.shareToken}`;
+
+            sendSuccess(res, {
+                shareToken: result.shareToken,
+                shareUrl,
+                message: 'Vault sharing enabled'
+            });
         } catch (error) {
             logger.error('Error enabling vault sharing:', { error: error.message });
             return sendError(res, 'Internal server error');
@@ -737,22 +727,18 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         try {
             const { vaultId } = req.params;
 
-            const client = await pool.connect();
-            
-            try {
-                const result = await client.query(
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
                     `UPDATE vaults SET is_public = FALSE WHERE id = $1 AND user_id = $2 RETURNING id`,
                     [vaultId, req.user.id]
                 );
+            });
 
-                if (result.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
-                }
-
-                res.json({ message: 'Vault sharing disabled' });
-            } finally {
-                client.release();
+            if (result.rows.length === 0) {
+                return sendNotFound(res, 'Vault');
             }
+
+            sendSuccess(res, { message: 'Vault sharing disabled' });
         } catch (error) {
             logger.error('Error disabling vault sharing:', { error: error.message });
             return sendError(res, 'Internal server error');
@@ -764,10 +750,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         try {
             const { token } = req.params;
 
-            const client = await pool.connect();
-            
-            try {
-                // Get vault by share token
+            const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
                     `SELECT id, title, category, color_value, is_locked, created_at, updated_at 
                      FROM vaults WHERE share_token = $1 AND is_public = TRUE`,
@@ -775,24 +758,21 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 );
 
                 if (vaultResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Shared vault not found or sharing has been disabled' });
+                    return { status: 'not_found' };
                 }
 
                 const vault = vaultResult.rows[0];
 
-                // Don't allow viewing locked vaults publicly
                 if (vault.is_locked) {
-                    return res.status(403).json({ error: 'This vault is locked and cannot be viewed publicly' });
+                    return { status: 'locked' };
                 }
 
-                // Get items
                 const itemsResult = await client.query(
                     `SELECT id, item_type, label, encrypted_value, iv, order_index, created_at, updated_at 
                      FROM vault_items WHERE vault_id = $1 ORDER BY order_index ASC`,
                     [vault.id]
                 );
 
-                // Decrypt items
                 const decryptedItems = itemsResult.rows.map(item => {
                     try {
                         const decryptedValue = decrypt(item.encrypted_value, item.iv);
@@ -815,19 +795,26 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     }
                 });
 
-                res.json({
-                    id: vault.id,
-                    title: vault.title,
-                    category: vault.category,
-                    color_value: vault.color_value,
-                    created_at: vault.created_at,
-                    updated_at: vault.updated_at,
-                    items: decryptedItems,
-                    is_shared: true
-                });
-            } finally {
-                client.release();
+                return { status: 'ok', vault, items: decryptedItems };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Shared vault');
             }
+            if (result.status === 'locked') {
+                return sendError(res, 'This vault is locked and cannot be viewed publicly', 403, 'FORBIDDEN');
+            }
+
+            sendSuccess(res, {
+                id: result.vault.id,
+                title: result.vault.title,
+                category: result.vault.category,
+                color_value: result.vault.color_value,
+                created_at: result.vault.created_at,
+                updated_at: result.vault.updated_at,
+                items: result.items,
+                is_shared: true
+            });
         } catch (error) {
             logger.error('Error fetching shared vault:', { error: error.message });
             return sendError(res, 'Internal server error');
@@ -845,35 +832,31 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { master_password, current_password } = req.body;
 
             if (!master_password || master_password.length < 8) {
-                return res.status(400).json({ error: 'Master password must be at least 8 characters' });
+                return sendBadRequest(res, 'Master password must be at least 8 characters');
             }
 
-            const client = await pool.connect();
-            
-            try {
+            const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
                     'SELECT * FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
                 const vault = vaultResult.rows[0];
 
-                // If vault is already locked, require current password
                 if (vault.is_locked && vault.master_password_hash) {
                     if (!current_password) {
-                        return res.status(400).json({ error: 'Current password is required to change master password' });
+                        return { status: 'missing_current' };
                     }
                     const isValid = await verifyMasterPassword(current_password, vault.master_password_hash);
                     if (!isValid) {
-                        return res.status(401).json({ error: 'Invalid current password' });
+                        return { status: 'invalid_current' };
                     }
                 }
 
-                // Set new master password
                 const newSalt = generateSalt();
                 const newHash = await hashMasterPassword(master_password);
 
@@ -883,13 +866,23 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     [newSalt, newHash, vaultId, req.user.id]
                 );
 
-                res.json({ 
-                    message: 'Vault locked successfully',
-                    encryption_salt: newSalt
-                });
-            } finally {
-                client.release();
+                return { status: 'ok', salt: newSalt };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+            if (result.status === 'missing_current') {
+                return sendBadRequest(res, 'Current password is required to change master password');
+            }
+            if (result.status === 'invalid_current') {
+                return sendError(res, 'Invalid current password', 401, 'UNAUTHORIZED');
+            }
+
+            sendSuccess(res, { 
+                message: 'Vault locked successfully',
+                encryption_salt: result.salt
+            });
         } catch (error) {
             logger.error('Error locking vault:', { error: error.message });
             return sendError(res, 'Internal server error');
@@ -903,44 +896,50 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { master_password } = req.body;
 
             if (!master_password) {
-                return res.status(400).json({ error: 'Master password is required' });
+                return sendBadRequest(res, 'Master password is required');
             }
 
-            const client = await pool.connect();
-            
-            try {
+            const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
                     'SELECT * FROM vaults WHERE id = $1 AND user_id = $2',
                     [vaultId, req.user.id]
                 );
 
                 if (vaultResult.rows.length === 0) {
-                    return res.status(404).json({ error: 'Vault not found or access denied' });
+                    return { status: 'not_found' };
                 }
 
                 const vault = vaultResult.rows[0];
 
                 if (!vault.is_locked) {
-                    return res.status(400).json({ error: 'Vault is not locked' });
+                    return { status: 'not_locked' };
                 }
 
-                // Verify master password
                 const isValid = await verifyMasterPassword(master_password, vault.master_password_hash);
                 if (!isValid) {
-                    return res.status(401).json({ error: 'Invalid master password' });
+                    return { status: 'invalid_password' };
                 }
 
-                // Remove lock
                 await client.query(
                     `UPDATE vaults SET is_locked = FALSE, encryption_salt = NULL, master_password_hash = NULL 
                      WHERE id = $1 AND user_id = $2`,
                     [vaultId, req.user.id]
                 );
 
-                res.json({ message: 'Vault unlocked successfully' });
-            } finally {
-                client.release();
+                return { status: 'ok' };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Vault');
             }
+            if (result.status === 'not_locked') {
+                return sendBadRequest(res, 'Vault is not locked');
+            }
+            if (result.status === 'invalid_password') {
+                return sendError(res, 'Invalid master password', 401, 'UNAUTHORIZED');
+            }
+
+            sendSuccess(res, { message: 'Vault unlocked successfully' });
         } catch (error) {
             logger.error('Error unlocking vault:', { error: error.message });
             return sendError(res, 'Internal server error');

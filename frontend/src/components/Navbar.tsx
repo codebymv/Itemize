@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book, Activity, ShieldCheck, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -34,11 +34,12 @@ const adminNavItems = [
 
 const Navbar: React.FC = () => {
 
-  const { currentUser, logout } = useAuth();
+  const { currentUser } = useAuthState();
+  const { logout } = useAuthActions();
   const { theme, setTheme } = useTheme();
   const { aiEnabled, setAiEnabled } = useAISuggest();
   const { toast } = useToast();
-  const { subscription } = useSubscription();
+  const { subscription } = useSubscriptionState();
   const location = useLocation();
   const navigate = useNavigate();
 

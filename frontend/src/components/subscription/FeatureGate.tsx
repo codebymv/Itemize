@@ -4,7 +4,7 @@
  */
 
 import React, { ReactNode } from 'react';
-import { useSubscription, FeatureName } from '../../contexts/SubscriptionContext';
+import { useSubscriptionFeatures, FeatureName } from '../../contexts/SubscriptionContext';
 import { Lock, Sparkles, ArrowRight } from 'lucide-react';
 
 interface FeatureGateProps {
@@ -67,7 +67,7 @@ export function FeatureGate({
   showOverlay = false,
   upgradeMessage 
 }: FeatureGateProps) {
-  const { hasFeature, getRequiredTier, startCheckout } = useSubscription();
+  const { hasFeature, getRequiredTier, startCheckout } = useSubscriptionFeatures();
 
   const hasAccess = hasFeature(feature);
   const requiredTier = getRequiredTier(feature);

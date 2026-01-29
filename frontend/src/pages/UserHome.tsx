@@ -3,12 +3,12 @@ import { Plus, Search, Filter, CheckSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import CreateListModal from "@/components/CreateListModal";
+import { CreateItemModal } from "@/components/CreateItemModal";
 import { ListCard } from "@/components/ListCard";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 
 import api from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthState } from "@/contexts/AuthContext";
 
 interface ListItem {
   id: string;
@@ -32,7 +32,7 @@ const UserHome = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token } = useAuthState();
   const { categories } = useDatabaseCategories();
 
   // Fetch all lists from the API
@@ -66,7 +66,6 @@ const UserHome = () => {
       console.error('Failed to fetch lists:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch lists",
         description: "Could not retrieve your lists. Please try again later.",
         variant: "destructive"
       });
@@ -107,10 +106,22 @@ const UserHome = () => {
       console.error('Failed to create list:', error);
       toast({
         title: "Error",
-        description: "Failed to create list",
         description: "Could not create your list. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleCreateList = async (
+    title: string,
+    category: string,
+    _color: string
+  ) => {
+    try {
+      await createList(title, category);
+      return true;
+    } catch {
+      return false;
     }
   };
  
@@ -167,7 +178,6 @@ const UserHome = () => {
       console.error('Failed to update list:', error);
       toast({
         title: "Error",
-        description: "Failed to update list",
         description: "Could not update your list. Please try again.",
         variant: "destructive"
       });
@@ -373,11 +383,13 @@ const UserHome = () => {
       </div>
 
       {/* Create List Modal */}
-      <CreateListModal
+      <CreateItemModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreateList={createList}
+        itemType="list"
+        onCreate={handleCreateList}
         existingCategories={categories}
+        position={{ x: 0, y: 0 }}
       />
     </div>
   );

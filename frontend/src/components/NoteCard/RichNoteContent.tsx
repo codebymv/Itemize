@@ -12,6 +12,7 @@ import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useAISuggest } from '@/context/AISuggestContext';
 import { useTheme } from 'next-themes';
+import { storage } from '@/lib/storage';
 
 // Global storage for autocomplete suggestions (persists across editor recreations)
 let globalAutocompleteStorage: {
@@ -544,14 +545,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           
           // Clear note suggestion cache to force fresh suggestions for new context
           try {
-            const keysToRemove: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('note-suggestions-')) {
-                keysToRemove.push(key);
-              }
-            }
-            keysToRemove.forEach(key => localStorage.removeItem(key));
+            storage.removeByPrefix('note-suggestions-');
             console.log('🗑️ Cleared note suggestion cache after accepting suggestion');
           } catch (err) {
             console.warn('Failed to clear note suggestion cache:', err);

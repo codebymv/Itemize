@@ -136,38 +136,37 @@ module.exports = (pool, authenticateJWT) => {
             } = req.body;
 
             if (!name || !subject) {
-                return res.status(400).json({ error: 'Name and subject are required' });
+                return sendBadRequest(res, 'Name and subject are required');
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    INSERT INTO email_campaigns (
+                        organization_id, name, subject, from_name, from_email, reply_to,
+                        template_id, content_html, content_text,
+                        segment_type, segment_filter, tag_ids, excluded_tag_ids,
+                        created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    name,
+                    subject,
+                    from_name,
+                    from_email,
+                    reply_to,
+                    template_id || null,
+                    content_html || null,
+                    content_text || null,
+                    segment_type || 'all',
+                    JSON.stringify(segment_filter || {}),
+                    tag_ids || [],
+                    excluded_tag_ids || [],
+                    req.user.id
+                ]);
+            });
 
-            const result = await client.query(`
-                INSERT INTO email_campaigns (
-                    organization_id, name, subject, from_name, from_email, reply_to,
-                    template_id, content_html, content_text,
-                    segment_type, segment_filter, tag_ids, excluded_tag_ids,
-                    created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                RETURNING *
-            `, [
-                req.organizationId,
-                name,
-                subject,
-                from_name,
-                from_email,
-                reply_to,
-                template_id || null,
-                content_html || null,
-                content_text || null,
-                segment_type || 'all',
-                JSON.stringify(segment_filter || {}),
-                tag_ids || [],
-                excluded_tag_ids || [],
-                req.user.id
-            ]);
-
-            client.release();
-            res.status(201).json(result.rows[0]);
+            sendCreated(res, result.rows[0]);
         } catch (error) {
             console.error('Error creating campaign:', error);
             return sendError(res, 'Failed to create campaign');
@@ -195,60 +194,65 @@ module.exports = (pool, authenticateJWT) => {
                 excluded_tag_ids
             } = req.body;
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const checkResult = await client.query(
+                    'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if campaign can be edited
-            const checkResult = await client.query(
-                'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                if (!['draft', 'scheduled'].includes(checkResult.rows[0].status)) {
+                    return { status: 'invalid_status' };
+                }
+
+                const updateResult = await client.query(`
+                    UPDATE email_campaigns SET
+                        name = COALESCE($1, name),
+                        subject = COALESCE($2, subject),
+                        from_name = $3,
+                        from_email = $4,
+                        reply_to = $5,
+                        template_id = $6,
+                        content_html = $7,
+                        content_text = $8,
+                        segment_type = COALESCE($9, segment_type),
+                        segment_filter = COALESCE($10, segment_filter),
+                        tag_ids = COALESCE($11, tag_ids),
+                        excluded_tag_ids = COALESCE($12, excluded_tag_ids),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $13 AND organization_id = $14
+                    RETURNING *
+                `, [
+                    name,
+                    subject,
+                    from_name,
+                    from_email,
+                    reply_to,
+                    template_id,
+                    content_html,
+                    content_text,
+                    segment_type,
+                    segment_filter ? JSON.stringify(segment_filter) : null,
+                    tag_ids,
+                    excluded_tag_ids,
+                    id,
+                    req.organizationId
+                ]);
+
+                return { status: 'ok', campaign: updateResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
+            }
+            if (result.status === 'invalid_status') {
+                return sendBadRequest(res, 'Cannot edit campaign that has been sent');
             }
 
-            if (!['draft', 'scheduled'].includes(checkResult.rows[0].status)) {
-                client.release();
-                return res.status(400).json({ error: 'Cannot edit campaign that has been sent' });
-            }
-
-            const result = await client.query(`
-                UPDATE email_campaigns SET
-                    name = COALESCE($1, name),
-                    subject = COALESCE($2, subject),
-                    from_name = $3,
-                    from_email = $4,
-                    reply_to = $5,
-                    template_id = $6,
-                    content_html = $7,
-                    content_text = $8,
-                    segment_type = COALESCE($9, segment_type),
-                    segment_filter = COALESCE($10, segment_filter),
-                    tag_ids = COALESCE($11, tag_ids),
-                    excluded_tag_ids = COALESCE($12, excluded_tag_ids),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $13 AND organization_id = $14
-                RETURNING *
-            `, [
-                name,
-                subject,
-                from_name,
-                from_email,
-                reply_to,
-                template_id,
-                content_html,
-                content_text,
-                segment_type,
-                segment_filter ? JSON.stringify(segment_filter) : null,
-                tag_ids,
-                excluded_tag_ids,
-                id,
-                req.organizationId
-            ]);
-
-            client.release();
-            res.json(result.rows[0]);
+            sendSuccess(res, result.campaign);
         } catch (error) {
             console.error('Error updating campaign:', error);
             return sendError(res, 'Failed to update campaign');
@@ -261,31 +265,36 @@ module.exports = (pool, authenticateJWT) => {
     router.delete('/:id', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const checkResult = await client.query(
+                    'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if campaign can be deleted
-            const checkResult = await client.query(
-                'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                if (checkResult.rows[0].status === 'sending') {
+                    return { status: 'sending' };
+                }
+
+                await client.query(
+                    'DELETE FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
+
+                return { status: 'ok' };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
+            }
+            if (result.status === 'sending') {
+                return sendBadRequest(res, 'Cannot delete campaign that is currently sending');
             }
 
-            if (checkResult.rows[0].status === 'sending') {
-                client.release();
-                return res.status(400).json({ error: 'Cannot delete campaign that is currently sending' });
-            }
-
-            await client.query(
-                'DELETE FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            client.release();
-            res.json({ success: true });
+            sendSuccess(res, { success: true });
         } catch (error) {
             console.error('Error deleting campaign:', error);
             return sendError(res, 'Failed to delete campaign');
@@ -298,47 +307,51 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/duplicate', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const original = await client.query(
+                    'SELECT * FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            const original = await client.query(
-                'SELECT * FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (original.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (original.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                const campaign = original.rows[0];
+
+                const insertResult = await client.query(`
+                    INSERT INTO email_campaigns (
+                        organization_id, name, subject, from_name, from_email, reply_to,
+                        template_id, content_html, content_text,
+                        segment_type, segment_filter, tag_ids, excluded_tag_ids,
+                        created_by, status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'draft')
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    `${campaign.name} (Copy)`,
+                    campaign.subject,
+                    campaign.from_name,
+                    campaign.from_email,
+                    campaign.reply_to,
+                    campaign.template_id,
+                    campaign.content_html,
+                    campaign.content_text,
+                    campaign.segment_type,
+                    campaign.segment_filter,
+                    campaign.tag_ids,
+                    campaign.excluded_tag_ids,
+                    req.user.id
+                ]);
+
+                return { status: 'ok', campaign: insertResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
             }
 
-            const campaign = original.rows[0];
-
-            const result = await client.query(`
-                INSERT INTO email_campaigns (
-                    organization_id, name, subject, from_name, from_email, reply_to,
-                    template_id, content_html, content_text,
-                    segment_type, segment_filter, tag_ids, excluded_tag_ids,
-                    created_by, status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'draft')
-                RETURNING *
-            `, [
-                req.organizationId,
-                `${campaign.name} (Copy)`,
-                campaign.subject,
-                campaign.from_name,
-                campaign.from_email,
-                campaign.reply_to,
-                campaign.template_id,
-                campaign.content_html,
-                campaign.content_text,
-                campaign.segment_type,
-                campaign.segment_filter,
-                campaign.tag_ids,
-                campaign.excluded_tag_ids,
-                req.user.id
-            ]);
-
-            client.release();
-            res.status(201).json(result.rows[0]);
+            sendCreated(res, result.campaign);
         } catch (error) {
             console.error('Error duplicating campaign:', error);
             return sendError(res, 'Failed to duplicate campaign');
@@ -358,45 +371,50 @@ module.exports = (pool, authenticateJWT) => {
             const { scheduled_at, timezone } = req.body;
 
             if (!scheduled_at) {
-                return res.status(400).json({ error: 'scheduled_at is required' });
+                return sendBadRequest(res, 'scheduled_at is required');
             }
 
             const scheduledDate = new Date(scheduled_at);
             if (scheduledDate <= new Date()) {
-                return res.status(400).json({ error: 'Scheduled time must be in the future' });
+                return sendBadRequest(res, 'Scheduled time must be in the future');
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const checkResult = await client.query(
+                    'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify campaign exists and is in draft status
-            const checkResult = await client.query(
-                'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                if (!['draft', 'scheduled'].includes(checkResult.rows[0].status)) {
+                    return { status: 'invalid_status' };
+                }
+
+                const updateResult = await client.query(`
+                    UPDATE email_campaigns SET
+                        status = 'scheduled',
+                        scheduled_at = $1,
+                        timezone = $2,
+                        send_immediately = FALSE,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $3 AND organization_id = $4
+                    RETURNING *
+                `, [scheduled_at, timezone || 'UTC', id, req.organizationId]);
+
+                return { status: 'ok', campaign: updateResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
+            }
+            if (result.status === 'invalid_status') {
+                return sendBadRequest(res, 'Campaign cannot be scheduled');
             }
 
-            if (!['draft', 'scheduled'].includes(checkResult.rows[0].status)) {
-                client.release();
-                return res.status(400).json({ error: 'Campaign cannot be scheduled' });
-            }
-
-            const result = await client.query(`
-                UPDATE email_campaigns SET
-                    status = 'scheduled',
-                    scheduled_at = $1,
-                    timezone = $2,
-                    send_immediately = FALSE,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3 AND organization_id = $4
-                RETURNING *
-            `, [scheduled_at, timezone || 'UTC', id, req.organizationId]);
-
-            client.release();
-            res.json(result.rows[0]);
+            sendSuccess(res, result.campaign);
         } catch (error) {
             console.error('Error scheduling campaign:', error);
             return sendError(res, 'Failed to schedule campaign');
@@ -409,24 +427,22 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/unschedule', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
-                UPDATE email_campaigns SET
-                    status = 'draft',
-                    scheduled_at = NULL,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND organization_id = $2 AND status = 'scheduled'
-                RETURNING *
-            `, [id, req.organizationId]);
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    UPDATE email_campaigns SET
+                        status = 'draft',
+                        scheduled_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1 AND organization_id = $2 AND status = 'scheduled'
+                    RETURNING *
+                `, [id, req.organizationId]);
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Campaign not found or not scheduled' });
+                return sendNotFound(res, 'Campaign');
             }
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error unscheduling campaign:', error);
             return sendError(res, 'Failed to unschedule campaign');
@@ -439,12 +455,7 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/send', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
-                // Get campaign
+            const outcome = await withTransaction(pool, async (client) => {
                 const campaignResult = await client.query(`
                     SELECT c.*, et.body_html as template_html, et.body_text as template_text
                     FROM email_campaigns c
@@ -453,20 +464,15 @@ module.exports = (pool, authenticateJWT) => {
                 `, [id, req.organizationId]);
 
                 if (campaignResult.rows.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(404).json({ error: 'Campaign not found' });
+                    return { status: 'not_found' };
                 }
 
                 const campaign = campaignResult.rows[0];
 
                 if (!['draft', 'scheduled'].includes(campaign.status)) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(400).json({ error: 'Campaign cannot be sent' });
+                    return { status: 'invalid_status' };
                 }
 
-                // Build recipient query based on segment
                 let recipientQuery = `
                     SELECT c.id, c.email, c.first_name, c.last_name
                     FROM contacts c
@@ -490,7 +496,6 @@ module.exports = (pool, authenticateJWT) => {
                     recipientParams.push(campaign.segment_filter.status);
                 }
 
-                // Exclude contacts with certain tags
                 if (campaign.excluded_tag_ids?.length > 0) {
                     recipientQuery += ` AND c.id NOT IN (
                         SELECT ct.contact_id FROM contact_tags ct WHERE ct.tag_id = ANY($${recipientParams.length + 1})
@@ -502,35 +507,19 @@ module.exports = (pool, authenticateJWT) => {
                 const recipients = recipientsResult.rows;
 
                 if (recipients.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(400).json({ error: 'No recipients match the campaign criteria' });
+                    return { status: 'no_recipients' };
                 }
 
-                // Check email usage limits before sending
                 const usageLimitCheck = await usageService.isWithinLimits(
-                    req.organizationId, 
-                    'emails_per_month', 
+                    req.organizationId,
+                    'emails_per_month',
                     recipients.length
                 );
-                
+
                 if (!usageLimitCheck.withinLimits) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(429).json({
-                        success: false,
-                        error: {
-                            message: `Sending ${recipients.length} emails would exceed your monthly limit`,
-                            code: 'USAGE_LIMIT_EXCEEDED',
-                            current: usageLimitCheck.current,
-                            limit: usageLimitCheck.limit,
-                            requested: recipients.length,
-                            remaining: usageLimitCheck.remaining || 0
-                        }
-                    });
+                    return { status: 'usage_exceeded', usage: usageLimitCheck, recipientsCount: recipients.length };
                 }
 
-                // Update campaign status
                 await client.query(`
                     UPDATE email_campaigns SET
                         status = 'sending',
@@ -541,7 +530,6 @@ module.exports = (pool, authenticateJWT) => {
                     WHERE id = $3
                 `, [req.user.id, recipients.length, id]);
 
-                // Insert recipients in bulk
                 const recipientValues = [];
                 const recipientInsertParams = [];
                 recipients.forEach((recipient, index) => {
@@ -571,33 +559,54 @@ module.exports = (pool, authenticateJWT) => {
                     );
                 }
 
-                await client.query('COMMIT');
-
-                // Track email usage (pre-allocate the quota)
-                await usageService.incrementUsage(req.organizationId, 'emails_per_month', recipients.length);
-
-                // Start sending in background
-                sendCampaignEmails(pool, id, campaign, recipients).catch(err => {
-                    console.error('Error sending campaign emails:', err);
-                });
-
-                // Get updated campaign
                 const updatedResult = await client.query(
                     'SELECT * FROM email_campaigns WHERE id = $1',
                     [id]
                 );
 
-                client.release();
-                res.json({
+                return {
+                    status: 'ok',
                     campaign: updatedResult.rows[0],
-                    recipientCount: recipients.length,
-                    message: 'Campaign is now sending'
-                });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                    recipients,
+                    recipientCount: recipients.length
+                };
+            });
+
+            if (outcome.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
             }
+            if (outcome.status === 'invalid_status') {
+                return sendBadRequest(res, 'Campaign cannot be sent');
+            }
+            if (outcome.status === 'no_recipients') {
+                return sendBadRequest(res, 'No recipients match the campaign criteria');
+            }
+            if (outcome.status === 'usage_exceeded') {
+                return sendError(
+                    res,
+                    `Sending ${outcome.recipientsCount} emails would exceed your monthly limit`,
+                    429,
+                    'USAGE_LIMIT_EXCEEDED',
+                    {
+                        current: outcome.usage.current,
+                        limit: outcome.usage.limit,
+                        requested: outcome.recipientsCount,
+                        remaining: outcome.usage.remaining || 0
+                    }
+                );
+            }
+
+            await usageService.incrementUsage(req.organizationId, 'emails_per_month', outcome.recipientCount);
+
+            sendCampaignEmails(pool, id, outcome.campaign, outcome.recipients).catch(err => {
+                console.error('Error sending campaign emails:', err);
+            });
+
+            sendSuccess(res, {
+                campaign: outcome.campaign,
+                recipientCount: outcome.recipientCount,
+                message: 'Campaign is now sending'
+            });
         } catch (error) {
             console.error('Error sending campaign:', error);
             return sendError(res, 'Failed to send campaign');
@@ -610,23 +619,21 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/pause', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
-                UPDATE email_campaigns SET
-                    status = 'paused',
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND organization_id = $2 AND status = 'sending'
-                RETURNING *
-            `, [id, req.organizationId]);
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    UPDATE email_campaigns SET
+                        status = 'paused',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1 AND organization_id = $2 AND status = 'sending'
+                    RETURNING *
+                `, [id, req.organizationId]);
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Campaign not found or not sending' });
+                return sendNotFound(res, 'Campaign');
             }
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error pausing campaign:', error);
             return sendError(res, 'Failed to pause campaign');
@@ -639,55 +646,55 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/resume', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const campaignResult = await client.query(`
+                    SELECT c.*, et.body_html as template_html, et.body_text as template_text
+                    FROM email_campaigns c
+                    LEFT JOIN email_templates et ON c.template_id = et.id
+                    WHERE c.id = $1 AND c.organization_id = $2 AND c.status = 'paused'
+                `, [id, req.organizationId]);
 
-            // Get campaign and pending recipients
-            const campaignResult = await client.query(`
-                SELECT c.*, et.body_html as template_html, et.body_text as template_text
-                FROM email_campaigns c
-                LEFT JOIN email_templates et ON c.template_id = et.id
-                WHERE c.id = $1 AND c.organization_id = $2 AND c.status = 'paused'
-            `, [id, req.organizationId]);
+                if (campaignResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (campaignResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found or not paused' });
-            }
+                const campaign = campaignResult.rows[0];
 
-            const campaign = campaignResult.rows[0];
-
-            // Get pending recipients
-            const recipientsResult = await client.query(`
-                SELECT cr.*, c.email, c.first_name, c.last_name
-                FROM campaign_recipients cr
-                JOIN contacts c ON cr.contact_id = c.id
-                WHERE cr.campaign_id = $1 AND cr.status = 'pending'
-            `, [id]);
-
-            const recipients = recipientsResult.rows;
-
-            if (recipients.length === 0) {
-                // All sent, mark as complete
-                await client.query(`
-                    UPDATE email_campaigns SET status = 'sent', completed_at = CURRENT_TIMESTAMP WHERE id = $1
+                const recipientsResult = await client.query(`
+                    SELECT cr.*, c.email, c.first_name, c.last_name
+                    FROM campaign_recipients cr
+                    JOIN contacts c ON cr.contact_id = c.id
+                    WHERE cr.campaign_id = $1 AND cr.status = 'pending'
                 `, [id]);
-                client.release();
-                return res.json({ message: 'Campaign already fully sent' });
+
+                const recipients = recipientsResult.rows;
+
+                if (recipients.length === 0) {
+                    await client.query(`
+                        UPDATE email_campaigns SET status = 'sent', completed_at = CURRENT_TIMESTAMP WHERE id = $1
+                    `, [id]);
+                    return { status: 'completed' };
+                }
+
+                await client.query(`
+                    UPDATE email_campaigns SET status = 'sending', updated_at = CURRENT_TIMESTAMP WHERE id = $1
+                `, [id]);
+
+                return { status: 'ok', campaign, recipients };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
+            }
+            if (result.status === 'completed') {
+                return sendSuccess(res, { message: 'Campaign already fully sent' });
             }
 
-            // Update status
-            await client.query(`
-                UPDATE email_campaigns SET status = 'sending', updated_at = CURRENT_TIMESTAMP WHERE id = $1
-            `, [id]);
-
-            client.release();
-
-            // Resume sending in background
-            sendCampaignEmails(pool, id, campaign, recipients).catch(err => {
+            sendCampaignEmails(pool, id, result.campaign, result.recipients).catch(err => {
                 console.error('Error resuming campaign emails:', err);
             });
 
-            res.json({ message: 'Campaign resumed', pendingRecipients: recipients.length });
+            sendSuccess(res, { message: 'Campaign resumed', pendingRecipients: result.recipients.length });
         } catch (error) {
             console.error('Error resuming campaign:', error);
             return sendError(res, 'Failed to resume campaign');
@@ -717,44 +724,50 @@ module.exports = (pool, authenticateJWT) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const checkResult = await client.query(
+                    'SELECT id FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify campaign belongs to org
-            const checkResult = await client.query(
-                'SELECT id FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM campaign_recipients cr ${whereClause}`,
+                    params
+                );
+
+                const recipientsResult = await client.query(`
+                    SELECT cr.*,
+                        c.first_name as contact_first_name,
+                        c.last_name as contact_last_name
+                    FROM campaign_recipients cr
+                    LEFT JOIN contacts c ON cr.contact_id = c.id
+                    ${whereClause}
+                    ORDER BY cr.sent_at DESC NULLS LAST
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
+
+                return {
+                    status: 'ok',
+                    recipients: recipientsResult.rows,
+                    total: parseInt(countResult.rows[0].count)
+                };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
             }
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM campaign_recipients cr ${whereClause}`,
-                params
-            );
-
-            const result = await client.query(`
-                SELECT cr.*,
-                    c.first_name as contact_first_name,
-                    c.last_name as contact_last_name
-                FROM campaign_recipients cr
-                LEFT JOIN contacts c ON cr.contact_id = c.id
-                ${whereClause}
-                ORDER BY cr.sent_at DESC NULLS LAST
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
-
-            res.json({
-                recipients: result.rows,
+            sendSuccess(res, {
+                recipients: result.recipients,
                 pagination: {
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                    total: result.total,
+                    totalPages: Math.ceil(result.total / parseInt(limit))
                 }
             });
         } catch (error) {
@@ -769,19 +782,24 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id/preview', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const campaignResult = await client.query(
+                    'SELECT * FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            const campaignResult = await client.query(
-                'SELECT * FROM email_campaigns WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (campaignResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (campaignResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Campaign not found' });
+                return { status: 'ok', campaign: campaignResult.rows[0] };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Campaign');
             }
 
-            const campaign = campaignResult.rows[0];
+            const campaign = result.campaign;
 
             // Build recipient count query
             let countQuery = `
@@ -814,11 +832,12 @@ module.exports = (pool, authenticateJWT) => {
                 countParams.push(campaign.excluded_tag_ids);
             }
 
-            const result = await client.query(countQuery, countParams);
-            client.release();
+            const countResult = await withDbClient(pool, async (client) => {
+                return client.query(countQuery, countParams);
+            });
 
-            res.json({
-                recipientCount: parseInt(result.rows[0].total),
+            sendSuccess(res, {
+                recipientCount: parseInt(countResult.rows[0].total),
                 segmentType: campaign.segment_type,
                 tagIds: campaign.tag_ids,
                 excludedTagIds: campaign.excluded_tag_ids
@@ -838,22 +857,20 @@ module.exports = (pool, authenticateJWT) => {
             const { test_email } = req.body;
 
             if (!test_email) {
-                return res.status(400).json({ error: 'test_email is required' });
+                return sendBadRequest(res, 'test_email is required');
             }
 
-            const client = await pool.connect();
-
-            const campaignResult = await client.query(`
-                SELECT c.*, et.body_html as template_html, et.body_text as template_text
-                FROM email_campaigns c
-                LEFT JOIN email_templates et ON c.template_id = et.id
-                WHERE c.id = $1 AND c.organization_id = $2
-            `, [id, req.organizationId]);
-
-            client.release();
+            const campaignResult = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    SELECT c.*, et.body_html as template_html, et.body_text as template_text
+                    FROM email_campaigns c
+                    LEFT JOIN email_templates et ON c.template_id = et.id
+                    WHERE c.id = $1 AND c.organization_id = $2
+                `, [id, req.organizationId]);
+            });
 
             if (campaignResult.rows.length === 0) {
-                return res.status(404).json({ error: 'Campaign not found' });
+                return sendNotFound(res, 'Campaign');
             }
 
             const campaign = campaignResult.rows[0];
@@ -887,7 +904,7 @@ module.exports = (pool, authenticateJWT) => {
                 replyTo: campaign.reply_to
             });
 
-            res.json({
+            sendSuccess(res, {
                 success: true,
                 message: `Test email sent to ${test_email}`,
                 emailId: result?.id
@@ -907,151 +924,146 @@ module.exports = (pool, authenticateJWT) => {
 async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
     console.log(`Starting to send campaign ${campaignId} to ${recipients.length} recipients`);
 
-    const client = await pool.connect();
-    let sentCount = 0;
-    let failedCount = 0;
-    let processedCount = 0;
-    const pendingUpdates = [];
+    await withDbClient(pool, async (client) => {
+        let sentCount = 0;
+        let failedCount = 0;
+        let processedCount = 0;
+        const pendingUpdates = [];
 
-    const htmlContent = campaign.content_html || campaign.template_html || '';
-    const textContent = campaign.content_text || campaign.template_text || '';
+        const htmlContent = campaign.content_html || campaign.template_html || '';
+        const textContent = campaign.content_text || campaign.template_text || '';
 
-    const flushUpdates = async () => {
-        if (pendingUpdates.length === 0) {
-            return;
-        }
+        const flushUpdates = async () => {
+            if (pendingUpdates.length === 0) {
+                return;
+            }
 
-        const updateValues = [];
-        const updateParams = [];
-        pendingUpdates.forEach((update, index) => {
-            const baseIndex = index * 6;
-            updateParams.push(
-                campaignId,
-                update.contactId,
-                update.status,
-                update.sentAt,
-                update.externalMessageId,
-                update.errorMessage
-            );
-            updateValues.push(
-                `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`
-            );
-        });
-
-        await client.query(
-            `
-                UPDATE campaign_recipients AS cr SET
-                    status = v.status,
-                    sent_at = v.sent_at,
-                    external_message_id = v.external_message_id,
-                    error_message = v.error_message,
-                    updated_at = CURRENT_TIMESTAMP
-                FROM (
-                    VALUES ${updateValues.join(', ')}
-                ) AS v(campaign_id, contact_id, status, sent_at, external_message_id, error_message)
-                WHERE cr.campaign_id = v.campaign_id AND cr.contact_id = v.contact_id
-            `,
-            updateParams
-        );
-
-        pendingUpdates.length = 0;
-    };
-
-    for (const recipient of recipients) {
-        try {
-            if (processedCount % 10 === 0) {
-                const statusCheck = await client.query(
-                    'SELECT status FROM email_campaigns WHERE id = $1',
-                    [campaignId]
+            const updateValues = [];
+            const updateParams = [];
+            pendingUpdates.forEach((update, index) => {
+                const baseIndex = index * 6;
+                updateParams.push(
+                    campaignId,
+                    update.contactId,
+                    update.status,
+                    update.sentAt,
+                    update.externalMessageId,
+                    update.errorMessage
                 );
-
-                if (!statusCheck.rows.length || !['sending'].includes(statusCheck.rows[0].status)) {
-                    console.log(`Campaign ${campaignId} stopped - status: ${statusCheck.rows[0]?.status}`);
-                    break;
-                }
-            }
-
-            // Replace variables
-            const variables = {
-                first_name: recipient.first_name || '',
-                last_name: recipient.last_name || '',
-                email: recipient.email,
-                full_name: `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim()
-            };
-
-            let processedHtml = htmlContent;
-            let processedText = textContent;
-            Object.entries(variables).forEach(([key, value]) => {
-                const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'gi');
-                processedHtml = processedHtml.replace(regex, value);
-                processedText = processedText.replace(regex, value);
+                updateValues.push(
+                    `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`
+                );
             });
 
-            // Send email
-            const result = await emailService.sendEmail({
-                to: recipient.email,
-                subject: campaign.subject,
-                html: processedHtml,
-                text: processedText,
-                fromName: campaign.from_name,
-                fromEmail: campaign.from_email,
-                replyTo: campaign.reply_to
-            });
-
-            pendingUpdates.push({
-                contactId: recipient.contact_id || recipient.id,
-                status: 'sent',
-                sentAt: new Date(),
-                externalMessageId: result?.id || null,
-                errorMessage: null
-            });
-            sentCount++;
-            processedCount++;
-
-            // Update campaign stats periodically
-            if (sentCount % 10 === 0) {
-                await client.query(`
-                    UPDATE email_campaigns SET
-                        total_sent = $1,
+            await client.query(
+                `
+                    UPDATE campaign_recipients AS cr SET
+                        status = v.status,
+                        sent_at = v.sent_at,
+                        external_message_id = v.external_message_id,
+                        error_message = v.error_message,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $2
-                `, [sentCount, campaignId]);
+                    FROM (
+                        VALUES ${updateValues.join(', ')}
+                    ) AS v(campaign_id, contact_id, status, sent_at, external_message_id, error_message)
+                    WHERE cr.campaign_id = v.campaign_id AND cr.contact_id = v.contact_id
+                `,
+                updateParams
+            );
+
+            pendingUpdates.length = 0;
+        };
+
+        for (const recipient of recipients) {
+            try {
+                if (processedCount % 10 === 0) {
+                    const statusCheck = await client.query(
+                        'SELECT status FROM email_campaigns WHERE id = $1',
+                        [campaignId]
+                    );
+
+                    if (!statusCheck.rows.length || !['sending'].includes(statusCheck.rows[0].status)) {
+                        console.log(`Campaign ${campaignId} stopped - status: ${statusCheck.rows[0]?.status}`);
+                        break;
+                    }
+                }
+
+                const variables = {
+                    first_name: recipient.first_name || '',
+                    last_name: recipient.last_name || '',
+                    email: recipient.email,
+                    full_name: `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim()
+                };
+
+                let processedHtml = htmlContent;
+                let processedText = textContent;
+                Object.entries(variables).forEach(([key, value]) => {
+                    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'gi');
+                    processedHtml = processedHtml.replace(regex, value);
+                    processedText = processedText.replace(regex, value);
+                });
+
+                const result = await emailService.sendEmail({
+                    to: recipient.email,
+                    subject: campaign.subject,
+                    html: processedHtml,
+                    text: processedText,
+                    fromName: campaign.from_name,
+                    fromEmail: campaign.from_email,
+                    replyTo: campaign.reply_to
+                });
+
+                pendingUpdates.push({
+                    contactId: recipient.contact_id || recipient.id,
+                    status: 'sent',
+                    sentAt: new Date(),
+                    externalMessageId: result?.id || null,
+                    errorMessage: null
+                });
+                sentCount++;
+                processedCount++;
+
+                if (sentCount % 10 === 0) {
+                    await client.query(`
+                        UPDATE email_campaigns SET
+                            total_sent = $1,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = $2
+                    `, [sentCount, campaignId]);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+            } catch (error) {
+                console.error(`Failed to send to ${recipient.email}:`, error.message);
+                failedCount++;
+                processedCount++;
+
+                pendingUpdates.push({
+                    contactId: recipient.contact_id || recipient.id,
+                    status: 'failed',
+                    sentAt: null,
+                    externalMessageId: null,
+                    errorMessage: error.message
+                });
             }
 
-            // Small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-        } catch (error) {
-            console.error(`Failed to send to ${recipient.email}:`, error.message);
-            failedCount++;
-            processedCount++;
-
-            pendingUpdates.push({
-                contactId: recipient.contact_id || recipient.id,
-                status: 'failed',
-                sentAt: null,
-                externalMessageId: null,
-                errorMessage: error.message
-            });
+            if (pendingUpdates.length >= 10) {
+                await flushUpdates();
+            }
         }
 
-        if (pendingUpdates.length >= 10) {
-            await flushUpdates();
-        }
-    }
+        await flushUpdates();
 
-    await flushUpdates();
+        await client.query(`
+            UPDATE email_campaigns SET
+                status = 'sent',
+                total_sent = $1,
+                completed_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+        `, [sentCount, campaignId]);
 
-    // Final update
-    await client.query(`
-        UPDATE email_campaigns SET
-            status = 'sent',
-            total_sent = $1,
-            completed_at = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-    `, [sentCount, campaignId]);
-
-    client.release();
-    console.log(`Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed`);
+        console.log(`Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed`);
+    });
 }

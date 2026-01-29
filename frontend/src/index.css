@@ -204,6 +204,16 @@
     --sidebar-border: 215 20% 37%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  body {
+    font-family: "Raleway", sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-raleway {
+    font-family: "Raleway", sans-serif;
+  }
 }
 
 @layer base {

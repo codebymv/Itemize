@@ -52,7 +52,7 @@ import {
 import { useToast } from "../hooks/use-toast";
 import { CreateItemModal } from "../components/CreateItemModal";
 import { ListCard } from "../components/ListCard";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuthState } from "../contexts/AuthContext";
 import { NoteCard } from '../components/NoteCard';
 import { WhiteboardCard } from '../components/WhiteboardCard';
 import { ShareModal } from '../components/ShareModal';
@@ -125,7 +125,7 @@ const CanvasPage: React.FC = () => {
   } | null>(null);
 
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { token } = useAuthState();
 
   // WebSocket state for real-time updates
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -205,7 +205,7 @@ const CanvasPage: React.FC = () => {
         // Remove any lists that no longer exist in the backend
         if (failedListIds.length > 0) {
           setLists(prev => prev.filter(list => !failedListIds.includes(list.id)));
-          console.log(`Removed ${failedListIds.length} stale list(s) from frontend state:`, failedListIds);
+          logger.log(`Removed ${failedListIds.length} stale list(s) from frontend state:`, failedListIds);
         }
 
         // Update all notes that belong to this category
@@ -705,7 +705,7 @@ const CanvasPage: React.FC = () => {
     if (!token) return;
 
     const BACKEND_URL = getApiUrl();
-    console.log('Canvas: Connecting to WebSocket at:', BACKEND_URL);
+    logger.log('Canvas: Connecting to WebSocket at:', BACKEND_URL);
 
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -724,10 +724,10 @@ const CanvasPage: React.FC = () => {
     });
 
     newSocket.on('joinedUserCanvas', (data) => {
-      console.log('Canvas: Successfully joined user canvas:', data);
+      logger.log('Canvas: Successfully joined user canvas:', data);
 
       // Send a test ping to verify connection
-      console.log('Canvas: Sending test ping');
+      logger.log('Canvas: Sending test ping');
       newSocket.emit('testPing', { message: 'Hello from canvas' });
     });
 
@@ -769,7 +769,7 @@ const CanvasPage: React.FC = () => {
     setSocket(newSocket);
 
     return () => {
-      console.log('Canvas: Cleaning up WebSocket connection');
+      logger.log('Canvas: Cleaning up WebSocket connection');
       newSocket.disconnect();
     };
   }, [token, toast]);
@@ -820,7 +820,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not create your note. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to create note",
         description: errorMessage,
         variant: "destructive"
       });
@@ -858,7 +857,7 @@ const CanvasPage: React.FC = () => {
       logger.log(`🔑 Frontend: Using token: ${token ? 'Present' : 'Missing'}`);
 
       const result = await apiDeleteNote(noteId, token);
-      console.log(`✅ Frontend: Delete API response:`, result);
+      logger.log(`✅ Frontend: Delete API response:`, result);
 
       setNotes(prev => prev.filter(n => n.id !== noteId));
       toast({
@@ -877,7 +876,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your note. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to delete note",
         description: errorMessage,
         variant: "destructive"
       });
@@ -916,7 +914,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not create your whiteboard. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to create whiteboard",
         description: errorMessage,
         variant: "destructive"
       });
@@ -931,7 +928,7 @@ const CanvasPage: React.FC = () => {
     setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? { ...w, ...updatedData } : w));
 
     try {
-      console.log('🎨 CanvasPage: Updating whiteboard:', {
+      logger.log('🎨 CanvasPage: Updating whiteboard:', {
         whiteboardId,
         updatedFields: Object.keys(updatedData),
         hasCanvasData: !!updatedData.canvas_data,
@@ -958,7 +955,7 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to update whiteboard",
+        description: errorMessage,
         variant: "destructive"
       });
       return null;
@@ -979,7 +976,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your whiteboard. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to delete whiteboard",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1013,7 +1009,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not create your wireframe. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to create wireframe",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1036,7 +1031,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not update your wireframe. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to update wireframe",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1098,7 +1092,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not create your vault. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to create vault",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1142,7 +1135,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your vault. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to delete vault",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1188,7 +1180,6 @@ const CanvasPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Could not share your vault. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to share vault",
         description: errorMessage,
         variant: "destructive"
       });
@@ -1257,7 +1248,6 @@ const CanvasPage: React.FC = () => {
       } else {
         toast({
           title: "Error",
-          description: "Failed to update list",
           description: "Could not update your list. Please try again.",
           variant: "destructive"
         });
@@ -1343,7 +1333,6 @@ const CanvasPage: React.FC = () => {
       console.error('Failed to create list:', error);
       toast({
         title: "Error",
-        description: "Failed to create list",
         description: "Could not create your list. Please try again.",
         variant: "destructive"
       });
@@ -1576,7 +1565,6 @@ const CanvasPage: React.FC = () => {
         setLists(originalLists);
         toast({
           title: "Error",
-          description: "Failed to update position",
           description: "Could not update list position. Please try again.",
           variant: "destructive"
         });
@@ -1598,7 +1586,7 @@ const CanvasPage: React.FC = () => {
     // Make API call and rollback on error
     apiUpdateWhiteboardPosition(whiteboardId, newPosition.x, newPosition.y, token)
       .then(() => {
-        console.log('📍 Whiteboard position update successful');
+        logger.log('📍 Whiteboard position update successful');
       })
       .catch((error) => {
         console.error('📍 Failed to update whiteboard position:', error);
@@ -1606,7 +1594,6 @@ const CanvasPage: React.FC = () => {
         setWhiteboards(originalWhiteboards);
         toast({
           title: "Error",
-          description: "Failed to update position",
           description: "Could not update whiteboard position. Please try again.",
           variant: "destructive"
         });
@@ -2015,7 +2002,7 @@ const CanvasPage: React.FC = () => {
                 onWireframeDelete={handleDeleteWireframe}
                 onWireframeShare={(wireframeId) => {
                   // TODO: Implement wireframe sharing
-                  console.log('Share wireframe:', wireframeId);
+                  logger.log('Share wireframe:', wireframeId);
                 }}
                 onWireframePositionUpdate={handleWireframePositionChange}
                 onVaultUpdate={handleUpdateVault}

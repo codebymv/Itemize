@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Zap, Crown, Building2, User } from 'lucide-react';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Plan, PLAN_METADATA, PLAN_PRICING } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,7 +15,8 @@ const PLAN_ICONS = {
 };
 
 export function SubscriptionStatus() {
-    const { subscription, planName, openBillingPortal, isLoading } = useSubscription();
+    const { subscription, planName, isLoading } = useSubscriptionState();
+    const { openBillingPortal } = useSubscriptionFeatures();
     const { toast } = useToast();
 
     if (isLoading) {

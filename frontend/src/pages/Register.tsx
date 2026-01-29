@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthActions } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
@@ -15,7 +15,7 @@ export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme } = useTheme();
-  const { register, login } = useAuth();
+  const { register, login } = useAuthActions();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

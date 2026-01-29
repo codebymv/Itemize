@@ -355,58 +355,61 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return next();
             }
 
-            const client = await pool.connect();
+            const invoice = await withDbClient(pool, async (client) => {
+                const invoiceResult = await client.query(`
+                    SELECT i.*, 
+                        c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
+                        b.name as business_name, b.email as business_email, b.phone as business_phone,
+                        b.address as business_address, b.tax_id as business_tax_id, b.logo_url as business_logo_url
+                    FROM invoices i
+                    LEFT JOIN contacts c ON i.contact_id = c.id
+                    LEFT JOIN businesses b ON i.business_id = b.id
+                    WHERE i.id = $1 AND i.organization_id = $2
+                `, [parseInt(id), req.organizationId]);
 
-            const invoiceResult = await client.query(`
-                SELECT i.*, 
-                    c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
-                    b.name as business_name, b.email as business_email, b.phone as business_phone,
-                    b.address as business_address, b.tax_id as business_tax_id, b.logo_url as business_logo_url
-                FROM invoices i
-                LEFT JOIN contacts c ON i.contact_id = c.id
-                LEFT JOIN businesses b ON i.business_id = b.id
-                WHERE i.id = $1 AND i.organization_id = $2
-            `, [parseInt(id), req.organizationId]);
+                if (invoiceResult.rows.length === 0) {
+                    return null;
+                }
 
-            if (invoiceResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Invoice not found' });
+                // Get line items
+                const itemsResult = await client.query(`
+                    SELECT ii.*, p.name as product_name
+                    FROM invoice_items ii
+                    LEFT JOIN products p ON ii.product_id = p.id
+                    WHERE ii.invoice_id = $1
+                    ORDER BY ii.sort_order
+                `, [id]);
+
+                // Get payments
+                const paymentsResult = await client.query(`
+                    SELECT * FROM payments WHERE invoice_id = $1 ORDER BY created_at DESC
+                `, [id]);
+
+                const invoiceData = invoiceResult.rows[0];
+                invoiceData.items = itemsResult.rows;
+                invoiceData.payments = paymentsResult.rows;
+                
+                // Include business object if business_id is set
+                if (invoiceData.business_id) {
+                    invoiceData.business = {
+                        id: invoiceData.business_id,
+                        name: invoiceData.business_name,
+                        email: invoiceData.business_email,
+                        phone: invoiceData.business_phone,
+                        address: invoiceData.business_address,
+                        tax_id: invoiceData.business_tax_id,
+                        logo_url: invoiceData.business_logo_url
+                    };
+                }
+
+                return invoiceData;
+            });
+
+            if (!invoice) {
+                return sendNotFound(res, 'Invoice');
             }
 
-            // Get line items
-            const itemsResult = await client.query(`
-                SELECT ii.*, p.name as product_name
-                FROM invoice_items ii
-                LEFT JOIN products p ON ii.product_id = p.id
-                WHERE ii.invoice_id = $1
-                ORDER BY ii.sort_order
-            `, [id]);
-
-            // Get payments
-            const paymentsResult = await client.query(`
-                SELECT * FROM payments WHERE invoice_id = $1 ORDER BY created_at DESC
-            `, [id]);
-
-            client.release();
-
-            const invoice = invoiceResult.rows[0];
-            invoice.items = itemsResult.rows;
-            invoice.payments = paymentsResult.rows;
-            
-            // Include business object if business_id is set
-            if (invoice.business_id) {
-                invoice.business = {
-                    id: invoice.business_id,
-                    name: invoice.business_name,
-                    email: invoice.business_email,
-                    phone: invoice.business_phone,
-                    address: invoice.business_address,
-                    tax_id: invoice.business_tax_id,
-                    logo_url: invoice.business_logo_url
-                };
-            }
-
-            res.json(invoice);
+            sendSuccess(res, invoice);
         } catch (error) {
             console.error('Error fetching invoice:', error);
             return sendError(res, 'Failed to fetch invoice');
@@ -437,14 +440,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             } = req.body;
 
             if (!items || !Array.isArray(items) || items.length === 0) {
-                return res.status(400).json({ error: 'At least one line item is required' });
+                return sendBadRequest(res, 'At least one line item is required');
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const invoice = await withTransaction(pool, async (client) => {
                 // Get next invoice number
                 const invoiceNumber = await getNextInvoiceNumber(client, req.organizationId);
 
@@ -569,8 +568,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     lineItemParams
                 );
 
-                await client.query('COMMIT');
-
                 // Fetch complete invoice
                 const fullInvoiceResult = await client.query(`
                     SELECT * FROM invoices WHERE id = $1
@@ -580,17 +577,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order
                 `, [invoiceId]);
 
-                client.release();
+                const invoiceData = fullInvoiceResult.rows[0];
+                invoiceData.items = itemsResult.rows;
 
-                const invoice = fullInvoiceResult.rows[0];
-                invoice.items = itemsResult.rows;
+                return invoiceData;
+            });
 
-                res.status(201).json(invoice);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+            sendCreated(res, invoice);
         } catch (error) {
             console.error('Error creating invoice:', error);
             return sendError(res, 'Failed to create invoice');
@@ -626,26 +619,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 payment_terms
             } = req.body;
 
-            const client = await pool.connect();
+            const updateResult = await withTransaction(pool, async (client) => {
+                // Check if invoice can be edited
+                const checkResult = await client.query(
+                    'SELECT status FROM invoices WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if invoice can be edited
-            const checkResult = await client.query(
-                'SELECT status FROM invoices WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { notFound: true };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Invoice not found' });
-            }
-
-            if (!['draft', 'sent'].includes(checkResult.rows[0].status)) {
-                client.release();
-                return res.status(400).json({ error: 'Cannot edit invoice in current status' });
-            }
-
-            try {
-                await client.query('BEGIN');
+                if (!['draft', 'sent'].includes(checkResult.rows[0].status)) {
+                    return { invalidStatus: true };
+                }
 
                 // Recalculate totals if items provided
                 let updateFields = [];
@@ -796,23 +783,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     );
                 }
 
-                await client.query('COMMIT');
-
                 // Fetch updated invoice
                 const result = await client.query('SELECT * FROM invoices WHERE id = $1', [id]);
                 const itemsResult = await client.query('SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order', [id]);
 
-                client.release();
-
                 const invoice = result.rows[0];
                 invoice.items = itemsResult.rows;
 
-                res.json(invoice);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { invoice };
+            });
+
+            if (updateResult?.notFound) {
+                return sendNotFound(res, 'Invoice');
             }
+
+            if (updateResult?.invalidStatus) {
+                return sendBadRequest(res, 'Cannot edit invoice in current status');
+            }
+
+            sendSuccess(res, updateResult.invoice);
         } catch (error) {
             console.error('Error updating invoice:', error);
             return sendError(res, 'Failed to update invoice');
@@ -831,27 +820,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return next();
             }
 
-            const client = await pool.connect();
+            const invoiceInfo = await withDbClient(pool, async (client) => {
+                // Check invoice exists
+                const checkResult = await client.query(
+                    'SELECT id, invoice_number FROM invoices WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check invoice exists
-            const checkResult = await client.query(
-                'SELECT id, invoice_number FROM invoices WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return null;
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Invoice not found' });
+                // Delete invoice items first (foreign key constraint)
+                await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [id]);
+                
+                // Delete the invoice
+                await client.query('DELETE FROM invoices WHERE id = $1', [id]);
+
+                return checkResult.rows[0];
+            });
+
+            if (!invoiceInfo) {
+                return sendNotFound(res, 'Invoice');
             }
 
-            // Delete invoice items first (foreign key constraint)
-            await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [id]);
-            
-            // Delete the invoice
-            await client.query('DELETE FROM invoices WHERE id = $1', [id]);
-            client.release();
-
-            res.json({ success: true, invoice_number: checkResult.rows[0].invoice_number });
+            sendSuccess(res, { success: true, invoice_number: invoiceInfo.invoice_number });
         } catch (error) {
             console.error('Error deleting invoice:', error);
             return sendError(res, 'Failed to delete invoice');
@@ -875,12 +868,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
-                return res.status(404).json({ error: 'Invoice not found' });
+                return sendNotFound(res, 'Invoice');
             }
 
-            const client = await pool.connect();
-
-            try {
+            const sendResult = await withDbClient(pool, async (client) => {
                 // Fetch the full invoice data with items
                 const invoiceResult = await client.query(`
                     SELECT i.*, 
@@ -893,8 +884,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 `, [id, req.organizationId]);
 
                 if (invoiceResult.rows.length === 0) {
-                    client.release();
-                    return res.status(404).json({ error: 'Invoice not found' });
+                    return { errorStatus: 404, error: 'Invoice not found' };
                 }
 
                 const invoice = invoiceResult.rows[0];
@@ -902,14 +892,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 // Check if invoice can be sent (allow resend for sent invoices)
                 const allowedStatuses = resend ? ['draft', 'sent', 'viewed', 'partial', 'overdue'] : ['draft', 'sent'];
                 if (!allowedStatuses.includes(invoice.status)) {
-                    client.release();
-                    return res.status(400).json({ error: 'Invoice cannot be sent in current status' });
+                    return { errorStatus: 400, error: 'Invoice cannot be sent in current status' };
                 }
 
                 // Check if customer email exists
                 if (!invoice.customer_email) {
-                    client.release();
-                    return res.status(400).json({ error: 'Customer email is required to send invoice' });
+                    return { errorStatus: 400, error: 'Customer email is required to send invoice' };
                 }
 
                 // Fetch invoice items for PDF generation
@@ -1084,18 +1072,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     emailError = 'Email service not configured';
                 }
 
-                client.release();
+                return {
+                    data: {
+                        ...updatedInvoice,
+                        emailSent,
+                        emailError: emailError || undefined
+                    }
+                };
+            });
 
-                // Return response with email status
-                res.json({
-                    ...updatedInvoice,
-                    emailSent,
-                    emailError: emailError || undefined,
-                });
-            } catch (innerError) {
-                client.release();
-                throw innerError;
+            if (sendResult.errorStatus) {
+                return sendError(res, sendResult.error, sendResult.errorStatus);
             }
+
+            sendSuccess(res, sendResult.data);
         } catch (error) {
             logger.error('Error sending invoice:', error);
             return sendError(res, 'Failed to send invoice');
@@ -1111,53 +1101,56 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
-                return res.status(404).json({ error: 'Invoice not found' });
+                return sendNotFound(res, 'Invoice');
             }
 
             const { generateInvoicePDF, isPDFAvailable } = require('../services/pdf.service');
 
             if (!isPDFAvailable()) {
-                return res.status(503).json({ error: 'PDF generation not available' });
+                return sendError(res, 'PDF generation not available', 503, 'SERVICE_UNAVAILABLE');
             }
 
-            const client = await pool.connect();
+            const pdfData = await withDbClient(pool, async (client) => {
+                // Get invoice with items
+                const invoiceResult = await client.query(`
+                    SELECT i.*, c.first_name as contact_first_name, c.last_name as contact_last_name
+                    FROM invoices i
+                    LEFT JOIN contacts c ON i.contact_id = c.id
+                    WHERE i.id = $1 AND i.organization_id = $2
+                `, [id, req.organizationId]);
 
-            // Get invoice with items
-            const invoiceResult = await client.query(`
-                SELECT i.*, c.first_name as contact_first_name, c.last_name as contact_last_name
-                FROM invoices i
-                LEFT JOIN contacts c ON i.contact_id = c.id
-                WHERE i.id = $1 AND i.organization_id = $2
-            `, [id, req.organizationId]);
+                if (invoiceResult.rows.length === 0) {
+                    return { notFound: true };
+                }
 
-            if (invoiceResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Invoice not found' });
+                const invoice = invoiceResult.rows[0];
+
+                // Get items
+                const itemsResult = await client.query(`
+                    SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order
+                `, [id]);
+                invoice.items = itemsResult.rows;
+
+                // Get payment settings for business info
+                const settingsResult = await client.query(
+                    'SELECT * FROM payment_settings WHERE organization_id = $1',
+                    [req.organizationId]
+                );
+                const settings = settingsResult.rows[0] || {};
+
+                return { invoice, settings };
+            });
+
+            if (pdfData.notFound) {
+                return sendNotFound(res, 'Invoice');
             }
-
-            const invoice = invoiceResult.rows[0];
-
-            // Get items
-            const itemsResult = await client.query(`
-                SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order
-            `, [id]);
-            invoice.items = itemsResult.rows;
-
-            // Get payment settings for business info
-            const settingsResult = await client.query(
-                'SELECT * FROM payment_settings WHERE organization_id = $1',
-                [req.organizationId]
-            );
-            const settings = settingsResult.rows[0] || {};
-
-            client.release();
 
             // Generate PDF
-            const pdf = await generateInvoicePDF(invoice, settings);
+            const pdf = await generateInvoicePDF(pdfData.invoice, pdfData.settings);
 
             // Set response headers
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoice_number}.pdf"`);
+            res.setHeader('Content-Disposition', `attachment; filename="${pdfData.invoice.invoice_number}.pdf"`);
             res.setHeader('Content-Length', pdf.length);
 
             res.send(pdf);
@@ -1176,20 +1169,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
-                return res.status(404).json({ error: 'Invoice not found' });
+                return sendNotFound(res, 'Invoice');
             }
 
             const { amount, payment_method, notes } = req.body;
 
             if (!amount || amount <= 0) {
-                return res.status(400).json({ error: 'Valid amount is required' });
+                return sendBadRequest(res, 'Valid amount is required');
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const paymentResult = await withTransaction(pool, async (client) => {
                 // Get invoice
                 const invoiceResult = await client.query(
                     'SELECT * FROM invoices WHERE id = $1 AND organization_id = $2',
@@ -1197,9 +1186,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 if (invoiceResult.rows.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(404).json({ error: 'Invoice not found' });
+                    return { notFound: true };
                 }
 
                 const invoice = invoiceResult.rows[0];
@@ -1214,7 +1201,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 const payNotes = notes || null;
 
                 // Create payment record - simple parameterized query (NULL values handled by PostgreSQL)
-                const paymentResult = await client.query(`
+                const paymentInsert = await client.query(`
                     INSERT INTO payments (
                         organization_id, invoice_id, contact_id, amount, currency,
                         payment_method, status, notes, paid_at
@@ -1245,22 +1232,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     WHERE id = $4
                 `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, id]);
 
-                await client.query('COMMIT');
-                client.release();
-
-                res.json({
-                    payment: paymentResult.rows[0],
+                return {
+                    payment: paymentInsert.rows[0],
                     invoice: {
                         amount_paid: newAmountPaid,
                         amount_due: Math.max(0, newAmountDue),
                         status: newStatus
                     }
-                });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                };
+            });
+
+            if (paymentResult.notFound) {
+                return sendNotFound(res, 'Invoice');
             }
+
+            sendSuccess(res, paymentResult);
         } catch (error) {
             console.error('Error recording payment:', error);
             return sendError(res, 'Failed to record payment');
@@ -1277,74 +1263,77 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             // Skip if id is not a number
             if (isNaN(parseInt(id))) {
-                return res.status(404).json({ error: 'Invoice not found' });
+                return sendNotFound(res, 'Invoice');
             }
 
             if (!stripe) {
-                return res.status(400).json({ error: 'Stripe not configured' });
-            }
-            const client = await pool.connect();
-
-            const invoiceResult = await client.query(
-                'SELECT * FROM invoices WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            if (invoiceResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Invoice not found' });
+                return sendBadRequest(res, 'Stripe not configured');
             }
 
-            const invoice = invoiceResult.rows[0];
+            const paymentLinkResult = await withDbClient(pool, async (client) => {
+                const invoiceResult = await client.query(
+                    'SELECT * FROM invoices WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            if (invoice.amount_due <= 0) {
-                client.release();
-                return res.status(400).json({ error: 'Invoice already paid' });
-            }
-
-            // Get frontend URL for redirects
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-            // Create Stripe Checkout Session (hosted payment page)
-            const session = await stripe.checkout.sessions.create({
-                mode: 'payment',
-                payment_method_types: ['card'],
-                line_items: [{
-                    price_data: {
-                        currency: (invoice.currency || 'USD').toLowerCase(),
-                        product_data: {
-                            name: `Invoice ${invoice.invoice_number}`,
-                            description: invoice.customer_name || 'Invoice Payment'
-                        },
-                        unit_amount: Math.round(invoice.amount_due * 100) // Convert to cents
-                    },
-                    quantity: 1
-                }],
-                success_url: `${frontendUrl}/invoices?payment=success&invoice=${id}`,
-                cancel_url: `${frontendUrl}/invoices?payment=cancelled&invoice=${id}`,
-                customer_email: invoice.customer_email || undefined,
-                metadata: {
-                    invoice_id: invoice.id.toString(),
-                    invoice_number: invoice.invoice_number,
-                    organization_id: req.organizationId.toString()
+                if (invoiceResult.rows.length === 0) {
+                    return { errorStatus: 404, error: 'Invoice not found' };
                 }
+
+                const invoice = invoiceResult.rows[0];
+
+                if (invoice.amount_due <= 0) {
+                    return { errorStatus: 400, error: 'Invoice already paid' };
+                }
+
+                // Get frontend URL for redirects
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+                // Create Stripe Checkout Session (hosted payment page)
+                const session = await stripe.checkout.sessions.create({
+                    mode: 'payment',
+                    payment_method_types: ['card'],
+                    line_items: [{
+                        price_data: {
+                            currency: (invoice.currency || 'USD').toLowerCase(),
+                            product_data: {
+                                name: `Invoice ${invoice.invoice_number}`,
+                                description: invoice.customer_name || 'Invoice Payment'
+                            },
+                            unit_amount: Math.round(invoice.amount_due * 100) // Convert to cents
+                        },
+                        quantity: 1
+                    }],
+                    success_url: `${frontendUrl}/invoices?payment=success&invoice=${id}`,
+                    cancel_url: `${frontendUrl}/invoices?payment=cancelled&invoice=${id}`,
+                    customer_email: invoice.customer_email || undefined,
+                    metadata: {
+                        invoice_id: invoice.id.toString(),
+                        invoice_number: invoice.invoice_number,
+                        organization_id: req.organizationId.toString()
+                    }
+                });
+
+                // Store checkout session ID for reference
+                await client.query(`
+                    UPDATE invoices SET
+                        stripe_payment_intent_id = $1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $2
+                `, [session.id, id]);
+
+                return {
+                    url: session.url,
+                    session_id: session.id
+                };
             });
 
-            // Store checkout session ID for reference
-            await client.query(`
-                UPDATE invoices SET
-                    stripe_payment_intent_id = $1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $2
-            `, [session.id, id]);
-
-            client.release();
+            if (paymentLinkResult.errorStatus) {
+                return sendError(res, paymentLinkResult.error, paymentLinkResult.errorStatus);
+            }
 
             // Return the checkout URL for redirect
-            res.json({
-                url: session.url,
-                session_id: session.id
-            });
+            sendSuccess(res, paymentLinkResult);
         } catch (error) {
             console.error('Error creating payment link:', error);
             return sendError(res, 'Failed to create payment link');
@@ -1379,38 +1368,38 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const paymentsData = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM payments p ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM payments p ${whereClause}`,
-                params
-            );
+                const result = await client.query(`
+                    SELECT p.*, 
+                        i.invoice_number,
+                        c.first_name as contact_first_name, 
+                        c.last_name as contact_last_name,
+                        COALESCE(c.first_name || ' ' || c.last_name, i.customer_name) as contact_name
+                    FROM payments p
+                    LEFT JOIN invoices i ON p.invoice_id = i.id
+                    LEFT JOIN contacts c ON p.contact_id = c.id
+                    ${whereClause}
+                    ORDER BY p.created_at DESC
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-                SELECT p.*, 
-                    i.invoice_number,
-                    c.first_name as contact_first_name, 
-                    c.last_name as contact_last_name,
-                    COALESCE(c.first_name || ' ' || c.last_name, i.customer_name) as contact_name
-                FROM payments p
-                LEFT JOIN invoices i ON p.invoice_id = i.id
-                LEFT JOIN contacts c ON p.contact_id = c.id
-                ${whereClause}
-                ORDER BY p.created_at DESC
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
-
-            client.release();
-
-            res.json({
-                payments: result.rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
-                }
+                return {
+                    payments: result.rows,
+                    pagination: {
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        total: parseInt(countResult.rows[0].count),
+                        totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                    }
+                };
             });
+
+            sendSuccess(res, paymentsData);
         } catch (error) {
             console.error('Error fetching payments:', error);
             return sendError(res, 'Failed to fetch payments');
@@ -1426,17 +1415,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/businesses', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    `SELECT * FROM businesses 
+                     WHERE organization_id = $1 AND is_active = true
+                     ORDER BY last_used_at DESC NULLS LAST, created_at DESC`,
+                    [req.organizationId]
+                );
+            });
 
-            const result = await client.query(
-                `SELECT * FROM businesses 
-                 WHERE organization_id = $1 AND is_active = true
-                 ORDER BY last_used_at DESC NULLS LAST, created_at DESC`,
-                [req.organizationId]
-            );
-
-            client.release();
-            res.json(result.rows);
+            sendSuccess(res, result.rows);
         } catch (error) {
             console.error('Error fetching businesses:', error);
             return sendError(res, 'Failed to fetch businesses');
@@ -1455,20 +1443,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return next();
             }
 
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'SELECT * FROM businesses WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'SELECT * FROM businesses WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Business not found' });
+                return sendNotFound(res, 'Business');
             }
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error fetching business:', error);
             return sendError(res, 'Failed to fetch business');
@@ -1483,27 +1469,26 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { name, email, phone, address, tax_id, logo_url } = req.body;
 
             if (!name || !name.trim()) {
-                return res.status(400).json({ error: 'Business name is required' });
+                return sendBadRequest(res, 'Business name is required');
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    INSERT INTO businesses (organization_id, name, email, phone, address, tax_id, logo_url)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    name.trim(),
+                    email || null,
+                    phone || null,
+                    address || null,
+                    tax_id || null,
+                    logo_url || null
+                ]);
+            });
 
-            const result = await client.query(`
-                INSERT INTO businesses (organization_id, name, email, phone, address, tax_id, logo_url)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING *
-            `, [
-                req.organizationId,
-                name.trim(),
-                email || null,
-                phone || null,
-                address || null,
-                tax_id || null,
-                logo_url || null
-            ]);
-
-            client.release();
-            res.status(201).json(result.rows[0]);
+            sendCreated(res, result.rows[0]);
         } catch (error) {
             console.error('Error creating business:', error);
             return sendError(res, 'Failed to create business');
@@ -1525,48 +1510,52 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { name, email, phone, address, tax_id, logo_url, is_active } = req.body;
 
             if (name !== undefined && (!name || !name.trim())) {
-                return res.status(400).json({ error: 'Business name cannot be empty' });
+                return sendBadRequest(res, 'Business name cannot be empty');
             }
 
-            const client = await pool.connect();
+            const updateResult = await withDbClient(pool, async (client) => {
+                // Check if business exists and belongs to organization
+                const checkResult = await client.query(
+                    'SELECT id FROM businesses WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if business exists and belongs to organization
-            const checkResult = await client.query(
-                'SELECT id FROM businesses WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { notFound: true };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Business not found' });
+                const result = await client.query(`
+                    UPDATE businesses SET
+                        name = COALESCE($1, name),
+                        email = COALESCE($2, email),
+                        phone = COALESCE($3, phone),
+                        address = COALESCE($4, address),
+                        tax_id = COALESCE($5, tax_id),
+                        logo_url = COALESCE($6, logo_url),
+                        is_active = COALESCE($7, is_active),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $8 AND organization_id = $9
+                    RETURNING *
+                `, [
+                    name?.trim(),
+                    email,
+                    phone,
+                    address,
+                    tax_id,
+                    logo_url,
+                    is_active,
+                    id,
+                    req.organizationId
+                ]);
+
+                return { business: result.rows[0] };
+            });
+
+            if (updateResult.notFound) {
+                return sendNotFound(res, 'Business');
             }
 
-            const result = await client.query(`
-                UPDATE businesses SET
-                    name = COALESCE($1, name),
-                    email = COALESCE($2, email),
-                    phone = COALESCE($3, phone),
-                    address = COALESCE($4, address),
-                    tax_id = COALESCE($5, tax_id),
-                    logo_url = COALESCE($6, logo_url),
-                    is_active = COALESCE($7, is_active),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $8 AND organization_id = $9
-                RETURNING *
-            `, [
-                name?.trim(),
-                email,
-                phone,
-                address,
-                tax_id,
-                logo_url,
-                is_active,
-                id,
-                req.organizationId
-            ]);
-
-            client.release();
-            res.json(result.rows[0]);
+            sendSuccess(res, updateResult.business);
         } catch (error) {
             console.error('Error updating business:', error);
             return sendError(res, 'Failed to update business');
@@ -1585,27 +1574,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return next();
             }
 
-            const client = await pool.connect();
+            const deleteResult = await withDbClient(pool, async (client) => {
+                // Check if business exists and belongs to organization
+                const checkResult = await client.query(
+                    'SELECT id FROM businesses WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if business exists and belongs to organization
-            const checkResult = await client.query(
-                'SELECT id FROM businesses WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { notFound: true };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Business not found' });
+                // Soft delete by setting is_active = false
+                await client.query(
+                    'UPDATE businesses SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                    [id]
+                );
+
+                return { success: true };
+            });
+
+            if (deleteResult.notFound) {
+                return sendNotFound(res, 'Business');
             }
 
-            // Soft delete by setting is_active = false
-            await client.query(
-                'UPDATE businesses SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-                [id]
-            );
-
-            client.release();
-            res.json({ success: true, message: 'Business deleted' });
+            sendSuccess(res, { success: true, message: 'Business deleted' });
         } catch (error) {
             console.error('Error deleting business:', error);
             return sendError(res, 'Failed to delete business');
@@ -1617,7 +1610,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/businesses/:id/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
         if (!upload) {
-            return res.status(503).json({ error: 'File upload not available' });
+            return sendError(res, 'File upload not available', 503, 'SERVICE_UNAVAILABLE');
         }
 
         const { id } = req.params;
@@ -1629,33 +1622,111 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (err) {
                 if (err instanceof multer.MulterError) {
                     if (err.code === 'LIMIT_FILE_SIZE') {
-                        return res.status(400).json({ error: 'File too large. Maximum size is 2MB.' });
+                        return sendBadRequest(res, 'File too large. Maximum size is 2MB.');
                     }
                 }
-                return res.status(400).json({ error: err.message });
+                return sendBadRequest(res, err.message);
             }
 
             if (!req.file) {
-                return res.status(400).json({ error: 'No file uploaded' });
+                return sendBadRequest(res, 'No file uploaded');
             }
 
             try {
-                const client = await pool.connect();
+                const uploadResult = await withDbClient(pool, async (client) => {
+                    // Check if business exists
+                    const checkResult = await client.query(
+                        'SELECT logo_url FROM businesses WHERE id = $1 AND organization_id = $2',
+                        [id, req.organizationId]
+                    );
 
-                // Check if business exists
-                const checkResult = await client.query(
+                    if (checkResult.rows.length === 0) {
+                        return { notFound: true };
+                    }
+
+                    // Delete old logo file if exists
+                    if (checkResult.rows[0].logo_url) {
+                        const oldUrl = checkResult.rows[0].logo_url;
+                        // Delete from S3 if it's an S3 URL
+                        if (s3Service && oldUrl.includes('.s3.')) {
+                            try {
+                                const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                                if (oldKey) {
+                                    await s3Service.deleteFile(oldKey);
+                                }
+                            } catch (s3Err) {
+                                logger.warn('Failed to delete old logo from S3:', s3Err);
+                            }
+                        }
+                        // Delete local file if it exists
+                        if (oldUrl.includes('/uploads/logos/')) {
+                            const oldFilename = oldUrl.split('/uploads/logos/')[1];
+                            const oldFilePath = path.join(__dirname, '../../uploads/logos', oldFilename);
+                            if (fs.existsSync(oldFilePath)) {
+                                fs.unlinkSync(oldFilePath);
+                            }
+                        }
+                    }
+
+                    // Upload to S3 or use local storage
+                    let logoUrl;
+                    if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
+                        // Upload to S3
+                        const key = `logos/logo-${req.organizationId}-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+                        logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
+                        // Delete local file after S3 upload
+                        if (fs.existsSync(req.file.path)) {
+                            fs.unlinkSync(req.file.path);
+                        }
+                    } else {
+                        // Fallback to local storage
+                        logoUrl = `/uploads/logos/${req.file.filename}`;
+                    }
+
+                    // Update business with logo URL
+                    await client.query(
+                        'UPDATE businesses SET logo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                        [logoUrl, id]
+                    );
+
+                    return { logoUrl };
+                });
+
+                if (uploadResult.notFound) {
+                    return sendNotFound(res, 'Business');
+                }
+
+                sendSuccess(res, { logo_url: uploadResult.logoUrl });
+            } catch (error) {
+                console.error('Error uploading business logo:', error);
+                return sendError(res, 'Failed to upload logo');
+            }
+        });
+    }));
+
+    /**
+     * DELETE /api/invoices/businesses/:id/logo - Remove business logo
+     */
+    router.delete('/businesses/:id/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            if (isNaN(parseInt(id))) {
+                return next();
+            }
+
+            const deleteResult = await withDbClient(pool, async (client) => {
+                // Get current logo
+                const result = await client.query(
                     'SELECT logo_url FROM businesses WHERE id = $1 AND organization_id = $2',
                     [id, req.organizationId]
                 );
 
-                if (checkResult.rows.length === 0) {
-                    client.release();
-                    return res.status(404).json({ error: 'Business not found' });
+                if (result.rows.length === 0) {
+                    return { notFound: true };
                 }
 
-                // Delete old logo file if exists
-                if (checkResult.rows[0].logo_url) {
-                    const oldUrl = checkResult.rows[0].logo_url;
+                if (result.rows[0].logo_url) {
+                    const oldUrl = result.rows[0].logo_url;
                     // Delete from S3 if it's an S3 URL
                     if (s3Service && oldUrl.includes('.s3.')) {
                         try {
@@ -1677,90 +1748,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     }
                 }
 
-                // Upload to S3 or use local storage
-                let logoUrl;
-                if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
-                    // Upload to S3
-                    const key = `logos/logo-${req.organizationId}-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
-                    logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
-                    // Delete local file after S3 upload
-                    if (fs.existsSync(req.file.path)) {
-                        fs.unlinkSync(req.file.path);
-                    }
-                } else {
-                    // Fallback to local storage
-                    logoUrl = `/uploads/logos/${req.file.filename}`;
-                }
-
-                // Update business with logo URL
+                // Clear logo_url
                 await client.query(
-                    'UPDATE businesses SET logo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-                    [logoUrl, id]
+                    'UPDATE businesses SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+                    [id]
                 );
 
-                client.release();
-                res.json({ logo_url: logoUrl });
-            } catch (error) {
-                console.error('Error uploading business logo:', error);
-                return sendError(res, 'Failed to upload logo');
-            }
-        });
-    }));
+                return { success: true };
+            });
 
-    /**
-     * DELETE /api/invoices/businesses/:id/logo - Remove business logo
-     */
-    router.delete('/businesses/:id/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res, next) => {
-        try {
-            const { id } = req.params;
-            if (isNaN(parseInt(id))) {
-                return next();
+            if (deleteResult.notFound) {
+                return sendNotFound(res, 'Business');
             }
 
-            const client = await pool.connect();
-
-            // Get current logo
-            const result = await client.query(
-                'SELECT logo_url FROM businesses WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            if (result.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Business not found' });
-            }
-
-            if (result.rows[0].logo_url) {
-                const oldUrl = result.rows[0].logo_url;
-                // Delete from S3 if it's an S3 URL
-                if (s3Service && oldUrl.includes('.s3.')) {
-                    try {
-                        const oldKey = oldUrl.split('.amazonaws.com/')[1];
-                        if (oldKey) {
-                            await s3Service.deleteFile(oldKey);
-                        }
-                    } catch (s3Err) {
-                        logger.warn('Failed to delete old logo from S3:', s3Err);
-                    }
-                }
-                // Delete local file if it exists
-                if (oldUrl.includes('/uploads/logos/')) {
-                    const oldFilename = oldUrl.split('/uploads/logos/')[1];
-                    const oldFilePath = path.join(__dirname, '../../uploads/logos', oldFilename);
-                    if (fs.existsSync(oldFilePath)) {
-                        fs.unlinkSync(oldFilePath);
-                    }
-                }
-            }
-
-            // Clear logo_url
-            await client.query(
-                'UPDATE businesses SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-                [id]
-            );
-
-            client.release();
-            res.json({ success: true });
+            sendSuccess(res, { success: true });
         } catch (error) {
             console.error('Error removing business logo:', error);
             return sendError(res, 'Failed to remove logo');
@@ -1776,17 +1777,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/settings', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'SELECT * FROM payment_settings WHERE organization_id = $1',
-                [req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'SELECT * FROM payment_settings WHERE organization_id = $1',
+                    [req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
-                return res.json({
+                return sendSuccess(res, {
                     invoice_prefix: 'INV-',
                     next_invoice_number: 1,
                     default_payment_terms: 30,
@@ -1796,7 +1795,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 });
             }
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error fetching payment settings:', error);
             return sendError(res, 'Failed to fetch payment settings');
@@ -1823,47 +1822,46 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 default_currency
             } = req.body;
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    INSERT INTO payment_settings (
+                        organization_id, invoice_prefix, default_payment_terms, default_notes, default_terms,
+                        default_tax_rate, tax_id, business_name, business_address, business_phone,
+                        business_email, logo_url, default_currency
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    ON CONFLICT (organization_id) DO UPDATE SET
+                        invoice_prefix = COALESCE(EXCLUDED.invoice_prefix, payment_settings.invoice_prefix),
+                        default_payment_terms = COALESCE(EXCLUDED.default_payment_terms, payment_settings.default_payment_terms),
+                        default_notes = EXCLUDED.default_notes,
+                        default_terms = EXCLUDED.default_terms,
+                        default_tax_rate = COALESCE(EXCLUDED.default_tax_rate, payment_settings.default_tax_rate),
+                        tax_id = EXCLUDED.tax_id,
+                        business_name = EXCLUDED.business_name,
+                        business_address = EXCLUDED.business_address,
+                        business_phone = EXCLUDED.business_phone,
+                        business_email = EXCLUDED.business_email,
+                        logo_url = EXCLUDED.logo_url,
+                        default_currency = COALESCE(EXCLUDED.default_currency, payment_settings.default_currency),
+                        updated_at = CURRENT_TIMESTAMP
+                    RETURNING *
+                `, [
+                    req.organizationId,
+                    invoice_prefix || 'INV-',
+                    default_payment_terms || 30,
+                    default_notes || null,
+                    default_terms || null,
+                    default_tax_rate ?? 10,
+                    tax_id || null,
+                    business_name || null,
+                    business_address || null,
+                    business_phone || null,
+                    business_email || null,
+                    logo_url || null,
+                    default_currency || 'USD'
+                ]);
+            });
 
-            const result = await client.query(`
-                INSERT INTO payment_settings (
-                    organization_id, invoice_prefix, default_payment_terms, default_notes, default_terms,
-                    default_tax_rate, tax_id, business_name, business_address, business_phone,
-                    business_email, logo_url, default_currency
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                ON CONFLICT (organization_id) DO UPDATE SET
-                    invoice_prefix = COALESCE(EXCLUDED.invoice_prefix, payment_settings.invoice_prefix),
-                    default_payment_terms = COALESCE(EXCLUDED.default_payment_terms, payment_settings.default_payment_terms),
-                    default_notes = EXCLUDED.default_notes,
-                    default_terms = EXCLUDED.default_terms,
-                    default_tax_rate = COALESCE(EXCLUDED.default_tax_rate, payment_settings.default_tax_rate),
-                    tax_id = EXCLUDED.tax_id,
-                    business_name = EXCLUDED.business_name,
-                    business_address = EXCLUDED.business_address,
-                    business_phone = EXCLUDED.business_phone,
-                    business_email = EXCLUDED.business_email,
-                    logo_url = EXCLUDED.logo_url,
-                    default_currency = COALESCE(EXCLUDED.default_currency, payment_settings.default_currency),
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            `, [
-                req.organizationId,
-                invoice_prefix || 'INV-',
-                default_payment_terms || 30,
-                default_notes || null,
-                default_terms || null,
-                default_tax_rate ?? 10,
-                tax_id || null,
-                business_name || null,
-                business_address || null,
-                business_phone || null,
-                business_email || null,
-                logo_url || null,
-                default_currency || 'USD'
-            ]);
-
-            client.release();
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error updating payment settings:', error);
             return sendError(res, 'Failed to update payment settings');
@@ -1875,7 +1873,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/settings/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         if (!upload) {
-            return res.status(503).json({ error: 'File upload not available. Please install multer: npm install multer' });
+            return sendError(res, 'File upload not available. Please install multer: npm install multer', 503, 'SERVICE_UNAVAILABLE');
         }
 
         // Use multer middleware
@@ -1883,76 +1881,76 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (err) {
                 if (err instanceof multer.MulterError) {
                     if (err.code === 'LIMIT_FILE_SIZE') {
-                        return res.status(400).json({ error: 'File too large. Maximum size is 2MB.' });
+                        return sendBadRequest(res, 'File too large. Maximum size is 2MB.');
                     }
                 }
-                return res.status(400).json({ error: err.message });
+                return sendBadRequest(res, err.message);
             }
 
             if (!req.file) {
-                return res.status(400).json({ error: 'No file uploaded' });
+                return sendBadRequest(res, 'No file uploaded');
             }
 
             try {
-                const client = await pool.connect();
+                const uploadResult = await withDbClient(pool, async (client) => {
+                    // Delete old logo file if exists
+                    const oldSettings = await client.query(
+                        'SELECT logo_url FROM payment_settings WHERE organization_id = $1',
+                        [req.organizationId]
+                    );
 
-                // Delete old logo file if exists
-                const oldSettings = await client.query(
-                    'SELECT logo_url FROM payment_settings WHERE organization_id = $1',
-                    [req.organizationId]
-                );
-
-                if (oldSettings.rows.length > 0 && oldSettings.rows[0].logo_url) {
-                    const oldUrl = oldSettings.rows[0].logo_url;
-                    // Delete from S3 if it's an S3 URL
-                    if (s3Service && oldUrl.includes('.s3.')) {
-                        try {
-                            const oldKey = oldUrl.split('.amazonaws.com/')[1];
-                            if (oldKey) {
-                                await s3Service.deleteFile(oldKey);
+                    if (oldSettings.rows.length > 0 && oldSettings.rows[0].logo_url) {
+                        const oldUrl = oldSettings.rows[0].logo_url;
+                        // Delete from S3 if it's an S3 URL
+                        if (s3Service && oldUrl.includes('.s3.')) {
+                            try {
+                                const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                                if (oldKey) {
+                                    await s3Service.deleteFile(oldKey);
+                                }
+                            } catch (s3Err) {
+                                logger.warn('Failed to delete old logo from S3:', s3Err);
                             }
-                        } catch (s3Err) {
-                            logger.warn('Failed to delete old logo from S3:', s3Err);
+                        }
+                        // Delete local file if it exists
+                        if (oldUrl.includes('/uploads/logos/')) {
+                            const filename = oldUrl.split('/uploads/logos/')[1];
+                            const oldFilePath = path.join(__dirname, '../../uploads/logos', filename);
+                            if (fs.existsSync(oldFilePath)) {
+                                fs.unlinkSync(oldFilePath);
+                            }
                         }
                     }
-                    // Delete local file if it exists
-                    if (oldUrl.includes('/uploads/logos/')) {
-                        const filename = oldUrl.split('/uploads/logos/')[1];
-                        const oldFilePath = path.join(__dirname, '../../uploads/logos', filename);
-                        if (fs.existsSync(oldFilePath)) {
-                            fs.unlinkSync(oldFilePath);
+
+                    // Upload to S3 or use local storage
+                    let logoUrl;
+                    if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
+                        // Upload to S3
+                        const key = `logos/logo-${req.organizationId}-settings-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+                        logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
+                        // Delete local file after S3 upload
+                        if (fs.existsSync(req.file.path)) {
+                            fs.unlinkSync(req.file.path);
                         }
+                    } else {
+                        // Fallback to local storage
+                        logoUrl = `/uploads/logos/${req.file.filename}`;
                     }
-                }
 
-                // Upload to S3 or use local storage
-                let logoUrl;
-                if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
-                    // Upload to S3
-                    const key = `logos/logo-${req.organizationId}-settings-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
-                    logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
-                    // Delete local file after S3 upload
-                    if (fs.existsSync(req.file.path)) {
-                        fs.unlinkSync(req.file.path);
-                    }
-                } else {
-                    // Fallback to local storage
-                    logoUrl = `/uploads/logos/${req.file.filename}`;
-                }
+                    await client.query(`
+                        INSERT INTO payment_settings (organization_id, logo_url)
+                        VALUES ($1, $2)
+                        ON CONFLICT (organization_id) DO UPDATE SET
+                            logo_url = EXCLUDED.logo_url,
+                            updated_at = CURRENT_TIMESTAMP
+                    `, [req.organizationId, logoUrl]);
 
-                await client.query(`
-                    INSERT INTO payment_settings (organization_id, logo_url)
-                    VALUES ($1, $2)
-                    ON CONFLICT (organization_id) DO UPDATE SET
-                        logo_url = EXCLUDED.logo_url,
-                        updated_at = CURRENT_TIMESTAMP
-                `, [req.organizationId, logoUrl]);
+                    return { logoUrl };
+                });
 
-                client.release();
-
-                res.json({
+                sendSuccess(res, {
                     success: true,
-                    logo_url: logoUrl
+                    logo_url: uploadResult.logoUrl
                 });
             } catch (error) {
                 // Clean up uploaded file on error
@@ -1970,46 +1968,45 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.delete('/settings/logo', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
-            const client = await pool.connect();
+            await withDbClient(pool, async (client) => {
+                // Get current logo
+                const result = await client.query(
+                    'SELECT logo_url FROM payment_settings WHERE organization_id = $1',
+                    [req.organizationId]
+                );
 
-            // Get current logo
-            const result = await client.query(
-                'SELECT logo_url FROM payment_settings WHERE organization_id = $1',
-                [req.organizationId]
-            );
-
-            if (result.rows.length > 0 && result.rows[0].logo_url) {
-                const oldUrl = result.rows[0].logo_url;
-                // Delete from S3 if it's an S3 URL
-                if (s3Service && oldUrl.includes('.s3.')) {
-                    try {
-                        const oldKey = oldUrl.split('.amazonaws.com/')[1];
-                        if (oldKey) {
-                            await s3Service.deleteFile(oldKey);
+                if (result.rows.length > 0 && result.rows[0].logo_url) {
+                    const oldUrl = result.rows[0].logo_url;
+                    // Delete from S3 if it's an S3 URL
+                    if (s3Service && oldUrl.includes('.s3.')) {
+                        try {
+                            const oldKey = oldUrl.split('.amazonaws.com/')[1];
+                            if (oldKey) {
+                                await s3Service.deleteFile(oldKey);
+                            }
+                        } catch (s3Err) {
+                            logger.warn('Failed to delete old logo from S3:', s3Err);
                         }
-                    } catch (s3Err) {
-                        logger.warn('Failed to delete old logo from S3:', s3Err);
+                    }
+                    // Delete local file if it exists
+                    if (oldUrl.includes('/uploads/logos/')) {
+                        const filename = oldUrl.split('/uploads/logos/')[1];
+                        const filePath = path.join(__dirname, '../../uploads/logos', filename);
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
                     }
                 }
-                // Delete local file if it exists
-                if (oldUrl.includes('/uploads/logos/')) {
-                    const filename = oldUrl.split('/uploads/logos/')[1];
-                    const filePath = path.join(__dirname, '../../uploads/logos', filename);
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                }
-            }
 
-            // Clear logo_url in settings
-            await client.query(`
-                UPDATE payment_settings 
-                SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE organization_id = $1
-            `, [req.organizationId]);
+                // Clear logo_url in settings
+                await client.query(`
+                    UPDATE payment_settings 
+                    SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP
+                    WHERE organization_id = $1
+                `, [req.organizationId]);
+            });
 
-            client.release();
-            res.json({ success: true });
+            sendSuccess(res, { success: true });
         } catch (error) {
             console.error('Error removing logo:', error);
             return sendError(res, 'Failed to remove logo');
@@ -2025,7 +2022,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/webhook/stripe', express.raw({ type: 'application/json' }), asyncHandler(async (req, res) => {
         if (!stripe) {
-            return res.status(400).json({ error: 'Stripe not configured' });
+            return sendBadRequest(res, 'Stripe not configured');
         }
 
         const sig = req.headers['stripe-signature'];
@@ -2041,89 +2038,89 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
         } catch (err) {
             console.error('Webhook signature verification failed:', err.message);
-            return res.status(400).send(`Webhook Error: ${err.message}`);
+            return sendBadRequest(res, `Webhook Error: ${err.message}`);
         }
 
-        const client = await pool.connect();
-
         try {
-            logger.info(`Processing Stripe webhook event: ${event.type}`);
+            const webhookResult = await withDbClient(pool, async (client) => {
+                logger.info(`Processing Stripe webhook event: ${event.type}`);
 
-            switch (event.type) {
-                // Checkout Session completed - customer finished the hosted checkout
-                case 'checkout.session.completed':
-                    const session = event.data.object;
-                    const invoiceId = session.metadata?.invoice_id;
+                switch (event.type) {
+                    // Checkout Session completed - customer finished the hosted checkout
+                    case 'checkout.session.completed':
+                        const session = event.data.object;
+                        const invoiceId = session.metadata?.invoice_id;
 
-                    logger.info(`Checkout session completed for invoice ${invoiceId}`, {
-                        sessionId: session.id,
-                        paymentStatus: session.payment_status,
-                        amountTotal: session.amount_total
-                    });
+                        logger.info(`Checkout session completed for invoice ${invoiceId}`, {
+                            sessionId: session.id,
+                            paymentStatus: session.payment_status,
+                            amountTotal: session.amount_total
+                        });
 
-                    // Only process if payment was successful
-                    if (invoiceId && session.payment_status === 'paid') {
-                        // Record payment
-                        await client.query(`
-                            INSERT INTO payments (
-                                organization_id, invoice_id, amount, currency, payment_method, status,
-                                stripe_payment_intent_id, paid_at
-                            ) VALUES (
-                                $1, $2, $3, $4, 'stripe', 'succeeded', $5, CURRENT_TIMESTAMP
-                            )
-                        `, [
-                            session.metadata.organization_id,
-                            invoiceId,
-                            session.amount_total / 100,
-                            (session.currency || 'usd').toUpperCase(),
-                            session.payment_intent || session.id
-                        ]);
-
-                        // Update invoice
-                        const invoiceResult = await client.query(
-                            'SELECT total, amount_paid FROM invoices WHERE id = $1',
-                            [invoiceId]
-                        );
-
-                        if (invoiceResult.rows.length > 0) {
-                            const invoice = invoiceResult.rows[0];
-                            const newAmountPaid = parseFloat(invoice.amount_paid) + (session.amount_total / 100);
-                            const newAmountDue = parseFloat(invoice.total) - newAmountPaid;
-                            const newStatus = newAmountDue <= 0 ? 'paid' : 'partial';
-
+                        // Only process if payment was successful
+                        if (invoiceId && session.payment_status === 'paid') {
+                            // Record payment
                             await client.query(`
-                                UPDATE invoices SET
-                                    amount_paid = $1,
-                                    amount_due = $2,
-                                    status = $3::VARCHAR(20),
-                                    paid_at = CASE WHEN $3::VARCHAR(20) = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
-                                    updated_at = CURRENT_TIMESTAMP
-                                WHERE id = $4
-                            `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, invoiceId]);
+                                INSERT INTO payments (
+                                    organization_id, invoice_id, amount, currency, payment_method, status,
+                                    stripe_payment_intent_id, paid_at
+                                ) VALUES (
+                                    $1, $2, $3, $4, 'stripe', 'succeeded', $5, CURRENT_TIMESTAMP
+                                )
+                            `, [
+                                session.metadata.organization_id,
+                                invoiceId,
+                                session.amount_total / 100,
+                                (session.currency || 'usd').toUpperCase(),
+                                session.payment_intent || session.id
+                            ]);
 
-                            logger.info(`Invoice ${invoiceId} updated: status=${newStatus}, amountPaid=${newAmountPaid}`);
+                            // Update invoice
+                            const invoiceResult = await client.query(
+                                'SELECT total, amount_paid FROM invoices WHERE id = $1',
+                                [invoiceId]
+                            );
+
+                            if (invoiceResult.rows.length > 0) {
+                                const invoice = invoiceResult.rows[0];
+                                const newAmountPaid = parseFloat(invoice.amount_paid) + (session.amount_total / 100);
+                                const newAmountDue = parseFloat(invoice.total) - newAmountPaid;
+                                const newStatus = newAmountDue <= 0 ? 'paid' : 'partial';
+
+                                await client.query(`
+                                    UPDATE invoices SET
+                                        amount_paid = $1,
+                                        amount_due = $2,
+                                        status = $3::VARCHAR(20),
+                                        paid_at = CASE WHEN $3::VARCHAR(20) = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    WHERE id = $4
+                                `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, invoiceId]);
+
+                                logger.info(`Invoice ${invoiceId} updated: status=${newStatus}, amountPaid=${newAmountPaid}`);
+                            }
                         }
-                    }
-                    break;
+                        break;
 
-                // Checkout session expired - customer abandoned checkout (optional handling)
-                case 'checkout.session.expired':
-                    const expiredSession = event.data.object;
-                    logger.info(`Checkout session expired`, {
-                        sessionId: expiredSession.id,
-                        invoiceId: expiredSession.metadata?.invoice_id
-                    });
-                    // No action needed - invoice remains unpaid
-                    break;
+                    // Checkout session expired - customer abandoned checkout (optional handling)
+                    case 'checkout.session.expired':
+                        const expiredSession = event.data.object;
+                        logger.info(`Checkout session expired`, {
+                            sessionId: expiredSession.id,
+                            invoiceId: expiredSession.metadata?.invoice_id
+                        });
+                        // No action needed - invoice remains unpaid
+                        break;
 
-                default:
-                    logger.debug(`Unhandled Stripe event type: ${event.type}`);
-            }
+                    default:
+                        logger.debug(`Unhandled Stripe event type: ${event.type}`);
+                }
 
-            client.release();
-            res.json({ received: true });
+                return { received: true };
+            });
+
+            sendSuccess(res, webhookResult);
         } catch (error) {
-            client.release();
             console.error('Error processing Stripe webhook:', error);
             return sendError(res, 'Webhook processing failed');
         }

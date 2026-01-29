@@ -5,7 +5,7 @@ import { ContextMenu } from './ContextMenu';
 import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
 import { updateListPosition, updateList, deleteList } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuthState } from '../../contexts/AuthContext';
 
 import Spinner from '../../components/ui/Spinner';
 import { DraggableNoteCard } from './DraggableNoteCard';
@@ -98,7 +98,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   updateCategory
 }) => {
   const { theme } = useTheme();
-  const { token } = useAuth();
+  const { token } = useAuthState();
   const { state: sidebarState, isMobile } = useSidebar();
   
   // Calculate sidebar width for zoom controls positioning

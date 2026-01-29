@@ -10,6 +10,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 /**
  * Create calendars routes with injected dependencies
@@ -41,9 +42,7 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         SELECT c.*,
                u.name as assigned_to_name,
                (SELECT COUNT(*) FROM bookings WHERE calendar_id = c.id AND status = 'confirmed') as upcoming_bookings
@@ -51,13 +50,11 @@ module.exports = (pool, authenticateJWT) => {
         LEFT JOIN users u ON c.assigned_to = u.id
         WHERE c.organization_id = $1
         ORDER BY c.created_at DESC
-      `, [req.organizationId]);
-
-            client.release();
+      `, [req.organizationId]));
             res.json({ calendars: result.rows });
         } catch (error) {
             console.error('Error fetching calendars:', error);
-            res.status(500).json({ error: 'Failed to fetch calendars' });
+            return sendError(res, 'Failed to fetch calendars');
         }
     });
 
@@ -68,10 +65,9 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            // Get calendar
-            const calendarResult = await client.query(`
+            const data = await withDbClient(pool, async (client) => {
+                // Get calendar
+                const calendarResult = await client.query(`
         SELECT c.*,
                u.name as assigned_to_name
         FROM calendars c
@@ -79,35 +75,43 @@ module.exports = (pool, authenticateJWT) => {
         WHERE c.id = $1 AND c.organization_id = $2
       `, [id, req.organizationId]);
 
-            if (calendarResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
+                if (calendarResult.rows.length === 0) {
+                    return { calendar: null, availability: [], overrides: [] };
+                }
 
-            // Get availability windows
-            const availabilityResult = await client.query(`
+                // Get availability windows
+                const availabilityResult = await client.query(`
         SELECT * FROM availability_windows
         WHERE calendar_id = $1
         ORDER BY day_of_week, start_time
       `, [id]);
 
-            // Get date overrides
-            const overridesResult = await client.query(`
+                // Get date overrides
+                const overridesResult = await client.query(`
         SELECT * FROM calendar_date_overrides
         WHERE calendar_id = $1 AND override_date >= CURRENT_DATE
         ORDER BY override_date
       `, [id]);
 
-            client.release();
+                return {
+                    calendar: calendarResult.rows[0],
+                    availability: availabilityResult.rows,
+                    overrides: overridesResult.rows,
+                };
+            });
 
-            const calendar = calendarResult.rows[0];
-            calendar.availability_windows = availabilityResult.rows;
-            calendar.date_overrides = overridesResult.rows;
+            if (!data.calendar) {
+                return res.status(404).json({ error: 'Calendar not found' });
+            }
+
+            const calendar = data.calendar;
+            calendar.availability_windows = data.availability;
+            calendar.date_overrides = data.overrides;
 
             res.json(calendar);
         } catch (error) {
             console.error('Error fetching calendar:', error);
-            res.status(500).json({ error: 'Failed to fetch calendar' });
+            return sendError(res, 'Failed to fetch calendar');
         }
     });
 
@@ -140,11 +144,7 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             const slug = generateSlug(name);
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const calendar = await withTransaction(pool, async (client) => {
                 // Create calendar
                 const calendarResult = await client.query(`
           INSERT INTO calendars (
@@ -174,7 +174,7 @@ module.exports = (pool, authenticateJWT) => {
                     req.user.id
                 ]);
 
-                const calendar = calendarResult.rows[0];
+                const createdCalendar = calendarResult.rows[0];
 
                 // Create default availability windows if provided
                 if (availability_windows && Array.isArray(availability_windows)) {
@@ -183,7 +183,7 @@ module.exports = (pool, authenticateJWT) => {
               INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time, is_active)
               VALUES ($1, $2, $3, $4, $5)
             `, [
-                            calendar.id,
+                            createdCalendar.id,
                             window.day_of_week,
                             window.start_time,
                             window.end_time,
@@ -196,22 +196,16 @@ module.exports = (pool, authenticateJWT) => {
                         await client.query(`
               INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time)
               VALUES ($1, $2, '09:00', '17:00')
-            `, [calendar.id, day]);
+            `, [createdCalendar.id, day]);
                     }
                 }
+                return createdCalendar;
+            });
 
-                await client.query('COMMIT');
-                client.release();
-
-                res.status(201).json(calendar);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+            res.status(201).json(calendar);
         } catch (error) {
             console.error('Error creating calendar:', error);
-            res.status(500).json({ error: 'Failed to create calendar' });
+            return sendError(res, 'Failed to create calendar');
         }
     });
 
@@ -240,9 +234,7 @@ module.exports = (pool, authenticateJWT) => {
                 is_active
             } = req.body;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         UPDATE calendars SET
           name = COALESCE($1, name),
           description = COALESCE($2, description),
@@ -280,9 +272,7 @@ module.exports = (pool, authenticateJWT) => {
                 is_active,
                 id,
                 req.organizationId
-            ]);
-
-            client.release();
+            ]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Calendar not found' });
@@ -291,7 +281,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json(result.rows[0]);
         } catch (error) {
             console.error('Error updating calendar:', error);
-            res.status(500).json({ error: 'Failed to update calendar' });
+            return sendError(res, 'Failed to update calendar');
         }
     });
 
@@ -302,37 +292,38 @@ module.exports = (pool, authenticateJWT) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            // Check for upcoming bookings
-            const bookingsCheck = await client.query(
-                `SELECT COUNT(*) FROM bookings 
+            const data = await withDbClient(pool, async (client) => {
+                // Check for upcoming bookings
+                const bookingsCheck = await client.query(
+                    `SELECT COUNT(*) FROM bookings 
          WHERE calendar_id = $1 AND status = 'confirmed' AND start_time > NOW()`,
-                [id]
-            );
+                    [id]
+                );
 
-            if (parseInt(bookingsCheck.rows[0].count) > 0) {
-                client.release();
-                return res.status(400).json({
-                    error: 'Cannot delete calendar with upcoming bookings. Cancel bookings first.'
-                });
+                if (parseInt(bookingsCheck.rows[0].count) > 0) {
+                    return { error: 'Cannot delete calendar with upcoming bookings. Cancel bookings first.', result: null };
+                }
+
+                const deleteResult = await client.query(
+                    'DELETE FROM calendars WHERE id = $1 AND organization_id = $2 RETURNING id',
+                    [id, req.organizationId]
+                );
+
+                return { error: null, result: deleteResult };
+            });
+
+            if (data.error) {
+                return res.status(400).json({ error: data.error });
             }
 
-            const result = await client.query(
-                'DELETE FROM calendars WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            );
-
-            client.release();
-
-            if (result.rows.length === 0) {
+            if (data.result.rows.length === 0) {
                 return res.status(404).json({ error: 'Calendar not found' });
             }
 
             res.json({ message: 'Calendar deleted successfully' });
         } catch (error) {
             console.error('Error deleting calendar:', error);
-            res.status(500).json({ error: 'Failed to delete calendar' });
+            return sendError(res, 'Failed to delete calendar');
         }
     });
 
@@ -353,21 +344,16 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).json({ error: 'availability_windows must be an array' });
             }
 
-            const client = await pool.connect();
+            const data = await withTransaction(pool, async (client) => {
+                // Verify calendar exists
+                const calendarCheck = await client.query(
+                    'SELECT id FROM calendars WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify calendar exists
-            const calendarCheck = await client.query(
-                'SELECT id FROM calendars WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
-
-            if (calendarCheck.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
-
-            try {
-                await client.query('BEGIN');
+                if (calendarCheck.rows.length === 0) {
+                    return { exists: false, windows: [] };
+                }
 
                 // Delete existing windows
                 await client.query('DELETE FROM availability_windows WHERE calendar_id = $1', [id]);
@@ -385,25 +371,23 @@ module.exports = (pool, authenticateJWT) => {
                         window.is_active !== false
                     ]);
                 }
-
-                await client.query('COMMIT');
-
                 // Fetch updated windows
                 const result = await client.query(
                     'SELECT * FROM availability_windows WHERE calendar_id = $1 ORDER BY day_of_week, start_time',
                     [id]
                 );
 
-                client.release();
-                res.json({ availability_windows: result.rows });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { exists: true, windows: result.rows };
+            });
+
+            if (!data.exists) {
+                return res.status(404).json({ error: 'Calendar not found' });
             }
+
+            res.json({ availability_windows: data.windows });
         } catch (error) {
             console.error('Error updating availability:', error);
-            res.status(500).json({ error: 'Failed to update availability' });
+            return sendError(res, 'Failed to update availability');
         }
     });
 
@@ -420,21 +404,19 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).json({ error: 'override_date is required' });
             }
 
-            const client = await pool.connect();
+            const data = await withDbClient(pool, async (client) => {
+                // Verify calendar exists
+                const calendarCheck = await client.query(
+                    'SELECT id FROM calendars WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Verify calendar exists
-            const calendarCheck = await client.query(
-                'SELECT id FROM calendars WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (calendarCheck.rows.length === 0) {
+                    return { exists: false, result: null };
+                }
 
-            if (calendarCheck.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Calendar not found' });
-            }
-
-            // Upsert override
-            const result = await client.query(`
+                // Upsert override
+                const result = await client.query(`
         INSERT INTO calendar_date_overrides (calendar_id, override_date, is_available, start_time, end_time, reason)
         VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (calendar_id, override_date) 
@@ -442,11 +424,17 @@ module.exports = (pool, authenticateJWT) => {
         RETURNING *
       `, [id, override_date, is_available || false, start_time, end_time, reason]);
 
-            client.release();
-            res.json(result.rows[0]);
+                return { exists: true, result };
+            });
+
+            if (!data.exists) {
+                return res.status(404).json({ error: 'Calendar not found' });
+            }
+
+            res.json(data.result.rows[0]);
         } catch (error) {
             console.error('Error creating date override:', error);
-            res.status(500).json({ error: 'Failed to create date override' });
+            return sendError(res, 'Failed to create date override');
         }
     });
 
@@ -458,15 +446,11 @@ module.exports = (pool, authenticateJWT) => {
         try {
             const { id, overrideId } = req.params;
 
-            const client = await pool.connect();
-
-            const result = await client.query(`
+            const result = await withDbClient(pool, async (client) => client.query(`
         DELETE FROM calendar_date_overrides 
         WHERE id = $1 AND calendar_id = $2
         RETURNING id
-      `, [overrideId, id]);
-
-            client.release();
+      `, [overrideId, id]));
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Date override not found' });
@@ -475,7 +459,7 @@ module.exports = (pool, authenticateJWT) => {
             res.json({ message: 'Date override removed' });
         } catch (error) {
             console.error('Error deleting date override:', error);
-            res.status(500).json({ error: 'Failed to delete date override' });
+            return sendError(res, 'Failed to delete date override');
         }
     });
 

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Navigation from './Navigation';
 import Footer from './Footer';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuthState } from '../contexts/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ const useIsDesktopCanvas = () => {
 };
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuthState();
   const hideFooter = useIsDesktopCanvas();
 
   return (

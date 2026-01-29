@@ -6,9 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const smsService = require('../services/smsService');
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
+const { sendError } = require('../utils/response');
 
 /**
  * Create SMS templates routes with injected dependencies
@@ -27,9 +26,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { category, is_active, search } = req.query;
 
     try {
-      const client = await pool.connect();
-
-      let query = `
+      const result = await withDbClient(pool, async (client) => {
+        let query = `
         SELECT 
           st.*,
           u.name as created_by_name
@@ -37,31 +35,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         LEFT JOIN users u ON st.created_by = u.id
         WHERE st.organization_id = $1
       `;
-      const params = [req.organizationId];
-      let paramIndex = 2;
+        const params = [req.organizationId];
+        let paramIndex = 2;
 
-      if (category) {
-        query += ` AND st.category = $${paramIndex}`;
-        params.push(category);
-        paramIndex++;
-      }
+        if (category) {
+          query += ` AND st.category = $${paramIndex}`;
+          params.push(category);
+          paramIndex++;
+        }
 
-      if (is_active !== undefined) {
-        query += ` AND st.is_active = $${paramIndex}`;
-        params.push(is_active === 'true');
-        paramIndex++;
-      }
+        if (is_active !== undefined) {
+          query += ` AND st.is_active = $${paramIndex}`;
+          params.push(is_active === 'true');
+          paramIndex++;
+        }
 
-      if (search) {
-        query += ` AND (st.name ILIKE $${paramIndex} OR st.message ILIKE $${paramIndex})`;
-        params.push(`%${search}%`);
-        paramIndex++;
-      }
+        if (search) {
+          query += ` AND (st.name ILIKE $${paramIndex} OR st.message ILIKE $${paramIndex})`;
+          params.push(`%${search}%`);
+          paramIndex++;
+        }
 
-      query += ' ORDER BY st.updated_at DESC';
+        query += ' ORDER BY st.updated_at DESC';
 
-      const result = await client.query(query, params);
-      client.release();
+        return client.query(query, params);
+      });
 
       res.json({
         templates: result.rows,
@@ -69,7 +67,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       });
     } catch (error) {
       console.error('Error fetching SMS templates:', error);
-      res.status(500).json({ error: 'Failed to fetch SMS templates' });
+      return sendError(res, 'Failed to fetch SMS templates');
     }
   });
 
@@ -79,23 +77,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
    */
   router.get('/categories/list', authenticateJWT, requireOrganization, async (req, res) => {
     try {
-      const client = await pool.connect();
-      const result = await client.query(
+      const result = await withDbClient(pool, async (client) => client.query(
         `SELECT DISTINCT category, COUNT(*) as count
          FROM sms_templates 
          WHERE organization_id = $1
          GROUP BY category
          ORDER BY category`,
         [req.organizationId]
-      );
-      client.release();
+      ));
 
       res.json({
         categories: result.rows,
       });
     } catch (error) {
       console.error('Error fetching template categories:', error);
-      res.status(500).json({ error: 'Failed to fetch categories' });
+      return sendError(res, 'Failed to fetch categories');
     }
   });
 
@@ -107,8 +103,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { id } = req.params;
 
     try {
-      const client = await pool.connect();
-      const result = await client.query(
+      const result = await withDbClient(pool, async (client) => client.query(
         `SELECT 
           st.*,
           u.name as created_by_name
@@ -116,8 +111,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         LEFT JOIN users u ON st.created_by = u.id
         WHERE st.id = $1 AND st.organization_id = $2`,
         [id, req.organizationId]
-      );
-      client.release();
+      ));
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'SMS template not found' });
@@ -126,7 +120,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       res.json(result.rows[0]);
     } catch (error) {
       console.error('Error fetching SMS template:', error);
-      res.status(500).json({ error: 'Failed to fetch SMS template' });
+      return sendError(res, 'Failed to fetch SMS template');
     }
   });
 
@@ -153,8 +147,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       // Get message info
       const messageInfo = smsService.getMessageInfo(message);
 
-      const client = await pool.connect();
-      const result = await client.query(
+      const result = await withDbClient(pool, async (client) => client.query(
         `INSERT INTO sms_templates 
           (organization_id, name, message, variables, category, is_active, created_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -168,8 +161,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           is_active !== false,
           userId,
         ]
-      );
-      client.release();
+      ));
 
       res.status(201).json({
         ...result.rows[0],
@@ -177,7 +169,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       });
     } catch (error) {
       console.error('Error creating SMS template:', error);
-      res.status(500).json({ error: 'Failed to create SMS template' });
+      return sendError(res, 'Failed to create SMS template');
     }
   });
 
@@ -190,58 +182,62 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { name, message, category, is_active } = req.body;
 
     try {
-      const client = await pool.connect();
+      const data = await withDbClient(pool, async (client) => {
+        // Check template exists and belongs to org
+        const existing = await client.query(
+          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
 
-      // Check template exists and belongs to org
-      const existing = await client.query(
-        'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
+        if (existing.rows.length === 0) {
+          return { error: 'SMS template not found', status: 404 };
+        }
 
-      if (existing.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'SMS template not found' });
+        const template = existing.rows[0];
+
+        // Build update values
+        const finalName = name !== undefined ? name : template.name;
+        const finalMessage = message !== undefined ? message : template.message;
+        const finalCategory = category !== undefined ? category : template.category;
+        const finalIsActive = is_active !== undefined ? is_active : template.is_active;
+
+        // Re-extract variables
+        const variables = smsService.extractVariables(finalMessage);
+        const uniqueVariables = [...new Set(variables)];
+
+        const result = await client.query(
+          `UPDATE sms_templates 
+           SET name = $1, message = $2, variables = $3, category = $4, is_active = $5, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $6 AND organization_id = $7
+           RETURNING *`,
+          [
+            finalName,
+            finalMessage,
+            JSON.stringify(uniqueVariables),
+            finalCategory,
+            finalIsActive,
+            id,
+            req.organizationId,
+          ]
+        );
+
+        // Get message info
+        const messageInfo = smsService.getMessageInfo(finalMessage);
+
+        return { error: null, status: 200, result, messageInfo };
+      });
+
+      if (data.error) {
+        return res.status(data.status).json({ error: data.error });
       }
 
-      const template = existing.rows[0];
-
-      // Build update values
-      const finalName = name !== undefined ? name : template.name;
-      const finalMessage = message !== undefined ? message : template.message;
-      const finalCategory = category !== undefined ? category : template.category;
-      const finalIsActive = is_active !== undefined ? is_active : template.is_active;
-
-      // Re-extract variables
-      const variables = smsService.extractVariables(finalMessage);
-      const uniqueVariables = [...new Set(variables)];
-
-      const result = await client.query(
-        `UPDATE sms_templates 
-         SET name = $1, message = $2, variables = $3, category = $4, is_active = $5, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $6 AND organization_id = $7
-         RETURNING *`,
-        [
-          finalName,
-          finalMessage,
-          JSON.stringify(uniqueVariables),
-          finalCategory,
-          finalIsActive,
-          id,
-          req.organizationId,
-        ]
-      );
-      client.release();
-
-      // Get message info
-      const messageInfo = smsService.getMessageInfo(finalMessage);
-
       res.json({
-        ...result.rows[0],
-        message_info: messageInfo,
+        ...data.result.rows[0],
+        message_info: data.messageInfo,
       });
     } catch (error) {
       console.error('Error updating SMS template:', error);
-      res.status(500).json({ error: 'Failed to update SMS template' });
+      return sendError(res, 'Failed to update SMS template');
     }
   });
 
@@ -253,21 +249,27 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { id } = req.params;
 
     try {
-      const client = await pool.connect();
-      const result = await client.query(
-        'DELETE FROM sms_templates WHERE id = $1 AND organization_id = $2 RETURNING id',
-        [id, req.organizationId]
-      );
-      client.release();
+      const data = await withDbClient(pool, async (client) => {
+        const result = await client.query(
+          'DELETE FROM sms_templates WHERE id = $1 AND organization_id = $2 RETURNING id',
+          [id, req.organizationId]
+        );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'SMS template not found' });
+        if (result.rows.length === 0) {
+          return { error: 'SMS template not found', status: 404 };
+        }
+
+        return { error: null, status: 200, result };
+      });
+
+      if (data.error) {
+        return res.status(data.status).json({ error: data.error });
       }
 
-      res.json({ success: true, deleted_id: result.rows[0].id });
+      res.json({ success: true, deleted_id: data.result.rows[0].id });
     } catch (error) {
       console.error('Error deleting SMS template:', error);
-      res.status(500).json({ error: 'Failed to delete SMS template' });
+      return sendError(res, 'Failed to delete SMS template');
     }
   });
 
@@ -284,12 +286,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     }
 
     try {
-      const client = await pool.connect();
-      const result = await client.query(
+      const result = await withDbClient(pool, async (client) => client.query(
         'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
         [id, req.organizationId]
-      );
-      client.release();
+      ));
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'SMS template not found' });
@@ -325,7 +325,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       }
     } catch (error) {
       console.error('Error sending test SMS:', error);
-      res.status(500).json({ error: 'Failed to send test SMS' });
+      return sendError(res, 'Failed to send test SMS');
     }
   });
 
@@ -338,43 +338,47 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const userId = req.user?.id;
 
     try {
-      const client = await pool.connect();
+      const data = await withDbClient(pool, async (client) => {
+        // Get the original template
+        const original = await client.query(
+          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+          [id, req.organizationId]
+        );
 
-      // Get the original template
-      const original = await client.query(
-        'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
-        [id, req.organizationId]
-      );
+        if (original.rows.length === 0) {
+          return { error: 'SMS template not found', status: 404 };
+        }
 
-      if (original.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'SMS template not found' });
+        const template = original.rows[0];
+
+        // Create duplicate with "(Copy)" suffix
+        const result = await client.query(
+          `INSERT INTO sms_templates 
+            (organization_id, name, message, variables, category, is_active, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING *`,
+          [
+            req.organizationId,
+            `${template.name} (Copy)`,
+            template.message,
+            JSON.stringify(template.variables),
+            template.category,
+            false, // Start as inactive
+            userId,
+          ]
+        );
+
+        return { error: null, status: 201, result };
+      });
+
+      if (data.error) {
+        return res.status(data.status).json({ error: data.error });
       }
 
-      const template = original.rows[0];
-
-      // Create duplicate with "(Copy)" suffix
-      const result = await client.query(
-        `INSERT INTO sms_templates 
-          (organization_id, name, message, variables, category, is_active, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *`,
-        [
-          req.organizationId,
-          `${template.name} (Copy)`,
-          template.message,
-          JSON.stringify(template.variables),
-          template.category,
-          false, // Start as inactive
-          userId,
-        ]
-      );
-      client.release();
-
-      res.status(201).json(result.rows[0]);
+      res.status(201).json(data.result.rows[0]);
     } catch (error) {
       console.error('Error duplicating SMS template:', error);
-      res.status(500).json({ error: 'Failed to duplicate SMS template' });
+      return sendError(res, 'Failed to duplicate SMS template');
     }
   });
 
@@ -402,117 +406,115 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     }
 
     try {
-      const client = await pool.connect();
-
-      // Get contact
-      const contactResult = await client.query(
-        'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
-        [contact_id, req.organizationId]
-      );
-
-      if (contactResult.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'Contact not found' });
-      }
-
-      const contact = contactResult.rows[0];
-
-      if (!contact.phone) {
-        client.release();
-        return res.status(400).json({ error: 'Contact does not have a phone number' });
-      }
-
-      let message, templateName, templateId = null;
-
-      if (template_id) {
-        // Get template
-        const templateResult = await client.query(
-          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
-          [template_id, req.organizationId]
+      const data = await withDbClient(pool, async (client) => {
+        // Get contact
+        const contactResult = await client.query(
+          'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
+          [contact_id, req.organizationId]
         );
 
-        if (templateResult.rows.length === 0) {
-          client.release();
-          return res.status(404).json({ error: 'SMS template not found' });
+        if (contactResult.rows.length === 0) {
+          return { status: 404, payload: { error: 'Contact not found' } };
         }
 
-        const template = templateResult.rows[0];
-        templateId = template.id;
-        templateName = template.name;
+        const contact = contactResult.rows[0];
 
-        // Prepare SMS content with variable substitution
-        const content = smsService.prepareSmsContent(template, contact);
-        message = content.message;
-      } else {
-        // Use custom message with variable substitution
-        const contactData = {
-          first_name: contact.first_name || '',
-          last_name: contact.last_name || '',
-          full_name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'there',
-          email: contact.email || '',
-          phone: contact.phone || '',
-          company: contact.company || '',
-          ...contact.custom_fields,
-        };
+        if (!contact.phone) {
+          return { status: 400, payload: { error: 'Contact does not have a phone number' } };
+        }
 
-        message = smsService.replaceVariables(customMessage, contactData);
-      }
+        let message, templateName, templateId = null;
 
-      // Get message info
-      const messageInfo = smsService.getMessageInfo(message);
+        if (template_id) {
+          // Get template
+          const templateResult = await client.query(
+            'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+            [template_id, req.organizationId]
+          );
 
-      // Send SMS
-      const sendResult = await smsService.sendSms({
-        to: contact.phone,
-        message,
-      });
+          if (templateResult.rows.length === 0) {
+            return { status: 404, payload: { error: 'SMS template not found' } };
+          }
 
-      if (sendResult.success || sendResult.simulated) {
-        // Log to sms_logs
-        await client.query(
-          `INSERT INTO sms_logs 
-            (organization_id, contact_id, template_id, to_phone, from_phone, message, direction, status, external_id, segments)
-           VALUES ($1, $2, $3, $4, $5, $6, 'outbound', $7, $8, $9)`,
-          [
-            req.organizationId,
-            contact.id,
-            templateId,
-            smsService.normalizePhoneNumber(contact.phone),
-            process.env.TWILIO_PHONE_NUMBER || null,
-            message,
-            sendResult.success ? 'sent' : 'queued',
-            sendResult.id || null,
-            messageInfo.segments,
-          ]
-        );
+          const template = templateResult.rows[0];
+          templateId = template.id;
+          templateName = template.name;
 
-        // Log activity
-        await client.query(
-          `INSERT INTO contact_activities (organization_id, contact_id, type, description, created_by)
-           VALUES ($1, $2, 'sms', $3, $4)`,
-          [
-            req.organizationId,
-            contact.id,
-            templateName
-              ? `Sent SMS using template "${templateName}"`
-              : `Sent SMS message`,
-            userId,
-          ]
-        );
+          // Prepare SMS content with variable substitution
+          const content = smsService.prepareSmsContent(template, contact);
+          message = content.message;
+        } else {
+          // Use custom message with variable substitution
+          const contactData = {
+            first_name: contact.first_name || '',
+            last_name: contact.last_name || '',
+            full_name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'there',
+            email: contact.email || '',
+            phone: contact.phone || '',
+            company: contact.company || '',
+            ...contact.custom_fields,
+          };
 
-        client.release();
+          message = smsService.replaceVariables(customMessage, contactData);
+        }
 
-        res.json({
-          success: true,
-          simulated: sendResult.simulated || false,
-          message: sendResult.simulated
-            ? 'SMS service not configured - SMS would have been sent'
-            : 'SMS sent successfully',
-          sms_id: sendResult.id,
-          status: sendResult.status,
-          segments: messageInfo.segments,
+        // Get message info
+        const messageInfo = smsService.getMessageInfo(message);
+
+        // Send SMS
+        const sendResult = await smsService.sendSms({
+          to: contact.phone,
+          message,
         });
-      } else {
+
+        if (sendResult.success || sendResult.simulated) {
+          // Log to sms_logs
+          await client.query(
+            `INSERT INTO sms_logs 
+              (organization_id, contact_id, template_id, to_phone, from_phone, message, direction, status, external_id, segments)
+             VALUES ($1, $2, $3, $4, $5, $6, 'outbound', $7, $8, $9)`,
+            [
+              req.organizationId,
+              contact.id,
+              templateId,
+              smsService.normalizePhoneNumber(contact.phone),
+              process.env.TWILIO_PHONE_NUMBER || null,
+              message,
+              sendResult.success ? 'sent' : 'queued',
+              sendResult.id || null,
+              messageInfo.segments,
+            ]
+          );
+
+          // Log activity
+          await client.query(
+            `INSERT INTO contact_activities (organization_id, contact_id, type, description, created_by)
+             VALUES ($1, $2, 'sms', $3, $4)`,
+            [
+              req.organizationId,
+              contact.id,
+              templateName
+                ? `Sent SMS using template "${templateName}"`
+                : `Sent SMS message`,
+              userId,
+            ]
+          );
+
+          return {
+            status: 200,
+            payload: {
+              success: true,
+              simulated: sendResult.simulated || false,
+              message: sendResult.simulated
+                ? 'SMS service not configured - SMS would have been sent'
+                : 'SMS sent successfully',
+              sms_id: sendResult.id,
+              status: sendResult.status,
+              segments: messageInfo.segments,
+            },
+          };
+        }
+
         // Log failed attempt
         await client.query(
           `INSERT INTO sms_logs 
@@ -529,15 +531,19 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           ]
         );
 
-        client.release();
-        res.status(500).json({
-          success: false,
-          error: sendResult.error,
-        });
-      }
+        return {
+          status: 500,
+          payload: {
+            success: false,
+            error: sendResult.error,
+          },
+        };
+      });
+
+      return res.status(data.status).json(data.payload);
     } catch (error) {
       console.error('Error sending SMS to contact:', error);
-      res.status(500).json({ error: 'Failed to send SMS' });
+      return sendError(res, 'Failed to send SMS');
     }
   });
 
@@ -587,38 +593,36 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         return res.status(400).send('MessageSid required');
       }
 
-      const client = await pool.connect();
+      await withDbClient(pool, async (client) => {
+        // Update SMS log status
+        const statusMap = {
+          'queued': 'queued',
+          'sending': 'sending',
+          'sent': 'sent',
+          'delivered': 'delivered',
+          'undelivered': 'undelivered',
+          'failed': 'failed',
+        };
 
-      // Update SMS log status
-      const statusMap = {
-        'queued': 'queued',
-        'sending': 'sending',
-        'sent': 'sent',
-        'delivered': 'delivered',
-        'undelivered': 'undelivered',
-        'failed': 'failed',
-      };
+        const dbStatus = statusMap[MessageStatus] || MessageStatus;
 
-      const dbStatus = statusMap[MessageStatus] || MessageStatus;
+        const updateQuery = `
+          UPDATE sms_logs 
+          SET status = $1, 
+              ${MessageStatus === 'delivered' ? 'delivered_at = CURRENT_TIMESTAMP,' : ''}
+              ${MessageStatus === 'sent' ? 'sent_at = CURRENT_TIMESTAMP,' : ''}
+              error_code = $2,
+              error_message = $3
+          WHERE external_id = $4
+        `;
 
-      const updateQuery = `
-        UPDATE sms_logs 
-        SET status = $1, 
-            ${MessageStatus === 'delivered' ? 'delivered_at = CURRENT_TIMESTAMP,' : ''}
-            ${MessageStatus === 'sent' ? 'sent_at = CURRENT_TIMESTAMP,' : ''}
-            error_code = $2,
-            error_message = $3
-        WHERE external_id = $4
-      `;
-
-      await client.query(updateQuery, [
-        dbStatus,
-        ErrorCode || null,
-        ErrorMessage || null,
-        MessageSid,
-      ]);
-
-      client.release();
+        await client.query(updateQuery, [
+          dbStatus,
+          ErrorCode || null,
+          ErrorMessage || null,
+          MessageSid,
+        ]);
+      });
 
       // Respond to Twilio
       res.status(200).send('OK');
@@ -656,92 +660,90 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         return res.status(400).send('Missing required fields');
       }
 
-      const client = await pool.connect();
+      await withDbClient(pool, async (client) => {
+        // Normalize phone numbers
+        const normalizedFrom = smsService.normalizePhoneNumber(fromPhone);
+        const normalizedTo = smsService.normalizePhoneNumber(toPhone);
 
-      // Normalize phone numbers
-      const normalizedFrom = smsService.normalizePhoneNumber(fromPhone);
-      const normalizedTo = smsService.normalizePhoneNumber(toPhone);
-
-      // Try to find the contact by phone number
-      // We need to find which organization this belongs to
-      const contactResult = await client.query(
-        `SELECT c.*, om.organization_id 
-         FROM contacts c
-         JOIN organization_members om ON c.organization_id = om.organization_id
-         WHERE c.phone = $1 OR c.phone = $2
-         LIMIT 1`,
-        [normalizedFrom, fromPhone]
-      );
-
-      let contactId = null;
-      let organizationId = null;
-      let conversationId = null;
-
-      if (contactResult.rows.length > 0) {
-        const contact = contactResult.rows[0];
-        contactId = contact.id;
-        organizationId = contact.organization_id;
-
-        // Find or create conversation
-        const convResult = await client.query(
-          `SELECT id FROM conversations 
-           WHERE contact_id = $1 AND organization_id = $2 AND channel = 'sms'
-           ORDER BY last_message_at DESC
+        // Try to find the contact by phone number
+        // We need to find which organization this belongs to
+        const contactResult = await client.query(
+          `SELECT c.*, om.organization_id 
+           FROM contacts c
+           JOIN organization_members om ON c.organization_id = om.organization_id
+           WHERE c.phone = $1 OR c.phone = $2
            LIMIT 1`,
-          [contactId, organizationId]
+          [normalizedFrom, fromPhone]
         );
 
-        if (convResult.rows.length > 0) {
-          conversationId = convResult.rows[0].id;
+        let contactId = null;
+        let organizationId = null;
+        let conversationId = null;
 
-          // Update conversation
+        if (contactResult.rows.length > 0) {
+          const contact = contactResult.rows[0];
+          contactId = contact.id;
+          organizationId = contact.organization_id;
+
+          // Find or create conversation
+          const convResult = await client.query(
+            `SELECT id FROM conversations 
+             WHERE contact_id = $1 AND organization_id = $2 AND channel = 'sms'
+             ORDER BY last_message_at DESC
+             LIMIT 1`,
+            [contactId, organizationId]
+          );
+
+          if (convResult.rows.length > 0) {
+            conversationId = convResult.rows[0].id;
+
+            // Update conversation
+            await client.query(
+              `UPDATE conversations 
+               SET last_message_at = CURRENT_TIMESTAMP, 
+                   last_message_preview = $1,
+                   unread_count = unread_count + 1,
+                   status = 'open'
+               WHERE id = $2`,
+              [messageBody.substring(0, 100), conversationId]
+            );
+          } else {
+            // Create new conversation
+            const newConv = await client.query(
+              `INSERT INTO conversations 
+                (organization_id, contact_id, channel, status, last_message_at, last_message_preview, unread_count)
+               VALUES ($1, $2, 'sms', 'open', CURRENT_TIMESTAMP, $3, 1)
+               RETURNING id`,
+              [organizationId, contactId, messageBody.substring(0, 100)]
+            );
+            conversationId = newConv.rows[0].id;
+          }
+
+          // Create message in conversation
           await client.query(
-            `UPDATE conversations 
-             SET last_message_at = CURRENT_TIMESTAMP, 
-                 last_message_preview = $1,
-                 unread_count = unread_count + 1,
-                 status = 'open'
-             WHERE id = $2`,
-            [messageBody.substring(0, 100), conversationId]
+            `INSERT INTO messages 
+              (conversation_id, organization_id, sender_type, sender_contact_id, channel, content)
+             VALUES ($1, $2, 'contact', $3, 'sms', $4)`,
+            [conversationId, organizationId, contactId, messageBody]
           );
-        } else {
-          // Create new conversation
-          const newConv = await client.query(
-            `INSERT INTO conversations 
-              (organization_id, contact_id, channel, status, last_message_at, last_message_preview, unread_count)
-             VALUES ($1, $2, 'sms', 'open', CURRENT_TIMESTAMP, $3, 1)
-             RETURNING id`,
-            [organizationId, contactId, messageBody.substring(0, 100)]
-          );
-          conversationId = newConv.rows[0].id;
         }
 
-        // Create message in conversation
+        // Log the incoming SMS
         await client.query(
-          `INSERT INTO messages 
-            (conversation_id, organization_id, sender_type, sender_contact_id, channel, content)
-           VALUES ($1, $2, 'contact', $3, 'sms', $4)`,
-          [conversationId, organizationId, contactId, messageBody]
+          `INSERT INTO sms_logs 
+            (organization_id, contact_id, conversation_id, to_phone, from_phone, message, direction, status, external_id)
+           VALUES ($1, $2, $3, $4, $5, $6, 'inbound', 'received', $7)`,
+          [
+            organizationId,
+            contactId,
+            conversationId,
+            normalizedTo,
+            normalizedFrom,
+            messageBody,
+            MessageSid,
+          ]
         );
-      }
-
-      // Log the incoming SMS
-      await client.query(
-        `INSERT INTO sms_logs 
-          (organization_id, contact_id, conversation_id, to_phone, from_phone, message, direction, status, external_id)
-         VALUES ($1, $2, $3, $4, $5, $6, 'inbound', 'received', $7)`,
-        [
-          organizationId,
-          contactId,
-          conversationId,
-          normalizedTo,
-          normalizedFrom,
-          messageBody,
-          MessageSid,
-        ]
-      );
-
-      client.release();
+      });
 
       // Respond to Twilio with empty TwiML (no auto-response)
       res.type('text/xml');

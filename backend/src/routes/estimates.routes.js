@@ -6,6 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const { logger } = require('../utils/logger');
+const { withDbClient, withTransaction } = require('../utils/db');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -57,36 +59,36 @@ module.exports = (pool, authenticateJWT) => {
                 paramIndex++;
             }
 
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const countResult = await client.query(
+                    `SELECT COUNT(*) FROM estimates e ${whereClause}`,
+                    params
+                );
 
-            const countResult = await client.query(
-                `SELECT COUNT(*) FROM estimates e ${whereClause}`,
-                params
-            );
+                const estimatesResult = await client.query(`
+                    SELECT e.*, c.first_name as contact_first_name, c.last_name as contact_last_name
+                    FROM estimates e
+                    LEFT JOIN contacts c ON e.contact_id = c.id
+                    ${whereClause}
+                    ORDER BY e.created_at DESC
+                    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                `, [...params, parseInt(limit), offset]);
 
-            const result = await client.query(`
-                SELECT e.*, c.first_name as contact_first_name, c.last_name as contact_last_name
-                FROM estimates e
-                LEFT JOIN contacts c ON e.contact_id = c.id
-                ${whereClause}
-                ORDER BY e.created_at DESC
-                LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-            `, [...params, parseInt(limit), offset]);
+                return { rows: estimatesResult.rows, total: parseInt(countResult.rows[0].count) };
+            });
 
-            client.release();
-
-            res.json({
+            sendSuccess(res, {
                 estimates: result.rows,
                 pagination: {
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    total: parseInt(countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit))
+                    total: result.total,
+                    totalPages: Math.ceil(result.total / parseInt(limit))
                 }
             });
         } catch (error) {
             console.error('Error fetching estimates:', error);
-            res.status(500).json({ error: 'Failed to fetch estimates' });
+            sendError(res, 'Failed to fetch estimates');
         }
     });
 
@@ -96,34 +98,35 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
+            const result = await withDbClient(pool, async (client) => {
+                const estimateResult = await client.query(`
+                    SELECT e.*, c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
+                    FROM estimates e
+                    LEFT JOIN contacts c ON e.contact_id = c.id
+                    WHERE e.id = $1 AND e.organization_id = $2
+                `, [id, req.organizationId]);
 
-            const estimateResult = await client.query(`
-                SELECT e.*, c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
-                FROM estimates e
-                LEFT JOIN contacts c ON e.contact_id = c.id
-                WHERE e.id = $1 AND e.organization_id = $2
-            `, [id, req.organizationId]);
+                if (estimateResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (estimateResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Estimate not found' });
+                const itemsResult = await client.query(`
+                    SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
+                `, [id]);
+
+                const estimate = estimateResult.rows[0];
+                estimate.items = itemsResult.rows;
+                return { status: 'ok', estimate };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Estimate');
             }
 
-            // Get line items
-            const itemsResult = await client.query(`
-                SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
-            `, [id]);
-
-            client.release();
-
-            const estimate = estimateResult.rows[0];
-            estimate.items = itemsResult.rows;
-
-            res.json(estimate);
+            sendSuccess(res, result.estimate);
         } catch (error) {
             console.error('Error fetching estimate:', error);
-            res.status(500).json({ error: 'Failed to fetch estimate' });
+            sendError(res, 'Failed to fetch estimate');
         }
     });
 
@@ -147,14 +150,10 @@ module.exports = (pool, authenticateJWT) => {
             } = req.body;
 
             if (!items || !Array.isArray(items) || items.length === 0) {
-                return res.status(400).json({ error: 'At least one line item is required' });
+                return sendBadRequest(res, 'At least one line item is required');
             }
 
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
+            const estimate = await withTransaction(pool, async (client) => {
                 const estimateNumber = await getNextEstimateNumber(client, req.organizationId);
 
                 // Calculate totals
@@ -244,9 +243,6 @@ module.exports = (pool, authenticateJWT) => {
                     ]);
                 }
 
-                await client.query('COMMIT');
-
-                // Fetch complete estimate
                 const fullEstimateResult = await client.query(`
                     SELECT * FROM estimates WHERE id = $1
                 `, [estimateId]);
@@ -255,20 +251,16 @@ module.exports = (pool, authenticateJWT) => {
                     SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
                 `, [estimateId]);
 
-                client.release();
+                const createdEstimate = fullEstimateResult.rows[0];
+                createdEstimate.items = itemsResult.rows;
 
-                const estimate = fullEstimateResult.rows[0];
-                estimate.items = itemsResult.rows;
+                return createdEstimate;
+            });
 
-                res.status(201).json(estimate);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
-            }
+            sendCreated(res, estimate);
         } catch (error) {
             console.error('Error creating estimate:', error);
-            res.status(500).json({ error: 'Failed to create estimate' });
+            sendError(res, 'Failed to create estimate');
         }
     });
 
@@ -291,26 +283,19 @@ module.exports = (pool, authenticateJWT) => {
                 terms_and_conditions
             } = req.body;
 
-            const client = await pool.connect();
+            const result = await withTransaction(pool, async (client) => {
+                const checkResult = await client.query(
+                    'SELECT status FROM estimates WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
 
-            // Check if estimate exists and is editable
-            const checkResult = await client.query(
-                'SELECT status FROM estimates WHERE id = $1 AND organization_id = $2',
-                [id, req.organizationId]
-            );
+                if (checkResult.rows.length === 0) {
+                    return { status: 'not_found' };
+                }
 
-            if (checkResult.rows.length === 0) {
-                client.release();
-                return res.status(404).json({ error: 'Estimate not found' });
-            }
-
-            if (!['draft', 'sent'].includes(checkResult.rows[0].status)) {
-                client.release();
-                return res.status(400).json({ error: 'Cannot edit estimate in current status' });
-            }
-
-            try {
-                await client.query('BEGIN');
+                if (!['draft', 'sent'].includes(checkResult.rows[0].status)) {
+                    return { status: 'invalid_status' };
+                }
 
                 let updateFields = [];
                 let updateParams = [];
@@ -424,26 +409,27 @@ module.exports = (pool, authenticateJWT) => {
                     `, updateParams);
                 }
 
-                await client.query('COMMIT');
-
-                // Fetch updated estimate
-                const result = await client.query('SELECT * FROM estimates WHERE id = $1', [id]);
+                const estimateResult = await client.query('SELECT * FROM estimates WHERE id = $1', [id]);
                 const itemsResult = await client.query('SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order', [id]);
 
-                client.release();
-
-                const estimate = result.rows[0];
+                const estimate = estimateResult.rows[0];
                 estimate.items = itemsResult.rows;
 
-                res.json(estimate);
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+                return { status: 'ok', estimate };
+            });
+
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Estimate');
             }
+
+            if (result.status === 'invalid_status') {
+                return sendBadRequest(res, 'Cannot edit estimate in current status');
+            }
+
+            sendSuccess(res, result.estimate);
         } catch (error) {
             console.error('Error updating estimate:', error);
-            res.status(500).json({ error: 'Failed to update estimate' });
+            sendError(res, 'Failed to update estimate');
         }
     });
 
@@ -453,23 +439,21 @@ module.exports = (pool, authenticateJWT) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(
-                'DELETE FROM estimates WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            );
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(
+                    'DELETE FROM estimates WHERE id = $1 AND organization_id = $2 RETURNING id',
+                    [id, req.organizationId]
+                );
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Estimate not found' });
+                return sendNotFound(res, 'Estimate');
             }
 
-            res.json({ success: true });
+            sendSuccess(res, { success: true });
         } catch (error) {
             console.error('Error deleting estimate:', error);
-            res.status(500).json({ error: 'Failed to delete estimate' });
+            sendError(res, 'Failed to delete estimate');
         }
     });
 
@@ -479,29 +463,27 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/send', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            const result = await client.query(`
-                UPDATE estimates SET
-                    status = 'sent',
-                    sent_at = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND organization_id = $2 AND status IN ('draft', 'sent')
-                RETURNING *
-            `, [id, req.organizationId]);
-
-            client.release();
+            const result = await withDbClient(pool, async (client) => {
+                return client.query(`
+                    UPDATE estimates SET
+                        status = 'sent',
+                        sent_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1 AND organization_id = $2 AND status IN ('draft', 'sent')
+                    RETURNING *
+                `, [id, req.organizationId]);
+            });
 
             if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Estimate not found or cannot be sent' });
+                return sendNotFound(res, 'Estimate');
             }
 
             // TODO: Actually send email with estimate
 
-            res.json(result.rows[0]);
+            sendSuccess(res, result.rows[0]);
         } catch (error) {
             console.error('Error sending estimate:', error);
-            res.status(500).json({ error: 'Failed to send estimate' });
+            sendError(res, 'Failed to send estimate');
         }
     });
 
@@ -511,36 +493,25 @@ module.exports = (pool, authenticateJWT) => {
     router.post('/:id/convert-to-invoice', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const client = await pool.connect();
-
-            try {
-                await client.query('BEGIN');
-
-                // Get the estimate
+            const result = await withTransaction(pool, async (client) => {
                 const estimateResult = await client.query(`
                     SELECT * FROM estimates WHERE id = $1 AND organization_id = $2
                 `, [id, req.organizationId]);
 
                 if (estimateResult.rows.length === 0) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(404).json({ error: 'Estimate not found' });
+                    return { status: 'not_found' };
                 }
 
                 const estimate = estimateResult.rows[0];
 
                 if (estimate.converted_invoice_id) {
-                    await client.query('ROLLBACK');
-                    client.release();
-                    return res.status(400).json({ error: 'Estimate already converted to invoice' });
+                    return { status: 'already_converted' };
                 }
 
-                // Get estimate items
                 const itemsResult = await client.query(`
                     SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
                 `, [id]);
 
-                // Generate invoice number
                 const settingsResult = await client.query(
                     'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
                     [req.organizationId]
@@ -566,11 +537,9 @@ module.exports = (pool, authenticateJWT) => {
 
                 const invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
 
-                // Calculate due date (30 days from now)
                 const dueDate = new Date();
                 dueDate.setDate(dueDate.getDate() + 30);
 
-                // Create invoice
                 const invoiceResult = await client.query(`
                     INSERT INTO invoices (
                         organization_id, invoice_number, contact_id,
@@ -602,7 +571,6 @@ module.exports = (pool, authenticateJWT) => {
 
                 const invoiceId = invoiceResult.rows[0].id;
 
-                // Copy line items to invoice
                 for (const item of itemsResult.rows) {
                     await client.query(`
                         INSERT INTO invoice_items (
@@ -624,7 +592,6 @@ module.exports = (pool, authenticateJWT) => {
                     ]);
                 }
 
-                // Update estimate with converted invoice reference
                 await client.query(`
                     UPDATE estimates SET
                         converted_invoice_id = $1,
@@ -633,22 +600,25 @@ module.exports = (pool, authenticateJWT) => {
                     WHERE id = $2
                 `, [invoiceId, id]);
 
-                await client.query('COMMIT');
-                client.release();
+                return { status: 'ok', invoiceId, invoiceNumber };
+            });
 
-                res.json({
-                    success: true,
-                    invoice_id: invoiceId,
-                    invoice_number: invoiceNumber
-                });
-            } catch (error) {
-                await client.query('ROLLBACK');
-                client.release();
-                throw error;
+            if (result.status === 'not_found') {
+                return sendNotFound(res, 'Estimate');
             }
+
+            if (result.status === 'already_converted') {
+                return sendBadRequest(res, 'Estimate already converted to invoice');
+            }
+
+            sendSuccess(res, {
+                success: true,
+                invoice_id: result.invoiceId,
+                invoice_number: result.invoiceNumber
+            });
         } catch (error) {
             console.error('Error converting estimate to invoice:', error);
-            res.status(500).json({ error: 'Failed to convert estimate to invoice' });
+            sendError(res, 'Failed to convert estimate to invoice');
         }
     });
 

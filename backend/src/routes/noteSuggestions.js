@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const aiSuggestionService = require('../services/aiSuggestionService');
+const { sendError } = require('../utils/response');
 
 // Middleware to authenticate JWT tokens
 const authenticateJWT = global.authenticateJWT || ((req, res, next) => {
@@ -52,10 +53,7 @@ router.post('/', authenticateJWT, async (req, res) => {
       body: req.body
     });
     
-    res.status(500).json({ 
-      error: 'Failed to generate note suggestions',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    return sendError(res, 'Failed to generate note suggestions');
   }
 });
 
