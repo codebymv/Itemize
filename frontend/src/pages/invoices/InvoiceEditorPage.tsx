@@ -72,7 +72,13 @@ interface Contact {
     last_name: string;
     email: string;
     phone?: string;
-    address?: string;
+    address?: string | {
+        street?: string;
+        city?: string;
+        state?: string;
+        zip?: string;
+        country?: string;
+    } | Record<string, any>;
 }
 
 export function InvoiceEditorPage() {
@@ -116,6 +122,21 @@ export function InvoiceEditorPage() {
     const [lineItems, setLineItems] = useState<LineItem[]>([
         { id: crypto.randomUUID(), name: '', description: '', quantity: 1, unit_price: 0, tax_rate: 0 }
     ]);
+
+    const formatAddress = (address: Contact['address'] | Invoice['customer_address'] | undefined): string => {
+        if (!address) return '';
+        if (typeof address === 'string') return address;
+
+        const parts = [
+            address.street,
+            address.city,
+            address.state,
+            address.zip,
+            address.country
+        ].filter(Boolean);
+
+        return parts.join(', ');
+    };
 
     // Refs for auto-resizing textareas
     const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -238,7 +259,7 @@ export function InvoiceEditorPage() {
                     setCustomerName(invoice.customer_name || '');
                     setCustomerEmail(invoice.customer_email || '');
                     setCustomerPhone(invoice.customer_phone || '');
-                    setCustomerAddress(invoice.customer_address || '');
+                    setCustomerAddress(formatAddress(invoice.customer_address));
                     setIssueDate(invoice.issue_date?.split('T')[0] || invoice.created_at?.split('T')[0] || '');
                     setDueDate(invoice.due_date?.split('T')[0] || '');
                     setPaymentTerms(invoice.payment_terms || 30);
@@ -298,7 +319,7 @@ export function InvoiceEditorPage() {
             setCustomerName(`${selectedContact.first_name} ${selectedContact.last_name}`.trim());
             setCustomerEmail(selectedContact.email || '');
             setCustomerPhone(selectedContact.phone || '');
-            setCustomerAddress(selectedContact.address || '');
+            setCustomerAddress(formatAddress(selectedContact.address));
         }
     };
 

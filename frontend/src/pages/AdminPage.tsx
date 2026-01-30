@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useHeader } from '@/contexts/HeaderContext';
-import { useSubscriptionState } from '@/contexts/SubscriptionContext';
+import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -844,6 +844,7 @@ function StatisticsSection() {
 // Change Tier Section (Admin Testing)
 function ChangeTierSection() {
     const { subscription } = useSubscriptionState();
+    const { refreshSubscription } = useSubscriptionFeatures();
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
     const { toast } = useToast();
 
@@ -862,14 +863,13 @@ function ChangeTierSection() {
         setLoadingPlan(planId);
         try {
             await adminApi.updateMyPlan(planId);
+            await refreshSubscription();
             const planDisplayName = PLAN_METADATA[planId]?.displayName || planId;
             toast({
                 title: 'Plan Updated',
                 description: `Your plan has been changed to ${planDisplayName}`,
             });
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+            setLoadingPlan(null);
         } catch (error: any) {
             toast({
                 title: 'Error',
