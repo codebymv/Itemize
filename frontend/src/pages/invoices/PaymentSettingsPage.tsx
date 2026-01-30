@@ -136,6 +136,9 @@ export function PaymentSettingsPage() {
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
     const businessFileInputRef = useRef<HTMLInputElement>(null);
+    const [taxRateInput, setTaxRateInput] = useState<string>('');
+    const taxRateInputRef = useRef<HTMLInputElement>(null);
+    const isEditingTaxRate = useRef(false);
 
     // Set header content with icon, title, and Save button (no tabs - those are in sidebar)
     useEffect(() => {
@@ -183,6 +186,13 @@ export function PaymentSettingsPage() {
             ]);
             setSettings(settingsData);
             setBusinesses(businessesData);
+            // Initialize tax rate input - never set to "0", always empty string for 0
+            const rate = settingsData.default_tax_rate;
+            const numRate = typeof rate === 'string' ? parseFloat(rate) : (rate ?? 0);
+            // Always use empty string for 0, never "0"
+            const initialValue = numRate === 0 || isNaN(numRate) ? '' : String(numRate);
+            console.log('[TaxRate] Initializing - rate:', rate, 'numRate:', numRate, 'initialValue:', initialValue);
+            setTaxRateInput(initialValue);
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load settings', variant: 'destructive' });
         } finally {
@@ -200,6 +210,13 @@ export function PaymentSettingsPage() {
         try {
             const updated = await updatePaymentSettings(settings, organizationId);
             setSettings(updated);
+            // Sync tax rate input after save only if not currently editing
+            // Never set to "0" - always use empty string for 0
+            if (!isEditingTaxRate.current) {
+                const rate = updated.default_tax_rate;
+                const numRate = typeof rate === 'string' ? parseFloat(rate) : (rate ?? 0);
+                setTaxRateInput(numRate === 0 || isNaN(numRate) ? '' : String(numRate));
+            }
             toast({ title: 'Saved', description: 'Settings saved successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
@@ -572,17 +589,64 @@ export function PaymentSettingsPage() {
                         <Card>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label>Default Tax Rate (%)</Label>
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="0.1"
-                                            value={settings.default_tax_rate || ''}
-                                            onChange={(e) => updateField('default_tax_rate', e.target.value === '' ? 0 : parseFloat(e.target.value))}
-                                        />
-                                    </div>
+                                <div>
+                                    <Label>Default Tax Rate (%)</Label>
+                                    <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={taxRateInput === '0' || taxRateInput === '0.0' || taxRateInput === '0.00' ? '' : (taxRateInput || '')}
+                                        placeholder="0"
+                                        onFocus={(e) => {
+                                            isEditingTaxRate.current = true;
+                                            const input = e.target as HTMLInputElement;
+                                            if (input.value === '0') {
+                                                input.value = '';
+                                                setTaxRateInput('');
+                                            } else {
+                                                input.select();
+                                            }
+                                        }}
+                                        onChange={(e) => {
+                                            let val = e.target.value;
+                                            
+                                            // Remove leading zeros
+                                            if (val.length > 1 && val.startsWith('0') && val[1] !== '.') {
+                                                val = val.replace(/^0+/, '') || '';
+                                            }
+                                            
+                                            // Convert "0" to empty
+                                            if (val === '0') {
+                                                val = '';
+                                            }
+                                            
+                                            setTaxRateInput(val);
+                                            
+                                            if (val && val !== '.' && !val.endsWith('.') && /^\d+\.?\d*$/.test(val)) {
+                                                const num = parseFloat(val);
+                                                if (!isNaN(num) && num >= 0 && num <= 100) {
+                                                    updateField('default_tax_rate', num);
+                                                }
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            isEditingTaxRate.current = false;
+                                            const val = e.target.value.trim();
+                                            if (!val || val === '.' || !/^\d+\.?\d*$/.test(val)) {
+                                                updateField('default_tax_rate', 0);
+                                                setTaxRateInput('');
+                                            } else {
+                                                const num = parseFloat(val);
+                                                if (!isNaN(num) && num >= 0 && num <= 100) {
+                                                    updateField('default_tax_rate', num);
+                                                    setTaxRateInput(String(num));
+                                                } else {
+                                                    updateField('default_tax_rate', 0);
+                                                    setTaxRateInput('');
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </div>
                                     <div>
                                         <Label>Default Currency</Label>
                                         <Select

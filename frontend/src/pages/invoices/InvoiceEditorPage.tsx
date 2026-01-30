@@ -668,96 +668,60 @@ export function InvoiceEditorPage() {
                     {/* Left: Customer (Bill To) */}
                     <Card className="border-2 border-dashed">
                         <CardContent className="pt-6">
-                            {/* Only show summary view when a contact is selected from dropdown */}
-                            {contactId ? (
+                            <div className="space-y-4">
+                                {/* Contact selector */}
+                                {contacts.length > 0 && (
+                                    <>
+                                        <div className="flex flex-col items-center justify-center py-2 text-center">
+                                            <UserPlus className="h-6 w-6 text-muted-foreground mb-2" />
+                                            <Select
+                                                value={contactId?.toString() || 'none'}
+                                                onValueChange={handleContactChange}
+                                            >
+                                                <SelectTrigger className="w-full max-w-xs">
+                                                    <SelectValue placeholder="Select existing customer" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">Or enter manually below</SelectItem>
+                                                    {contacts.map(contact => (
+                                                        <SelectItem key={contact.id} value={contact.id.toString()}>
+                                                            {contact.first_name} {contact.last_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Separator />
+                                    </>
+                                )}
+                                {/* Manual entry fields - always visible */}
                                 <div className="space-y-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="space-y-1">
-                                            <p className="font-semibold">{customerName || 'Unnamed'}</p>
-                                            {customerAddress && (
-                                                <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                                    {customerAddress}
-                                                </p>
-                                            )}
-                                            {customerPhone && (
-                                                <p className="text-sm text-muted-foreground">{customerPhone}</p>
-                                            )}
-                                            {customerEmail && (
-                                                <p className="text-sm text-muted-foreground">{customerEmail}</p>
-                                            )}
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setContactId(undefined);
-                                                setCustomerName('');
-                                                setCustomerEmail('');
-                                                setCustomerPhone('');
-                                                setCustomerAddress('');
-                                            }}
-                                            className="text-muted-foreground"
-                                        >
-                                            Change
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {/* Contact selector */}
-                                    {contacts.length > 0 && (
-                                        <>
-                                            <div className="flex flex-col items-center justify-center py-2 text-center">
-                                                <UserPlus className="h-6 w-6 text-muted-foreground mb-2" />
-                                                <Select
-                                                    value="none"
-                                                    onValueChange={handleContactChange}
-                                                >
-                                                    <SelectTrigger className="w-full max-w-xs">
-                                                        <SelectValue placeholder="Select existing customer" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">Or enter manually below</SelectItem>
-                                                        {contacts.map(contact => (
-                                                            <SelectItem key={contact.id} value={contact.id.toString()}>
-                                                                {contact.first_name} {contact.last_name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <Separator />
-                                        </>
-                                    )}
-                                    {/* Manual entry fields - always visible */}
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Input
-                                                value={customerName}
-                                                onChange={(e) => setCustomerName(e.target.value)}
-                                                placeholder="Customer name"
-                                            />
-                                            <Input
-                                                type="email"
-                                                value={customerEmail}
-                                                onChange={(e) => setCustomerEmail(e.target.value)}
-                                                placeholder="Email"
-                                            />
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-3">
                                         <Input
-                                            value={customerPhone}
-                                            onChange={(e) => setCustomerPhone(e.target.value)}
-                                            placeholder="Phone"
+                                            value={customerName}
+                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            placeholder="Customer name"
                                         />
-                                        <Textarea
-                                            value={customerAddress}
-                                            onChange={(e) => setCustomerAddress(e.target.value)}
-                                            placeholder="Address"
-                                            rows={2}
+                                        <Input
+                                            type="email"
+                                            value={customerEmail}
+                                            onChange={(e) => setCustomerEmail(e.target.value)}
+                                            placeholder="Email"
                                         />
                                     </div>
+                                    <Input
+                                        value={customerPhone}
+                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                        placeholder="Phone"
+                                    />
+                                    <Textarea
+                                        value={customerAddress}
+                                        onChange={(e) => setCustomerAddress(e.target.value)}
+                                        placeholder="Address"
+                                        rows={2}
+                                    />
                                 </div>
-                            )}
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -971,15 +935,27 @@ export function InvoiceEditorPage() {
                                 <span>{formatCurrency(taxAmount)}</span>
                             </div>
                         ) : (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-600 hover:text-blue-700 p-0 h-auto"
-                                onClick={() => setTaxRate(settings?.default_tax_rate || 10)}
-                            >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add tax
-                            </Button>
+                            <div className="flex items-center justify-between text-sm">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-blue-600 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                    onClick={() => {
+                                        const rawRate = settings?.default_tax_rate;
+                                        const parsedRate = typeof rawRate === 'string' 
+                                            ? parseFloat(rawRate) 
+                                            : (rawRate ?? 0);
+                                        // Use default of 10 if rate is 0 or invalid
+                                        const rate = parsedRate > 0 ? parsedRate : 10;
+                                        setTaxRate(rate);
+                                    }}
+                                >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add tax
+                                </Button>
+                                <span className="text-muted-foreground">-</span>
+                            </div>
                         )}
                         
                         {/* Add Discount */}
@@ -1019,10 +995,15 @@ export function InvoiceEditorPage() {
                             </div>
                         ) : (
                             <Button
-                                variant="ghost"
+                                type="button"
+                                variant="outline"
                                 size="sm"
-                                className="text-blue-600 hover:text-blue-700 p-0 h-auto"
-                                onClick={() => setDiscountValue(0.01)}
+                                className="h-7 px-2 text-blue-600 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDiscountValue(0.01);
+                                }}
                             >
                                 <Plus className="h-3 w-3 mr-1" />
                                 Add a discount

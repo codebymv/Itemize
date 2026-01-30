@@ -53,9 +53,29 @@ const ITEMS_PER_PAGE = 50;
 function AdminNav() {
     const location = useLocation();
     const navigate = useNavigate();
+    const activePath = location.pathname === '/admin/' ? '/admin' : location.pathname;
 
-    return (
-        <nav className="flex flex-col gap-1">
+    // Mobile: Use tabs
+    const mobileTabs = (
+        <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+                {adminNav.map((item) => (
+                    <TabsTrigger 
+                        key={item.path} 
+                        value={item.path}
+                        className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3"
+                    >
+                        <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">{item.title}</span>
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </Tabs>
+    );
+
+    // Desktop: Use sidebar navigation
+    const desktopNav = (
+        <nav className="hidden md:flex flex-col gap-1">
             {adminNav.map((item) => {
                 const isActive = location.pathname === item.path ||
                     (item.path === '/admin' && location.pathname === '/admin/');
@@ -72,6 +92,13 @@ function AdminNav() {
                 );
             })}
         </nav>
+    );
+
+    return (
+        <>
+            {mobileTabs}
+            {desktopNav}
+        </>
     );
 }
 
@@ -548,8 +575,8 @@ function CommunicationsSection() {
                                             {/* Admin badge */}
                                             {user.role === 'ADMIN' && (
                                                 <Badge variant="default" className="bg-blue-600">
-                                                    <ShieldCheck className="h-3 w-3 mr-1" />
-                                                    Admin
+                                                    <ShieldCheck className="h-3 w-3 sm:mr-1" />
+                                                    <span className="hidden sm:inline">Admin</span>
                                                 </Badge>
                                             )}
                                             {/* Plan badge */}
@@ -557,8 +584,8 @@ function CommunicationsSection() {
                                                 const PlanIcon = PLAN_ICONS[user.plan as Plan] || UserIcon;
                                                 return (
                                                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${getPlanBadgeClass(user.plan)}`}>
-                                                        <PlanIcon className="h-3 w-3" />
-                                                        {PLAN_METADATA[user.plan as Plan]?.displayName || user.plan}
+                                                        <PlanIcon className="h-3 w-3 flex-shrink-0" />
+                                                        <span className="hidden sm:inline">{PLAN_METADATA[user.plan as Plan]?.displayName || user.plan}</span>
                                                     </span>
                                                 );
                                             })()}
@@ -949,10 +976,10 @@ export function AdminPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate font-raleway"
+                        className="text-base sm:text-xl font-semibold italic truncate font-raleway"
                         style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        ADMIN | {activeNavItem.title}
+                        <span className="hidden sm:inline">ADMIN | </span>{activeNavItem.title}
                     </h1>
                 </div>
             </div>

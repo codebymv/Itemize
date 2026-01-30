@@ -79,6 +79,7 @@ import {
     Save,
 } from 'lucide-react';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 // Settings navigation items
 const settingsNav = [
@@ -90,9 +91,29 @@ const settingsNav = [
 function SettingsNav() {
     const location = useLocation();
     const navigate = useNavigate();
+    const activePath = location.pathname;
 
-    return (
-        <nav className="flex flex-col gap-1">
+    // Mobile: Use tabs
+    const mobileTabs = (
+        <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+                {settingsNav.map((item) => (
+                    <TabsTrigger 
+                        key={item.path} 
+                        value={item.path}
+                        className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3"
+                    >
+                        <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">{item.title}</span>
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </Tabs>
+    );
+
+    // Desktop: Use sidebar navigation
+    const desktopNav = (
+        <nav className="hidden md:flex flex-col gap-1">
             {settingsNav.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -109,6 +130,13 @@ function SettingsNav() {
                 );
             })}
         </nav>
+    );
+
+    return (
+        <>
+            {mobileTabs}
+            {desktopNav}
+        </>
     );
 }
 
@@ -139,13 +167,13 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
                     <CardTitle className="text-base">Account Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-medium">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                        <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
                             {currentUser?.name?.[0]?.toUpperCase() || 'U'}
                         </div>
-                        <div>
-                            <p className="font-medium">{currentUser?.name || 'User'}</p>
-                            <p className="text-sm text-muted-foreground">{currentUser?.email}</p>
+                        <div className="text-center sm:text-left min-w-0 flex-1">
+                            <p className="font-medium break-words">{currentUser?.name || 'User'}</p>
+                            <p className="text-sm text-muted-foreground break-all sm:break-words">{currentUser?.email}</p>
                         </div>
                     </div>
 
@@ -303,6 +331,7 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
     const businessFileInputRef = useRef<HTMLInputElement>(null);
+    const [taxRateInput, setTaxRateInput] = useState<string>('');
 
     useEffect(() => {
         if (!organizationId) {
@@ -337,6 +366,9 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
         try {
             const updated = await updatePaymentSettings(settings, organizationId);
             setSettings(updated);
+            // Sync tax rate input after save
+            const rate = updated.default_tax_rate;
+            setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
             toast({ title: 'Saved', description: 'Payment settings saved successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
@@ -597,7 +629,7 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
                             {businesses.map(business => (
                                 <div
                                     key={business.id}
-                                    className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                    className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                                 >
                                     <div className="flex-shrink-0">
                                         {business.logo_url ? (
@@ -613,27 +645,32 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-medium truncate">{business.name}</h3>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                            <h3 className="font-medium break-words sm:truncate">{business.name}</h3>
                                             {business.last_used_at && (
-                                                <Badge variant="secondary" className="text-xs">
+                                                <Badge variant="secondary" className="text-xs w-fit">
                                                     <Clock className="h-3 w-3 mr-1" />
                                                     Last used
                                                 </Badge>
                                             )}
                                         </div>
-                                        {business.email && <p className="text-sm text-muted-foreground truncate">{business.email}</p>}
+                                        {business.email && <p className="text-sm text-muted-foreground break-all sm:truncate">{business.email}</p>}
                                         {business.phone && <p className="text-sm text-muted-foreground">{business.phone}</p>}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => openBusinessDialog(business)}>
+                                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 w-full sm:w-auto justify-end sm:justify-start">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => openBusinessDialog(business)}
+                                            className="h-9 w-9 sm:h-10 sm:w-10"
+                                        >
                                             <Edit className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => { setBusinessToDelete(business); setDeleteDialogOpen(true); }}
-                                            className="text-destructive hover:text-destructive"
+                                            className="text-destructive hover:text-destructive h-9 w-9 sm:h-10 sm:w-10"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -720,7 +757,7 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
                     <CardDescription>Configure default tax rates for new products and invoices</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <Label>Default Tax Rate (%)</Label>
                             <Input
@@ -728,8 +765,32 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
                                 min="0"
                                 max="100"
                                 step="0.1"
-                                value={settings.default_tax_rate ?? ''}
-                                onChange={(e) => updateField('default_tax_rate', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                                value={taxRateInput}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setTaxRateInput(value);
+                                    // Update settings: empty string becomes 0, otherwise parse the number
+                                    const numValue = value === '' ? 0 : parseFloat(value);
+                                    if (!isNaN(numValue)) {
+                                        updateField('default_tax_rate', numValue);
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    // On blur, ensure we have a valid number or 0
+                                    const value = e.target.value.trim();
+                                    if (value === '' || value === '-') {
+                                        setTaxRateInput('');
+                                        updateField('default_tax_rate', 0);
+                                    } else {
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue)) {
+                                            const clampedValue = Math.max(0, Math.min(100, numValue));
+                                            setTaxRateInput(String(clampedValue));
+                                            updateField('default_tax_rate', clampedValue);
+                                        }
+                                    }
+                                }}
+                                className="w-full"
                             />
                         </div>
                         <div>
@@ -738,7 +799,7 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
                                 value={settings.default_currency || 'USD'}
                                 onValueChange={(v) => updateField('default_currency', v)}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -761,34 +822,36 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
                     <CardDescription>Connect Stripe to accept online payments from your customers</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${settings.stripe_connected ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'}`}>
-                                {settings.stripe_connected ? (
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
-                                ) : (
-                                    <XCircle className="h-6 w-6 text-muted-foreground" />
-                                )}
+                    <div className="p-4 border rounded-lg">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${settings.stripe_connected ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'}`}>
+                                    {settings.stripe_connected ? (
+                                        <CheckCircle className="h-6 w-6 text-green-600" />
+                                    ) : (
+                                        <XCircle className="h-6 w-6 text-muted-foreground" />
+                                    )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-medium">
+                                        {settings.stripe_connected ? 'Stripe Connected' : 'Stripe Not Connected'}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground break-words">
+                                        {settings.stripe_connected
+                                            ? `Connected ${settings.stripe_connected_at ? new Date(settings.stripe_connected_at).toLocaleDateString() : ''}`
+                                            : 'Connect your Stripe account to accept credit card payments'
+                                        }
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-medium">
-                                    {settings.stripe_connected ? 'Stripe Connected' : 'Stripe Not Connected'}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {settings.stripe_connected
-                                        ? `Connected ${settings.stripe_connected_at ? new Date(settings.stripe_connected_at).toLocaleDateString() : ''}`
-                                        : 'Connect your Stripe account to accept credit card payments'
-                                    }
-                                </p>
-                            </div>
+                            <Button
+                                variant={settings.stripe_connected ? 'outline' : 'default'}
+                                className={`w-full sm:w-auto flex-shrink-0 ${!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                            >
+                                <Link className="h-4 w-4 mr-2" />
+                                {settings.stripe_connected ? 'Manage Connection' : 'Connect Stripe'}
+                            </Button>
                         </div>
-                        <Button
-                            variant={settings.stripe_connected ? 'outline' : 'default'}
-                            className={!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
-                        >
-                            <Link className="h-4 w-4 mr-2" />
-                            {settings.stripe_connected ? 'Manage Connection' : 'Connect Stripe'}
-                        </Button>
                     </div>
                     {settings.stripe_connected && settings.stripe_account_id && (
                         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
@@ -1003,13 +1066,13 @@ export function SettingsPage() {
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
                     <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
+                        className="text-base sm:text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        SETTINGS | {activeNavItem.title}
+                        <span className="hidden sm:inline">SETTINGS | </span>{activeNavItem.title}
                     </h1>
                 </div>
                 {saveButton && <div className="hidden md:flex items-center gap-2 mr-4">{saveButton}</div>}
@@ -1025,11 +1088,11 @@ export function SettingsPage() {
                     <div className="flex-1">{saveButton}</div>
                 </MobileControlsBar>
             )}
-            <div className="container mx-auto p-6 max-w-8xl">
-                <div className="grid gap-8 md:grid-cols-[200px_1fr]">
+            <div className="container mx-auto p-4 sm:p-6 max-w-8xl">
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8">
                     <SettingsNav />
 
-                    <div className="min-w-0" key={location.pathname}>
+                    <div className="min-w-0 flex-1" key={location.pathname}>
                         {location.pathname === '/preferences' && <PreferencesSettings />}
                         {location.pathname === '/payment-settings' && <PaymentsSettings setSaveButton={setSaveButton} />}
                         {location.pathname === '/settings' && <AccountSettings />}
