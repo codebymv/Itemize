@@ -52,6 +52,9 @@ const { initScheduler } = require('./scheduler');
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Trust proxy headers in production (Railway/other proxies)
+app.set('trust proxy', 1);
+
 // Log startup with structured logger
 logger.info('Starting server', { port, timestamp: new Date().toISOString() });
 logger.info('Environment configuration', { 
