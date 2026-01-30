@@ -154,6 +154,16 @@ const writeLimiter = rateLimit({
     message: { error: { message: 'Too many write requests', code: 'RATE_LIMIT_EXCEEDED' } }
 });
 
+// Higher limit for high-frequency canvas position updates
+const positionLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 120, // 120 position updates per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `${req.ip}-${req.user?.id || 'anon'}`,
+    message: { error: { message: 'Too many position updates', code: 'RATE_LIMIT_EXCEEDED' } }
+});
+
 // Rate limiting for public endpoints
 const publicRateLimit = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
@@ -303,10 +313,22 @@ setTimeout(async () => {
         // Import and mount route modules
         logger.info('Mounting route modules...');
 
+        // Rate limit high-frequency position updates
+        app.put('/api/lists/:id/position', positionLimiter);
+        app.put('/api/whiteboards/:id/position', positionLimiter);
+        app.put('/api/wireframes/:id/position', positionLimiter);
+        app.put('/api/vaults/:vaultId/position', positionLimiter);
+        app.put('/api/canvas/positions', positionLimiter);
+
         // Lists routes
         const listsRoutes = require('./routes/lists.routes');
         app.use('/api', listsRoutes(pool, authenticateJWT, broadcast));
         logger.info('Lists routes initialized');
+
+        // Canvas routes (batched updates)
+        const canvasRoutes = require('./routes/canvas.routes');
+        app.use('/api', canvasRoutes(pool, authenticateJWT, broadcast));
+        logger.info('Canvas routes initialized');
 
         // Notes routes
         const notesRoutes = require('./routes/notes.routes');

@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map, GitBranch, KeyRound } from 'lucide-react';
+import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map as MapIcon, GitBranch, KeyRound } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
 import {
   fetchCanvasLists,
   createList as apiCreateList,
   updateList as apiUpdateList,
-  updateListPosition as apiUpdateListPosition,
   deleteList as apiDeleteList,
   getNotes,
   createNote as apiCreateNote,
@@ -18,24 +17,23 @@ import {
   getWhiteboards,
   createWhiteboard as apiCreateWhiteboard,
   updateWhiteboard as apiUpdateWhiteboard,
-  updateWhiteboardPosition as apiUpdateWhiteboardPosition,
   deleteWhiteboard as apiDeleteWhiteboard,
   CreateWhiteboardPayload,
   getWireframes,
   createWireframe as apiCreateWireframe,
   updateWireframe as apiUpdateWireframe,
-  updateWireframePosition as apiUpdateWireframePosition,
   deleteWireframe as apiDeleteWireframe,
   CreateWireframePayload,
   getVaults,
   createVault as apiCreateVault,
   updateVault as apiUpdateVault,
-  updateVaultPosition as apiUpdateVaultPosition,
   deleteVault as apiDeleteVault,
   shareVault as apiShareVault,
   unshareVault as apiUnshareVault,
   CreateVaultPayload,
-  updateCategory as apiUpdateCategory
+  updateCategory as apiUpdateCategory,
+  updateCanvasPositions as apiUpdateCanvasPositions,
+  CanvasPositionUpdate
 } from '../services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
@@ -76,6 +74,9 @@ function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
+
+const POSITION_UPDATE_DEBOUNCE_MS = 400;
+const POSITION_UPDATE_RETRY_MS = 1000;
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
@@ -345,7 +346,7 @@ const CanvasPage: React.FC = () => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2">
-          <Map className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <MapIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1 className="text-xl font-semibold italic truncate" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}>
             CANVAS
           </h1>
@@ -851,6 +852,23 @@ const CanvasPage: React.FC = () => {
     }
   };
 
+  const handleNotePositionUpdate = (noteId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
+    setNotes(prev => prev.map(n => n.id === noteId ? {
+      ...n,
+      position_x: newPosition.x,
+      position_y: newPosition.y,
+      ...(newSize ? { width: newSize.width, height: newSize.height } : {})
+    } : n));
+
+    enqueuePositionUpdate({
+      type: 'note',
+      id: noteId,
+      position_x: newPosition.x,
+      position_y: newPosition.y,
+      ...(newSize ? { width: newSize.width, height: newSize.height } : {})
+    });
+  };
+
   const handleDeleteNote = async (noteId: number) => {
     try {
       logger.log(`🗑️ Frontend: Attempting to delete note ${noteId}`);
@@ -1058,13 +1076,15 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  const handleWireframePositionChange = async (wireframeId: number, newPosition: { x: number; y: number }) => {
-    try {
-      await apiUpdateWireframePosition(wireframeId, newPosition.x, newPosition.y, token);
-      setWireframes(prev => prev.map(w => w.id === wireframeId ? { ...w, position_x: newPosition.x, position_y: newPosition.y } : w));
-    } catch (error) {
-      console.error('Failed to update wireframe position:', error);
-    }
+  const handleWireframePositionChange = (wireframeId: number, newPosition: { x: number; y: number }) => {
+    setWireframes(prev => prev.map(w => w.id === wireframeId ? { ...w, position_x: newPosition.x, position_y: newPosition.y } : w));
+
+    enqueuePositionUpdate({
+      type: 'wireframe',
+      id: wireframeId,
+      position_x: newPosition.x,
+      position_y: newPosition.y
+    });
   };
 
   // CRUD operations for vaults
@@ -1142,27 +1162,26 @@ const CanvasPage: React.FC = () => {
     }
   };
 
-  const handleVaultPositionChange = async (vaultId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
-    try {
-      // Update position
-      await apiUpdateVaultPosition(vaultId, newPosition.x, newPosition.y, token);
-      
-      // If size was changed, update that too
-      if (newSize) {
-        await apiUpdateVault(vaultId, { width: newSize.width, height: newSize.height }, token);
-        setVaults(prev => prev.map(v => v.id === vaultId 
-          ? { ...v, position_x: newPosition.x, position_y: newPosition.y, width: newSize.width, height: newSize.height } 
-          : v
-        ));
-      } else {
-        setVaults(prev => prev.map(v => v.id === vaultId 
-          ? { ...v, position_x: newPosition.x, position_y: newPosition.y } 
-          : v
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to update vault position:', error);
+  const handleVaultPositionChange = (vaultId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
+    if (newSize) {
+      setVaults(prev => prev.map(v => v.id === vaultId 
+        ? { ...v, position_x: newPosition.x, position_y: newPosition.y, width: newSize.width, height: newSize.height } 
+        : v
+      ));
+    } else {
+      setVaults(prev => prev.map(v => v.id === vaultId 
+        ? { ...v, position_x: newPosition.x, position_y: newPosition.y } 
+        : v
+      ));
     }
+
+    enqueuePositionUpdate({
+      type: 'vault',
+      id: vaultId,
+      position_x: newPosition.x,
+      position_y: newPosition.y,
+      ...(newSize ? { width: newSize.width, height: newSize.height } : {})
+    });
   };
 
   // Vault sharing handlers
@@ -1533,13 +1552,65 @@ const CanvasPage: React.FC = () => {
     }
   };
 
+  const positionUpdateQueueRef = useRef<Map<string, CanvasPositionUpdate>>(new globalThis.Map());
+  const positionUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushPositionUpdates = useCallback(async (retryDelayMs = POSITION_UPDATE_RETRY_MS) => {
+    if (positionUpdateTimerRef.current) {
+      clearTimeout(positionUpdateTimerRef.current);
+      positionUpdateTimerRef.current = null;
+    }
+
+    const pendingUpdates = Array.from(positionUpdateQueueRef.current.values());
+    if (pendingUpdates.length === 0) {
+      return;
+    }
+
+    positionUpdateQueueRef.current.clear();
+
+    try {
+      await apiUpdateCanvasPositions(pendingUpdates, token);
+    } catch (error: any) {
+      console.error('Failed to update canvas positions:', error);
+
+      if (error?.response?.status === 429) {
+        pendingUpdates.forEach(update => {
+          positionUpdateQueueRef.current.set(`${update.type}:${update.id}`, update);
+        });
+        positionUpdateTimerRef.current = setTimeout(() => {
+          void flushPositionUpdates(retryDelayMs);
+        }, retryDelayMs);
+      }
+    }
+  }, [token]);
+
+  const enqueuePositionUpdate = useCallback((update: CanvasPositionUpdate) => {
+    positionUpdateQueueRef.current.set(`${update.type}:${update.id}`, update);
+
+    if (positionUpdateTimerRef.current) {
+      clearTimeout(positionUpdateTimerRef.current);
+    }
+
+    positionUpdateTimerRef.current = setTimeout(() => {
+      void flushPositionUpdates();
+    }, POSITION_UPDATE_DEBOUNCE_MS);
+  }, [flushPositionUpdates]);
+
+  useEffect(() => {
+    return () => {
+      if (positionUpdateTimerRef.current) {
+        clearTimeout(positionUpdateTimerRef.current);
+      }
+      if (positionUpdateQueueRef.current.size > 0) {
+        void flushPositionUpdates();
+      }
+    };
+  }, [flushPositionUpdates]);
+
   // List position update (matches working Prototype2 pattern)
   const handleListPositionUpdate = (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => {
     // console.log('📍 handleListPositionUpdate called for listId:', listId, 'newPosition:', newPosition);
     // console.log('📍 Current lists before position update:', lists.length, lists.map(l => `${l.id}:(${l.position_x},${l.position_y})`));
-
-    // Save original state for rollback (optimistic update pattern from Prototype1)
-    const originalLists = [...lists];
 
     // Update local state immediately (optimistic update)
     setLists(prev => {
@@ -1553,29 +1624,17 @@ const CanvasPage: React.FC = () => {
       return newLists;
     });
 
-    // Make API call and rollback on error
-    apiUpdateListPosition(listId, newPosition.x, newPosition.y, token)
-      .then(() => {
-        // console.log('📍 API position update successful');
-      })
-      .catch((error) => {
-        console.error('📍 Failed to update list position:', error);
-        // Rollback to original state on error
-        // console.log('📍 Rolling back to original state');
-        setLists(originalLists);
-        toast({
-          title: "Error",
-          description: "Could not update list position. Please try again.",
-          variant: "destructive"
-        });
-      });
+    enqueuePositionUpdate({
+      type: 'list',
+      id: listId,
+      position_x: newPosition.x,
+      position_y: newPosition.y,
+      ...(newSize ? { width: newSize.width } : {})
+    });
   };
 
   // Whiteboard position update (similar to list position update)
   const handleWhiteboardPositionUpdate = (whiteboardId: number, newPosition: { x: number; y: number }) => {
-    // Save original state for rollback
-    const originalWhiteboards = [...whiteboards];
-
     // Update local state immediately (optimistic update)
     setWhiteboards(prev => prev.map(whiteboard => whiteboard.id === whiteboardId ? {
       ...whiteboard,
@@ -1583,21 +1642,12 @@ const CanvasPage: React.FC = () => {
       position_y: newPosition.y
     } : whiteboard));
 
-    // Make API call and rollback on error
-    apiUpdateWhiteboardPosition(whiteboardId, newPosition.x, newPosition.y, token)
-      .then(() => {
-        logger.log('📍 Whiteboard position update successful');
-      })
-      .catch((error) => {
-        console.error('📍 Failed to update whiteboard position:', error);
-        // Rollback to original state on error
-        setWhiteboards(originalWhiteboards);
-        toast({
-          title: "Error",
-          description: "Could not update whiteboard position. Please try again.",
-          variant: "destructive"
-        });
-      });
+    enqueuePositionUpdate({
+      type: 'whiteboard',
+      id: whiteboardId,
+      position_x: newPosition.x,
+      position_y: newPosition.y
+    });
   };
 
   if (isLoading) {
@@ -1993,9 +2043,11 @@ const CanvasPage: React.FC = () => {
                 onListDelete={deleteList}
                 onListShare={handleShareList}
                 onNoteUpdate={handleUpdateNote}
+                onNotePositionUpdate={handleNotePositionUpdate}
                 onNoteDelete={handleDeleteNote}
                 onNoteShare={handleShareNote}
                 onWhiteboardUpdate={handleUpdateWhiteboard}
+                onWhiteboardPositionUpdate={handleWhiteboardPositionUpdate}
                 onWhiteboardDelete={handleDeleteWhiteboard}
                 onWhiteboardShare={handleShareWhiteboard}
                 onWireframeUpdate={handleUpdateWireframe}

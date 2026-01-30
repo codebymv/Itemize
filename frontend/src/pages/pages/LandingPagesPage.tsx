@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getPages, updatePage, deletePage, duplicatePage, createPage } from '@/services/pagesApi';
@@ -58,8 +59,7 @@ export function LandingPagesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
                     <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className={`text-xl font-semibold italic truncate min-w-0 font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
                         PAGES & FORMS | Landing Pages
                     </h1>
@@ -73,6 +73,7 @@ export function LandingPagesPage() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 bg-muted/20 border-border/50"
+                            aria-label="Search landing pages"
                         />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -137,7 +138,7 @@ export function LandingPagesPage() {
                 updated_at: p.updated_at,
             })));
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load pages', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToLoad('pages'), variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -153,7 +154,7 @@ export function LandingPagesPage() {
             const newPage = await createPage({ name: 'New Page' }, organizationId);
             navigate(`/pages/${newPage.id}`);
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to create page', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToCreate('page'), variant: 'destructive' });
         }
     };
 
@@ -164,7 +165,7 @@ export function LandingPagesPage() {
             setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: newStatus } : p));
             toast({ title: newStatus === 'published' ? 'Page published' : 'Page unpublished' });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to update page', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToUpdate('page'), variant: 'destructive' });
         }
     };
 
@@ -173,9 +174,9 @@ export function LandingPagesPage() {
         try {
             const copy = await duplicatePage(id, organizationId);
             setPages(prev => [copy, ...prev]);
-            toast({ title: 'Duplicated', description: 'Page duplicated successfully' });
+            toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToDuplicate('page'), variant: 'destructive' });
         }
     };
 
@@ -184,15 +185,15 @@ export function LandingPagesPage() {
         try {
             await deletePage(id, organizationId);
             setPages(prev => prev.filter(p => p.id !== id));
-            toast({ title: 'Deleted', description: 'Page deleted successfully' });
+            toast({ title: 'Deleted', description: toastMessages.deleted('page') });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToDelete('page'), variant: 'destructive' });
         }
     };
 
     const copyPageLink = (slug: string) => {
         navigator.clipboard.writeText(`${window.location.origin}/p/${slug}`);
-        toast({ title: 'Link Copied', description: 'Page link copied to clipboard' });
+        toast({ title: 'Link Copied', description: toastMessages.copiedToClipboard('page link') });
     };
 
     const filteredPages = pages.filter(p => 

@@ -279,6 +279,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   variant="ghost"
                   onClick={handleEditTitle}
                   className="h-8 w-8 p-0"
+                  aria-label="Save vault title"
                 >
                   <Check className="h-4 w-4" />
                 </Button>
@@ -290,6 +291,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                     setIsEditing(false);
                   }}
                   className="h-8 w-8 p-0"
+                  aria-label="Cancel edit"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -329,8 +331,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   )}
                   {/* Title - clickable to edit */}
                   <CardTitle 
-                    className="text-lg font-medium cursor-pointer"
-                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    className="text-lg font-medium cursor-pointer font-raleway"
                     onClick={() => setIsEditing(true)}
                   >
                     {vaultTitle}
@@ -339,7 +340,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 <div className="flex">
                   {/* Collapsible trigger - separate button */}
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Toggle vault details">
                       <ChevronDown className={cn(
                         "h-4 w-4 transition-transform",
                         isCollapsibleOpen ? "" : "transform rotate-180"
@@ -349,23 +350,22 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   {/* Dropdown menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
+                      <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Vault actions">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu font-raleway">
                         <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareVault} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleShareVault} className="group/menu font-raleway">
                         <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Share
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={handleDeleteConfirmation}
-                        className="text-red-600"
-                        style={{ fontFamily: '"Raleway", sans-serif' }}
+                        className="text-red-600 font-raleway"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Vault

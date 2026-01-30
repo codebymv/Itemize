@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Form } from '@/types';
 import { getForms, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
@@ -47,8 +48,7 @@ export function FormsPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
                         PAGES & FORMS | Forms
                     </h1>
@@ -113,7 +113,7 @@ export function FormsPage() {
             const response = await getForms(organizationId, statusFilter !== 'all' ? statusFilter : undefined);
             setForms(response.forms);
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load forms', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToLoad('forms'), variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -129,7 +129,7 @@ export function FormsPage() {
             const newForm = await createForm({ name: 'New Form', organization_id: organizationId });
             navigate(`/forms/${newForm.id}`);
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to create form', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToCreate('form'), variant: 'destructive' });
         }
     };
 
@@ -140,7 +140,7 @@ export function FormsPage() {
             setForms(prev => prev.map(f => f.id === form.id ? { ...f, status: newStatus } : f));
             toast({ title: newStatus === 'published' ? 'Form published' : 'Form unpublished' });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to update form', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToUpdate('form'), variant: 'destructive' });
         }
     };
 
@@ -149,9 +149,9 @@ export function FormsPage() {
         try {
             const copy = await duplicateForm(id, organizationId);
             setForms(prev => [copy, ...prev]);
-            toast({ title: 'Duplicated', description: 'Form duplicated successfully' });
+            toast({ title: 'Duplicated', description: toastMessages.duplicated('form') });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToDuplicate('form'), variant: 'destructive' });
         }
     };
 
@@ -160,15 +160,15 @@ export function FormsPage() {
         try {
             await deleteForm(id, organizationId);
             setForms(prev => prev.filter(f => f.id !== id));
-            toast({ title: 'Deleted', description: 'Form deleted successfully' });
+            toast({ title: 'Deleted', description: toastMessages.deleted('form') });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToDelete('form'), variant: 'destructive' });
         }
     };
 
     const copyFormLink = (slug: string) => {
         navigator.clipboard.writeText(`${window.location.origin}/form/${slug}`);
-        toast({ title: 'Link Copied', description: 'Form link copied to clipboard' });
+        toast({ title: 'Link Copied', description: toastMessages.copiedToClipboard('form link') });
     };
 
     const filteredForms = forms.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -204,6 +204,7 @@ export function FormsPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        aria-label="Search forms"
                     />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>

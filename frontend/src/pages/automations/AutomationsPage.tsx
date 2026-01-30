@@ -135,8 +135,7 @@ export function AutomationsPage() {
               placeholder="Search workflows..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
             />
           </div>
           <Select value={triggerFilter} onValueChange={setTriggerFilter}>

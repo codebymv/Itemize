@@ -1,4 +1,4 @@
-import api from '../lib/api';
+import api, { type RetryConfig } from '../lib/api';
 import { logger } from '../lib/logger';
 import { MIN_LIST_WIDTH } from '../constants/dimensions';
 
@@ -13,6 +13,15 @@ export interface CreateNotePayload {
   height?: number;
   z_index?: number;
 }
+
+export type CanvasPositionUpdate = {
+  type: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
+  id: number | string;
+  position_x: number;
+  position_y: number;
+  width?: number;
+  height?: number;
+};
 
 export interface CanvasPath {
   drawMode: boolean;
@@ -230,6 +239,18 @@ export const updateListPosition = async (listId: string, x: number, y: number, t
   const response = await api.put(`/api/lists/${listId}/position`, { x, y }, {
     headers: getAuthHeaders(token)
   });
+  return response.data;
+};
+
+export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], token?: string) => {
+  const response = await api.put(
+    '/api/canvas/positions',
+    { updates },
+    {
+      headers: getAuthHeaders(token),
+      retryOn429: true
+    } as RetryConfig
+  );
   return response.data;
 };
 

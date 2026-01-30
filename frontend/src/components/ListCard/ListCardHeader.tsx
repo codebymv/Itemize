@@ -70,6 +70,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
               variant="ghost"
               onClick={handleEditTitle}
               className="h-8 w-8 p-0"
+              aria-label="Save list title"
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -78,6 +79,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
               variant="ghost"
               onClick={() => setIsEditing(false)}
               className="h-8 w-8 p-0"
+              aria-label="Cancel edit"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -126,8 +128,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
               </ColorPicker>
               <CheckSquare className="h-4 w-4" style={{ color: 'var(--list-color)' }} />
               <CardTitle
-                className="text-lg font-medium cursor-pointer"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
+                className="text-lg font-medium cursor-pointer font-raleway"
                 onClick={() => setIsEditing(true)}
               >
                 {title}
@@ -135,7 +136,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
             </div>
             <div className="flex">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Toggle list details">
                   <ChevronDown className={cn(
                     "h-4 w-4 transition-transform",
                     isCollapsibleOpen ? "" : "transform rotate-180"
@@ -144,20 +145,20 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
               </CollapsibleTrigger>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
+                  <Button variant="ghost" className="h-8 w-8 p-0" aria-label="List actions">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu font-raleway">
                     <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                     Edit Title
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleShareList} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <DropdownMenuItem onClick={handleShareList} className="group/menu font-raleway">
                     <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                     Share
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDeleteList} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <DropdownMenuItem onClick={handleDeleteList} className="text-red-600 font-raleway">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete List
                   </DropdownMenuItem>

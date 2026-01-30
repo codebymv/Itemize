@@ -4,6 +4,7 @@ import api, { getApiUrl, setAuthToken, getAuthToken } from '@/lib/api';
 import { storage } from '@/lib/storage';
 import axios from 'axios'; // Keep axios for Google API calls
 import { toast } from '@/components/ui/use-toast'; // Import toast
+import logger from '@/lib/logger';
 
 export interface User {
   uid: string;
@@ -100,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           storage.removeItem('itemize_expiry');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        logger.error('Error initializing auth:', error);
       } finally {
         setLoading(false);
       }
@@ -131,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     onSuccess: async (tokenResponse) => {
       setLoading(true);
       try {
-        console.log('Google login successful, getting user info');
+        logger.debug('auth', 'Google login successful, getting user info');
         
         // Get user info from Google using the access token
         const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -139,11 +140,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         const googleUser = userResponse.data;
-        console.log('Received user info from Google:', googleUser);
+        logger.debug('auth', 'Received user info from Google:', googleUser);
         
         // Now authenticate with your backend using the Google user info
         const apiUrl = getApiUrl();
-        console.log('Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
+        logger.debug('auth', 'Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
         
         // Make API request with proper data
         try {
@@ -154,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             picture: googleUser.picture
           }, { withCredentials: true });
 
-          console.log('Backend auth response:', response.data);
+          logger.debug('auth', 'Backend auth response:', response.data);
           
           const { user: userData, token: authToken } = response.data;
           
@@ -172,18 +173,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Navigate to the pending redirect path after successful auth
           const redirectTo = pendingRedirectRef.current || '/dashboard';
           pendingRedirectRef.current = null;
-          console.log('Google auth complete, redirecting to:', redirectTo);
+          logger.debug('auth', 'Google auth complete, redirecting to:', redirectTo);
           
           // Use window.location for reliable navigation after auth state change
           // This ensures the page reloads with fresh auth state
           window.location.href = redirectTo;
         } catch (backendError) {
-          console.error('Backend auth error:', backendError);
+          logger.error('Backend auth error:', backendError);
           throw new Error(`Backend authentication failed: ${backendError.message}`);
         }
         
       } catch (error) {
-        console.error('Google login failed:', error);
+        logger.error('Google login failed:', error);
         toast({
           title: 'Login failed',
           description: 'Failed to sign in with Google. Please try again.',
@@ -194,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     },
     onError: () => {
-      console.error('Google login failed');
+      logger.error('Google login failed');
       setLoading(false);
       toast({
         title: 'Login failed',
@@ -208,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback((redirectTo?: string) => {
     // Store the redirect path for use after successful auth
     pendingRedirectRef.current = redirectTo || '/dashboard';
-    console.log('Starting Google login, will redirect to:', pendingRedirectRef.current);
+    logger.debug('auth', 'Starting Google login, will redirect to:', pendingRedirectRef.current);
     googleLogin();
   }, [googleLogin]);
 
@@ -281,16 +282,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       googleLogout();
     } catch (googleError) {
-      console.error('Error signing out from Google:', googleError);
+      logger.error('Error signing out from Google:', googleError);
     }
     
     // Backend logout (optional - mainly for clearing any server-side sessions)
     try {
       api.post('/api/auth/logout').catch((error) => {
-        console.error('Backend logout failed:', error);
+        logger.error('Backend logout failed:', error);
       });
     } catch (error) {
-      console.error('Backend logout failed:', error);
+      logger.error('Backend logout failed:', error);
     }
   }, []);
 
@@ -298,7 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleGoogleSuccess = useCallback(async (credentialResponse: CredentialResponse) => {
     setLoading(true);
     try {
-      console.log('Google One Tap login successful');
+      logger.debug('auth', 'Google One Tap login successful');
       
       // Send the credential to your backend
       const apiUrl = getApiUrl();
@@ -320,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'Successfully signed in with Google.',
       });
     } catch (error) {
-      console.error('Google credential login failed:', error);
+      logger.error('Google credential login failed:', error);
     } finally {
       setLoading(false);
     }

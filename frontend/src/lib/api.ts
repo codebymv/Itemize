@@ -12,6 +12,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Production URL for the backend (override via env)
 const PRODUCTION_URL = import.meta.env.VITE_PRODUCTION_API_URL || API_BASE_URL;
+const PRODUCTION_DOMAIN = import.meta.env.VITE_PRODUCTION_DOMAIN;
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -21,8 +22,9 @@ const INITIAL_RETRY_DELAY = 1000; // 1 second
 const RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504];
 
 // Extend axios config to track retry count
-interface RetryConfig extends InternalAxiosRequestConfig {
+export interface RetryConfig extends InternalAxiosRequestConfig {
   __retryCount?: number;
+  retryOn429?: boolean;
 }
 
 /**
@@ -58,7 +60,7 @@ const shouldRetry = (error: AxiosError, config: RetryConfig): boolean => {
   
   // Only retry idempotent requests or network errors
   if (!isIdempotent && error.response) {
-    return false;
+    return config.retryOn429 === true && error.response.status === 429;
   }
 
   // Retry network errors (no response)
@@ -102,7 +104,9 @@ export const setAuthToken = (token: string | null): void => {
 api.interceptors.request.use(
   (config) => {
     // Update baseURL based on current hostname
-    const isProductionDomain = window.location.hostname === 'itemize.cloud';
+    const isProductionDomain = PRODUCTION_DOMAIN
+      ? window.location.hostname === PRODUCTION_DOMAIN
+      : false;
     config.baseURL = isProductionDomain ? PRODUCTION_URL : API_BASE_URL;
 
     // Check if the request URL matches any blocked endpoint
@@ -228,7 +232,9 @@ api.interceptors.response.use(
 
 // Export a function to get the current API URL
 export const getApiUrl = () => {
-  const isProductionDomain = window.location.hostname === 'itemize.cloud';
+  const isProductionDomain = PRODUCTION_DOMAIN
+    ? window.location.hostname === PRODUCTION_DOMAIN
+    : false;
   return isProductionDomain ? PRODUCTION_URL : API_BASE_URL;
 };
 
@@ -242,7 +248,7 @@ export const getAssetUrl = (url: string | null | undefined): string => {
   // If it's already an absolute URL, check if it needs fixing for production
   if (url.startsWith('http://') || url.startsWith('https://')) {
     // If it's a localhost URL and we're in production, fix it
-    if (url.includes('localhost:') && window.location.hostname === 'itemize.cloud') {
+    if (url.includes('localhost:') && PRODUCTION_DOMAIN && window.location.hostname === PRODUCTION_DOMAIN) {
       // Extract the path portion and prepend production URL
       const pathMatch = url.match(/\/uploads\/.*/);
       if (pathMatch) {

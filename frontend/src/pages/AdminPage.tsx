@@ -63,9 +63,8 @@ function AdminNav() {
                     <Button
                         key={item.path}
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className="justify-start text-muted-foreground hover:text-foreground"
+                        className="justify-start text-muted-foreground hover:text-foreground font-raleway"
                         onClick={() => navigate(item.path)}
-                        style={{ fontFamily: '"Raleway", sans-serif' }}
                     >
                         <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
                         {item.title}
@@ -312,7 +311,7 @@ function CommunicationsSection() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <h2 className="text-2xl font-semibold font-raleway">
                     Communications
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -817,7 +816,7 @@ function StatisticsSection() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <h2 className="text-2xl font-semibold font-raleway">
                     System Statistics
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -884,7 +883,7 @@ function ChangeTierSection() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-semibold" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <h2 className="text-2xl font-semibold font-raleway">
                     Change Tier
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -950,8 +949,8 @@ export function AdminPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway"
+                        style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
                         ADMIN | {activeNavItem.title}
                     </h1>

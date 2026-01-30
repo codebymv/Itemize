@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Booking } from '@/types';
 import { getBookings, cancelBooking, BookingsQueryParams } from '@/services/calendarsApi';
@@ -54,8 +55,7 @@ export function BookingsPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
                         SCHEDULING | Bookings
                     </h1>
@@ -69,7 +69,7 @@ export function BookingsPage() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                            aria-label="Search bookings"
                         />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -118,7 +118,7 @@ export function BookingsPage() {
             console.error('Error fetching bookings:', error);
             toast({
                 title: 'Error',
-                description: 'Failed to load bookings',
+                description: toastMessages.failedToLoad('bookings'),
                 variant: 'destructive',
             });
         } finally {
@@ -136,13 +136,13 @@ export function BookingsPage() {
 
         try {
             await cancelBooking(id, 'Cancelled by admin', organizationId);
-            toast({ title: 'Cancelled', description: 'Booking cancelled successfully' });
+            toast({ title: 'Cancelled', description: toastMessages.cancelled('booking') });
             fetchBookings();
         } catch (error) {
             console.error('Error cancelling booking:', error);
             toast({
                 title: 'Error',
-                description: 'Failed to cancel booking',
+                description: toastMessages.failedToCancel('booking'),
                 variant: 'destructive',
             });
         }

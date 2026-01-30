@@ -28,6 +28,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -102,8 +103,8 @@ export function EstimateEditorPage() {
                     </Button>
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate min-w-0 font-raleway"
+                        style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
                         SALES & PAYMENTS | {isNew ? 'New Estimate' : 'Estimate'}
                     </h1>
@@ -190,7 +191,7 @@ export function EstimateEditorPage() {
                     }
                 }
             } catch (error) {
-                toast({ title: 'Error', description: 'Failed to load data', variant: 'destructive' });
+                toast({ title: 'Error', description: toastMessages.failedToLoad('estimate data'), variant: 'destructive' });
             } finally {
                 setLoading(false);
             }
@@ -308,16 +309,16 @@ export function EstimateEditorPage() {
                 const response = await api.post('/api/invoices/estimates', estimateData, {
                     headers: { 'x-organization-id': organizationId.toString() }
                 });
-                toast({ title: 'Created', description: 'Estimate created successfully' });
+                toast({ title: 'Created', description: toastMessages.created('estimate') });
                 navigate(`/estimates/${response.data.id}`);
             } else if (id) {
                 await api.put(`/api/invoices/estimates/${id}`, estimateData, {
                     headers: { 'x-organization-id': organizationId.toString() }
                 });
-                toast({ title: 'Saved', description: 'Estimate saved successfully' });
+                toast({ title: 'Saved', description: toastMessages.saved('estimate') });
             }
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to save estimate', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToSave('estimate'), variant: 'destructive' });
         } finally {
             setSaving(false);
         }
@@ -335,7 +336,7 @@ export function EstimateEditorPage() {
             setStatus('sent');
             toast({ title: 'Sent', description: 'Estimate sent successfully' });
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to send estimate', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToSend('estimate'), variant: 'destructive' });
         } finally {
             setSaving(false);
         }
@@ -353,7 +354,7 @@ export function EstimateEditorPage() {
             toast({ title: 'Converted', description: 'Estimate converted to invoice successfully' });
             navigate(`/invoices/${response.data.invoice_id}`);
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to convert estimate', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToConvert('estimate'), variant: 'destructive' });
         } finally {
             setSaving(false);
         }

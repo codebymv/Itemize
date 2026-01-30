@@ -205,8 +205,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                   </ColorPicker>
                   <Palette className="h-4 w-4" style={{ color: 'var(--whiteboard-color)' }} />
                   <CardTitle 
-                    className="text-lg font-medium cursor-pointer"
-                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    className="text-lg font-medium cursor-pointer font-raleway"
                     onClick={() => setIsEditing(true)}
                   >
                     {whiteboardTitle}
@@ -214,7 +213,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                 </div>
                 <div className="flex">
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Toggle whiteboard details">
                       <ChevronDown className={cn(
                         "h-4 w-4 transition-transform",
                         isCollapsibleOpen ? "" : "transform rotate-180"
@@ -223,20 +222,20 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                   </CollapsibleTrigger>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
+                      <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Whiteboard actions">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu font-raleway">
                         <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareWhiteboard} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleShareWhiteboard} className="group/menu font-raleway">
                         <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Share
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-red-600 font-raleway">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Whiteboard
                       </DropdownMenuItem>

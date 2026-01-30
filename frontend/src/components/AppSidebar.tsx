@@ -349,6 +349,7 @@ export function AppSidebar() {
                         size="icon"
                         onClick={toggleSidebar}
                         className="h-8 w-8 flex-shrink-0"
+                        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
                         {isCollapsed ? <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" /> : <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
                     </Button>
@@ -357,7 +358,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
-                    <SidebarGroupLabel style={{ fontFamily: '"Raleway", sans-serif' }}>Main</SidebarGroupLabel>
+                    <SidebarGroupLabel className="font-raleway">Main</SidebarGroupLabel>
                     <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                         <SidebarMenu className={cn("gap-3", isCollapsed && "w-full items-center")}>
                             {filteredMainNavItems.map((item) => {
@@ -385,8 +386,7 @@ export function AppSidebar() {
                                                     <SidebarMenuButton
                                                         tooltip={item.title}
                                                         isActive={isActive}
-                                                        className="h-10 group/item"
-                                                        style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                        className="h-10 group/item font-raleway"
                                                         onClick={(e) => {
                                                             if (isCollapsed) {
                                                                 e.preventDefault();
@@ -407,7 +407,7 @@ export function AppSidebar() {
                                                                 <SidebarMenuSubButton
                                                                     asChild
                                                                     isActive={location.pathname === subItem.path}
-                                                                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                                    className="font-raleway"
                                                                 >
                                                                     <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
                                                                         <span>{subItem.title}</span>
@@ -428,12 +428,11 @@ export function AppSidebar() {
                                             tooltip={item.title}
                                             isActive={isActive}
                                             onClick={() => handleItemClick(item, item.disabled)}
-                                            className={cn(
-                                                "h-10 group/item",
-                                                item.disabled ? 'opacity-50 cursor-not-allowed' : '',
-                                                isActive ? 'text-gray-900 dark:text-white font-medium' : ''
-                                            )}
-                                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                                        className={cn(
+                                            "h-10 group/item font-raleway",
+                                            item.disabled ? 'opacity-50 cursor-not-allowed' : '',
+                                            isActive ? 'text-gray-900 dark:text-white font-medium' : ''
+                                        )}
                                         >
                                             <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
                                             <span>{item.title}</span>
@@ -478,8 +477,7 @@ export function AppSidebar() {
                                                         <SidebarMenuButton
                                                             tooltip={item.title}
                                                             isActive={isActive}
-                                                            className="h-9 group/item"
-                                                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                            className="h-9 group/item font-raleway"
                                                             onClick={(e) => {
                                                                 if (isCollapsed) {
                                                                     e.preventDefault();
@@ -500,7 +498,7 @@ export function AppSidebar() {
                                                                     <SidebarMenuSubButton
                                                                         asChild
                                                                         isActive={location.pathname === subItem.path}
-                                                                        style={{ fontFamily: '"Raleway", sans-serif' }}
+                                                                        className="font-raleway"
                                                                     >
                                                                         <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
                                                                             <span>{subItem.title}</span>
@@ -522,10 +520,9 @@ export function AppSidebar() {
                                                 isActive={isActive}
                                                 onClick={() => handleItemClick(item)}
                                                 className={cn(
-                                                    "h-9 group/item",
+                                                    "h-9 group/item font-raleway",
                                                     isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                                 )}
-                                                style={{ fontFamily: '"Raleway", sans-serif' }}
                                             >
                                                 <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
                                                 <span>{item.title}</span>

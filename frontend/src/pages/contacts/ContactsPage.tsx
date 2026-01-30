@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { usePageHeader } from '@/hooks/usePageHeader';
 import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV } from '@/services/contactsApi';
@@ -168,8 +169,8 @@ export function ContactsPage() {
               placeholder="Search contacts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
+              aria-label="Search contacts"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -255,7 +256,7 @@ export function ContactsPage() {
       console.error('Error fetching contacts:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load contacts',
+        description: toastMessages.failedToLoad('contacts'),
         variant: 'destructive',
       });
     } finally {
@@ -298,14 +299,14 @@ export function ContactsPage() {
       await deleteContact(id, organizationId);
       toast({
         title: 'Deleted',
-        description: 'Contact deleted successfully',
+        description: toastMessages.deleted('contact'),
       });
       fetchContacts();
     } catch (error) {
       console.error('Error deleting contact:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete contact',
+        description: toastMessages.failedToDelete('contact'),
         variant: 'destructive',
       });
     }
@@ -327,7 +328,7 @@ export function ContactsPage() {
       console.error('Error bulk deleting contacts:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete contacts',
+        description: toastMessages.failedToDelete('contacts'),
         variant: 'destructive',
       });
     }
@@ -338,7 +339,7 @@ export function ContactsPage() {
     setShowCreateModal(false);
     toast({
       title: 'Created',
-      description: 'Contact created successfully',
+      description: toastMessages.created('contact'),
     });
     fetchContacts();
   };

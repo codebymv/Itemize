@@ -48,6 +48,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useAuthState } from '@/contexts/AuthContext';
 import {
@@ -129,7 +130,7 @@ export function SharedPage() {
       console.error('Error fetching content:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load shared content',
+        description: toastMessages.failedToLoad('shared content'),
         variant: 'destructive',
       });
     } finally {
@@ -309,7 +310,7 @@ export function SharedPage() {
     navigator.clipboard.writeText(content.share_url);
     toast({
       title: 'Link Copied',
-      description: 'Share link has been copied to clipboard',
+      description: toastMessages.copiedToClipboard('share link'),
     });
   };
 
@@ -389,8 +390,7 @@ export function SharedPage() {
         <div className="flex items-center gap-2 ml-2">
           <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-xl font-semibold italic truncate"
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+            className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
           >
             SHARED ITEMS
           </h1>
@@ -581,6 +581,7 @@ export function SharedPage() {
                             size="sm"
                             className="h-8 w-8 p-0 flex-shrink-0"
                             onClick={() => handleCopyLink(content)}
+                            aria-label="Copy share link"
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -626,21 +627,20 @@ export function SharedPage() {
       <AlertDialog open={unshareDialogOpen} onOpenChange={setUnshareDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <AlertDialogTitle className="flex items-center gap-2 font-raleway">
               <AlertTriangle className="h-5 w-5 text-red-500" />
               Disable Sharing?
             </AlertDialogTitle>
-            <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <AlertDialogDescription className="font-raleway">
               This will disable the public share link for "{contentToUnshare?.title}". 
               Anyone with the current link will no longer be able to access it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="font-raleway">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleUnshare}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
+              className="bg-red-600 hover:bg-red-700 text-white font-raleway"
             >
               Disable Sharing
             </AlertDialogAction>

@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Contact, ContactActivity } from '@/types';
 import {
@@ -188,7 +189,7 @@ export function ContactDetailPage() {
       console.error('Error fetching contact:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load contact',
+        description: toastMessages.failedToLoad('contact'),
         variant: 'destructive',
       });
       navigate('/contacts');
@@ -209,14 +210,14 @@ export function ContactDetailPage() {
       await deleteContact(contact.id, organizationId);
       toast({
         title: 'Deleted',
-        description: 'Contact deleted successfully',
+        description: toastMessages.deleted('contact'),
       });
       navigate('/contacts');
     } catch (error) {
       console.error('Error deleting contact:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete contact',
+        description: toastMessages.failedToDelete('contact'),
         variant: 'destructive',
       });
     }
@@ -245,13 +246,13 @@ export function ContactDetailPage() {
 
       toast({
         title: 'Note Added',
-        description: 'Note added successfully',
+        description: toastMessages.added('note'),
       });
     } catch (error) {
       console.error('Error adding note:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add note',
+        description: toastMessages.failedToAdd('note'),
         variant: 'destructive',
       });
     } finally {
@@ -276,7 +277,7 @@ export function ContactDetailPage() {
     setShowEditModal(false);
     toast({
       title: 'Updated',
-      description: 'Contact updated successfully',
+      description: toastMessages.updated('contact'),
     });
   };
 

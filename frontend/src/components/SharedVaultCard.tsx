@@ -82,18 +82,14 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
               <KeyRound className="h-5 w-5" style={{ color: vaultColor }} />
             </div>
             <div className="flex-1">
-              <h3
-                className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              >
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate font-raleway">
                 {vaultData.title}
               </h3>
               {vaultData.category && (
                 <div
-                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1"
+                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway"
                   style={{
-                    backgroundColor: vaultColor,
-                    fontFamily: '"Raleway", sans-serif'
+                    backgroundColor: vaultColor
                   }}
                 >
                   {vaultData.category}
@@ -201,10 +197,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
 
       {/* Timestamps */}
       <div className="mt-4 text-center">
-        <p 
-          className="text-sm text-gray-500 dark:text-gray-400"
-          style={{ fontFamily: '"Raleway", sans-serif' }}
-        >
+        <p className="text-sm text-gray-500 dark:text-gray-400 font-raleway">
           Last updated {new Date(vaultData.updated_at).toLocaleDateString()}
         </p>
       </div>

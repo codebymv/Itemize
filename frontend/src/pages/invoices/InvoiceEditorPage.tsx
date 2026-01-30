@@ -34,6 +34,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -170,8 +171,8 @@ export function InvoiceEditorPage() {
                     </Button>
                     <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate min-w-0 font-raleway"
+                        style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
                         SALES & PAYMENTS | {isNew ? 'New Invoice' : 'Invoice'}
                     </h1>
@@ -277,7 +278,7 @@ export function InvoiceEditorPage() {
                     }
                 }
             } catch (error) {
-                toast({ title: 'Error', description: 'Failed to load data', variant: 'destructive' });
+                toast({ title: 'Error', description: toastMessages.failedToLoad('invoice data'), variant: 'destructive' });
             } finally {
                 setLoading(false);
             }
@@ -397,15 +398,15 @@ export function InvoiceEditorPage() {
 
             if (isNew) {
                 await createInvoice(invoiceData, organizationId);
-                toast({ title: 'Created', description: 'Invoice created successfully' });
+                toast({ title: 'Created', description: toastMessages.created('invoice') });
                 navigate('/invoices');
             } else if (id) {
                 await updateInvoice(parseInt(id), invoiceData, organizationId);
-                toast({ title: 'Saved', description: 'Invoice saved successfully' });
+                toast({ title: 'Saved', description: toastMessages.saved('invoice') });
                 navigate('/invoices');
             }
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to save invoice', variant: 'destructive' });
+            toast({ title: 'Error', description: toastMessages.failedToSave('invoice'), variant: 'destructive' });
         } finally {
             setSaving(false);
         }
@@ -440,7 +441,7 @@ export function InvoiceEditorPage() {
             setShowSendModal(false);
             navigate('/invoices');
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.error || 'Failed to send invoice';
+            const errorMessage = error?.response?.data?.error || toastMessages.failedToSend('invoice');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setSaving(false);

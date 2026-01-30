@@ -8,7 +8,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
-const { sendError } = require('../utils/response');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 
 /**
  * Create tags routes with injected dependencies
@@ -45,7 +45,7 @@ module.exports = (pool, authenticateJWT) => {
         return counts;
       });
 
-      res.json(tagsWithCounts);
+      return sendSuccess(res, tagsWithCounts);
     } catch (error) {
       console.error('Error fetching tags:', error);
       return sendError(res, 'Internal server error');
@@ -58,7 +58,7 @@ module.exports = (pool, authenticateJWT) => {
       const { name, color } = req.body;
 
       if (!name || name.trim().length === 0) {
-        return res.status(400).json({ error: 'Tag name is required' });
+        return sendBadRequest(res, 'Tag name is required', 'name');
       }
 
       const data = await withDbClient(pool, async (client) => {
@@ -81,10 +81,10 @@ module.exports = (pool, authenticateJWT) => {
       });
 
       if (data.error) {
-        return res.status(data.status).json({ error: data.error });
+        return sendError(res, data.error, data.status || 400, 'BAD_REQUEST');
       }
 
-      res.status(201).json(data.result.rows[0]);
+      return sendCreated(res, data.result.rows[0]);
     } catch (error) {
       console.error('Error creating tag:', error);
       return sendError(res, 'Internal server error');
@@ -132,10 +132,13 @@ module.exports = (pool, authenticateJWT) => {
       });
 
       if (data.error) {
-        return res.status(data.status).json({ error: data.error });
+        if (data.status === 404) {
+          return sendNotFound(res, 'Tag');
+        }
+        return sendError(res, data.error, data.status || 400, 'BAD_REQUEST');
       }
 
-      res.json(data.result.rows[0]);
+      return sendSuccess(res, data.result.rows[0]);
     } catch (error) {
       console.error('Error updating tag:', error);
       return sendError(res, 'Internal server error');
@@ -180,10 +183,13 @@ module.exports = (pool, authenticateJWT) => {
       });
 
       if (data.error) {
-        return res.status(data.status).json({ error: data.error });
+        if (data.status === 404) {
+          return sendNotFound(res, 'Tag');
+        }
+        return sendError(res, data.error, data.status || 400, 'BAD_REQUEST');
       }
 
-      res.json({ message: 'Tag deleted successfully' });
+      return sendSuccess(res, { message: 'Tag deleted successfully' });
     } catch (error) {
       console.error('Error deleting tag:', error);
       return sendError(res, 'Internal server error');
@@ -200,7 +206,7 @@ module.exports = (pool, authenticateJWT) => {
         ORDER BY tag ASC
       `, [req.organizationId]));
 
-      res.json(result.rows.map(r => r.tag));
+      return sendSuccess(res, result.rows.map(r => r.tag));
     } catch (error) {
       console.error('Error fetching tag suggestions:', error);
       return sendError(res, 'Internal server error');

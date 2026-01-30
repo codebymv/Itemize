@@ -6,6 +6,7 @@ import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
 import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuthState } from '../../contexts/AuthContext';
+import { storage } from '../../lib/storage';
 
 import Spinner from '../../components/ui/Spinner';
 import { DraggableNoteCard } from './DraggableNoteCard';
@@ -28,6 +29,7 @@ interface CanvasContainerProps {
   onListDelete: (listId: string) => Promise<boolean>;
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
+  onNotePositionUpdate?: (noteId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => void;
   onNoteDelete: (noteId: number) => Promise<boolean>;
   onNoteShare: (noteId: number) => void;
   whiteboards: Whiteboard[];
@@ -74,6 +76,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onListDelete,
   notes,
   onNoteUpdate,
+  onNotePositionUpdate,
   onNoteDelete,
   onNoteShare,
   whiteboards,
@@ -98,7 +101,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   updateCategory
 }) => {
   const { theme } = useTheme();
-  const { token } = useAuthState();
+  const { currentUser } = useAuthState();
   const { state: sidebarState, isMobile } = useSidebar();
   
   // Calculate sidebar width for zoom controls positioning
@@ -111,13 +114,20 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [menuAbsolutePosition, setMenuAbsolutePosition] = useState<{ x: number, y: number } | undefined>(undefined);
   const [menuIsFromButton, setMenuIsFromButton] = useState(false);
 
-  
-  // Canvas transform state - start centered for optimal panning
-  const [canvasTransform, setCanvasTransform] = useState({
-    x: window.innerWidth / 2 - 2000, // Center the 4000px canvas width
-    y: window.innerHeight / 2 - 2000, // Center the 4000px canvas height
-    scale: 1
+  const viewportKey = useMemo(
+    () => `canvas_viewport:${currentUser?.uid ?? 'guest'}`,
+    [currentUser?.uid]
+  );
+  const initialTransformAppliedRef = useRef(false);
+
+  const getDefaultTransform = () => ({
+    x: window.innerWidth / 2 - 2000,
+    y: window.innerHeight / 2 - 2000,
+    scale: 1,
   });
+
+  // Canvas transform state - start centered for optimal panning
+  const [canvasTransform, setCanvasTransform] = useState(getDefaultTransform);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   
@@ -126,6 +136,74 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
+
+  const allPositions = useMemo(() => {
+    const positions: { x: number; y: number }[] = [];
+    const pushPosition = (x?: number | null, y?: number | null) => {
+      if (typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)) {
+        positions.push({ x, y });
+      }
+    };
+
+    lists.forEach((list) => pushPosition(list.position_x, list.position_y));
+    notes.forEach((note) => pushPosition(note.position_x, note.position_y));
+    whiteboards.forEach((whiteboard) => pushPosition(whiteboard.position_x, whiteboard.position_y));
+    wireframes.forEach((wireframe) => pushPosition(wireframe.position_x, wireframe.position_y));
+    vaults.forEach((vault) => pushPosition(vault.position_x, vault.position_y));
+
+    return positions;
+  }, [lists, notes, whiteboards, wireframes, vaults]);
+
+  const getViewportSize = () => {
+    const width = canvasRef.current?.clientWidth ?? window.innerWidth;
+    const height = canvasRef.current?.clientHeight ?? window.innerHeight;
+    return { width, height };
+  };
+
+  const getMedian = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  };
+
+  const getContentCenter = (positions: { x: number; y: number }[]) => {
+    if (positions.length === 0) {
+      return { x: 2000, y: 2000 };
+    }
+    const xs = positions.map((pos) => pos.x);
+    const ys = positions.map((pos) => pos.y);
+    return { x: getMedian(xs), y: getMedian(ys) };
+  };
+
+  useEffect(() => {
+    if (initialTransformAppliedRef.current) return;
+
+    const saved = storage.getJson<{ x: number; y: number; scale: number }>(viewportKey);
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) && Number.isFinite(saved.scale)) {
+      setCanvasTransform(saved);
+      initialTransformAppliedRef.current = true;
+      return;
+    }
+
+    if (allPositions.length > 0) {
+      const { width, height } = getViewportSize();
+      const { x: centerX, y: centerY } = getContentCenter(allPositions);
+      setCanvasTransform({
+        x: width / 2 - centerX,
+        y: height / 2 - centerY,
+        scale: 1,
+      });
+      initialTransformAppliedRef.current = true;
+    }
+  }, [allPositions, viewportKey]);
+
+  useEffect(() => {
+    if (!initialTransformAppliedRef.current) return;
+    const timeout = window.setTimeout(() => {
+      storage.setJson(viewportKey, canvasTransform);
+    }, 400);
+    return () => window.clearTimeout(timeout);
+  }, [canvasTransform, viewportKey]);
 
   // Handler for when 'Add Note' is clicked in the context menu
   const handleRequestAddNote = () => {
@@ -451,11 +529,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   const handleResetView = () => {
-    setCanvasTransform({ 
-      x: window.innerWidth / 2 - 2000, // Center the 4000px canvas width
-      y: window.innerHeight / 2 - 2000, // Center the 4000px canvas height
-      scale: 1 
-    });
+    setCanvasTransform(getDefaultTransform());
   };
 
   // Filter logic
@@ -658,7 +732,15 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 key={note.id} 
                 note={note} 
                 onPositionUpdate={(noteId, newPosition, newSize) => {
-                  const updatePayload: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = { position_x: newPosition.x, position_y: newPosition.y };
+                  if (onNotePositionUpdate) {
+                    onNotePositionUpdate(noteId, newPosition, newSize);
+                    return;
+                  }
+
+                  const updatePayload: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = {
+                    position_x: newPosition.x,
+                    position_y: newPosition.y
+                  };
                   if (newSize) {
                     updatePayload.width = newSize.width;
                     updatePayload.height = newSize.height;
@@ -685,6 +767,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
                 onPositionChange={(whiteboardId, newPosition) => {
+                  if (onWhiteboardPositionUpdate) {
+                    onWhiteboardPositionUpdate(whiteboardId, newPosition);
+                    return;
+                  }
                   onWhiteboardUpdate(whiteboardId, { position_x: newPosition.x, position_y: newPosition.y });
                 }}
                 updateCategory={updateCategory}
@@ -702,6 +788,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 existingCategories={existingCategories}
                 canvasTransform={canvasTransform}
                 onPositionChange={(wireframeId, newPosition) => {
+                  if (onWireframePositionUpdate) {
+                    onWireframePositionUpdate(wireframeId, newPosition);
+                    return;
+                  }
                   onWireframeUpdate(wireframeId, { position_x: newPosition.x, position_y: newPosition.y });
                 }}
                 updateCategory={updateCategory}

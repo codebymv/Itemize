@@ -31,9 +31,9 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Backend - Error Handling (Critical)
 
-**`asyncHandler` coverage (status: already applied in these files):**
-- `invoices.routes.js`, `organizations.routes.js`, `campaigns.routes.js`, `vaults.routes.js` all import and use `asyncHandler`
-- Remaining work is standardizing response utilities and removing ad-hoc `res.status(...).json(...)` patterns
+**`asyncHandler` coverage (status: complete):**
+- Applied across route files, including `admin.routes.js` and `billing.routes.js`
+- Remaining work: standardize response utilities and remove ad-hoc `res.status(...).json(...)` patterns
 
 **N+1 Query Problems (status: original items resolved in code):**
 - `contacts.routes.js` tag triggers use `Promise.allSettled` (no nested N+1)
@@ -44,10 +44,10 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Context Performance (Critical)
 
-**useMemo on context values (status: already in code):**
-- `AuthContext`, `SubscriptionContext`, `HeaderContext` already memoize value objects
+**useMemo on context values (status: resolved):**
+- `AuthContext`, `SubscriptionContext`, `HeaderContext` memoize value objects
 
-**Should split contexts:**
+**Split contexts (status: resolved):**
 - `AuthContext` → `AuthStateContext` + `AuthActionsContext`
 - `SubscriptionContext` → `SubscriptionStateContext` + `SubscriptionFeaturesContext`
 
@@ -64,7 +64,7 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 **Extract shared components (status: partially resolved):**
 - `<ErrorState>` and `<EmptyState>` exist; usage still inconsistent across pages
-- `<StatCard>` exists and used in multiple pages; remaining pages still to adopt
+- `<StatCard>` exists and is used in `CampaignsPage`, `SegmentsPage`, `DashboardPage`, `AdminPage`
 
 **Hardcoded strings to extract (~100+ instances):**
 - "Cancel", "Delete", "Create" button labels
@@ -74,27 +74,21 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Backend - Code Consistency
 
-**Response format inconsistency:**
-- Some routes: `res.json({ error: ... })`
-- Others: `res.status(500).json({ error: ... })`
-- Should use: `sendSuccess`, `sendError`, `sendPaginated` from `utils/response.js`
+**Response format inconsistency (status: partially resolved):**
+- Many routes now use `sendSuccess`, `sendError`, `sendPaginated` from `utils/response.js`
+- Remaining: remove ad-hoc `res.status(...).json(...)` patterns in a few route files
 
-**Database connection handling:**
-- Many routes manually call `pool.connect()` and `client.release()`
-- Should use: `withDbClient` from `utils/db.js`
+**Database connection handling (status: resolved):**
+- `withDbClient` now used in route files; no manual `pool.connect()` calls found
 
-**Hardcoded endpoints in InvoicesPage:**
-- Line 293: `/api/invoices/recurring/from-invoice/${id}`
-- Line 348: `/api/invoices/${id}/record-payment`
-- Line 390: `/api/invoices/${id}/create-payment-link`
-- Should move to `invoicesApi.ts`
+**Hardcoded endpoints in InvoicesPage (status: resolved):**
+- Invoice/recurring/payment-link calls now routed through `invoicesApi.ts`
 
 ### TypeScript Improvements
 
-**Inline interfaces to centralize:**
-- `CampaignsPage.tsx` (line 31) - Inline `Campaign` interface
-- `SegmentsPage.tsx` (line 24) - Inline `Segment` interface
-- Should import from API services or `@/types`
+**Inline interfaces to centralize (status: resolved):**
+- `CampaignsPage.tsx` now imports `Campaign` from `@/types/campaigns`
+- `SegmentsPage.tsx` now imports `Segment` from `@/types/segments`
 
 ### Form Validation Standardization
 
@@ -114,6 +108,7 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 **Missing aria-labels on icon-only buttons:**
 - `*CategorySelector.tsx` - Check/X buttons lack aria-labels
 - Multiple modals - Cancel/Add buttons missing labels
+- List/Vault header icon buttons now labeled
 
 **Missing roles:**
 - Badge components used as buttons lack `role="button"`
@@ -137,33 +132,30 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 - (And 10+ more files)
 
 **Font family inline styles (status: partially resolved):**
-- Global `font-raleway` class exists; several key components updated
+- Global `font-raleway` class exists; admin/automation headers and list/vault headers updated
 - Remaining inline styles still need cleanup
 
-**Console.log statements (802 instances across 72 files):**
-- `ProtectedRoute.tsx` (lines 12, 20, 28, 33) - Debug logs should be removed
-- `canvas.tsx` (56 instances) - Should use logger utility
-- Many pages/components have console.logs for debugging
-- Should replace with proper logger (`lib/logger.ts` exists but underutilized)
-- Consider environment-based logging (dev only)
+**Console.log statements (hundreds across many files):**
+- `ProtectedRoute.tsx` logs removed
+- `canvas.tsx` still has many console logs
+- Should replace with logger utility (`lib/logger.ts`) and gate by environment
 
-**Hardcoded production URL:**
-- `lib/api.ts` still uses a hardcoded production URL
-- Should be in environment variable or config file
+**Hardcoded production URL (status: resolved):**
+- `lib/api.ts` now reads `VITE_PRODUCTION_DOMAIN` + `VITE_PRODUCTION_API_URL` from env
+- Removed hardcoded domain checks in favor of env-driven config
 
 **localStorage usage (status: mostly resolved):**
 - Centralized `storage` utility created and adopted in key auth/AI paths
 - Remaining usages should migrate to `storage` utility
 
-**window.location usage (89 instances across 36 files):**
-- Direct `window.location.href` assignments scattered across codebase
-- Should use React Router's `useNavigate` hook for SPA navigation
+**window.location usage (18 instances across 11 files):**
+- Direct `window.location.href` assignments still scattered
+- Should use React Router's `useNavigate` for SPA navigation
 - Only use `window.location` for external redirects or full page reloads
 
-**Hardcoded production URL:**
-- `lib/api.ts` (line 10) - `PRODUCTION_URL` hardcoded as string
-- Should move to environment variable `VITE_PRODUCTION_API_URL`
-- Currently checks `window.location.hostname === 'itemize.cloud'` for detection
+**Hardcoded production URL (status: resolved):**
+- `lib/api.ts` now uses `VITE_PRODUCTION_API_URL` + `VITE_PRODUCTION_DOMAIN`
+- No hardcoded `itemize.cloud` check in runtime logic
 
 ### Documentation
 
@@ -174,15 +166,15 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 
 ### Page Layout Consistency
 
-**Missing stat cards:**
-- CampaignsPage - Should show draft/scheduled/sending/sent counts
-- SegmentsPage - Should show total/active/dynamic vs static counts
+**Missing stat cards (status: resolved for key pages):**
+- CampaignsPage now shows 4 stat cards
+- SegmentsPage now shows 4 stat cards
 
 **AutomationsPage:**
-- Has 5 stat cards (should be 4 to match pattern)
+- Still has 5 stat cards (should be 4 to match pattern)
 
-**Error Boundaries:**
-- All pages missing React Error Boundary components
+**Error Boundaries (status: not started):**
+- No React Error Boundary components in pages
 
 ### Code Quality & Debugging
 
@@ -253,14 +245,14 @@ Verified in code: `AppSidebar.tsx`, `ContactsPage.tsx`, `AutomationsPage.tsx`, `
 ## Quick Wins (Fast to Implement)
 
 1. Add `useMemo` to context values (Done - already applied)
-2. Fix duplicate `description` in toast calls (15+ files, 1 min each)
-3. Add missing aria-labels to icon buttons (pattern: `aria-label="Close"`)
-4. Replace inline font styles with CSS class
-5. Remove hardcoded endpoints from InvoicesPage (move to invoicesApi)
-6. Add `asyncHandler` wrapper to backend routes
-7. Remove console.logs from `ProtectedRoute.tsx` (4 instances, 2 min)
-8. Extract production URL to environment variable (5 min)
-9. Replace `window.location.href` with `useNavigate` in React components (89 instances, batch fix)
+2. Fix duplicate `description` in toast calls (In progress - `toastMessages` adopted in key pages)
+3. Add missing aria-labels to icon buttons (In progress - List/Vault headers updated)
+4. Replace inline font styles with CSS class (In progress - admin/automation headers cleaned)
+5. Remove hardcoded endpoints from InvoicesPage (Done - uses `invoicesApi`)
+6. Add `asyncHandler` wrapper to backend routes (Done)
+7. Remove console.logs from `ProtectedRoute.tsx` (Done - no logs remain)
+8. Extract production URL to environment variable (Done - `VITE_PRODUCTION_DOMAIN`/`VITE_PRODUCTION_API_URL`)
+9. Replace `window.location.href` with `useNavigate` in React components (Pending - 18 instances across 11 files)
 10. Create centralized localStorage utility with error handling (Done - created `storage` utility)
 
 ---
