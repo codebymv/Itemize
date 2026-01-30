@@ -354,7 +354,7 @@ export function AutomationsPage() {
       <PageContainer>
         <PageSurface>
         {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
         {loading ? (
           <>
             {[...Array(5)].map((_, i) => (

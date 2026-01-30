@@ -43,7 +43,7 @@ export interface UserCountResponse {
  */
 export async function getUserCount(): Promise<UserCountResponse> {
     const response = await api.get('/api/admin/users/count');
-    return response.data.data;
+    return response.data?.data ?? response.data;
 }
 
 /**
@@ -59,7 +59,7 @@ export async function searchUsers(params: {
     const response = await api.get('/api/admin/users/search', {
         params: { query, page, limit, plan }
     });
-    return response.data.data;
+    return response.data?.data ?? response.data;
 }
 
 /**
@@ -69,7 +69,7 @@ export async function getUserIds(query?: string): Promise<{ ids: number[] }> {
     const response = await api.get('/api/admin/users/ids', {
         params: { query }
     });
-    return response.data.data;
+    return response.data?.data ?? response.data;
 }
 
 /**
@@ -79,7 +79,7 @@ export async function getUsersByIds(ids: number[]): Promise<{ users: AdminUser[]
     const response = await api.get('/api/admin/users/by-ids', {
         params: { ids: ids.join(',') }
     });
-    return response.data.data;
+    return response.data?.data ?? response.data;
 }
 
 /**
@@ -87,7 +87,7 @@ export async function getUsersByIds(ids: number[]): Promise<{ users: AdminUser[]
  */
 export async function getStats(): Promise<SystemStats> {
     const response = await api.get('/api/admin/stats');
-    return response.data.data;
+    return response.data?.data ?? response.data;
 }
 
 /**
@@ -95,5 +95,5 @@ export async function getStats(): Promise<SystemStats> {
  */
 export async function updateMyPlan(plan: string): Promise<{ message: string; plan: string }> {
     const response = await api.patch('/api/admin/me/plan', { plan });
-    return response.data.data;
+    return response.data?.data ?? response.data;
 }
