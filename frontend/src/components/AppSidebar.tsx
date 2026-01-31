@@ -42,8 +42,12 @@ import {
     Mail,
     Star,
     Receipt,
+    Search,
+    Command,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useSearch } from '@/components/AppShell';
 
 // Navigation items for the sidebar
 interface NavItem {
@@ -259,6 +263,7 @@ export function AppSidebar() {
     const { theme } = useTheme();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
     const isMobileDevice = useIsMobile();
+    const { setSearchOpen } = useSearch();
 
     const isCollapsed = state === 'collapsed';
 
@@ -355,6 +360,22 @@ export function AppSidebar() {
                     </Button>
                 </div>
             </SidebarHeader>
+
+            <div className={cn("px-3 py-2", isCollapsed && "hidden")}>
+                <div
+                    onClick={() => setSearchOpen(true)}
+                    className="relative flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-background border rounded-md hover:bg-muted cursor-pointer transition-colors"
+                >
+                    <Search className="h-4 w-4" />
+                    <Input
+                        type="text"
+                        placeholder="Search everything..."
+                        className="flex-1 h-auto px-0 border-none bg-transparent focus-visible:ring-0 text-sm"
+                        readOnly
+                    />
+                    <Command className="h-3.5 w-3.5 opacity-50" />
+                </div>
+            </div>
 
             <SidebarContent>
                 <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>

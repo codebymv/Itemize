@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, Users, Inbox, Zap, Calendar, BarChart3, LucideIcon } from 'lucide-react';
+import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { fetchCanvasLists } from '@/services/api';
+import { fetchCanvasLists, getNotes, getWhiteboards, getWireframes, getVaults } from '@/services/api';
 import { getContacts } from '@/services/contactsApi';
+import { getSegments } from '@/services/segmentsApi';
+import { getCampaigns } from '@/services/campaignsApi';
+import { getWorkflows } from '@/services/automationsApi';
 
 interface SearchResult {
   id: string;
-  type: 'page' | 'list' | 'note' | 'contact';
+  type: 'page' | 'list' | 'note' | 'contact' | 'whiteboard' | 'wireframe' | 'vault' | 'segment' | 'campaign' | 'automation';
   title: string;
   subtitle?: string;
   icon?: LucideIcon;
@@ -24,14 +27,18 @@ interface GlobalSearchProps {
 }
 
 const STATIC_PAGES: SearchResult[] = [
-  { id: 'page-dashboard', type: 'page', title: 'Dashboard', subtitle: 'Main dashboard', icon: LayoutDashboard, href: '/dashboard' },
-  { id: 'page-canvas', type: 'page', title: 'Canvas', subtitle: 'All your content', icon: List, href: '/canvas' },
+  { id: 'page-dashboard', type: 'page', title: 'Dashboard', subtitle: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
+  { id: 'page-canvas', type: 'page', title: 'Canvas', subtitle: 'All content', icon: List, href: '/canvas' },
   { id: 'page-contacts', type: 'page', title: 'Contacts', subtitle: 'Manage contacts', icon: Users, href: '/contacts' },
-  { id: 'page-inbox', type: 'page', title: 'Inbox', subtitle: 'Email inbox', icon: Inbox, href: '/inbox' },
-  { id: 'page-calendar', type: 'page', title: 'Calendar', subtitle: 'View calendar', icon: Calendar, href: '/calendar' },
+  { id: 'page-inbox', type: 'page', title: 'Inbox', subtitle: 'Email messages', icon: Inbox, href: '/inbox' },
+  { id: 'page-calendar', type: 'page', title: 'Calendar', subtitle: 'Appointments', icon: Calendar, href: '/calendars' },
   { id: 'page-automations', type: 'page', title: 'Automations', subtitle: 'Workflows', icon: Zap, href: '/automations' },
+  { id: 'page-campaigns', type: 'page', title: 'Campaigns', subtitle: 'Email campaigns', icon: Megaphone, href: '/campaigns' },
+  { id: 'page-segments', type: 'page', title: 'Segments', subtitle: 'Contact segments', icon: Package, href: '/segments' },
+  { id: 'page-pipelines', type: 'page', title: 'Pipelines', subtitle: 'Deals & sales', icon: StickyNote, href: '/pipelines' },
   { id: 'page-analytics', type: 'page', title: 'Analytics', subtitle: 'Statistics', icon: BarChart3, href: '/analytics' },
-  { id: 'page-forms', type: 'page', title: 'Forms', subtitle: 'Manage forms', icon: FileText, href: '/forms' },
+  { id: 'page-forms', type: 'page', title: 'Forms', subtitle: 'Custom forms', icon: FileText, href: '/forms' },
+  { id: 'page-settings', type: 'page', title: 'Settings', subtitle: 'Account settings', icon: FileText, href: '/settings' },
 ];
 
 export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
@@ -76,6 +83,14 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
     };
   }, [open]);
 
+  const getToken = useCallback(() => {
+    return localStorage.getItem('itemize_auth_token');
+  }, []);
+
+  const getOrgId = useCallback(() => {
+    return localStorage.getItem('current_org_id');
+  }, []);
+
   useEffect(() => {
     const search = async () => {
       if (!query.trim()) {
@@ -94,17 +109,24 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         );
         allResults.push(...matchedPages);
 
-        if (query.length > 2) {
+        if (query.length > 1) {
+          const token = getToken();
           try {
-            const [listsData, contactsData] = await Promise.allSettled([
-              fetchCanvasLists(localStorage.getItem('auth_token') || ''),
-              getContacts({ search: query, limit: 5 })
+            const [listsData, notesData, whiteboardsData, wireframesData, vaultsData, segmentsData, campaignsData, automationsData] = await Promise.allSettled([
+              fetchCanvasLists(token),
+              getNotes(token),
+              getWhiteboards(token),
+              getWireframes(token),
+              getVaults(token),
+              getSegments({ search: query, limit: 3 }),
+              getCampaigns({ search: query, limit: 3 }),
+              getWorkflows(Number(getOrgId() || 0), { search: query }).catch(() => ({ workflows: [] }))
             ]);
 
             if (listsData.status === 'fulfilled' && Array.isArray(listsData.value)) {
               const matchedLists = listsData.value
                 .filter((l: { title: string }) => l.title.toLowerCase().includes(lowerQuery))
-                .slice(0, 5)
+                .slice(0, 3)
                 .map((l: { id: string; title: string }) => ({
                   id: `list-${l.id}`,
                   type: 'list' as const,
@@ -116,21 +138,130 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               allResults.push(...matchedLists);
             }
 
-            if (contactsData.status === 'fulfilled' && contactsData.value?.data) {
-              const matchedContacts = contactsData.value.data
-                .filter((c: { name?: string; email: string }) =>
-                  c.name?.toLowerCase().includes(lowerQuery) || c.email.toLowerCase().includes(lowerQuery)
-                )
-                .slice(0, 5)
-                .map((c: { id: string; name?: string; email: string }) => ({
-                  id: `contact-${c.id}`,
-                  type: 'contact' as const,
-                  title: c.name || c.email,
-                  subtitle: c.email,
-                  icon: Users,
-                  href: '/contacts'
+            if (notesData.status === 'fulfilled' && Array.isArray(notesData.value)) {
+              const matchedNotes = notesData.value
+                .filter((n: { title?: string }) => (n.title || '').toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((n: { id: number; title?: string }) => ({
+                  id: `note-${n.id}`,
+                  type: 'note' as const,
+                  title: n.title || 'Untitled Note',
+                  subtitle: 'Note',
+                  icon: StickyNote,
+                  href: `/canvas#note-${n.id}`
                 }));
-              allResults.push(...matchedContacts);
+              allResults.push(...matchedNotes);
+            }
+
+            if (whiteboardsData.status === 'fulfilled' && Array.isArray(whiteboardsData.value)) {
+              const matchedWhiteboards = whiteboardsData.value
+                .filter((w: { title?: string }) => (w.title || '').toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((w: { id: number; title?: string }) => ({
+                  id: `whiteboard-${w.id}`,
+                  type: 'whiteboard' as const,
+                  title: w.title || 'Untitled Whiteboard',
+                  subtitle: 'Whiteboard',
+                  icon: PenTool,
+                  href: `/canvas#whiteboard-${w.id}`
+                }));
+              allResults.push(...matchedWhiteboards);
+            }
+
+            if (wireframesData.status === 'fulfilled' && Array.isArray(wireframesData.value)) {
+              const matchedWireframes = wireframesData.value
+                .filter((w: { title?: string }) => (w.title || '').toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((w: { id: string; title?: string }) => ({
+                  id: `wireframe-${w.id}`,
+                  type: 'wireframe' as const,
+                  title: w.title || 'Untitled Wireframe',
+                  subtitle: 'Wireframe',
+                  icon: Workflow,
+                  href: `/canvas#wireframe-${w.id}`
+                }));
+              allResults.push(...matchedWireframes);
+            }
+
+            if (vaultsData.status === 'fulfilled') {
+              const vaults = vaultsData.value?.vaults || [];
+              const matchedVaults = (Array.isArray(vaults) ? vaults : [])
+                .filter((v: { title?: string }) => (v.title || '').toLowerCase().includes(lowerQuery))
+                .slice(0, 2)
+                .map((v: { id: number; title?: string }) => ({
+                  id: `vault-${v.id}`,
+                  type: 'vault' as const,
+                  title: v.title || 'Untitled Vault',
+                  subtitle: 'Vault',
+                  icon: Lock,
+                  href: `/canvas#vault-${v.id}`
+                }));
+              allResults.push(...matchedVaults);
+            }
+
+            if (segmentsData.status === 'fulfilled' && Array.isArray(segmentsData)) {
+              const matchedSegments = segmentsData
+                .filter((s: { name: string }) => s.name.toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((s: { id: number; name: string }) => ({
+                  id: `segment-${s.id}`,
+                  type: 'segment' as const,
+                  title: s.name,
+                  subtitle: 'Segment',
+                  icon: Package,
+                  href: `/segments`
+                }));
+              allResults.push(...matchedSegments);
+            }
+
+            if (campaignsData.status === 'fulfilled' && campaignsData.value?.campaigns) {
+              const matchedCampaigns = campaignsData.value.campaigns
+                .filter((c: { name: string }) => c.name.toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((c: { id: number; name: string; status?: string }) => ({
+                  id: `campaign-${c.id}`,
+                  type: 'campaign' as const,
+                  title: c.name,
+                  subtitle: c.status || 'Campaign',
+                  icon: Megaphone,
+                  href: `/campaigns`
+                }));
+              allResults.push(...matchedCampaigns);
+            }
+
+            if (automationsData.status === 'fulfilled' && automationsData?.workflows) {
+              const matchedAutomations = automationsData.workflows
+                .filter((a: { name: string }) => a.name.toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((a: { id: number; name: string }) => ({
+                  id: `automation-${a.id}`,
+                  type: 'automation' as const,
+                  title: a.name,
+                  subtitle: 'Automation',
+                  icon: Zap,
+                  href: `/automations`
+                }));
+              allResults.push(...matchedAutomations);
+            }
+
+            if (query.length > 2) {
+              const contactsData = await getContacts({ search: query, limit: 3 });
+              if (contactsData?.data) {
+                const matchedContacts = contactsData.data
+                  .filter((c: { name?: string; email: string }) =>
+                    c.name?.toLowerCase().includes(lowerQuery) || c.email.toLowerCase().includes(lowerQuery)
+                  )
+                  .slice(0, 3)
+                  .map((c: { id: string; name?: string; email: string }) => ({
+                    id: `contact-${c.id}`,
+                    type: 'contact' as const,
+                    title: c.name || c.email,
+                    subtitle: c.email,
+                    icon: Users,
+                    href: '/contacts'
+                  }));
+                allResults.push(...matchedContacts);
+              }
             }
           } catch (error) {
             console.error('Search error', error);
@@ -147,7 +278,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
 
     const debounce = setTimeout(search, 300);
     return () => clearTimeout(debounce);
-  }, [query]);
+  }, [query, getToken, getOrgId]);
 
   const handleSelect = (result: SearchResult) => {
     navigate(result.href);
@@ -166,7 +297,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search lists, contacts, pages..."
+            placeholder="Search everything..."
             className="flex-1 text-lg outline-none placeholder:text-slate-400 text-slate-900 dark:text-slate-100 bg-transparent border-none focus:ring-0"
             autoFocus
           />
@@ -186,7 +317,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             <div className="p-8 text-center text-slate-600 dark:text-slate-400">
               <Search className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
               <p className="text-lg font-medium text-slate-700 dark:text-slate-300">Search for anything</p>
-              <p className="text-sm">Type to find lists, contacts, and more.</p>
+              <p className="text-sm">Type to find lists, notes, contacts, campaigns, and more.</p>
 
               <div className="mt-8 text-left max-w-sm mx-auto">
                 <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-3 px-2">Quick Links</p>
@@ -226,6 +357,12 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     result.type === 'list' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400' :
                     result.type === 'note' ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400' :
                     result.type === 'contact' ? 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400' :
+                    result.type === 'whiteboard' ? 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400' :
+                    result.type === 'wireframe' ? 'bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400' :
+                    result.type === 'vault' ? 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400' :
+                    result.type === 'segment' ? 'bg-cyan-100 text-cyan-600 dark:bg-cyan-950 dark:text-cyan-400' :
+                    result.type === 'campaign' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' :
+                    result.type === 'automation' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-400' :
                     'bg-slate-100 text-slate-600'
                   }`}>
                     {result.icon ? <result.icon className="h-5 w-5" /> : <Search className="h-5 w-5" />}

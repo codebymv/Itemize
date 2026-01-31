@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, createContext, useContext } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -26,6 +26,16 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { cn } from '@/lib/utils';
+
+const SearchContext = createContext<{
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
+}>({
+  searchOpen: false,
+  setSearchOpen: () => {}
+});
+
+export const useSearch = () => useContext(SearchContext);
 
 interface AppShellProps {
     children: React.ReactNode;
@@ -62,11 +72,16 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const handleLogout = async () => {
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setSearchOpen(false);
+            }
+        };
 
-    // Clear header content on unmount/change
-    // This helps when navigating away from a page with custom header
-    // Note: Pages should set their header content in useEffect
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const getUserInitials = (name: string, email: string): string => {
         if (name && name.trim()) {
@@ -75,7 +90,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         return email ? email[0].toUpperCase() : 'U';
     };
 
-    // Get tier icon based on subscription plan
     const getTierIcon = (plan?: Plan) => {
         if (!plan) return User;
         const iconName = PLAN_METADATA[plan]?.icon || 'user';
@@ -88,7 +102,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         return iconMap[iconName] || User;
     };
 
-    // Get current plan
     const currentPlan = (subscription?.planName?.toLowerCase() as Plan) || 'free';
     const TierIcon = getTierIcon(currentPlan);
 
@@ -109,10 +122,11 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <SidebarProvider defaultOpen={true}>
-            <AppSidebar />
-            <SidebarInset className="overflow-x-hidden">
-                {/* Top header bar */}
+        <SearchContext.Provider value={{ searchOpen, setSearchOpen }}>
+            <SidebarProvider defaultOpen={true}>
+                <AppSidebar />
+                <SidebarInset className="overflow-x-hidden">
+                    {/* Top header bar */}
                 <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full overflow-hidden">
                     <div className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
                         <SidebarTrigger className="md:hidden" />
@@ -123,7 +137,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                             onClick={() => setSearchOpen(true)}
                             className="hidden md:flex items-center gap-2 h-9 w-64 justify-start text-muted-foreground hover:bg-muted px-3">
                             <Search className="h-4 w-4" />
-                            <span className="text-sm">Search lists, contacts...</span>
+                            <span className="text-sm">Search everything...</span>
                             <Command className="h-3.5 w-3.5 ml-auto opacity-50" />
                         </Button>
 
@@ -272,11 +286,10 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </SidebarInset>
+            <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
         </SidebarProvider>
-
-        <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+    </SearchContext.Provider>
     );
-  </div>
 }
 
 export function AppShell({ children }: AppShellProps) {
