@@ -148,22 +148,22 @@ export function CookieConsent() {
         )}
       >
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
               {/* Text */}
-              <p className="text-sm text-white/90 flex-1">
-                <Cookie className="h-4 w-4 inline mr-1.5 text-white" />
+              <p className="text-xs sm:text-sm text-white/90 flex-1">
+                <Cookie className="h-3.5 sm:h-4 w-3.5 sm:w-4 inline mr-1 sm:mr-1.5 text-white" />
                 We use cookies to enhance your experience.{' '}
-                <a href="/legal/privacy" className="text-white underline hover:text-white/80">
+                <a href="/legal/privacy" className="text-white underline hover:text-white/80 whitespace-nowrap">
                   Learn more
                 </a>
               </p>
 
               {/* Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="text-sm text-white/80 hover:text-white px-2 py-1"
+                  className="text-xs sm:text-sm text-white/80 hover:text-white px-2 py-1 whitespace-nowrap"
                 >
                   Settings
                 </button>
@@ -171,14 +171,14 @@ export function CookieConsent() {
                   variant="outline"
                   size="sm"
                   onClick={handleEssentialOnly}
-                  className="bg-transparent text-white border-white/40 hover:bg-white/10 hover:border-white/60 h-8"
+                  className="bg-transparent text-white border-white/40 hover:bg-white/10 hover:border-white/60 h-7 sm:h-8 text-xs sm:text-sm"
                 >
                   Reject
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleAcceptAll}
-                  className="bg-white text-blue-700 hover:bg-white/90 h-8 font-medium"
+                  className="bg-white text-blue-700 hover:bg-white/90 h-7 sm:h-8 font-normal sm:font-medium text-xs sm:text-sm"
                 >
                   Accept
                 </Button>

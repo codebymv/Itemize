@@ -39,8 +39,8 @@ export default function Login() {
   useEffect(() => {
     if (sessionExpired) {
       toast({
-        title: 'Session Expired',
-        description: 'Your session has expired. Please sign in again to continue.',
+        title: 'Session has expired',
+        description: 'Please sign in again to continue.',
         variant: 'destructive',
       });
     }
@@ -114,10 +114,10 @@ export default function Login() {
             </div>
           </Link>
           {sessionExpired && (
-            <Alert variant="destructive" className="mx-6 mb-4">
+            <Alert variant="destructive" className="mx-0 mb-4 border-l-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Your session has expired. Please sign in again to continue.
+                Session has expired
               </AlertDescription>
             </Alert>
           )}

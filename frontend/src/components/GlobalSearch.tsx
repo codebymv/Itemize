@@ -288,10 +288,10 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 sm:pt-32">
+    <div className="fixed inset-0 z-[100] flex items-start sm:justify-center pt-0 sm:pt-20 sm:pt-32">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      <div className="relative w-full max-w-2xl mx-4 bg-white dark:bg-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh] animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-3 p-4 border-b bg-white dark:bg-slate-800">
+      <div className="relative w-full sm:max-w-2xl mx-0 sm:mx-4 bg-white dark:bg-slate-800 rounded-none sm:rounded-xl shadow-2xl overflow-hidden flex flex-col h-full sm:max-h-[70vh] sm:min-h-[400px] animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-3 p-4 border-b bg-white dark:bg-slate-800 shrink-0">
           <Search className="h-5 w-5 text-slate-400" />
           <input
             ref={inputRef}
@@ -302,7 +302,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             autoFocus
           />
           <div className="flex items-center gap-2">
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-teal-600" />}
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-600">
               <kbd className="hidden sm:inline-block pointer-events-none h-5 select-none items-center gap-1 rounded border bg-slate-100 dark:bg-slate-700 px-1.5 font-mono text-[10px] font-medium text-slate-600 dark:text-slate-400 opacity-100">
                 ESC
@@ -312,7 +312,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
           </div>
         </div>
 
-        <div className="overflow-y-auto p-2 bg-slate-50/50 dark:bg-slate-900/50 min-h-[300px]">
+        <div className="flex-1 overflow-y-auto p-2 bg-slate-50/50 dark:bg-slate-900/50 min-h-[300px]">
           {!query && (
             <div className="p-8 text-center text-slate-600 dark:text-slate-400">
               <Search className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
@@ -328,7 +328,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                       onClick={() => handleSelect(page)}
                       className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all text-slate-700 dark:text-slate-300 group"
                     >
-                      <div className="w-8 h-8 rounded-md bg-teal-50 dark:bg-teal-950 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:bg-teal-100 dark:group-hover:bg-teal-900 transition-colors">
+                      <div className="w-8 h-8 rounded-md bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900 transition-colors">
                         {page.icon && <page.icon className="h-4 w-4" />}
                       </div>
                       <span className="font-medium">{page.title}</span>
@@ -351,7 +351,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 <button
                   key={result.id}
                   onClick={() => handleSelect(result)}
-                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-900 dark:hover:text-teal-200 transition-colors group text-left"
+                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-900 dark:hover:text-blue-200 transition-colors group text-left"
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-slate-700 dark:text-slate-300 ${
                     result.type === 'list' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400' :
@@ -368,23 +368,23 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     {result.icon ? <result.icon className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-slate-700 dark:text-slate-200 group-hover:text-teal-900 dark:group-hover:text-teal-200">
+                    <p className="font-medium truncate text-slate-700 dark:text-slate-200 group-hover:text-blue-900 dark:group-hover:text-blue-200">
                       {result.title}
                     </p>
                     {result.subtitle && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate group-hover:text-teal-700 dark:group-hover:text-teal-400">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">
                         {result.subtitle}
                       </p>
                     )}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-teal-400 dark:group-hover:text-teal-500" />
+                  <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500" />
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0">
           <div className="flex gap-4">
             <span><kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">↑</kbd> <kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">↓</kbd> to navigate</span>
             <span><kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">↵</kbd> to select</span>
