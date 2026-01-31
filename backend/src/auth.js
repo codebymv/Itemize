@@ -246,57 +246,47 @@ router.post('/register', authRateLimit, validate(registerSchema), asyncHandler(a
 router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (req, res) => {
   const { email, password } = req.validatedBody;
   const pool = req.dbPool;
-
+  
   if (!pool) {
     return res.status(503).json({ error: 'Database connection unavailable' });
   }
-
+  
   const client = await pool.connect();
   try {
-    // Find user
+    // Find user by email
     const result = await client.query(
       'SELECT id, email, name, password_hash, provider, email_verified, role FROM users WHERE email = $1',
       [email]
     );
-
+    
     if (result.rows.length === 0) {
-      return res.status(401).json({ 
-        error: 'Invalid email or password.',
-        code: 'INVALID_CREDENTIALS'
-      });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
-
+    
     const user = result.rows[0];
-
+    
     // Check if user registered with Google
-    if (user.provider === 'google' && !user.password_hash) {
+    if (user.provider === 'google') {
       return res.status(400).json({ 
-        error: 'This account uses Google sign-in. Please sign in with Google.',
+        error: 'This email is registered with Google. Please sign in with Google.',
         code: 'GOOGLE_ACCOUNT'
       });
     }
-
+    
     // Verify password
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) {
-      return res.status(401).json({ 
-        error: 'Invalid email or password.',
-        code: 'INVALID_CREDENTIALS'
-      });
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
-
+    
     // Check email verification
     if (!user.email_verified) {
-      return res.status(403).json({
-        error: 'Please verify your email address before logging in.',
-        code: 'EMAIL_NOT_VERIFIED',
-        data: { email: user.email },
-      });
+      return res.status(401).json({ error: 'Email not verified. Please check your email to verify your account.' });
     }
-
+    
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user);
-
+    
     // Set cookies
     res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
@@ -305,7 +295,7 @@ router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (
 
     res.json({
       success: true,
-      token: accessToken, // For backward compatibility
+      token: accessToken,
       user: {
         uid: user.id,
         email: user.email,
@@ -1016,11 +1006,11 @@ router.post('/logout', (req, res) => {
  */
 router.post('/refresh', asyncHandler(async (req, res) => {
   const refreshToken = req.cookies?.itemize_refresh;
-  
+
   if (!refreshToken) {
     return res.status(401).json({ error: 'No refresh token provided' });
   }
-  
+
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET);
     
@@ -1098,7 +1088,7 @@ const authenticateJWT = (req, res, next) => {
   if (token) {
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) {
-        return res.sendStatus(403);
+        return res.sendStatus(401);
       }
       req.user = user;
       next();

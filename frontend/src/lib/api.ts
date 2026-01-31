@@ -86,7 +86,7 @@ const AUTH_TOKEN_KEY = 'itemize_auth_token';
  * Get the stored auth token
  */
 export const getAuthToken = (): string | null => {
-  return storage.getItem(AUTH_TOKEN_KEY);
+  return storage.getItem('itemize_auth_token');
 };
 
 /**
