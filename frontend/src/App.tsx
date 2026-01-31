@@ -256,26 +256,26 @@ const App = () => (
         themes={['light', 'dark']}
       >
         <GoogleOAuthProvider clientId={googleClientId}>
-          <AuthProvider>
-            <SubscriptionProviderWrapper>
-              <AISuggestProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter
-                  future={{
-                    v7_startTransition: true,
-                    v7_relativeSplatPath: true
-                  }}
-                >
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true
+            }}
+          >
+            <AuthProvider>
+              <SubscriptionProviderWrapper>
+                <AISuggestProvider>
+                  <Toaster />
+                  <Sonner />
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoading />}>
                       <AppContent />
                     </Suspense>
                   </ErrorBoundary>
-                </BrowserRouter>
-              </AISuggestProvider>
-            </SubscriptionProviderWrapper>
-          </AuthProvider>
+                </AISuggestProvider>
+              </SubscriptionProviderWrapper>
+            </AuthProvider>
+          </BrowserRouter>
         </GoogleOAuthProvider>
       </ThemeProvider>
     </TooltipProvider>
