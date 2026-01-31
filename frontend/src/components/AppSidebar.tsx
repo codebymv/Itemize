@@ -369,7 +369,7 @@ export function AppSidebar() {
                     <Search className="h-4 w-4" />
                     <Input
                         type="text"
-                        placeholder="Search everything..."
+                        placeholder="Search anything..."
                         className="flex-1 h-auto px-0 border-none bg-transparent focus-visible:ring-0 text-sm"
                         readOnly
                     />

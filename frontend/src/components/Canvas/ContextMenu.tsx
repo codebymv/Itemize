@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { CheckSquare, StickyNote, Palette, GitBranch, KeyRound } from 'lucide-react';
 import { List } from '../../types';
 
@@ -33,19 +34,22 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   // Calculate responsive positioning for mobile
   const getResponsivePosition = () => {
-    if (!isFromButton || !absolutePosition) {
-      return {
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        transform: 'translateX(-50%)'
-      };
-    }
-
     const menuWidth = 180; // minWidth of the menu
     const viewportWidth = window.innerWidth;
     const padding = 16; // Safe padding from screen edges
     
-    let left = absolutePosition.x;
+    // Prefer absolutePosition (screen coordinates) when available for correct zoom behavior
+    let x, y;
+    
+    if (absolutePosition) {
+      x = absolutePosition.x;
+      y = absolutePosition.y;
+    } else {
+      x = position.x;
+      y = position.y;
+    }
+    
+    let left = x;
     let transform = 'translateX(-50%)';
     
     // Check if menu would overflow on the right
@@ -62,7 +66,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     }
     
     return {
-      top: `${absolutePosition.y}px`,
+      top: `${y}px`,
       left: `${left}px`,
       transform
     };
@@ -70,11 +74,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const positionStyle = getResponsivePosition();
 
-  return (
+  // Use portal to render at body level so menu is not affected by parent transforms (zoom)
+  const content = (
     <div 
       className="context-menu min-w-[180px] overflow-hidden rounded-md border border-sidebar-border bg-sidebar p-1 text-sidebar-foreground shadow-md"
       style={{
-        position: isFromButton ? 'fixed' : 'absolute',
+        position: 'fixed',
         ...positionStyle,
         zIndex: 10000,
       }}
@@ -125,6 +130,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       )}
     </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 export default ContextMenu;

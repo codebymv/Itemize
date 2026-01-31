@@ -137,7 +137,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                             onClick={() => setSearchOpen(true)}
                             className="hidden md:flex items-center gap-2 h-9 w-64 justify-start text-muted-foreground hover:bg-muted px-3">
                             <Search className="h-4 w-4" />
-                            <span className="text-sm">Search everything...</span>
+                            <span className="text-sm">Search anything...</span>
                             <Command className="h-3.5 w-3.5 ml-auto opacity-50" />
                         </Button>
 

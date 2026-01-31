@@ -323,9 +323,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       
       console.log('Context menu position:', { canvasX, canvasY, screenX: x, screenY: y });
       
+      // Pass both canvas-relative coordinates (for positioning items) and absolute screen coordinates (for menu positioning)
       setMenuPosition({ x: canvasX, y: canvasY });
-      setMenuIsFromButton(false); // Right-click is not from button
-      setMenuAbsolutePosition(undefined); // Clear absolute position for right-click
+      
+      // Use screen coordinates for menu positioning so menu isn't affected by zoom
+      setMenuAbsolutePosition({ x: e.clientX, y: e.clientY });
+      setMenuIsFromButton(false);
       setShowContextMenu(true);
     }
   };

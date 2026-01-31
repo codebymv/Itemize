@@ -350,7 +350,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search everything..."
+            placeholder="Search anything..."
             className="flex-1 text-lg outline-none placeholder:text-slate-400 text-slate-900 dark:text-slate-100 bg-transparent border-none focus:ring-0"
             autoFocus
           />
