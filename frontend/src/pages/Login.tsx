@@ -115,7 +115,7 @@ export default function Login() {
           </Link>
           {sessionExpired && (
             <Alert variant="destructive" className="mx-0 mb-4 border-l-4">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription>
                 Session has expired
               </AlertDescription>

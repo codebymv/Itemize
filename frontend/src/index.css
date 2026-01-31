@@ -232,8 +232,9 @@
   }
 }
 
-html {
+html, body {
   overflow-x: hidden;
+  max-w: 100vw;
 }
 
 /* Safe area support for iOS devices with notch/home indicator */
