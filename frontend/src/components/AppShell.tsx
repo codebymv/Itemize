@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
+import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarChart3, ChevronRight, Search, Command } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
@@ -47,6 +48,21 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { subscription } = useSubscriptionState();
+    const [searchOpen, setSearchOpen] = useState(false);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setSearchOpen(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const handleLogout = async () => {
 
     // Clear header content on unmount/change
     // This helps when navigating away from a page with custom header
@@ -100,6 +116,16 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full overflow-hidden">
                     <div className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
                         <SidebarTrigger className="md:hidden" />
+
+                        {/* Search trigger */}
+                        <Button
+                            variant="ghost"
+                            onClick={() => setSearchOpen(true)}
+                            className="hidden md:flex items-center gap-2 h-9 w-64 justify-start text-muted-foreground hover:bg-muted px-3">
+                            <Search className="h-4 w-4" />
+                            <span className="text-sm">Search lists, contacts...</span>
+                            <Command className="h-3.5 w-3.5 ml-auto opacity-50" />
+                        </Button>
 
                         {/* Dynamic header content injected by pages */}
                         <div className="flex-1 flex items-center min-w-0 overflow-hidden">
@@ -236,18 +262,21 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
                 )}
 
-                {/* Main content */}
+{/* Main content */}
                 <main className={cn(
                     "flex-1 overflow-x-hidden overflow-y-auto",
-                    location.pathname.startsWith('/help') 
-                        ? "h-[calc(100vh-3.5rem-2.5rem)]" 
+                    location.pathname.startsWith('/help')
+                        ? "h-[calc(100vh-3.5rem-2.5rem)]"
                         : "h-[calc(100vh-3.5rem)]"
                 )}>
                     {children}
                 </main>
             </SidebarInset>
         </SidebarProvider>
+
+        <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     );
+  </div>
 }
 
 export function AppShell({ children }: AppShellProps) {
