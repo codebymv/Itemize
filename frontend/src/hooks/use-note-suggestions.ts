@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrl } from '@/lib/api';
 import { storage } from '@/lib/storage';
+import logger from '@/lib/logger';
 
 // Shorter debounce for better responsiveness (was 3000ms)
 const NOTES_DEBOUNCE_DELAY = 1000;
@@ -61,12 +62,12 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   // Check if we should trigger AI based on content analysis
   const shouldTriggerAI = useCallback((content: string): boolean => {
     if (!enabled || !content.trim()) {
-      console.log('❌ Note AI: Disabled or empty content', { enabled, contentLength: content.length });
+      logger.debug('note-suggestions', 'Disabled or empty content', { enabled, contentLength: content.length });
       return false;
     }
     
     const words = content.trim().split(/\s+/);
-    console.log('🔍 Note AI: Checking trigger conditions', { 
+    logger.debug('note-suggestions', 'Checking trigger conditions', { 
       wordCount: words.length, 
       minRequired: MIN_WORDS_FOR_AI, 
       content: content.substring(0, 50) + '...' 
@@ -74,7 +75,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     
     // Must have minimum word count
     if (words.length < MIN_WORDS_FOR_AI) {
-      console.log(`❌ Note AI: Not enough words (${words.length}/${MIN_WORDS_FOR_AI})`);
+      logger.debug('note-suggestions', `Not enough words (${words.length}/${MIN_WORDS_FOR_AI})`);
       return false;
     }
     
@@ -84,7 +85,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     const contextChanged = currentContext !== lastTriggerContext;
     const contentLengthChanged = Math.abs(content.length - lastTriggerContext.length) > 5;
     
-    console.log('🔍 Context change check:', {
+    logger.debug('note-suggestions', 'Context change check:', {
       contextChanged,
       contentLengthChanged,
       currentLength: content.length,
@@ -95,44 +96,44 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     
     // Don't block if content has changed meaningfully
     if (!contextChanged && !contentLengthChanged) {
-      console.log('❌ Note AI: Context unchanged, skipping');
+      logger.debug('note-suggestions', 'Context unchanged, skipping');
       return false;
     }
     
     // More responsive trigger points for better autocomplete experience:
     // 1. Ends with sentence completion
     if (/[.!?]\s*$/.test(content.trim())) {
-      console.log('✅ Note AI trigger: Sentence completion');
+      logger.debug('note-suggestions', 'Trigger: Sentence completion');
       return true;
     }
     
     // 2. Recent paragraph break
     if (/\n\s*\n\s*\w+/.test(content.slice(-50))) {
-      console.log('✅ Note AI trigger: Paragraph break');
+      logger.debug('note-suggestions', 'Trigger: Paragraph break');
       return true;
     }
     
     // 3. After a significant amount of new content (reduced from 100 to 20)
     const newContentLength = Math.abs(content.length - lastTriggerContext.length);
     if (newContentLength > 20) {
-      console.log('✅ Note AI trigger: New content length', newContentLength);
+      logger.debug('note-suggestions', 'Trigger: New content length', newContentLength);
       return true;
     }
     
     // 4. Trigger when user has typed enough new content for fresh suggestions
     const wordsSinceLastTrigger = Math.abs(words.length - (lastTriggerContext.trim().split(/\s+/).length || 0));
     if (wordsSinceLastTrigger >= 3) {
-      console.log('✅ Note AI trigger: Significant word count change', { wordsSinceLastTrigger });
+      logger.debug('note-suggestions', 'Trigger: Significant word count change', { wordsSinceLastTrigger });
       return true;
     }
     
     // 5. Trigger if we have context change but no recent suggestions
     if (contextChanged) {
-      console.log('✅ Note AI trigger: Context changed');
+      logger.debug('note-suggestions', 'Trigger: Context changed');
       return true;
     }
     
-    console.log('❌ Note AI: No trigger conditions met');
+    logger.debug('note-suggestions', 'No trigger conditions met');
     return false;
   }, [enabled, getContextWindow, lastTriggerContext]);
 
@@ -147,12 +148,12 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       if (cachedData) {
         const { suggestions, continuations, timestamp } = cachedData;
         if (Date.now() - timestamp < CACHE_DURATION) {
-          console.log('📦 Found cached suggestions for context:', contextHash.substring(0, 50));
+          logger.debug('note-suggestions', 'Found cached suggestions for context:', contextHash.substring(0, 50));
           return { suggestions: suggestions || [], continuations: continuations || [] };
         }
       }
     } catch (err) {
-      console.warn('Failed to read note suggestion cache:', err);
+      logger.warn('Failed to read note suggestion cache:', err);
     }
     return null;
   }, [noteCategory]);
@@ -169,9 +170,9 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         timestamp: Date.now()
       };
       storage.setJson(cacheKey, cacheData);
-      console.log('💾 Cached suggestions for context:', contextHash.substring(0, 50));
+      logger.debug('note-suggestions', 'Cached suggestions for context:', contextHash.substring(0, 50));
     } catch (err) {
-      console.warn('Failed to cache note suggestions:', err);
+      logger.warn('Failed to cache note suggestions:', err);
     }
   }, [noteCategory]);
 
@@ -215,7 +216,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     // Check cache first
     const cached = getCachedSuggestions(context);
     if (cached && !forceRefresh) {
-      console.log('📦 Using cached note suggestions for context:', context.substring(0, 50));
+      logger.debug('note-suggestions', 'Using cached note suggestions for context:', context.substring(0, 50));
       setSuggestions(cached.suggestions);
       setContinuations(cached.continuations);
       setCurrentSuggestion(cached.suggestions[0] || cached.continuations[0] || null);
@@ -225,12 +226,12 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     // Throttle API calls to avoid hitting rate limits
     const now = Date.now();
     if (!forceRefresh && lastApiCall.current && (now - lastApiCall.current) < AI_CALL_THROTTLE) {
-      console.log('⏰ Throttling AI call - too soon since last request');
+      logger.debug('note-suggestions', 'Throttling AI call - too soon since last request');
       return;
     }
     
     if (forceRefresh) {
-      console.log('🚀 Force refreshing AI suggestions (bypassing throttle and cache)');
+      logger.debug('note-suggestions', 'Force refreshing AI suggestions (bypassing throttle and cache)');
     }
     
     try {
@@ -254,7 +255,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
 
       if (response.data) {
         const { suggestions = [], continuations = [] } = response.data;
-        console.log('🚀 Note AI suggestions received:', { 
+        logger.debug('note-suggestions', 'AI suggestions received:', { 
           suggestions: suggestions.length, 
           continuations: continuations.length,
           firstSuggestion: suggestions[0] || continuations[0] || 'none',
@@ -265,11 +266,11 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         setContinuations(continuations);
         setCurrentSuggestion(suggestions[0] || continuations[0] || null);
         
-        // Cache the results
+        // Cache results
         cacheSuggestions(context, suggestions, continuations);
       }
     } catch (err: any) {
-      console.error('Failed to fetch note AI suggestions:', err);
+      logger.error('Failed to fetch note AI suggestions:', err);
       
       // Fallback to local suggestions on error
       const localSugs = getLocalSuggestions(noteContent);
@@ -315,7 +316,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
 
   // Clear all suggestions from React state
   const clearSuggestions = useCallback(() => {
-    console.log('🧹 Clearing suggestions from React state');
+    logger.debug('note-suggestions', 'Clearing suggestions from React state');
     setSuggestions([]);
     setContinuations([]);
     setCurrentSuggestion(null);
@@ -323,7 +324,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
 
   // Get suggestion for current typing position (GitHub Copilot style)
   const getSuggestionForInput = useCallback((content: string, cursorPosition: number): string | null => {
-    console.log('🎯 Note getSuggestionForInput:', { 
+    logger.debug('note-suggestions', 'getSuggestionForInput:', { 
       enabled, 
       contentLength: content.length, 
       cursorPosition, 
@@ -340,11 +341,11 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     const isAfterSpace = cursorPosition > 0 && /\s/.test(content[cursorPosition - 1]);
     const isAtWordBoundary = cursorPosition === content.length || /\s/.test(content[cursorPosition] || ' ');
     const isInMiddleOfWord = cursorPosition > 0 && cursorPosition < content.length && 
-                            !/\s/.test(content[cursorPosition - 1]) && !/\s/.test(content[cursorPosition]);
+                             !/\s/.test(content[cursorPosition - 1]) && !/\s/.test(content[cursorPosition]);
     
-    // Only block suggestions if we're clearly in the middle of a word (not at end, not after space)
+    // Only block suggestions if we're clearly in middle of a word (not at end, not after space)
     if (isInMiddleOfWord) {
-      console.log('❌ Cursor in middle of word, blocking suggestion:', {
+      logger.debug('note-suggestions', 'Cursor in middle of word, blocking suggestion:', {
         isAtEnd,
         isAfterSpace,
         isAtWordBoundary,
@@ -355,7 +356,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       return null;
     }
     
-    console.log('✅ Cursor position valid for suggestions:', {
+    logger.debug('note-suggestions', 'Cursor position valid for suggestions:', {
       isAtEnd,
       isAfterSpace,
       isAtWordBoundary,
@@ -380,7 +381,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       
       // Don't suggest if the suggestion already exists after the cursor
       if (contentAfterCursor.toLowerCase().includes(suggestionTrimmed.toLowerCase())) {
-        console.log('🚫 Filtering suggestion already present after cursor:', {
+        logger.debug('note-suggestions', 'Filtering suggestion already present after cursor:', {
           suggestion: suggestion.substring(0, 30),
           contentAfterCursor: contentAfterCursor.substring(0, 30)
         });
@@ -390,7 +391,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       // Only filter if the suggestion exactly matches the end of content before cursor
       const contentEnd = contentBeforeCursor.trim().slice(-suggestionTrimmed.length);
       if (contentEnd.toLowerCase() === suggestionTrimmed.toLowerCase()) {
-        console.log('🚫 Filtering exact duplicate suggestion:', {
+        logger.debug('note-suggestions', 'Filtering exact duplicate suggestion:', {
           contentEnd: contentEnd.slice(-30),
           suggestion: suggestion.substring(0, 30)
         });
@@ -402,7 +403,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       const suggestionStart = suggestionTrimmed.toLowerCase().split(/\s+/).slice(0, 2).join(' ');
       
       if (lastWords.length > 3 && suggestionStart.length > 3 && lastWords === suggestionStart) {
-        console.log('🚫 Filtering suggestion starting with recent words:', {
+        logger.debug('note-suggestions', 'Filtering suggestion starting with recent words:', {
           lastWords,
           suggestionStart,
           suggestion: suggestion.substring(0, 30)
@@ -413,7 +414,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       return true;
     });
     
-    console.log('🔍 Suggestion filtering results:', {
+    logger.debug('note-suggestions', 'Suggestion filtering results:', {
       originalSuggestions: allSuggestions.length,
       filteredSuggestions: filteredSuggestions.length,
       originalFirst: allSuggestions[0]?.substring(0, 30),
@@ -425,11 +426,11 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     // Return first non-duplicate suggestion if we have any
     if (filteredSuggestions.length > 0) {
       const suggestion = filteredSuggestions[0];
-      console.log('💡 Note autocomplete suggestion (filtered):', suggestion.substring(0, 50));
+      logger.debug('note-suggestions', 'Autocomplete suggestion (filtered):', suggestion.substring(0, 50));
       return suggestion;
     }
     
-    console.log('❌ No non-duplicate suggestions available');
+    logger.debug('note-suggestions', 'No non-duplicate suggestions available');
     return null;
   }, [enabled, suggestions, continuations]);
   

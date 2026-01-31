@@ -6,6 +6,7 @@ import { List, ListItem, Category } from '@/types';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
+import logger from '@/lib/logger';
 
 interface UseListCardLogicProps {
   list: List;
@@ -136,7 +137,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
             color_value: '#3B82F6'
           });
         } catch (error) {
-          console.error('Failed to create category in database:', error);
+          logger.error('Failed to create category in database:', error);
         }
       }
 
@@ -175,7 +176,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       });
     },
     onError: (error, action) => {
-      console.error('Failed to update category:', error);
+      logger.error('Failed to update category:', error);
       if (action === 'color') {
         toast({
           title: 'Error',
@@ -330,7 +331,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       onUpdate({ ...list, color_value: newColor });
     },
     onError: (error) => {
-      console.error("Failed to save list color:", error);
+      logger.error("Failed to save list color:", error);
     }
   });
   

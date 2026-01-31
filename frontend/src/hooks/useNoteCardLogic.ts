@@ -6,6 +6,7 @@ import { updateNoteTitle, updateNoteCategory, updateNoteContent } from '@/servic
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
+import logger from '@/lib/logger';
 
 interface UseNoteCardLogicProps {
   note: Note;
@@ -53,9 +54,9 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       if (nextTitle !== note.title) {
         try {
           await updateNoteTitle(note.id, nextTitle, token);
-          console.log('✅ Granular title update successful');
+          logger.debug('note', 'Granular title update successful');
         } catch (error) {
-          console.error('❌ Granular title update failed, falling back:', error);
+          logger.error('Granular title update failed, falling back:', error);
           await onUpdate(note.id, { title: nextTitle });
         }
       }
@@ -67,9 +68,9 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     if (editContent.trim() !== note.content) {
       try {
         await updateNoteContent(note.id, editContent.trim(), token);
-        console.log('✅ Granular content update successful');
+        logger.debug('note', 'Granular content update successful');
       } catch (error) {
-        console.error('❌ Granular content update failed, falling back:', error);
+        logger.error('Granular content update failed, falling back:', error);
         // Fallback to full update if granular fails
         await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
       }
@@ -107,18 +108,18 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     onUpdateCategory: async (category) => {
       try {
         await updateNoteCategory(note.id, category, token);
-        console.log('✅ Granular category update successful');
+        logger.debug('note', 'Granular category update successful');
       } catch (error) {
-        console.error('❌ Granular category update failed, falling back:', error);
+        logger.error('Granular category update failed, falling back:', error);
         await onUpdate(note.id, { category });
       }
     },
     onAddCustomCategory: async (category) => {
       try {
         await updateNoteCategory(note.id, category, token);
-        console.log('✅ Granular custom category update successful');
+        logger.debug('note', 'Granular custom category update successful');
       } catch (error) {
-        console.error('❌ Granular custom category update failed, falling back:', error);
+        logger.error('Granular custom category update failed, falling back:', error);
         await onUpdate(note.id, { category });
       }
     },
@@ -132,7 +133,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
       });
     },
     onError: (error, action) => {
-      console.error('Failed to update note category:', error);
+      logger.error('Failed to update note category:', error);
       if (action === 'color') {
         toast({
           title: 'Error',

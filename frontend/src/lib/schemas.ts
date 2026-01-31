@@ -203,6 +203,39 @@ export const updateWhiteboardPositionSchema = z.object({
 });
 
 // =============================================================================
+// Contact Schemas
+// =============================================================================
+
+/**
+ * Create contact payload
+ */
+export const createContactSchema = z.object({
+  first_name: z.string().min(1, 'First name is required').max(100, 'First name is too long').optional(),
+  last_name: z.string().min(1, 'Last name is required').max(100, 'Last name is too long').optional(),
+  email: z.string().email('Invalid email address').max(255, 'Email is too long').optional(),
+  phone: z.string().min(10, 'Phone number is too short').max(20, 'Phone number is too long').optional(),
+  company: z.string().max(200, 'Company name is too long').optional(),
+  job_title: z.string().max(100, 'Job title is too long').optional(),
+  status: z.enum(['active', 'inactive', 'archived']).default('active'),
+  source: z.enum(['manual', 'import', 'form', 'integration', 'api']).default('manual'),
+  organization_id: z.number().int().positive(),
+});
+
+/**
+ * Update contact payload
+ */
+export const updateContactSchema = z.object({
+  first_name: z.string().min(1).max(100).optional(),
+  last_name: z.string().min(1).max(100).optional(),
+  email: z.string().email('Invalid email address').max(255).optional(),
+  phone: z.string().min(10).max(20).optional(),
+  company: z.string().max(200).optional(),
+  job_title: z.string().max(100).optional(),
+  status: z.enum(['active', 'inactive', 'archived']).optional(),
+  source: z.enum(['manual', 'import', 'form', 'integration', 'api']).optional(),
+});
+
+// =============================================================================
 // Category Schemas
 // =============================================================================
 
@@ -236,6 +269,9 @@ export type UpdateNotePayload = z.infer<typeof updateNoteSchema>;
 export type CreateWhiteboardPayload = z.infer<typeof createWhiteboardSchema>;
 export type UpdateWhiteboardPayload = z.infer<typeof updateWhiteboardSchema>;
 export type UpdateWhiteboardPositionPayload = z.infer<typeof updateWhiteboardPositionSchema>;
+
+export type CreateContactPayload = z.infer<typeof createContactSchema>;
+export type UpdateContactPayload = z.infer<typeof updateContactSchema>;
 
 export type CreateCategoryPayload = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryPayload = z.infer<typeof updateCategorySchema>;

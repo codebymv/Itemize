@@ -166,7 +166,7 @@ export function BulkTagModal({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={isSubmitting} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <Button variant="outline" onClick={onClose} disabled={isSubmitting} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                         Cancel
                     </Button>
                     <Button
@@ -174,6 +174,7 @@ export function BulkTagModal({
                         disabled={tags.length === 0 || isSubmitting}
                         className={mode === 'add' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'}
                         style={{ fontFamily: '"Raleway", sans-serif' }}
+                        aria-label={isSubmitting ? 'Updating tags...' : `${mode === 'add' ? 'Add' : 'Remove'} tags`}
                     >
                         {isSubmitting ? 'Updating...' : `${mode === 'add' ? 'Add' : 'Remove'} Tags`}
                     </Button>

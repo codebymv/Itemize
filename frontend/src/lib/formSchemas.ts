@@ -44,3 +44,36 @@ export const createItemFormSchema = z.object({
 });
 
 export type CreateItemFormValues = z.infer<typeof createItemFormSchema>;
+
+export const createContactFormSchema = z.object({
+  first_name: z.string().min(1, 'First name is required').max(100, 'First name is too long').optional(),
+  last_name: z.string().min(1, 'Last name is required').max(100, 'Last name is too long').optional(),
+  email: z.string().email('Invalid email address').max(255, 'Email is too long').optional(),
+  phone: z.string().min(10, 'Phone number is too short').max(20, 'Phone number is too long').optional(),
+  company: z.string().max(200, 'Company name is too long').optional(),
+  job_title: z.string().max(100, 'Job title is too long').optional(),
+  status: z.enum(['active', 'inactive', 'archived']).default('active'),
+  source: z.enum(['manual', 'import', 'form', 'integration', 'api']).default('manual'),
+}).superRefine((data, ctx) => {
+  if (!data.first_name && !data.last_name && !data.email && !data.company) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [],
+      message: 'Please provide at least a first name, last name, email, or company',
+    });
+  }
+  return data;
+});
+
+export type CreateContactFormValues = z.infer<typeof createContactFormSchema>;
+
+export const createDealFormSchema = z.object({
+  title: z.string().min(1, 'Deal title is required').max(200, 'Deal title is too long'),
+  value: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Value must be a number').optional(),
+  stage_id: z.string().min(1, 'Stage is required'),
+  contact_id: z.string().optional(),
+  probability: z.string().regex(/^\d{0,3}$/, 'Probability must be 0-100').default('0'),
+  expected_close_date: z.string().optional(),
+});
+
+export type CreateDealFormValues = z.infer<typeof createDealFormSchema>;

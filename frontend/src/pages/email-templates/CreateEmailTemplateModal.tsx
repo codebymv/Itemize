@@ -233,6 +233,7 @@ export function CreateEmailTemplateModal({
               variant="outline"
               onClick={onClose}
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label="Cancel"
             >
               Cancel
             </Button>
@@ -241,6 +242,7 @@ export function CreateEmailTemplateModal({
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label={loading ? 'Creating template...' : 'Create template'}
             >
               {loading ? 'Creating...' : 'Create Template'}
             </Button>

@@ -746,6 +746,7 @@ export function CreateCampaignModal({
               variant="outline"
               onClick={currentStep === 0 ? onClose : handlePrev}
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label={currentStep === 0 ? "Cancel" : "Back"}
             >
               {currentStep === 0 ? 'Cancel' : (
                 <>
@@ -761,6 +762,7 @@ export function CreateCampaignModal({
                 onClick={handleNext}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
+                aria-label="Next"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -772,6 +774,7 @@ export function CreateCampaignModal({
                 disabled={loading}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
+                aria-label={loading ? 'Creating campaign...' : 'Create campaign'}
               >
                 {loading ? 'Creating...' : 'Create Campaign'}
               </Button>

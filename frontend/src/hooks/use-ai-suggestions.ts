@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext'; // Import auth context
+import { useAuth } from '../contexts/AuthContext';
 import { getApiUrl } from '@/lib/api';
 import { storage } from '@/lib/storage';
+import logger from '@/lib/logger';
 
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
@@ -67,11 +68,11 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         if (Date.now() - timestamp < CACHE_DURATION && suggestions && suggestions.length > 0) {
           return suggestions;
         }
+        }
+      } catch (err) {
+        logger.warn('Failed to read suggestion cache:', err);
       }
-    } catch (err) {
-      console.warn('Failed to read suggestion cache:', err);
-    }
-    return null;
+      return null;
   }, [listTitle, existingItems]);
   
   // Save suggestions to cache
@@ -87,7 +88,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       
       storage.setJson(cacheKey, cacheData);
     } catch (err) {
-      console.warn('Failed to cache suggestions:', err);
+      logger.warn('Failed to cache suggestions:', err);
     }
   }, [listTitle, existingItems]);
 
@@ -114,7 +115,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
 
     // If we already have suggestions for this exact content, don't clear them
     if (lastSuggestedContent.current === currentContentKey && currentSuggestion !== null) {
-      console.log('🔒 Skipping fetch - already have suggestions for this content');
+      logger.debug('ai-suggestions', 'Skipping fetch - already have suggestions for this content');
       return;
     }
 
@@ -132,7 +133,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       const cachedFirstSuggestion = cachedSuggestions[0];
 
       if (suggestions.length === 0 || currentFirstSuggestion !== cachedFirstSuggestion) {
-        console.log('Using cached suggestions for:', listTitle);
+        logger.debug('ai-suggestions', 'Using cached suggestions for:', listTitle);
         setSuggestions(cachedSuggestions);
         setCurrentSuggestion(cachedFirstSuggestion || null);
         lastSuggestedContent.current = currentContentKey;
@@ -150,7 +151,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       
       // Delay the call until we're past the throttle window
       const delayTime = API_REQUEST_THROTTLE - timeSinceLastRequest;
-      console.log(`Throttling API call for ${delayTime}ms`);
+      logger.debug('ai-suggestions', `Throttling API call for ${delayTime}ms`);
       
       debounceTimer.current = setTimeout(() => {
         fetchSuggestions();
@@ -188,7 +189,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         setCurrentSuggestion(null);
       }
     } catch (err: any) {
-      console.error('Failed to fetch AI suggestions:', err);
+      logger.error('Failed to fetch AI suggestions:', err);
       
       // Handle auth errors gracefully
       if (err?.response?.status === 401) {
@@ -249,7 +250,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       );
       
       if (matchingSuggestions.length > 0) {
-        console.log('Using API suggestion (prefix match):', matchingSuggestions[0]);
+        logger.debug('ai-suggestions', 'Using API suggestion (prefix match):', matchingSuggestions[0]);
         return matchingSuggestions[0];
       }
       
@@ -260,7 +261,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       );
       
       if (containsMatches.length > 0) {
-        console.log('Using API suggestion (contains match):', containsMatches[0]);
+        logger.debug('ai-suggestions', 'Using API suggestion (contains match):', containsMatches[0]);
         return containsMatches[0];
       }
     }

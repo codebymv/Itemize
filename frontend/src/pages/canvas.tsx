@@ -192,7 +192,7 @@ const CanvasPage: React.FC = () => {
           try {
             await updateList({ ...list, color_value: newColor });
           } catch (error: any) {
-            console.error(`Failed to update list ${list.id} color:`, error);
+            logger.error(`Failed to update list ${list.id} color:`, error);
 
             // If it's a 404 error, the list no longer exists in the backend
             // Remove it from the frontend state to prevent future errors
@@ -215,7 +215,7 @@ const CanvasPage: React.FC = () => {
           try {
             await handleUpdateNote(note.id, { color_value: newColor });
           } catch (error) {
-            console.error(`Failed to update note ${note.id} color:`, error);
+            logger.error(`Failed to update note ${note.id} color:`, error);
           }
         }
 
@@ -225,7 +225,7 @@ const CanvasPage: React.FC = () => {
           try {
             await handleUpdateWhiteboard(whiteboard.id, { color_value: newColor });
           } catch (error) {
-            console.error(`Failed to update whiteboard ${whiteboard.id} color:`, error);
+            logger.error(`Failed to update whiteboard ${whiteboard.id} color:`, error);
           }
         }
 
@@ -237,7 +237,7 @@ const CanvasPage: React.FC = () => {
       // If it doesn't, we may need to implement a refresh mechanism in the hook
 
     } catch (error) {
-      console.error('Error updating category:', error);
+      logger.error('Error updating category:', error);
       toast({
         title: 'Error',
         description: `Failed to update category "${categoryName}". Please try again.`,
@@ -593,7 +593,7 @@ const CanvasPage: React.FC = () => {
 
         // Categories are now managed by useUnifiedCategories hook
       } catch (error) {
-        console.error('Error fetching lists:', error);
+        logger.error('Error fetching lists:', error);
         setError('Failed to load lists. Please try again.');
       } finally {
         setLoadingLists(false);
@@ -614,7 +614,7 @@ const CanvasPage: React.FC = () => {
         const fetchedNotes = response?.notes || response || [];
         setNotes(Array.isArray(fetchedNotes) ? fetchedNotes : []);
       } catch (err) {
-        console.error('Error fetching notes:', err);
+        logger.error('Error fetching notes:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load notes. Please try again.';
         setErrorNotes(errorMessage);
         toast({ title: "Error", description: "Failed to fetch notes", variant: "destructive" });
@@ -639,7 +639,7 @@ const CanvasPage: React.FC = () => {
         const fetchedWhiteboards = response?.whiteboards || response || [];
         setWhiteboards(Array.isArray(fetchedWhiteboards) ? fetchedWhiteboards : []);
       } catch (err) {
-        console.error('Error fetching whiteboards:', err);
+        logger.error('Error fetching whiteboards:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load whiteboards. Please try again.';
         setErrorWhiteboards(errorMessage);
         toast({ title: "Error", description: "Failed to fetch whiteboards", variant: "destructive" });
@@ -663,7 +663,7 @@ const CanvasPage: React.FC = () => {
         const fetchedWireframes = response?.wireframes || response || [];
         setWireframes(Array.isArray(fetchedWireframes) ? fetchedWireframes : []);
       } catch (err) {
-        console.error('Error fetching wireframes:', err);
+        logger.error('Error fetching wireframes:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load wireframes. Please try again.';
         setErrorWireframes(errorMessage);
         toast({ title: "Error", description: "Failed to fetch wireframes", variant: "destructive" });
@@ -687,7 +687,7 @@ const CanvasPage: React.FC = () => {
         const fetchedVaults = response?.vaults || response || [];
         setVaults(Array.isArray(fetchedVaults) ? fetchedVaults : []);
       } catch (err) {
-        console.error('Error fetching vaults:', err);
+        logger.error('Error fetching vaults:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load vaults. Please try again.';
         setErrorVaults(errorMessage);
         toast({ title: "Error", description: "Failed to fetch vaults", variant: "destructive" });
@@ -759,7 +759,7 @@ const CanvasPage: React.FC = () => {
     });
 
     newSocket.on('error', (error) => {
-      console.error('Canvas: WebSocket error:', error);
+      logger.error('Canvas: WebSocket error:', error);
       toast({
         title: "Connection Error",
         description: error.message || "Failed to connect to real-time updates",
@@ -817,7 +817,7 @@ const CanvasPage: React.FC = () => {
 
       setShowNewNoteModal(false);
     } catch (error) {
-      console.error('Failed to create note:', error);
+      logger.error('Failed to create note:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your note. Please try again.';
       toast({
         title: "Error",
@@ -840,7 +840,7 @@ const CanvasPage: React.FC = () => {
       setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
       return updatedNote;
     } catch (error) {
-      console.error('Failed to update note:', error);
+      logger.error('Failed to update note:', error);
       // Rollback to original state on error
       setNotes(originalNotes);
       toast({
@@ -884,8 +884,8 @@ const CanvasPage: React.FC = () => {
       });
       return true;
     } catch (error) {
-      console.error('❌ Frontend: Failed to delete note:', error);
-      console.error('❌ Frontend: Error details:', {
+      logger.error('Frontend: Failed to delete note:', error);
+      logger.error('Frontend: Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         status: (error as any)?.response?.status,
         data: (error as any)?.response?.data
@@ -928,7 +928,7 @@ const CanvasPage: React.FC = () => {
 
       // Removed success toast - no need to distract user for routine whiteboard creation
     } catch (error) {
-      console.error('Failed to create whiteboard:', error);
+      logger.error('Failed to create whiteboard:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your whiteboard. Please try again.';
       toast({
         title: "Error",
@@ -967,7 +967,7 @@ const CanvasPage: React.FC = () => {
       setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? updatedWhiteboard : w));
       return updatedWhiteboard;
     } catch (error) {
-      console.error('Failed to update whiteboard:', error);
+      logger.error('Failed to update whiteboard:', error);
       // Rollback to original state on error
       setWhiteboards(originalWhiteboards);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
@@ -990,7 +990,7 @@ const CanvasPage: React.FC = () => {
       });
       return true;
     } catch (error) {
-      console.error('Failed to delete whiteboard:', error);
+      logger.error('Failed to delete whiteboard:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your whiteboard. Please try again.';
       toast({
         title: "Error",
@@ -1023,7 +1023,7 @@ const CanvasPage: React.FC = () => {
       const newWireframe = await apiCreateWireframe(payloadWithDefaults, token);
       setWireframes(prev => [newWireframe, ...prev]);
     } catch (error) {
-      console.error('Failed to create wireframe:', error);
+      logger.error('Failed to create wireframe:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your wireframe. Please try again.';
       toast({
         title: "Error",
@@ -1044,7 +1044,7 @@ const CanvasPage: React.FC = () => {
       setWireframes(prev => prev.map(w => w.id === wireframeId ? updatedWireframe : w));
       return updatedWireframe;
     } catch (error) {
-      console.error('Failed to update wireframe:', error);
+      logger.error('Failed to update wireframe:', error);
       setWireframes(originalWireframes);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your wireframe. Please try again.';
       toast({
@@ -1066,7 +1066,7 @@ const CanvasPage: React.FC = () => {
       });
       return true;
     } catch (error) {
-      console.error('Failed to delete wireframe:', error);
+      logger.error('Failed to delete wireframe:', error);
       toast({
         title: "Error",
         description: "Failed to delete wireframe",
@@ -1108,7 +1108,7 @@ const CanvasPage: React.FC = () => {
       const newVault = await apiCreateVault(payloadWithDefaults, token);
       setVaults(prev => [newVault, ...prev]);
     } catch (error) {
-      console.error('Failed to create vault:', error);
+      logger.error('Failed to create vault:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not create your vault. Please try again.';
       toast({
         title: "Error",
@@ -1129,7 +1129,7 @@ const CanvasPage: React.FC = () => {
       setVaults(prev => prev.map(v => v.id === vaultId ? updatedVault : v));
       return updatedVault;
     } catch (error) {
-      console.error('Failed to update vault:', error);
+      logger.error('Failed to update vault:', error);
       setVaults(originalVaults);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your vault. Please try again.';
       toast({
@@ -1151,7 +1151,7 @@ const CanvasPage: React.FC = () => {
       });
       return true;
     } catch (error) {
-      console.error('Failed to delete vault:', error);
+      logger.error('Failed to delete vault:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not delete your vault. Please try again.';
       toast({
         title: "Error",
@@ -1195,7 +1195,7 @@ const CanvasPage: React.FC = () => {
       ));
       return result;
     } catch (error) {
-      console.error('Failed to share vault:', error);
+      logger.error('Failed to share vault:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not share your vault. Please try again.';
       toast({
         title: "Error",
@@ -1215,7 +1215,7 @@ const CanvasPage: React.FC = () => {
         : v
       ));
     } catch (error) {
-      console.error('Failed to unshare vault:', error);
+      logger.error('Failed to unshare vault:', error);
       toast({
         title: "Error",
         description: "Failed to revoke share",
@@ -1253,11 +1253,11 @@ const CanvasPage: React.FC = () => {
       );
 
     } catch (error: any) {
-      console.error('Failed to update list:', error);
+      logger.error('Failed to update list:', error);
 
       // If it's a 404 error, the list no longer exists in the backend
       if (error?.response?.status === 404 || error?.status === 404) {
-        console.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
+        logger.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
         setLists(prev => prev.filter(list => list.id !== updatedList.id));
         toast({
           title: "List no longer exists",
@@ -1289,7 +1289,7 @@ const CanvasPage: React.FC = () => {
 
       return true;
     } catch (error) {
-      console.error('Failed to delete list:', error);
+      logger.error('Failed to delete list:', error);
       toast({
         title: "Error",
         description: "Failed to delete list",
@@ -1349,7 +1349,7 @@ const CanvasPage: React.FC = () => {
 
       // Removed success toast - no need to distract user for routine list creation
     } catch (error) {
-      console.error('Failed to create list:', error);
+      logger.error('Failed to create list:', error);
       toast({
         title: "Error",
         description: "Could not create your list. Please try again.",
@@ -1477,7 +1477,7 @@ const CanvasPage: React.FC = () => {
       });
       return response.data;
     } catch (error) {
-      console.error('Error sharing list:', error);
+      logger.error('Error sharing list:', error);
       throw error;
     }
   };
@@ -1488,7 +1488,7 @@ const CanvasPage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
-      console.error('Error unsharing list:', error);
+      logger.error('Error unsharing list:', error);
       throw error;
     }
   };
@@ -1500,7 +1500,7 @@ const CanvasPage: React.FC = () => {
       });
       return response.data;
     } catch (error) {
-      console.error('Error sharing note:', error);
+      logger.error('Error sharing note:', error);
       throw error;
     }
   };
@@ -1511,7 +1511,7 @@ const CanvasPage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
-      console.error('Error unsharing note:', error);
+      logger.error('Error unsharing note:', error);
       throw error;
     }
   };
@@ -1523,7 +1523,7 @@ const CanvasPage: React.FC = () => {
       });
       return response.data;
     } catch (error) {
-      console.error('Error sharing whiteboard:', error);
+      logger.error('Error sharing whiteboard:', error);
       throw error;
     }
   };
@@ -1534,7 +1534,7 @@ const CanvasPage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
-      console.error('Error unsharing whiteboard:', error);
+      logger.error('Error unsharing whiteboard:', error);
       throw error;
     }
   };
@@ -1571,7 +1571,7 @@ const CanvasPage: React.FC = () => {
     try {
       await apiUpdateCanvasPositions(pendingUpdates, token);
     } catch (error: any) {
-      console.error('Failed to update canvas positions:', error);
+      logger.error('Failed to update canvas positions:', error);
 
       if (error?.response?.status === 429) {
         pendingUpdates.forEach(update => {

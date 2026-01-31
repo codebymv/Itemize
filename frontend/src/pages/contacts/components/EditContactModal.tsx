@@ -234,7 +234,7 @@ export function EditContactModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
+            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
               Cancel
             </Button>
             <Button 

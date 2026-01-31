@@ -21,6 +21,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Contact } from '@/types';
 import { createContact, CreateContactData } from '@/services/contactsApi';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { createContactFormSchema, type CreateContactFormValues } from '@/lib/formSchemas';
+import logger from '@/lib/logger';
 
 interface CreateContactModalProps {
   organizationId: number;
@@ -35,41 +40,33 @@ export function CreateContactModal({
 }: CreateContactModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<CreateContactData>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    company: '',
-    job_title: '',
-    status: 'active',
-    source: 'manual',
-    organization_id: organizationId,
+
+  const form = useForm<CreateContactFormValues>({
+    resolver: zodResolver(createContactFormSchema),
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      company: '',
+      job_title: '',
+      status: 'active',
+      source: 'manual',
+    },
   });
 
-  const handleChange = (field: keyof CreateContactData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate at least one identifier
-    if (!formData.first_name && !formData.last_name && !formData.email && !formData.company) {
-      toast({
-        title: 'Error',
-        description: 'Please provide at least a name, email, or company',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleSubmit = async (values: CreateContactFormValues) => {
     setLoading(true);
     try {
-      const contact = await createContact(formData);
+      const contactData: CreateContactData = {
+        ...values,
+        organization_id: organizationId,
+      };
+      const contact = await createContact(contactData);
       onCreated(contact);
+      form.reset();
     } catch (error: any) {
-      console.error('Error creating contact:', error);
+      logger.error('Error creating contact:', error);
       toast({
         title: 'Error',
         description: error.response?.data?.error || 'Failed to create contact',
@@ -93,124 +90,179 @@ export function CreateContactModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name" style={{ fontFamily: '"Raleway", sans-serif' }}>First Name</Label>
-                <Input
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) => handleChange('first_name', e.target.value)}
-                  placeholder="John"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name" style={{ fontFamily: '"Raleway", sans-serif' }}>Last Name</Label>
-                <Input
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) => handleChange('last_name', e.target.value)}
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" style={{ fontFamily: '"Raleway", sans-serif' }}>Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                placeholder="john@example.com"
+              <FormField
+                control={form.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel htmlFor="first_name" style={{ fontFamily: '"Raleway", sans-serif' }}>First Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        id="first_name"
+                        placeholder="John"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel htmlFor="last_name" style={{ fontFamily: '"Raleway", sans-serif' }}>Last Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        id="last_name"
+                        placeholder="Doe"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone" style={{ fontFamily: '"Raleway", sans-serif' }}>Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="+1 (555) 123-4567"
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel htmlFor="email" style={{ fontFamily: '"Raleway", sans-serif' }}>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel htmlFor="phone" style={{ fontFamily: '"Raleway", sans-serif' }}>Phone</FormLabel>
+                  <FormControl>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="company"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel htmlFor="company" style={{ fontFamily: '"Raleway", sans-serif' }}>Company</FormLabel>
+                    <FormControl>
+                      <Input
+                        id="company"
+                        placeholder="Acme Inc."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="job_title"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel htmlFor="job_title" style={{ fontFamily: '"Raleway", sans-serif' }}>Job Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        id="job_title"
+                        placeholder="CEO"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="company" style={{ fontFamily: '"Raleway", sans-serif' }}>Company</Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => handleChange('company', e.target.value)}
-                  placeholder="Acme Inc."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="job_title" style={{ fontFamily: '"Raleway", sans-serif' }}>Job Title</Label>
-                <Input
-                  id="job_title"
-                  value={formData.job_title}
-                  onChange={(e) => handleChange('job_title', e.target.value)}
-                  placeholder="CEO"
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel htmlFor="status" style={{ fontFamily: '"Raleway", sans-serif' }}>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel htmlFor="source" style={{ fontFamily: '"Raleway", sans-serif' }}>Source</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">Manual Entry</SelectItem>
+                        <SelectItem value="import">Import</SelectItem>
+                        <SelectItem value="form">Web Form</SelectItem>
+                        <SelectItem value="integration">Integration</SelectItem>
+                        <SelectItem value="api">API</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="status" style={{ fontFamily: '"Raleway", sans-serif' }}>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="source" style={{ fontFamily: '"Raleway", sans-serif' }}>Source</Label>
-                <Select
-                  value={formData.source}
-                  onValueChange={(value) => handleChange('source', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">Manual Entry</SelectItem>
-                    <SelectItem value="import">Import</SelectItem>
-                    <SelectItem value="form">Web Form</SelectItem>
-                    <SelectItem value="integration">Integration</SelectItem>
-                    <SelectItem value="api">API</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              {loading ? 'Creating...' : 'Create Contact'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                style={{ fontFamily: '"Raleway", sans-serif' }}
+                aria-label={loading ? 'Creating contact' : 'Create contact'}
+              >
+                {loading ? 'Creating...' : 'Create Contact'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

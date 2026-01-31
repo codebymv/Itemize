@@ -341,20 +341,20 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
 
                 <DialogFooter>
                     {step === 'upload' && (
-                        <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</Button>
+                        <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">Cancel</Button>
                     )}
                     {step === 'preview' && (
                         <>
-                            <Button variant="outline" onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                            <Button variant="outline" onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Back to upload">
                                 Back
                             </Button>
-                            <Button onClick={handleImport} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                            <Button onClick={handleImport} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label={`Import ${parsedData.length} contacts`}>
                                 Import {parsedData.length} Contacts
                             </Button>
                         </>
                     )}
                     {step === 'complete' && (
-                        <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }}>Done</Button>
+                        <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Close">Done</Button>
                     )}
                 </DialogFooter>
             </DialogContent>

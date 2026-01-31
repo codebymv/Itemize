@@ -270,6 +270,7 @@ export function CreateSMSTemplateModal({
               variant="outline"
               onClick={onClose}
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label="Cancel"
             >
               Cancel
             </Button>
@@ -278,6 +279,7 @@ export function CreateSMSTemplateModal({
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label={loading ? 'Creating template...' : 'Create template'}
             >
               {loading ? 'Creating...' : 'Create Template'}
             </Button>

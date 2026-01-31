@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
+import logger from '@/lib/logger';
 
 interface UseWireframeCardLogicProps {
   wireframe: Wireframe;
@@ -78,7 +79,7 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
       });
     },
     onError: (error, action) => {
-      console.error('Failed to update wireframe category:', error);
+      logger.error('Failed to update wireframe category:', error);
       if (action === 'color') {
         toast({
           title: 'Error',
@@ -97,22 +98,22 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
   
   // Flow data operations
   const handleFlowDataChange = useCallback((flowData: any) => {
-    console.log('Flow data changed:', flowData);
+    logger.debug('wireframe', 'Flow data changed:', flowData);
   }, []);
   
   const handleFlowDataSave = useCallback(async (flowData: { nodes: any[]; edges: any[]; viewport: { x: number; y: number; zoom: number } }) => {
     try {
-      console.log('🔷 WireframeCardLogic: Saving flow data:', {
+      logger.debug('wireframe', 'Saving flow data:', {
         wireframeId: wireframe.id,
         nodeCount: flowData.nodes?.length || 0,
         edgeCount: flowData.edges?.length || 0
       });
 
       await onUpdate(wireframe.id, { flow_data: flowData });
-
-      console.log('🔷 WireframeCardLogic: Flow data save completed successfully');
+      
+      logger.debug('wireframe', 'Flow data save completed successfully');
     } catch (error) {
-      console.error('Failed to save flow data:', error);
+      logger.error('Failed to save flow data:', error);
       toast({
         title: "Error",
         description: "Failed to save wireframe",

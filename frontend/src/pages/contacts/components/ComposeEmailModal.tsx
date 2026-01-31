@@ -258,7 +258,7 @@ export function ComposeEmailModal({
                 </Tabs>
 
                 <DialogFooter className="mt-4">
-                    <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                         Cancel
                     </Button>
                     <Button
@@ -270,6 +270,7 @@ export function ComposeEmailModal({
                         }
                         className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
+                        aria-label={isSending ? 'Sending email...' : 'Send email'}
                     >
                         {isSending ? (
                             <>

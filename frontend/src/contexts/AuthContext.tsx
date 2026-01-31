@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
 import api, { getApiUrl, setAuthToken, getAuthToken } from '@/lib/api';
 import { storage } from '@/lib/storage';
@@ -66,6 +67,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -175,9 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pendingRedirectRef.current = null;
           logger.debug('auth', 'Google auth complete, redirecting to:', redirectTo);
           
-          // Use window.location for reliable navigation after auth state change
-          // This ensures the page reloads with fresh auth state
-          window.location.href = redirectTo;
+          navigate(redirectTo, { replace: true });
         } catch (backendError) {
           logger.error('Backend auth error:', backendError);
           throw new Error(`Backend authentication failed: ${backendError.message}`);

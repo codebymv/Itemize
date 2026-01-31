@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
+import logger from '@/lib/logger';
 
 interface UseWhiteboardCardLogicProps {
   whiteboard: Whiteboard;
@@ -76,7 +77,7 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
       });
     },
     onError: (error, action) => {
-      console.error('Failed to update whiteboard category:', error);
+      logger.error('Failed to update whiteboard category:', error);
       if (action === 'color') {
         toast({
           title: 'Error',
@@ -98,12 +99,12 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
   // Canvas operations
   const handleCanvasChange = useCallback((canvasData: any) => {
     // This can be used for real-time feedback if needed
-    console.log('Canvas changed:', canvasData);
+    logger.debug('whiteboard', 'Canvas changed:', canvasData);
   }, []);
   
   const handleCanvasSave = useCallback(async (data: { canvas_data: any; updated_at: string }) => {
     try {
-      console.log('🎨 WhiteboardCardLogic: Saving canvas data:', {
+      logger.debug('whiteboard', 'Saving canvas data:', {
         whiteboardId: whiteboard.id,
         pathCount: data.canvas_data?.length || 0,
         dataType: typeof data.canvas_data,
@@ -145,14 +146,14 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
           const testSerialization = JSON.stringify(sanitizedCanvasData);
           JSON.parse(testSerialization);
           
-          console.log('🎨 Canvas data sanitized successfully:', {
+          logger.debug('whiteboard', 'Canvas data sanitized successfully:', {
             originalPaths: data.canvas_data?.length || 0,
             sanitizedPaths: sanitizedCanvasData?.length || 0,
             dataPreview: testSerialization.substring(0, 200)
           });
           
         } catch (sanitizationError) {
-          console.error('🎨 Canvas data sanitization failed:', sanitizationError);
+          logger.error('Canvas data sanitization failed:', sanitizationError);
           // Fallback to empty array if sanitization fails
           sanitizedCanvasData = [];
         }
@@ -163,10 +164,10 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
 
       // Send the sanitized canvas data
       await onUpdate(whiteboard.id, { canvas_data: sanitizedCanvasData });
-
-      console.log('🎨 WhiteboardCardLogic: Canvas save completed successfully');
+      
+      logger.debug('whiteboard', 'Canvas save completed successfully');
     } catch (error) {
-      console.error('Failed to save canvas data:', error);
+      logger.error('Failed to save canvas data:', error);
       toast({
         title: "Error",
         description: "Failed to save whiteboard",

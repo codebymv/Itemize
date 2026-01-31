@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../../utils/timeUtils';
 import { useAISuggest } from '@/context/AISuggestContext';
 import { useTheme } from 'next-themes';
 import { storage } from '@/lib/storage';
+import logger from '@/lib/logger';
 
 // Global storage for autocomplete suggestions (persists across editor recreations)
 let globalAutocompleteStorage: {
@@ -34,17 +35,17 @@ const AutocompleteExtension = Extension.create({
   addKeyboardShortcuts() {
     return {
       Tab: () => {
-        console.log('🔥 TipTap Extension: Tab key pressed!');
-        console.log('🔥 TipTap Extension: Editor focus state:', this.editor.isFocused);
-        console.log('🔥 TipTap Extension: Local storage object:', JSON.stringify(this.storage, null, 2));
-        console.log('🔥 TipTap Extension: Global storage object:', JSON.stringify(globalAutocompleteStorage, null, 2));
+        logger.debug('tiptap', 'Tab key pressed');
+        logger.debug('tiptap', 'Editor focus state:', this.editor.isFocused);
+        logger.debug('tiptap', 'Local storage object:', JSON.stringify(this.storage, null, 2));
+        logger.debug('tiptap', 'Global storage object:', JSON.stringify(globalAutocompleteStorage, null, 2));
         
         // Use global storage instead of local storage
         const suggestion = globalAutocompleteStorage.suggestion;
-        console.log('🔥 TipTap Extension: Current suggestion from global storage:', suggestion?.substring(0, 30));
+        logger.debug('tiptap', 'Current suggestion from global storage:', suggestion?.substring(0, 30));
         
         if (suggestion) {
-          console.log('✅ TipTap Extension: Accepting suggestion with Tab:', suggestion.substring(0, 30));
+          logger.debug('tiptap', 'Accepting suggestion with Tab:', suggestion.substring(0, 30));
           
           // Get current content to check for duplicates before insertion
           const currentContent = this.editor.getText();
@@ -58,7 +59,7 @@ const AutocompleteExtension = Extension.create({
           if (suggestionWords.length === 1) {
             const singleWord = suggestionWords[0];
             if (lastWords.some(word => word.toLowerCase() === singleWord)) {
-              console.log('🚫 TipTap Extension: Preventing single word duplicate:', {
+              logger.debug('tiptap', 'Preventing single word duplicate:', {
                 duplicateWord: singleWord,
                 lastWords: lastWords.slice(-5)
               });
@@ -72,7 +73,7 @@ const AutocompleteExtension = Extension.create({
           const lastWordsText = lastWords.join(' ').toLowerCase();
           
           if (suggestionStart.length > 3 && lastWordsText.includes(suggestionStart)) {
-            console.log('🚫 TipTap Extension: Preventing phrase duplicate:', {
+            logger.debug('tiptap', 'Preventing phrase duplicate:', {
               suggestionStart,
               lastWords: lastWords.slice(-5)
             });
@@ -97,15 +98,15 @@ const AutocompleteExtension = Extension.create({
           
           return true; // Prevent default Tab behavior
         } else {
-          console.log('❌ TipTap Extension: No suggestion available in global storage');
-          console.log('❌ TipTap Extension: Global storage state:', globalAutocompleteStorage);
+          logger.debug('tiptap', 'No suggestion available in global storage');
+          logger.debug('tiptap', 'Global storage state:', globalAutocompleteStorage);
         }
         return false;
       },
       ArrowRight: () => {
         const suggestion = globalAutocompleteStorage.suggestion;
         if (suggestion) {
-          console.log('🔥 TipTap Extension: ArrowRight pressed with suggestion:', suggestion.substring(0, 30));
+          logger.debug('tiptap', 'ArrowRight pressed with suggestion:', suggestion.substring(0, 30));
           
           // Get current content to check for duplicates before insertion
           const currentContent = this.editor.getText();
@@ -119,7 +120,7 @@ const AutocompleteExtension = Extension.create({
           if (suggestionWords.length === 1) {
             const singleWord = suggestionWords[0];
             if (lastWords.some(word => word.toLowerCase() === singleWord)) {
-              console.log('🚫 TipTap Extension: Preventing single word duplicate (ArrowRight):', {
+              logger.debug('tiptap', 'Preventing single word duplicate (ArrowRight):', {
                 duplicateWord: singleWord,
                 lastWords: lastWords.slice(-5)
               });
@@ -133,7 +134,7 @@ const AutocompleteExtension = Extension.create({
           const lastWordsText = lastWords.join(' ').toLowerCase();
           
           if (suggestionStart.length > 3 && lastWordsText.includes(suggestionStart)) {
-            console.log('🚫 TipTap Extension: Preventing phrase duplicate (ArrowRight):', {
+            logger.debug('tiptap', 'Preventing phrase duplicate (ArrowRight):', {
               suggestionStart,
               lastWords: lastWords.slice(-5)
             });
@@ -185,11 +186,11 @@ const AutocompleteExtension = Extension.create({
       this.storage.autocomplete.suggestion = existingSuggestion;
     }
     
-    console.log('🏗️ TipTap Extension: onBeforeCreate called, preserving suggestion:', this.storage.autocomplete?.suggestion?.substring(0, 30) || 'null');
+    logger.debug('tiptap', 'onBeforeCreate called, preserving suggestion:', this.storage.autocomplete?.suggestion?.substring(0, 30) || 'null');
   },
 
   onCreate() {
-    console.log('🏗️ TipTap Extension: onCreate called, final storage:', this.storage.autocomplete?.suggestion?.substring(0, 30) || 'null');
+    logger.debug('tiptap', 'onCreate called, final storage:', this.storage.autocomplete?.suggestion?.substring(0, 30) || 'null');
   },
 });
 
@@ -319,7 +320,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       
       // Auto-enable editing mode when user starts typing
       if (!isEditingContent) {
-        console.log('🔄 Auto-enabling editing mode because content changed');
+        logger.debug('tiptap', 'Auto-enabling editing mode because content changed');
         setIsEditingContent(true);
       }
       
@@ -329,7 +330,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       }
       
       autosaveTimeoutRef.current = setTimeout(() => {
-        console.log('💾 Auto-saving rich note content...');
+        logger.debug('tiptap', 'Auto-saving rich note content...');
         onAutoSave(htmlContent); // Pass just the content for granular updates
       }, 1000); // 1 second with granular updates for optimal real-time performance
     },
@@ -339,7 +340,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   useEffect(() => {
     const globalTabHandler = (e: KeyboardEvent) => {
       if (e.key === 'Tab') {
-        console.log('🌍 Global Tab Event:', {
+        logger.debug('tiptap', 'Global Tab Event:', {
           target: e.target,
           tagName: (e.target as Element)?.tagName,
           className: (e.target as Element)?.className,
@@ -351,7 +352,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         // Fallback: If we have a suggestion and Tab wasn't handled by TipTap
         const suggestion = globalAutocompleteStorage.suggestion;
         if (suggestion && !e.defaultPrevented && editor) {
-          console.log('🔄 Global fallback: Handling Tab with suggestion:', suggestion.substring(0, 30));
+          logger.debug('tiptap', 'Global fallback: Handling Tab with suggestion:', suggestion.substring(0, 30));
           e.preventDefault();
           
           // Clear the suggestion first
@@ -475,7 +476,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       fixedSuggestion = fixedSuggestion.charAt(0).toLowerCase() + fixedSuggestion.slice(1);
     }
     
-    console.log('🔤 Grammar fix:', {
+    logger.debug('tiptap', 'Grammar fix:', {
       context: `"${trimmedContext.slice(-15)}"`,
       suggestion: `"${suggestion.substring(0, 20)}"`,
       fixed: `"${fixedSuggestion.substring(0, 20)}"`,
@@ -515,7 +516,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   const currentAutocomplete = stableSuggestion;
   
   // Debug logging for Tab functionality
-  console.log('🔧 Tab Debug:', {
+  logger.debug('tiptap', 'Tab Debug:', {
     currentAutocomplete: currentAutocomplete?.substring(0, 20),
     suggestionsAvailable: suggestions.length,
     plainTextLength: plainTextContent.length,
@@ -525,7 +526,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   // Update editor's autocomplete storage with current state
   useEffect(() => {
     if (editor && editor.storage && typeof editor.storage.autocomplete === 'object') {
-      console.log('🔄 Updating editor autocomplete storage:', {
+      logger.debug('tiptap', 'Updating editor autocomplete storage:', {
         suggestion: currentAutocomplete?.substring(0, 30),
         isEditingContent,
         willPassSuggestion: currentAutocomplete !== null,
@@ -540,19 +541,19 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         globalAutocompleteStorage.suggestion = currentAutocomplete;
         globalAutocompleteStorage.triggerSuggestions = fetchAISuggestions;
         globalAutocompleteStorage.setSuggestionDebounce = (wordCount: number) => {
-          console.log('🕰️ Setting suggestion tracking after accepting suggestion, word count:', wordCount);
+          logger.debug('tiptap', 'Setting suggestion tracking after accepting suggestion, word count:', wordCount);
           setLastAcceptedSuggestionLength(wordCount);
           
           // Clear note suggestion cache to force fresh suggestions for new context
           try {
             storage.removeByPrefix('note-suggestions-');
-            console.log('🗑️ Cleared note suggestion cache after accepting suggestion');
+            logger.debug('tiptap', 'Cleared note suggestion cache after accepting suggestion');
           } catch (err) {
-            console.warn('Failed to clear note suggestion cache:', err);
+            logger.warn('Failed to clear note suggestion cache:', err);
           }
           
           // Clear current in-memory suggestions to prevent stale data
-          console.log('🧹 Clearing in-memory suggestions before refresh', {
+          logger.debug('tiptap', 'Clearing in-memory suggestions before refresh', {
             currentSuggestionsCount: suggestions.length,
             currentContinuationsCount: continuations.length,
             currentSuggestion: currentSuggestion?.substring(0, 30)
@@ -570,7 +571,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           
           // Trigger fresh suggestions after a short delay
           if (forceRefreshSuggestions) {
-            console.log('🔄 Force refreshing suggestions after cache clear');
+            logger.debug('tiptap', 'Force refreshing suggestions after cache clear');
             setTimeout(() => {
               forceRefreshSuggestions();
             }, 300); // Small delay to let editor settle after insertion
@@ -595,7 +596,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         }
         
         // Additional logging to verify storage was set correctly
-        console.log('✅ Storage after update:', {
+        logger.debug('tiptap', 'Storage after update:', {
           globalSuggestion: globalAutocompleteStorage.suggestion?.substring(0, 30) || 'null',
           localSuggestion: editor?.storage?.autocomplete?.suggestion?.substring(0, 30) || 'null',
           hasGlobalStorage: !!globalAutocompleteStorage.suggestion,
@@ -612,7 +613,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
   // Simplified debug logging for note autocomplete
   useEffect(() => {
-    console.log('📝 Rich Note Autocomplete State:', {
+    logger.debug('tiptap', 'Rich Note Autocomplete State:', {
       isEditingContent,
       aiEnabled,
       plainTextContent: plainTextContent.substring(0, 50) + (plainTextContent.length > 50 ? '...' : ''),
@@ -639,7 +640,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   // Auto-enable editing mode when suggestions are available
   useEffect(() => {
     if (aiEnabled && !isEditingContent && (suggestions.length > 0 || currentAutocomplete)) {
-      console.log('🎯 Auto-enabling editing mode because suggestions are available');
+      logger.debug('tiptap', 'Auto-enabling editing mode because suggestions are available');
       setIsEditingContent(true);
       // Also focus the editor to enable Tab capture
       if (editor) {
@@ -653,7 +654,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     if (editor) {
       // Always ensure editing mode and focus when clicking editor
       if (!isEditingContent) {
-        console.log('🎯 Enabling editing mode and focusing editor on click');
+        logger.debug('tiptap', 'Enabling editing mode and focusing editor on click');
         setIsEditingContent(true);
       }
       // Always focus the editor on click
@@ -693,7 +694,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   useEffect(() => {
     return () => {
       if (autosaveTimeoutRef.current) {
-        console.log('🧹 Cleaning up autosave timeout on component unmount');
+        logger.debug('tiptap', 'Cleaning up autosave timeout on component unmount');
         clearTimeout(autosaveTimeoutRef.current);
       }
     };

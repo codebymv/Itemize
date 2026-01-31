@@ -260,7 +260,7 @@ export function CreateCalendarModal({
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                             Cancel
                         </Button>
                         <Button
@@ -268,6 +268,7 @@ export function CreateCalendarModal({
                             disabled={loading}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                             style={{ fontFamily: '"Raleway", sans-serif' }}
+                            aria-label={loading ? 'Creating calendar...' : 'Create calendar'}
                         >
                             {loading ? 'Creating...' : 'Create Calendar'}
                         </Button>

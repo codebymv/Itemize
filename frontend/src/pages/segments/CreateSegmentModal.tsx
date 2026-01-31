@@ -269,6 +269,7 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
         size="icon"
         onClick={() => onRemove(index)}
         className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        aria-label="Remove filter"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -510,6 +511,7 @@ export function CreateSegmentModal({
                   size="sm"
                   onClick={handleAddFilter}
                   disabled={loadingOptions || !filterOptions}
+                  aria-label="Add filter condition"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Condition
@@ -622,6 +624,7 @@ export function CreateSegmentModal({
               variant="outline"
               onClick={onClose}
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label="Cancel"
             >
               Cancel
             </Button>
@@ -630,6 +633,7 @@ export function CreateSegmentModal({
               disabled={loading || filters.length === 0}
               className="bg-blue-600 hover:bg-blue-700 text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-label={loading ? 'Creating segment...' : 'Create segment'}
             >
               {loading ? 'Creating...' : 'Create Segment'}
             </Button>
