@@ -84,6 +84,7 @@ const PageLoading = () => (
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const queryClient = new QueryClient();
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -267,6 +268,7 @@ const App = () => (
                 <AISuggestProvider>
                   <Toaster />
                   <Sonner />
+                  <CookieConsent />
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoading />}>
                       <AppContent />
