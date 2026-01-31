@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { fetchCanvasLists, getNotes, getWhiteboards, getWireframes, getVaults } from '@/services/api';
 import { getContacts } from '@/services/contactsApi';
 import { getSegments } from '@/services/segmentsApi';
@@ -47,7 +48,9 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number | string>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -55,22 +58,70 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     } else {
       setQuery('');
       setResults([]);
+      setSelectedIndex(-1);
     }
   }, [open]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (!open) return;
+
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!query) {
+          // Quick links navigation
+          const maxIndex = STATIC_PAGES.slice(0, 5).length - 1;
+          const currentNumIndex = typeof selectedIndex === 'number' && selectedIndex >= 0 ? selectedIndex : -1;
+          setSelectedIndex(Math.min(currentNumIndex + 1, maxIndex));
+        } else {
+          // Search results navigation
+          const maxIndex = results.length - 1;
+          const currentNumIndex = typeof selectedIndex === 'number' ? selectedIndex : -1;
+          setSelectedIndex(Math.min(currentNumIndex + 1, maxIndex));
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!query) {
+          const currentNumIndex = typeof selectedIndex === 'number' && selectedIndex >= 0 ? selectedIndex : -1;
+          setSelectedIndex(Math.max(currentNumIndex - 1, -1));
+        } else {
+          const currentNumIndex = typeof selectedIndex === 'number' ? selectedIndex : -1;
+          setSelectedIndex(Math.max(currentNumIndex - 1, -1));
+        }
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (typeof selectedIndex === 'number' && selectedIndex >= 0) {
+          if (!query && STATIC_PAGES[selectedIndex]) {
+            handleSelect(STATIC_PAGES[selectedIndex]);
+          } else if (results[selectedIndex]) {
+            handleSelect(results[selectedIndex]);
+          }
+        }
+        return;
+      }
     };
+
     if (open) {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [open, onClose]);
+  }, [open, onClose, results, selectedIndex, query]);
 
   useEffect(() => {
     if (open) {
@@ -95,10 +146,12 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
     const search = async () => {
       if (!query.trim()) {
         setResults([]);
+        setSelectedIndex(-1);
         return;
       }
 
       setLoading(true);
+      setSelectedIndex(-1); // Reset selection when query changes
       try {
         const lowerQuery = query.toLowerCase();
         const allResults: SearchResult[] = [];
@@ -322,11 +375,15 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               <div className="mt-8 text-left max-w-sm mx-auto">
                 <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-3 px-2">Quick Links</p>
                 <div className="space-y-1">
-                  {STATIC_PAGES.slice(0, 5).map(page => (
+                  {STATIC_PAGES.slice(0, 5).map((page, index) => (
                     <button
                       key={page.id}
                       onClick={() => handleSelect(page)}
-                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all text-slate-700 dark:text-slate-300 group"
+                      onMouseEnter={() => setSelectedIndex(`quick-${index}`)}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all text-slate-700 dark:text-slate-300 group",
+                        selectedIndex === `quick-${index}` && "bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200"
+                      )}
                     >
                       <div className="w-8 h-8 rounded-md bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900 transition-colors">
                         {page.icon && <page.icon className="h-4 w-4" />}
@@ -347,11 +404,15 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
 
           {results.length > 0 && (
             <div className="space-y-1">
-              {results.map((result) => (
+              {results.map((result, index) => (
                 <button
                   key={result.id}
                   onClick={() => handleSelect(result)}
-                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-900 dark:hover:text-blue-200 transition-colors group text-left"
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  className={cn(
+                    "w-full flex items-center gap-4 p-3 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-900 dark:hover:text-blue-200 transition-colors group text-left",
+                    selectedIndex === index && "bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200"
+                  )}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-slate-700 dark:text-slate-300 ${
                     result.type === 'list' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400' :
