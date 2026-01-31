@@ -711,6 +711,9 @@ const CanvasPage: React.FC = () => {
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
+      auth: {
+        token, // Send token in auth for initial connection
+      },
     });
 
     newSocket.on('connect', () => {
@@ -760,17 +763,54 @@ const CanvasPage: React.FC = () => {
 
     newSocket.on('error', (error) => {
       logger.error('Canvas: WebSocket error:', error);
-      toast({
-        title: "Connection Error",
-        description: error.message || "Failed to connect to real-time updates",
-        variant: "destructive",
-      });
+      
+      // Handle JWT expired error specifically
+      if (error?.details === 'jwt expired' || error?.message?.includes('jwt expired')) {
+        logger.log('Canvas: JWT expired, will reconnect after token refresh');
+        // Don't show error toast - let the token refresh handle it silently
+      } else {
+        toast({
+          title: "Connection Error",
+          description: error.message || "Failed to connect to real-time updates",
+          variant: "destructive",
+        });
+      }
+    });
+
+    // Listen for auth errors
+    newSocket.on('connect_error', (error) => {
+      logger.error('Canvas: WebSocket connection error:', error);
+      if (error.message?.includes('jwt expired') || error.message?.includes('unauthorized')) {
+        logger.log('Canvas: Auth error, waiting for token refresh...');
+        setIsConnected(false);
+      }
     });
 
     setSocket(newSocket);
 
+    // Handle token refresh - reconnect WebSocket with new token
+    const handleTokenRefresh = (event: CustomEvent) => {
+      const newToken = event.detail?.token;
+      logger.log('Canvas: Token refreshed, reconnecting WebSocket...');
+      
+      // Disconnect old socket
+      newSocket.disconnect();
+      
+      // Update socket auth and reconnect
+      newSocket.auth = { token: newToken };
+      newSocket.connect();
+      
+      toast({
+        title: "Connection Restored",
+        description: "Your session has been refreshed.",
+      });
+    };
+
+    window.addEventListener('auth:token-refreshed', handleTokenRefresh as EventListener);
+
     return () => {
       logger.log('Canvas: Cleaning up WebSocket connection');
+      window.removeEventListener('auth:token-refreshed', handleTokenRefresh as EventListener);
       newSocket.disconnect();
     };
   }, [token, toast]);

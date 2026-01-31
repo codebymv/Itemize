@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthActions } from '@/contexts/AuthContext';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { theme } = useTheme();
   const { login, loginWithEmail } = useAuthActions();
@@ -29,6 +31,20 @@ export default function Login() {
 
   // Get redirect path from location state
   const from = (location.state as any)?.from?.pathname || '/dashboard';
+
+  // Check if redirected due to session expiration
+  const sessionExpired = searchParams.get('session') === 'expired';
+
+  // Show session expired message
+  useEffect(() => {
+    if (sessionExpired) {
+      toast({
+        title: 'Session Expired',
+        description: 'Your session has expired. Please sign in again to continue.',
+        variant: 'destructive',
+      });
+    }
+  }, [sessionExpired, toast]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +113,14 @@ export default function Login() {
               />
             </div>
           </Link>
+          {sessionExpired && (
+            <Alert variant="destructive" className="mx-6 mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your session has expired. Please sign in again to continue.
+              </AlertDescription>
+            </Alert>
+          )}
           <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
             Welcome back
           </CardTitle>

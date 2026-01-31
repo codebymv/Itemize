@@ -156,6 +156,16 @@ const processQueue = (error: Error | null) => {
   failedQueue = [];
 };
 
+// Track token refresh attempts to prevent infinite loops
+let refreshAttempts = 0;
+const MAX_REFRESH_ATTEMPTS = 3;
+const REFRESH_ATTEMPT_RESET_TIME = 60000; // 1 minute
+
+// Reset refresh attempts counter periodically
+setInterval(() => {
+  refreshAttempts = 0;
+}, REFRESH_ATTEMPT_RESET_TIME);
+
 // Add a response interceptor for error handling and retry logic
 api.interceptors.response.use(
   (response) => {
@@ -169,7 +179,20 @@ api.interceptors.response.use(
     const config = error.config as RetryConfig | undefined;
     
     // Handle 401 unauthorized - attempt token refresh
-    if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh')) {
+    if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh') && !config.url?.includes('/auth/login')) {
+      // Prevent infinite refresh loops
+      if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
+        console.error('[Auth] Max refresh attempts reached, forcing logout');
+        // Clear auth state and redirect
+        setAuthToken(null);
+        storage.removeItem('itemize_user');
+        storage.removeItem('itemize_expiry');
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login?session=expired';
+        }
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -178,35 +201,73 @@ api.interceptors.response.use(
       }
 
       isRefreshing = true;
+      refreshAttempts++;
 
       try {
-        // Attempt to refresh the token
-        const refreshResponse = await api.post('/api/auth/refresh');
+        console.log('[Auth] Attempting token refresh...');
+        
+        // Attempt to refresh the token - withCredentials ensures cookies are sent
+        const refreshResponse = await axios.create({
+          baseURL: config.baseURL,
+          withCredentials: true,
+          timeout: 10000,
+        }).post('/api/auth/refresh');
+        
         // If refresh returns a new token, save it
         if (refreshResponse.data?.token) {
+          console.log('[Auth] Token refreshed successfully');
           setAuthToken(refreshResponse.data.token);
+          
+          // Also update user data if provided
+          if (refreshResponse.data?.user) {
+            storage.setJson('itemize_user', refreshResponse.data.user);
+          }
+          
+          // Reset refresh attempts on success
+          refreshAttempts = 0;
+          processQueue(null);
+          isRefreshing = false;
+          
+          // Dispatch custom event for other parts of app (like WebSocket)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:token-refreshed', {
+              detail: { token: refreshResponse.data.token }
+            }));
+          }
+          
+          // Retry the original request with new token
+          return api(config);
+        } else {
+          throw new Error('No token received from refresh endpoint');
         }
-        processQueue(null);
-        isRefreshing = false;
-        // Retry the original request
-        return api(config);
-      } catch (refreshError) {
-        // Refresh failed - clear auth state and redirect to login
+      } catch (refreshError: any) {
+        console.error('[Auth] Token refresh failed:', refreshError.message);
+        
+        // Refresh failed - clear auth state
         processQueue(refreshError as Error);
         isRefreshing = false;
-        // Clear all auth data (Gleam-style)
+        
+        // Clear all auth data
         setAuthToken(null);
         storage.removeItem('itemize_user');
         storage.removeItem('itemize_expiry');
-        // Optionally redirect to login
+        
+        // Show user-friendly message and redirect
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          // Dispatch event to show toast notification
+          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+          
+          // Redirect to login with session expired message
+          setTimeout(() => {
+            window.location.href = '/login?session=expired';
+          }, 2000); // Give time for toast to show
         }
+        
         return Promise.reject(error);
       }
     }
 
-    // Handle retry logic
+    // Handle retry logic for other errors
     if (config && shouldRetry(error, config)) {
       config.__retryCount = (config.__retryCount || 0) + 1;
       

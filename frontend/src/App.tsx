@@ -84,6 +84,7 @@ const PageLoading = () => (
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useSessionExpiration } from "@/hooks/useSessionExpiration";
 import { CookieConsent } from "@/components/CookieConsent";
 
 const queryClient = new QueryClient();
@@ -133,6 +134,9 @@ const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
 
 const AppContent = () => {
   const location = useLocation();
+
+  // Handle session expiration notifications
+  useSessionExpiration();
 
   // Disable browser scroll restoration to prevent interference with manual scroll control
   useEffect(() => {
