@@ -498,6 +498,11 @@ setTimeout(async () => {
         app.use('/api/admin/email', adminEmailRoutes(pool, authenticateJWT, requireAdmin));
         logger.info('Admin Email routes initialized');
 
+        // Onboarding routes
+        const onboardingRoutes = require('./routes/onboarding.routes');
+        app.use('/api/onboarding', onboardingRoutes(pool, authenticateJWT));
+        logger.info('Onboarding routes initialized');
+
         // AI suggestions endpoints
         try {
             logger.info('Initializing AI suggestion service...');

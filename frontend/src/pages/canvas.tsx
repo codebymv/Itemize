@@ -61,6 +61,9 @@ import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 import { useHeader } from '../contexts/HeaderContext';
 import { MobileControlsBar } from '../components/MobileControlsBar';
+import { useOnboardingTrigger } from '../hooks/useOnboardingTrigger';
+import { OnboardingModal } from '../components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '../config/onboardingContent.tsx';
 
 // Debounce utility function
 function debounce<T extends (...args: any[]) => any>(
@@ -82,6 +85,9 @@ const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
   // Use the header context to set the header content
   const { setHeaderContent } = useHeader();
+
+  // Onboarding
+  const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('canvas');
 
   const [lists, setLists] = useState<List[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -1966,6 +1972,15 @@ const CanvasPage: React.FC = () => {
   // Main render
   return (
     <>
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.canvas}
+      />
+
       {/* Prevent body scrolling only for desktop canvas */}
       <style>{`
         ${!isMobileView ? `

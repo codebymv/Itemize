@@ -11,7 +11,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
-import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionProvider";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -268,18 +269,20 @@ const App = () => (
             }}
           >
             <AuthProvider>
-              <SubscriptionProviderWrapper>
-                <AISuggestProvider>
-                  <Toaster />
-                  <Sonner />
-                  <CookieConsent />
-                  <ErrorBoundary>
-                    <Suspense fallback={<PageLoading />}>
-                      <AppContent />
-                    </Suspense>
-                  </ErrorBoundary>
-                </AISuggestProvider>
-              </SubscriptionProviderWrapper>
+              <OnboardingProvider>
+                <SubscriptionProviderWrapper>
+                  <AISuggestProvider>
+                    <Toaster />
+                    <Sonner />
+                    <CookieConsent />
+                    <ErrorBoundary>
+                      <Suspense fallback={<PageLoading />}>
+                        <AppContent />
+                      </Suspense>
+                    </ErrorBoundary>
+                  </AISuggestProvider>
+                </SubscriptionProviderWrapper>
+              </OnboardingProvider>
             </AuthProvider>
           </BrowserRouter>
         </GoogleOAuthProvider>

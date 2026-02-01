@@ -786,6 +786,60 @@ const runWireframesDimensionsMigration = async (pool) => {
   }
 };
 
+// Migration to add onboarding progress tracking to users table
+const runOnboardingMigration = async (pool) => {
+  console.log('Running onboarding progress migration...');
+  
+  try {
+    // Add onboarding_progress JSONB column to users table
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS onboarding_progress JSONB DEFAULT '{}'::jsonb;
+    `);
+    console.log('✅ onboarding_progress column added to users table');
+    
+    // Create GIN index for efficient JSONB queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_onboarding_progress 
+      ON users USING gin(onboarding_progress);
+    `);
+    console.log('✅ GIN index created on onboarding_progress');
+    
+    // Optional: Create analytics/events table for detailed tracking
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS onboarding_events (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        feature_key VARCHAR(50) NOT NULL,
+        event_type VARCHAR(20) NOT NULL,
+        version VARCHAR(10) DEFAULT '1.0',
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+    console.log('✅ onboarding_events table created (if not exists)');
+    
+    // Create index for efficient event queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_onboarding_events_user_feature 
+      ON onboarding_events(user_id, feature_key);
+    `);
+    console.log('✅ index created on onboarding_events(user_id, feature_key)');
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_onboarding_events_created_at 
+      ON onboarding_events(created_at);
+    `);
+    console.log('✅ index created on onboarding_events(created_at)');
+    
+    console.log('✅ Onboarding migration completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Onboarding migration failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = {
   runCanvasMigration,
   runListResizeMigration,
@@ -797,5 +851,6 @@ module.exports = {
   runSharingMigration,
   runEmailPasswordAuthMigration,
   runWireframesMigration,
-  runWireframesDimensionsMigration
+  runWireframesDimensionsMigration,
+  runOnboardingMigration
 };
