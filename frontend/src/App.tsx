@@ -11,7 +11,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
-import { SubscriptionProvider } from "@/contexts/SubscriptionProvider";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 // Layout components
