@@ -17,15 +17,15 @@ export const onboardingService = {
    * Get user's complete onboarding progress
    */
   async getProgress(): Promise<OnboardingProgress> {
-    const response = await api.get('/onboarding/progress');
-    return response.data.data; // Unwrap { success: true, data: {...} }
+    const response = await api.get('/api/onboarding/progress');
+    return response.data.data;
   },
 
   /**
    * Get specific feature's onboarding status
    */
   async getFeatureProgress(feature: string): Promise<OnboardingFeatureProgress> {
-    const response = await api.get(`/onboarding/progress/${feature}`);
+    const response = await api.get(`/api/onboarding/progress/${feature}`);
     return response.data.data;
   },
 
@@ -33,7 +33,7 @@ export const onboardingService = {
    * Mark a feature as seen
    */
   async markSeen(feature: string, version: string = '1.0'): Promise<OnboardingProgress> {
-    const response = await api.post('/onboarding/mark-seen', { feature, version });
+    const response = await api.post('/api/onboarding/mark-seen', { feature, version });
     return response.data.data;
   },
 
@@ -41,7 +41,7 @@ export const onboardingService = {
    * Dismiss a feature's onboarding
    */
   async dismiss(feature: string): Promise<OnboardingProgress> {
-    const response = await api.post('/onboarding/dismiss', { feature });
+    const response = await api.post('/api/onboarding/dismiss', { feature });
     return response.data.data;
   },
 
@@ -49,7 +49,7 @@ export const onboardingService = {
    * Mark a specific step as completed
    */
   async completeStep(feature: string, step: number): Promise<OnboardingProgress> {
-    const response = await api.post('/onboarding/complete-step', { feature, step });
+    const response = await api.post('/api/onboarding/complete-step', { feature, step });
     return response.data.data;
   },
 
@@ -57,7 +57,7 @@ export const onboardingService = {
    * Reset onboarding progress
    */
   async reset(feature?: string): Promise<OnboardingProgress> {
-    const url = feature ? `/onboarding/reset?feature=${feature}` : '/onboarding/reset';
+    const url = feature ? `/api/onboarding/reset?feature=${feature}` : '/api/onboarding/reset';
     const response = await api.delete(url);
     return response.data.data;
   },

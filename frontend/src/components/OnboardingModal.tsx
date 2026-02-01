@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronLeft, ChevronRight, X, Lightbulb } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 
 export interface OnboardingStep {
   title: string;
@@ -36,7 +34,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   content,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   const totalSteps = content.steps.length;
   const isFirstStep = currentStep === 0;
@@ -44,7 +41,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleNext = () => {
     if (isLastStep) {
-      handleComplete();
+      onComplete();
     } else {
       setCurrentStep(prev => prev + 1);
     }
@@ -54,20 +51,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     setCurrentStep(prev => Math.max(0, prev - 1));
   };
 
-  const handleComplete = () => {
-    if (dontShowAgain) {
-      onDismiss();
-    } else {
-      onComplete();
-    }
-  };
-
   const handleSkip = () => {
-    if (dontShowAgain) {
-      onDismiss();
-    } else {
-      onClose();
-    }
+    onClose();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -88,39 +73,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold">
-                {currentStepContent.title}
-              </DialogTitle>
-              <DialogDescription className="mt-2">
-                {currentStepContent.description}
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={handleSkip}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </div>
+<DialogHeader>
+          <DialogTitle className="text-2xl font-bold">
+            {currentStepContent.title}
+          </DialogTitle>
+          <DialogDescription className="mt-2">
+            {currentStepContent.description}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-6">
-          {/* Step indicator */}
+{/* Step indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">
             {content.steps.map((_, index) => (
               <div
                 key={index}
                 className={`h-2 rounded-full transition-all ${
                   index === currentStep
-                    ? 'w-8 bg-primary'
+                    ? 'w-8 bg-blue-600'
                     : index < currentStep
-                    ? 'w-2 bg-primary/50'
+                    ? 'w-2 bg-blue-600/50'
                     : 'w-2 bg-muted'
                 }`}
               />
@@ -139,26 +111,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
 
-            {currentStepContent.icon && (
+{currentStepContent.icon && (
               <div className="flex justify-center">
-                <div className="p-4 rounded-full bg-primary/10">
+                <div className="p-4 rounded-full bg-blue-600/10">
                   {currentStepContent.icon}
                 </div>
               </div>
             )}
 
-            {currentStepContent.tips && currentStepContent.tips.length > 0 && (
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+{currentStepContent.tips && currentStepContent.tips.length > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                  <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-2">
+                    <h4 className="font-semibold text-sm text-foreground mb-2">
                       Quick Tips
                     </h4>
-                    <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                    <ul className="space-y-1 text-sm text-muted-foreground">
                       {currentStepContent.tips.map((tip, index) => (
                         <li key={index} className="flex items-start gap-2">
-                          <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
+                          <span className="text-blue-600 mt-0.5">•</span>
                           <span>{tip}</span>
                         </li>
                       ))}
@@ -170,22 +142,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-col gap-3">
-          {/* Don't show again checkbox */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="dont-show"
-              checked={dontShowAgain}
-              onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-            />
-            <Label
-              htmlFor="dont-show"
-              className="text-sm font-normal cursor-pointer"
-            >
-              Don't show this again
-            </Label>
-          </div>
-
+<DialogFooter className="flex-col sm:flex-col gap-3">
           {/* Navigation buttons */}
           <div className="flex items-center justify-between w-full gap-2">
             <Button
@@ -207,9 +164,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </Button>
               )}
 
-              <Button
+<Button
                 onClick={handleNext}
-                className="min-w-[120px]"
+                className="min-w-[120px] bg-blue-600 hover:bg-blue-700"
               >
                 {isLastStep ? 'Get Started' : 'Next'}
                 {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}

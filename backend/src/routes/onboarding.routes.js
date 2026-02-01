@@ -6,7 +6,7 @@ const express = require('express');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
 const { sendSuccess, sendBadRequest, sendError } = require('../utils/response');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 /**
  * Create onboarding routes with injected dependencies
