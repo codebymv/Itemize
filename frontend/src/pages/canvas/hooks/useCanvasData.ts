@@ -17,6 +17,11 @@ interface CanvasData {
   whiteboards: Whiteboard[];
   wireframes: Wireframe[];
   vaults: Vault[];
+  setLists: React.Dispatch<React.SetStateAction<List[]>>;
+  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
+  setWhiteboards: React.Dispatch<React.SetStateAction<Whiteboard[]>>;
+  setWireframes: React.Dispatch<React.SetStateAction<Wireframe[]>>;
+  setVaults: React.Dispatch<React.SetStateAction<Vault[]>>;
   loadingLists: boolean;
   loadingNotes: boolean;
   loadingWhiteboards: boolean;
@@ -145,6 +150,11 @@ export function useCanvasData(): CanvasData {
     whiteboards,
     wireframes,
     vaults,
+    setLists,
+    setNotes,
+    setWhiteboards,
+    setWireframes,
+    setVaults,
     loadingLists,
     loadingNotes,
     loadingWhiteboards,

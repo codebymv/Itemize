@@ -80,7 +80,11 @@ export function useCanvasCRUD(
   };
 
   const handleUpdateNote = async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
-    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...updatedData } : n));
+    let originalNotes: Note[] = [];
+    setNotes(prev => {
+      originalNotes = prev;
+      return prev.map(n => n.id === noteId ? { ...n, ...updatedData } : n);
+    });
 
     try {
       const updatedNote = await apiUpdateNote(noteId, updatedData, token);
@@ -88,6 +92,7 @@ export function useCanvasCRUD(
       return updatedNote;
     } catch (error) {
       logger.error('Failed to update note:', error);
+      setNotes(originalNotes);
       toast({
         title: "Error",
         description: "Failed to update note",
@@ -176,6 +181,12 @@ export function useCanvasCRUD(
 
   const handleUpdateWhiteboard = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
+      let originalWhiteboards: Whiteboard[] = [];
+      setWhiteboards(prev => {
+        originalWhiteboards = prev;
+        return prev.map(w => w.id === whiteboardId ? { ...w, ...updatedData } : w);
+      });
+
       logger.log('🎨 CanvasPage: Updating whiteboard:', {
         whiteboardId,
         updatedFields: Object.keys(updatedData),
@@ -197,6 +208,7 @@ export function useCanvasCRUD(
       return updatedWhiteboard;
     } catch (error) {
       logger.error('Failed to update whiteboard:', error);
+      setWhiteboards(originalWhiteboards);
       const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
       toast({
         title: "Error",
@@ -402,6 +414,157 @@ export function useCanvasCRUD(
     });
   };
 
+  const handleWhiteboardPositionUpdate = (whiteboardId: number, newPosition: { x: number; y: number }) => {
+    setWhiteboards(prev => prev.map(whiteboard => whiteboard.id === whiteboardId ? {
+      ...whiteboard,
+      position_x: newPosition.x,
+      position_y: newPosition.y
+    } : whiteboard));
+
+    enqueuePositionUpdate({
+      type: 'whiteboard',
+      id: whiteboardId,
+      position_x: newPosition.x,
+      position_y: newPosition.y
+    });
+  };
+
+  const handleListPositionUpdate = (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => {
+    setLists(prev => {
+      return prev.map(list => list.id === listId ? {
+        ...list,
+        position_x: newPosition.x,
+        position_y: newPosition.y,
+        ...(newSize ? { width: newSize.width } : {})
+      } : list);
+    });
+
+    enqueuePositionUpdate({
+      type: 'list',
+      id: listId,
+      position_x: newPosition.x,
+      position_y: newPosition.y,
+      ...(newSize ? { width: newSize.width } : {})
+    });
+  };
+
+  const updateList = async (updatedList: List) => {
+    try {
+      const updatedListFromAPI = await apiUpdateList(updatedList, token);
+
+      const transformedList: List = {
+        id: updatedListFromAPI.id,
+        title: updatedListFromAPI.title,
+        type: updatedListFromAPI.type || 'General',
+        items: updatedListFromAPI.items || [],
+        createdAt: updatedListFromAPI.createdAt ? new Date(updatedListFromAPI.createdAt) : undefined,
+        position_x: updatedListFromAPI.position_x,
+        position_y: updatedListFromAPI.position_y,
+        width: updatedListFromAPI.width,
+        height: updatedListFromAPI.height,
+        color_value: updatedListFromAPI.color_value,
+        share_token: updatedListFromAPI.share_token,
+        is_public: updatedListFromAPI.is_public,
+        shared_at: updatedListFromAPI.shared_at ? new Date(updatedListFromAPI.shared_at).toISOString() : undefined,
+      };
+
+      setLists(prev =>
+        prev.map(list => list.id === updatedList.id ? transformedList : list)
+      );
+    } catch (error: any) {
+      logger.error('Failed to update list:', error);
+
+      if (error?.response?.status === 404 || error?.status === 404) {
+        logger.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
+        setLists(prev => prev.filter(list => list.id !== updatedList.id));
+        toast({
+          title: "List no longer exists",
+          description: "This list has been removed as it no longer exists.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not update your list. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const deleteList = async (listId: string): Promise<boolean> => {
+    try {
+      await apiDeleteList(listId, token);
+
+      setLists(prev => prev.filter(list => list.id !== listId));
+
+      toast({
+        title: "List deleted",
+        description: "Your list has been successfully removed.",
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Failed to delete list:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete list",
+        variant: "destructive"
+      });
+
+      return false;
+    }
+  };
+
+  const handleCreateList = async (title: string, type: string, color: string, position: { x: number; y: number }) => {
+    try {
+      if (!isCategoryInUse(type) && type !== 'General') {
+        await addCategory({ name: type, color_value: color });
+      }
+
+      const response = await apiCreateList({
+        title,
+        type,
+        items: [],
+        position_x: position.x,
+        position_y: position.y,
+        color_value: color
+      }, token);
+
+      const newList: List = {
+        id: response.id,
+        title: response.title,
+        type: response.type || 'General',
+        items: response.items || [],
+        createdAt: response.createdAt ? new Date(response.createdAt) : undefined,
+        position_x: response.position_x || position.x,
+        position_y: response.position_y || position.y,
+        width: response.width,
+        height: response.height,
+        color_value: response.color_value || color,
+        share_token: response.share_token,
+        is_public: response.is_public,
+        shared_at: response.shared_at ? new Date(response.shared_at).toISOString() : undefined,
+      };
+
+      recentlyCreatedListIds.current.add(newList.id);
+      setTimeout(() => {
+        recentlyCreatedListIds.current.delete(newList.id);
+      }, 2000);
+
+      setLists(prev => [newList, ...prev]);
+      return newList;
+    } catch (error) {
+      logger.error('Failed to create list:', error);
+      toast({
+        title: "Error",
+        description: "Could not create your list. Please try again.",
+        variant: "destructive"
+      });
+      return undefined;
+    }
+  };
+
   const handleShareVault = async (vaultId: number) => {
     try {
       const result = await apiShareVault(vaultId, token);
@@ -441,6 +604,10 @@ export function useCanvasCRUD(
   };
 
   return {
+    handleCreateList,
+    updateList,
+    deleteList,
+    handleListPositionUpdate,
     handleCreateNote,
     handleUpdateNote,
     handleDeleteNote,
@@ -448,6 +615,7 @@ export function useCanvasCRUD(
     handleCreateWhiteboard,
     handleUpdateWhiteboard,
     handleDeleteWhiteboard,
+    handleWhiteboardPositionUpdate,
     handleCreateWireframe,
     handleUpdateWireframe,
     handleDeleteWireframe,

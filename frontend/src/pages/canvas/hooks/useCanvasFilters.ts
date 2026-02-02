@@ -95,7 +95,7 @@ export function useCanvasFilters(
 
   // Apply search filter
   const getFilteredContent = () => {
-    const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes } = filteredData;
+    const { filteredLists, filteredNotes, filteredWhiteboards, filteredWireframes, filteredVaults } = filteredData;
 
     let searchFilteredLists = [...filteredLists];
     if (searchQuery) {
@@ -129,11 +129,19 @@ export function useCanvasFilters(
       });
     }
 
+    let searchFilteredVaults = [...filteredVaults];
+    if (searchQuery) {
+      searchFilteredVaults = searchFilteredVaults.filter(vault => {
+        return vault.title?.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
+
     return {
       filteredLists: searchFilteredLists,
       filteredNotes: searchFilteredNotes,
       filteredWhiteboards: searchFilteredWhiteboards,
-      filteredWireframes: searchFilteredWireframes
+      filteredWireframes: searchFilteredWireframes,
+      filteredVaults: searchFilteredVaults
     };
   };
 

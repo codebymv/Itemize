@@ -75,21 +75,23 @@ export function SubscriptionStatus() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                     Current Plan
                 </CardTitle>
-                <div className="flex items-center gap-2 mt-2">
-                    <PlanIcon className={`h-5 w-5 ${planMetadata.color}`} />
-                    <span className="text-2xl font-semibold">{planMetadata.displayName}</span>
-                    {planMetadata.popular && (
-                        <Badge variant="secondary" className="ml-2">
-                            Most Popular
-                        </Badge>
-                    )}
+                <div className="flex items-start justify-between gap-4 mt-2">
+                    <div className="flex items-center gap-2">
+                        <PlanIcon className="h-5 w-5 text-blue-600" />
+                        <span className="text-2xl font-semibold">{planMetadata.displayName}</span>
+                        {planMetadata.popular && (
+                            <Badge variant="secondary" className="ml-2">
+                                Most Popular
+                            </Badge>
+                        )}
+                    </div>
+                    <div className="text-lg font-semibold text-foreground whitespace-nowrap">
+                        {currentPlan === 'free' ? '$0' : `$${planPricing.monthly}/month`}
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">
-                        {currentPlan === 'free' ? '$0' : `$${planPricing.monthly}/month`}
-                    </div>
                     {renewalDate && (
                         <div className="text-xs text-muted-foreground">
                             Renews on {renewalDate}

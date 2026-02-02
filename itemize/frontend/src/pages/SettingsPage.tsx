@@ -1,32 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useAISuggest } from '@/context/AISuggestContext';
-import { useOrganization } from '@/hooks/useOrganization';
-import { useAuthState } from '@/contexts/AuthContext';
-import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getAssetUrl } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { PricingCards } from '@/components/subscription';
-import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
-import { Plan } from '@/lib/subscription';
+import { save } from '@turbopack/ts-utils';
+import type { Plan } from '@/lib/subscription';
+import { type Plan, PLAN_METADATA } from '@/lib/subscription';
 import {
   Settings,
   User,
@@ -34,29 +21,33 @@ import {
   Sparkles,
   Sun,
   Moon,
-  CreditCard,
-  Building,
   Loader2,
 } from 'lucide-react';
+import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
+import { 
+  getPaymentSettings, 
+} from '@/services/invoicesApi';
+import { getAssetUrl } from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Refactored hooks and components
-import {
-  usePaymentSettings,
-  useBusinessManagement
+import { 
+  usePaymentSettings, 
+  useBusinessManagement 
 } from './settings';
-import {
+import { 
   PaymentSettingsForm,
   BusinessProfileCard,
   BusinessFormDialog,
-  DeleteConfirmDialog
+  DeleteConfirmDialog 
 } from './settings';
+import { AccountInfo } from '@/components/subscription/AccountInfo';
 
 // Settings navigation items
 const settingsNav = [
   { title: 'Account', path: '/settings', icon: User },
   { title: 'Preferences', path: '/preferences', icon: Wrench },
-  { title: 'Payments', path: '/payment-settings', icon: CreditCard },
+  { title: 'Payments', path: '/payment-settings', icon: Settings },
 ];
 
 function SettingsNav() {
@@ -66,40 +57,38 @@ function SettingsNav() {
 
   // Mobile: Use tabs
   const mobileTabs = (
-    <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
-      <TabsList className="grid w-full grid-cols-3 mb-4">
-        {settingsNav.map((item) => (
-          <TabsTrigger 
-            key={item.path} 
-            value={item.path}
-            className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 text-muted-foreground group/item"
-          >
-            <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-gray-600 dark:text-gray-400 transition-colors group-hover/item:text-blue-600 data-[state=active]:text-blue-600" />
-            <span className="hidden sm:inline">{item.title}</span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+    <div className="flex border-b md:hidden">
+      {settingsNav.map((item) => (
+        <button
+          key={item.path}
+          onClick={() => navigate(item.path)}
+          className={`flex-1 flex-col items-center gap-1 py-2 text-sm font-medium font-raleway transition-colors ${
+            activePath === item.path || (item.path === '/settings' && location.pathname === '/settings/')
+              ? 'text-foreground border-b-2 border-blue-600'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <item.icon className="h-4 w-4 flex-shrink-0" />
+          <span className="hidden xs:inline">{item.title}</span>
+        </button>
+      ))}
+    </div>
   );
 
   // Desktop: Use sidebar navigation
   const desktopNav = (
     <nav className="hidden md:flex flex-col gap-1">
       {settingsNav.map((item) => {
-        const isActive = location.pathname === item.path || (item.path === '/settings' && location.pathname === '/settings/');
+        const isActive = location.pathname === item.path ||
+          (item.path === '/settings' && location.pathname === '/settings/');
         return (
           <Button
             key={item.path}
             variant={isActive ? 'secondary' : 'ghost'}
-            className="justify-start text-muted-foreground hover:text-foreground font-raleway group/item"
+            className="justify-start text-muted-foreground hover:text-foreground font-raleway"
             onClick={() => navigate(item.path)}
           >
-            <item.icon
-              className={cn(
-                "mr-2 h-4 w-4 transition-colors text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600",
-                isActive ? 'text-blue-600' : ''
-              )}
-            />
+            <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
             {item.title}
           </Button>
         );
@@ -115,69 +104,6 @@ function SettingsNav() {
   );
 }
 
-function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
-  const { currentUser } = useAuthState();
-  const { startCheckout } = useSubscriptionFeatures();
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleUpgrade = async (planId: Plan) => {
-    if (currentPlan === planId) return;
-
-    setIsLoading(true);
-    try {
-      await startCheckout(planId, billingPeriod);
-    } catch (error) {
-      console.error('Failed to start checkout:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Account Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-            <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
-              {currentUser?.name?.[0]?.toUpperCase() || 'U'}
-            </div>
-            <div className="text-center sm:text-left min-w-0 flex-1">
-              <p className="font-medium break-words">{currentUser?.name || 'User'}</p>
-              <p className="text-sm text-muted-foreground break-all sm:break-words">{currentUser?.email}</p>
-            </div>
-          </div>
-
-          <Separator />
-
-          <SubscriptionStatus />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Available Plans</CardTitle>
-          <CardDescription>Choose the plan that works best for you</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PricingCards
-            variant="dashboard"
-            currentPlan={currentPlan}
-            onUpgrade={handleUpgrade}
-            isLoading={isLoading}
-            showYearlyToggle={true}
-            billingPeriod={billingPeriod}
-            onBillingPeriodChange={setBillingPeriod}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 function AccountSettings() {
   const { planName } = useSubscriptionState();
 
@@ -190,6 +116,7 @@ function AccountSettings() {
         </p>
       </div>
       <Separator />
+      
       <AccountInfo currentPlan={planName as Plan | undefined} />
     </div>
   );
@@ -294,14 +221,31 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
   } = useBusinessManagement();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [businessToDelete, setBusinessToDelete] = useState<any>(null);
+  const [businessToDelete, setBusinessToDelete] = useState< ReturnType<typeof useBusinessManagement>['editingBusiness'] | null>(null);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleDeleteClick = (business: any) => {
-    setBusinessToDelete(business);
+  // Setup save button in header
+  useEffect(() => {
+    if (!organizationId || loading) return;
+    if (setSaveButton) {
+      setSaveButton(
+        <Button onClick={handleSaveSettings} disabled={saving}>
+          {saving ? 'Saving...' : <><save className="h-4 w-4 mr-2" />Save</>}
+        </Button>
+      );
+    }
+    return () => {
+      if (setSaveButton) {
+        setSaveButton(null);
+      }
+    };
+  }, [saving, setSaveButton, loading, handleSaveSettings, organizationId]);
+
+  const handleDeleteClick = (business: Parameters<typeof Set<number>>[0]) => {
+    setBusinessToDelete(business as any);
     setDeleteDialogOpen(true);
   };
 
@@ -315,9 +259,8 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
     }
     setPendingLogoFile(null);
     setBusinessFormData((prev: any) => ({ ...prev, logo_url: '' }));
-    const inputRef = (document.querySelector('input[type="file"]') as HTMLInputElement);
-    if (inputRef) {
-      inputRef.value = '';
+    if (editingBusiness && (businessFileInputRef as any)?.current) {
+      (businessFileInputRef as any).current.value = '';
     }
   };
 
@@ -348,14 +291,14 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
       <Separator />
 
       <PaymentSettingsForm
-        settings={settings!}
+        settings={settings}
         taxRateInput={taxRateInput}
-        updateField={updateField!}
-        setTaxRateInput={setTaxRateInput!}
+        updateField={updateField}
+        setTaxRateInput={setTaxRateInput}
       />
 
       <BusinessProfileCard
-        businesses={businesses!}
+        businesses={businesses}
         loading={loading}
         onAddBusiness={openBusinessDialog}
         onEditBusiness={openBusinessDialog}
@@ -363,10 +306,10 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
       />
 
       <BusinessFormDialog
-        open={businessDialogOpen!}
-        onOpenChange={setBusinessDialogOpen!}
+        open={businessDialogOpen}
+        onOpenChange={setBusinessDialogOpen}
         editingBusiness={editingBusiness}
-        formData={businessFormData!}
+        formData={businessFormData as any}
         saving={savingBusiness}
         uploadingLogo={uploadingLogo}
         pendingLogoFile={pendingLogoFile}
@@ -381,8 +324,8 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         title="Delete Business"
-        itemName={businessToDelete?.name}
-        description={`Are you sure you want to delete "${businessToDelete?.name}"? This action cannot be undone.`}
+        itemName={(businessToDelete as any)?.name}
+        description={`Are you sure you want to delete "${(businessToDelete as any)?.name}"? This action cannot be undone.`}
         onConfirm={handleDeleteBusiness}
       />
     </div>
