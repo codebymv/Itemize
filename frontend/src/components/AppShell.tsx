@@ -6,7 +6,7 @@ import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarChart3, ChevronRight, Search, Command } from 'lucide-react';
+import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
@@ -130,16 +130,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full overflow-hidden">
                     <div className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
                         <SidebarTrigger className="md:hidden" />
-
-                        {/* Search trigger */}
-                        <Button
-                            variant="ghost"
-                            onClick={() => setSearchOpen(true)}
-                            className="hidden md:flex items-center gap-2 h-9 w-64 justify-start text-muted-foreground hover:bg-muted px-3">
-                            <Search className="h-4 w-4" />
-                            <span className="text-sm">Search anything...</span>
-                            <Command className="h-3.5 w-3.5 ml-auto opacity-50" />
-                        </Button>
 
                         {/* Dynamic header content injected by pages */}
                         <div className="flex-1 flex items-center min-w-0 overflow-hidden">
