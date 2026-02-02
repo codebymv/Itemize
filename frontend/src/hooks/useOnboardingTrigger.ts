@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import { getOnboardingKeyForRoute } from '@/config/onboardingRouteMap';
 
 /**
@@ -9,28 +10,14 @@ import { getOnboardingKeyForRoute } from '@/config/onboardingRouteMap';
  */
 export const useOnboardingTrigger = (featureKey: string) => {
   const { shouldShowOnboarding, markAsSeen, dismissOnboarding, loading } = useOnboarding();
+  const { isAuthenticated } = useAuthState();
   const [showModal, setShowModal] = useState(false);
+  const sessionExpiredRef = useRef(false);
 
-  useEffect(() => {
-    // Wait for loading to complete before checking
-    if (loading) return;
-    
-    if (shouldShowOnboarding(featureKey)) {
-      // Longer delay to allow auth verification to complete
-      // This prevents showing modal right before session-expired redirect
-      const timer = setTimeout(() => {
-        // Double-check we're still on the same page and not redirecting
-        if (document.visibilityState === 'visible') {
-          setShowModal(true);
-        }
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [featureKey, shouldShowOnboarding, loading]);
-
-  // Listen for session expiration and close modal immediately
+  // Listen for session expiration FIRST - set flag and close modal
   useEffect(() => {
     const handleSessionExpired = () => {
+      sessionExpiredRef.current = true;
       setShowModal(false);
     };
 
@@ -39,6 +26,29 @@ export const useOnboardingTrigger = (featureKey: string) => {
       window.removeEventListener('auth:session-expired', handleSessionExpired);
     };
   }, []);
+
+  useEffect(() => {
+    // Don't show if not authenticated
+    if (!isAuthenticated) return;
+    
+    // Wait for loading to complete before checking
+    if (loading) return;
+    
+    if (shouldShowOnboarding(featureKey)) {
+      // Longer delay to allow auth verification to complete
+      // This prevents showing modal right before session-expired redirect
+      const timer = setTimeout(() => {
+        // Check if session expired during the delay
+        if (sessionExpiredRef.current) return;
+        
+        // Double-check we're still on the same page and not redirecting
+        if (document.visibilityState === 'visible' && isAuthenticated) {
+          setShowModal(true);
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [featureKey, shouldShowOnboarding, loading, isAuthenticated]);
 
   const handleComplete = async () => {
     console.log('[OnboardingTrigger] handleComplete called for:', featureKey);
@@ -93,29 +103,14 @@ export const useRouteOnboarding = () => {
   const onboardingKey = getOnboardingKeyForRoute(location.pathname);
   
   const { shouldShowOnboarding, markAsSeen, dismissOnboarding, loading } = useOnboarding();
+  const { isAuthenticated } = useAuthState();
   const [showModal, setShowModal] = useState(false);
+  const sessionExpiredRef = useRef(false);
 
-  useEffect(() => {
-    // No onboarding for this route
-    if (!onboardingKey) return;
-    
-    // Wait for loading to complete before checking
-    if (loading) return;
-    
-    if (shouldShowOnboarding(onboardingKey)) {
-      // Longer delay to allow auth verification to complete
-      const timer = setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          setShowModal(true);
-        }
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [onboardingKey, shouldShowOnboarding, loading]);
-
-  // Listen for session expiration and close modal immediately
+  // Listen for session expiration FIRST - set flag and close modal
   useEffect(() => {
     const handleSessionExpired = () => {
+      sessionExpiredRef.current = true;
       setShowModal(false);
     };
 
@@ -124,6 +119,30 @@ export const useRouteOnboarding = () => {
       window.removeEventListener('auth:session-expired', handleSessionExpired);
     };
   }, []);
+
+  useEffect(() => {
+    // No onboarding for this route
+    if (!onboardingKey) return;
+    
+    // Don't show if not authenticated
+    if (!isAuthenticated) return;
+    
+    // Wait for loading to complete before checking
+    if (loading) return;
+    
+    if (shouldShowOnboarding(onboardingKey)) {
+      // Longer delay to allow auth verification to complete
+      const timer = setTimeout(() => {
+        // Check if session expired during the delay
+        if (sessionExpiredRef.current) return;
+        
+        if (document.visibilityState === 'visible' && isAuthenticated) {
+          setShowModal(true);
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [onboardingKey, shouldShowOnboarding, loading, isAuthenticated]);
 
   // Close modal on route change
   useEffect(() => {
