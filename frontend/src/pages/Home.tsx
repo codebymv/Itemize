@@ -124,7 +124,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 1: HERO */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="hero" className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4 pt-24 md:pt-32 pb-16 md:pb-24">
+        <section id="hero" className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4 pt-16 md:pt-32 pb-16 md:pb-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Text Content */}
             <div className="text-center lg:text-left">
