@@ -200,29 +200,22 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                             <>
                                                 <DropdownMenuSeparator />
                                                 <div className="w-full">
-                                                    <Collapsible 
-                                                        defaultOpen={isOnAdminRoute} 
-                                                        className="w-full group/collapsible"
-                                                        onOpenChange={(open) => {
-                                                            // When opening, navigate to first sub-item (matching sidebar behavior)
-                                                            // Only navigate if we're not already on an admin route
-                                                            if (open && !isOnAdminRoute && adminNavItems.length > 0) {
-                                                                navigate(adminNavItems[0].path);
+                                                    {(() => {
+                                                        const onAdminDashboardClick = (e: React.MouseEvent) => {
+                                                            if (!isOnAdminRoute) {
+                                                                navigate('/admin');
                                                             }
-                                                        }}
-                                                    >
-                                                        <CollapsibleTrigger asChild>
-                                                            <DropdownMenuItem 
-                                                                className="w-full cursor-pointer group/admin"
-                                                                onSelect={(e) => e.preventDefault()}
-                                                            >
-                                                                <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600" : "group-hover/admin:text-blue-600")} />
-                                                                <span className="flex-1">Admin Dashboard</span>
-                                                                <ChevronRight className="h-4 w-4 ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                                                            </DropdownMenuItem>
-                                                        </CollapsibleTrigger>
-                                                        <CollapsibleContent className="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up overflow-hidden">
-                                                            <div className="pl-6 py-1">
+                                                        };
+                                                        
+                                                        return (
+                                                            <>
+                                                                <DropdownMenuItem 
+                                                                    className="w-full cursor-pointer group/admin"
+                                                                    onClick={onAdminDashboardClick}
+                                                                >
+                                                                    <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600" : "group-hover/admin:text-blue-600")} />
+                                                                    <span className="flex-1">Admin Dashboard</span>
+                                                                </DropdownMenuItem>
                                                                 {adminNavItems.map((item) => {
                                                                     const isActive = location.pathname === item.path || 
                                                                         (item.path !== '/admin' && location.pathname.startsWith(item.path));
@@ -232,17 +225,17 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                                                             key={item.path}
                                                                             onClick={() => navigate(item.path)}
                                                                             className={cn(
-                                                                                "cursor-pointer",
+                                                                                "cursor-pointer pl-8",
                                                                                 isActive && "bg-muted"
                                                                             )}
                                                                         >
-                                                                            <span className="flex-1">{item.title}</span>
+                                                                            <span className="flex-1 text-sm">{item.title}</span>
                                                                         </DropdownMenuItem>
                                                                     );
                                                                 })}
-                                                            </div>
-                                                        </CollapsibleContent>
-                                                    </Collapsible>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </>
                                         );
