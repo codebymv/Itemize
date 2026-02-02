@@ -127,7 +127,9 @@ export const LandingNav: React.FC = () => {
     ? isLight
       ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/50'
       : 'bg-slate-900/95 backdrop-blur-md shadow-sm border-b border-slate-700/50'
-    : 'bg-transparent';
+    : isLight
+      ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
+      : 'bg-gradient-to-br from-slate-900 to-slate-800';
 
   const textColor = isLight ? 'text-gray-700' : 'text-slate-300';
   const textColorHover = isLight ? 'hover:text-gray-900' : 'hover:text-white';
@@ -141,25 +143,30 @@ export const LandingNav: React.FC = () => {
           <div className="flex-shrink-0">
             <button 
               onClick={() => handleNavClick('hero')}
-              className="flex items-center"
+              className="flex items-center gap-2"
             >
+              <img 
+                src="/icon.png"
+                alt="" 
+                className="h-8 md:h-10 w-auto"
+              />
               <img 
                 src={isLight ? "/textblack.png" : "/textwhite.png"}
                 alt="Itemize" 
-                className="h-8 md:h-10 w-auto"
+                className="h-6 md:h-8 w-auto"
               />
             </button>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center">
             <NavigationMenu>
-              <NavigationMenuList>
+              <NavigationMenuList className="gap-0">
                 {/* Features Dropdown */}
                 <NavigationMenuItem>
                   <NavigationMenuTrigger 
                     className={cn(
-                      'bg-transparent px-3 py-2 text-sm font-medium transition-colors',
+                      'bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent px-3 py-2 text-sm font-medium transition-colors',
                       textColor,
                       textColorHover,
                       activeSection === 'features' && activeTextColor
@@ -169,7 +176,7 @@ export const LandingNav: React.FC = () => {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className={cn(
-                      'w-[500px] p-4 rounded-xl',
+                      'w-[480px] p-4',
                       isLight ? 'bg-white' : 'bg-slate-800'
                     )}>
                       <div className="grid gap-3 grid-cols-2">
@@ -216,7 +223,7 @@ export const LandingNav: React.FC = () => {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger 
                     className={cn(
-                      'bg-transparent px-3 py-2 text-sm font-medium transition-colors',
+                      'bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent px-3 py-2 text-sm font-medium transition-colors',
                       textColor,
                       textColorHover,
                       activeSection === 'workspaces' && activeTextColor
@@ -226,7 +233,7 @@ export const LandingNav: React.FC = () => {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className={cn(
-                      'w-[350px] p-4 rounded-xl',
+                      'w-[320px] p-4',
                       isLight ? 'bg-white' : 'bg-slate-800'
                     )}>
                       <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
@@ -356,70 +363,80 @@ export const LandingNav: React.FC = () => {
               <SheetContent 
                 side="right" 
                 className={cn(
-                  'w-[300px] sm:w-[350px]',
+                  'w-[300px] sm:w-[350px] flex flex-col',
                   isLight ? 'bg-white' : 'bg-slate-900'
                 )}
               >
-                <div className="flex flex-col h-full">
-                  {/* Mobile Header */}
-                  <div className="flex items-center justify-between pb-6 border-b border-gray-200 dark:border-slate-700">
+                {/* Mobile Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src="/icon.png"
+                      alt="" 
+                      className="h-8 w-auto"
+                    />
                     <img 
                       src={isLight ? "/textblack.png" : "/textwhite.png"}
                       alt="Itemize" 
-                      className="h-8 w-auto"
+                      className="h-6 w-auto"
                     />
                   </div>
+                </div>
 
-                  {/* Mobile Nav Links */}
-                  <nav className="flex-1 py-6 space-y-1 overflow-y-auto">
-                    {SECTIONS.map((section) => (
-                      <button
-                        key={section.id}
-                        onClick={() => handleNavClick(section.id)}
-                        className={cn(
-                          'w-full flex items-center px-3 py-3 rounded-lg text-left font-medium transition-colors',
-                          activeSection === section.id
-                            ? isLight
-                              ? 'bg-blue-50 text-blue-600'
-                              : 'bg-blue-900/30 text-blue-400'
-                            : isLight
-                              ? 'text-gray-700 hover:bg-gray-50'
-                              : 'text-slate-300 hover:bg-slate-800'
-                        )}
-                      >
-                        {section.label}
-                      </button>
-                    ))}
-                  </nav>
-
-                  {/* Mobile CTAs */}
-                  <div className="pt-6 border-t border-gray-200 dark:border-slate-700 space-y-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        handleSignIn();
-                      }}
+                {/* Mobile Nav Links */}
+                <nav className="flex-1 py-4 space-y-1 overflow-y-auto min-h-0">
+                  {[
+                    { id: 'features', label: 'Features' },
+                    { id: 'workspaces', label: 'Workspaces' },
+                    { id: 'integrations', label: 'Integrations' },
+                    { id: 'pricing', label: 'Pricing' },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavClick(item.id)}
                       className={cn(
-                        'w-full',
-                        isLight 
-                          ? 'border-gray-300' 
-                          : 'border-slate-600'
+                        'w-full flex items-center px-3 py-3 rounded-lg text-left font-medium transition-colors',
+                        activeSection === item.id
+                          ? isLight
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'bg-blue-900/30 text-blue-400'
+                          : isLight
+                            ? 'text-gray-700 hover:bg-gray-50'
+                            : 'text-slate-300 hover:bg-slate-800'
                       )}
                     >
-                      Sign In
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        handleGetStarted();
-                      }}
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                    >
-                      Start Free Trial
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+
+                {/* Mobile CTAs - Fixed at bottom */}
+                <div className="pt-4 pb-2 border-t border-gray-200 dark:border-slate-700 space-y-3 mt-auto">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleSignIn();
+                    }}
+                    className={cn(
+                      'w-full',
+                      isLight 
+                        ? 'border-gray-300' 
+                        : 'border-slate-600'
+                    )}
+                  >
+                    Sign In
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleGetStarted();
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                  >
+                    Start Free Trial
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>

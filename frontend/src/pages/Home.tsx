@@ -128,15 +128,6 @@ const Home: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Text Content */}
             <div className="text-center lg:text-left">
-              {/* Logo */}
-              <div className="mb-6">
-                <img 
-                  src={isLight ? "/textblack.png" : "/textwhite.png"}
-                  alt="Itemize" 
-                  className="h-16 md:h-20 w-auto mx-auto lg:mx-0"
-                />
-              </div>
-              
               {/* Hero Headline */}
               <h1 className={`text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight ${textColor} mb-6`}>
                 The CRM that works{' '}
