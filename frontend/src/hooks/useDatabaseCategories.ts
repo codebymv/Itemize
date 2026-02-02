@@ -88,7 +88,6 @@ export const useDatabaseCategories = () => {
       
       toast({
         title: "Error",
-        description: "Failed to create category",
         description: errorMessage,
         variant: "destructive"
       });
@@ -147,7 +146,6 @@ export const useDatabaseCategories = () => {
       
       toast({
         title: "Error",
-        description: "Failed to delete category",
         description: errorMessage,
         variant: "destructive"
       });
