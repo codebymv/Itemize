@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { io } from 'socket.io-client';
 import { Search, Plus, Filter, Palette, CheckSquare, StickyNote, Map as MapIcon, GitBranch, KeyRound } from 'lucide-react';
 import { CanvasContainer, CanvasContainerMethods } from '../components/Canvas/CanvasContainer';
 import { ContextMenu } from '../components/Canvas/ContextMenu';
@@ -28,12 +27,7 @@ import {
   unshareVault as apiUnshareVault,
   CreateVaultPayload,
   updateCategory as apiUpdateCategory,
-  CanvasPositionUpdate,
-  fetchCanvasLists,
-  getNotes,
-  getWhiteboards,
-  getWireframes,
-  getVaults
+  CanvasPositionUpdate
 } from '../services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
@@ -56,7 +50,7 @@ import { ShareModal } from '../components/ShareModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 import { useIsMobile } from '../hooks/use-mobile';
 import { logger } from '../lib/logger';
-import api, { getApiUrl } from '../lib/api';
+import api from '../lib/api';
 import { useHeader } from '../contexts/HeaderContext';
 import { MobileControlsBar } from '../components/MobileControlsBar';
 import { useOnboardingTrigger } from '../hooks/useOnboardingTrigger';
