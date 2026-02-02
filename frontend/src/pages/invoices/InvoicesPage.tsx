@@ -75,6 +75,9 @@ import { RefreshCw } from 'lucide-react';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { cn } from '@/lib/utils';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 interface Invoice {
     id: number;
@@ -113,6 +116,9 @@ export function InvoicesPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('invoices');
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
@@ -658,6 +664,15 @@ export function InvoicesPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.invoices}
+            />
+
             {/* Mobile Controls Bar */}
             <MobileControlsBar className="flex-col items-stretch">
                 <div className="flex items-center gap-2 w-full">

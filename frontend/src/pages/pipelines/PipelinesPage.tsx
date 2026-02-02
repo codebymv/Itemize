@@ -19,6 +19,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 import { getPipelines, getPipeline, createPipeline, moveDealToStage } from '@/services/pipelinesApi';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -32,6 +35,9 @@ export function PipelinesPage() {
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
+
+  // Onboarding
+  const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pipelines');
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null);
@@ -276,6 +282,15 @@ export function PipelinesPage() {
 
   return (
     <>
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.pipelines}
+      />
+
       {/* Mobile Controls Bar */}
       <MobileControlsBar>
         {pipelines.length > 0 && (

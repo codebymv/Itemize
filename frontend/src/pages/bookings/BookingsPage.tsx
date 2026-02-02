@@ -24,6 +24,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Booking } from '@/types';
 import { getBookings, cancelBooking, BookingsQueryParams } from '@/services/calendarsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -34,6 +37,9 @@ export function BookingsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('bookings');
 
     // State
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -184,6 +190,15 @@ export function BookingsPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.bookings}
+            />
+
             {/* Mobile Controls Bar */}
             <MobileControlsBar>
                 <div className="relative flex-1">

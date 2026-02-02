@@ -25,6 +25,9 @@ import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getPages, updatePage, deletePage, duplicatePage, createPage } from '@/services/pagesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
@@ -46,6 +49,9 @@ export function LandingPagesPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pages');
 
     const [pages, setPages] = useState<LandingPage[]>([]);
     const [loading, setLoading] = useState(true);
@@ -222,6 +228,15 @@ export function LandingPagesPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.pages}
+            />
+
             <MobileControlsBar className="flex-col items-stretch">
                 <div className="flex items-center gap-2 w-full">
                     <div className="relative flex-1">

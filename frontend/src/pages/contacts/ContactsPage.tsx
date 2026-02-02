@@ -25,6 +25,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { usePageHeader } from '@/hooks/usePageHeader';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
@@ -125,6 +128,9 @@ export function ContactsPage() {
   const { toast } = useToast();
   const { theme } = useTheme();
   const isMobile = useIsMobile();
+
+  // Onboarding
+  const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('contacts');
 
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -369,6 +375,15 @@ export function ContactsPage() {
 
   return (
     <>
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.contacts}
+      />
+
       {/* Mobile Controls Bar */}
       <MobileControlsBar className="flex-col items-stretch">
         <div className="flex items-center gap-2 w-full">

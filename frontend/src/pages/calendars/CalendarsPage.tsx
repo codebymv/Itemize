@@ -17,6 +17,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Calendar } from '@/types';
 import { getCalendars, updateCalendar, deleteCalendar } from '@/services/calendarsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -30,6 +33,9 @@ export function CalendarsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('calendars');
 
     // State
     const [calendars, setCalendars] = useState<Calendar[]>([]);
@@ -198,6 +204,15 @@ export function CalendarsPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.calendars}
+            />
+
             {/* Mobile Controls Bar */}
             <MobileControlsBar>
                 <div className="relative flex-1">

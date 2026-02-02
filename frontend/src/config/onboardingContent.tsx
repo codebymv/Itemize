@@ -9,7 +9,15 @@ import {
   FileText,
   Zap,
   Calendar,
-  Mail
+  Mail,
+  Inbox,
+  Send,
+  Globe,
+  ClipboardList,
+  CalendarCheck,
+  MessageCircle,
+  Share2,
+  Star
 } from 'lucide-react';
 
 export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
@@ -275,6 +283,158 @@ export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
           "Monitor important metrics",
           "Quick access to all features",
           "Customize your dashboard layout"
+        ]
+      }
+    ]
+  },
+
+  inbox: {
+    title: "Welcome to Inbox",
+    description: "Your unified communication hub for all customer conversations",
+    version: "1.0",
+    steps: [
+      {
+        title: "Unified Inbox",
+        description: "Manage all your customer conversations in one place - emails, messages, and more.",
+        icon: <Inbox className="h-12 w-12 text-primary" />,
+        tips: [
+          "View all conversations in one place",
+          "Filter by status: open, closed, or all",
+          "Quick reply to messages",
+          "Archive conversations when done"
+        ]
+      }
+    ]
+  },
+
+  campaigns: {
+    title: "Welcome to Campaigns",
+    description: "Create and manage email marketing campaigns to engage your audience",
+    version: "1.0",
+    steps: [
+      {
+        title: "Email Campaigns",
+        description: "Design beautiful emails, target specific segments, and track performance.",
+        icon: <Send className="h-12 w-12 text-primary" />,
+        tips: [
+          "Create campaigns from templates",
+          "Target specific contact segments",
+          "Schedule or send immediately",
+          "Track opens, clicks, and conversions"
+        ]
+      }
+    ]
+  },
+
+  pages: {
+    title: "Welcome to Landing Pages",
+    description: "Build beautiful landing pages to capture leads and showcase your business",
+    version: "1.0",
+    steps: [
+      {
+        title: "Page Builder",
+        description: "Create stunning landing pages with our drag-and-drop editor.",
+        icon: <Globe className="h-12 w-12 text-primary" />,
+        tips: [
+          "Choose from pre-built templates",
+          "Customize colors and branding",
+          "Add forms to capture leads",
+          "Track page views and conversions"
+        ]
+      }
+    ]
+  },
+
+  forms: {
+    title: "Welcome to Forms",
+    description: "Create custom forms to collect information from leads and customers",
+    version: "1.0",
+    steps: [
+      {
+        title: "Form Builder",
+        description: "Build custom forms with various field types and conditional logic.",
+        icon: <ClipboardList className="h-12 w-12 text-primary" />,
+        tips: [
+          "Drag and drop field types",
+          "Set required fields and validation",
+          "Embed forms on your website",
+          "Auto-create contacts from submissions"
+        ]
+      }
+    ]
+  },
+
+  bookings: {
+    title: "Welcome to Bookings",
+    description: "View and manage all your scheduled appointments",
+    version: "1.0",
+    steps: [
+      {
+        title: "Booking Management",
+        description: "See all upcoming and past appointments at a glance.",
+        icon: <CalendarCheck className="h-12 w-12 text-primary" />,
+        tips: [
+          "View bookings by status",
+          "See customer details and notes",
+          "Confirm or cancel appointments",
+          "Send reminders to customers"
+        ]
+      }
+    ]
+  },
+
+  chat_widget: {
+    title: "Welcome to Chat Widget",
+    description: "Add live chat to your website to engage visitors in real-time",
+    version: "1.0",
+    steps: [
+      {
+        title: "Live Chat Setup",
+        description: "Configure your chat widget and embed it on your website.",
+        icon: <MessageCircle className="h-12 w-12 text-primary" />,
+        tips: [
+          "Customize colors and messages",
+          "Set online/offline modes",
+          "Copy embed code for your site",
+          "Conversations appear in your Inbox"
+        ]
+      }
+    ]
+  },
+
+  social: {
+    title: "Welcome to Social",
+    description: "Connect your social media accounts and manage conversations",
+    version: "1.0",
+    steps: [
+      {
+        title: "Social Channels",
+        description: "Connect Facebook and Instagram to manage messages from one place.",
+        icon: <Share2 className="h-12 w-12 text-primary" />,
+        tips: [
+          "Connect Facebook pages",
+          "Connect Instagram accounts",
+          "Reply to messages and comments",
+          "Track engagement across platforms"
+        ]
+      }
+    ]
+  },
+
+  reputation: {
+    title: "Welcome to Reputation",
+    description: "Monitor and manage your online reviews and reputation",
+    version: "1.0",
+    steps: [
+      {
+        title: "Review Management",
+        description: "Track reviews across platforms and respond to customer feedback.",
+        icon: <Star className="h-12 w-12 text-primary" />,
+        tips: [
+          "See all reviews in one place",
+          "Respond to reviews quickly",
+          "Request reviews from happy customers",
+          "Track your average rating over time"
         ]
       }
     ]

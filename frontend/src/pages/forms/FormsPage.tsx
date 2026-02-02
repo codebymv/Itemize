@@ -24,6 +24,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Form } from '@/types';
 import { getForms, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -35,6 +38,9 @@ export function FormsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('forms');
 
     const [forms, setForms] = useState<Form[]>([]);
     const [loading, setLoading] = useState(true);
@@ -195,6 +201,15 @@ export function FormsPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.forms}
+            />
+
             {/* Mobile Controls Bar */}
             <MobileControlsBar>
                 <div className="relative flex-1">

@@ -12,6 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getChatWidget, createChatWidget, updateChatWidget, getEmbedCode } from '@/services/chatWidgetApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
@@ -32,6 +35,9 @@ export function ChatWidgetPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('chat_widget');
 
     const [config, setConfig] = useState<LocalChatWidgetConfig | null>(null);
     const [embedCode, setEmbedCode] = useState<string>('');
@@ -203,6 +209,15 @@ export function ChatWidgetPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.chat_widget}
+            />
+
             <MobileControlsBar className="flex-col items-stretch gap-3">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="w-full">

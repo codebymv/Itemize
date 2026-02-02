@@ -24,6 +24,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getCampaigns, deleteCampaign, duplicateCampaign, sendCampaign, pauseCampaign, resumeCampaign } from '@/services/campaignsApi';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -37,6 +40,9 @@ export function CampaignsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { theme } = useTheme();
+
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('campaigns');
 
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
@@ -196,6 +202,15 @@ export function CampaignsPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.campaigns}
+            />
+
             {/* Mobile Controls Bar */}
             <MobileControlsBar>
                 <div className="relative flex-1">

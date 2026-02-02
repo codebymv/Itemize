@@ -4,6 +4,9 @@ import { useTheme } from 'next-themes';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useHeader } from '@/contexts/HeaderContext';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -512,6 +515,9 @@ export function DashboardPage() {
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
     
+    // Onboarding
+    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('dashboard');
+    
     // Date range state
     const [period, setPeriod] = useState<PeriodOption>('30days');
 
@@ -628,6 +634,15 @@ export function DashboardPage() {
 
     return (
         <>
+            {/* Onboarding Modal */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={closeOnboarding}
+                onComplete={completeOnboarding}
+                onDismiss={dismissOnboarding}
+                content={ONBOARDING_CONTENT.dashboard}
+            />
+
             {/* Mobile Controls Bar */}
             <MobileControlsBar>
                 <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>

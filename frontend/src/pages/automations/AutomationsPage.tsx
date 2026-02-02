@@ -73,6 +73,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { 
   getWorkflows, 
   activateWorkflow, 
@@ -110,6 +113,9 @@ export function AutomationsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme } = useTheme();
+
+  // Onboarding
+  const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('automations');
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -308,6 +314,15 @@ export function AutomationsPage() {
 
   return (
     <>
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.automations}
+      />
+
       <MobileControlsBar className="flex-col items-stretch">
         <div className="flex items-center gap-2 w-full">
           <div className="relative flex-1">
