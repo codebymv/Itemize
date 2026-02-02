@@ -39,6 +39,9 @@ import { useOrganization } from '@/hooks/useOrganization';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
@@ -101,6 +104,15 @@ export function PaymentsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const {
+        showModal: showOnboarding,
+        handleComplete: handleOnboardingComplete,
+        handleDismiss: handleOnboardingDismiss,
+        handleClose: handleOnboardingClose,
+        featureKey: onboardingFeatureKey,
+    } = useRouteOnboarding();
 
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -711,6 +723,17 @@ export function PaymentsPage() {
                 </Card>
             </PageSurface>
             </PageContainer>
+
+        {/* Route-aware onboarding modal */}
+        {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={handleOnboardingClose}
+                onComplete={handleOnboardingComplete}
+                onDismiss={handleOnboardingDismiss}
+                content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+            />
+        )}
         </>
     );
 }

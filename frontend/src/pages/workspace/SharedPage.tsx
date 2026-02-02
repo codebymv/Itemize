@@ -65,6 +65,9 @@ import {
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -87,6 +90,15 @@ export function SharedPage() {
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
   const { token } = useAuthState();
+
+  // Route-aware onboarding (will show 'canvas' onboarding for Workspace group)
+  const {
+    showModal: showOnboarding,
+    handleComplete: handleOnboardingComplete,
+    handleDismiss: handleOnboardingDismiss,
+    handleClose: handleOnboardingClose,
+    featureKey: onboardingFeatureKey,
+  } = useRouteOnboarding();
 
   // Filter state
   const [typeFilter, setTypeFilter] = useState<ContentType>('all');
@@ -649,6 +661,17 @@ export function SharedPage() {
       </AlertDialog>
     </PageSurface>
     </PageContainer>
+
+    {/* Route-aware onboarding modal */}
+    {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleOnboardingClose}
+        onComplete={handleOnboardingComplete}
+        onDismiss={handleOnboardingDismiss}
+        content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+      />
+    )}
     </>
   );
 }

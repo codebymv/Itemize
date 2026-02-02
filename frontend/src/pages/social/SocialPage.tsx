@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl } from '@/services/socialApi';
@@ -52,8 +52,14 @@ export function SocialPage() {
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
 
-    // Onboarding
-    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('social');
+    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
+    const {
+        showModal: showOnboarding,
+        handleComplete: completeOnboarding,
+        handleDismiss: dismissOnboarding,
+        handleClose: closeOnboarding,
+        featureKey: onboardingFeatureKey,
+    } = useRouteOnboarding();
 
     const [channels, setChannels] = useState<SocialChannel[]>([]);
     const [conversations, setConversations] = useState<SocialConversation[]>([]);
@@ -191,14 +197,16 @@ export function SocialPage() {
 
     return (
         <>
-            {/* Onboarding Modal */}
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={closeOnboarding}
-                onComplete={completeOnboarding}
-                onDismiss={dismissOnboarding}
-                content={ONBOARDING_CONTENT.social}
-            />
+            {/* Route-aware onboarding modal */}
+            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+                <OnboardingModal
+                    isOpen={showOnboarding}
+                    onClose={closeOnboarding}
+                    onComplete={completeOnboarding}
+                    onDismiss={dismissOnboarding}
+                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+                />
+            )}
 
             <MobileControlsBar>
                 <div className="relative flex-1">

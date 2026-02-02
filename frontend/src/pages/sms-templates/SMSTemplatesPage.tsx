@@ -20,6 +20,9 @@ import { getSmsTemplates as getSMSTemplates, deleteSmsTemplate as deleteSMSTempl
 import { CreateSMSTemplateModal } from './CreateSMSTemplateModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 interface SMSTemplate {
     id: number;
@@ -37,6 +40,15 @@ export function SMSTemplatesPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const {
+        showModal: showOnboarding,
+        handleComplete: handleOnboardingComplete,
+        handleDismiss: handleOnboardingDismiss,
+        handleClose: handleOnboardingClose,
+        featureKey: onboardingFeatureKey,
+    } = useRouteOnboarding();
 
     const [templates, setTemplates] = useState<SMSTemplate[]>([]);
     const [loading, setLoading] = useState(true);
@@ -256,6 +268,17 @@ export function SMSTemplatesPage() {
                 />
             )}
             </PageContainer>
+
+            {/* Route-aware onboarding modal */}
+            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+                <OnboardingModal
+                    isOpen={showOnboarding}
+                    onClose={handleOnboardingClose}
+                    onComplete={handleOnboardingComplete}
+                    onDismiss={handleOnboardingDismiss}
+                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+                />
+            )}
         </>
     );
 }

@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { useHeader } from '@/contexts/HeaderContext';
-import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Booking } from '@/types';
@@ -38,8 +38,14 @@ export function BookingsPage() {
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
 
-    // Onboarding
-    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('bookings');
+    // Route-aware onboarding (will show 'calendars' onboarding for Scheduling group)
+    const {
+        showModal: showOnboarding,
+        handleComplete: completeOnboarding,
+        handleDismiss: dismissOnboarding,
+        handleClose: closeOnboarding,
+        featureKey: onboardingFeatureKey,
+    } = useRouteOnboarding();
 
     // State
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -190,14 +196,16 @@ export function BookingsPage() {
 
     return (
         <>
-            {/* Onboarding Modal */}
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={closeOnboarding}
-                onComplete={completeOnboarding}
-                onDismiss={dismissOnboarding}
-                content={ONBOARDING_CONTENT.bookings}
-            />
+            {/* Route-aware onboarding modal */}
+            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+                <OnboardingModal
+                    isOpen={showOnboarding}
+                    onClose={closeOnboarding}
+                    onComplete={completeOnboarding}
+                    onDismiss={dismissOnboarding}
+                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+                />
+            )}
 
             {/* Mobile Controls Bar */}
             <MobileControlsBar>

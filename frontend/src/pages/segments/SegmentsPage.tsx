@@ -25,11 +25,23 @@ import { ErrorState } from '@/components/ErrorState';
 import { Segment } from '@/types/segments';
 import { StatCard } from '@/components/StatCard';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 export function SegmentsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { theme } = useTheme();
+
+    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const {
+        showModal: showOnboarding,
+        handleComplete: handleOnboardingComplete,
+        handleDismiss: handleOnboardingDismiss,
+        handleClose: handleOnboardingClose,
+        featureKey: onboardingFeatureKey,
+    } = useRouteOnboarding();
 
     const [segments, setSegments] = useState<Segment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -277,6 +289,17 @@ export function SegmentsPage() {
                     />
                 )}
             </PageContainer>
+
+            {/* Route-aware onboarding modal */}
+            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+                <OnboardingModal
+                    isOpen={showOnboarding}
+                    onClose={handleOnboardingClose}
+                    onComplete={handleOnboardingComplete}
+                    onDismiss={handleOnboardingDismiss}
+                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+                />
+            )}
         </>
     );
 }

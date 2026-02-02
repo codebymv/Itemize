@@ -63,6 +63,9 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { CreateItemModal } from '@/components/CreateItemModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -90,6 +93,15 @@ export function ContentsPage() {
   const { theme } = useTheme();
   const { token } = useAuthState();
   const isMobile = useIsMobile();
+
+  // Route-aware onboarding (will show 'canvas' onboarding for /contents)
+  const {
+    showModal: showOnboarding,
+    handleComplete: handleOnboardingComplete,
+    handleDismiss: handleOnboardingDismiss,
+    handleClose: handleOnboardingClose,
+    featureKey: onboardingFeatureKey,
+  } = useRouteOnboarding();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -949,6 +961,17 @@ export function ContentsPage() {
           onCreate={handleCreateVault}
           position={{ x: 0, y: 0 }}
           existingCategories={categoriesForModal}
+        />
+      )}
+
+      {/* Route-aware onboarding modal (shows 'canvas' onboarding for /contents) */}
+      {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={handleOnboardingClose}
+          onComplete={handleOnboardingComplete}
+          onDismiss={handleOnboardingDismiss}
+          content={ONBOARDING_CONTENT[onboardingFeatureKey]}
         />
       )}
     </PageContainer>

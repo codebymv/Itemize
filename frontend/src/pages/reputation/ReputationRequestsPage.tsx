@@ -27,6 +27,9 @@ import { getReviewRequests, deleteReviewRequest, sendReviewRequest } from '@/ser
 import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 interface ReviewRequest {
     id: number;
@@ -46,6 +49,15 @@ export function ReputationRequestsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+
+    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
+    const {
+        showModal: showOnboarding,
+        handleComplete: handleOnboardingComplete,
+        handleDismiss: handleOnboardingDismiss,
+        handleClose: handleOnboardingClose,
+        featureKey: onboardingFeatureKey,
+    } = useRouteOnboarding();
 
     const [requests, setRequests] = useState<ReviewRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -286,6 +298,17 @@ export function ReputationRequestsPage() {
                 />
             )}
         </PageContainer>
+
+        {/* Route-aware onboarding modal */}
+        {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onClose={handleOnboardingClose}
+                onComplete={handleOnboardingComplete}
+                onDismiss={handleOnboardingDismiss}
+                content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+            />
+        )}
         </>
     );
 }
