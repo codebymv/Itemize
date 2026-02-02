@@ -35,8 +35,7 @@ export const useOnboardingTrigger = (featureKey: string) => {
     if (loading) return;
     
     if (shouldShowOnboarding(featureKey)) {
-      // Longer delay to allow auth verification to complete
-      // This prevents showing modal right before session-expired redirect
+      // Short delay to let page settle before showing modal
       const timer = setTimeout(() => {
         // Check if session expired during the delay
         if (sessionExpiredRef.current) return;
@@ -45,7 +44,7 @@ export const useOnboardingTrigger = (featureKey: string) => {
         if (document.visibilityState === 'visible' && isAuthenticated) {
           setShowModal(true);
         }
-      }, 1500);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [featureKey, shouldShowOnboarding, loading, isAuthenticated]);
@@ -131,7 +130,7 @@ export const useRouteOnboarding = () => {
     if (loading) return;
     
     if (shouldShowOnboarding(onboardingKey)) {
-      // Longer delay to allow auth verification to complete
+      // Short delay to let page settle before showing modal
       const timer = setTimeout(() => {
         // Check if session expired during the delay
         if (sessionExpiredRef.current) return;
@@ -139,7 +138,7 @@ export const useRouteOnboarding = () => {
         if (document.visibilityState === 'visible' && isAuthenticated) {
           setShowModal(true);
         }
-      }, 1500);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [onboardingKey, shouldShowOnboarding, loading, isAuthenticated]);
