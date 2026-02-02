@@ -116,7 +116,6 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
       logger.error('Failed to save flow data:', error);
       toast({
         title: "Error",
-        description: "Failed to save wireframe",
         description: "Could not save your diagram. Please try again.",
         variant: "destructive"
       });

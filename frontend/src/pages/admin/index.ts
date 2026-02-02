@@ -1,5 +1,5 @@
-export { CommunicationsSection } from './components/CommunicationsSection';
-export { EmailLogsView } from './components/EmailLogsView';
-export { StatisticsSection } from './components/StatisticsSection';
-export { ChangeTierSection } from './components/ChangeTierSection';
-export { AdminNav } from './components/AdminNav';
+export { default as CommunicationsSection } from './components/CommunicationsSection';
+export { default as EmailLogsView } from './components/EmailLogsView';
+export { default as StatisticsSection } from './components/StatisticsSection';
+export { default as ChangeTierSection } from './components/ChangeTierSection';
+export { default as AdminNav } from './components/AdminNav';
