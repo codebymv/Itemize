@@ -10,13 +10,29 @@ export const useOnboardingTrigger = (featureKey: string) => {
     if (loading) return;
     
     if (shouldShowOnboarding(featureKey)) {
-      // Small delay to let page render first
+      // Longer delay to allow auth verification to complete
+      // This prevents showing modal right before session-expired redirect
       const timer = setTimeout(() => {
-        setShowModal(true);
-      }, 500);
+        // Double-check we're still on the same page and not redirecting
+        if (document.visibilityState === 'visible') {
+          setShowModal(true);
+        }
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [featureKey, shouldShowOnboarding, loading]);
+
+  // Listen for session expiration and close modal immediately
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setShowModal(false);
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('auth:session-expired', handleSessionExpired);
+    };
+  }, []);
 
   const handleComplete = async () => {
     console.log('[OnboardingTrigger] handleComplete called for:', featureKey);
