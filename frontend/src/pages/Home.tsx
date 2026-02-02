@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
+import { LandingNav } from '@/components/LandingNav';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { 
@@ -114,13 +115,16 @@ const Home: React.FC = () => {
         </div>
       </div>
 
+      {/* Landing Navigation */}
+      <LandingNav />
+
       {/* Main Content */}
       <div className="relative z-10">
         
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 1: HERO */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4 py-16 md:py-24">
+        <section id="hero" className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4 pt-24 md:pt-32 pb-16 md:pb-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Text Content */}
             <div className="text-center lg:text-left">
@@ -163,7 +167,7 @@ const Home: React.FC = () => {
                   variant="outline"
                   className={`rounded-lg px-8 py-6 text-lg font-medium ${isLight ? 'border-gray-300 hover:bg-gray-50' : 'border-slate-600 hover:bg-slate-800'}`}
                   size="lg"
-                  onClick={() => scrollToSection('features')}
+                  onClick={() => scrollToSection('how-it-works')}
                 >
                   See How It Works
                 </Button>
@@ -216,7 +220,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 2: PROBLEM STATEMENT */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
+        <section id="problem" className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
             <div className="text-center mb-12">
               <h2 className={`text-2xl md:text-3xl font-bold ${textColor} mb-4`}>
@@ -257,7 +261,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 3: VALUE FLOW (Organize → Automate → Grow) */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="features" className="py-16 md:py-24">
+        <section id="how-it-works" className="py-16 md:py-24">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
             <div className="text-center mb-16">
               <Badge className={`mb-4 ${isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-900/50 text-blue-300'}`}>
@@ -320,7 +324,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 4: UNIQUE DIFFERENTIATOR - WORKSPACES */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className={`py-16 md:py-24 ${isLight ? 'bg-gradient-to-br from-indigo-50 to-blue-50' : 'bg-gradient-to-br from-indigo-950/50 to-slate-900'}`}>
+        <section id="workspaces" className={`py-16 md:py-24 ${isLight ? 'bg-gradient-to-br from-indigo-50 to-blue-50' : 'bg-gradient-to-br from-indigo-950/50 to-slate-900'}`}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Left: Visual */}
@@ -374,7 +378,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 5: FEATURE DEEP-DIVES */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className="py-16 md:py-24">
+        <section id="features" className="py-16 md:py-24">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
             <div className="text-center mb-16">
               <Badge className={`mb-4 ${isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-900/50 text-blue-300'}`}>
@@ -455,7 +459,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 6: INTEGRATIONS */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
+        <section id="integrations" className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 text-center">
             <Badge className={`mb-4 ${isLight ? 'bg-gray-100 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
               Integrations
@@ -494,7 +498,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 7: TRUST & SECURITY */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className="py-16 md:py-24">
+        <section id="security" className="py-16 md:py-24">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 text-center">
             <h2 className={`text-2xl md:text-3xl font-bold ${textColor} mb-4`}>
               Your data, protected
@@ -524,7 +528,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 8: PRICING */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
+        <section id="pricing" className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
             <div className="text-center mb-12">
               <Badge className={`mb-4 ${isLight ? 'bg-green-100 text-green-700' : 'bg-green-900/50 text-green-300'}`}>
@@ -551,7 +555,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 9: FINAL CTA */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className="py-20 md:py-32">
+        <section id="cta" className="py-20 md:py-32">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 text-center">
             <h2 className={`text-3xl md:text-4xl font-bold ${textColor} mb-6`}>
               Ready to simplify your business?
