@@ -54,7 +54,10 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [loadProgress]);
 
   const shouldShowOnboarding = useCallback((featureKey: string): boolean => {
-    const featureProgress = progress[featureKey];
+    // Don't show during loading or when not authenticated
+    if (loading || !isAuthenticated) return false;
+    
+    const featureProgress = progress?.[featureKey];
     
     // Show if never seen or explicitly not dismissed
     if (!featureProgress) return true;
@@ -62,13 +65,17 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (featureProgress.dismissed) return false;
     
     return false;
-  }, [progress]);
+  }, [progress, loading, isAuthenticated]);
 
   const markAsSeen = useCallback(async (featureKey: string, version: string = '1.0') => {
     try {
+      console.log('[Onboarding] Calling markSeen API for:', featureKey);
       const updatedProgress = await onboardingService.markSeen(featureKey, version);
+      console.log('[Onboarding] markSeen response:', updatedProgress);
       setProgress(updatedProgress);
+      console.log('[Onboarding] Progress updated successfully');
     } catch (error) {
+      console.error('[Onboarding] Failed to mark as seen:', error);
       logger.error('Failed to mark onboarding as seen', error);
       throw error;
     }

@@ -18,6 +18,15 @@ export const logger = {
   },
 
   /**
+   * Log info (only in development) - alias for log
+   */
+  info: (...args: LogArgs): void => {
+    if (isDev) {
+      console.info(...args);
+    }
+  },
+
+  /**
    * Log warnings (only in development)
    */
   warn: (...args: LogArgs): void => {

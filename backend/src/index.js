@@ -117,13 +117,32 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // CORS configuration
+const corsOrigin = process.env.FRONTEND_URL || (
+    process.env.NODE_ENV === 'production'
+        ? 'https://itemize.cloud'
+        : 'http://localhost:5173'
+);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || (
-        process.env.NODE_ENV === 'production'
-            ? 'https://itemize.cloud'
-            : 'http://localhost:5173'
-    ),
-    credentials: true
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin matches configured URL or is a GitHub Codespaces URL
+        const isAllowed = origin === corsOrigin || 
+            origin.includes('.app.github.dev') ||
+            origin.includes('localhost');
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Organization-Id'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
 // Serve uploaded files (logos, etc.) - registered early so it's available immediately
