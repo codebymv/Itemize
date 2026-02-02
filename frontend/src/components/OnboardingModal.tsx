@@ -172,7 +172,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 <Button
                 onClick={handleNext}
                 size="sm"
-                className="min-w-[100px] sm:min-w-[120px] bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm"
+                className="min-w-[100px] sm:min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
               >
                 {isLastStep ? 'Get Started' : 'Next'}
                 {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
