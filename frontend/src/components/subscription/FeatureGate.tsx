@@ -50,6 +50,7 @@ const FEATURE_NAMES: Record<FeatureName, string> = {
   sms_templates: 'SMS Templates',
   conversations: 'Unified Inbox',
   basic_automation: 'Basic Automation',
+  signature_documents: 'E-Signatures',
   api_access: 'API Access',
   advanced_workflows: 'Advanced Workflows',
   unlimited_orgs: 'Unlimited Organizations',

@@ -5,6 +5,7 @@
 
 const cron = require('node-cron');
 const { runAllInvoiceJobs } = require('./jobs/invoice-jobs');
+const { runSignatureReminderJobs } = require('./jobs/signature-jobs');
 const { logger } = require('./utils/logger');
 
 let schedulerInitialized = false;
@@ -31,6 +32,19 @@ function initScheduler(pool) {
         }
     }, {
         timezone: 'America/New_York' // Adjust timezone as needed
+    });
+
+    // Run signature reminder jobs hourly
+    cron.schedule('0 * * * *', async () => {
+        logger.info('Running signature reminder jobs (hourly)...');
+        try {
+            await runSignatureReminderJobs(pool);
+            logger.info('Signature reminder jobs completed successfully');
+        } catch (error) {
+            logger.error('Error in signature reminder jobs:', error);
+        }
+    }, {
+        timezone: 'America/New_York'
     });
 
     // Also run immediately on startup in development to catch any missed jobs

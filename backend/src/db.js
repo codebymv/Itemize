@@ -57,6 +57,9 @@ const { runAllNormalizationMigrations } = require('./db_normalization_migrations
 // Import Subscription migrations (feature gating and billing)
 const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
 
+// Import E-Signature migrations
+const { runAllESignatureMigrations, runESignatureMvpPlusMigrations } = require('./db_esignature_migrations');
+
 // Import Vault migrations (encrypted storage)
 const { runVaultMigrations } = require('./db_vault_migrations');
 
@@ -391,6 +394,8 @@ const initializeDatabase = async (pool) => {
     
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);
+    await runMigrationOnce(pool, 'module_esignatures', runAllESignatureMigrations);
+    await runMigrationOnce(pool, 'module_esignatures_mvp_plus', runESignatureMvpPlusMigrations);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
     
     // Admin email communications - extend email_logs for admin use

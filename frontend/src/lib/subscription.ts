@@ -129,7 +129,7 @@ export const PLAN_PRICING: Record<Plan, {
 export type FeatureKey = 
     | 'CONTACTS' | 'PIPELINES' | 'CALENDARS' | 'FORMS' | 'LANDING_PAGES'
     | 'EMAIL_TEMPLATES' | 'SMS_TEMPLATES' | 'CONVERSATIONS' | 'BASIC_AUTOMATION'
-    | 'REPUTATION' | 'INVOICING' | 'BASIC_ANALYTICS'
+    | 'REPUTATION' | 'INVOICING' | 'SIGNATURE_DOCUMENTS' | 'BASIC_ANALYTICS'
     | 'API_ACCESS' | 'ADVANCED_WORKFLOWS' | 'UNLIMITED_ORGS' | 'WHITE_LABEL'
     | 'CUSTOM_DOMAINS' | 'ADVANCED_ANALYTICS' | 'TEAM_ROLES' | 'WEBHOOKS' | 'SOCIAL_INTEGRATION'
     | 'SAAS_MODE' | 'CLIENT_BILLING' | 'MOBILE_WHITE_LABEL' | 'PRIORITY_SUPPORT'
@@ -198,6 +198,17 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
         allowedPlans: ['starter', 'unlimited', 'pro'],
         label: 'Invoicing',
         description: 'Create and send invoices'
+    },
+    SIGNATURE_DOCUMENTS: {
+        allowedPlans: ['starter', 'unlimited', 'pro'],
+        label: 'E-Signatures',
+        description: 'Send documents for electronic signature',
+        limit: {
+            starter: 5,
+            unlimited: 50,
+            pro: Infinity,
+            free: 0
+        }
     },
     BASIC_ANALYTICS: {
         allowedPlans: ['starter', 'unlimited', 'pro'],

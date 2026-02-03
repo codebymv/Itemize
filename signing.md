@@ -2,12 +2,13 @@
 
 This document captures a comprehensive plan for adding a “Signatures / Documents / Envelopes” feature that mirrors DocuSign-style flows. It reuses existing invoice sending, PDF, file upload, and public-access patterns already in the codebase.
 
-## Goals
-- Upload a document (PDF initially).
-- Place signature/initials fields via drag-and-drop on the document.
-- Send a signing link to recipients.
-- Allow recipients to sign without an account.
-- Track status and produce a final signed PDF with an audit trail.
+## Goals (DocuSign-aligned)
+- Upload a document (PDF initially) and preserve exact layout fidelity.
+- Place signature/initials fields (plus core field types) via drag-and-drop.
+- Send signing links to recipients with optional identity verification.
+- Allow recipients to sign without an account while preserving audit integrity.
+- Track status and produce a final signed PDF with a complete audit trail.
+- Protect document integrity with tamper-evident metadata and hashing.
 
 ## Existing patterns to reuse
 - **Invoice send flow**: `backend/src/routes/invoices.routes.js` uses email delivery and status updates.
@@ -44,6 +45,8 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 - `sender_name`, `sender_email`, `created_by`
 - `sent_at`, `completed_at`
 - `signed_file_url`
+- `original_sha256`, `signed_sha256`
+- `timezone`, `locale`
 
 ### `signature_recipients`
 - `id`, `document_id`, `organization_id`, `contact_id`
@@ -52,17 +55,27 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 - `status`: `pending | sent | viewed | signed | declined`
 - `sent_at`, `viewed_at`, `signed_at`, `declined_at`, `decline_reason`
 - `ip_address`, `user_agent`
+- `identity_method`: `none | email_otp | sms_otp`
+- `identity_verified_at`
 
 ### `signature_fields`
 - `id`, `document_id`, `recipient_id`
 - `field_type`: `signature | initials | text | date | checkbox`
 - `page_number`, `x_position`, `y_position`, `width`, `height` (percent-based)
 - `label`, `is_required`, `value` (filled after signing)
+- `font_size`, `font_family`, `text_align`, `locked`
 
 ### `signature_audit_log`
 - `id`, `document_id`, `recipient_id`
 - `event_type`, `description`
 - `ip_address`, `user_agent`, `created_at`
+- `metadata` (JSON, e.g. hash, geo, device)
+
+### `signature_documents_versions` (optional, hardened)
+- `id`, `document_id`, `version_number`
+- `file_url`, `file_name`, `file_size`, `file_type`
+- `original_sha256`
+- `created_at`, `created_by`
 
 ## API (proposed)
 ### Authenticated
@@ -79,15 +92,19 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 - `POST /api/public/sign/:token` submit signature payload
 - `POST /api/public/sign/:token/decline` decline with reason
 - `GET /api/public/sign/:token/download` download original PDF
+- `POST /api/public/sign/:token/verify` verify identity (OTP)
 
 ## Email flow (reuse invoices)
 - Use `backend/src/services/email.service.js` to send signing request emails.
 - Email includes CTA button to `/sign/:token` and optional PDF attachment.
 - On completion: send notifications to sender + all recipients.
+- Provide resend/reminder emails with a throttled schedule.
 
 ## PDF handling
 - Use `backend/src/services/pdf.service.js` to generate a final signed PDF by overlaying signature images on the original document.
 - Append a certificate/audit page with signer name, email, timestamp, and IP.
+- Add tamper-evident metadata: store original and signed SHA-256 and embed hash in certificate page.
+- Ensure placement uses a consistent coordinate system with page size + scale preserved.
 
 ## Frontend UX (proposed)
 ### Internal (authenticated)
@@ -110,6 +127,12 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 - Capture IP and user agent for audit logs.
 - Ensure CORS allows public signing endpoints.
 - Add optional reminder emails via scheduler (future).
+- Require TLS for all signing endpoints and assets.
+- Store tokens hashed at rest; only compare hash on access.
+- Protect against replay: one-time-use signing submissions and idempotent completion.
+- Prevent document mutation after send; use versioning when edits are needed.
+- Add data retention policy and explicit deletion workflows.
+- Add abuse monitoring: brute-force OTP attempts, token enumeration, and high-volume access.
 
 ## Subscription gating (suggested)
 - Feature flag: `signature_documents`.
@@ -123,6 +146,8 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 4. **Template support**: Allow reusable field placements for repeat documents?
 5. **Recipient identity**: Require email verification or OTP before signing?
 6. **Mobile signature**: Define UX for mobile signature capture.
+7. **Retention/compliance**: Retain signed docs for X years or configurable?
+8. **Evidence bundle**: Include signer consent, identity method, and hash in certificate?
 
 ## First implementation slice (MVP)
 - PDF upload
@@ -131,6 +156,37 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 - Public signing page
 - Signed PDF output
 - Basic audit trail
+
+## DocuSign-aligned hardened behavior (to bake in)
+### Document integrity
+- Immutable document after send; edits create a new version.
+- Store and embed SHA-256 hashes of original and signed PDFs.
+- Certificate of completion appended with event timestamps and hashes.
+
+### Recipient identity (tiered)
+- Default: email link with passive verification.
+- Optional: OTP (email/SMS) before signing.
+- Record identity method in audit log.
+
+### Signing ceremony
+- Consent check before signing; capture explicit acknowledgment.
+- Required fields must be completed; block submission if incomplete.
+- Sequential routing enforced when signing order is defined.
+
+### Security hardening
+- Tokens are random, long, single-use for completion, and stored hashed.
+- All public endpoints rate-limited and monitored.
+- Idempotent submit to prevent duplicate signatures.
+- Strict input validation and sanitization for all public responses.
+
+### Audit trail completeness
+- Log every event: view, start, sign, decline, resend.
+- Include IP, user agent, timestamp, and optional geo data.
+- Make audit log immutable and append-only.
+
+### Compliance & retention
+- Add retention policy + legal hold support (future).
+- Optional eIDAS/ESIGN/ESRA alignment considerations.
 
 ## Suggested future enhancements
 - Multiple recipients with sequential signing

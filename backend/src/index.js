@@ -487,6 +487,11 @@ setTimeout(async () => {
         app.use('/api/forms', formsRoutes(pool, authenticateJWT, publicRateLimit));
         logger.info('Forms routes initialized');
 
+        // Signatures routes (includes public signing endpoints)
+        const signaturesRoutes = require('./routes/signatures.routes');
+        app.use('/api', signaturesRoutes(pool, authenticateJWT, publicRateLimit));
+        logger.info('Signatures routes initialized');
+
         // Conversations routes (Inbox)
         const conversationsRoutes = require('./routes/conversations.routes');
         app.use('/api/conversations', conversationsRoutes(pool, authenticateJWT));

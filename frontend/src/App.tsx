@@ -75,6 +75,11 @@ const EstimateEditorPage = React.lazy(() => import("./pages/invoices/EstimateEdi
 const RecurringInvoicesPage = React.lazy(() => import("./pages/invoices/RecurringInvoicesPage"));
 const PaymentsPage = React.lazy(() => import("./pages/invoices/PaymentsPage"));
 const ProductsPage = React.lazy(() => import("./pages/invoices/ProductsPage"));
+const SignaturesPage = React.lazy(() => import("./pages/signatures/SignaturesPage"));
+const SignatureEditorPage = React.lazy(() => import("./pages/signatures/SignatureEditorPage"));
+const SignatureTemplatesPage = React.lazy(() => import("./pages/signatures/SignatureTemplatesPage"));
+const SignatureTemplateEditorPage = React.lazy(() => import("./pages/signatures/SignatureTemplateEditorPage"));
+const SignPage = React.lazy(() => import("./pages/sign/SignPage"));
 
 // Loading fallback component for lazy-loaded pages
 const PageLoading = () => (
@@ -182,6 +187,7 @@ const AppContent = () => {
       <Route path="/shared/note/:token" element={<SharedNotePage />} />
       <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
       <Route path="/shared/vault/:token" element={<SharedVaultPage />} />
+      <Route path="/sign/:token" element={<SignPage />} />
 
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>
@@ -244,6 +250,11 @@ const AppContent = () => {
         <Route path="/recurring-invoices" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
         <Route path="/invoices/payments" element={<AuthenticatedLayout><PaymentsPage /></AuthenticatedLayout>} />
         <Route path="/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
+        <Route path="/signatures" element={<AuthenticatedLayout><SignaturesPage /></AuthenticatedLayout>} />
+        <Route path="/signatures/new" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
+        <Route path="/signatures/:id" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
+        <Route path="/signatures/templates" element={<AuthenticatedLayout><SignatureTemplatesPage /></AuthenticatedLayout>} />
+        <Route path="/signatures/templates/:id" element={<AuthenticatedLayout><SignatureTemplateEditorPage /></AuthenticatedLayout>} />
       </Route>
 
       {/* Catch-all route */}

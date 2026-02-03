@@ -25,6 +25,7 @@ export type FeatureName =
   | 'sms_templates'
   | 'conversations'
   | 'basic_automation'
+  | 'signature_documents'
   | 'api_access'
   | 'advanced_workflows'
   | 'unlimited_orgs'
@@ -94,6 +95,7 @@ const FEATURE_TIERS: Record<FeatureName, number> = {
   sms_templates: 1,
   conversations: 1,
   basic_automation: 1,
+  signature_documents: 1,
   api_access: 2,
   advanced_workflows: 2,
   unlimited_orgs: 2,

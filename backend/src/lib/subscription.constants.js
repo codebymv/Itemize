@@ -210,6 +210,15 @@ const CALENDAR_LIMITS = {
 };
 
 /**
+ * Signature documents per month limits
+ */
+const SIGNATURE_LIMITS = {
+    [PLANS.STARTER]: 5,
+    [PLANS.UNLIMITED]: 50,
+    [PLANS.PRO]: Infinity
+};
+
+/**
  * API calls per day limits
  */
 const API_LIMITS = {
@@ -291,6 +300,11 @@ const FEATURES = {
         allowedPlans: [PLANS.STARTER, PLANS.UNLIMITED, PLANS.PRO],
         label: 'Invoicing',
         description: 'Create and send invoices'
+    },
+    SIGNATURE_DOCUMENTS: {
+        allowedPlans: [PLANS.STARTER, PLANS.UNLIMITED, PLANS.PRO],
+        label: 'E-Signatures',
+        description: 'Send documents for electronic signature'
     },
     BASIC_ANALYTICS: {
         allowedPlans: [PLANS.STARTER, PLANS.UNLIMITED, PLANS.PRO],
@@ -527,6 +541,7 @@ function getAllPlans() {
             landingPages: LANDING_PAGE_LIMITS[plan],
             forms: FORM_LIMITS[plan],
             calendars: CALENDAR_LIMITS[plan],
+            signatures: SIGNATURE_LIMITS[plan],
             apiCalls: API_LIMITS[plan],
             storage: STORAGE_LIMITS[plan]
         }
@@ -554,6 +569,7 @@ module.exports = {
     LANDING_PAGE_LIMITS,
     FORM_LIMITS,
     CALENDAR_LIMITS,
+    SIGNATURE_LIMITS,
     API_LIMITS,
     STORAGE_LIMITS,
     

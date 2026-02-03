@@ -44,6 +44,7 @@ import {
     Receipt,
     Search,
     Command,
+    FileSignature,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,6 +121,21 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Products',
                 path: '/products',
+            },
+        ],
+    },
+    {
+        title: 'Signatures',
+        icon: FileSignature,
+        path: '/signatures',
+        items: [
+            {
+                title: 'Documents',
+                path: '/signatures',
+            },
+            {
+                title: 'Templates',
+                path: '/signatures/templates',
             },
         ],
     },
