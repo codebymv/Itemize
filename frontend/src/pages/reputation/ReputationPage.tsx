@@ -110,7 +110,7 @@ export function ReputationPage() {
 
     usePageHeader(
         {
-            title: 'REPUTATION | Reviews',
+            title: 'Reviews',
             icon: <Star className="h-5 w-5 text-blue-600 flex-shrink-0" />,
             rightContent: (
                 <>

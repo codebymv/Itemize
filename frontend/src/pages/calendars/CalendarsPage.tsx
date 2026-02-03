@@ -56,7 +56,7 @@ export function CalendarsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        SCHEDULING | Calendars
+                        Calendars
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

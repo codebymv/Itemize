@@ -128,7 +128,7 @@ export function AutomationsPage() {
 
   usePageHeader(
     {
-      title: 'AUTOMATIONS | All',
+      title: 'Workflows',
       icon: <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />,
       leftClassName: 'min-w-0 flex-1',
       rightClassName: 'flex-shrink-0',

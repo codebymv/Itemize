@@ -175,7 +175,7 @@ export function EstimatesPage() {
                     <h1
                         className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
-                        SALES & PAYMENTS | Estimates
+                        Estimates
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

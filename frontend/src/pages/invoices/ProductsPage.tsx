@@ -121,7 +121,7 @@ export function ProductsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        SALES & PAYMENTS | Products
+                        Products
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

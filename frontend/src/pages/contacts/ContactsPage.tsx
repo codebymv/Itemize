@@ -165,7 +165,7 @@ export function ContactsPage() {
 
   usePageHeader(
     {
-      title: 'CONTACTS',
+      title: 'Contacts',
       icon: <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />,
       rightContent: (
         <>

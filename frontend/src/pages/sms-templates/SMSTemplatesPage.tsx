@@ -65,7 +65,7 @@ export function SMSTemplatesPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        CAMPAIGNS | SMS Templates
+                        SMS Templates
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

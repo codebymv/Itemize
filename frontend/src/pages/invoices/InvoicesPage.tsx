@@ -530,7 +530,7 @@ export function InvoicesPage() {
                     <h1
                         className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
-                        SALES & PAYMENTS | Invoices
+                        Invoices
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

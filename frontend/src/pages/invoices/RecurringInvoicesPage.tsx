@@ -478,7 +478,7 @@ export function RecurringInvoicesPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        SALES & PAYMENTS | Recurring
+                        Recurring Invoices
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

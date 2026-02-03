@@ -67,7 +67,7 @@ export function LandingPagesPage() {
                     <h1
                         className={`text-xl font-semibold italic truncate min-w-0 font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
-                        PAGES & FORMS | Landing Pages
+                        Landing Pages
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

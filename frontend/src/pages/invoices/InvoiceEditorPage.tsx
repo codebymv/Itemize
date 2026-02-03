@@ -235,7 +235,7 @@ export function InvoiceEditorPage() {
                         className="text-xl font-semibold italic truncate min-w-0 font-raleway"
                         style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        SALES & PAYMENTS | {isNew ? 'New Invoice' : 'Invoice'}
+                        {isNew ? 'New Invoice' : 'Invoice'}
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

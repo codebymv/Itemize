@@ -106,7 +106,7 @@ export function EstimateEditorPage() {
                         className="text-xl font-semibold italic truncate min-w-0 font-raleway"
                         style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        SALES & PAYMENTS | {isNew ? 'New Estimate' : 'Estimate'}
+                        {isNew ? 'New Estimate' : 'Estimate'}
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

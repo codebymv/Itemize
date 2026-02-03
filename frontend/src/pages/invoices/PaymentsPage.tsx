@@ -140,7 +140,7 @@ export function PaymentsPage() {
                     <h1
                         className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
-                        SALES & PAYMENTS | Payments
+                        Payments
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

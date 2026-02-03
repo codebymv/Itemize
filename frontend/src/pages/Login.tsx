@@ -114,17 +114,17 @@ export default function Login() {
             </div>
           </Link>
           {sessionExpired && (
-            <Alert variant="destructive" className="mx-6 mb-4 border-l-4">
+            <Alert variant="destructive" className="mx-4 mb-4 border-l-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Session has expired
               </AlertDescription>
             </Alert>
           )}
-          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
+          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'} px-4`}>
             Welcome back
           </CardTitle>
-          <CardDescription className={isLight ? '' : 'text-slate-400'}>
+          <CardDescription className={`${isLight ? '' : 'text-slate-400'} px-4`}>
             Sign in to your Itemize account
           </CardDescription>
         </CardHeader>

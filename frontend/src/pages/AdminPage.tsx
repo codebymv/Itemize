@@ -40,7 +40,7 @@ export function AdminPage() {
                         className="text-base sm:text-xl font-semibold italic truncate font-raleway"
                         style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        <span className="hidden sm:inline">ADMIN | </span>{activeNavItem.title}
+                        {activeNavItem.title}
                     </h1>
                 </div>
             </div>

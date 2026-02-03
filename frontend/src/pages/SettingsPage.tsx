@@ -68,16 +68,22 @@ function SettingsNav() {
   const mobileTabs = (
     <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
       <TabsList className="grid w-full grid-cols-3 mb-4">
-        {settingsNav.map((item) => (
-          <TabsTrigger 
-            key={item.path} 
-            value={item.path}
-            className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 text-muted-foreground group/item"
-          >
-            <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-gray-600 dark:text-gray-400 transition-colors group-hover/item:text-blue-600 data-[state=active]:text-blue-600" />
-            <span className="hidden sm:inline">{item.title}</span>
-          </TabsTrigger>
-        ))}
+        {settingsNav.map((item) => {
+          const isActive = activePath === item.path || (item.path === '/settings' && activePath === '/settings/');
+          return (
+            <TabsTrigger 
+              key={item.path} 
+              value={item.path}
+              className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 text-muted-foreground group/item"
+            >
+              <item.icon className={cn(
+                "h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-colors group-hover/item:text-blue-600",
+                isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"
+              )} />
+              <span className="hidden sm:inline">{item.title}</span>
+            </TabsTrigger>
+          );
+        })}
       </TabsList>
     </Tabs>
   );
@@ -406,7 +412,7 @@ export function SettingsPage() {
             className="text-base sm:text-xl font-semibold italic truncate"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            <span className="hidden sm:inline">SETTINGS | </span>{activeNavItem.title}
+            {activeNavItem.title}
           </h1>
         </div>
         {saveButton && <div className="hidden md:flex items-center gap-2 mr-4">{saveButton}</div>}
