@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import {
@@ -105,7 +106,22 @@ export function SignaturesPage() {
   };
 
   return (
-    <PageContainer>
+    <>
+      <MobileControlsBar>
+        <div className="flex items-center gap-2 w-full">
+          <Button size="icon" variant="outline" onClick={() => fetchDocuments()}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="flex-1 h-9" onClick={() => navigate('/signatures/templates')}>
+            Templates
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9" onClick={() => navigate('/signatures/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Document
+          </Button>
+        </div>
+      </MobileControlsBar>
+      <PageContainer>
         <PageSurface>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-semibold">Signature Documents</h1>
@@ -173,7 +189,8 @@ export function SignaturesPage() {
             </Table>
           </div>
         </PageSurface>
-    </PageContainer>
+      </PageContainer>
+    </>
   );
 }
 

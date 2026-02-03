@@ -105,13 +105,13 @@ export default function Register() {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${bgGradient} px-4 py-8 relative overflow-hidden`}>
+    <div className={`min-h-[100svh] flex items-start justify-center ${bgGradient} px-4 pt-4 pb-6 sm:items-center sm:pt-6 sm:pb-6 relative overflow-hidden`}>
       <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
       
       <Card className={`w-full max-w-md relative z-10 ${isLight ? 'bg-white' : 'bg-slate-800 border-slate-700'}`}>
-        <CardHeader className="text-center p-0">
+        <CardHeader className="text-center pb-2">
           <Link to="/home">
-            <div className="mb-4 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-6 hover:from-blue-700 hover:to-indigo-700 transition-colors">
+            <div className="mb-3 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-4 hover:from-blue-700 hover:to-indigo-700 transition-colors -mx-6 -mt-6">
               <img
                 src={"/textwhite.png"}
                 alt="Itemize"
@@ -128,7 +128,7 @@ export default function Register() {
         </CardHeader>
 
         <form onSubmit={handleRegister}>
-          <CardContent className="space-y-4 pt-6">
+          <CardContent className="space-y-3 pt-4">
             <div className="space-y-2">
               <Label htmlFor="name" className={isLight ? 'text-gray-700' : 'text-slate-300'}>
                 Name
@@ -233,7 +233,7 @@ export default function Register() {
             </div>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-3">
             <Button 
               type="submit" 
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white" 
