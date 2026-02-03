@@ -103,9 +103,9 @@ export default function Login() {
       <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
       
       <Card className={`w-full max-w-md relative z-10 ${isLight ? 'bg-white' : 'bg-slate-800 border-slate-700'}`}>
-        <CardHeader className="text-center p-0">
+        <CardHeader className="text-center pb-0">
           <Link to="/home">
-            <div className="mb-4 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-6 hover:from-blue-700 hover:to-indigo-700 transition-colors">
+            <div className="mb-4 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-6 hover:from-blue-700 hover:to-indigo-700 transition-colors -mx-6 -mt-6">
               <img
                 src={"/textwhite.png"}
                 alt="Itemize"
@@ -114,17 +114,17 @@ export default function Login() {
             </div>
           </Link>
           {sessionExpired && (
-            <Alert variant="destructive" className="mx-4 mb-4 border-l-4">
+            <Alert variant="destructive" className="mb-4 border-l-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Session has expired
               </AlertDescription>
             </Alert>
           )}
-          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'} px-4`}>
+          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
             Welcome back
           </CardTitle>
-          <CardDescription className={`${isLight ? '' : 'text-slate-400'} px-4`}>
+          <CardDescription className={isLight ? '' : 'text-slate-400'}>
             Sign in to your Itemize account
           </CardDescription>
         </CardHeader>
