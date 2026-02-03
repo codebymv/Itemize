@@ -60,7 +60,7 @@ export function CampaignsPage() {
     }, [campaigns]);
 
     usePageHeader({
-        title: 'Campaigns',
+        title: 'CAMPAIGNS',
         icon: <Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />,
         rightContent: (
             <>

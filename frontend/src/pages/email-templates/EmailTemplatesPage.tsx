@@ -72,7 +72,7 @@ export function EmailTemplatesPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        Email Templates
+                        EMAIL TEMPLATES
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

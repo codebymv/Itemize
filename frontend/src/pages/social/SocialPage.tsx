@@ -77,7 +77,7 @@ export function SocialPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        Social
+                        SOCIAL
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

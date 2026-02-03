@@ -203,7 +203,7 @@ export function WorkflowBuilderPage() {
             className="text-xl font-semibold italic truncate min-w-0" 
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            {isNewWorkflow ? 'New Workflow' : name || 'Workflow'}
+            {(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
           </h1>
         </div>
         {/* Desktop-only controls */}

@@ -67,7 +67,7 @@ export function CalendarIntegrationsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        Integrations
+                        INTEGRATIONS
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

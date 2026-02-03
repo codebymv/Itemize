@@ -412,7 +412,7 @@ export function SettingsPage() {
             className="text-base sm:text-xl font-semibold italic truncate"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            {activeNavItem.title}
+            {activeNavItem.title.toUpperCase()}
           </h1>
         </div>
         {saveButton && <div className="hidden md:flex items-center gap-2 mr-4">{saveButton}</div>}

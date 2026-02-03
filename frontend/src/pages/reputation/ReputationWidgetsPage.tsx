@@ -63,7 +63,7 @@ export function ReputationWidgetsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        Widgets
+                        WIDGETS
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

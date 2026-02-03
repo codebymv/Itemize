@@ -190,7 +190,7 @@ export function PageEditorPage() {
                         className="text-xl font-semibold italic truncate min-w-0"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        {loading ? 'Loading...' : editedName || 'Page Editor'}
+                        {(loading ? 'Loading...' : editedName || 'Page Editor').toUpperCase()}
                     </h1>
                     {page && (
                         <Badge className={page.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>

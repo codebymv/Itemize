@@ -150,7 +150,7 @@ export function PaymentSettingsPage() {
                         className="text-xl font-semibold italic truncate"
                         style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        Payment Settings
+                        PAYMENT SETTINGS
                     </h1>
                 </div>
                 {/* Desktop-only controls */}

@@ -114,7 +114,7 @@ export function ContactDetailPage() {
             className="text-xl font-semibold italic truncate min-w-0"
             style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
           >
-            {getContactDisplayName(contact)}
+            {getContactDisplayName(contact).toUpperCase()}
           </h1>
         </div>
         <div className="flex items-center gap-2 mr-4 flex-shrink-0">

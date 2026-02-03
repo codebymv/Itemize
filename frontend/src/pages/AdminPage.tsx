@@ -40,7 +40,7 @@ export function AdminPage() {
                         className="text-base sm:text-xl font-semibold italic truncate font-raleway"
                         style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        {activeNavItem.title}
+                        {activeNavItem.title.toUpperCase()}
                     </h1>
                 </div>
             </div>

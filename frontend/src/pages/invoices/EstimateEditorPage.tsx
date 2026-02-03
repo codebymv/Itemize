@@ -106,7 +106,7 @@ export function EstimateEditorPage() {
                         className="text-xl font-semibold italic truncate min-w-0 font-raleway"
                         style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
                     >
-                        {isNew ? 'New Estimate' : 'Estimate'}
+                        {(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
                     </h1>
                 </div>
                 {/* Desktop-only controls */}
