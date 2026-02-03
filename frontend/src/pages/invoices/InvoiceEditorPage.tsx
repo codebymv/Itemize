@@ -11,7 +11,6 @@ import {
     Eye,
     ChevronDown,
     ChevronUp,
-    UserPlus,
     Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,9 +40,6 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getContacts } from '@/services/contactsApi';
 import {
     getInvoice,
-    createInvoice,
-    updateInvoice,
-    sendInvoice,
     getProducts,
     getPaymentSettings,
     getBusinesses,
@@ -55,16 +51,14 @@ import {
 import { InvoicePreview } from './components/InvoicePreview';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
-
-interface LineItem {
-    id: string;
-    product_id?: number;
-    name: string;
-    description: string;
-    quantity: number;
-    unit_price: number;
-    tax_rate: number;
-}
+import { CustomerInfoSection } from './components/CustomerInfoSection';
+import { LineItemsTable } from './components/LineItemsTable';
+import { useLineItems } from './hooks/useLineItems';
+import { useInvoiceCalculations } from './hooks/useInvoiceCalculations';
+import { useContactSelection } from './hooks/useContactSelection';
+import { useInvoiceForm } from './hooks/useInvoiceForm';
+import { useInvoiceSave } from './hooks/useInvoiceSave';
+import { formatCurrency, getPaymentTermsLabel } from './utils/invoiceFormatters';
 
 interface Contact {
     id: number;
@@ -90,53 +84,87 @@ export function InvoiceEditorPage() {
     const isNew = id === 'new' || !id;
 
     const [loading, setLoading] = useState(!isNew);
-    const [saving, setSaving] = useState(false);
     const { organizationId } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [businesses, setBusinesses] = useState<Business[]>([]);
-    const [selectedBusinessId, setSelectedBusinessId] = useState<number | undefined>();
     const [settings, setSettings] = useState<PaymentSettings | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [showSendModal, setShowSendModal] = useState(false);
     const [businessSectionOpen, setBusinessSectionOpen] = useState(true);
-
-    // Invoice state
-    const [invoiceNumber, setInvoiceNumber] = useState('');
-    const [invoiceSummary, setInvoiceSummary] = useState('');
-    const [contactId, setContactId] = useState<number | undefined>();
-    const [customerName, setCustomerName] = useState('');
-    const [customerEmail, setCustomerEmail] = useState('');
-    const [customerPhone, setCustomerPhone] = useState('');
-    const [customerAddress, setCustomerAddress] = useState('');
-    const [issueDate, setIssueDate] = useState('');
-    const [dueDate, setDueDate] = useState('');
-    const [paymentTerms, setPaymentTerms] = useState<number>(30);
-    const [currency, setCurrency] = useState('USD');
-    const [notes, setNotes] = useState('');
-    const [termsAndConditions, setTermsAndConditions] = useState('');
-    const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('fixed');
-    const [discountValue, setDiscountValue] = useState(0);
-    const [taxRate, setTaxRate] = useState(0);
     const [footerOpen, setFooterOpen] = useState(false);
-    const [lineItems, setLineItems] = useState<LineItem[]>([
-        { id: crypto.randomUUID(), name: '', description: '', quantity: 1, unit_price: 0, tax_rate: 0 }
-    ]);
 
-    const formatAddress = (address: Contact['address'] | Invoice['customer_address'] | undefined): string => {
-        if (!address) return '';
-        if (typeof address === 'string') return address;
+    // Use extracted hooks
+    const {
+        lineItems,
+        setLineItems,
+        addLineItem,
+        removeLineItem,
+        updateLineItem,
+    } = useLineItems();
 
-        const parts = [
-            address.street,
-            address.city,
-            address.state,
-            address.zip,
-            address.country
-        ].filter(Boolean);
+    const {
+        contactId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        setContactId,
+        setCustomerName,
+        setCustomerEmail,
+        setCustomerPhone,
+        setCustomerAddress,
+        handleContactChange,
+        loadContactData,
+    } = useContactSelection();
 
-        return parts.join(', ');
-    };
+    const {
+        invoiceNumber,
+        invoiceSummary,
+        issueDate,
+        dueDate,
+        paymentTerms,
+        currency,
+        notes,
+        termsAndConditions,
+        discountType,
+        discountValue,
+        taxRate,
+        selectedBusinessId,
+        setInvoiceNumber,
+        setInvoiceSummary,
+        setIssueDate,
+        setDueDate,
+        setPaymentTerms,
+        setCurrency,
+        setNotes,
+        setTermsAndConditions,
+        setDiscountType,
+        setDiscountValue,
+        setTaxRate,
+        setSelectedBusinessId,
+        handlePaymentTermsChange,
+        loadInvoiceData,
+    } = useInvoiceForm({
+        isNew,
+        defaultPaymentTerms: settings?.default_payment_terms,
+        defaultCurrency: settings?.default_currency,
+        defaultNotes: settings?.default_notes,
+        defaultTerms: settings?.default_terms,
+    });
+
+    const { subtotal, taxAmount, discountAmount, total } = useInvoiceCalculations({
+        lineItems,
+        taxRate,
+        discountType,
+        discountValue,
+    });
+
+    const { saving, handleSave: handleSaveInvoice, handleSendInvoice } = useInvoiceSave({
+        organizationId,
+        isNew,
+        invoiceId: id,
+    });
 
     // Refs for auto-resizing textareas
     const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -154,33 +182,45 @@ export function InvoiceEditorPage() {
         }
     }, [loading, notes, termsAndConditions]);
 
-    // Helper function to calculate due date from issue date and payment terms
-    const calculateDueDate = (issueDateStr: string, terms: number): string => {
-        const [year, month, day] = issueDateStr.split('-').map(Number);
-        const issue = new Date(year, month - 1, day); // month is 0-indexed
-        issue.setDate(issue.getDate() + terms);
-        return `${issue.getFullYear()}-${String(issue.getMonth() + 1).padStart(2, '0')}-${String(issue.getDate()).padStart(2, '0')}`;
-    };
-
-    // Handler for when user changes payment terms - recalculate due date
-    const handlePaymentTermsChange = (newTerms: number) => {
-        setPaymentTerms(newTerms);
-        if (issueDate) {
-            setDueDate(calculateDueDate(issueDate, newTerms));
+    // Product selection handler
+    const handleProductSelect = (lineItemId: string, productIdStr: string) => {
+        if (productIdStr === 'custom') {
+            updateLineItem(lineItemId, { product_id: undefined });
+            return;
+        }
+        const product = products.find(p => p.id === parseInt(productIdStr));
+        if (product) {
+            updateLineItem(lineItemId, {
+                product_id: product.id,
+                name: product.name,
+                description: product.description || '',
+                unit_price: product.price,
+                tax_rate: product.tax_rate || 0,
+            });
         }
     };
 
-    // Set default issue date and due date for new invoices only
-    useEffect(() => {
-        if (isNew && !issueDate) {
-            // Use local date to avoid timezone issues
-            const now = new Date();
-            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            setIssueDate(todayStr);
-            // Also set due date immediately
-            setDueDate(calculateDueDate(todayStr, paymentTerms));
-        }
-    }, [isNew]);
+    // Wrapper for handleSave to pass invoice data
+    const handleSave = () => {
+        handleSaveInvoice({
+            contact_id: contactId,
+            business_id: selectedBusinessId,
+            customer_name: customerName || undefined,
+            customer_email: customerEmail || undefined,
+            customer_phone: customerPhone || undefined,
+            customer_address: customerAddress || undefined,
+            issue_date: issueDate,
+            due_date: dueDate,
+            payment_terms: paymentTerms,
+            currency: currency,
+            tax_rate: taxRate,
+            items: [], // Will be populated in hook
+            discount_type: discountType,
+            discount_value: discountValue,
+            notes: notes || undefined,
+            terms_and_conditions: termsAndConditions || undefined,
+        }, lineItems);
+    };
 
     // Setup header
     useEffect(() => {
@@ -253,22 +293,14 @@ export function InvoiceEditorPage() {
                 // Load existing invoice if editing
                 if (!isNew && id) {
                     const invoice = await getInvoice(parseInt(id), organizationId);
-                    setInvoiceNumber(invoice.invoice_number || '');
-                    setContactId(invoice.contact_id);
-                    setSelectedBusinessId(invoice.business_id);
-                    setCustomerName(invoice.customer_name || '');
-                    setCustomerEmail(invoice.customer_email || '');
-                    setCustomerPhone(invoice.customer_phone || '');
-                    setCustomerAddress(formatAddress(invoice.customer_address));
-                    setIssueDate(invoice.issue_date?.split('T')[0] || invoice.created_at?.split('T')[0] || '');
-                    setDueDate(invoice.due_date?.split('T')[0] || '');
-                    setPaymentTerms(invoice.payment_terms || 30);
-                    setCurrency(invoice.currency || 'USD');
-                    setNotes(invoice.notes || '');
-                    setTermsAndConditions(invoice.terms_and_conditions || '');
-                    setDiscountType(invoice.discount_type || 'fixed');
-                    setDiscountValue(invoice.discount_value || 0);
-                    setTaxRate(invoice.tax_rate || 0);
+                    loadInvoiceData(invoice);
+                    loadContactData({
+                        id: invoice.contact_id,
+                        name: invoice.customer_name,
+                        email: invoice.customer_email,
+                        phone: invoice.customer_phone,
+                        address: invoice.customer_address,
+                    });
                     
                     if (invoice.items && invoice.items.length > 0) {
                         setLineItems(invoice.items.map(item => ({
@@ -282,13 +314,6 @@ export function InvoiceEditorPage() {
                         })));
                     }
                 } else {
-                    // Set defaults for new invoices from settings
-                    if (settingsData) {
-                        setPaymentTerms(settingsData.default_payment_terms || 30);
-                        setCurrency(settingsData.default_currency || 'USD');
-                        setNotes(settingsData.default_notes || '');
-                        setTermsAndConditions(settingsData.default_terms || '');
-                    }
                     // Auto-select last used business for new invoices
                     const businessesList = Array.isArray(businessesData) ? businessesData : businessesData?.businesses || [];
                     if (businessesList.length > 0) {
@@ -305,181 +330,9 @@ export function InvoiceEditorPage() {
             }
         };
         init();
-    }, [organizationId, id, isNew, toast]);
+    }, [organizationId, id, isNew, toast, loadInvoiceData, loadContactData, setLineItems, setSelectedBusinessId]);
 
-    // Handle contact selection
-    const handleContactChange = (contactIdStr: string) => {
-        if (contactIdStr === 'none') {
-            setContactId(undefined);
-            return;
-        }
-        const selectedContact = contacts.find(c => c.id === parseInt(contactIdStr));
-        if (selectedContact) {
-            setContactId(selectedContact.id);
-            setCustomerName(`${selectedContact.first_name} ${selectedContact.last_name}`.trim());
-            setCustomerEmail(selectedContact.email || '');
-            setCustomerPhone(selectedContact.phone || '');
-            setCustomerAddress(formatAddress(selectedContact.address));
-        }
-    };
 
-    // Handle product selection for line item
-    const handleProductSelect = (lineItemId: string, productIdStr: string) => {
-        if (productIdStr === 'custom') {
-            updateLineItem(lineItemId, { product_id: undefined });
-            return;
-        }
-        const product = products.find(p => p.id === parseInt(productIdStr));
-        if (product) {
-            updateLineItem(lineItemId, {
-                product_id: product.id,
-                name: product.name,
-                description: product.description || '',
-                unit_price: product.price,
-                tax_rate: product.tax_rate || 0,
-            });
-        }
-    };
-
-    // Line item management
-    const addLineItem = () => {
-        setLineItems([...lineItems, {
-            id: crypto.randomUUID(),
-            name: '',
-            description: '',
-            quantity: 1,
-            unit_price: 0,
-            tax_rate: 0,
-        }]);
-    };
-
-    const removeLineItem = (itemId: string) => {
-        if (lineItems.length > 1) {
-            setLineItems(lineItems.filter(i => i.id !== itemId));
-        }
-    };
-
-    const updateLineItem = (itemId: string, updates: Partial<LineItem>) => {
-        setLineItems(lineItems.map(item =>
-            item.id === itemId ? { ...item, ...updates } : item
-        ));
-    };
-
-    // Calculate totals
-    const subtotal = lineItems.reduce((sum, item) => {
-        return sum + (item.quantity * item.unit_price);
-    }, 0);
-
-    // Calculate tax from global tax rate
-    const taxAmount = subtotal * (taxRate / 100);
-
-    const discountAmount = discountType === 'percent'
-        ? subtotal * (discountValue / 100)
-        : discountValue;
-
-    const total = subtotal + taxAmount - discountAmount;
-
-    // Save invoice
-    const handleSave = async () => {
-        if (!organizationId) return;
-
-        const validItems = lineItems.filter(i => i.name.trim());
-        if (validItems.length === 0) {
-            toast({ title: 'Error', description: 'Add at least one line item', variant: 'destructive' });
-            return;
-        }
-
-        setSaving(true);
-        try {
-            const invoiceData = {
-                contact_id: contactId,
-                business_id: selectedBusinessId,
-                customer_name: customerName || undefined,
-                customer_email: customerEmail || undefined,
-                customer_phone: customerPhone || undefined,
-                customer_address: customerAddress || undefined,
-                issue_date: issueDate,
-                due_date: dueDate,
-                payment_terms: paymentTerms,
-                currency: currency,
-                tax_rate: taxRate,
-                items: validItems.map(item => ({
-                    product_id: item.product_id,
-                    name: item.name,
-                    description: item.description,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    tax_rate: 0, // Individual item tax not used, using invoice-level tax
-                })),
-                discount_type: discountType,
-                discount_value: discountValue,
-                notes: notes || undefined,
-                terms_and_conditions: termsAndConditions || undefined,
-            };
-
-            if (isNew) {
-                await createInvoice(invoiceData, organizationId);
-                toast({ title: 'Created', description: toastMessages.created('invoice') });
-                navigate('/invoices');
-            } else if (id) {
-                await updateInvoice(parseInt(id), invoiceData, organizationId);
-                toast({ title: 'Saved', description: toastMessages.saved('invoice') });
-                navigate('/invoices');
-            }
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToSave('invoice'), variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // Send invoice with email customization
-    const handleSendInvoice = async (options: SendOptions) => {
-        if (!organizationId || !id || isNew) return;
-
-        setSaving(true);
-        try {
-            // Pass email customization options to the backend
-            const result = await sendInvoice(parseInt(id), organizationId, {
-                subject: options.subject,
-                message: options.message,
-                ccEmails: options.ccEmails,
-            });
-            
-            // Show appropriate toast based on email status
-            if (result.emailSent) {
-                toast({ title: 'Sent', description: 'Invoice sent successfully and email delivered' });
-            } else if (result.emailError) {
-                toast({ 
-                    title: 'Sent with warning', 
-                    description: `Invoice marked as sent but email failed: ${result.emailError}`,
-                    variant: 'destructive'
-                });
-            } else {
-                toast({ title: 'Sent', description: 'Invoice marked as sent (email service not configured)' });
-            }
-            
-            setShowSendModal(false);
-            navigate('/invoices');
-        } catch (error: any) {
-            const errorMessage = error?.response?.data?.error || toastMessages.failedToSend('invoice');
-            toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currency
-        }).format(amount);
-    };
-
-    const getPaymentTermsLabel = (days: number) => {
-        if (days === 0) return 'Due on receipt';
-        return `Within ${days} days`;
-    };
 
     if (loading) {
         return (
@@ -666,64 +519,19 @@ export function InvoiceEditorPage() {
                 {/* Customer + Invoice Details - Side by Side */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Left: Customer (Bill To) */}
-                    <Card className="border-2 border-dashed">
-                        <CardContent className="pt-6">
-                            <div className="space-y-4">
-                                {/* Contact selector */}
-                                {contacts.length > 0 && (
-                                    <>
-                                        <div className="flex flex-col items-center justify-center py-2 text-center">
-                                            <UserPlus className="h-6 w-6 text-muted-foreground mb-2" />
-                                            <Select
-                                                value={contactId?.toString() || 'none'}
-                                                onValueChange={handleContactChange}
-                                            >
-                                                <SelectTrigger className="w-full max-w-xs">
-                                                    <SelectValue placeholder="Select existing customer" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="none">Or enter manually below</SelectItem>
-                                                    {contacts.map(contact => (
-                                                        <SelectItem key={contact.id} value={contact.id.toString()}>
-                                                            {contact.first_name} {contact.last_name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <Separator />
-                                    </>
-                                )}
-                                {/* Manual entry fields - always visible */}
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Input
-                                            value={customerName}
-                                            onChange={(e) => setCustomerName(e.target.value)}
-                                            placeholder="Customer name"
-                                        />
-                                        <Input
-                                            type="email"
-                                            value={customerEmail}
-                                            onChange={(e) => setCustomerEmail(e.target.value)}
-                                            placeholder="Email"
-                                        />
-                                    </div>
-                                    <Input
-                                        value={customerPhone}
-                                        onChange={(e) => setCustomerPhone(e.target.value)}
-                                        placeholder="Phone"
-                                    />
-                                    <Textarea
-                                        value={customerAddress}
-                                        onChange={(e) => setCustomerAddress(e.target.value)}
-                                        placeholder="Address"
-                                        rows={2}
-                                    />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <CustomerInfoSection
+                        contacts={contacts}
+                        contactId={contactId}
+                        customerName={customerName}
+                        customerEmail={customerEmail}
+                        customerPhone={customerPhone}
+                        customerAddress={customerAddress}
+                        onContactChange={(contactIdStr) => handleContactChange(contactIdStr, contacts)}
+                        onCustomerNameChange={setCustomerName}
+                        onCustomerEmailChange={setCustomerEmail}
+                        onCustomerPhoneChange={setCustomerPhone}
+                        onCustomerAddressChange={setCustomerAddress}
+                    />
 
                     {/* Right: Invoice Details */}
                     <Card>
@@ -785,127 +593,22 @@ export function InvoiceEditorPage() {
                 </div>
 
                 {/* Line Items - Table Style */}
-                <Card>
-                    <CardContent className="pt-6">
-                        {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider pb-2 border-b">
-                            <div className="col-span-5">Items</div>
-                            <div className="col-span-2 text-center">Quantity</div>
-                            <div className="col-span-2 text-right">Price</div>
-                            <div className="col-span-2 text-right">Amount</div>
-                            <div className="col-span-1"></div>
-                        </div>
-
-                        {/* Line Items */}
-                        <div className="divide-y">
-                            {lineItems.map((item) => (
-                                <div key={item.id} className="grid grid-cols-12 gap-2 py-3 items-start">
-                                    {/* Item Name & Description */}
-                                    <div className="col-span-5 space-y-1">
-                                        {products.length > 0 ? (
-                                            <Select
-                                                value={item.product_id?.toString() || 'custom'}
-                                                onValueChange={(v) => handleProductSelect(item.id, v)}
-                                            >
-                                                <SelectTrigger className="h-9">
-                                                    <SelectValue placeholder="Select or type item" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="custom">Custom item</SelectItem>
-                                                    {products.map(product => (
-                                                        <SelectItem key={product.id} value={product.id.toString()}>
-                                                            {product.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        ) : (
-                                            <Input
-                                                value={item.name}
-                                                onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
-                                                placeholder="Item name"
-                                                className="h-9"
-                                            />
-                                        )}
-                                        {item.product_id && (
-                                            <Input
-                                                value={item.name}
-                                                onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
-                                                placeholder="Item name"
-                                                className="h-8 text-sm"
-                                            />
-                                        )}
-                                        <Input
-                                            value={item.description}
-                                            onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
-                                            placeholder="Description (optional)"
-                                            className="h-8 text-sm text-muted-foreground"
-                                        />
-                                    </div>
-
-                                    {/* Quantity */}
-                                    <div className="col-span-2">
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            value={item.quantity || ''}
-                                            onChange={(e) => updateLineItem(item.id, { quantity: e.target.value === '' ? 1 : parseInt(e.target.value) })}
-                                            className="h-9 text-center"
-                                        />
-                                    </div>
-
-                                    {/* Price */}
-                                    <div className="col-span-2">
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={item.unit_price || ''}
-                                            onChange={(e) => updateLineItem(item.id, { unit_price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
-                                            className="h-9 text-right"
-                                        />
-                                    </div>
-
-                                    {/* Amount */}
-                                    <div className="col-span-2 text-right pt-2 font-medium">
-                                        {formatCurrency(item.quantity * item.unit_price)}
-                                    </div>
-
-                                    {/* Delete */}
-                                    <div className="col-span-1 flex justify-center pt-1">
-                                        {lineItems.length > 1 && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={() => removeLineItem(item.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Add Item Button */}
-                        <Button
-                            variant="ghost"
-                            className="mt-4 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            onClick={addLineItem}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add an item
-                        </Button>
-                    </CardContent>
-                </Card>
+                <LineItemsTable
+                    lineItems={lineItems}
+                    products={products}
+                    currency={currency}
+                    onAddLineItem={addLineItem}
+                    onRemoveLineItem={removeLineItem}
+                    onUpdateLineItem={updateLineItem}
+                    onProductSelect={handleProductSelect}
+                />
 
                 {/* Totals Section - Right Aligned */}
                 <div className="flex justify-end">
                     <div className="w-80 space-y-3">
                         <div className="flex justify-between text-sm">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(subtotal)}</span>
+                            <span>{formatCurrency(subtotal, currency)}</span>
                         </div>
 
                         {/* Add Tax */}
@@ -932,7 +635,7 @@ export function InvoiceEditorPage() {
                                         <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
                                     </Button>
                                 </div>
-                                <span>{formatCurrency(taxAmount)}</span>
+                                <span>{formatCurrency(taxAmount, currency)}</span>
                             </div>
                         ) : (
                             <div className="flex items-center justify-between text-sm">
@@ -991,7 +694,7 @@ export function InvoiceEditorPage() {
                                         <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
                                     </Button>
                                 </div>
-                                <span>-{formatCurrency(discountAmount)}</span>
+                                <span>-{formatCurrency(discountAmount, currency)}</span>
                             </div>
                         ) : (
                             <Button
@@ -1029,12 +732,12 @@ export function InvoiceEditorPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <span className="text-lg font-bold">{formatCurrency(total)}</span>
+                            <span className="text-lg font-bold">{formatCurrency(total, currency)}</span>
                         </div>
 
                         <div className="flex justify-between pt-2 border-t">
                             <span className="font-semibold">Amount Due</span>
-                            <span className="text-lg font-bold">{formatCurrency(total)}</span>
+                            <span className="text-lg font-bold">{formatCurrency(total, currency)}</span>
                         </div>
                     </div>
                 </div>
