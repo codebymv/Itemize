@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, UploadCloud, Save, Send } from 'lucide-react';
+import { Plus, UploadCloud, Save, Send, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { FeatureGate } from '@/components/subscription/FeatureGate';
 import {
   SignatureDocument,
   SignatureRecipient,
@@ -49,9 +48,11 @@ export default function SignatureEditorPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex flex-col min-w-0">
-          <span className="text-lg font-semibold truncate">{isEditing ? 'Edit Signature Document' : 'New Signature Document'}</span>
-          <span className="text-xs text-muted-foreground truncate">Set up recipients, fields, and routing.</span>
+        <div className="flex items-center gap-2 ml-2 min-w-0">
+          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <span className="text-xl font-semibold italic uppercase tracking-wide truncate">
+            {isEditing ? 'Edit Signature Document' : 'New Signature Document'}
+          </span>
         </div>
       </div>
     );
@@ -159,7 +160,6 @@ export default function SignatureEditorPage() {
 
   return (
     <PageContainer>
-      <FeatureGate feature="signature_documents" showOverlay>
         <PageSurface>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Document' : 'New Document'}</h1>
@@ -168,7 +168,7 @@ export default function SignatureEditorPage() {
                 <Save className="h-4 w-4 mr-2" />
                 Save
               </Button>
-              <Button onClick={handleSend} disabled={loading || !document}>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSend} disabled={loading || !document}>
                 <Send className="h-4 w-4 mr-2" />
                 Send
               </Button>
@@ -272,7 +272,6 @@ export default function SignatureEditorPage() {
             </CardContent>
           </Card>
         </PageSurface>
-      </FeatureGate>
     </PageContainer>
   );
 }

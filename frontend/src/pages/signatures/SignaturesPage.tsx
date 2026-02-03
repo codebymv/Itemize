@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, Send, XCircle, Download, Eye } from 'lucide-react';
+import { Plus, RefreshCw, Send, XCircle, Download, Eye, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { FeatureGate } from '@/components/subscription/FeatureGate';
 import {
   SignatureDocument,
   listSignatureDocuments,
@@ -53,7 +52,7 @@ export function SignaturesPage() {
       <Button variant="outline" onClick={() => navigate('/signatures/templates')}>
         Templates
       </Button>
-      <Button onClick={() => navigate('/signatures/new')}>
+      <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => navigate('/signatures/new')}>
         <Plus className="h-4 w-4 mr-2" />
         New Document
       </Button>
@@ -63,9 +62,9 @@ export function SignaturesPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex flex-col min-w-0">
-          <span className="text-lg font-semibold truncate">Signatures</span>
-          <span className="text-xs text-muted-foreground truncate">Send documents for signature and track status.</span>
+        <div className="flex items-center gap-2 ml-2 min-w-0">
+          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <span className="text-xl font-semibold italic uppercase tracking-wide truncate">Signatures</span>
         </div>
         <div className="hidden md:flex">{headerActions}</div>
       </div>
@@ -107,7 +106,6 @@ export function SignaturesPage() {
 
   return (
     <PageContainer>
-      <FeatureGate feature="signature_documents" showOverlay>
         <PageSurface>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-semibold">Signature Documents</h1>
@@ -175,7 +173,6 @@ export function SignaturesPage() {
             </Table>
           </div>
         </PageSurface>
-      </FeatureGate>
     </PageContainer>
   );
 }

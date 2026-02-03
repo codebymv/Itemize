@@ -380,10 +380,12 @@ export function PageEditorPage() {
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="text-lg">Page Sections</CardTitle>
-                                <Button size="sm" onClick={() => setShowAddSection(true)}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Section
-                                </Button>
+                                {page.sections && page.sections.length > 0 && (
+                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowAddSection(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Section
+                                    </Button>
+                                )}
                             </div>
                             <CardDescription>
                                 Drag to reorder sections. Click to edit content.
@@ -394,7 +396,7 @@ export function PageEditorPage() {
                                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                                     <Layout className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                                     <p className="text-muted-foreground mb-4">No sections yet</p>
-                                    <Button variant="outline" onClick={() => setShowAddSection(true)}>
+                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowAddSection(true)}>
                                         <Plus className="h-4 w-4 mr-2" />
                                         Add Your First Section
                                     </Button>
@@ -515,7 +517,11 @@ export function PageEditorPage() {
                                     <Badge className={page.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
                                         {page.status}
                                     </Badge>
-                                    <Button variant="outline" size="sm" onClick={handleTogglePublish}>
+                                    <Button
+                                        size="sm"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        onClick={handleTogglePublish}
+                                    >
                                         {page.status === 'published' ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
                                         {page.status === 'published' ? 'Unpublish' : 'Publish'}
                                     </Button>

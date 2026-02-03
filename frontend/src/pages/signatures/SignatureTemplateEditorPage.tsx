@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, UploadCloud, Save } from 'lucide-react';
+import { Plus, UploadCloud, Save, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,6 @@ import { Separator } from '@/components/ui/separator';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { FeatureGate } from '@/components/subscription/FeatureGate';
 import {
   SignatureTemplate,
   SignatureTemplateRole,
@@ -39,9 +38,9 @@ export default function SignatureTemplateEditorPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex flex-col min-w-0">
-          <span className="text-lg font-semibold truncate">Edit Signature Template</span>
-          <span className="text-xs text-muted-foreground truncate">Define roles and place fields once.</span>
+        <div className="flex items-center gap-2 ml-2 min-w-0">
+          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <span className="text-xl font-semibold italic uppercase tracking-wide truncate">Edit Signature Template</span>
         </div>
       </div>
     );
@@ -123,12 +122,11 @@ export default function SignatureTemplateEditorPage() {
 
   return (
     <PageContainer>
-      <FeatureGate feature="signature_documents" showOverlay>
         <PageSurface>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-semibold">Edit Template</h1>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleSave} disabled={loading || !template}>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template}>
                 <Save className="h-4 w-4 mr-2" />
                 Save
               </Button>
@@ -216,7 +214,6 @@ export default function SignatureTemplateEditorPage() {
             </CardContent>
           </Card>
         </PageSurface>
-      </FeatureGate>
     </PageContainer>
   );
 }

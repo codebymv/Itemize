@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, Eye, Send } from 'lucide-react';
+import { Plus, RefreshCw, Eye, Send, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
-import { FeatureGate } from '@/components/subscription/FeatureGate';
 import { SignatureTemplate, listSignatureTemplates, createSignatureTemplate, instantiateSignatureTemplate } from '@/services/signaturesApi';
 
 export default function SignatureTemplatesPage() {
@@ -52,7 +51,7 @@ export default function SignatureTemplatesPage() {
         <RefreshCw className="h-4 w-4 mr-2" />
         Refresh
       </Button>
-      <Button onClick={() => handleCreate()}>
+      <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleCreate()}>
         <Plus className="h-4 w-4 mr-2" />
         New Template
       </Button>
@@ -62,9 +61,9 @@ export default function SignatureTemplatesPage() {
   useEffect(() => {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex flex-col min-w-0">
-          <span className="text-lg font-semibold truncate">Signature Templates</span>
-          <span className="text-xs text-muted-foreground truncate">Manage reusable templates for signature documents.</span>
+        <div className="flex items-center gap-2 ml-2 min-w-0">
+          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <span className="text-xl font-semibold italic uppercase tracking-wide truncate">Signature Templates</span>
         </div>
         <div className="hidden md:flex">{headerActions}</div>
       </div>
@@ -75,7 +74,6 @@ export default function SignatureTemplatesPage() {
 
   return (
     <PageContainer>
-      <FeatureGate feature="signature_documents" showOverlay>
         <PageSurface>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-semibold">Signature Templates</h1>
@@ -123,7 +121,6 @@ export default function SignatureTemplatesPage() {
             </Table>
           </div>
         </PageSurface>
-      </FeatureGate>
     </PageContainer>
   );
 }
