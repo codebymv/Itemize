@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { useQuery } from '@tanstack/react-query';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
@@ -9,10 +8,8 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/StatCard';
-import { Progress } from '@/components/ui/progress';
 import {
     Select,
     SelectContent,
@@ -20,12 +17,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from '@/components/ui/chart';
-import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import {
@@ -35,8 +26,6 @@ import {
     CheckSquare,
     DollarSign,
     ArrowRight,
-    ArrowUpRight,
-    ArrowDownRight,
     Map,
     Sparkles,
     LucideIcon,
@@ -44,26 +33,24 @@ import {
     AlertCircle,
     CalendarDays,
     Target,
-    Mail,
-    Phone,
     Workflow,
     BarChart3,
     PieChart,
     LayoutDashboard,
     Activity,
+    Mail,
+    ArrowUpRight,
+    ArrowDownRight,
 } from 'lucide-react';
-import { 
-    getDashboardAnalytics, 
-    getConversionRates,
-    getCommunicationStats,
-    getPipelineVelocity,
-    getRevenueTrends,
-    type DashboardAnalytics,
-    type ConversionRates,
-    type CommunicationStats,
-    type PipelineVelocity,
-    type RevenueTrends,
-} from '@/services/analyticsApi';
+import { useDashboardData } from './dashboard/hooks/useDashboardData';
+import { usePeriodSelector, periodLabels } from './dashboard/hooks/usePeriodSelector';
+import { PipelineFunnel } from './dashboard/components/PipelineFunnel';
+import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
+import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
+import { PipelineVelocityCard } from './dashboard/components/PipelineVelocityCard';
+import { RecentActivityList } from './dashboard/components/RecentActivityList';
+import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
+import { useOrganization } from '@/hooks/useOrganization';
 
 interface QuickAction {
     title: string;
@@ -73,493 +60,33 @@ interface QuickAction {
     primary?: boolean;
 }
 
-
-function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalytics['deals']['funnel']; isLoading?: boolean }) {
-    if (isLoading) {
-        return (
-            <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 flex-1" />
-                        <Skeleton className="h-4 w-16" />
-                    </div>
-                ))}
-            </div>
-        );
-    }
-
-    if (!funnel || funnel.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No pipeline data available
-            </div>
-        );
-    }
-
-    const maxCount = Math.max(...funnel.map(s => s.dealCount), 1);
-
-    return (
-        <div className="space-y-3">
-            {funnel.map((stage) => (
-                <div key={stage.stageId} className="flex items-center gap-3">
-                    <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: stage.stageColor }}
-                    />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium truncate">{stage.stageName}</span>
-                            <span className="text-sm text-muted-foreground">
-                                {stage.dealCount} deal{stage.dealCount !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-                        <Progress
-                            value={(stage.dealCount / maxCount) * 100}
-                            className="h-2"
-                            style={{ '--progress-color': stage.stageColor } as React.CSSProperties}
-                        />
-                    </div>
-                    <div className="text-sm font-medium w-20 text-right">
-                        ${stage.totalValue.toLocaleString()}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function ConversionRateCard({ 
-    title, 
-    rate, 
-    numerator, 
-    denominator, 
-    icon: Icon, 
-    color = 'text-green-600',
-    isLoading 
-}: { 
-    title: string;
-    rate: number;
-    numerator: number;
-    denominator: number;
-    icon: LucideIcon;
-    color?: string;
-    isLoading?: boolean;
-}) {
-    if (isLoading) {
-        return (
-            <div className="p-4 bg-muted/30 rounded-lg">
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-20" />
-            </div>
-        );
-    }
-
-    return (
-        <div className="p-4 bg-muted/30 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-                <Icon className={`h-4 w-4 ${color}`} />
-                <span className="text-sm font-medium text-muted-foreground">{title}</span>
-            </div>
-            <div className="text-2xl font-bold">{rate}%</div>
-            <div className="text-xs text-muted-foreground">
-                {numerator} of {denominator}
-            </div>
-        </div>
-    );
-}
-
-function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationStats; isLoading?: boolean }) {
-    if (isLoading) {
-        return (
-            <div className="space-y-4">
-                <Skeleton className="h-20" />
-                <Skeleton className="h-20" />
-            </div>
-        );
-    }
-
-    if (!stats || !stats.email || !stats.sms) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No communication data available
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-4">
-            {/* Email Stats */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                <div className="flex items-center gap-2 mb-3">
-                    <Mail className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Email</span>
-                    <span className="text-sm text-muted-foreground ml-auto">{stats.email?.total ?? 0} total</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <div className="text-lg font-bold text-gray-600">{stats.email?.rates?.delivery ?? 0}%</div>
-                        <div className="text-xs text-muted-foreground">Delivered</div>
-                    </div>
-                    <div>
-                        <div className="text-lg font-bold text-green-600">{stats.email?.rates?.open ?? 0}%</div>
-                        <div className="text-xs text-muted-foreground">Opened</div>
-                    </div>
-                    <div>
-                        <div className="text-lg font-bold text-purple-600">{stats.email?.rates?.click ?? 0}%</div>
-                        <div className="text-xs text-muted-foreground">Clicked</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* SMS Stats */}
-            <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                <div className="flex items-center gap-2 mb-3">
-                    <Phone className="h-4 w-4 text-green-600" />
-                    <span className="font-medium">SMS</span>
-                    <span className="text-sm text-muted-foreground ml-auto">{stats.sms?.total ?? 0} total</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <div className="text-lg font-bold text-green-600">{stats.sms?.rates?.delivery ?? 0}%</div>
-                        <div className="text-xs text-muted-foreground">Delivered</div>
-                    </div>
-                    <div>
-                        <div className="text-lg font-bold">{stats.sms?.outbound ?? 0}</div>
-                        <div className="text-xs text-muted-foreground">Outbound</div>
-                    </div>
-                    <div>
-                        <div className="text-lg font-bold">{stats.sms?.inbound ?? 0}</div>
-                        <div className="text-xs text-muted-foreground">Inbound</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function PipelineVelocityCard({ velocity, isLoading }: { velocity?: PipelineVelocity; isLoading?: boolean }) {
-    if (isLoading) {
-        return (
-            <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 flex-1" />
-                        <Skeleton className="h-4 w-16" />
-                    </div>
-                ))}
-            </div>
-        );
-    }
-
-    if (!velocity?.velocity || velocity.velocity.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No pipeline data available
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-3">
-            {velocity.velocity.map((stage) => (
-                <div key={stage.stageId} className="flex items-center gap-3">
-                    <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: stage.stageColor }}
-                    />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium truncate">{stage.stageName}</span>
-                            <div className="flex items-center gap-2">
-                                {stage.isBottleneck && (
-                                    <span className="text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded">
-                                        Bottleneck
-                                    </span>
-                                )}
-                                <span className="text-sm text-muted-foreground">
-                                    {stage.dealCount} deal{stage.dealCount !== 1 ? 's' : ''}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Avg {stage.avgAgeDays} days</span>
-                            <span>${stage.totalValue.toLocaleString()}</span>
-                        </div>
-                    </div>
-                </div>
-            ))}
-            {velocity.summary && (
-                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 text-center">
-                    <div>
-                        <div className="text-lg font-bold text-green-600">{velocity.summary.avgDaysToWin}</div>
-                        <div className="text-xs text-muted-foreground">Avg days to win</div>
-                    </div>
-                    <div>
-                        <div className="text-lg font-bold">{velocity.summary.winRate}%</div>
-                        <div className="text-xs text-muted-foreground">Win rate</div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function RecentActivityList({ activities, isLoading }: { activities: DashboardAnalytics['recentActivity']; isLoading?: boolean }) {
-    if (isLoading) {
-        return (
-            <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <div className="flex-1">
-                            <Skeleton className="h-4 w-full mb-1" />
-                            <Skeleton className="h-3 w-20" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    }
-
-    if (!activities || activities.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No recent activity
-            </div>
-        );
-    }
-
-    const getActivityIcon = (type: string) => {
-        switch (type) {
-            case 'email': return '📧';
-            case 'call': return '📞';
-            case 'note': return '📝';
-            case 'meeting': return '📅';
-            case 'deal': return '💰';
-            default: return '📌';
-        }
-    };
-
-    const formatTime = (dateString: string) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString();
-    };
-
-    return (
-        <div className="space-y-3">
-            {activities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                    <div className="text-lg">{getActivityIcon(activity.type)}</div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{activity.description}</p>
-                        <p className="text-xs text-muted-foreground">{formatTime(activity.createdAt)}</p>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// Period options for date range selector
-type PeriodOption = '7days' | '30days' | '90days' | '6months' | '12months';
-const periodLabels: Record<PeriodOption, string> = {
-    '7days': 'Last 7 days',
-    '30days': 'Last 30 days',
-    '90days': 'Last 90 days',
-    '6months': 'Last 6 months',
-    '12months': 'Last 12 months',
-};
-
-// Revenue Trends Chart Component
-function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoading?: boolean }) {
-    if (isLoading) {
-        return (
-            <div className="h-[200px] flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-            </div>
-        );
-    }
-
-    if (!data?.data || data.data.length === 0) {
-        return (
-            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                No revenue data available
-            </div>
-        );
-    }
-
-    // Determine if we're showing days or months based on period
-    const isDayView = data.period === '30days';
-    const isMonthView = data.period === '6months' || data.period === '12months';
-
-    // Format date for display
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        if (isDayView) {
-            // For day view: "Jan 26"
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        } else if (isMonthView) {
-            // For month view: "Jan 2026"
-            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        }
-        // Fallback: "Jan 26, 2026"
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    // Format date for tooltip (more detailed)
-    const formatTooltipDate = (dateString: string) => {
-        const date = new Date(dateString);
-        if (isDayView) {
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-        } else {
-            return date.toLocaleDateString('en-US', { 
-                month: 'long', 
-                year: 'numeric' 
-            });
-        }
-    };
-
-    // Prepare chart data with formatted labels
-    const chartData = data.data.map(item => ({
-        ...item,
-        formattedPeriod: formatDate(item.period)
-    }));
-
-    const chartConfig = {
-        revenue: {
-            label: 'Revenue',
-            color: 'hsl(142, 76%, 36%)',
-        },
-    };
-
-    return (
-        <ChartContainer config={chartConfig} className="h-[200px] w-full">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0} />
-                    </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                    dataKey="formattedPeriod" 
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    angle={isDayView ? -45 : 0}
-                    textAnchor={isDayView ? 'end' : 'middle'}
-                    height={isDayView ? 60 : 30}
-                />
-                <YAxis 
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                />
-                <ChartTooltip 
-                    content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                            const dataPoint = payload[0].payload as typeof chartData[0];
-                            return (
-                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                    <div className="grid gap-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-[0.70rem] text-muted-foreground">
-                                                {formatTooltipDate(dataPoint.period)}
-                                            </span>
-                                            <span className="font-bold text-foreground">
-                                                ${Number(payload[0].value).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        }
-                        return null;
-                    }}
-                />
-                <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="hsl(142, 76%, 36%)"
-                    strokeWidth={2}
-                    fill="url(#revenueGradient)"
-                />
-            </AreaChart>
-        </ChartContainer>
-    );
-}
-
 export function DashboardPage() {
     const { currentUser } = useAuthState();
     const navigate = useNavigate();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
+    const { organizationId } = useOrganization();
     
     // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('dashboard');
     
-    // Date range state
-    const [period, setPeriod] = useState<PeriodOption>('30days');
+    // Period selector hook
+    const { period, setPeriod } = usePeriodSelector('30days');
 
-    // Fetch analytics data
-    const { data: analytics, isLoading, error } = useQuery({
-        queryKey: ['dashboardAnalytics'],
-        queryFn: () => getDashboardAnalytics(),
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        refetchOnWindowFocus: false,
-    });
+    // Fetch all dashboard data with custom hook
+    const {
+        analytics,
+        conversions: conversionData,
+        communications: commStats,
+        velocity: velocityData,
+        revenue: revenueData,
+        isLoadingAnalytics: isLoading,
+        isLoadingConversions: conversionLoading,
+        isLoadingCommunications: commLoading,
+        isLoadingVelocity: velocityLoading,
+        isLoadingRevenue: revenueLoading,
+    } = useDashboardData({ organizationId, period });
 
-    // Fetch conversion rates with dynamic period
-    const { data: conversionData, isLoading: conversionLoading } = useQuery({
-        queryKey: ['conversionRates', period],
-        queryFn: () => getConversionRates(period as any),
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false,
-    });
-
-    // Fetch communication stats with dynamic period
-    const { data: commStats, isLoading: commLoading } = useQuery({
-        queryKey: ['communicationStats', period],
-        queryFn: () => getCommunicationStats(period as any),
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false,
-    });
-
-    // Fetch pipeline velocity
-    const { data: velocityData, isLoading: velocityLoading } = useQuery({
-        queryKey: ['pipelineVelocity'],
-        queryFn: () => getPipelineVelocity(),
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false,
-    });
-
-    // Fetch revenue trends with dynamic period
-    const { data: revenueData, isLoading: revenueLoading } = useQuery({
-        queryKey: ['revenueTrends', period],
-        queryFn: () => getRevenueTrends(period as any),
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false,
-    });
 
     // Set header content following workspace pattern
     useEffect(() => {
@@ -787,9 +314,9 @@ export function DashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Pipeline Funnel & Recent Activity */}
+                    {/* Pipeline Funnel & Pipeline Velocity */}
                     <div className="grid gap-6 md:grid-cols-2 mb-8">
-                        {/* Pipeline Funnel */}
+                        {/* Pipeline Overview */}
                         <Card className="bg-muted/10">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
@@ -815,32 +342,62 @@ export function DashboardPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Recent Activity */}
+                        {/* Pipeline Velocity */}
                         <Card className="bg-muted/10">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Activity className="h-4 w-4 text-blue-600" />
-                                        Recent Activity
-                                    </CardTitle>
+                                    <div>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <BarChart3 className="h-4 w-4 text-blue-600" />
+                                            Pipeline Velocity
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {velocityData?.pipeline?.name ?? 'Default Pipeline'} - Deal flow analysis
+                                        </CardDescription>
+                                    </div>
                                     <Button
                                         size="sm"
-                                        onClick={() => navigate('/contacts')}
+                                        onClick={() => navigate('/pipelines')}
                                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
                                     >
                                         View Details <ArrowRight className="h-3 w-3 ml-1" />
                                     </Button>
                                 </div>
-                                <CardDescription>Latest updates across your CRM</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <RecentActivityList
-                                    activities={analytics?.recentActivity ?? []}
-                                    isLoading={isLoading}
+                                <PipelineVelocityCard 
+                                    velocity={velocityData} 
+                                    isLoading={velocityLoading} 
                                 />
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* Recent Activity */}
+                    <Card className="bg-muted/10 mb-8">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Activity className="h-4 w-4 text-blue-600" />
+                                    Recent Activity
+                                </CardTitle>
+                                <Button
+                                    size="sm"
+                                    onClick={() => navigate('/contacts')}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
+                                >
+                                    View Details <ArrowRight className="h-3 w-3 ml-1" />
+                                </Button>
+                            </div>
+                            <CardDescription>Latest updates across your CRM</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <RecentActivityList
+                                activities={analytics?.recentActivity ?? []}
+                                isLoading={isLoading}
+                            />
+                        </CardContent>
+                    </Card>
 
                     {/* Conversion Rates & Communication Stats */}
                     <div className="grid gap-6 md:grid-cols-2 mb-8">
@@ -885,18 +442,26 @@ export function DashboardPage() {
                                         color="text-purple-600"
                                         isLoading={conversionLoading}
                                     />
-                                    <div className="p-4 bg-muted/30 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <DollarSign className="h-4 w-4 text-green-600" />
-                                            <span className="text-sm font-medium text-muted-foreground">Won Value</span>
-                                        </div>
-                                        <div className="text-2xl font-bold">
-                                            ${(conversionData?.conversions?.dealWinRate?.wonValue ?? 0).toLocaleString()}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Lost: ${(conversionData?.conversions?.dealWinRate?.lostValue ?? 0).toLocaleString()}
-                                        </div>
-                                    </div>
+                                    <Card>
+                                        <CardContent className="pt-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="p-2 rounded-full bg-muted text-green-600">
+                                                    <DollarSign className="h-5 w-5" />
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-2xl font-bold">
+                                                        ${(conversionData?.conversions?.dealWinRate?.wonValue ?? 0).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2">
+                                                <p className="text-sm font-medium">Won Value</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Lost: ${(conversionData?.conversions?.dealWinRate?.lostValue ?? 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </CardContent>
                         </Card>
@@ -921,36 +486,6 @@ export function DashboardPage() {
                             </CardContent>
                         </Card>
                     </div>
-
-                    {/* Pipeline Velocity */}
-                    <Card className="bg-muted/10 mb-8">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <BarChart3 className="h-4 w-4 text-blue-600" />
-                                        Pipeline Velocity
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {velocityData?.pipeline?.name ?? 'Default Pipeline'} - Deal flow analysis
-                                    </CardDescription>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    onClick={() => navigate('/pipelines')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
-                                >
-                                    View Details <ArrowRight className="h-3 w-3 ml-1" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <PipelineVelocityCard 
-                                velocity={velocityData} 
-                                isLoading={velocityLoading} 
-                            />
-                        </CardContent>
-                    </Card>
 
                     {/* Quick Actions */}
                     <div className="mb-8">

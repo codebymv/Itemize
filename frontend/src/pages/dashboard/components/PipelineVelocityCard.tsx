@@ -2,7 +2,7 @@ import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PipelineVelocity } from '@/services/analyticsApi';
 
-function PipelineVelocityCard({ velocity, isLoading }: { velocity?: PipelineVelocity; isLoading?: boolean }) {
+export function PipelineVelocityCard({ velocity, isLoading }: { velocity?: PipelineVelocity; isLoading?: boolean }) {
     if (isLoading) {
         return (
             <div className="space-y-3">
@@ -69,5 +69,3 @@ function PipelineVelocityCard({ velocity, isLoading }: { velocity?: PipelineVelo
         </div>
     );
 }
-
-export default PipelineVelocityCard;

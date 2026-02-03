@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Mail, Phone } from 'lucide-react';
 import type { CommunicationStats } from '@/services/analyticsApi';
 
-function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationStats; isLoading?: boolean }) {
+export function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationStats; isLoading?: boolean }) {
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -71,5 +71,3 @@ function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationSta
         </div>
     );
 }
-
-export default CommunicationStatsCard;

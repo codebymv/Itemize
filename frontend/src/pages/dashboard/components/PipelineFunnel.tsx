@@ -3,7 +3,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardAnalytics } from '@/services/analyticsApi';
 
-function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalytics['deals']['funnel']; isLoading?: boolean }) {
+export function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalytics['deals']['funnel']; isLoading?: boolean }) {
     if (isLoading) {
         return (
             <div className="space-y-3">
@@ -57,5 +57,3 @@ function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalytics['dea
         </div>
     );
 }
-
-export default PipelineFunnel;

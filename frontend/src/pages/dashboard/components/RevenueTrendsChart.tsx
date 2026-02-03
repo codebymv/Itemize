@@ -7,7 +7,7 @@ import {
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import type { RevenueTrends } from '@/services/analyticsApi';
 
-function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoading?: boolean }) {
+export function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoading?: boolean }) {
     if (isLoading) {
         return (
             <div className="h-[200px] flex items-center justify-center">
@@ -16,17 +16,46 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
         );
     }
 
-    if (!data?.data || data.data.length === 0) {
-        return (
-            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                No revenue data available
-            </div>
-        );
-    }
+    // Create empty data with zero values if no data exists
+    const hasData = data?.data && data.data.length > 0;
+    const period = data?.period || '30days';
+    
+    // Generate placeholder data points if no data exists
+    const generateEmptyData = () => {
+        const now = new Date();
+        const dataPoints = [];
+        
+        if (period === '30days') {
+            // Last 30 days - show weekly points
+            for (let i = 3; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - (i * 7));
+                dataPoints.push({
+                    period: date.toISOString(),
+                    revenue: 0
+                });
+            }
+        } else {
+            // Last 6 or 12 months - show monthly points
+            const months = period === '6months' ? 6 : 12;
+            for (let i = months - 1; i >= 0; i--) {
+                const date = new Date(now);
+                date.setMonth(date.getMonth() - i);
+                dataPoints.push({
+                    period: date.toISOString(),
+                    revenue: 0
+                });
+            }
+        }
+        
+        return dataPoints;
+    };
+
+    const rawData = hasData ? data.data : generateEmptyData();
 
     // Determine if we're showing days or months based on period
-    const isDayView = data.period === '30days';
-    const isMonthView = data.period === '6months' || data.period === '12months';
+    const isDayView = period === '30days';
+    const isMonthView = period === '6months' || period === '12months';
 
     // Format date for display
     const formatDate = (dateString: string) => {
@@ -60,7 +89,7 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
     };
 
     // Prepare chart data with formatted labels
-    const chartData = data.data.map(item => ({
+    const chartData = rawData.map(item => ({
         ...item,
         formattedPeriod: formatDate(item.period)
     }));
@@ -132,5 +161,3 @@ function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoadi
         </ChartContainer>
     );
 }
-
-export default RevenueTrendsChart;

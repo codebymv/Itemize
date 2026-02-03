@@ -2,7 +2,7 @@ import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardAnalytics } from '@/services/analyticsApi';
 
-function RecentActivityList({ activities, isLoading }: { activities: DashboardAnalytics['recentActivity']; isLoading?: boolean }) {
+export function RecentActivityList({ activities, isLoading }: { activities: DashboardAnalytics['recentActivity']; isLoading?: boolean }) {
     if (isLoading) {
         return (
             <div className="space-y-3">
@@ -66,5 +66,3 @@ function RecentActivityList({ activities, isLoading }: { activities: DashboardAn
         </div>
     );
 }
-
-export default RecentActivityList;
