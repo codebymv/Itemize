@@ -6,3 +6,4 @@ export { DeleteConfirmDialog } from './components/DeleteConfirmDialog';
 
 export { usePaymentSettings } from './hooks/usePaymentSettings';
 export { useBusinessManagement } from './hooks/useBusinessManagement';
+export { usePaymentsTab } from './hooks/usePaymentsTab';

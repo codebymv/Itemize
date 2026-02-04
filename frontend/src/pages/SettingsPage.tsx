@@ -41,16 +41,14 @@ import {
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Refactored hooks and components
-import {
-  usePaymentSettings,
-  useBusinessManagement
-} from './settings';
+import { usePaymentsTab } from './settings/hooks/usePaymentsTab';
 import {
   PaymentSettingsForm,
   BusinessProfileCard,
   BusinessFormDialog,
   DeleteConfirmDialog
 } from './settings';
+import { PaymentsTabLoadingSkeleton, PaymentsTabErrorState } from './settings/components/PaymentsTabLoadingStates';
 
 // Settings navigation items
 const settingsNav = [
@@ -268,79 +266,72 @@ function PreferencesSettings() {
 }
 
 function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.ReactNode) => void }) {
-  const { organizationId } = useOrganization();
-
   const {
     loading,
+    initialLoad,
     saving,
-    settings,
-    taxRateInput,
-    handleSaveSettings,
-    updateField,
-    setTaxRateInput,
-  } = usePaymentSettings();
-
-  const {
-    businesses,
     savingBusiness,
     uploadingLogo,
+    settings,
+    businesses,
+    taxRateInput,
     businessDialogOpen,
     editingBusiness,
     businessFormData,
     pendingLogoFile,
-    fetchData,
+    deleteDialogOpen,
+    businessToDelete,
+    refetchData,
+    handleSaveSettings,
+    updateField,
+    setTaxRateInput,
     openBusinessDialog,
     closeBusinessDialog,
     handleSaveBusiness,
     handleDeleteBusiness,
+    handleDeleteClick,
     handleBusinessLogoUpload,
+    handleRemoveLogo,
     setBusinessDialogOpen,
     setBusinessFormData,
     setPendingLogoFile,
-  } = useBusinessManagement();
+    setDeleteDialogOpen,
+  } = usePaymentsTab();
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [businessToDelete, setBusinessToDelete] = useState<any>(null);
-
+  // Set save button in header
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleDeleteClick = (business: any) => {
-    setBusinessToDelete(business);
-    setDeleteDialogOpen(true);
-  };
+    if (setSaveButton) {
+      setSaveButton(
+        <Button
+          onClick={handleSaveSettings}
+          disabled={saving || loading}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      );
+    }
+  }, [handleSaveSettings, saving, loading, setSaveButton]);
 
   const handleFormChange = (field: string, value: string) => {
-    setBusinessFormData((prev: any) => ({ ...prev, [field]: value }));
+    setBusinessFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleRemoveLogo = () => {
-    if (businessFormData?.logo_url?.startsWith('blob:')) {
-      URL.revokeObjectURL(businessFormData.logo_url);
-    }
-    setPendingLogoFile(null);
-    setBusinessFormData((prev: any) => ({ ...prev, logo_url: '' }));
-    const inputRef = (document.querySelector('input[type="file"]') as HTMLInputElement);
-    if (inputRef) {
-      inputRef.value = '';
-    }
-  };
+  // Show skeleton on initial load or when explicitly loading
+  if (initialLoad || loading) {
+    return <PaymentsTabLoadingSkeleton />;
+  }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium">Payments</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure invoicing and payment settings
-          </p>
-        </div>
-        <Separator />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
-      </div>
-    );
+  // Show error state only if we have tried loading but have no settings
+  if (!settings && !initialLoad) {
+    return <PaymentsTabErrorState onRetry={refetchData} />;
   }
 
   return (
@@ -353,15 +344,17 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
       </div>
       <Separator />
 
-      <PaymentSettingsForm
-        settings={settings!}
-        taxRateInput={taxRateInput}
-        updateField={updateField!}
-        setTaxRateInput={setTaxRateInput!}
-      />
+      {settings && (
+        <PaymentSettingsForm
+          settings={settings}
+          taxRateInput={taxRateInput}
+          updateField={updateField}
+          setTaxRateInput={setTaxRateInput}
+        />
+      )}
 
       <BusinessProfileCard
-        businesses={businesses!}
+        businesses={businesses}
         loading={loading}
         onAddBusiness={openBusinessDialog}
         onEditBusiness={openBusinessDialog}
@@ -369,10 +362,10 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
       />
 
       <BusinessFormDialog
-        open={businessDialogOpen!}
-        onOpenChange={setBusinessDialogOpen!}
+        open={businessDialogOpen}
+        onOpenChange={setBusinessDialogOpen}
         editingBusiness={editingBusiness}
-        formData={businessFormData!}
+        formData={businessFormData}
         saving={savingBusiness}
         uploadingLogo={uploadingLogo}
         pendingLogoFile={pendingLogoFile}

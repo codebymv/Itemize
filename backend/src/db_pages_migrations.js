@@ -14,22 +14,22 @@ async function createPagesTable(pool) {
             CREATE TABLE IF NOT EXISTS pages (
                 id SERIAL PRIMARY KEY,
                 organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-                
+
                 -- Page info
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
                 slug VARCHAR(255) NOT NULL,
-                
+
                 -- Status
                 status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
-                
+
                 -- SEO Settings
                 seo_title VARCHAR(255),
                 seo_description VARCHAR(500),
                 seo_keywords TEXT,
                 og_image VARCHAR(500),
                 favicon_url VARCHAR(500),
-                
+
                 -- Theme settings
                 theme JSONB DEFAULT '{
                     "primaryColor": "#3B82F6",
@@ -41,12 +41,12 @@ async function createPagesTable(pool) {
                     "borderRadius": 8,
                     "spacing": "normal"
                 }'::jsonb,
-                
+
                 -- Custom code
                 custom_css TEXT,
                 custom_js TEXT,
                 custom_head TEXT,
-                
+
                 -- Settings
                 settings JSONB DEFAULT '{
                     "showNavbar": false,
@@ -55,17 +55,20 @@ async function createPagesTable(pool) {
                     "password": null,
                     "expiresAt": null
                 }'::jsonb,
-                
+
+                -- Versioning
+                current_version_id INTEGER REFERENCES page_versions(id) ON DELETE SET NULL,
+
                 -- Stats (cached for performance)
                 view_count INTEGER DEFAULT 0,
                 unique_visitors INTEGER DEFAULT 0,
-                
+
                 -- Timestamps
                 published_at TIMESTAMP WITH TIME ZONE,
                 created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                
+
                 UNIQUE(organization_id, slug)
             )
         `);
@@ -83,8 +86,40 @@ async function createPagesTable(pool) {
         await client.query(`
             CREATE INDEX IF NOT EXISTS idx_pages_org_slug ON pages(organization_id, slug)
         `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_pages_version ON pages(current_version_id) WHERE current_version_id IS NOT NULL
+        `);
 
         console.log('✅ pages table created/verified');
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Add current_version_id column to existing pages table (if running migration on existing DB)
+ */
+async function addVersionIdToPages(pool) {
+    const client = await pool.connect();
+    try {
+        // Check if column exists
+        const columnCheck = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'pages' AND column_name = 'current_version_id'
+        `);
+
+        if (columnCheck.rows.length === 0) {
+            await client.query(`
+                ALTER TABLE pages ADD COLUMN current_version_id INTEGER REFERENCES page_versions(id) ON DELETE SET NULL
+            `);
+            await client.query(`
+                CREATE INDEX idx_pages_version ON pages(current_version_id) WHERE current_version_id IS NOT NULL
+            `);
+            console.log('✅ Added current_version_id to pages table');
+        } else {
+            console.log('✅ current_version_id column already exists');
+        }
     } finally {
         client.release();
     }
@@ -237,6 +272,55 @@ async function createPageAnalyticsTable(pool) {
 }
 
 /**
+ * Create page_versions table
+ * Stores version history for staging and rollback
+ */
+async function createPageVersionsTable(pool) {
+    const client = await pool.connect();
+    try {
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS page_versions (
+                id SERIAL PRIMARY KEY,
+                page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+
+                -- Version number (incrementing)
+                version_number INTEGER NOT NULL,
+
+                -- Page content snapshot
+                content JSONB NOT NULL,
+
+                -- Version metadata
+                description TEXT,
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+
+                -- Publishing info
+                published_at TIMESTAMP WITH TIME ZONE,
+                is_current BOOLEAN DEFAULT FALSE,
+
+                -- Timestamps
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+                UNIQUE(page_id, version_number)
+            )
+        `);
+
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_page_versions_page ON page_versions(page_id)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_page_versions_version ON page_versions(page_id, version_number)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_page_versions_created ON page_versions(created_at)
+        `);
+
+        console.log('✅ page_versions table created/verified');
+    } finally {
+        client.release();
+    }
+}
+
+/**
  * Create page_templates table
  * Stores reusable page templates
  */
@@ -293,12 +377,16 @@ async function createPageTemplatesTable(pool) {
  */
 async function runAllPagesMigrations(pool) {
     console.log('Running landing page migrations...');
-    
+
     await createPagesTable(pool);
     await createPageSectionsTable(pool);
     await createPageAnalyticsTable(pool);
     await createPageTemplatesTable(pool);
-    
+    await createPageVersionsTable(pool);
+
+    // Add columns to existing tables
+    await addVersionIdToPages(pool);
+
     console.log('✅ All landing page migrations completed');
 }
 
@@ -307,5 +395,7 @@ module.exports = {
     createPagesTable,
     createPageSectionsTable,
     createPageAnalyticsTable,
-    createPageTemplatesTable
+    createPageTemplatesTable,
+    createPageVersionsTable,
+    addVersionIdToPages
 };

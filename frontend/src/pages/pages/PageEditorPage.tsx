@@ -30,6 +30,12 @@ import {
     Copy,
     ChevronUp,
     ChevronDown,
+    Monitor,
+    Smartphone,
+    Tablet,
+    Play,
+    Pause,
+    History as HistoryIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,6 +93,9 @@ import {
 } from '@/services/pagesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PagePreviewDialog } from '@/components/PagePreviewDialog';
+import { PageVersionHistory } from '@/components/PageVersionHistory';
+import { formatStatus, formatSectionType, titleCase } from '@/utils/textUtils';
 
 // Icon mapping for section types
 const SECTION_ICONS: Record<SectionType, React.ReactNode> = {
@@ -142,10 +151,13 @@ export function PageEditorPage() {
     const [editedSeoTitle, setEditedSeoTitle] = useState('');
     const [editedSeoDescription, setEditedSeoDescription] = useState('');
 
-    // UI states
+// UI states
     const [showAddSection, setShowAddSection] = useState(false);
     const [selectedSection, setSelectedSection] = useState<PageSection | null>(null);
     const [activeTab, setActiveTab] = useState('sections');
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewVersionId, setPreviewVersionId] = useState<number | undefined>();
+    const [showVersionHistory, setShowVersionHistory] = useState(false);
 
     useEffect(() => {
         if (!organizationId) {
@@ -192,17 +204,17 @@ export function PageEditorPage() {
                     >
                         {(loading ? 'Loading...' : editedName || 'Page Editor').toUpperCase()}
                     </h1>
-                    {page && (
-                        <Badge className={page.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                            {page.status}
+{page && (
+                        <Badge className={page.status === 'published' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}>
+                            {formatStatus(page.status)}
                         </Badge>
                     )}
                 </div>
                 {/* Desktop-only controls */}
                 <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
-                    {page?.status === 'published' && (
-                        <Button variant="outline" size="sm" onClick={() => window.open(`/p/${page.slug}`, '_blank')}>
-                            <ExternalLink className="h-4 w-4 mr-2" />
+{page?.status === 'published' && (
+                        <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+                            <Eye className="h-4 w-4 mr-2" />
                             Preview
                         </Button>
                     )}
@@ -355,9 +367,9 @@ export function PageEditorPage() {
     return (
         <>
             <MobileControlsBar>
-                {page?.status === 'published' && (
-                    <Button variant="outline" size="sm" onClick={() => window.open(`/p/${page.slug}`, '_blank')} className="flex-1">
-                        <ExternalLink className="h-4 w-4 mr-2" />
+{page?.status === 'published' && (
+                    <Button variant="outline" size="sm" onClick={() => setShowPreview(true)} className="flex-1">
+                        <Eye className="h-4 w-4 mr-2" />
                         Preview
                     </Button>
                 )}
@@ -415,8 +427,8 @@ export function PageEditorPage() {
                                                 <span className="font-medium truncate">
                                                     {section.name || SECTION_TEMPLATES[section.section_type]?.name || section.section_type}
                                                 </span>
-                                                <Badge variant="outline" className="text-xs">
-                                                    {section.section_type}
+<Badge variant="outline" className="text-xs">
+                                                    {formatSectionType(section.section_type)}
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -514,8 +526,8 @@ export function PageEditorPage() {
                             <div className="flex items-center justify-between pt-2">
                                 <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Status</Label>
                                 <div className="flex items-center gap-2">
-                                    <Badge className={page.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                                        {page.status}
+<Badge className={page.status === 'published' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}>
+                                        {formatStatus(page.status)}
                                     </Badge>
                                     <Button
                                         size="sm"
@@ -555,6 +567,22 @@ export function PageEditorPage() {
                         </CardContent>
                     </Card>
 
+<Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">Version History</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Button
+                                onClick={() => setShowVersionHistory(true)}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                <HistoryIcon className="h-4 w-4 mr-2" />
+                                Manage Versions
+                            </Button>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-lg">Stats</CardTitle>
@@ -575,7 +603,7 @@ export function PageEditorPage() {
                 </div>
             </div>
 
-            {/* Add Section Dialog */}
+{/* Add Section Dialog */}
             <Dialog open={showAddSection} onOpenChange={setShowAddSection}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
@@ -605,6 +633,35 @@ export function PageEditorPage() {
                     </ScrollArea>
                 </DialogContent>
             </Dialog>
+
+            {/* Page Preview Dialog */}
+            {page && (
+                <PagePreviewDialog
+                    open={showPreview}
+                    onOpenChange={() => {
+                        setShowPreview(false);
+                        setPreviewVersionId(undefined);
+                    }}
+                    pageSlug={page.slug}
+                    pageName={page.name}
+                    versionId={previewVersionId}
+                />
+            )}
+
+            {/* Page Version History */}
+            {page && (
+                <PageVersionHistory
+                    open={showVersionHistory}
+                    onOpenChange={setShowVersionHistory}
+                    pageId={page.id}
+                    pageName={page.name}
+                    onPreviewVersion={(versionId) => {
+                        setPreviewVersionId(versionId);
+                        setShowVersionHistory(false);
+                        setShowPreview(true);
+                    }}
+                />
+            )}
         </PageSurface>
         </PageContainer>
         </>

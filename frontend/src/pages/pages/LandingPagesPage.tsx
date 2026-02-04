@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil } from 'lucide-react';
+import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,6 +31,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getPages, updatePage, deletePage, duplicatePage, createPage } from '@/services/pagesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { formatStatus, titleCase } from '@/utils/textUtils';
 
 interface LandingPage {
     id: number;
@@ -175,11 +176,21 @@ export function LandingPagesPage() {
         }
     };
 
-    const handleDuplicate = async (id: number) => {
+const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
         try {
             const copy = await duplicatePage(id, organizationId);
-            setPages(prev => [copy, ...prev]);
+            setPages(prev => [{
+                id: copy.id,
+                name: copy.name,
+                slug: copy.slug,
+                description: copy.description,
+                status: copy.status,
+                views: copy.view_count || 0,
+                conversions: 0,
+                created_at: copy.created_at,
+                updated_at: copy.updated_at,
+            } as LandingPage, ...prev]);
             toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
         } catch (error) {
             toast({ title: 'Error', description: toastMessages.failedToDuplicate('page'), variant: 'destructive' });
@@ -206,12 +217,12 @@ export function LandingPagesPage() {
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'published': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'draft': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-            case 'archived': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-            default: return '';
+            case 'published': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200';
+            case 'draft': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-200';
+            case 'archived': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -344,7 +355,7 @@ export function LandingPagesPage() {
                                         {page.description && (
                                             <span className="text-sm text-muted-foreground truncate max-w-full">{page.description}</span>
                                         )}
-                                        <Badge className={`text-xs ${getStatusBadge(page.status)}`}>{page.status}</Badge>
+                                        <Badge className={`text-xs ${getStatusBadge(page.status)}`}>{formatStatus(page.status)}</Badge>
                                     </div>
                                     <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1">

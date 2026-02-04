@@ -468,6 +468,17 @@ setTimeout(async () => {
         app.use('/api/pages', pagesRoutes(pool, authenticateJWT, publicRateLimit));
         logger.info('Landing Pages routes initialized');
 
+        // Page Versions routes (staging, versioning, rollback)
+        const pageVersionsRoutes = require('./routes/pageVersions.routes');
+        const { requireOrganization } = require('./middleware/organization')(pool);
+        app.use('/api/pages', pageVersionsRoutes(pool, authenticateJWT, requireOrganization));
+        logger.info('Page Versions routes initialized');
+
+        // Preview routes (public page and version previews)
+        const previewRoutes = require('./routes/preview.routes');
+        app.use('/api/preview', previewRoutes(pool));
+        logger.info('Preview routes initialized');
+
         // Calendars routes (Appointments)
         const calendarsRoutes = require('./routes/calendars.routes');
         app.use('/api/calendars', calendarsRoutes(pool, authenticateJWT));
