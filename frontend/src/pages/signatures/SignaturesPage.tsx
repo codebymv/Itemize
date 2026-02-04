@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, XCircle, Download, Eye, FileSignature, CheckCircle, Clock, ChevronDown, MoreVertical, Trash2, Search } from 'lucide-react';
+import { Plus, Send, XCircle, Download, Eye, FileSignature, CheckCircle, Clock, ChevronDown, MoreVertical, Trash2, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import {
   listSignatureDocuments,
   getSignatureDocument,
   sendSignatureDocument,
+  remindSignatureDocument,
   cancelSignatureDocument,
   deleteSignatureDocument,
   downloadSignedDocument
@@ -185,6 +186,16 @@ export function SignaturesPage() {
       fetchDocuments();
     } catch (error) {
       toast({ title: 'Failed to send signature request', variant: 'destructive' });
+    }
+  };
+
+  const handleResend = async (id: number) => {
+    try {
+      await remindSignatureDocument(id);
+      toast({ title: 'Signature request resent' });
+      fetchDocuments();
+    } catch (error) {
+      toast({ title: 'Failed to resend signature request', variant: 'destructive' });
     }
   };
 
@@ -399,6 +410,11 @@ export function SignaturesPage() {
                                       <Send className="h-4 w-4 mr-2" />Send
                                     </DropdownMenuItem>
                                   )}
+                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
+                                    <DropdownMenuItem onClick={() => handleResend(doc.id)}>
+                                      <RefreshCw className="h-4 w-4 mr-2" />Resend
+                                    </DropdownMenuItem>
+                                  )}
                                   {doc.status === 'draft' && (
                                     <>
                                       <DropdownMenuSeparator />
@@ -512,6 +528,19 @@ export function SignaturesPage() {
                                     >
                                       <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                                       Send
+                                    </Button>
+                                  )}
+                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleResend(doc.id);
+                                      }}
+                                    >
+                                      <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                      Resend
                                     </Button>
                                   )}
                                   {doc.status !== 'completed' && doc.status !== 'cancelled' && doc.status !== 'draft' && (
