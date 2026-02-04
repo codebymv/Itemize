@@ -313,6 +313,51 @@ async function deleteDocumentFile(pool, organizationId, documentId) {
     });
 }
 
+async function deleteDocument(pool, organizationId, documentId) {
+    return withTransaction(pool, async (client) => {
+        const docResult = await client.query(
+            'SELECT id, status, file_url FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            [documentId, organizationId]
+        );
+        if (docResult.rows.length === 0) return null;
+        const doc = docResult.rows[0];
+
+        if (doc.status !== 'draft') {
+            throw new Error('Only draft documents can be deleted');
+        }
+
+        const fileUrl = doc.file_url;
+        if (fileUrl) {
+            try {
+                if (fileUrl.startsWith('/uploads/')) {
+                    const relativePath = fileUrl.replace('/uploads/', '');
+                    const fullPath = path.join(__dirname, '../uploads', relativePath);
+                    await fs.promises.unlink(fullPath).catch(() => null);
+                } else if (fileUrl.includes('.s3.') && s3Service) {
+                    const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
+                    const key = parsed.pathname.replace(/^\//, '');
+                    await s3Service.deleteFile(key).catch(() => null);
+                }
+            } catch (error) {
+                logger.warn('Failed to delete signature document file', { error: error.message });
+            }
+        }
+
+        await client.query('DELETE FROM signature_fields WHERE document_id = $1', [documentId]);
+        await client.query('DELETE FROM signature_recipients WHERE document_id = $1 AND organization_id = $2', [documentId, organizationId]);
+        await client.query('DELETE FROM signature_document_versions WHERE document_id = $1', [documentId]);
+        await client.query('DELETE FROM signature_audit_log WHERE document_id = $1', [documentId]);
+        await client.query('DELETE FROM signature_reminders WHERE document_id = $1', [documentId]);
+
+        const deleted = await client.query(
+            'DELETE FROM signature_documents WHERE id = $1 AND organization_id = $2 RETURNING *',
+            [documentId, organizationId]
+        );
+
+        return deleted.rows[0] || null;
+    });
+}
+
 async function replaceRecipients(pool, organizationId, documentId, recipients) {
     return withTransaction(pool, async (client) => {
         await client.query(
@@ -425,11 +470,11 @@ async function listDocuments(pool, organizationId, filters = {}, pagination = {}
     const offset = (page - 1) * limit;
 
     const values = [organizationId];
-    const conditions = ['organization_id = $1'];
+    const conditions = ['d.organization_id = $1'];
     let index = 2;
 
     if (filters.status) {
-        conditions.push(`status = $${index}`);
+        conditions.push(`d.status = $${index}`);
         values.push(filters.status);
         index += 1;
     }
@@ -438,7 +483,7 @@ async function listDocuments(pool, organizationId, filters = {}, pagination = {}
 
     const countResult = await withDbClient(pool, async (client) => {
         const result = await client.query(
-            `SELECT COUNT(*) FROM signature_documents ${whereClause}`,
+            `SELECT COUNT(*) FROM signature_documents d ${whereClause}`,
             values
         );
         return parseInt(result.rows[0].count, 10);
@@ -446,8 +491,15 @@ async function listDocuments(pool, organizationId, filters = {}, pagination = {}
 
     const items = await withDbClient(pool, async (client) => {
         const result = await client.query(
-            `SELECT * FROM signature_documents ${whereClause}
-             ORDER BY created_at DESC
+            `SELECT d.*, COALESCE(r.recipient_count, 0) AS recipient_count
+             FROM signature_documents d
+             LEFT JOIN (
+                 SELECT document_id, COUNT(*)::int AS recipient_count
+                 FROM signature_recipients
+                 GROUP BY document_id
+             ) r ON r.document_id = d.id
+             ${whereClause}
+             ORDER BY d.created_at DESC
              LIMIT $${index} OFFSET $${index + 1}`,
             [...values, limit, offset]
         );
@@ -1105,6 +1157,16 @@ async function updateTemplate(pool, organizationId, templateId, data) {
     });
 }
 
+async function deleteTemplate(pool, organizationId, templateId) {
+    return withDbClient(pool, async (client) => {
+        const result = await client.query(
+            'DELETE FROM signature_templates WHERE id = $1 AND organization_id = $2 RETURNING *',
+            [templateId, organizationId]
+        );
+        return result.rows[0] || null;
+    });
+}
+
 async function uploadTemplateFile(pool, organizationId, templateId, file) {
     return withTransaction(pool, async (client) => {
         const sha256 = await computeSha256FromFile(file);
@@ -1393,12 +1455,14 @@ module.exports = {
     declineSignature,
     createTemplate,
     updateTemplate,
+    deleteTemplate,
     uploadTemplateFile,
     replaceTemplateRoles,
     replaceTemplateFields,
     listTemplates,
     getTemplate,
     instantiateTemplate,
+    deleteDocument,
     generateToken,
     hashToken
 };

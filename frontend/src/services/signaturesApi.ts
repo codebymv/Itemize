@@ -23,6 +23,7 @@ export interface SignatureDocument {
   description?: string;
   message?: string;
   status: SignatureStatus;
+  recipient_count?: number;
   routing_mode?: 'parallel' | 'sequential';
   template_id?: number;
   expiration_days?: number;
@@ -135,6 +136,11 @@ export const sendSignatureDocument = async (id: number) => {
 
 export const cancelSignatureDocument = async (id: number) => {
   const response = await api.post(`/api/signatures/documents/${id}/cancel`);
+  return unwrapResponse<SignatureDocument>(response.data);
+};
+
+export const deleteSignatureDocument = async (id: number) => {
+  const response = await api.delete(`/api/signatures/documents/${id}`);
   return unwrapResponse<SignatureDocument>(response.data);
 };
 
@@ -264,4 +270,9 @@ export const getSignatureTemplate = async (id: number) => {
 export const instantiateSignatureTemplate = async (id: number, payload: any) => {
   const response = await api.post(`/api/signatures/templates/${id}/instantiate`, payload);
   return unwrapResponse<SignatureDocument>(response.data);
+};
+
+export const deleteSignatureTemplate = async (id: number) => {
+  const response = await api.delete(`/api/signatures/templates/${id}`);
+  return unwrapResponse<SignatureTemplate>(response.data);
 };

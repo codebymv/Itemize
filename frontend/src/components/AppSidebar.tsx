@@ -127,15 +127,15 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Signatures',
         icon: FileSignature,
-        path: '/signatures',
+        path: '/documents',
         items: [
             {
                 title: 'Documents',
-                path: '/signatures',
+                path: '/documents',
             },
             {
                 title: 'Templates',
-                path: '/signatures/templates',
+                path: '/templates',
             },
         ],
     },

@@ -333,7 +333,7 @@ export function LandingPagesPage() {
                                                         <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(page.id)} className="text-destructive">
+                                                    <DropdownMenuItem onClick={() => handleDelete(page.id)} className="text-destructive dark:text-red-400 focus:text-destructive focus:dark:text-red-300">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>

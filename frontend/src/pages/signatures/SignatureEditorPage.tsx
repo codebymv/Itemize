@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, UploadCloud, Save, Send, FileSignature, X } from 'lucide-react';
+import { ArrowLeft, Plus, UploadCloud, Save, Send, FileSignature, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,6 +44,7 @@ export default function SignatureEditorPage() {
   const [loading, setLoading] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const roleChoices = useMemo(() => ['Signer', 'Witness', 'Approver', 'Observer'], []);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const roleOptions = useMemo(
     () => recipients.map((recipient) => recipient.role_name).filter((role): role is string => Boolean(role)),
     [recipients]
@@ -55,6 +56,9 @@ export default function SignatureEditorPage() {
     setHeaderContent(
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2 min-w-0">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/documents')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <span className="text-xl font-semibold italic uppercase tracking-wide truncate">
             {isEditing ? 'Edit Signature Document' : 'New Signature Document'}
@@ -177,7 +181,7 @@ export default function SignatureEditorPage() {
       await sendSignatureDocument(document.id);
       toast({ title: 'Signature request sent' });
       setShowSendModal(false);
-      navigate('/signatures');
+      navigate('/documents');
     } catch (error) {
       toast({ title: 'Failed to send signature request', variant: 'destructive' });
     } finally {
@@ -240,24 +244,14 @@ export default function SignatureEditorPage() {
                 <Label htmlFor="message">Message</Label>
                 <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
               </div>
-              <div>
-                <Label>Routing Mode</Label>
-                <Select value={routingMode} onValueChange={(value) => setRoutingMode(value as 'parallel' | 'sequential')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Routing mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="parallel">Parallel</SelectItem>
-                    <SelectItem value="sequential">Sequential</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <Separator />
               <div className="space-y-2">
                 <Label>Upload PDF</Label>
-                <Input
+                <input
+                  ref={fileInputRef}
                   type="file"
                   accept="application/pdf"
+                  className="hidden"
                   onChange={(e) => {
                     const selected = e.target.files?.[0] || null;
                     setFile(selected);
@@ -266,6 +260,18 @@ export default function SignatureEditorPage() {
                     }
                   }}
                 />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Choose File
+                  </Button>
+                  <span className="text-sm text-muted-foreground truncate">
+                    {file?.name || document?.file_name || 'No file chosen'}
+                  </span>
+                </div>
                 {(file || document?.file_name) && (
                   <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                     <span className="truncate">
@@ -376,6 +382,8 @@ export default function SignatureEditorPage() {
           onMessageChange={setMessage}
           hasFile={Boolean(file || document?.file_url)}
           expiresAt={document?.expires_at || null}
+          routingMode={routingMode}
+          onRoutingModeChange={setRoutingMode}
         />
       </PageSurface>
     </PageContainer>

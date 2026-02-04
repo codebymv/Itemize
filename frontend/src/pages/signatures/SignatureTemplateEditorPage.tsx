@@ -61,7 +61,7 @@ export default function SignatureTemplateEditorPage() {
       })
       .catch(() => {
         toast({ title: 'Failed to load template', variant: 'destructive' });
-        navigate('/signatures/templates');
+        navigate('/templates');
       })
       .finally(() => setLoading(false));
   }, [id, toast, navigate]);

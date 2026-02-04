@@ -135,6 +135,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         return sendSuccess(res, updated);
     }));
 
+    router.delete('/signatures/templates/:id', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const templateId = parseInt(req.params.id, 10);
+        if (!templateId) {
+            return sendBadRequest(res, 'Invalid template id');
+        }
+        const deleted = await signatureService.deleteTemplate(pool, req.organizationId, templateId);
+        if (!deleted) {
+            return sendNotFound(res, 'Template not found');
+        }
+        return sendSuccess(res, deleted);
+    }));
+
     router.post('/signatures/templates/upload', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
         if (!upload) {
             return sendError(res, 'File upload not available. Please install multer.', 503, 'SERVICE_UNAVAILABLE');
@@ -275,6 +287,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const updated = await signatureService.removeDocumentFile(pool, req.organizationId, documentId);
         if (!updated) return sendNotFound(res, 'Document not found');
         return sendSuccess(res, updated);
+    }));
+
+    router.delete('/signatures/documents/:id', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const documentId = parseInt(req.params.id, 10);
+        if (!documentId) {
+            return sendBadRequest(res, 'Invalid document id');
+        }
+        try {
+            const deleted = await signatureService.deleteDocument(pool, req.organizationId, documentId);
+            if (!deleted) return sendNotFound(res, 'Document not found');
+            return sendSuccess(res, deleted);
+        } catch (error) {
+            return sendBadRequest(res, error.message || 'Unable to delete document');
+        }
     }));
 
     router.get('/signatures/documents', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {

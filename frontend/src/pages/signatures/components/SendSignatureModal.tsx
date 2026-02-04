@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Send, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { SignatureRecipient } from '@/services/signaturesApi';
 import { SignatureEmailPreview } from './SignatureEmailPreview';
@@ -30,6 +31,8 @@ interface SendSignatureModalProps {
   onMessageChange: (value: string) => void;
   hasFile: boolean;
   expiresAt?: string | null;
+  routingMode: 'parallel' | 'sequential';
+  onRoutingModeChange: (value: 'parallel' | 'sequential') => void;
 }
 
 export function SendSignatureModal({
@@ -44,7 +47,9 @@ export function SendSignatureModal({
   message,
   onMessageChange,
   hasFile,
-  expiresAt
+  expiresAt,
+  routingMode,
+  onRoutingModeChange
 }: SendSignatureModalProps) {
   const [showPreview, setShowPreview] = useState(false);
 
@@ -148,6 +153,24 @@ export function SendSignatureModal({
                 placeholder="Add a note for the recipients"
                 rows={showPreview ? 12 : 8}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Routing Mode</Label>
+              <Select value={routingMode} onValueChange={(value) => onRoutingModeChange(value as 'parallel' | 'sequential')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Routing mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="parallel">Parallel</SelectItem>
+                  <SelectItem value="sequential">Sequential</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {routingMode === 'parallel'
+                  ? 'Parallel sends requests to everyone at the same time.'
+                  : 'Sequential sends to the first recipient, then the next after they sign.'}
+              </p>
             </div>
 
             <Separator />

@@ -20,11 +20,21 @@ interface FieldPlacementCanvasProps {
   roles?: string[];
   localFile?: File | null;
   documentId?: number;
+  readOnly?: boolean;
 }
 
 const FIELD_TYPES: SignatureField['field_type'][] = ['signature', 'initials', 'text', 'date', 'checkbox'];
 
-export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles = [], localFile = null, documentId }: FieldPlacementCanvasProps) {
+export default function FieldPlacementCanvas({
+  fields,
+  onChange,
+  fileUrl,
+  roles = [],
+  localFile = null,
+  documentId,
+  readOnly = false
+}: FieldPlacementCanvasProps) {
+  const formatFieldType = (type: SignatureField['field_type']) => type.charAt(0).toUpperCase() + type.slice(1);
   const [fieldType, setFieldType] = useState<SignatureField['field_type']>('signature');
   const [pageNumber, setPageNumber] = useState(1);
   const [numPages, setNumPages] = useState(1);
@@ -72,6 +82,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
   }, [numPages, pageNumber]);
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>, targetPage: number) => {
+    if (readOnly) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 100;
     const y = ((event.clientY - rect.top) / rect.height) * 100;
@@ -93,6 +104,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
   };
 
   const removeField = (fieldId: number) => {
+    if (readOnly) return;
     onChange(fields.filter((field) => field.id !== fieldId));
   };
 
@@ -125,59 +137,61 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-4 items-end">
-        <div className="space-y-1">
-          <Label>Field Type</Label>
-          <Select value={fieldType} onValueChange={(value) => setFieldType(value as SignatureField['field_type'])}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Field type" />
-            </SelectTrigger>
-            <SelectContent>
-              {FIELD_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {roles.length > 0 && (
+      {!readOnly && (
+        <div className="flex flex-wrap gap-4 items-end">
           <div className="space-y-1">
-            <Label>Role</Label>
-            <Select value={roleName} onValueChange={setRoleName}>
+            <Label>Field Type</Label>
+            <Select value={fieldType} onValueChange={(value) => setFieldType(value as SignatureField['field_type'])}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Role" />
+                <SelectValue placeholder="Field type" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
+                {FIELD_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        )}
-        <div className="space-y-1">
-          <Label>Page</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min={1}
-              max={numPages}
-              value={pageNumber}
-              onChange={(e) => jumpToPage(Number(e.target.value))}
-              className="w-[120px]"
-            />
-            <span className="text-sm text-muted-foreground">of {numPages}</span>
+          {roles.length > 0 && (
+            <div className="space-y-1">
+              <Label>Role</Label>
+              <Select value={roleName} onValueChange={setRoleName}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-1">
+            <Label>Page</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={numPages}
+                value={pageNumber}
+                onChange={(e) => jumpToPage(Number(e.target.value))}
+                className="w-[120px]"
+              />
+              <span className="text-sm text-muted-foreground">of {numPages}</span>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Click on the canvas to place a field.
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          Click on the canvas to place a field.
-        </div>
-      </div>
+      )}
 
-      <div className="border rounded-md bg-muted/30 p-4" ref={containerRef}>
+      <div className="w-full" ref={containerRef}>
         {!pdfFile && (
           <div className="flex items-center justify-center text-xs text-muted-foreground h-48">
             Upload a PDF to start placing fields.
@@ -186,7 +200,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
         {pdfFile && (
           <div
             ref={scrollRef}
-            className="max-h-[70vh] overflow-y-auto space-y-6 pr-2"
+            className="max-h-[70vh] overflow-y-auto space-y-6"
             onScroll={handleScroll}
           >
             <Document
@@ -201,7 +215,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
               onSourceError={(error) => {
                 setLoadError(error?.message || 'Failed to load PDF source');
               }}
-              loading={<div className="p-4 text-sm text-muted-foreground">Loading PDF...</div>}
+              loading={<div className="flex items-center justify-center py-8 text-sm text-muted-foreground">Loading PDF...</div>}
               error={null}
             >
               {Array.from({ length: numPages }, (_, index) => {
@@ -212,12 +226,12 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
                     ref={(el) => {
                       pageRefs.current[index] = el;
                     }}
-                    className="relative w-full max-w-4xl mx-auto border border-dashed border-muted-foreground/40 bg-white"
+                    className="relative w-full border border-dashed border-muted-foreground/40 bg-white"
                     onClick={(event) => handleCanvasClick(event, pageIndex)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
-                      if (event.key === 'Enter') handleCanvasClick(event as any, pageIndex);
+                      if (!readOnly && event.key === 'Enter') handleCanvasClick(event as any, pageIndex);
                     }}
                   >
                     <Page
@@ -243,7 +257,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
                             setSelectedFieldId(field.id);
                           }}
                         >
-                          {field.field_type}
+                          {formatFieldType(field.field_type)}
                         </div>
                       ))}
                   </div>
@@ -259,14 +273,14 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
         )}
       </div>
 
-      {fields.length > 0 && (
+      {fields.length > 0 && !readOnly && (
         <div className="space-y-2">
           <Label>Placed Fields</Label>
           <div className="space-y-2">
             {fields.map((field) => (
               <div key={field.id} className="flex items-center justify-between border rounded-md p-2">
                 <div className="text-sm">
-                  {field.field_type.charAt(0).toUpperCase() + field.field_type.slice(1)}
+                  {formatFieldType(field.field_type)}
                   {field.role_name ? ` (${field.role_name})` : ''} on page {field.page_number}
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => removeField(field.id)}>

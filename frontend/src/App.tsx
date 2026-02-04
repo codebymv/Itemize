@@ -6,7 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React, { useEffect, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
@@ -141,6 +141,16 @@ const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
 const AppContent = () => {
   const location = useLocation();
 
+  const SignatureDocumentRedirect = () => {
+    const { id } = useParams();
+    return <Navigate to={id ? `/documents/${id}` : '/documents'} replace />;
+  };
+
+  const SignatureTemplateRedirect = () => {
+    const { id } = useParams();
+    return <Navigate to={id ? `/templates/${id}` : '/templates'} replace />;
+  };
+
   // Handle session expiration notifications
   useSessionExpiration();
 
@@ -250,11 +260,16 @@ const AppContent = () => {
         <Route path="/recurring-invoices" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
         <Route path="/invoices/payments" element={<AuthenticatedLayout><PaymentsPage /></AuthenticatedLayout>} />
         <Route path="/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
-        <Route path="/signatures" element={<AuthenticatedLayout><SignaturesPage /></AuthenticatedLayout>} />
-        <Route path="/signatures/new" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
-        <Route path="/signatures/:id" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
-        <Route path="/signatures/templates" element={<AuthenticatedLayout><SignatureTemplatesPage /></AuthenticatedLayout>} />
-        <Route path="/signatures/templates/:id" element={<AuthenticatedLayout><SignatureTemplateEditorPage /></AuthenticatedLayout>} />
+        <Route path="/signatures/templates/:id" element={<SignatureTemplateRedirect />} />
+        <Route path="/signatures/templates" element={<Navigate to="/templates" replace />} />
+        <Route path="/signatures/new" element={<Navigate to="/documents/new" replace />} />
+        <Route path="/signatures/:id" element={<SignatureDocumentRedirect />} />
+        <Route path="/signatures" element={<Navigate to="/documents" replace />} />
+        <Route path="/documents" element={<AuthenticatedLayout><SignaturesPage /></AuthenticatedLayout>} />
+        <Route path="/documents/new" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
+        <Route path="/documents/:id" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
+        <Route path="/templates" element={<AuthenticatedLayout><SignatureTemplatesPage /></AuthenticatedLayout>} />
+        <Route path="/templates/:id" element={<AuthenticatedLayout><SignatureTemplateEditorPage /></AuthenticatedLayout>} />
       </Route>
 
       {/* Catch-all route */}

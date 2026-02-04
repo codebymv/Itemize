@@ -1060,6 +1060,15 @@ export function InvoicesPage() {
                                                                     <span className="sm:hidden">Recurring</span>
                                                                 </Button>
                                                             )}
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-destructive dark:text-red-400 border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive focus:dark:text-red-300 text-xs sm:text-sm"
+                                                                onClick={(e) => handleDeleteClick(invoice, e)}
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                                Delete
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 ) : null}
