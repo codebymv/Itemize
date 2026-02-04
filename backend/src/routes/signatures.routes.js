@@ -231,6 +231,52 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         });
     }));
 
+    // =============================
+    // Signature Email Preview
+    // =============================
+    router.post('/signatures/email/preview', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const { message, documentTitle, senderName, senderEmail, recipientName, expiresAt, baseUrl } = req.body || {};
+
+        if (!message || !message.trim()) {
+            return sendBadRequest(res, 'Message content is required');
+        }
+
+        const signingUrl = 'https://itemize.cloud/sign/preview';
+        const { subject, html } = signatureEmailService.buildSignatureRequestEmail({
+            recipientName,
+            documentTitle,
+            senderName,
+            senderEmail,
+            message: message.trim(),
+            signingUrl,
+            expiresAt,
+            isPreview: true,
+            baseUrl
+        });
+
+        return sendSuccess(res, { html, subject });
+    }));
+
+    router.delete('/signatures/documents/:id/file', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const documentId = parseInt(req.params.id, 10);
+        if (!documentId) {
+            return sendBadRequest(res, 'Invalid document id');
+        }
+        const updated = await signatureService.deleteDocumentFile(pool, req.organizationId, documentId);
+        if (!updated) return sendNotFound(res, 'Document not found');
+        return sendSuccess(res, updated);
+    }));
+
+    router.delete('/signatures/documents/:id/file', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const documentId = parseInt(req.params.id, 10);
+        if (!documentId) {
+            return sendBadRequest(res, 'Invalid document id');
+        }
+        const updated = await signatureService.removeDocumentFile(pool, req.organizationId, documentId);
+        if (!updated) return sendNotFound(res, 'Document not found');
+        return sendSuccess(res, updated);
+    }));
+
     router.get('/signatures/documents', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
         const { status, page = 1, limit = 20 } = req.query;
         const result = await signatureService.listDocuments(pool, req.organizationId, { status }, { page: parseInt(page, 10), limit: parseInt(limit, 10) });
@@ -300,6 +346,39 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         }
 
         return sendSuccess(res, { url: data.document.signed_file_url });
+    }));
+
+    router.get('/signatures/documents/:id/file', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const documentId = parseInt(req.params.id, 10);
+        const data = await signatureService.getDocumentDetails(pool, req.organizationId, documentId);
+        if (!data) return sendNotFound(res, 'Document not found');
+        if (!data.document.file_url) return sendNotFound(res, 'File not found');
+
+        const fileUrl = data.document.file_url;
+        if (fileUrl.startsWith('/uploads/')) {
+            const relativePath = fileUrl.replace('/uploads/', '');
+            const fullPath = path.join(__dirname, '../uploads', relativePath);
+            return res.sendFile(fullPath);
+        }
+
+        if (fileUrl.includes('.s3.') && signatureService && signatureService?.constructor) {
+            // Use S3 SDK if available
+            const s3Service = require('../services/s3.service');
+            const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
+            const key = parsed.pathname.replace(/^\//, '');
+            const s3Response = await s3Service.getFile(key);
+            if (s3Response?.Body) {
+                res.setHeader('Content-Type', s3Response.ContentType || 'application/pdf');
+                return s3Response.Body.pipe(res);
+            }
+        }
+
+        const axios = require('axios');
+        const response = await axios.get(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`,
+            { responseType: 'arraybuffer' }
+        );
+        res.setHeader('Content-Type', response.headers['content-type'] || 'application/pdf');
+        return res.status(200).send(Buffer.from(response.data));
     }));
 
     router.get('/signatures/documents/:id/audit', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
@@ -389,6 +468,42 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const data = await signatureService.getDocumentForSigning(pool, token, audit);
         if (!data) return sendNotFound(res, 'Signing link is invalid or expired');
         return sendSuccess(res, { url: data.document.file_url });
+    }));
+
+    router.get('/public/sign/:token/file', publicRateLimit, asyncHandler(async (req, res) => {
+        const token = req.params.token;
+        const audit = {
+            ip_address: req.ip,
+            user_agent: req.headers['user-agent']
+        };
+        const data = await signatureService.getDocumentForSigning(pool, token, audit);
+        if (!data) return sendNotFound(res, 'Signing link is invalid or expired');
+        const fileUrl = data.document.file_url;
+        if (!fileUrl) return sendNotFound(res, 'File not found');
+
+        if (fileUrl.startsWith('/uploads/')) {
+            const relativePath = fileUrl.replace('/uploads/', '');
+            const fullPath = path.join(__dirname, '../uploads', relativePath);
+            return res.sendFile(fullPath);
+        }
+
+        if (fileUrl.includes('.s3.') && signatureService && signatureService?.constructor) {
+            const s3Service = require('../services/s3.service');
+            const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
+            const key = parsed.pathname.replace(/^\//, '');
+            const s3Response = await s3Service.getFile(key);
+            if (s3Response?.Body) {
+                res.setHeader('Content-Type', s3Response.ContentType || 'application/pdf');
+                return s3Response.Body.pipe(res);
+            }
+        }
+
+        const axios = require('axios');
+        const response = await axios.get(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`,
+            { responseType: 'arraybuffer' }
+        );
+        res.setHeader('Content-Type', response.headers['content-type'] || 'application/pdf');
+        return res.status(200).send(Buffer.from(response.data));
     }));
 
     return router;

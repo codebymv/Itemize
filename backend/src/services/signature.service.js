@@ -56,6 +56,24 @@ function buildUploadKey(organizationId, documentId, originalname) {
     return `signatures/${organizationId}/${documentId}/${base || 'document'}-${uniqueSuffix}${ext || '.pdf'}`;
 }
 
+function getLocalFilePath(fileUrl) {
+    if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
+    const relativePath = fileUrl.replace('/uploads/', '');
+    return path.join(__dirname, '../uploads', relativePath);
+}
+
+function getS3KeyFromUrl(fileUrl) {
+    if (!fileUrl || !s3Service) return null;
+    try {
+        const url = new URL(fileUrl);
+        const bucket = process.env.AWS_S3_BUCKET || 'itemize-uploads';
+        if (!url.hostname.startsWith(`${bucket}.s3.`)) return null;
+        return url.pathname.replace(/^\//, '');
+    } catch (error) {
+        return null;
+    }
+}
+
 async function createDocument(pool, organizationId, userId, data) {
     return withDbClient(pool, async (client) => {
         const result = await client.query(`
@@ -191,6 +209,107 @@ async function uploadDocument(pool, organizationId, documentId, file) {
         }
 
         return updateResult.rows[0] || null;
+    });
+}
+
+async function removeDocumentFile(pool, organizationId, documentId) {
+    return withTransaction(pool, async (client) => {
+        const docResult = await client.query(
+            'SELECT file_url FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            [documentId, organizationId]
+        );
+        if (docResult.rows.length === 0) return null;
+
+        const fileUrl = docResult.rows[0].file_url;
+
+        if (fileUrl) {
+            try {
+                if (fileUrl.startsWith('/uploads/')) {
+                    const relativePath = fileUrl.replace('/uploads/', '');
+                    const fullPath = path.join(__dirname, '../uploads', relativePath);
+                    await fs.promises.unlink(fullPath).catch(() => null);
+                } else if (fileUrl.includes('.s3.') && s3Service) {
+                    const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
+                    const key = parsed.pathname.replace(/^\//, '');
+                    await s3Service.deleteFile(key);
+                }
+            } catch (error) {
+                logger.warn('Failed to delete signature document file', { error: error.message });
+            }
+        }
+
+        const updateResult = await client.query(`
+            UPDATE signature_documents SET
+                file_url = NULL,
+                file_name = NULL,
+                file_size = NULL,
+                file_type = NULL,
+                original_sha256 = NULL,
+                signed_file_url = NULL,
+                signed_sha256 = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND organization_id = $2
+            RETURNING *
+        `, [documentId, organizationId]);
+
+        await client.query(`
+            INSERT INTO signature_audit_log (document_id, event_type, description, created_at)
+            VALUES ($1, 'file_removed', 'Document file removed', CURRENT_TIMESTAMP)
+        `, [documentId]);
+
+        return updateResult.rows[0] || null;
+    });
+}
+
+async function deleteDocumentFile(pool, organizationId, documentId) {
+    return withTransaction(pool, async (client) => {
+        const current = await client.query(
+            'SELECT file_url FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            [documentId, organizationId]
+        );
+        if (current.rows.length === 0) return null;
+
+        const fileUrl = current.rows[0].file_url;
+        if (fileUrl) {
+            if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
+                const key = getS3KeyFromUrl(fileUrl);
+                if (key) {
+                    try {
+                        await s3Service.deleteFile(key);
+                    } catch (error) {
+                        logger.warn('Failed to delete signature file from S3', { error: error.message, key });
+                    }
+                }
+            } else {
+                const localPath = getLocalFilePath(fileUrl);
+                if (localPath) {
+                    try {
+                        await fs.promises.unlink(localPath);
+                    } catch (error) {
+                        logger.warn('Failed to delete signature file from disk', { error: error.message, localPath });
+                    }
+                }
+            }
+        }
+
+        await client.query(
+            'DELETE FROM signature_document_versions WHERE document_id = $1',
+            [documentId]
+        );
+
+        const updated = await client.query(`
+            UPDATE signature_documents SET
+                file_url = NULL,
+                file_name = NULL,
+                file_size = NULL,
+                file_type = NULL,
+                original_sha256 = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND organization_id = $2
+            RETURNING *
+        `, [documentId, organizationId]);
+
+        return updated.rows[0] || null;
     });
 }
 
@@ -421,6 +540,17 @@ async function sendForSignature(pool, emailService, documentId, organizationId, 
             throw new Error('No recipients configured');
         }
 
+        let senderName = document.sender_name || null;
+        let senderEmail = document.sender_email || null;
+
+        if (!senderName || !senderEmail) {
+            const userResult = await client.query('SELECT name, email FROM users WHERE id = $1', [document.created_by]);
+            if (userResult.rows.length > 0) {
+                senderName = senderName || userResult.rows[0].name || null;
+                senderEmail = senderEmail || userResult.rows[0].email || null;
+            }
+        }
+
         const routingMode = document.routing_mode || 'parallel';
         const now = new Date();
         const expiresAt = document.expiration_days
@@ -451,7 +581,8 @@ async function sendForSignature(pool, emailService, documentId, organizationId, 
                         to: recipient.email,
                         recipientName: recipient.name,
                         documentTitle: document.title,
-                        senderName: document.sender_name || 'Itemize',
+                        senderName,
+                        senderEmail,
                         message: document.message,
                         signingUrl,
                         expiresAt
@@ -759,7 +890,8 @@ async function submitSignature(pool, token, payload, audit = {}) {
                         to: nextRecipient.email,
                         recipientName: nextRecipient.name,
                         documentTitle: recipient.title,
-                        senderName: recipient.sender_name || 'Itemize',
+                        senderName: recipient.sender_name || null,
+                        senderEmail: recipient.sender_email || null,
                         message: recipient.message,
                         signingUrl,
                         expiresAt: recipient.document_expires_at
@@ -1248,6 +1380,7 @@ module.exports = {
     createDocument,
     updateDocument,
     uploadDocument,
+    deleteDocumentFile,
     replaceRecipients,
     replaceFields,
     listDocuments,

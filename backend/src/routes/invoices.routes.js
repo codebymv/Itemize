@@ -248,8 +248,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      * POST /api/invoices/email/preview - Generate invoice email preview
      * Returns the HTML that would be sent, wrapped in branded template
      */
-    router.post('/email/preview', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
-            const { message, subject, includePaymentLink } = req.body;
+        router.post('/email/preview', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+            const { message, subject, includePaymentLink, baseUrl } = req.body;
 
             if (!message || !message.trim()) {
                 return sendBadRequest(res, 'Message content is required');
@@ -277,7 +277,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const previewHtml = wrapInBrandedTemplate(emailBodyContent, {
                 subject: subject || 'Invoice',
                 isPreview: true,
-                showUnsubscribe: false // Transactional emails don't need unsubscribe
+                showUnsubscribe: false, // Transactional emails don't need unsubscribe
+                baseUrl
             });
 
             return sendSuccess(res, {

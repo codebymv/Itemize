@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 
 class S3Service {
     constructor() {
@@ -33,6 +33,14 @@ class S3Service {
             Bucket: this.bucket,
             Key: key,
         }));
+    }
+
+    async getFile(key) {
+        const response = await this.client.send(new GetObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+        }));
+        return response;
     }
 }
 

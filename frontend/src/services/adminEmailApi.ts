@@ -30,6 +30,7 @@ export interface SendEmailResponse {
 export interface PreviewEmailRequest {
     subject: string;
     bodyHtml: string;
+    baseUrl?: string;
 }
 
 export interface PreviewEmailResponse {
@@ -96,7 +97,8 @@ export async function sendEmail(data: SendEmailRequest): Promise<SendEmailRespon
  * Get email preview HTML
  */
 export async function getPreview(data: PreviewEmailRequest): Promise<PreviewEmailResponse> {
-    const response = await api.post('/api/admin/email/preview', data);
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const response = await api.post('/api/admin/email/preview', { ...data, baseUrl });
     return response.data.data;
 }
 

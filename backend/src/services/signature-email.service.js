@@ -16,33 +16,47 @@ function formatDate(date) {
     });
 }
 
-async function sendSignatureRequest({ to, recipientName, documentTitle, senderName, message, signingUrl, expiresAt }) {
-    if (!emailService) return false;
-
-    const subject = `${senderName || 'Itemize'} has sent a document for signature`;
+function buildSignatureRequestEmail({ recipientName, documentTitle, senderName, senderEmail, message, signingUrl, expiresAt, isPreview, baseUrl }) {
+    const senderLabel = senderEmail || senderName || 'Itemize';
+    const subject = `${senderLabel} wants your signature`;
+    const safeMessage = (message || '').trim();
     const bodyContent = `
-        <h1 style="font-size: 22px; margin: 0 0 16px; color: #111827;">
-            Please sign: ${documentTitle || 'Document'}
-        </h1>
-        <p style="color: #374151; margin: 0 0 16px; line-height: 1.6;">
-            Hi ${recipientName || 'there'},
-        </p>
-        <p style="color: #374151; margin: 0 0 16px; line-height: 1.6;">
-            ${senderName || 'Someone'} has requested your signature.
-        </p>
-        ${message ? `<div style="white-space: pre-wrap; color: #374151; margin: 0 0 16px; line-height: 1.6;">${message}</div>` : ''}
+        <div style="white-space: pre-wrap; color: #374151; line-height: 1.6;">
+            ${safeMessage}
+        </div>
         <div style="text-align: center; margin: 24px 0;">
             <a href="${signingUrl}" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
                 Review and Sign
             </a>
         </div>
+        ${documentTitle ? `<p style="color: #6b7280; font-size: 13px;">Document: ${documentTitle}</p>` : ''}
         ${expiresAt ? `<p style="color: #6b7280; font-size: 13px;">Expires on ${formatDate(expiresAt)}</p>` : ''}
     `;
 
     const html = wrapInBrandedTemplate(bodyContent, {
         subject,
-        isPreview: false,
-        showUnsubscribe: false
+        isPreview: Boolean(isPreview),
+        showUnsubscribe: false,
+        showHeader: true,
+        showFooter: true,
+        baseUrl
+    });
+
+    return { subject, html };
+}
+
+async function sendSignatureRequest({ to, recipientName, documentTitle, senderName, senderEmail, message, signingUrl, expiresAt }) {
+    if (!emailService) return false;
+
+    const { subject, html } = buildSignatureRequestEmail({
+        recipientName,
+        documentTitle,
+        senderName,
+        senderEmail,
+        message,
+        signingUrl,
+        expiresAt,
+        isPreview: false
     });
 
     try {
@@ -201,5 +215,6 @@ module.exports = {
     sendDocumentCompleted,
     sendSignatureDeclined,
     sendSignatureReminder,
-    sendReminderEmails
+    sendReminderEmails,
+    buildSignatureRequestEmail
 };

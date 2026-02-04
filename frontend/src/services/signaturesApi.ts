@@ -113,6 +113,11 @@ export const uploadSignatureDocument = async (documentId: number, file: File) =>
   return unwrapResponse<SignatureDocument>(response.data);
 };
 
+export const deleteSignatureDocumentFile = async (id: number) => {
+  const response = await api.delete(`/api/signatures/documents/${id}/file`);
+  return unwrapResponse<SignatureDocument>(response.data);
+};
+
 export const listSignatureDocuments = async (params: { status?: SignatureStatus; page?: number; limit?: number } = {}) => {
   const response = await api.get('/api/signatures/documents', { params });
   return unwrapResponse<{ items: SignatureDocument[]; pagination: any }>(response.data);
@@ -141,6 +146,27 @@ export const remindSignatureDocument = async (id: number) => {
 export const downloadSignedDocument = async (id: number) => {
   const response = await api.get(`/api/signatures/documents/${id}/download`);
   return unwrapResponse<{ url: string }>(response.data);
+};
+
+export interface SignatureEmailPreviewRequest {
+  message: string;
+  documentTitle?: string;
+  senderName?: string;
+  senderEmail?: string;
+  recipientName?: string;
+  expiresAt?: string | null;
+  baseUrl?: string;
+}
+
+export interface SignatureEmailPreviewResponse {
+  html: string;
+  subject?: string;
+}
+
+export const getSignatureEmailPreview = async (data: SignatureEmailPreviewRequest) => {
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const response = await api.post('/api/signatures/email/preview', { ...data, baseUrl });
+  return unwrapResponse<SignatureEmailPreviewResponse>(response.data);
 };
 
 export const getSignatureAudit = async (id: number) => {

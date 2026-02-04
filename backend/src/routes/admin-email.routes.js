@@ -165,7 +165,7 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
      */
     router.post('/preview', async (req, res) => {
         try {
-            const { subject, bodyHtml } = req.body;
+            const { subject, bodyHtml, baseUrl } = req.body;
 
             if (!bodyHtml) {
                 return res.status(400).json({
@@ -197,7 +197,8 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
             // Wrap in branded template (this is a preview)
             const wrappedHtml = wrapInBrandedTemplate(previewHtml, { 
                 subject: previewSubject,
-                isPreview: true 
+                isPreview: true,
+                baseUrl
             });
 
             res.json({

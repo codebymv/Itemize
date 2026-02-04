@@ -230,8 +230,15 @@ export const getInvoices = async (
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
     const payload = response.data;
-    const invoices = payload?.data ?? payload?.invoices ?? [];
-    const pagination = payload?.pagination ?? payload?.data?.pagination ?? {
+    const data = payload?.data;
+    const invoices =
+        (Array.isArray(payload) ? payload : null) ||
+        (Array.isArray(data) ? data : null) ||
+        (Array.isArray(payload?.invoices) ? payload.invoices : null) ||
+        (Array.isArray(data?.invoices) ? data.invoices : null) ||
+        (Array.isArray(data?.items) ? data.items : null) ||
+        [];
+    const pagination = payload?.pagination ?? data?.pagination ?? {
         page: params.page ?? 1,
         limit: params.limit ?? 50,
         total: Array.isArray(invoices) ? invoices.length : 0,
@@ -328,6 +335,7 @@ export interface InvoiceEmailPreviewRequest {
     message: string;
     subject: string;
     includePaymentLink?: boolean;
+    baseUrl?: string;
 }
 
 export interface InvoiceEmailPreviewResponse {
@@ -338,10 +346,11 @@ export const getInvoiceEmailPreview = async (
     data: InvoiceEmailPreviewRequest,
     organizationId?: number
 ): Promise<InvoiceEmailPreviewResponse> => {
-    const response = await api.post('/api/invoices/email/preview', data, {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const response = await api.post('/api/invoices/email/preview', { ...data, baseUrl }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data.data;
+    return unwrapResponse<InvoiceEmailPreviewResponse>(response.data);
 };
 
 export const recordPayment = async (

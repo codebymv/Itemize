@@ -83,115 +83,113 @@ This document captures a comprehensive plan for adding a “Signatures / Documen
 - `POST /api/signatures/documents/upload` upload PDF (S3/local)
 - `GET /api/signatures/documents` list with filters
 - `GET /api/signatures/documents/:id` details + recipients + fields + audit
-- `POST /api/signatures/documents/:id/send` send signing emails
-- `POST /api/signatures/documents/:id/cancel` cancel request
-- `GET /api/signatures/documents/:id/download` signed PDF
+# E-Signatures (Signatures) — Implementation Review, Gaps, and Follow‑ups
 
-### Public
-- `GET /api/public/sign/:token` fetch doc + fields for recipient
-- `POST /api/public/sign/:token` submit signature payload
-- `POST /api/public/sign/:token/decline` decline with reason
-- `GET /api/public/sign/:token/download` download original PDF
-- `POST /api/public/sign/:token/verify` verify identity (OTP)
+This document captures the current state of the implemented signatures feature, highlights gaps, and lists concrete follow‑ups to make the feature production‑robust.
 
-## Email flow (reuse invoices)
-- Use `backend/src/services/email.service.js` to send signing request emails.
-- Email includes CTA button to `/sign/:token` and optional PDF attachment.
-- On completion: send notifications to sender + all recipients.
-- Provide resend/reminder emails with a throttled schedule.
+## Implemented scope (current)
 
-## PDF handling
-- Use `backend/src/services/pdf.service.js` to generate a final signed PDF by overlaying signature images on the original document.
-- Append a certificate/audit page with signer name, email, timestamp, and IP.
-- Add tamper-evident metadata: store original and signed SHA-256 and embed hash in certificate page.
-- Ensure placement uses a consistent coordinate system with page size + scale preserved.
+### Backend
+- **Routes**: Full signatures API and public signing endpoints in [backend/src/routes/signatures.routes.js](backend/src/routes/signatures.routes.js).
+- **Core logic**: Token generation, document lifecycle, recipients, fields, audit in [backend/src/services/signature.service.js](backend/src/services/signature.service.js).
+- **PDF signing**: Final signed PDF + certificate page via pdf-lib in [backend/src/services/pdf-signature.service.js](backend/src/services/pdf-signature.service.js).
+- **Email**: Request, reminder, completion, decline in [backend/src/services/signature-email.service.js](backend/src/services/signature-email.service.js).
+- **DB schema**: Documents, recipients, fields, audit logs, templates, reminders, versions in [backend/src/db_esignature_migrations.js](backend/src/db_esignature_migrations.js).
+- **Reminders**: Scheduled reminder job in [backend/src/jobs/signature-jobs.js](backend/src/jobs/signature-jobs.js), invoked in scheduler.
+- **Feature gating**: SIGNATURE_DOCUMENTS feature + limits in [backend/src/lib/subscription.constants.js](backend/src/lib/subscription.constants.js).
 
-## Frontend UX (proposed)
-### Internal (authenticated)
-1. **Upload**: upload document, show PDF preview.
-2. **Field placement**: drag-and-drop fields on pages; assign each field to recipient.
-3. **Recipients**: add multiple signers with signing order (sequential or parallel).
-4. **Send**: compose message and send for signature.
-5. **Status tracking**: list view for sent/in-progress/completed.
+### Frontend (authenticated)
+- **Documents list**: [frontend/src/pages/signatures/SignaturesPage.tsx](frontend/src/pages/signatures/SignaturesPage.tsx).
+- **Document editor**: [frontend/src/pages/signatures/SignatureEditorPage.tsx](frontend/src/pages/signatures/SignatureEditorPage.tsx).
+- **Templates**: [frontend/src/pages/signatures/SignatureTemplatesPage.tsx](frontend/src/pages/signatures/SignatureTemplatesPage.tsx) and [frontend/src/pages/signatures/SignatureTemplateEditorPage.tsx](frontend/src/pages/signatures/SignatureTemplateEditorPage.tsx).
+- **Field placement**: [frontend/src/pages/signatures/components/FieldPlacementCanvas.tsx](frontend/src/pages/signatures/components/FieldPlacementCanvas.tsx).
+- **Routing**: [frontend/src/App.tsx](frontend/src/App.tsx) registers /signatures routes.
 
-### Public (recipient)
-1. Open `/sign/:token`.
-2. Review doc with fields highlighted.
-3. Draw/typed signature + initials.
-4. Submit and finalize.
-5. Show completion + download signed PDF.
+### Frontend (public signing)
+- **Signing page**: [frontend/src/pages/sign/SignPage.tsx](frontend/src/pages/sign/SignPage.tsx) handles public signing and decline flows.
 
-## Security & compliance considerations
-- Signing tokens must be random and unique; support expiration (`expires_at`).
-- Rate-limit all public endpoints.
-- Capture IP and user agent for audit logs.
-- Ensure CORS allows public signing endpoints.
-- Add optional reminder emails via scheduler (future).
-- Require TLS for all signing endpoints and assets.
-- Store tokens hashed at rest; only compare hash on access.
-- Protect against replay: one-time-use signing submissions and idempotent completion.
-- Prevent document mutation after send; use versioning when edits are needed.
-- Add data retention policy and explicit deletion workflows.
-- Add abuse monitoring: brute-force OTP attempts, token enumeration, and high-volume access.
+## Gaps observed (needs follow‑up)
 
-## Subscription gating (suggested)
-- Feature flag: `signature_documents`.
-- Starter: limited documents/month.
-- Unlimited/Pro: higher limits/unlimited.
+### UX gaps
+1. **No WYSIWYG PDF overlay**
+  - Field placement canvas is a placeholder and does not render the actual PDF; placement is approximate. See [frontend/src/pages/signatures/components/FieldPlacementCanvas.tsx](frontend/src/pages/signatures/components/FieldPlacementCanvas.tsx).
+2. **Public signer experience is form-based**
+  - Signers fill fields in a list rather than directly on the PDF. See [frontend/src/pages/sign/SignPage.tsx](frontend/src/pages/sign/SignPage.tsx).
+3. **Mobile signature capture**
+  - Signature canvas is mouse‑only; touch and pressure handling are not implemented.
+4. **No visual routing hints**
+  - Sequential routing status is not surfaced in the UI for recipients or document owners.
 
-## Open questions / decisions
-1. **Sequential vs parallel signing**: Should signing order be enforced?
-2. **Field types**: Start with signature + initials, or include text/date/checkbox?
-3. **PDF tooling**: Use Puppeteer only (consistent), or add `pdf-lib` for higher-fidelity overlays?
-4. **Template support**: Allow reusable field placements for repeat documents?
-5. **Recipient identity**: Require email verification or OTP before signing?
-6. **Mobile signature**: Define UX for mobile signature capture.
-7. **Retention/compliance**: Retain signed docs for X years or configurable?
-8. **Evidence bundle**: Include signer consent, identity method, and hash in certificate?
+### Product gaps
+1. **Identity verification is a placeholder**
+  - `/public/sign/:token/verify` returns a stub response; OTP flows aren’t implemented. See [backend/src/routes/signatures.routes.js](backend/src/routes/signatures.routes.js).
+2. **Token lifecycle and expiry UX**
+  - Expiration handling is enforced server‑side, but recipient UI doesn’t display timers or states like “expired”.
+3. **No signer re‑assignment**
+  - There’s no admin workflow to reassign or resend to a new recipient email.
+4. **Limited bulk / CSV workflows**
+  - No bulk send or import/export for signature recipients.
 
-## First implementation slice (MVP)
-- PDF upload
-- One recipient
-- Signature + initials only
-- Public signing page
-- Signed PDF output
-- Basic audit trail
+### Technical gaps
+1. **PDF overlay accuracy and scaling**
+  - Percent‑based coordinates are used, but no PDF page rendering is used to validate placement accuracy.
+2. **Signed PDF download UX**
+  - Download is URL‑based; there’s no inline viewer or embedded download experience.
+3. **Audit log completeness**
+  - Audit log exists, but there’s limited front‑end visualization for compliance review.
+4. **Rate limit tuning for large signing payloads**
+  - Payload size check exists, but limits may need tuning for large signatures and multi‑page docs.
 
-## DocuSign-aligned hardened behavior (to bake in)
-### Document integrity
-- Immutable document after send; edits create a new version.
-- Store and embed SHA-256 hashes of original and signed PDFs.
-- Certificate of completion appended with event timestamps and hashes.
+## Follow‑ups to make the feature robust
 
-### Recipient identity (tiered)
-- Default: email link with passive verification.
-- Optional: OTP (email/SMS) before signing.
-- Record identity method in audit log.
+### 1) PDF WYSIWYG placement
+- Integrate a PDF viewer (e.g., react‑pdf or pdf.js) for **actual page rendering** in FieldPlacementCanvas.
+- Use the viewer’s page dimensions to compute accurate percent‑based coordinates.
+- Enable drag‑resize and move on the overlay so fields can be adjusted after placement.
 
-### Signing ceremony
-- Consent check before signing; capture explicit acknowledgment.
-- Required fields must be completed; block submission if incomplete.
-- Sequential routing enforced when signing order is defined.
+### 2) Public signer overlay mode
+- Replace the field list in [frontend/src/pages/sign/SignPage.tsx](frontend/src/pages/sign/SignPage.tsx) with a PDF overlay UI.
+- Only show fields assigned to the current signer.
+- Provide contextual “Sign Here” callouts and navigation between required fields.
 
-### Security hardening
-- Tokens are random, long, single-use for completion, and stored hashed.
-- All public endpoints rate-limited and monitored.
-- Idempotent submit to prevent duplicate signatures.
-- Strict input validation and sanitization for all public responses.
+### 3) Identity verification (OTP)
+- Implement OTP issuance and validation flows (email or SMS):
+  - Create OTP tables and endpoints.
+  - Lock signing until OTP verified.
+  - Store `identity_verified_at` for audit.
 
-### Audit trail completeness
-- Log every event: view, start, sign, decline, resend.
-- Include IP, user agent, timestamp, and optional geo data.
-- Make audit log immutable and append-only.
+### 4) Sequential routing UX + enforcement
+- In sequential mode, lock fields for non‑active recipients and show “Waiting for previous signer” states.
+- Send signing email only when recipient becomes active.
+- Update UI to display routing status (e.g., “Signer 2 waiting”).
 
-### Compliance & retention
-- Add retention policy + legal hold support (future).
-- Optional eIDAS/ESIGN/ESRA alignment considerations.
+### 5) Robust audit trail and certificates
+- Extend audit log with additional events (viewed, signed, declined, email sent).
+- Add a front‑end audit log viewer with filters and exports.
+- Include audit data in the certificate page and signed PDF metadata.
 
-## Suggested future enhancements
-- Multiple recipients with sequential signing
-- Automated reminders
-- Field validation + required fields
+### 6) Resend, reassign, and reminders
+- Add UI for manual resend and recipient reassignment.
+- Add scheduled reminders UI (admin can set cadence in editor).
+
+### 7) Document templates
+- Add full PDF preview in template editor.
+- Support role‑based placement with role‑specific colors.
+
+### 8) UX polish
+- Better empty states and onboarding help for first document.
+- Inline error messaging for missing required fields.
+- Mobile signature pad with touch support and smaller screen layout.
+
+## Suggested prioritized roadmap
+1. **WYSIWYG PDF overlay** (placement + public signing)
+2. **Identity verification (OTP)**
+3. **Sequential routing UX**
+4. **Audit log UI**
+5. **Resend/reassign & reminder UI**
+6. **Templates with PDF preview**
+
+## Notes
+- Backend already includes reminders, audit, and PDF signing; the main gaps are UI fidelity and identity verification.
+- Field placement currently uses percentages, which is correct for scaling; accuracy improves once PDF rendering is integrated.
 - Reusable templates
-- Bulk send + CSV recipient imports
-- Advanced compliance: tamper-evident seals and document hashing

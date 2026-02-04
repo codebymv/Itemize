@@ -199,17 +199,17 @@ function getDefaultVariables(recipient = {}) {
     };
 }
 
-// Logo URL - for previews use FRONTEND_URL, for actual emails use production URL
+// Logo URL - for previews use FRONTEND_URL (or provided base URL), for actual emails use production URL
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const PROD_URL = process.env.PROD_URL || 'https://itemize.cloud';
+
+const normalizeBaseUrl = (value = '') => value.replace(/\/+$/, '');
+
 // Use frontend URL for development previews, production URL for actual emails
-const getLogoUrl = (isPreview = false) => {
-    // For previews during development, use frontend URL so the image loads
-    if (isPreview && FRONTEND_URL.includes('localhost')) {
-        return `${FRONTEND_URL}/cover.png`;
-    }
-    // For production or actual emails, use production URL
-    return `${PROD_URL}/cover.png`;
+const getLogoUrl = (isPreview = false, baseUrl) => {
+    const fallbackBase = isPreview ? FRONTEND_URL : PROD_URL;
+    const resolvedBase = normalizeBaseUrl(baseUrl || fallbackBase || PROD_URL || FRONTEND_URL || 'https://itemize.cloud');
+    return `${resolvedBase}/cover.png`;
 };
 
 /**
@@ -224,7 +224,8 @@ function wrapInBrandedTemplate(bodyHtml, options = {}) {
         showHeader = true, 
         showFooter = true, 
         isPreview = false,
-        showUnsubscribe = true // Set to false for transactional emails (invoices, receipts, etc.)
+        showUnsubscribe = true, // Set to false for transactional emails (invoices, receipts, etc.)
+        baseUrl
     } = options;
 
     // If content already looks like a complete HTML document, return as-is
@@ -234,12 +235,13 @@ function wrapInBrandedTemplate(bodyHtml, options = {}) {
 
     // Transform CSS classes to inline styles
     const styledBody = transformCssToInline(bodyHtml);
-    const logoUrl = getLogoUrl(isPreview);
+    const resolvedBaseUrl = normalizeBaseUrl(baseUrl || (isPreview ? FRONTEND_URL : PROD_URL) || PROD_URL || FRONTEND_URL || 'https://itemize.cloud');
+    const logoUrl = getLogoUrl(isPreview, resolvedBaseUrl);
 
     // Header with logo image
     const header = showHeader ? `
         <div style="text-align: center; padding: 20px; background: #ffffff; border-radius: 12px 12px 0 0;">
-            <a href="${FRONTEND_URL}" target="_blank" style="text-decoration: none;">
+            <a href="${resolvedBaseUrl}" target="_blank" style="text-decoration: none;">
                 <img 
                     src="${logoUrl}" 
                     alt="Itemize" 
@@ -253,8 +255,8 @@ function wrapInBrandedTemplate(bodyHtml, options = {}) {
     // Footer links - conditionally include unsubscribe for non-transactional emails
     const footerLinks = showUnsubscribe
         ? `<a href="{{unsubscribeUrl}}" style="color: #2563eb; text-decoration: none;">Unsubscribe</a> · 
-           <a href="${FRONTEND_URL}" style="color: #2563eb; text-decoration: none;">Visit Website</a>`
-        : `<a href="${FRONTEND_URL}" style="color: #2563eb; text-decoration: none;">Visit Website</a>`;
+              <a href="${resolvedBaseUrl}" style="color: #2563eb; text-decoration: none;">Visit Website</a>`
+          : `<a href="${resolvedBaseUrl}" style="color: #2563eb; text-decoration: none;">Visit Website</a>`;
 
     const footer = showFooter ? `
         <div style="text-align: center; padding: 30px 20px; color: #64748b; font-size: 13px;">

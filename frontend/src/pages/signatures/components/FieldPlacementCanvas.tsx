@@ -1,26 +1,77 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SignatureField } from '@/services/signaturesApi';
+import { getAssetUrl, getApiUrl, getAuthToken } from '@/lib/api';
+
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface FieldPlacementCanvasProps {
   fields: SignatureField[];
   onChange: (fields: SignatureField[]) => void;
   fileUrl: string;
   roles?: string[];
+  localFile?: File | null;
+  documentId?: number;
 }
 
 const FIELD_TYPES: SignatureField['field_type'][] = ['signature', 'initials', 'text', 'date', 'checkbox'];
 
-export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles = [] }: FieldPlacementCanvasProps) {
+export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles = [], localFile = null, documentId }: FieldPlacementCanvasProps) {
   const [fieldType, setFieldType] = useState<SignatureField['field_type']>('signature');
   const [pageNumber, setPageNumber] = useState(1);
+  const [numPages, setNumPages] = useState(1);
+  const [pageWidth, setPageWidth] = useState(800);
   const [roleName, setRoleName] = useState<string>(roles[0] || '');
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const resolvedUrl = useMemo(() => {
+    if (!fileUrl) return '';
+    if (fileUrl.startsWith('http') || fileUrl.startsWith('blob:')) return fileUrl;
+    return getAssetUrl(fileUrl);
+  }, [fileUrl]);
+
+  const pdfFile = useMemo(() => {
+    if (localFile) return localFile;
+    if (!resolvedUrl) return '';
+    if (resolvedUrl.startsWith(getApiUrl()) && resolvedUrl.includes('/uploads/')) return resolvedUrl;
+    if (documentId) {
+      const token = getAuthToken();
+      return {
+        url: `${getApiUrl()}/api/signatures/documents/${documentId}/file`,
+        httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined
+      };
+    }
+    return resolvedUrl;
+  }, [localFile, resolvedUrl, documentId]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setPageWidth(Math.min(900, entry.contentRect.width));
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (pageNumber > numPages) setPageNumber(numPages);
+  }, [numPages, pageNumber]);
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>, targetPage: number) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 100;
     const y = ((event.clientY - rect.top) / rect.height) * 100;
@@ -29,7 +80,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
       id: Date.now(),
       document_id: 0,
       field_type: fieldType,
-      page_number: pageNumber,
+      page_number: targetPage,
       x_position: Number(x.toFixed(3)),
       y_position: Number(y.toFixed(3)),
       width: 20,
@@ -45,6 +96,33 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
     onChange(fields.filter((field) => field.id !== fieldId));
   };
 
+  const handleScroll = () => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const containerTop = container.getBoundingClientRect().top;
+    let current = 1;
+    pageRefs.current.forEach((page, index) => {
+      if (!page) return;
+      const rect = page.getBoundingClientRect();
+      if (rect.top - containerTop <= 10) {
+        current = index + 1;
+      }
+    });
+    setPageNumber(current);
+  };
+
+  const jumpToPage = (nextPage: number) => {
+    const clamped = Math.min(numPages, Math.max(1, nextPage));
+    setPageNumber(clamped);
+    const page = pageRefs.current[clamped - 1];
+    if (page && scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: page.offsetTop - 16,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-4 items-end">
@@ -57,7 +135,7 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
             <SelectContent>
               {FIELD_TYPES.map((type) => (
                 <SelectItem key={type} value={type}>
-                  {type}
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -82,53 +160,103 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
         )}
         <div className="space-y-1">
           <Label>Page</Label>
-          <Input
-            type="number"
-            min={1}
-            value={pageNumber}
-            onChange={(e) => setPageNumber(Number(e.target.value))}
-            className="w-[120px]"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={numPages}
+              value={pageNumber}
+              onChange={(e) => jumpToPage(Number(e.target.value))}
+              className="w-[120px]"
+            />
+            <span className="text-sm text-muted-foreground">of {numPages}</span>
+          </div>
         </div>
         <div className="text-sm text-muted-foreground">
           Click on the canvas to place a field.
         </div>
       </div>
 
-      <div className="border rounded-md bg-muted/30 p-4">
-        <div
-          className="relative w-full max-w-3xl mx-auto aspect-[3/4] border border-dashed border-muted-foreground/40 bg-white"
-          onClick={handleCanvasClick}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') handleCanvasClick(event as any);
-          }}
-        >
-          {fileUrl ? (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-              PDF preview will render here in a future iteration.
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-              Upload a PDF to start placing fields.
-            </div>
-          )}
-          {fields.map((field) => (
-            <div
-              key={field.id}
-              className="absolute border border-blue-500 bg-blue-100/50 text-[10px] text-blue-700 px-1"
-              style={{
-                left: `${field.x_position}%`,
-                top: `${field.y_position}%`,
-                width: `${field.width}%`,
-                height: `${field.height}%`
+      <div className="border rounded-md bg-muted/30 p-4" ref={containerRef}>
+        {!pdfFile && (
+          <div className="flex items-center justify-center text-xs text-muted-foreground h-48">
+            Upload a PDF to start placing fields.
+          </div>
+        )}
+        {pdfFile && (
+          <div
+            ref={scrollRef}
+            className="max-h-[70vh] overflow-y-auto space-y-6 pr-2"
+            onScroll={handleScroll}
+          >
+            <Document
+              file={pdfFile}
+              onLoadSuccess={(doc) => {
+                setNumPages(doc.numPages);
+                setLoadError(null);
               }}
+              onLoadError={(error) => {
+                setLoadError(error?.message || 'Failed to load PDF file');
+              }}
+              onSourceError={(error) => {
+                setLoadError(error?.message || 'Failed to load PDF source');
+              }}
+              loading={<div className="p-4 text-sm text-muted-foreground">Loading PDF...</div>}
+              error={null}
             >
-              {field.field_type}
-            </div>
-          ))}
-        </div>
+              {Array.from({ length: numPages }, (_, index) => {
+                const pageIndex = index + 1;
+                return (
+                  <div
+                    key={`page-${pageIndex}`}
+                    ref={(el) => {
+                      pageRefs.current[index] = el;
+                    }}
+                    className="relative w-full max-w-4xl mx-auto border border-dashed border-muted-foreground/40 bg-white"
+                    onClick={(event) => handleCanvasClick(event, pageIndex)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') handleCanvasClick(event as any, pageIndex);
+                    }}
+                  >
+                    <Page
+                      pageNumber={pageIndex}
+                      width={pageWidth}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                    {fields
+                      .filter((field) => field.page_number === pageIndex)
+                      .map((field) => (
+                        <div
+                          key={field.id}
+                          className={`absolute border text-[10px] px-1 ${selectedFieldId === field.id ? 'border-blue-600 bg-blue-200/60 text-blue-800' : 'border-blue-500 bg-blue-100/50 text-blue-700'}`}
+                          style={{
+                            left: `${field.x_position}%`,
+                            top: `${field.y_position}%`,
+                            width: `${field.width}%`,
+                            height: `${field.height}%`
+                          }}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedFieldId(field.id);
+                          }}
+                        >
+                          {field.field_type}
+                        </div>
+                      ))}
+                  </div>
+                );
+              })}
+            </Document>
+          </div>
+        )}
+        {loadError && (
+          <div className="mt-3 text-xs text-red-500">
+            {loadError}
+          </div>
+        )}
       </div>
 
       {fields.length > 0 && (
@@ -138,7 +266,8 @@ export default function FieldPlacementCanvas({ fields, onChange, fileUrl, roles 
             {fields.map((field) => (
               <div key={field.id} className="flex items-center justify-between border rounded-md p-2">
                 <div className="text-sm">
-                  {field.field_type} {field.role_name ? `(${field.role_name})` : ''} on page {field.page_number} at ({field.x_position}, {field.y_position})
+                  {field.field_type.charAt(0).toUpperCase() + field.field_type.slice(1)}
+                  {field.role_name ? ` (${field.role_name})` : ''} on page {field.page_number}
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => removeField(field.id)}>
                   <Trash2 className="h-4 w-4" />
