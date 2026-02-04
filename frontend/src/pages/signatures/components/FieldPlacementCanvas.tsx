@@ -42,6 +42,7 @@ export default function FieldPlacementCanvas({
   const [roleName, setRoleName] = useState<string>(roles[0] || '');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
+  const [previewPageCount, setPreviewPageCount] = useState(2);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -80,6 +81,11 @@ export default function FieldPlacementCanvas({
   useEffect(() => {
     if (pageNumber > numPages) setPageNumber(numPages);
   }, [numPages, pageNumber]);
+
+  useEffect(() => {
+    if (!readOnly) return;
+    setPreviewPageCount((prev) => Math.min(Math.max(prev, 1), numPages || 1));
+  }, [numPages, readOnly]);
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>, targetPage: number) => {
     if (readOnly) return;
@@ -218,7 +224,7 @@ export default function FieldPlacementCanvas({
               loading={<div className="flex items-center justify-center py-8 text-sm text-muted-foreground">Loading PDF...</div>}
               error={null}
             >
-              {Array.from({ length: numPages }, (_, index) => {
+              {Array.from({ length: readOnly ? Math.min(numPages, previewPageCount) : numPages }, (_, index) => {
                 const pageIndex = index + 1;
                 return (
                   <div
@@ -264,6 +270,17 @@ export default function FieldPlacementCanvas({
                 );
               })}
             </Document>
+            {readOnly && numPages > previewPageCount && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewPageCount((prev) => Math.min(numPages, prev + 2))}
+                >
+                  Load more pages
+                </Button>
+              </div>
+            )}
           </div>
         )}
         {loadError && (

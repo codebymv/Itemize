@@ -103,6 +103,13 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const isOnAdminRoute = location.pathname.startsWith('/admin');
+  const [adminOpen, setAdminOpen] = React.useState(isOnAdminRoute);
+
+  React.useEffect(() => {
+    setAdminOpen(isOnAdminRoute);
+  }, [isOnAdminRoute]);
+
   return (
     <nav className="border-b backdrop-blur supports-[backdrop-filter]:bg-background/60" style={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff', borderBottomColor: theme === 'dark' ? '#475569' : '#e5e7eb' }}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -147,17 +154,19 @@ const Navbar: React.FC = () => {
                   
                   {/* Admin Dashboard Collapsible - Only shown for ADMIN users */}
                   {currentUser?.role === 'ADMIN' && (() => {
-                    const isOnAdminRoute = location.pathname.startsWith('/admin');
-                    
                     return (
                       <>
                         <DropdownMenuSeparator />
                         <div className="w-full">
-                          <Collapsible defaultOpen={isOnAdminRoute} className="w-full group/collapsible">
+                          <Collapsible open={adminOpen} onOpenChange={setAdminOpen} className="w-full group/collapsible">
                             <CollapsibleTrigger asChild>
                               <DropdownMenuItem 
                                 className="w-full cursor-pointer group/admin"
-                                onSelect={(e) => e.preventDefault()}
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  setAdminOpen(true);
+                                  handleNavigate('/admin');
+                                }}
                               >
                                 <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600" : "group-hover/admin:text-blue-600")} />
                                 <span className="flex-1">Admin Dashboard</span>
