@@ -252,7 +252,7 @@ export function SegmentsPage() {
                                                             <RefreshCw className="h-4 w-4 mr-2" />Recalculate
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => handleDelete(segment.id)} className="text-destructive dark:text-red-400 focus:text-destructive focus:dark:text-red-300">
+                                                        <DropdownMenuItem onClick={() => handleDelete(segment.id)} className="text-destructive focus:text-destructive">
                                                             <Trash2 className="h-4 w-4 mr-2" />Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>

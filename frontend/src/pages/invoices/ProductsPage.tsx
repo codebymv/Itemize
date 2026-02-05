@@ -361,7 +361,7 @@ export function ProductsPage() {
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         onClick={() => handleDelete(product.id)}
-                                                        className="text-destructive"
+                                                        className="text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>

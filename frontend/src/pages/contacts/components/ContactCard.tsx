@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Mail, Phone, MoreHorizontal, Trash2, Edit, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { Contact } from '@/types';
 
 interface ContactCardProps {
@@ -31,6 +32,8 @@ export function ContactCard({
     onDelete,
     onToggleExpand,
 }: ContactCardProps) {
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
     const getContactName = () => {
         if (contact.first_name || contact.last_name) {
             return `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
@@ -81,6 +84,7 @@ export function ContactCard({
     };
 
     return (
+        <>
         <Card
             className="cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => onToggleExpand(contact.id)}
@@ -150,12 +154,10 @@ export function ContactCard({
                                             </DropdownMenuItem>
                                         )}
                                         <DropdownMenuItem
-                                            className="text-destructive"
+                                            className="text-destructive focus:text-destructive"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (confirm('Are you sure you want to delete this contact?')) {
-                                                    onDelete(contact.id);
-                                                }
+                                                setDeleteDialogOpen(true);
                                             }}
                                         >
                                             <Trash2 className="h-4 w-4 mr-2" />
@@ -236,9 +238,7 @@ export function ContactCard({
                                         size="sm"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            if (confirm('Are you sure you want to delete this contact?')) {
-                                                onDelete(contact.id);
-                                            }
+                                            setDeleteDialogOpen(true);
                                         }}
                                         className="text-xs sm:text-sm"
                                     >
@@ -252,6 +252,18 @@ export function ContactCard({
                 </div>
             </CardContent>
         </Card>
+
+        <DeleteDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onConfirm={async () => {
+                onDelete(contact.id);
+                setDeleteDialogOpen(false);
+            }}
+            itemType="contact"
+            itemTitle={getContactName()}
+        />
+        </>
     );
 }
 

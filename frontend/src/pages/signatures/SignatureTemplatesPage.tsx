@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { SignatureTemplate, listSignatureTemplates, createSignatureTemplate, instantiateSignatureTemplate, deleteSignatureTemplate } from '@/services/signaturesApi';
@@ -18,6 +19,7 @@ export default function SignatureTemplatesPage() {
   const [templates, setTemplates] = useState<SignatureTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
+  const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -54,16 +56,18 @@ export default function SignatureTemplatesPage() {
     setExpandedTemplateId((prev) => (prev === templateId ? null : templateId));
   };
 
-  const handleDelete = useCallback(async (templateId: number) => {
-    if (!window.confirm('Delete this template?')) return;
+  const handleDelete = useCallback(async () => {
+    if (!deleteTemplateId) return;
     try {
-      await deleteSignatureTemplate(templateId);
-      setTemplates((prev) => prev.filter((template) => template.id !== templateId));
+      await deleteSignatureTemplate(deleteTemplateId);
+      setTemplates((prev) => prev.filter((template) => template.id !== deleteTemplateId));
       toast({ title: 'Template deleted' });
     } catch (error) {
       toast({ title: 'Failed to delete template', variant: 'destructive' });
+    } finally {
+      setDeleteTemplateId(null);
     }
-  }, [toast]);
+  }, [deleteTemplateId, toast]);
 
   const headerActions = useMemo(() => (
     <div className="flex items-center gap-2">
@@ -163,8 +167,8 @@ export default function SignatureTemplatesPage() {
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() => handleDelete(template.id)}
-                                    className="text-destructive dark:text-red-400 focus:text-destructive focus:dark:text-red-300"
+                                    onClick={() => setDeleteTemplateId(template.id)}
+                                    className="text-destructive focus:text-destructive"
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />Delete
                                   </DropdownMenuItem>
@@ -221,10 +225,10 @@ export default function SignatureTemplatesPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-destructive dark:text-red-400 border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive focus:dark:text-red-300 text-xs sm:text-sm"
+                                  className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDelete(template.id);
+                                    setDeleteTemplateId(template.id);
                                   }}
                                 >
                                   <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
@@ -243,6 +247,14 @@ export default function SignatureTemplatesPage() {
           </Card>
         </PageSurface>
       </PageContainer>
+
+      <DeleteDialog
+        open={deleteTemplateId !== null}
+        onOpenChange={(open) => !open && setDeleteTemplateId(null)}
+        onConfirm={handleDelete}
+        itemType="template"
+        itemTitle={templates.find(t => t.id === deleteTemplateId)?.title}
+      />
     </>
   );
 }

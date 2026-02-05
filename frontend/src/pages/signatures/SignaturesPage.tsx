@@ -9,6 +9,7 @@ import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
@@ -44,6 +45,7 @@ export function SignaturesPage() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
 
   const stats = useMemo(() => {
     const draftCount = documents.filter((doc) => doc.status === 'draft').length;
@@ -220,14 +222,16 @@ export function SignaturesPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this draft document?')) return;
+  const handleDelete = async () => {
+    if (!deleteDocumentId) return;
     try {
-      await deleteSignatureDocument(id);
+      await deleteSignatureDocument(deleteDocumentId);
       toast({ title: 'Draft deleted' });
       fetchDocuments();
     } catch (error) {
       toast({ title: 'Failed to delete draft', variant: 'destructive' });
+    } finally {
+      setDeleteDocumentId(null);
     }
   };
 
@@ -419,8 +423,8 @@ export function SignaturesPage() {
                                     <>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
-                                        onClick={() => handleDelete(doc.id)}
-                                        className="text-destructive dark:text-red-400 focus:text-destructive focus:dark:text-red-300"
+                                        onClick={() => setDeleteDocumentId(doc.id)}
+                                        className="text-destructive focus:text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                       </DropdownMenuItem>
@@ -574,10 +578,10 @@ export function SignaturesPage() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="text-destructive dark:text-red-400 border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive focus:dark:text-red-300 text-xs sm:text-sm"
+                                      className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDelete(doc.id);
+                                        setDeleteDocumentId(doc.id);
                                       }}
                                     >
                                       <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
@@ -600,6 +604,14 @@ export function SignaturesPage() {
           </Card>
         </PageSurface>
       </PageContainer>
+
+      <DeleteDialog
+        open={deleteDocumentId !== null}
+        onOpenChange={(open) => !open && setDeleteDocumentId(null)}
+        onConfirm={handleDelete}
+        itemType="document"
+        itemTitle={documents.find(d => d.id === deleteDocumentId)?.title}
+      />
     </>
   );
 }

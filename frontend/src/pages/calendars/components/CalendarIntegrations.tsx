@@ -299,7 +299,7 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
                                                 size="icon"
                                                 onClick={() => setDisconnectingId(connection.id)}
                                             >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                                             </Button>
                                         </div>
                                     </div>

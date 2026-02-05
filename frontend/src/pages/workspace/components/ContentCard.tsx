@@ -120,7 +120,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem 
-                className="text-red-600"
+                className="text-destructive focus:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();

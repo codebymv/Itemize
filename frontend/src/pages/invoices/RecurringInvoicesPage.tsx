@@ -757,7 +757,7 @@ export function RecurringInvoicesPage() {
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
                                                                 onClick={(e) => handleDeleteClick(recurring, e)}
-                                                                className="text-destructive"
+                                                                className="text-destructive focus:text-destructive"
                                                             >
                                                                 <Trash2 className="h-4 w-4 mr-2" />Delete
                                                             </DropdownMenuItem>
@@ -1095,7 +1095,7 @@ export function RecurringInvoicesPage() {
                                                 size="icon"
                                                 onClick={() => removeLineItem(item.id)}
                                             >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                                             </Button>
                                         )}
                                     </div>

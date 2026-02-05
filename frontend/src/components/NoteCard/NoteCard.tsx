@@ -278,7 +278,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                         <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Share
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-red-600" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Note
                       </DropdownMenuItem>

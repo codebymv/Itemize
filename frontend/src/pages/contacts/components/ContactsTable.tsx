@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MoreHorizontal, Trash2, Edit, Eye, Mail, Phone } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { Contact } from '@/types';
 
 interface ContactsTableProps {
@@ -37,6 +38,7 @@ export function ContactsTable({
   onContactClick,
   onDeleteContact,
 }: ContactsTableProps) {
+  const [deleteContactId, setDeleteContactId] = useState<number | null>(null);
   const allSelected = contacts.length > 0 && selectedContacts.length === contacts.length;
   const someSelected = selectedContacts.length > 0 && selectedContacts.length < contacts.length;
 
@@ -92,6 +94,7 @@ export function ContactsTable({
   };
 
   return (
+    <>
     <Table>
       <TableHeader>
         <TableRow>
@@ -196,12 +199,8 @@ export function ContactsTable({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => {
-                      if (confirm('Are you sure you want to delete this contact?')) {
-                        onDeleteContact(contact.id);
-                      }
-                    }}
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteContactId(contact.id)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
@@ -213,6 +212,22 @@ export function ContactsTable({
         ))}
       </TableBody>
     </Table>
+
+    <DeleteDialog
+      open={deleteContactId !== null}
+      onOpenChange={(open) => !open && setDeleteContactId(null)}
+      onConfirm={async () => {
+        if (deleteContactId) {
+          onDeleteContact(deleteContactId);
+          setDeleteContactId(null);
+        }
+      }}
+      itemType="contact"
+      itemTitle={contacts.find(c => c.id === deleteContactId) ? 
+        `${contacts.find(c => c.id === deleteContactId)?.first_name || ''} ${contacts.find(c => c.id === deleteContactId)?.last_name || ''}`.trim() || 
+        contacts.find(c => c.id === deleteContactId)?.email : undefined}
+    />
+    </>
   );
 }
 

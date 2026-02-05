@@ -366,7 +366,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={handleDeleteConfirmation}
-                        className="text-red-600 font-raleway"
+                        className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Vault

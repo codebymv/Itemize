@@ -20,6 +20,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
     getPageVersions,
@@ -47,6 +48,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     const [currentVersionId, setCurrentVersionId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [selectedVersion, setSelectedVersion] = useState<PageVersion | null>(null);
+    const [deleteVersionId, setDeleteVersionId] = useState<number | null>(null);
 
     // Load versions when dialog opens
     useEffect(() => {
@@ -91,15 +93,16 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
         }
     };
 
-    const handleDelete = async (versionId: number) => {
-        if (!organizationId) return;
-        if (!confirm('Are you sure you want to delete this version?')) return;
+    const handleDelete = async () => {
+        if (!organizationId || !deleteVersionId) return;
         try {
-            await deletePageVersion(pageId, versionId, organizationId);
+            await deletePageVersion(pageId, deleteVersionId, organizationId);
             toast({ title: 'Deleted', description: 'Version deleted successfully' });
             loadVersions();
         } catch (error) {
             toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete version', variant: 'destructive' });
+        } finally {
+            setDeleteVersionId(null);
         }
     };
 
@@ -214,7 +217,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                                     Restore
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    onClick={() => handleDelete(version.id)}
+                                                    onClick={() => setDeleteVersionId(version.id)}
                                                     className="text-destructive focus:text-destructive"
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" />
@@ -229,6 +232,14 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                     )}
                 </ScrollArea>
             </DialogContent>
+
+            <DeleteDialog
+                open={deleteVersionId !== null}
+                onOpenChange={(open) => !open && setDeleteVersionId(null)}
+                onConfirm={handleDelete}
+                itemType="version"
+                itemTitle={versions.find(v => v.id === deleteVersionId)?.description || `Version ${deleteVersionId}`}
+            />
         </Dialog>
     );
 }

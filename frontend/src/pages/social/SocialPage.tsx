@@ -335,7 +335,7 @@ export function SocialPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleDisconnect(channel.id)} className="text-destructive dark:text-red-400 focus:text-destructive focus:dark:text-red-300">
+                                                        <DropdownMenuItem onClick={() => handleDisconnect(channel.id)} className="text-destructive focus:text-destructive">
                                                             <Trash2 className="h-4 w-4 mr-2" />Disconnect
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>

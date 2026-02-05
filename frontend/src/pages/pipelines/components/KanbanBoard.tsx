@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 import { markDealWon, markDealLost, deleteDeal } from '@/services/pipelinesApi';
@@ -35,6 +36,7 @@ export function KanbanBoard({
   const { toast } = useToast();
   const [draggedDealId, setDraggedDealId] = useState<number | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+  const [deleteDealId, setDeleteDealId] = useState<number | null>(null);
 
   const stages = pipeline.stages as PipelineStage[];
 
@@ -99,15 +101,17 @@ export function KanbanBoard({
     }
   };
 
-  const handleDeleteDeal = async (dealId: number) => {
-    if (!confirm('Are you sure you want to delete this deal?')) return;
+  const handleDeleteDeal = async () => {
+    if (!deleteDealId) return;
     
     try {
-      await deleteDeal(dealId, organizationId);
+      await deleteDeal(deleteDealId, organizationId);
       toast({ title: 'Deleted', description: 'Deal deleted successfully' });
       onRefresh();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete deal', variant: 'destructive' });
+    } finally {
+      setDeleteDealId(null);
     }
   };
 
@@ -198,8 +202,8 @@ export function KanbanBoard({
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => handleDeleteDeal(deal.id)}
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteDealId(deal.id)}
                               >
                                 Delete
                               </DropdownMenuItem>
@@ -273,6 +277,14 @@ export function KanbanBoard({
           );
         })}
       </div>
+
+      <DeleteDialog
+        open={deleteDealId !== null}
+        onOpenChange={(open) => !open && setDeleteDealId(null)}
+        onConfirm={handleDeleteDeal}
+        itemType="deal"
+        itemTitle={deals.find(d => d.id === deleteDealId)?.title}
+      />
     </div>
   );
 }

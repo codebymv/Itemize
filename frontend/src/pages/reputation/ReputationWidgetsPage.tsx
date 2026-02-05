@@ -243,7 +243,7 @@ export function ReputationWidgetsPage() {
                                                         <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Embed Code
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(widget.id)} className="text-destructive dark:text-red-400 focus:text-destructive focus:dark:text-red-300">
+                                                    <DropdownMenuItem onClick={() => handleDelete(widget.id)} className="text-destructive focus:text-destructive">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
