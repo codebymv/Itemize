@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
+import { PageLoading } from '@/components/ui/page-loading';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
@@ -10,10 +11,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { currentUser, loading } = useAuthState();
   
   if (loading) {
-    // You could render a loading spinner here
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-    </div>;
+    return <PageLoading className="min-h-screen" />;
   }
 
   if (!currentUser) {

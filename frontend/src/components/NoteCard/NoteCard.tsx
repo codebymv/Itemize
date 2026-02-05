@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, StickyNote, Share2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
+import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/hooks/use-toast';
 import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
@@ -239,7 +240,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       />
                       {isSavingColor && (
                         <div className="absolute inset-0 flex items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
-                          <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+                          <Spinner size="xs" variant="current" />
                         </div>
                       )}
                     </Button>

@@ -4,6 +4,7 @@ import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedListCard } from '../components/SharedListCard';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
+import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
@@ -175,7 +176,7 @@ const SharedListPage: React.FC = () => {
         showCTA={false}
       >
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+          <Spinner size="xl" variant="brand" />
         </div>
       </SharedContentLayout>
     );

@@ -6,6 +6,7 @@ import { ExternalLink, Zap, Crown, Building2, User } from 'lucide-react';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Plan, PLAN_METADATA, PLAN_PRICING } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
+import { Spinner } from '@/components/ui/Spinner';
 
 const PLAN_ICONS = {
     free: User,
@@ -22,7 +23,7 @@ export function SubscriptionStatus() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <Spinner size="md" variant="brand" />
             </div>
         );
     }

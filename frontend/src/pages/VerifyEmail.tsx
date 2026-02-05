@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { useAuthActions } from '@/contexts/AuthContext';
 import { Mail, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
 
@@ -131,7 +132,7 @@ export default function VerifyEmail() {
         <CardContent className="pt-6 text-center">
           {verifying ? (
             <div className="flex flex-col items-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+              <Spinner size="xl" variant="brand" />
               <p className={`mt-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                 Verifying your email...
               </p>

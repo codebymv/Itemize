@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, GitBranch, Share2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
+import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useWireframeCardLogic } from '@/hooks/useWireframeCardLogic';
@@ -196,7 +197,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
                       />
                       {isSavingColor && (
                         <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-full">
-                          <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+                          <Spinner size="xs" variant="current" />
                         </div>
                       )}
                     </Button>

@@ -11,11 +11,11 @@ import {
   Network,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  Loader
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/Spinner';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
 interface ServerMemory {
@@ -179,7 +179,7 @@ const StatusPage: React.FC = () => {
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <Loader className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <Spinner size="lg" variant="brand" className="mx-auto mb-4" />
               <p>Loading backend status...</p>
             </div>
           </div>
@@ -207,7 +207,7 @@ const StatusPage: React.FC = () => {
               className="bg-blue-600 hover:bg-blue-700 text-white font-normal flex items-center"
             >
               {loading ? (
-                <Loader className="w-4 h-4 animate-spin mr-2" />
+                <Spinner size="sm" variant="current" className="mr-2" />
               ) : (
                 <Activity className="w-4 h-4 mr-2" />
               )}

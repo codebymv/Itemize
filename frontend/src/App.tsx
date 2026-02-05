@@ -82,11 +82,7 @@ const SignatureTemplateEditorPage = React.lazy(() => import("./pages/signatures/
 const SignPage = React.lazy(() => import("./pages/sign/SignPage"));
 
 // Loading fallback component for lazy-loaded pages
-const PageLoading = () => (
-  <div className="flex items-center justify-center min-h-[50vh]">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-  </div>
-);
+import { PageLoading } from '@/components/ui/page-loading';
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -107,9 +103,7 @@ const RootRedirect = () => {
   const { currentUser, loading } = useAuthState();
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-    </div>;
+    return <PageLoading className="min-h-screen" />;
   }
 
   // Redirect to dashboard when authenticated

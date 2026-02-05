@@ -4,6 +4,7 @@ import { useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import {
     AdminNav,
     CommunicationsSection,
@@ -51,7 +52,7 @@ export function AdminPage() {
     if (!currentUser) {
         return (
             <div className="flex items-center justify-center h-96">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Spinner size="lg" variant="muted" />
             </div>
         );
     }

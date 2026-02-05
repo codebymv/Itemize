@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
+import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/hooks/use-toast';
 
 interface ListCardHeaderProps {
@@ -121,7 +122,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                   />
                   {isSavingColor && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
-                      <div className="h-2 w-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+                      <Spinner size="xs" variant="current" />
                     </div>
                   )}
                 </Button>

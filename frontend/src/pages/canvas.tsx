@@ -7,6 +7,7 @@ import { ContextMenu } from '../components/Canvas/ContextMenu';
 import { List, Note, Whiteboard, Wireframe, Vault } from '../types';
 import { Input } from '../components/ui/input';
 import { Button } from '@/components/ui/button';
+import { PageLoading } from '@/components/ui/page-loading';
 import {
   Select,
   SelectContent,
@@ -453,12 +454,7 @@ const CanvasPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-          <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>Loading Workspace...</span>
-        </div>
-      </div>
+      <PageLoading message="Loading Workspace..." className="h-full" />
     );
   }
 
@@ -556,14 +552,7 @@ const CanvasPage: React.FC = () => {
         </MobileControlsBar>
 
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-              <span className="text-lg" style={{ color: theme === 'dark' ? '#ffffff' : '#374151' }}>
-                Loading Canvas...
-              </span>
-            </div>
-          </div>
+          <PageLoading message="Loading Canvas..." />
         ) : error ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
             <div className="text-destructive text-lg mb-4">⚠️ {error}</div>

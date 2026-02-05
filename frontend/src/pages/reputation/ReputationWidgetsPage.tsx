@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -200,8 +200,8 @@ export function ReputationWidgetsPage() {
                 <Card>
                 <CardContent className="p-0">
                     {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
+                        <div className="p-6">
+                            <CardGridSkeleton count={3} height="h-40" />
                         </div>
                     ) : filteredWidgets.length === 0 ? (
                         <div className="p-12 text-center">

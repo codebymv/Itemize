@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/Spinner';
 import {
     Dialog,
     DialogContent,
@@ -301,7 +302,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
                     {/* Importing step */}
                     {step === 'importing' && (
                         <div className="py-8 text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+                            <Spinner size="xl" variant="brand" className="mx-auto mb-4" />
                             <p className="text-muted-foreground">Importing {parsedData.length} contacts...</p>
                         </div>
                     )}
