@@ -471,7 +471,7 @@ export function SharedPage() {
             placeholder="Search shared..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
           />
         </div>
         <div className="flex items-center gap-2">

@@ -258,12 +258,12 @@ const UserHome = () => {
                 
                 {/* Desktop search - moved next to My Lists */}
                 <div className="relative hidden sm:block ml-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search lists..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-48 h-9"
+                    className="pl-10 h-9 w-48 bg-muted/20 border-border/50 focus:bg-background transition-colors"
                   />
                 </div>
               </div>
@@ -288,12 +288,12 @@ const UserHome = () => {
           {/* Mobile search */}
           <div className="sm:hidden pb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search lists..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9 bg-muted/20 border-border/50"
               />
             </div>
           </div>

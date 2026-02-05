@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from 'next-themes';
-import { Plus, Settings, MoreHorizontal, DollarSign, TrendingUp, Kanban } from 'lucide-react';
+import { Plus, Settings, MoreHorizontal, DollarSign, TrendingUp, Kanban, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -53,6 +54,7 @@ export function PipelinesPage() {
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
   const [showCreatePipelineModal, setShowCreatePipelineModal] = useState(false);
   const [initialStageId, setInitialStageId] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Set header content following workspace pattern
   useEffect(() => {
@@ -69,6 +71,15 @@ export function PipelinesPage() {
         </div>
         {/* Desktop-only controls */}
         <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search deals..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 w-56 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+            />
+          </div>
           {pipelines.length > 0 && (
             <Select
               value={selectedPipelineId?.toString() || ''}
@@ -115,7 +126,7 @@ export function PipelinesPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [pipelines, selectedPipelineId, theme, setHeaderContent]);
+  }, [pipelines, selectedPipelineId, searchQuery, theme, setHeaderContent]);
 
   useEffect(() => {
     if (orgLoading) {
@@ -292,48 +303,59 @@ export function PipelinesPage() {
       />
 
       {/* Mobile Controls Bar */}
-      <MobileControlsBar>
-        {pipelines.length > 0 && (
-          <Select
-            value={selectedPipelineId?.toString() || ''}
-            onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
+      <MobileControlsBar className="flex-col items-stretch gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search deals..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          {pipelines.length > 0 && (
+            <Select
+              value={selectedPipelineId?.toString() || ''}
+              onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
+            >
+              <SelectTrigger className="flex-1 h-9">
+                <SelectValue placeholder="Select pipeline" />
+              </SelectTrigger>
+              <SelectContent>
+                {pipelines.map((pipeline) => (
+                  <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                    {pipeline.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Pipeline
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <Settings className="h-4 w-4 mr-2" />
+                Pipeline Settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+            onClick={() => setShowCreateDealModal(true)}
           >
-            <SelectTrigger className="flex-1 h-9">
-              <SelectValue placeholder="Select pipeline" />
-            </SelectTrigger>
-            <SelectContent>
-              {pipelines.map((pipeline) => (
-                <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
-                  {pipeline.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-9 w-9">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Pipeline
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled>
-              <Settings className="h-4 w-4 mr-2" />
-              Pipeline Settings
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-          onClick={() => setShowCreateDealModal(true)}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </MobileControlsBar>
 
       <div className="h-full flex flex-col">
@@ -392,14 +414,30 @@ export function PipelinesPage() {
             </Card>
           </div>
         ) : currentPipeline ? (
-          <KanbanBoard
-            pipeline={currentPipeline}
-            deals={currentPipeline.deals}
-            onDealMove={handleDealMove}
-            onAddDeal={handleAddDealToStage}
-            onRefresh={fetchPipeline}
-            organizationId={organizationId!}
-          />
+          (() => {
+            const filteredDeals = searchQuery
+              ? currentPipeline.deals.filter(deal => {
+                  const query = searchQuery.toLowerCase();
+                  const titleMatch = deal.title.toLowerCase().includes(query);
+                  const contactMatch = deal.contact 
+                    ? `${deal.contact.first_name || ''} ${deal.contact.last_name || ''}`.toLowerCase().includes(query) ||
+                      (deal.contact.email || '').toLowerCase().includes(query)
+                    : false;
+                  const tagMatch = deal.tags?.some(tag => tag.toLowerCase().includes(query));
+                  return titleMatch || contactMatch || tagMatch;
+                })
+              : currentPipeline.deals;
+            return (
+              <KanbanBoard
+                pipeline={currentPipeline}
+                deals={filteredDeals}
+                onDealMove={handleDealMove}
+                onAddDeal={handleAddDealToStage}
+                onRefresh={fetchPipeline}
+                organizationId={organizationId!}
+              />
+            );
+          })()
         ) : null}
       </div>
 

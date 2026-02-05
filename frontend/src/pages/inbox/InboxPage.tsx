@@ -55,6 +55,7 @@ export function InboxPage() {
     const [messageLoading, setMessageLoading] = useState(false);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [statusFilter, setStatusFilter] = useState<string>('open');
+    const [searchQuery, setSearchQuery] = useState('');
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
 
@@ -72,6 +73,15 @@ export function InboxPage() {
                 </div>
                 {/* Desktop-only controls */}
                 <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 w-64 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                        />
+                    </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
@@ -87,7 +97,7 @@ export function InboxPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [statusFilter, theme, setHeaderContent]);
+    }, [statusFilter, searchQuery, theme, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -203,8 +213,17 @@ export function InboxPage() {
             />
 
             <MobileControlsBar>
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search conversations..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+                    />
+                </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full h-9">
+                    <SelectTrigger className="w-[120px] h-9">
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -224,16 +243,25 @@ export function InboxPage() {
                             <div className="p-4 space-y-3">
                                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16" />)}
                             </div>
-                        ) : conversations.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center p-4 text-center">
-                                <div>
-                                    <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                                    <p className="text-muted-foreground">No conversations</p>
+                        ) : (() => {
+                            const filteredConversations = conversations.filter(conv => {
+                                if (!searchQuery) return true;
+                                const query = searchQuery.toLowerCase();
+                                const contactName = `${conv.contact_first_name || ''} ${conv.contact_last_name || ''}`.toLowerCase();
+                                const email = (conv.contact_email || '').toLowerCase();
+                                const preview = (conv.last_message_preview || '').toLowerCase();
+                                return contactName.includes(query) || email.includes(query) || preview.includes(query);
+                            });
+                            return filteredConversations.length === 0 ? (
+                                <div className="flex-1 flex items-center justify-center p-4 text-center">
+                                    <div>
+                                        <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                                        <p className="text-muted-foreground">{searchQuery ? 'No conversations match your search' : 'No conversations'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <ScrollArea className="flex-1">
-                                {conversations.map((conv) => (
+                            ) : (
+                                <ScrollArea className="flex-1">
+                                    {filteredConversations.map((conv) => (
                                     <div
                                         key={conv.id}
                                         className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConversation?.id === conv.id ? 'bg-muted' : ''
@@ -273,7 +301,8 @@ export function InboxPage() {
                                     </div>
                                 ))}
                             </ScrollArea>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     {/* Message thread */}

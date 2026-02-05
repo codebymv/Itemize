@@ -215,7 +215,7 @@ export function BookingsPage() {
                         placeholder="Search bookings..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 h-9 w-full"
+                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
                     />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
