@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Hook to handle session expiration events
@@ -11,9 +11,10 @@ export const useSessionExpiration = () => {
 
   useEffect(() => {
     const handleSessionExpired = () => {
-      toast.error('Session Expired', {
+      toast({
+        title: 'Session Expired',
         description: 'Your session has expired. Please sign in again.',
-        duration: 5000,
+        variant: 'destructive',
       });
     };
 

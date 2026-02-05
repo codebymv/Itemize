@@ -241,7 +241,7 @@ export default function SignPage() {
       });
       toast({ title: 'Signature submitted' });
     } catch (error) {
-      toast({ title: 'Failed to submit signature', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to submit signature', variant: 'destructive' });
     }
   };
 
@@ -251,7 +251,7 @@ export default function SignPage() {
       await declinePublicSignature(token, 'Recipient declined');
       toast({ title: 'Signature declined' });
     } catch (error) {
-      toast({ title: 'Failed to decline', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to decline', variant: 'destructive' });
     }
   };
 

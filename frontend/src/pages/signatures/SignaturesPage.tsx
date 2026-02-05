@@ -95,7 +95,7 @@ export function SignaturesPage() {
       const response = await listSignatureDocuments();
       setDocuments(response.items || []);
     } catch (error) {
-      toast({ title: 'Failed to load documents', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to load documents', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -187,7 +187,7 @@ export function SignaturesPage() {
       toast({ title: 'Signature request sent' });
       fetchDocuments();
     } catch (error) {
-      toast({ title: 'Failed to send signature request', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
     }
   };
 
@@ -197,7 +197,7 @@ export function SignaturesPage() {
       toast({ title: 'Signature request resent' });
       fetchDocuments();
     } catch (error) {
-      toast({ title: 'Failed to resend signature request', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to resend signature request', variant: 'destructive' });
     }
   };
 
@@ -207,7 +207,7 @@ export function SignaturesPage() {
       toast({ title: 'Signature request cancelled' });
       fetchDocuments();
     } catch (error) {
-      toast({ title: 'Failed to cancel request', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to cancel request', variant: 'destructive' });
     }
   };
 
@@ -229,7 +229,7 @@ export function SignaturesPage() {
       toast({ title: 'Draft deleted' });
       fetchDocuments();
     } catch (error) {
-      toast({ title: 'Failed to delete draft', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to delete draft', variant: 'destructive' });
     } finally {
       setDeleteDocumentId(null);
     }
@@ -252,7 +252,7 @@ export function SignaturesPage() {
       const data = await getSignatureDocument(documentId);
       setExpandedDocumentData(data);
     } catch (error) {
-      toast({ title: 'Failed to load document details', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to load document details', variant: 'destructive' });
       setExpandedDocumentId(null);
     } finally {
       setLoadingPreview(false);

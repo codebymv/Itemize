@@ -60,7 +60,7 @@ export default function SignatureTemplateEditorPage() {
         setFields(data.fields || []);
       })
       .catch(() => {
-        toast({ title: 'Failed to load template', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to load template', variant: 'destructive' });
         navigate('/templates');
       })
       .finally(() => setLoading(false));
@@ -85,7 +85,7 @@ export default function SignatureTemplateEditorPage() {
       setTemplate(updated);
       toast({ title: 'Template updated' });
     } catch (error) {
-      toast({ title: 'Failed to save template', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to save template', variant: 'destructive' });
     } finally {
       setLoading(false);
     }

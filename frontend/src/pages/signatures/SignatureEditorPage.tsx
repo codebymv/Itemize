@@ -83,7 +83,7 @@ export default function SignatureEditorPage() {
         setFields(data.fields || []);
       })
       .catch(() => {
-        toast({ title: 'Failed to load document', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to load document', variant: 'destructive' });
       })
       .finally(() => setLoading(false));
   }, [id, toast]);
@@ -112,7 +112,7 @@ export default function SignatureEditorPage() {
         toast({ title: 'Document updated' });
       }
     } catch (error) {
-      toast({ title: 'Failed to save document', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to save document', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -156,7 +156,7 @@ export default function SignatureEditorPage() {
         setFile(null);
         toast({ title: 'File removed' });
       } catch (error) {
-        toast({ title: 'Failed to remove file', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to remove file', variant: 'destructive' });
       } finally {
         setLoading(false);
       }
@@ -183,7 +183,7 @@ export default function SignatureEditorPage() {
       setShowSendModal(false);
       navigate('/documents');
     } catch (error) {
-      toast({ title: 'Failed to send signature request', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
     } finally {
       setLoading(false);
     }

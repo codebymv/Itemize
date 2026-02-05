@@ -27,7 +27,7 @@ export default function SignatureTemplatesPage() {
       const response = await listSignatureTemplates();
       setTemplates(response || []);
     } catch (error) {
-      toast({ title: 'Failed to load templates', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to load templates', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -38,7 +38,7 @@ export default function SignatureTemplatesPage() {
       const created = await createSignatureTemplate({ title: 'New Template' });
       navigate(`/templates/${created.id}`);
     } catch (error) {
-      toast({ title: 'Failed to create template', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to create template', variant: 'destructive' });
     }
   }, [navigate, toast]);
 
@@ -47,7 +47,7 @@ export default function SignatureTemplatesPage() {
       const document = await instantiateSignatureTemplate(templateId, {});
       navigate(`/documents/${document.id}`);
     } catch (error) {
-      toast({ title: 'Failed to create document from template', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to create document from template', variant: 'destructive' });
     }
   }, [navigate, toast]);
 
@@ -63,7 +63,7 @@ export default function SignatureTemplatesPage() {
       setTemplates((prev) => prev.filter((template) => template.id !== deleteTemplateId));
       toast({ title: 'Template deleted' });
     } catch (error) {
-      toast({ title: 'Failed to delete template', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to delete template', variant: 'destructive' });
     } finally {
       setDeleteTemplateId(null);
     }
