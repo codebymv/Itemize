@@ -549,7 +549,7 @@ export function PaymentsPage() {
                                             
                                             {/* Footer Row: Date (on mobile) + Card info */}
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                                <span className="sm:hidden">
+                                                <span className="md:hidden">
                                                     {formatDateShort(payment.paid_at || payment.created_at)}
                                                 </span>
                                                 {payment.card_last4 && (

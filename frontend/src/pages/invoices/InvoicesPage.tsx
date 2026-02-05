@@ -915,7 +915,7 @@ export function InvoicesPage() {
                                             
                                             {/* Footer Row: Amount (on mobile) + Overdue status + Amount due */}
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                                <span className="sm:hidden font-semibold">{formatCurrency(invoice.total)}</span>
+                                                <span className="md:hidden font-semibold">{formatCurrency(invoice.total)}</span>
                                                 {isOverdue(invoice) && (
                                                     <span className="text-red-600 font-medium">
                                                         {Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))}d overdue
@@ -988,9 +988,9 @@ export function InvoicesPage() {
                                                                         handleOpenSendModal(invoice, false);
                                                                     }}
                                                                 >
-                                                                    <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                    <span className="hidden sm:inline">Send Invoice</span>
-                                                                    <span className="sm:hidden">Send</span>
+                                                                    <Send className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                    <span className="hidden md:inline">Send Invoice</span>
+                                                                    <span className="md:hidden">Send</span>
                                                                 </Button>
                                                             )}
                                                             {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
@@ -1002,18 +1002,18 @@ export function InvoicesPage() {
                                                                         handleOpenSendModal(invoice, true);
                                                                     }}
                                                                 >
-                                                                    <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                    <span className="hidden sm:inline">Resend Invoice</span>
-                                                                    <span className="sm:hidden">Resend</span>
+                                                                    <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                    <span className="hidden md:inline">Resend Invoice</span>
+                                                                    <span className="md:hidden">Resend</span>
                                                                 </Button>
                                                             )}
                                                             <Button 
                                                                 size="sm"
                                                                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                             >
-                                                                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                <span className="hidden sm:inline">Download PDF</span>
-                                                                <span className="sm:hidden">PDF</span>
+                                                                <Download className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                <span className="hidden md:inline">Download PDF</span>
+                                                                <span className="md:hidden">PDF</span>
                                                             </Button>
                                                             {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
                                                                 <>
@@ -1022,18 +1022,18 @@ export function InvoicesPage() {
                                                                         onClick={(e) => handleOpenPaymentModal(invoice, e)}
                                                                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                     >
-                                                                        <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                        <span className="hidden sm:inline">Record Payment</span>
-                                                                        <span className="sm:hidden">Payment</span>
+                                                                        <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                        <span className="hidden md:inline">Record Payment</span>
+                                                                        <span className="md:hidden">Payment</span>
                                                                     </Button>
                                                                     <Button
                                                                         size="sm"
                                                                         onClick={(e) => handleCreatePaymentLink(invoice, e)}
                                                                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                     >
-                                                                        <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                        <span className="hidden sm:inline">Payment Link</span>
-                                                                        <span className="sm:hidden">Link</span>
+                                                                        <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                        <span className="hidden md:inline">Payment Link</span>
+                                                                        <span className="md:hidden">Link</span>
                                                                     </Button>
                                                                 </>
                                                             )}
@@ -1043,9 +1043,9 @@ export function InvoicesPage() {
                                                                     onClick={(e) => handleOpenRecurringModal(invoice, e)}
                                                                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                                 >
-                                                                    <Repeat className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                    <span className="hidden sm:inline">Make Recurring</span>
-                                                                    <span className="sm:hidden">Recurring</span>
+                                                                    <Repeat className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                    <span className="hidden md:inline">Make Recurring</span>
+                                                                    <span className="md:hidden">Recurring</span>
                                                                 </Button>
                                                             )}
                                                             <Button

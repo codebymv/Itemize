@@ -278,15 +278,15 @@ const UserHome = () => {
                   className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">New List</span>
-                  <span className="sm:hidden">New</span>
+                  <span className="hidden md:inline">New List</span>
+                  <span className="md:hidden">New</span>
                 </Button>
               </div>
             </div>
           </div>
           
           {/* Mobile search */}
-          <div className="sm:hidden pb-4">
+          <div className="md:hidden pb-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

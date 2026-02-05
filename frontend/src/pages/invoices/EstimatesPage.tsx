@@ -444,7 +444,7 @@ export function EstimatesPage() {
                                         </span>
                                     </div>
                                     <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                        <span className="sm:hidden font-semibold">{formatCurrency(estimate.total)}</span>
+                                        <span className="md:hidden font-semibold">{formatCurrency(estimate.total)}</span>
                                     </div>
                                 </div>
                             ))}

@@ -776,7 +776,7 @@ export function RecurringInvoicesPage() {
                                             
                                             {/* Footer Row: Amount (on mobile) + Next run date + Generated count */}
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                                <span className="sm:hidden font-semibold">{formatCurrency(recurring.total)}</span>
+                                                <span className="md:hidden font-semibold">{formatCurrency(recurring.total)}</span>
                                                 {recurring.status === 'active' && recurring.next_run_date && (
                                                     <span>Next: {new Date(recurring.next_run_date).toLocaleDateString()}</span>
                                                 )}
