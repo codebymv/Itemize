@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import {
     Search,
+    Plus,
     CreditCard,
     DollarSign,
     Calendar,
@@ -50,6 +51,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CreatePaymentModal } from './components/CreatePaymentModal';
 
 interface Payment {
     id: number;
@@ -115,12 +117,16 @@ export function PaymentsPage() {
         featureKey: onboardingFeatureKey,
     } = useRouteOnboarding();
 
-    const [payments, setPayments] = useState<Payment[]>([]);
+const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [methodFilter, setMethodFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    
+    // Payment creation state
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [creating, setCreating] = useState(false);
 
     // Expanded payment state
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -144,10 +150,10 @@ export function PaymentsPage() {
                         PAYMENTS
                     </h1>
                 </div>
-                {/* Desktop-only controls */}
+{/* Desktop-only controls */}
                 <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <Select value={methodFilter} onValueChange={setMethodFilter}>
-                        <SelectTrigger className="w-[130px] h-9">
+                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
                             <SelectValue placeholder="Method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -159,7 +165,7 @@ export function PaymentsPage() {
                         </SelectContent>
                     </Select>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
+                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -171,14 +177,18 @@ export function PaymentsPage() {
                         </SelectContent>
                     </Select>
                     <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search payments..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
                         />
                     </div>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap" onClick={() => setShowCreateModal(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Payment
+                    </Button>
                 </div>
             </div>
         );
@@ -303,7 +313,7 @@ export function PaymentsPage() {
         }
     };
 
-    const filteredPayments = payments.filter(p => {
+const filteredPayments = payments.filter(p => {
         const searchLower = searchQuery.toLowerCase();
         return (
             (p.invoice_number && p.invoice_number.toLowerCase().includes(searchLower)) ||
@@ -314,21 +324,47 @@ export function PaymentsPage() {
         );
     });
 
+    const handleCreatePayment = async (paymentData: any) => {
+        if (!organizationId) return;
+        
+        try {
+            setCreating(true);
+            await api.post('/api/invoices/payments', {
+                ...paymentData,
+                status: 'succeeded',
+            }, {
+                headers: { 'x-organization-id': organizationId.toString() }
+            });
+            toast({ title: 'Payment recorded' });
+            setShowCreateModal(false);
+            fetchPayments();
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
+        } finally {
+            setCreating(false);
+        }
+    };
+
     return (
         <>
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar className="flex-col items-stretch">
+{/* Mobile Controls Bar */}
+            <MobileControlsBar className="flex-col items-stretch gap-2">
+                {/* Row 1: Primary Actions */}
                 <div className="flex items-center gap-2 w-full">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                             placeholder="Search payments..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
                         />
                     </div>
+                    <Button size="icon" className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9" onClick={() => setShowCreateModal(true)}>
+                        <Plus className="h-4 w-4" />
+                    </Button>
                 </div>
+                {/* Row 2: Filters */}
                 <div className="flex items-center gap-2 w-full">
                     <Select value={methodFilter} onValueChange={setMethodFilter}>
                         <SelectTrigger className="flex-1 h-9">
@@ -426,21 +462,21 @@ export function PaymentsPage() {
                         <div className="p-6 space-y-4">
                             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16" />)}
                         </div>
-                    ) : filteredPayments.length === 0 ? (
+) : filteredPayments.length === 0 ? (
                         <div className="p-12 text-center">
                             <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                                 <DollarSign className="h-6 w-6 text-muted-foreground" />
                             </div>
                             <h3 className="text-lg font-medium mb-2">No payments yet</h3>
                             <p className="text-muted-foreground mb-4">
-                                Payments will appear here when you record them on invoices
+                                Record payments manually or they'll appear when invoices are paid
                             </p>
                             <Button
-                                onClick={() => navigate('/invoices')}
+                                onClick={() => setShowCreateModal(true)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                             >
-                                <Receipt className="h-4 w-4 mr-2" />
-                                Go to Invoices
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                Record Payment
                             </Button>
                         </div>
                     ) : (
@@ -727,10 +763,18 @@ export function PaymentsPage() {
                 isOpen={showOnboarding}
                 onClose={handleOnboardingClose}
                 onComplete={handleOnboardingComplete}
-                onDismiss={handleOnboardingDismiss}
+onDismiss={handleOnboardingDismiss}
                 content={ONBOARDING_CONTENT[onboardingFeatureKey]}
             />
         )}
+        
+        {/* Create Payment Modal */}
+        <CreatePaymentModal
+            open={showCreateModal}
+            onOpenChange={setShowCreateModal}
+            onConfirm={handleCreatePayment}
+            creating={creating}
+        />
         </>
     );
 }
