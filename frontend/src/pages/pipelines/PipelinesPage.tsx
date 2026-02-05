@@ -69,15 +69,15 @@ export function PipelinesPage() {
             PIPELINES
           </h1>
         </div>
-        {/* Desktop-only controls */}
+{/* Desktop-only controls */}
         <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          <div className="relative">
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search deals..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 w-56 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
             />
           </div>
           {pipelines.length > 0 && (
@@ -116,7 +116,7 @@ export function PipelinesPage() {
           </DropdownMenu>
           <Button
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
             onClick={() => setShowCreateDealModal(true)}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -302,19 +302,31 @@ export function PipelinesPage() {
         content={ONBOARDING_CONTENT.pipelines}
       />
 
-      {/* Mobile Controls Bar */}
-      <MobileControlsBar className="flex-col items-stretch gap-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search deals..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-          />
+{/* Mobile Controls Bar */}
+      <MobileControlsBar className="flex-col items-stretch gap-2">
+        {/* Row 1: Primary Actions */}
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search deals..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+            />
+          </div>
+          <Button
+            size="icon"
+            className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+            onClick={() => setShowCreateDealModal(true)}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
-        <div className="flex items-center gap-2">
-          {pipelines.length > 0 && (
+        
+        {/* Row 2: Pipeline Selector + Menu */}
+        {pipelines.length > 0 && (
+          <div className="flex items-center gap-2 w-full">
             <Select
               value={selectedPipelineId?.toString() || ''}
               onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
@@ -330,32 +342,25 @@ export function PipelinesPage() {
                 ))}
               </SelectContent>
             </Select>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Pipeline
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <Settings className="h-4 w-4 mr-2" />
-                Pipeline Settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-            onClick={() => setShowCreateDealModal(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Pipeline
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Pipeline Settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </MobileControlsBar>
 
       <div className="h-full flex flex-col">
