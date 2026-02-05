@@ -3,6 +3,7 @@ import { MoreHorizontal, Trash2, Edit, Eye, Mail, Phone } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getContactStatusBadgeClass } from '@/lib/badge-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,27 +60,15 @@ export function ContactsTable({
       .slice(0, 2);
   };
 
-  const getContactStatusBadgeClasses = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'inactive':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-      case 'archived':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default:
-        return '';
-    }
-  };
-
   const getStatusBadge = (status: string) => {
+    const badgeClass = getContactStatusBadgeClass(status);
     switch (status) {
       case 'active':
-        return <Badge className={getContactStatusBadgeClasses('active')}>Active</Badge>;
+        return <Badge className={badgeClass}>Active</Badge>;
       case 'inactive':
-        return <Badge className={getContactStatusBadgeClasses('inactive')}>Inactive</Badge>;
+        return <Badge className={badgeClass}>Inactive</Badge>;
       case 'archived':
-        return <Badge className={getContactStatusBadgeClasses('archived')}>Archived</Badge>;
+        return <Badge className={badgeClass}>Archived</Badge>;
       default:
         return null;
     }

@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { usePageHeader } from '@/hooks/usePageHeader';
@@ -174,18 +175,6 @@ export function CampaignsPage() {
         c.subject.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'sent': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'sending': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-            case 'scheduled': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-            case 'draft': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-            case 'paused': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-            default: return '';
-        }
-    };
-
     if (initError) {
         return (
             <PageContainer>
@@ -302,7 +291,7 @@ export function CampaignsPage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <h3 className="font-medium truncate">{campaign.name}</h3>
-                                                <Badge className={`text-xs ${getStatusBadge(campaign.status)}`}>
+                                                <Badge className={`text-xs ${getStatusBadgeClass(campaign.status)}`}>
                                                     {campaign.status}
                                                 </Badge>
                                             </div>

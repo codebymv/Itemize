@@ -28,51 +28,8 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
-
-// Color helper functions for stat cards (matching dashboard/invoice page visual language)
-const getStatBadgeClasses = (theme: string) => {
-    switch (theme) {
-        case 'green': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-        case 'orange': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-        case 'blue': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
-        case 'purple': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-        case 'red': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-    }
-};
-
-const getStatIconBgClasses = (theme: string) => {
-    switch (theme) {
-        case 'green': return 'bg-green-100 dark:bg-green-900';
-        case 'orange': return 'bg-orange-100 dark:bg-orange-900';
-        case 'blue': return 'bg-sky-100 dark:bg-sky-900';
-        case 'purple': return 'bg-purple-100 dark:bg-purple-900';
-        case 'red': return 'bg-red-100 dark:bg-red-900';
-        default: return 'bg-gray-100 dark:bg-gray-800';
-    }
-};
-
-const getStatValueColor = (theme: string) => {
-    switch (theme) {
-        case 'green': return 'text-green-600';
-        case 'orange': return 'text-orange-600';
-        case 'blue': return 'text-sky-600';
-        case 'purple': return 'text-purple-600';
-        case 'red': return 'text-red-600';
-        default: return 'text-gray-600';
-    }
-};
-
-const getStatIconColor = (theme: string) => {
-    switch (theme) {
-        case 'green': return 'text-green-600 dark:text-green-400';
-        case 'orange': return 'text-orange-600 dark:text-orange-400';
-        case 'blue': return 'text-sky-600 dark:text-sky-400';
-        case 'purple': return 'text-purple-600 dark:text-purple-400';
-        case 'red': return 'text-red-600 dark:text-red-400';
-        default: return 'text-gray-400 dark:text-gray-500';
-    }
-};
+import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
+import { getSentimentBadgeClass } from '@/lib/badge-utils';
 
 interface Review {
     id: number;
@@ -279,12 +236,12 @@ export function ReputationPage() {
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Negative</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{analytics.negative_count}</p>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('red')}`}>Negative</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueClass('red')}`}>{analytics.negative_count}</p>
                                         <p className="text-xs text-muted-foreground">Negative Reviews</p>
                                     </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
-                                        <ThumbsDown className={`h-5 w-5 ${getStatIconColor('red')}`} />
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('red')}`}>
+                                        <ThumbsDown className={`h-5 w-5 ${getStatIconClass('red')}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -294,12 +251,12 @@ export function ReputationPage() {
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{analytics.total_reviews}</p>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Total</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{analytics.total_reviews}</p>
                                         <p className="text-xs text-muted-foreground">Total Reviews</p>
                                     </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
-                                        <FileText className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
+                                        <FileText className={`h-5 w-5 ${getStatIconClass('blue')}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -308,12 +265,12 @@ export function ReputationPage() {
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Average</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{Number(analytics.average_rating || 0).toFixed(1)}</p>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Average</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{Number(analytics.average_rating || 0).toFixed(1)}</p>
                                         <p className="text-xs text-muted-foreground">Average Rating</p>
                                     </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
-                                        <Star className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
+                                        <Star className={`h-5 w-5 ${getStatIconClass('blue')}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -323,12 +280,12 @@ export function ReputationPage() {
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Neutral</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{analytics.neutral_count}</p>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('orange')}`}>Neutral</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueClass('orange')}`}>{analytics.neutral_count}</p>
                                         <p className="text-xs text-muted-foreground">Neutral Reviews</p>
                                     </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
-                                        <MessageSquare className={`h-5 w-5 ${getStatIconColor('orange')}`} />
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('orange')}`}>
+                                        <MessageSquare className={`h-5 w-5 ${getStatIconClass('orange')}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -338,12 +295,12 @@ export function ReputationPage() {
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Positive</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{analytics.positive_count}</p>
+                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('green')}`}>Positive</Badge>
+                                        <p className={`text-2xl font-bold ${getStatValueClass('green')}`}>{analytics.positive_count}</p>
                                         <p className="text-xs text-muted-foreground">Positive Reviews</p>
                                     </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
-                                        <ThumbsUp className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('green')}`}>
+                                        <ThumbsUp className={`h-5 w-5 ${getStatIconClass('green')}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -376,7 +333,7 @@ export function ReputationPage() {
                                             <div className="flex items-center gap-2 mb-1">
                                                 <p className="font-medium">{review.reviewer_name}</p>
                                                 <Badge variant="outline" className="text-xs">{review.platform}</Badge>
-                                                <Badge className={`text-xs ${getSentimentBadge(review.sentiment)}`}>
+                                                <Badge className={`text-xs ${getSentimentBadgeClass(review.sentiment)}`}>
                                                     {review.sentiment}
                                                 </Badge>
                                             </div>

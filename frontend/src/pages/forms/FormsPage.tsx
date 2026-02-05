@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
@@ -185,15 +186,6 @@ export function FormsPage() {
 
     const filteredForms = forms.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'published': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'draft': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-            case 'archived': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-            default: return '';
-        }
-    };
-
     if (initError) {
         return (
             <PageContainer>
@@ -316,7 +308,7 @@ export function FormsPage() {
                                         </CardHeader>
                                         <CardContent className="pt-0">
                                             <div className="flex flex-wrap gap-2 mb-3">
-                                                <Badge className={`text-xs ${getStatusBadge(form.status)}`}>{form.status}</Badge>
+                                                <Badge className={`text-xs ${getStatusBadgeClass(form.status)}`}>{form.status}</Badge>
                                                 <Badge variant="outline" className="text-xs">{form.type}</Badge>
                                                 <Badge variant="outline" className="text-xs">{form.field_count || 0} fields</Badge>
                                             </div>

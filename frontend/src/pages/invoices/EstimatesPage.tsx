@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
@@ -249,17 +250,6 @@ export function EstimatesPage() {
         return filtered;
     }, [estimates, activeTab, searchQuery]);
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'accepted': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'sent': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            case 'draft': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
-            case 'declined': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-            case 'expired': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            default: return '';
-        }
-    };
-
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'accepted': return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -314,7 +304,7 @@ export function EstimatesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('declined')}`}>Declined</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('declined')}`}>Declined</Badge>
                                 <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
                                 <p className="text-xs text-muted-foreground">{stats.declined} estimate{stats.declined !== 1 ? 's' : ''}</p>
                             </div>
@@ -328,7 +318,7 @@ export function EstimatesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Draft</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('draft')}`}>Draft</Badge>
                                 <p className="text-2xl font-bold text-sky-600">{stats.draft}</p>
                                 <p className="text-xs text-muted-foreground">{stats.draft} estimate{stats.draft !== 1 ? 's' : ''}</p>
                             </div>
@@ -342,7 +332,7 @@ export function EstimatesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Sent</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('sent')}`}>Sent</Badge>
                                 <p className="text-2xl font-bold text-orange-600">{stats.sent}</p>
                                 <p className="text-xs text-muted-foreground">{stats.sent} estimate{stats.sent !== 1 ? 's' : ''}</p>
                             </div>
@@ -356,7 +346,7 @@ export function EstimatesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('accepted')}`}>Accepted</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('accepted')}`}>Accepted</Badge>
                                 <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
                                 <p className="text-xs text-muted-foreground">{stats.accepted} estimate{stats.accepted !== 1 ? 's' : ''}</p>
                             </div>
@@ -441,7 +431,7 @@ export function EstimatesPage() {
                                     </div>
                                     <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                                         <span className="text-sm text-muted-foreground font-medium">{getContactName(estimate)}</span>
-                                        <Badge className={`text-xs ${getStatusBadge(estimate.status)}`}>
+                                        <Badge className={`text-xs ${getStatusBadgeClass(estimate.status)}`}>
                                             {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
                                         </Badge>
                                         {estimate.converted_invoice_id && (

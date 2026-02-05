@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
@@ -160,18 +161,6 @@ export function BookingsPage() {
         }
     };
 
-    // Status badge color
-    const getStatusBadge = (status: string) => {
-        const variants: Record<string, string> = {
-            confirmed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-            pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-            completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-            no_show: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-        };
-        return variants[status] || 'bg-gray-100 text-gray-800';
-    };
-
     // Filter by search
     const filteredBookings = bookings.filter((b) => {
         const searchLower = searchQuery.toLowerCase();
@@ -273,7 +262,7 @@ export function BookingsPage() {
                                             <span className="font-medium truncate">
                                                 {booking.attendee_name || 'Unknown'}
                                             </span>
-                                            <Badge className={`text-xs ${getStatusBadge(booking.status)}`}>
+                                            <Badge className={`text-xs ${getStatusBadgeClass(booking.status)}`}>
                                                 {booking.status}
                                             </Badge>
                                         </div>

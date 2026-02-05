@@ -50,6 +50,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -545,15 +546,6 @@ export function RecurringInvoicesPage() {
         return filtered;
     }, [recurringInvoices, activeTab, searchQuery]);
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'active': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-            case 'paused': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            default: return '';
-        }
-    };
-
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'active': return <Play className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
@@ -618,7 +610,7 @@ export function RecurringInvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('active')}`}>Active</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('active')}`}>Active</Badge>
                                 <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
                                 <p className="text-xs text-muted-foreground">{stats.active} recurring{stats.active !== 1 ? 's' : ''}</p>
                             </div>
@@ -632,7 +624,7 @@ export function RecurringInvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('paused')}`}>Paused</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('paused')}`}>Paused</Badge>
                                 <p className="text-2xl font-bold text-orange-600">{stats.paused}</p>
                                 <p className="text-xs text-muted-foreground">{stats.paused} recurring{stats.paused !== 1 ? 's' : ''}</p>
                             </div>
@@ -646,7 +638,7 @@ export function RecurringInvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('completed')}`}>Completed</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('completed')}`}>Completed</Badge>
                                 <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
                                 <p className="text-xs text-muted-foreground">{stats.completed} recurring{stats.completed !== 1 ? 's' : ''}</p>
                             </div>
@@ -772,7 +764,7 @@ export function RecurringInvoicesPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(recurring)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(recurring.status)}`}>
+                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(recurring.status)}`}>
                                                     {recurring.status.charAt(0).toUpperCase() + recurring.status.slice(1)}
                                                 </Badge>
                                                 
@@ -845,7 +837,7 @@ export function RecurringInvoicesPage() {
                                                                         
                                                                         <div className="flex justify-between items-center py-2 border-b">
                                                                             <span className="text-sm text-muted-foreground">Status</span>
-                                                                            <Badge className={getStatusBadge(expandedData.status)}>
+                                                                            <Badge className={getStatusBadgeClass(expandedData.status)}>
                                                                                 {expandedData.status.charAt(0).toUpperCase() + expandedData.status.slice(1)}
                                                                             </Badge>
                                                                         </div>

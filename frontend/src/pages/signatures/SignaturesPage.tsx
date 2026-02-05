@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import {
   SignatureDocument,
@@ -24,15 +25,6 @@ import {
   deleteSignatureDocument,
   downloadSignedDocument
 } from '@/services/signaturesApi';
-
-const statusColors: Record<string, string> = {
-  draft: 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300',
-  sent: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  in_progress: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  expired: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-};
 
 export function SignaturesPage() {
   const navigate = useNavigate();
@@ -55,17 +47,6 @@ export function SignaturesPage() {
     const activeCount = sentCount + inProgressCount;
     return { draftCount, sentCount, inProgressCount, completedCount, activeCount };
   }, [documents]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'sent': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-      case 'in_progress': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-      case 'draft': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
-      case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -304,7 +285,7 @@ export function SignaturesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Drafts</Badge>
+                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('draft')}`}>Drafts</Badge>
                     <p className="text-2xl font-bold text-sky-600">{stats.draftCount}</p>
                     <p className="text-xs text-muted-foreground">document{stats.draftCount !== 1 ? 's' : ''}</p>
                   </div>
@@ -318,7 +299,7 @@ export function SignaturesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Sent</Badge>
+                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('sent')}`}>Sent</Badge>
                     <p className="text-2xl font-bold text-orange-600">{stats.sentCount}</p>
                     <p className="text-xs text-muted-foreground">document{stats.sentCount !== 1 ? 's' : ''}</p>
                   </div>
@@ -332,7 +313,7 @@ export function SignaturesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadge('in_progress')}`}>In Progress</Badge>
+                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('in_progress')}`}>In Progress</Badge>
                     <p className="text-2xl font-bold text-orange-600">{stats.inProgressCount}</p>
                     <p className="text-xs text-muted-foreground">document{stats.inProgressCount !== 1 ? 's' : ''}</p>
                   </div>
@@ -346,7 +327,7 @@ export function SignaturesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadge('completed')}`}>Completed</Badge>
+                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('completed')}`}>Completed</Badge>
                     <p className="text-2xl font-bold text-green-600">{stats.completedCount}</p>
                     <p className="text-xs text-muted-foreground">document{stats.completedCount !== 1 ? 's' : ''}</p>
                   </div>
@@ -446,7 +427,7 @@ export function SignaturesPage() {
                           </div>
 
                           <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                            <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(doc.status)}`}>
+                            <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(doc.status)}`}>
                               {doc.status.replace('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase())}
                             </Badge>
                             {(() => {

@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     AlertDialog,
@@ -609,19 +610,6 @@ export function InvoicesPage() {
         return filtered;
     }, [invoices, activeTab, searchQuery]);
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'sent':
-            case 'viewed': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            case 'draft': return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
-            case 'overdue': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-            case 'partial': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            case 'cancelled': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            default: return '';
-        }
-    };
-
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'paid': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
@@ -725,7 +713,7 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('overdue')}`}>Overdue</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('overdue')}`}>Overdue</Badge>
                                 <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.overdueCount} invoice{stats.overdueCount !== 1 ? 's' : ''}</p>
                             </div>
@@ -739,7 +727,7 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('draft')}`}>Draft</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('draft')}`}>Draft</Badge>
                                 <p className="text-2xl font-bold text-sky-600">{formatCurrency(stats.draft)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.draftCount} invoice{stats.draftCount !== 1 ? 's' : ''}</p>
                             </div>
@@ -753,7 +741,7 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('sent')}`}>Due within 30 days</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('sent')}`}>Due within 30 days</Badge>
                                 <p className="text-2xl font-bold text-orange-600">{formatCurrency(stats.dueWithin30)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.dueWithin30Count} invoice{stats.dueWithin30Count !== 1 ? 's' : ''}</p>
                             </div>
@@ -767,7 +755,7 @@ export function InvoicesPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('paid')}`}>Paid (Total)</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('paid')}`}>Paid (Total)</Badge>
                                 <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.paidCount} invoice{stats.paidCount !== 1 ? 's' : ''}</p>
                             </div>
@@ -907,7 +895,7 @@ export function InvoicesPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(invoice)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(effectiveStatus)}`}>
+                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(effectiveStatus)}`}>
                                                     {effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1)}
                                                 </Badge>
                                                 

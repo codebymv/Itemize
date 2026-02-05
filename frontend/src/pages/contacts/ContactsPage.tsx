@@ -40,88 +40,8 @@ import { ImportContactsModal } from './components/ImportContactsModal';
 import { BulkTagModal } from './components/BulkTagModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
-
-// Color helper functions for contact status badges and summary cards
-const getContactStatusBadgeClasses = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 'inactive':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-    case 'archived':
-      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    default:
-      return '';
-  }
-};
-
-const getStatBadgeClasses = (theme: string) => {
-  switch (theme) {
-    case 'green':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 'orange':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-    case 'blue':
-      return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300';
-    case 'red':
-      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    case 'gray':
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-  }
-};
-
-const getStatIconBgClasses = (theme: string) => {
-  switch (theme) {
-    case 'green':
-      return 'bg-green-100 dark:bg-green-900';
-    case 'orange':
-      return 'bg-orange-100 dark:bg-orange-900';
-    case 'blue':
-      return 'bg-sky-100 dark:bg-sky-900';
-    case 'red':
-      return 'bg-red-100 dark:bg-red-900';
-    case 'gray':
-      return 'bg-gray-100 dark:bg-gray-800';
-    default:
-      return 'bg-gray-100 dark:bg-gray-800';
-  }
-};
-
-const getStatValueColor = (theme: string) => {
-  switch (theme) {
-    case 'green':
-      return 'text-green-600';
-    case 'orange':
-      return 'text-orange-600';
-    case 'blue':
-      return 'text-sky-600';
-    case 'red':
-      return 'text-red-600';
-    case 'gray':
-      return 'text-gray-600';
-    default:
-      return 'text-gray-600';
-  }
-};
-
-const getStatIconColor = (theme: string) => {
-  switch (theme) {
-    case 'green':
-      return 'text-green-600 dark:text-green-400';
-    case 'orange':
-      return 'text-orange-600 dark:text-orange-400';
-    case 'blue':
-      return 'text-sky-600 dark:text-sky-400';
-    case 'red':
-      return 'text-red-600 dark:text-red-400';
-    case 'gray':
-      return 'text-gray-400 dark:text-gray-500';
-    default:
-      return 'text-gray-400 dark:text-gray-500';
-  }
-};
+import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
+import { getContactStatusBadgeClass } from '@/lib/badge-utils';
 
 export function ContactsPage() {
   const navigate = useNavigate();
@@ -443,14 +363,14 @@ export function ContactsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('red')}`}>Archived</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueColor('red')}`}>{contactStats.archived}</p>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('red')}`}>Archived</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueClass('red')}`}>{contactStats.archived}</p>
                     <p className="text-xs text-muted-foreground">
                       {contactStats.archived} contact{contactStats.archived !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('red')}`}>
-                    <Archive className={`h-5 w-5 ${getStatIconColor('red')}`} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('red')}`}>
+                    <Archive className={`h-5 w-5 ${getStatIconClass('red')}`} />
                   </div>
                 </div>
               </CardContent>
@@ -459,14 +379,14 @@ export function ContactsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('blue')}`}>Total</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueColor('blue')}`}>{contactStats.total}</p>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Total</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{contactStats.total}</p>
                     <p className="text-xs text-muted-foreground">
                       {contactStats.total} contact{contactStats.total !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('blue')}`}>
-                    <Users className={`h-5 w-5 ${getStatIconColor('blue')}`} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
+                    <Users className={`h-5 w-5 ${getStatIconClass('blue')}`} />
                   </div>
                 </div>
               </CardContent>
@@ -475,14 +395,14 @@ export function ContactsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('green')}`}>Active</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueColor('green')}`}>{contactStats.active}</p>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('green')}`}>Active</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueClass('green')}`}>{contactStats.active}</p>
                     <p className="text-xs text-muted-foreground">
                       {contactStats.active} contact{contactStats.active !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('green')}`}>
-                    <CheckCircle className={`h-5 w-5 ${getStatIconColor('green')}`} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('green')}`}>
+                    <CheckCircle className={`h-5 w-5 ${getStatIconClass('green')}`} />
                   </div>
                 </div>
               </CardContent>
@@ -491,14 +411,14 @@ export function ContactsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClasses('orange')}`}>Inactive</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueColor('orange')}`}>{contactStats.inactive}</p>
+                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('orange')}`}>Inactive</Badge>
+                    <p className={`text-2xl font-bold ${getStatValueClass('orange')}`}>{contactStats.inactive}</p>
                     <p className="text-xs text-muted-foreground">
                       {contactStats.inactive} contact{contactStats.inactive !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClasses('orange')}`}>
-                    <AlertCircle className={`h-5 w-5 ${getStatIconColor('orange')}`} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('orange')}`}>
+                    <AlertCircle className={`h-5 w-5 ${getStatIconClass('orange')}`} />
                   </div>
                 </div>
               </CardContent>

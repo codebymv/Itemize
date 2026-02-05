@@ -28,6 +28,7 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { getWidgetTypeBadgeClass } from '@/lib/badge-utils';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 interface ReviewWidget {
@@ -171,16 +172,6 @@ export function ReputationWidgetsPage() {
         }
     };
 
-    const getTypeBadge = (type: string) => {
-        switch (type) {
-            case 'carousel': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-            case 'grid': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-            case 'list': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'badge': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-            default: return '';
-        }
-    };
-
     const filteredWidgets = widgets.filter(w => {
         const matchesSearch = w.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesType = typeFilter === 'all' || w.widget_type === typeFilter;
@@ -288,7 +279,7 @@ export function ReputationWidgetsPage() {
                                     </CardHeader>
                                     <CardContent className="pt-0">
                                         <div className="flex flex-wrap gap-2 mb-3">
-                                            <Badge className={`text-xs ${getTypeBadge(widget.widget_type)}`}>
+                                            <Badge className={`text-xs ${getWidgetTypeBadgeClass(widget.widget_type)}`}>
                                                 {widget.widget_type}
                                             </Badge>
                                             <Badge variant={widget.is_active ? 'default' : 'secondary'}>

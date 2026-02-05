@@ -31,6 +31,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -258,10 +259,6 @@ export function PaymentsPage() {
         });
     };
 
-    const getStatusBadge = (status: string) => {
-        return STATUS_STYLES[status] || '';
-    };
-
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'succeeded': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
@@ -382,7 +379,7 @@ export function PaymentsPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('pending')}`}>Pending</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('pending')}`}>Pending</Badge>
                                 <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
                                 <p className="text-xs text-muted-foreground">{stats.pending} payment{stats.pending !== 1 ? 's' : ''}</p>
                             </div>
@@ -396,7 +393,7 @@ export function PaymentsPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('succeeded')}`}>Succeeded</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('succeeded')}`}>Succeeded</Badge>
                                 <p className="text-2xl font-bold text-green-600">{stats.succeeded}</p>
                                 <p className="text-xs text-muted-foreground">{stats.succeeded} payment{stats.succeeded !== 1 ? 's' : ''}</p>
                             </div>
@@ -410,7 +407,7 @@ export function PaymentsPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadge('succeeded')}`}>Total Received</Badge>
+                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('succeeded')}`}>Total Received</Badge>
                                 <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.total)}</p>
                                 <p className="text-xs text-muted-foreground">{stats.succeeded} payment{stats.succeeded !== 1 ? 's' : ''}</p>
                             </div>
@@ -531,7 +528,7 @@ export function PaymentsPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(payment)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadge(payment.status)}`}>
+                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(payment.status)}`}>
                                                     {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                                                 </Badge>
                                                 
@@ -585,7 +582,7 @@ export function PaymentsPage() {
                                                                 
                                                                 <div className="flex justify-between items-center py-2 border-b">
                                                                     <span className="text-sm text-muted-foreground">Status</span>
-                                                                    <Badge className={getStatusBadge(payment.status)}>
+                                                                    <Badge className={getStatusBadgeClass(payment.status)}>
                                                                         {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                                                                     </Badge>
                                                                 </div>
