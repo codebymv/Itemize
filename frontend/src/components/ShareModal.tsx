@@ -22,8 +22,8 @@ import { useToast } from '../hooks/use-toast';
 type ShareItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
 
 interface ShareModalProps<TId extends string | number = string | number> {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   itemType: ShareItemType;
   itemId: TId;
   itemTitle: string;
@@ -89,8 +89,8 @@ const shareConfig = {
 } as const;
 
 export const ShareModal = <TId extends string | number>({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   itemType,
   itemId,
   itemTitle,
@@ -189,7 +189,7 @@ export const ShareModal = <TId extends string | number>({
   };
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!open) return;
     setShareData(existingShareData || null);
     setCopied(false);
     setShowWarningState(showWarning && !existingShareData);
@@ -197,12 +197,12 @@ export const ShareModal = <TId extends string | number>({
     if (autoGenerate && !existingShareData && !isLocked) {
       handleShare();
     }
-  }, [isOpen, existingShareData, autoGenerate, isLocked, showWarning]);
+  }, [open, existingShareData, autoGenerate, isLocked, showWarning]);
 
-  if (!isOpen) return null;
+  if (!open) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-raleway">
@@ -217,7 +217,7 @@ export const ShareModal = <TId extends string | number>({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="font-raleway">Sharing</Label>
-            <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
+            <div className="p-3 bg-muted rounded-md">
               <p className="font-medium text-sm flex items-center gap-2 font-raleway">
                 <Icon className={`h-4 w-4 ${config.iconClassName}`} />
                 {itemTitle}
@@ -288,14 +288,14 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   onClick={handleUnshare}
                   disabled={isLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white font-raleway"
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-raleway"
                 >
                   Revoke Sharing
                 </Button>
                 <Button
                   type="button"
-                  onClick={onClose}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
+                  onClick={() => onOpenChange(false)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
                 >
                   Done
                 </Button>
@@ -306,7 +306,7 @@ export const ShareModal = <TId extends string | number>({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={() => onOpenChange(false)}
                   className="font-raleway"
               >
                 Close
@@ -318,7 +318,7 @@ export const ShareModal = <TId extends string | number>({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onClose}
+                  onClick={() => onOpenChange(false)}
                   className="font-raleway"
                 >
                   Cancel
@@ -327,7 +327,7 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   onClick={handleShare}
                   disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
                 >
                   I understand, Share
                 </Button>
@@ -354,7 +354,7 @@ export const ShareModal = <TId extends string | number>({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onClose}
+                  onClick={() => onOpenChange(false)}
                   className="font-raleway"
                 >
                   Cancel
@@ -366,7 +366,7 @@ export const ShareModal = <TId extends string | number>({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={() => onOpenChange(false)}
                   className="font-raleway"
               >
                 Cancel
@@ -375,7 +375,7 @@ export const ShareModal = <TId extends string | number>({
                 type="button"
                 onClick={handleShare}
                 disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
               >
                 Share
               </Button>

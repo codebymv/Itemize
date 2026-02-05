@@ -16,7 +16,7 @@ import { CategorySelector } from '../CategorySelector';
 import { useTheme } from 'next-themes';
 
 import { Category } from '@/types';
-import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
+import { DeleteDialog } from '../ui/delete-dialog';
 import { updateNoteContent } from '@/services/api';
 import { useAuthState } from '@/contexts/AuthContext';
 
@@ -345,9 +345,9 @@ const NoteCard: React.FC<NoteCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+      <DeleteDialog
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
         itemType="note"
         itemTitle={note.title}
         itemColor={noteDisplayColor}

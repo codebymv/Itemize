@@ -1183,10 +1183,12 @@ export function InvoicesPage() {
             {/* Payment Link Modal */}
             {selectedInvoiceForPaymentLink && (
                 <PaymentLinkModal
-                    isOpen={showPaymentLinkModal}
-                    onClose={() => {
-                        setShowPaymentLinkModal(false);
-                        setSelectedInvoiceForPaymentLink(null);
+                    open={showPaymentLinkModal}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setShowPaymentLinkModal(false);
+                            setSelectedInvoiceForPaymentLink(null);
+                        }
                     }}
                     invoiceNumber={selectedInvoiceForPaymentLink.invoice_number}
                     invoiceTotal={selectedInvoiceForPaymentLink.total}

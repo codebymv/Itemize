@@ -9,7 +9,7 @@ import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
 import { ListAISuggestionButton } from './ListAISuggestionButton';
-import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
+import { DeleteDialog } from '../ui/delete-dialog';
 import {
   DndContext,
   closestCenter,
@@ -268,9 +268,9 @@ const ListCard: React.FC<ListCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+      <DeleteDialog
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
         itemType="list"
         itemTitle={list.title}
         itemColor={listDisplayColor}

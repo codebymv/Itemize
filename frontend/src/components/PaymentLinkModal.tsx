@@ -7,8 +7,8 @@ import { Label } from './ui/label';
 import { useToast } from '../hooks/use-toast';
 
 interface PaymentLinkModalProps {
-    isOpen: boolean;
-    onClose: () => void;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
     invoiceNumber: string;
     invoiceTotal: number;
     amountDue: number;
@@ -19,8 +19,8 @@ interface PaymentLinkModalProps {
 }
 
 export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
-    isOpen,
-    onClose,
+    open,
+    onOpenChange,
     invoiceNumber,
     invoiceTotal,
     amountDue,
@@ -52,13 +52,13 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
 
     // Auto-generate payment link when modal opens
     useEffect(() => {
-        if (isOpen) {
+        if (open) {
             setPaymentUrl(null);
             setCopied(false);
             setError(null);
             generateLink();
         }
-    }, [isOpen]);
+    }, [open]);
 
     const generateLink = async () => {
         setIsLoading(true);
@@ -105,17 +105,17 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
         }
     };
 
-    if (!isOpen) return null;
+    if (!open) return null;
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <DialogTitle className="flex items-center gap-2 font-raleway">
                         <CreditCard className="h-5 w-5 text-blue-600" />
                         Payment Link
                     </DialogTitle>
-                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <DialogDescription className="font-raleway">
                         Share this link with your customer to collect payment
                     </DialogDescription>
                 </DialogHeader>
@@ -123,12 +123,12 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
                 <div className="space-y-4">
                     {/* Invoice info display */}
                     <div className="space-y-2">
-                        <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Invoice</Label>
-                        <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-md">
+                        <Label className="font-raleway">Invoice</Label>
+                        <div className="p-3 bg-muted rounded-md">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-slate-500" />
-                                    <span className="font-medium text-sm" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                                    <span className="font-medium text-sm font-raleway">
                                         {invoiceNumber}
                                     </span>
                                 </div>
@@ -136,7 +136,7 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
                                     {formatCurrency(amountDue)}
                                 </span>
                             </div>
-                            <div className="mt-1 text-xs text-muted-foreground" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                            <div className="mt-1 text-xs text-muted-foreground font-raleway">
                                 {customerName} • Due {formatDate(dueDate)}
                             </div>
                         </div>
@@ -144,7 +144,7 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
 
                     {/* Payment link section */}
                     <div className="space-y-2">
-                        <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Payment Link</Label>
+                        <Label className="font-raleway">Payment Link</Label>
                         <div className="flex space-x-2">
                             <Input
                                 value={isLoading ? 'Generating payment link...' : (error ? 'Failed to generate link' : (paymentUrl || ''))}
@@ -177,7 +177,7 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
                                 <ExternalLink className="h-4 w-4" />
                             </Button>
                         </div>
-                        <p className="text-xs text-gray-500" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <p className="text-xs text-gray-500 font-raleway">
                             Send this link to your customer to accept payment via Stripe
                         </p>
                     </div>
@@ -190,7 +190,7 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
                                 variant="outline"
                                 onClick={generateLink}
                                 disabled={isLoading}
-                                style={{ fontFamily: '"Raleway", sans-serif' }}
+                                className="font-raleway"
                             >
                                 Try Again
                             </Button>
@@ -201,9 +201,8 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
                     <div className="flex justify-end pt-2">
                         <Button
                             type="button"
-                            onClick={onClose}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                            onClick={() => onOpenChange(false)}
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
                         >
                             Done
                         </Button>

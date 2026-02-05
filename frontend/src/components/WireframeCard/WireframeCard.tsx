@@ -18,7 +18,7 @@ import { useWireframeCardLogic } from '@/hooks/useWireframeCardLogic';
 import { WireframeCardProps } from '@/types';
 import WireframeCanvas from './WireframeCanvas';
 import { CategorySelector } from '../CategorySelector';
-import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
+import { DeleteDialog } from '../ui/delete-dialog';
 import { Node, Edge } from '@xyflow/react';
 
 const WireframeCard: React.FC<WireframeCardProps> = ({
@@ -280,9 +280,9 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+      <DeleteDialog
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
         itemType="wireframe"
         itemTitle={wireframe.title}
         itemColor={wireframeDisplayColor}

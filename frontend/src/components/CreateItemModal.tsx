@@ -20,8 +20,8 @@ interface LocalCategory {
 type ItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
 
 interface CreateItemModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   itemType: ItemType;
   onCreate: (title: string, category: string, color: string, position: { x: number; y: number }) => Promise<unknown> | void;
   existingCategories: LocalCategory[];
@@ -73,8 +73,8 @@ const itemConfig = {
 };
 
 export const CreateItemModal: React.FC<CreateItemModalProps> = ({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   itemType,
   onCreate,
   existingCategories,
@@ -106,7 +106,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       form.reset({
         title: '',
         category: '',
@@ -118,7 +118,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       setError('');
       setIsLoading(false);
     }
-  }, [isOpen, config.defaultColor, form]);
+  }, [open, config.defaultColor, form]);
 
   const availableCategories = useMemo(() => {
     const hasGeneral = existingCategories.some(cat => cat.name === 'General');
@@ -167,7 +167,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         return;
       }
 
-      onClose();
+      onOpenChange(false);
     } catch (err) {
       setError(`Failed to create ${config.label.toLowerCase()}. Please try again.`);
     } finally {
@@ -175,15 +175,15 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!open) return null;
 
   return (
     <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) {
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
           setError('');
-          onClose();
+          onOpenChange(false);
         }
       }}
     >
@@ -420,13 +420,13 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
           )}
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose} className="font-raleway">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="font-raleway">
               {UI_LABELS.cancel}
             </Button>
             <Button
               type="submit"
               disabled={!title.trim() || isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
             >
               {isLoading ? `Creating ${config.label}...` : `${UI_LABELS.create} ${config.label}`}
             </Button>

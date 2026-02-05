@@ -14,7 +14,7 @@ import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
 import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
 import { CategorySelector } from '../CategorySelector';
-import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
+import { DeleteDialog } from '../ui/delete-dialog';
 
 
 
@@ -293,9 +293,9 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
       </Card>
 
       {/* Delete confirmation modal */}
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+      <DeleteDialog
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
         itemType="whiteboard"
         itemTitle={whiteboard.title}
         itemColor={whiteboardDisplayColor}

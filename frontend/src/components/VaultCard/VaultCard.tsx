@@ -12,7 +12,7 @@ import { useVaultCardLogic } from '@/hooks/useVaultCardLogic';
 import { VaultCardProps, Category } from '@/types';
 import { CategorySelector } from '../CategorySelector';
 import { VaultItemRow } from './VaultItemRow';
-import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
+import { DeleteDialog } from '../ui/delete-dialog';
 import { useTheme } from 'next-themes';
 import {
   DndContext,
@@ -519,9 +519,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({
       </Card>
 
       {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+      <DeleteDialog
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
         itemType="vault"
         itemTitle={vaultTitle}
         itemColor={vaultDisplayColor}

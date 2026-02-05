@@ -681,8 +681,8 @@ const CanvasPage: React.FC = () => {
         {/* Mobile View Modals */}
         <>
           <CreateItemModal
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
+            open={showCreateModal}
+            onOpenChange={setShowCreateModal}
             itemType="list"
             onCreate={handleCreateList}
             position={mobileListInitialPosition || undefined}
@@ -690,8 +690,8 @@ const CanvasPage: React.FC = () => {
             updateCategory={updateCategoryColor}
           />
           <CreateItemModal
-            isOpen={showCreateNoteModal}
-            onClose={() => setShowCreateNoteModal(false)}
+            open={showCreateNoteModal}
+            onOpenChange={setShowCreateNoteModal}
             itemType="note"
             onCreate={handleCreateNote}
             position={mobileNoteInitialPosition || undefined}
@@ -700,8 +700,8 @@ const CanvasPage: React.FC = () => {
           />
           {showNewNoteModal && newNoteInitialPosition && (
             <CreateItemModal
-              isOpen={showNewNoteModal}
-              onClose={() => setShowNewNoteModal(false)}
+              open={showNewNoteModal}
+              onOpenChange={setShowNewNoteModal}
               itemType="note"
               onCreate={handleCreateNote}
               position={newNoteInitialPosition}
@@ -711,8 +711,8 @@ const CanvasPage: React.FC = () => {
           )}
           {showNewWhiteboardModal && newWhiteboardInitialPosition && (
             <CreateItemModal
-              isOpen={showNewWhiteboardModal}
-              onClose={() => setShowNewWhiteboardModal(false)}
+              open={showNewWhiteboardModal}
+              onOpenChange={setShowNewWhiteboardModal}
               itemType="whiteboard"
               onCreate={handleCreateWhiteboard}
               position={newWhiteboardInitialPosition}
@@ -722,8 +722,8 @@ const CanvasPage: React.FC = () => {
           )}
           {showNewWireframeModal && newWireframeInitialPosition && (
             <CreateItemModal
-              isOpen={showNewWireframeModal}
-              onClose={() => setShowNewWireframeModal(false)}
+              open={showNewWireframeModal}
+              onOpenChange={setShowNewWireframeModal}
               itemType="wireframe"
               onCreate={handleCreateWireframe}
               position={newWireframeInitialPosition}
@@ -733,8 +733,8 @@ const CanvasPage: React.FC = () => {
           )}
           {showNewVaultModal && newVaultInitialPosition && (
             <CreateItemModal
-              isOpen={showNewVaultModal}
-              onClose={() => setShowNewVaultModal(false)}
+              open={showNewVaultModal}
+              onOpenChange={setShowNewVaultModal}
               itemType="vault"
               onCreate={handleCreateVault}
               position={newVaultInitialPosition}
@@ -744,8 +744,8 @@ const CanvasPage: React.FC = () => {
           )}
           {showNewListModal && newListInitialPosition && (
             <CreateItemModal
-              isOpen={showNewListModal}
-              onClose={() => setShowNewListModal(false)}
+              open={showNewListModal}
+              onOpenChange={setShowNewListModal}
               itemType="list"
               onCreate={handleCreateList}
               position={newListInitialPosition}
@@ -758,10 +758,12 @@ const CanvasPage: React.FC = () => {
         {/* Share Modal */}
         {showShareModal && currentShareItem && (
           <ShareModal
-            isOpen={showShareModal}
-            onClose={() => {
-              setShowShareModal(false);
-              setCurrentShareItem(null);
+            open={showShareModal}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowShareModal(false);
+                setCurrentShareItem(null);
+              }
             }}
             itemType={currentShareItem.itemType}
             itemId={currentShareItem.id}

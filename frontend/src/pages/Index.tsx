@@ -312,10 +312,12 @@ const Index = () => {
       {/* Share Modal */}
       {showShareModal && currentShareItem && (
         <ShareModal
-          isOpen={showShareModal}
-          onClose={() => {
-            setShowShareModal(false);
-            setCurrentShareItem(null);
+          open={showShareModal}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowShareModal(false);
+              setCurrentShareItem(null);
+            }
           }}
           itemType="list"
           itemId={currentShareItem.id}

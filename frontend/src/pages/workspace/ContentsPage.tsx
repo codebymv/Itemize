@@ -830,11 +830,11 @@ export function ContentsPage() {
         )}
       </div>
 
-      {showNewNoteModal && <CreateItemModal isOpen={showNewNoteModal} onClose={() => { setShowNewNoteModal(false); fetchAllContent(); }} itemType="note" onCreate={(_, __, color) => createNote('', '', color)} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewListModal && <CreateItemModal isOpen={showNewListModal} onClose={() => { setShowNewListModal(false); fetchAllContent(); }} itemType="list" onCreate={createList} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewWhiteboardModal && <CreateItemModal isOpen={showNewWhiteboardModal} onClose={() => { setShowNewWhiteboardModal(false); fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewWireframeModal && <CreateItemModal isOpen={showNewWireframeModal} onClose={() => { setShowNewWireframeModal(false); fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewVaultModal && <CreateItemModal isOpen={showNewVaultModal} onClose={() => { setShowNewVaultModal(false); fetchAllContent(); }} itemType="vault" onCreate={createVault} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
+      {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={(open) => { setShowNewNoteModal(open); if (!open) fetchAllContent(); }} itemType="note" onCreate={(_, __, color) => createNote('', '', color)} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
+      {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={(open) => { setShowNewListModal(open); if (!open) fetchAllContent(); }} itemType="list" onCreate={createList} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
+      {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={(open) => { setShowNewWhiteboardModal(open); if (!open) fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
+      {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={(open) => { setShowNewWireframeModal(open); if (!open) fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
+      {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={(open) => { setShowNewVaultModal(open); if (!open) fetchAllContent(); }} itemType="vault" onCreate={createVault} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
 
       {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
         <OnboardingModal
