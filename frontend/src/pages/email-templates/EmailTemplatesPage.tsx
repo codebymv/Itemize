@@ -78,14 +78,26 @@ export function EmailTemplatesPage() {
                 {/* Desktop-only controls */}
                 <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search templates..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
                         />
                     </div>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="welcome">Welcome</SelectItem>
+                            <SelectItem value="notification">Notification</SelectItem>
+                            <SelectItem value="system">System</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
@@ -98,7 +110,7 @@ export function EmailTemplatesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
+    }, [searchQuery, categoryFilter, theme, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -175,14 +187,26 @@ export function EmailTemplatesPage() {
             {/* Mobile Controls Bar */}
             <MobileControlsBar>
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search templates..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
                     />
                 </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="w-[100px] h-9">
+                        <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="welcome">Welcome</SelectItem>
+                        <SelectItem value="notification">Notification</SelectItem>
+                        <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                </Select>
                 <Button
                     size="sm"
                     className="bg-blue-600 hover:bg-blue-700 text-white font-light"

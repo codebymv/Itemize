@@ -103,10 +103,19 @@ export function SignaturesPage() {
 
   const headerActions = useMemo(() => (
     <>
+      <div className="relative w-full max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search documents..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+        />
+      </div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-9">
           <TabsTrigger value="all" className="text-xs">
-            All documents
+            All
             <Badge variant="secondary" className="ml-2">{documents.length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="active" className="text-xs">
@@ -118,20 +127,11 @@ export function SignaturesPage() {
             <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
           </TabsTrigger>
           <TabsTrigger value="completed" className="text-xs">
-            Completed
+            Done
             <Badge variant="secondary" className="ml-2">{stats.completedCount}</Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <div className="relative w-full max-w-xs">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search documents..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-9 bg-muted/20 border-border/50"
-        />
-      </div>
       <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => navigate('/documents/new')}>
         <Plus className="h-4 w-4 mr-2" />
         New Document

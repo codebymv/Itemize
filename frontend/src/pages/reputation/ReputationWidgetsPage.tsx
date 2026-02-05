@@ -11,6 +11,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +60,7 @@ export function ReputationWidgetsPage() {
     const [loading, setLoading] = useState(true);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
+    const [typeFilter, setTypeFilter] = useState<string>('all');
 
     useEffect(() => {
         setHeaderContent(
@@ -69,14 +77,27 @@ export function ReputationWidgetsPage() {
                 {/* Desktop-only controls */}
                 <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
                     <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search widgets..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
                         />
                     </div>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="carousel">Carousel</SelectItem>
+                            <SelectItem value="grid">Grid</SelectItem>
+                            <SelectItem value="list">List</SelectItem>
+                            <SelectItem value="badge">Badge</SelectItem>
+                            <SelectItem value="floating">Floating</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Button
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
@@ -89,7 +110,7 @@ export function ReputationWidgetsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
+    }, [searchQuery, typeFilter, theme, setHeaderContent]);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -160,9 +181,11 @@ export function ReputationWidgetsPage() {
         }
     };
 
-    const filteredWidgets = widgets.filter(w =>
-        w.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredWidgets = widgets.filter(w => {
+        const matchesSearch = w.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesType = typeFilter === 'all' || w.widget_type === typeFilter;
+        return matchesSearch && matchesType;
+    });
 
     if (initError) {
         return (
@@ -179,14 +202,27 @@ export function ReputationWidgetsPage() {
         <>
             <MobileControlsBar>
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search widgets..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
+                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
                     />
                 </div>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-[100px] h-9">
+                        <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="carousel">Carousel</SelectItem>
+                        <SelectItem value="grid">Grid</SelectItem>
+                        <SelectItem value="list">List</SelectItem>
+                        <SelectItem value="badge">Badge</SelectItem>
+                        <SelectItem value="floating">Floating</SelectItem>
+                    </SelectContent>
+                </Select>
                 <Button
                     size="icon"
                     className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
