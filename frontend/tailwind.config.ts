@@ -12,6 +12,7 @@ export default {
 	theme: {
 		fontFamily: {
 			sans: ['Raleway', 'sans-serif'],
+			display: ['Plus Jakarta Sans', 'Raleway', 'sans-serif'],
 		},
 		container: {
 			center: true,

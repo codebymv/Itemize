@@ -1,82 +1,72 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
+import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { 
   ArrowRight, 
   CheckCircle, 
-  Check,
-  Plus, 
-  CheckSquare, 
-  Sparkles, 
-  StickyNote, 
-  ChevronDown, 
-  Palette, 
   Users,
   TrendingUp,
   Calendar,
   Zap,
-  FileText,
-  Globe,
-  ChevronLeft,
-  ChevronRight,
   Layers,
-  Settings,
   Shield,
   Lock,
   Cloud,
   Key,
-  XCircle,
-  DollarSign,
-  BarChart3,
-  Mail,
-  MessageSquare,
-  CreditCard,
-  Workflow,
-  Search,
-  Clock
+  Sparkles,
+  CheckSquare,
+  StickyNote,
+  Palette,
 } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { PricingCards } from '@/components/subscription';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@/components/ui/carousel";
-import FeatureRow from './home/components/FeatureRow';
-import DashboardMock from './home/components/DashboardMock';
-import WorkspacesMockLarge from './home/components/WorkspacesMockLarge';
-import ContactsMockLarge from './home/components/ContactsMockLarge';
-import PipelinesMockLarge from './home/components/PipelinesMockLarge';
-import CalendarsMockLarge from './home/components/CalendarsMockLarge';
-import AutomationsMockLarge from './home/components/AutomationsMockLarge';
+import AppScreenshot from './home/components/AppScreenshot';
+import FeatureShowcase from './home/components/FeatureShowcase';
+import { IntegrationGrid } from './home/components/IntegrationLogos';
+import { useRevealClass } from '@/hooks/useScrollReveal';
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* Reusable reveal wrapper for sections                           */
+/* ═══════════════════════════════════════════════════════════════ */
+function RevealSection({ 
+  children, 
+  variant = 'fade-up' as const, 
+  delay = 0,
+  className = '',
+}: { 
+  children: React.ReactNode; 
+  variant?: 'fade-up' | 'fade' | 'scale'; 
+  delay?: number;
+  className?: string;
+}) {
+  const reveal = useRevealClass(variant, { delay });
+  return (
+    <div ref={reveal.ref} className={`${reveal.className} ${className}`} style={reveal.style}>
+      {children}
+    </div>
+  );
+}
 
 const Home: React.FC = () => {
-  const { currentUser, isAuthenticated, token } = useAuthState();
-  const { login } = useAuthActions();
+  const { isAuthenticated, token, currentUser } = useAuthState();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
 
-  // Theme-aware styling
+  // Theme-aware base colors
   const isLight = theme === 'light';
-  const bgGradient = isLight
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
-    : 'bg-gradient-to-br from-slate-900 to-slate-800';
   const textColor = isLight ? 'text-gray-900' : 'text-slate-100';
   const secondaryTextColor = isLight ? 'text-gray-600' : 'text-slate-400';
-  const mutedTextColor = isLight ? 'text-gray-500' : 'text-slate-500';
+  const mutedTextColor = isLight ? 'text-gray-400' : 'text-slate-500';
   const cardBgColor = isLight ? 'bg-white' : 'bg-slate-800';
   const cardBorderColor = isLight ? 'border-gray-200' : 'border-slate-700';
-  const patternColor = isLight ? 'bg-blue-400' : 'bg-slate-600';
   const accentGradient = 'bg-gradient-to-r from-blue-600 to-indigo-600';
   const accentGradientHover = 'hover:from-blue-700 hover:to-indigo-700';
 
-  // If user is already authenticated, redirect to canvas
+  // Auth redirect
   useEffect(() => {
     if (isAuthenticated && !navigatedRef.current) {
       navigatedRef.current = true;
@@ -84,515 +74,529 @@ const Home: React.FC = () => {
     }
   }, [currentUser, navigate, isAuthenticated, token]);
 
-  const handleGetStarted = () => {
-    navigate('/register');
-  };
-
-  const handleSignIn = () => {
-    navigate('/login');
-  };
-
+  const handleGetStarted = () => navigate('/register');
+  const handleSignIn = () => navigate('/login');
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <div className={`min-h-screen ${bgGradient} overflow-hidden relative`}>
-      {/* Background Clouds */}
-      <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={12} isLight={isLight} />
-
-      {/* Background Pattern */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={`pattern-${i}`}
-              className={`absolute rounded-full ${patternColor}`}
-              style={{
-                width: `${Math.random() * 300 + 100}px`,
-                height: `${Math.random() * 300 + 100}px`,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                opacity: Math.random() * 0.15,
-                transform: `scale(${Math.random() * 1 + 0.5})`,
-                filter: 'blur(80px)'
-              }}
-            />
-          ))}
-        </div>
+    <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
+      {/* Background effects */}
+      <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={10} isLight={isLight} />
+      
+      {/* Ambient gradient orbs - fixed positions, no Math.random */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} />
+        <div className={`absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full ${isLight ? 'bg-indigo-400' : 'bg-indigo-600'} opacity-[0.04] blur-[100px]`} />
+        <div className={`absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full ${isLight ? 'bg-violet-300' : 'bg-violet-600'} opacity-[0.03] blur-[100px]`} />
       </div>
 
-      {/* Landing Navigation */}
+      {/* Noise texture */}
+      <div className="noise-overlay absolute inset-0 pointer-events-none z-0" />
+
       <LandingNav />
 
-      {/* Main Content */}
       <div className="relative z-10">
         
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 1: HERO */}
+        {/* SECTION 1: HERO                                                */}
+        {/* Centered headline with full-width screenshot below             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="hero" className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4 pt-16 md:pt-32 pb-16 md:pb-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Text Content */}
-            <div className="text-center lg:text-left">
-              {/* Hero Headline */}
-              <h1 className={`text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight ${textColor} mb-6`}>
-                The CRM that works{' '}
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  for you
-                </span>
-                <br />
-                <span className={secondaryTextColor}>not against you</span>
-              </h1>
-              
-              {/* Subheadline */}
-              <p className={`text-lg ${secondaryTextColor} mb-8 max-w-xl mx-auto lg:mx-0`}>
-                Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts, 
-                deals, and workflows together with beautiful workspaces—so you can focus on growing.
-              </p>
-              
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6">
+        <section id="hero" className="pt-28 md:pt-40 pb-4 md:pb-8">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Centered text block */}
+            <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+              <RevealSection variant="fade-up" delay={0}>
+                <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
+                  The CRM that works{' '}
+                  <span className="landing-gradient-text">for you</span>
+                  <br />
+                  not against you
+                </h1>
+              </RevealSection>
+
+              <RevealSection variant="fade-up" delay={100}>
+                <p className={`text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
+                  Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts, 
+                  deals, and workflows together with beautiful workspaces.
+                </p>
+              </RevealSection>
+
+              <RevealSection variant="fade-up" delay={200}>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Button 
+                    onClick={handleGetStarted}
+                    className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
+                    size="lg"
+                  >
+                    Start Free Trial
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className={`rounded-xl px-8 py-6 text-lg font-semibold ${isLight ? 'border-gray-300 hover:bg-gray-50 text-gray-700' : 'border-slate-600 hover:bg-slate-800 text-slate-300'}`}
+                    size="lg"
+                    onClick={() => scrollToSection('how-it-works')}
+                  >
+                    See How It Works
+                  </Button>
+                </div>
+              </RevealSection>
+
+              <RevealSection variant="fade" delay={300}>
+                <div className="flex flex-wrap gap-6 justify-center">
+                  {['14-day free trial', 'No credit card required', 'Cancel anytime'].map((text) => (
+                    <span key={text} className={`flex items-center gap-2 text-sm font-medium ${mutedTextColor}`}>
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                      {text}
+                    </span>
+                  ))}
+                </div>
+              </RevealSection>
+            </div>
+
+            {/* Full-width hero screenshot with perspective */}
+            <RevealSection variant="scale" delay={400}>
+              <div className="screenshot-perspective max-w-5xl mx-auto">
+                <AppScreenshot
+                  label="Dashboard"
+                  sublabel="Replace with screenshot of your real dashboard"
+                  accentFrom="from-blue-500"
+                  accentTo="to-indigo-600"
+                  isLight={isLight}
+                  showChrome={true}
+                  aspectRatio="aspect-[16/10]"
+                  className="screenshot-tilt"
+                />
+              </div>
+            </RevealSection>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* SECTION 2: PROBLEM STATEMENT                                   */}
+        {/* Asymmetric cards with stronger visual hierarchy                */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section id="problem" className="py-20 md:py-32">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <RevealSection>
+              <div className="text-center mb-16">
+                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-red-500' : 'text-red-400'} mb-4`}>
+                  Sound familiar?
+                </p>
+                <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor}`}>
+                  Tired of juggling disconnected tools?
+                </h2>
+              </div>
+            </RevealSection>
+
+            <div className="grid md:grid-cols-3 gap-6 mb-16">
+              {[
+                { 
+                  title: 'Scattered Data', 
+                  desc: 'Customer info spread across spreadsheets, emails, and sticky notes. Nothing connects.',
+                  gradient: 'from-red-500 to-orange-500',
+                  number: '01',
+                },
+                { 
+                  title: 'Tool Overload', 
+                  desc: 'Paying for CRM + calendar + forms + automation separately. Stitching them together is a nightmare.',
+                  gradient: 'from-orange-500 to-amber-500',
+                  number: '02',
+                },
+                { 
+                  title: 'No Clear Picture', 
+                  desc: "Can't see your pipeline, contacts, and tasks in one view. Decisions are based on gut, not data.",
+                  gradient: 'from-amber-500 to-yellow-500',
+                  number: '03',
+                },
+              ].map((pain, i) => (
+                <RevealSection key={i} variant="fade-up" delay={i * 100}>
+                  <div className={`relative ${cardBgColor} rounded-2xl border ${cardBorderColor} p-8 h-full group hover:shadow-lg transition-all duration-300`}>
+                    {/* Number accent */}
+                    <span className={`absolute top-6 right-6 text-5xl font-extrabold ${isLight ? 'text-gray-100' : 'text-slate-700'} select-none leading-none`}>
+                      {pain.number}
+                    </span>
+                    {/* Gradient top bar */}
+                    <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${pain.gradient} mb-6`} />
+                    <h3 className={`landing-heading text-xl font-bold ${textColor} mb-3 relative`}>{pain.title}</h3>
+                    <p className={`${secondaryTextColor} leading-relaxed relative`}>{pain.desc}</p>
+                  </div>
+                </RevealSection>
+              ))}
+            </div>
+
+            <RevealSection>
+              <div className="text-center">
+                <p className={`text-xl font-semibold ${textColor}`}>
+                  There's a better way <span className="landing-gradient-text font-bold">→</span>
+                </p>
+              </div>
+            </RevealSection>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* SECTION 3: HOW IT WORKS                                        */}
+        {/* Connected steps with visual flow line                          */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section id="how-it-works" className={`py-20 md:py-32 relative ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`}>
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <RevealSection>
+              <div className="text-center mb-20">
+                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
+                  How It Works
+                </p>
+                <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor}`}>
+                  Three steps to a better business
+                </h2>
+              </div>
+            </RevealSection>
+
+            <div className="relative">
+              {/* Connecting line (desktop) */}
+              <div className={`hidden md:block absolute top-24 left-[16.66%] right-[16.66%] h-px ${isLight ? 'bg-gray-200' : 'bg-slate-700'}`} />
+
+              <div className="grid md:grid-cols-3 gap-12 md:gap-8">
+                {[
+                  { 
+                    step: '1', 
+                    title: 'Organize', 
+                    desc: 'Bring all your contacts, notes, and ideas into one unified workspace. No more switching tabs.',
+                    icon: Layers,
+                    gradient: 'from-blue-500 to-blue-600',
+                    shadow: 'shadow-blue-500/20',
+                  },
+                  { 
+                    step: '2', 
+                    title: 'Automate', 
+                    desc: 'Set up workflows that handle follow-ups, reminders, and busywork. It runs while you sleep.',
+                    icon: Zap,
+                    gradient: 'from-indigo-500 to-indigo-600',
+                    shadow: 'shadow-indigo-500/20',
+                  },
+                  { 
+                    step: '3', 
+                    title: 'Grow', 
+                    desc: 'Focus on relationships and closing deals while the system works for you. Watch the numbers climb.',
+                    icon: TrendingUp,
+                    gradient: 'from-emerald-500 to-emerald-600',
+                    shadow: 'shadow-emerald-500/20',
+                  },
+                ].map((item, i) => (
+                  <RevealSection key={i} variant="fade-up" delay={i * 150}>
+                    <div className="text-center relative">
+                      {/* Step circle */}
+                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mx-auto mb-8 shadow-xl ${item.shadow} relative z-10`}>
+                        <item.icon className="h-9 w-9 text-white" />
+                      </div>
+                      <div className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-3`}>
+                        Step {item.step}
+                      </div>
+                      <h3 className={`landing-heading text-2xl font-bold ${textColor} mb-4`}>{item.title}</h3>
+                      <p className={`${secondaryTextColor} leading-relaxed max-w-xs mx-auto`}>{item.desc}</p>
+                    </div>
+                  </RevealSection>
+                ))}
+              </div>
+            </div>
+
+            <RevealSection delay={500}>
+              <div className="text-center mt-16">
                 <Button 
                   onClick={handleGetStarted}
-                  className={`rounded-lg px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-medium shadow-lg shadow-blue-500/25`}
+                  className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
                   size="lg"
                 >
-                  Start Free Trial
+                  Start Organizing Today
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button 
-                  variant="outline"
-                  className={`rounded-lg px-8 py-6 text-lg font-medium ${isLight ? 'border-gray-300 hover:bg-gray-50' : 'border-slate-600 hover:bg-slate-800'}`}
-                  size="lg"
-                  onClick={() => scrollToSection('how-it-works')}
-                >
-                  See How It Works
-                </Button>
               </div>
-              
-              {/* Trust Badges */}
-              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                <span className={`flex items-center gap-2 text-sm ${mutedTextColor}`}>
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  14-day free trial
-                </span>
-                <span className={`flex items-center gap-2 text-sm ${mutedTextColor}`}>
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  No credit card required
-                </span>
-                <span className={`flex items-center gap-2 text-sm ${mutedTextColor}`}>
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Cancel anytime
-                </span>
-              </div>
-            </div>
+            </RevealSection>
+          </div>
+        </section>
 
-            {/* Right: App Preview */}
-            <div className="relative">
-              <div className={`${cardBgColor} rounded-2xl border ${cardBorderColor} shadow-2xl overflow-hidden`}>
-                {/* App Header - Clean dashboard header style */}
-                <div className={`flex items-center justify-between px-4 py-3 border-b ${cardBorderColor}`}>
-                  <div className="flex items-center gap-2">
-                    <img src="/icon.png" alt="" className="h-5 w-5" />
-                    <span className={`text-sm font-medium ${isLight ? 'text-gray-800' : 'text-slate-200'}`}>Dashboard</span>
-                  </div>
-                  <div className={`flex items-center gap-3`}>
-                    <div className={`w-6 h-6 rounded-full ${isLight ? 'bg-blue-100' : 'bg-blue-900'} flex items-center justify-center`}>
-                      <span className={`text-xs font-medium ${isLight ? 'text-blue-700' : 'text-blue-300'}`}>JD</span>
-                    </div>
-                  </div>
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* SECTION 4: WORKSPACES DIFFERENTIATOR                           */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section id="workspaces" className={`py-20 md:py-32 ${isLight ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80' : 'bg-gradient-to-br from-blue-950/30 to-slate-900'}`}>
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              {/* Screenshot */}
+              <RevealSection variant="fade-up" delay={0} className="order-2 lg:order-1">
+                <div className="screenshot-perspective">
+                  <AppScreenshot
+                    label="Workspaces"
+                    sublabel="Lists, Notes, and Whiteboards alongside your CRM"
+                    accentFrom="from-blue-500"
+                    accentTo="to-indigo-600"
+                    isLight={isLight}
+                    showChrome={true}
+                    className="screenshot-tilt"
+                  />
                 </div>
-                {/* App Content */}
-                <div className="p-4">
-                  <DashboardMock isLight={isLight} />
+              </RevealSection>
+
+              {/* Content */}
+              <RevealSection variant="fade-up" delay={150} className="order-1 lg:order-2">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
+                    <Sparkles className="h-4 w-4" />
+                    Unique to Itemize
+                  </div>
+                  <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight`}>
+                    The only CRM with built-in{' '}
+                    <span className="landing-gradient-text">Workspaces</span>
+                  </h2>
+                  <p className={`text-lg leading-relaxed ${secondaryTextColor} mb-8`}>
+                    Other CRMs force you to keep notes in separate apps. Itemize includes 
+                    powerful lists, notes, and whiteboards -- right alongside your contacts and deals.
+                  </p>
+                  <ul className="space-y-5 mb-10">
+                    {[
+                      { icon: CheckSquare, text: 'Smart lists with AI-powered suggestions' },
+                      { icon: StickyNote, text: 'Rich notes with formatting and media' },
+                      { icon: Palette, text: 'Infinite whiteboards for brainstorming' },
+                      { icon: Sparkles, text: 'Everything synced and searchable' },
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl ${isLight ? 'bg-blue-50' : 'bg-blue-900/30'} flex items-center justify-center flex-shrink-0`}>
+                          <item.icon className={`h-5 w-5 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
+                        </div>
+                        <span className={`${textColor} font-medium`}>{item.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    onClick={handleGetStarted}
+                    className={`rounded-xl px-6 py-5 ${accentGradient} ${accentGradientHover} text-white font-semibold shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
+                  >
+                    Try Workspaces Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
-              {/* Floating accent elements */}
-              <div className="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl opacity-20 blur-xl" />
-              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl opacity-20 blur-xl" />
+              </RevealSection>
             </div>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 2: PROBLEM STATEMENT */}
+        {/* SECTION 5: FEATURE DEEP-DIVES                                  */}
+        {/* Screenshot-based showcases with scroll reveal                  */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="problem" className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
-            <div className="text-center mb-12">
-              <h2 className={`text-2xl md:text-3xl font-bold ${textColor} mb-4`}>
-                Tired of juggling disconnected tools?
-              </h2>
-              <p className={`max-w-2xl mx-auto ${secondaryTextColor}`}>
-                Most businesses waste hours every week switching between apps. Sound familiar?
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 mb-12">
-              {[
-                { icon: XCircle, title: 'Scattered Data', desc: 'Customer info spread across spreadsheets, emails, and sticky notes' },
-                { icon: DollarSign, title: 'Tool Overload', desc: 'Paying for CRM + calendar + forms + automation separately' },
-                { icon: BarChart3, title: 'No Clear Picture', desc: "Can't see your pipeline, contacts, and tasks in one view" },
-              ].map((pain, i) => (
-                <div 
-                  key={i} 
-                  className={`${cardBgColor} rounded-xl border ${cardBorderColor} p-6 text-center`}
-                >
-                  <div className={`w-12 h-12 rounded-full ${isLight ? 'bg-red-50' : 'bg-red-900/30'} flex items-center justify-center mx-auto mb-4`}>
-                    <pain.icon className={`h-6 w-6 ${isLight ? 'text-red-500' : 'text-red-400'}`} />
-                  </div>
-                  <h3 className={`font-semibold ${textColor} mb-2`}>{pain.title}</h3>
-                  <p className={`text-sm ${secondaryTextColor}`}>{pain.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-center">
-              <p className={`text-lg font-medium ${textColor}`}>
-                There's a better way →
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 3: VALUE FLOW (Organize → Automate → Grow) */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className="py-16 md:py-24">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
-            <div className="text-center mb-16">
-              <Badge className={`mb-4 ${isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-900/50 text-blue-300'}`}>
-                How It Works
-              </Badge>
-              <h2 className={`text-3xl md:text-4xl font-bold ${textColor} mb-4`}>
-                Three steps to a better business
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { 
-                  step: '1', 
-                  title: 'Organize', 
-                  desc: 'Bring all your contacts, notes, and ideas into one unified workspace.',
-                  icon: Layers,
-                  color: 'from-blue-500 to-blue-600'
-                },
-                { 
-                  step: '2', 
-                  title: 'Automate', 
-                  desc: 'Set up workflows that handle follow-ups, reminders, and busywork.',
-                  icon: Zap,
-                  color: 'from-indigo-500 to-indigo-600'
-                },
-                { 
-                  step: '3', 
-                  title: 'Grow', 
-                  desc: 'Focus on relationships and closing deals while the system works for you.',
-                  icon: TrendingUp,
-                  color: 'from-emerald-500 to-emerald-600'
-                },
-              ].map((item, i) => (
-                <div key={i} className="text-center">
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center mx-auto mb-6 shadow-lg`}>
-                    <item.icon className="h-8 w-8 text-white" />
-                  </div>
-                  <div className={`text-sm font-medium ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-2`}>
-                    Step {item.step}
-                  </div>
-                  <h3 className={`text-xl font-bold ${textColor} mb-3`}>{item.title}</h3>
-                  <p className={secondaryTextColor}>{item.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-center mt-12">
-              <Button 
-                onClick={handleGetStarted}
-                className={`${accentGradient} ${accentGradientHover} text-white px-8 py-6 text-lg rounded-lg shadow-lg shadow-blue-500/25`}
-              >
-                Start Organizing Today
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 4: UNIQUE DIFFERENTIATOR - WORKSPACES */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="workspaces" className={`py-16 md:py-24 ${isLight ? 'bg-gradient-to-br from-indigo-50 to-blue-50' : 'bg-gradient-to-br from-indigo-950/50 to-slate-900'}`}>
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              {/* Left: Visual */}
-              <div className="order-2 lg:order-1">
-                <div className={`${cardBgColor} rounded-2xl border ${cardBorderColor} p-6 shadow-xl`}>
-                  <WorkspacesMockLarge isLight={isLight} />
-                </div>
-              </div>
-
-              {/* Right: Content */}
-              <div className="order-1 lg:order-2">
-                <Badge className={`mb-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white`}>
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Unique to Itemize
-                </Badge>
-                <h2 className={`text-3xl md:text-4xl font-bold ${textColor} mb-6`}>
-                  The only CRM with built-in Workspaces
-                </h2>
-                <p className={`text-lg ${secondaryTextColor} mb-6`}>
-                  Other CRMs force you to keep notes in separate apps. Itemize includes 
-                  powerful lists, notes, and whiteboards—right alongside your contacts and deals.
+        <section id="features" className="py-20 md:py-32">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <RevealSection>
+              <div className="text-center mb-20">
+                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
+                  Features
                 </p>
-                <ul className="space-y-4 mb-8">
-                  {[
-                    { icon: CheckSquare, text: 'Smart lists with AI-powered suggestions' },
-                    { icon: StickyNote, text: 'Rich notes with formatting and media' },
-                    { icon: Palette, text: 'Infinite whiteboards for brainstorming' },
-                    { icon: Sparkles, text: 'Everything synced and searchable' },
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg ${isLight ? 'bg-indigo-100' : 'bg-indigo-900/50'} flex items-center justify-center`}>
-                        <item.icon className={`h-4 w-4 ${isLight ? 'text-indigo-600' : 'text-indigo-400'}`} />
-                      </div>
-                      <span className={textColor}>{item.text}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button 
-                  onClick={handleGetStarted}
-                  variant="outline"
-                  className={`${isLight ? 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' : 'border-indigo-600 text-indigo-400 hover:bg-indigo-950'}`}
-                >
-                  Try Workspaces Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-5`}>
+                  Everything you need to grow
+                </h2>
+                <p className={`max-w-2xl mx-auto text-lg ${secondaryTextColor}`}>
+                  From first contact to closed deal, Itemize has you covered.
+                </p>
               </div>
-            </div>
-          </div>
-        </section>
+            </RevealSection>
 
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 5: FEATURE DEEP-DIVES */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="features" className="py-16 md:py-24">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
-            <div className="text-center mb-16">
-              <Badge className={`mb-4 ${isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-900/50 text-blue-300'}`}>
-                Features
-              </Badge>
-              <h2 className={`text-3xl md:text-4xl font-bold ${textColor} mb-4`}>
-                Everything you need to grow
-              </h2>
-              <p className={`max-w-2xl mx-auto ${secondaryTextColor}`}>
-                From first contact to closed deal, Itemize has you covered.
-              </p>
-            </div>
-
-            <div className="space-y-24">
+            <div className="space-y-28 md:space-y-36">
               {/* Feature 1: Contact Management */}
-              <FeatureRow
+              <FeatureShowcase
                 isLight={isLight}
-                cardBgColor={cardBgColor}
-                cardBorderColor={cardBorderColor}
-                textColor={textColor}
-                secondaryTextColor={secondaryTextColor}
                 reverse={false}
                 badge={{ icon: Users, label: 'Contact Management', color: 'from-blue-500 to-cyan-500' }}
                 title="Every customer, every interaction, one view"
                 description="Stop searching through emails and spreadsheets. See your complete customer history, notes, deals, and communications in one unified profile."
-                features={['Unlimited contacts', 'Custom fields & tags', 'Activity timeline', 'Smart segmentation']}
-                visual={<ContactsMockLarge isLight={isLight} />}
+                features={['Unlimited contacts with custom fields', 'Activity timeline and interaction history', 'Smart tags and segmentation', 'CSV import and bulk operations']}
+                screenshot={{ label: 'Contacts', sublabel: 'Full contact management with search and filters', accentFrom: 'from-blue-500', accentTo: 'to-cyan-500' }}
               />
 
               {/* Feature 2: Sales Pipelines */}
-              <FeatureRow
+              <FeatureShowcase
                 isLight={isLight}
-                cardBgColor={cardBgColor}
-                cardBorderColor={cardBorderColor}
-                textColor={textColor}
-                secondaryTextColor={secondaryTextColor}
                 reverse={true}
                 badge={{ icon: TrendingUp, label: 'Sales Pipelines', color: 'from-emerald-500 to-teal-500' }}
                 title="Visual deal tracking that makes sense"
                 description="Drag deals through custom stages, see your revenue forecast at a glance, and never let an opportunity slip through the cracks."
-                features={['Kanban boards', 'Custom stages', 'Deal values & forecasting', 'Win/loss tracking']}
-                visual={<PipelinesMockLarge isLight={isLight} />}
+                features={['Drag-and-drop Kanban boards', 'Custom pipeline stages and deal values', 'Revenue forecasting and probability', 'Win/loss tracking and analytics']}
+                screenshot={{ label: 'Pipelines', sublabel: 'Kanban board with drag-and-drop deal management', accentFrom: 'from-emerald-500', accentTo: 'to-teal-500' }}
               />
 
               {/* Feature 3: Calendars & Booking */}
-              <FeatureRow
+              <FeatureShowcase
                 isLight={isLight}
-                cardBgColor={cardBgColor}
-                cardBorderColor={cardBorderColor}
-                textColor={textColor}
-                secondaryTextColor={secondaryTextColor}
                 reverse={false}
                 badge={{ icon: Calendar, label: 'Calendars & Booking', color: 'from-orange-500 to-amber-500' }}
                 title="Let clients book, you stay focused"
-                description="Share your availability and let clients book directly into your calendar. Automatic reminders reduce no-shows and save hours of back-and-forth."
-                features={['Online booking pages', 'Google Calendar sync', 'Automatic reminders', 'Buffer times & limits']}
-                visual={<CalendarsMockLarge isLight={isLight} />}
+                description="Share your availability and let clients book directly. Automatic reminders reduce no-shows and save hours of back-and-forth scheduling."
+                features={['Online booking pages with custom slugs', 'Google Calendar two-way sync', 'Automatic email reminders', 'Buffer times and daily limits']}
+                screenshot={{ label: 'Calendars', sublabel: 'Booking calendar management and scheduling', accentFrom: 'from-orange-500', accentTo: 'to-amber-500' }}
               />
 
               {/* Feature 4: Automations */}
-              <FeatureRow
+              <FeatureShowcase
                 isLight={isLight}
-                cardBgColor={cardBgColor}
-                cardBorderColor={cardBorderColor}
-                textColor={textColor}
-                secondaryTextColor={secondaryTextColor}
                 reverse={true}
                 badge={{ icon: Zap, label: 'Automations', color: 'from-pink-500 to-rose-500' }}
                 title="Set it up once, let it work forever"
-                description="Build workflows that automatically send emails, update contacts, create tasks, and trigger actions—so you can focus on what matters."
-                features={['Visual workflow builder', 'Email sequences', 'Trigger-based actions', 'Conditional logic']}
-                visual={<AutomationsMockLarge isLight={isLight} />}
+                description="Build visual workflows that automatically send emails, update contacts, create tasks, and trigger actions -- so you can focus on what matters."
+                features={['Visual drag-and-drop workflow builder', 'Email sequences with templates', '8 action types including webhooks', '6 trigger types with conditional logic']}
+                screenshot={{ label: 'Automations', sublabel: 'Visual workflow builder with drag-and-drop nodes', accentFrom: 'from-pink-500', accentTo: 'to-rose-500' }}
               />
             </div>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 6: INTEGRATIONS */}
+        {/* SECTION 6: INTEGRATIONS                                        */}
+        {/* Real brand logos in a grid                                     */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="integrations" className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 text-center">
-            <Badge className={`mb-4 ${isLight ? 'bg-gray-100 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
-              Integrations
-            </Badge>
-            <h2 className={`text-2xl md:text-3xl font-bold ${textColor} mb-4`}>
-              Connects with tools you already use
-            </h2>
-            <p className={`max-w-xl mx-auto ${secondaryTextColor} mb-12`}>
-              Itemize works seamlessly with the apps you rely on every day.
-            </p>
+        <section id="integrations" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`}>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <RevealSection>
+              <div className="text-center mb-16">
+                <p className={`text-sm font-bold uppercase tracking-widest ${mutedTextColor} mb-4`}>
+                  Integrations
+                </p>
+                <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-5`}>
+                  Connects with tools you already use
+                </h2>
+                <p className={`max-w-xl mx-auto text-lg ${secondaryTextColor}`}>
+                  Itemize works seamlessly with the apps you rely on every day.
+                </p>
+              </div>
+            </RevealSection>
 
-            <div className="flex flex-wrap justify-center gap-8 mb-8">
-              {[
-                { name: 'Stripe', icon: CreditCard },
-                { name: 'Google Calendar', icon: Calendar },
-                { name: 'Gmail', icon: Mail },
-                { name: 'Twilio', icon: MessageSquare },
-                { name: 'Webhooks', icon: Globe },
-                { name: 'Zapier', icon: Zap, soon: true },
-              ].map((integration, i) => (
-                <div 
-                  key={i} 
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl ${cardBgColor} border ${cardBorderColor} min-w-[100px]`}
-                >
-                  <integration.icon className={`h-8 w-8 ${isLight ? 'text-gray-600' : 'text-slate-400'}`} />
-                  <span className={`text-sm font-medium ${textColor}`}>{integration.name}</span>
-                  {integration.soon && (
-                    <span className={`text-xs ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>Coming soon</span>
-                  )}
-                </div>
-              ))}
-            </div>
+            <RevealSection variant="fade-up" delay={150}>
+              <IntegrationGrid isLight={isLight} />
+            </RevealSection>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 7: TRUST & SECURITY */}
+        {/* SECTION 7: TRUST & SECURITY                                    */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="security" className="py-16 md:py-24">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 text-center">
-            <h2 className={`text-2xl md:text-3xl font-bold ${textColor} mb-4`}>
-              Your data, protected
-            </h2>
-            <p className={`max-w-xl mx-auto ${secondaryTextColor} mb-12`}>
-              Security isn't an afterthought—it's built into everything we do.
-            </p>
+        <section id="security" className="py-20 md:py-28">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <RevealSection>
+              <div className="text-center mb-14">
+                <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-4`}>
+                  Your data, protected
+                </h2>
+                <p className={`max-w-xl mx-auto text-lg ${secondaryTextColor}`}>
+                  Security isn't an afterthought -- it's built into everything we do.
+                </p>
+              </div>
+            </RevealSection>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[
-                { icon: Lock, label: '256-bit Encryption' },
-                { icon: Shield, label: 'GDPR Ready' },
-                { icon: Cloud, label: '99.9% Uptime' },
-                { icon: Key, label: 'Secure Auth' },
+                { icon: Lock, label: '256-bit Encryption', desc: 'End-to-end data protection' },
+                { icon: Shield, label: 'GDPR Ready', desc: 'Full compliance built in' },
+                { icon: Cloud, label: '99.9% Uptime', desc: 'Reliable infrastructure' },
+                { icon: Key, label: 'Secure Auth', desc: 'OAuth2 and 2FA support' },
               ].map((item, i) => (
-                <div key={i} className="flex flex-col items-center gap-3">
-                  <div className={`w-12 h-12 rounded-full ${isLight ? 'bg-green-50' : 'bg-green-900/30'} flex items-center justify-center`}>
-                    <item.icon className={`h-6 w-6 ${isLight ? 'text-green-600' : 'text-green-400'}`} />
+                <RevealSection key={i} variant="fade-up" delay={i * 80}>
+                  <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-all duration-300 hover:shadow-md`}>
+                    <div className={`w-14 h-14 rounded-2xl ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'} flex items-center justify-center mx-auto mb-4`}>
+                      <item.icon className={`h-7 w-7 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
+                    </div>
+                    <h3 className={`font-bold ${textColor} mb-1`}>{item.label}</h3>
+                    <p className={`text-sm ${mutedTextColor}`}>{item.desc}</p>
                   </div>
-                  <span className={`text-sm font-medium ${textColor}`}>{item.label}</span>
-                </div>
+                </RevealSection>
               ))}
             </div>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 8: PRICING */}
+        {/* SECTION 8: PRICING                                             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="pricing" className={`py-16 md:py-24 ${isLight ? 'bg-white/50' : 'bg-slate-900/50'}`}>
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
-            <div className="text-center mb-12">
-              <Badge className={`mb-4 ${isLight ? 'bg-green-100 text-green-700' : 'bg-green-900/50 text-green-300'}`}>
-                Pricing
-              </Badge>
-              <h2 className={`text-3xl md:text-4xl font-bold ${textColor} mb-4`}>
-                Simple, transparent pricing
-              </h2>
-              <p className={`max-w-2xl mx-auto ${secondaryTextColor}`}>
-                Start free, upgrade when you need more power. No hidden fees.
-              </p>
-            </div>
+        <section id="pricing" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`}>
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <RevealSection>
+              <div className="text-center mb-14">
+                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-emerald-600' : 'text-emerald-400'} mb-4`}>
+                  Pricing
+                </p>
+                <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-5`}>
+                  Simple, transparent pricing
+                </h2>
+                <p className={`max-w-2xl mx-auto text-lg ${secondaryTextColor}`}>
+                  Start free, upgrade when you need more power. No hidden fees.
+                </p>
+              </div>
+            </RevealSection>
             
-            <div className={`${cardBgColor} rounded-2xl p-6 md:p-8 border ${cardBorderColor}`}>
-              <PricingCards 
-                variant="landing"
-                showYearlyToggle={false}
-                onUpgrade={() => handleGetStarted()}
-              />
-            </div>
+            <RevealSection variant="fade-up" delay={100}>
+              <div className={`${cardBgColor} rounded-2xl p-6 md:p-10 border ${cardBorderColor}`}>
+                <PricingCards 
+                  variant="landing"
+                  showYearlyToggle={false}
+                  onUpgrade={() => handleGetStarted()}
+                />
+              </div>
+            </RevealSection>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 9: FINAL CTA */}
+        {/* SECTION 9: FINAL CTA                                           */}
+        {/* Full-bleed gradient with strong presence                       */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="cta" className="py-20 md:py-32">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 text-center">
-            <h2 className={`text-3xl md:text-4xl font-bold ${textColor} mb-6`}>
-              Ready to simplify your business?
-            </h2>
-            <p className={`text-lg ${secondaryTextColor} mb-8 max-w-2xl mx-auto`}>
-              Join businesses using Itemize to organize, automate, and grow. 
-              Start your free trial today—no credit card required.
-            </p>
-            <Button 
-              onClick={handleGetStarted}
-              className={`rounded-lg px-10 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-medium shadow-lg shadow-blue-500/25`}
-              size="lg"
-            >
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+        <section id="cta" className="py-24 md:py-36 relative overflow-hidden">
+          {/* Gradient background accent */}
+          <div className={`absolute inset-0 ${isLight ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50' : 'bg-gradient-to-br from-blue-950/50 via-indigo-950/50 to-violet-950/50'}`} />
+          
+          <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <RevealSection>
+              <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight`}>
+                Ready to simplify{' '}
+                <span className="landing-gradient-text">your business?</span>
+              </h2>
+              <p className={`text-lg md:text-xl ${secondaryTextColor} mb-10 max-w-2xl mx-auto leading-relaxed`}>
+                Join businesses using Itemize to organize, automate, and grow. 
+                Start your free trial today.
+              </p>
+              <Button 
+                onClick={handleGetStarted}
+                className={`rounded-xl px-10 py-7 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/25 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/35 hover:-translate-y-0.5`}
+                size="lg"
+              >
+                Get Started Free
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <p className={`mt-6 text-sm ${mutedTextColor}`}>
+                No credit card required. 14-day free trial.
+              </p>
+            </RevealSection>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* FOOTER */}
+        {/* FOOTER                                                         */}
+        {/* Clean, minimal                                                 */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <footer className={`py-12 border-t ${cardBorderColor}`}>
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-3">
                 <img 
                   src={isLight ? "/textblack.png" : "/textwhite.png"}
                   alt="Itemize" 
-                  className="h-8 w-auto"
+                  className="h-7 w-auto"
                 />
               </div>
-              <div className={`flex gap-6 text-sm ${secondaryTextColor}`}>
-                <button onClick={() => scrollToSection('features')} className="hover:underline">Features</button>
-                <button onClick={() => navigate('/help')} className="hover:underline">Help</button>
-                <button onClick={() => navigate('/status')} className="hover:underline">Status</button>
+              <div className={`flex gap-8 text-sm font-medium ${secondaryTextColor}`}>
+                <button onClick={() => scrollToSection('features')} className="hover:text-blue-600 transition-colors">Features</button>
+                <button onClick={() => navigate('/help')} className="hover:text-blue-600 transition-colors">Help</button>
+                <button onClick={() => navigate('/status')} className="hover:text-blue-600 transition-colors">Status</button>
               </div>
               <p className={`text-sm ${mutedTextColor}`}>
-                © 2026 Itemize. All rights reserved.
+                &copy; 2026 Itemize. All rights reserved.
               </p>
             </div>
           </div>

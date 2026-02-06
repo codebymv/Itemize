@@ -14,7 +14,6 @@ import {
 import { useScrollSpy, scrollToSection } from '@/hooks/useScrollSpy';
 import { 
   Menu, 
-  X, 
   ArrowRight,
   Users,
   TrendingUp,
@@ -24,8 +23,6 @@ import {
   CheckSquare,
   StickyNote,
   Palette,
-  Shield,
-  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -125,11 +122,11 @@ export const LandingNav: React.FC = () => {
   // Theme-aware colors
   const navBg = isScrolled
     ? isLight
-      ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/50'
-      : 'bg-slate-900/95 backdrop-blur-md shadow-sm border-b border-slate-700/50'
+      ? 'bg-white/90 backdrop-blur-xl shadow-sm border-b border-gray-200/50'
+      : 'bg-slate-900/90 backdrop-blur-xl shadow-sm border-b border-slate-700/50'
     : isLight
-      ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
-      : 'bg-gradient-to-br from-slate-900 to-slate-800';
+      ? 'bg-[#fafbfe]/0'
+      : 'bg-slate-900/0';
 
   const textColor = isLight ? 'text-gray-700' : 'text-slate-300';
   const textColorHover = isLight ? 'hover:text-gray-900' : 'hover:text-white';
@@ -143,17 +140,12 @@ export const LandingNav: React.FC = () => {
           <div className="flex-shrink-0">
             <button 
               onClick={() => handleNavClick('hero')}
-              className="flex items-center gap-2"
+              className="flex items-center"
             >
               <img 
-                src="/icon.png"
-                alt="" 
-                className="h-8 md:h-10 w-auto"
-              />
-              <img 
-                src={isLight ? "/textblack.png" : "/textwhite.png"}
+                src={isLight ? "/cover.png" : "/cover_whitetext.png"}
                 alt="Itemize" 
-                className="h-6 md:h-8 w-auto"
+                className="h-10 md:h-12 w-auto"
               />
             </button>
           </div>
@@ -369,16 +361,11 @@ export const LandingNav: React.FC = () => {
               >
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-slate-700">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center">
                     <img 
-                      src="/icon.png"
-                      alt="" 
-                      className="h-8 w-auto"
-                    />
-                    <img 
-                      src={isLight ? "/textblack.png" : "/textwhite.png"}
+                      src={isLight ? "/cover.png" : "/cover_whitetext.png"}
                       alt="Itemize" 
-                      className="h-6 w-auto"
+                      className="h-8 w-auto"
                     />
                   </div>
                 </div>

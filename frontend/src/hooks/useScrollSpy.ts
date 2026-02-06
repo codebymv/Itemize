@@ -13,47 +13,57 @@ interface UseScrollSpyOptions {
 export function useScrollSpy({ sectionIds, offset = 100, throttleMs = 100 }: UseScrollSpyOptions): string | null {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const lastUpdate = useRef(0);
+  const trailingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleScroll = useCallback(() => {
     const now = Date.now();
-    if (now - lastUpdate.current < throttleMs) return;
-    lastUpdate.current = now;
-
-    // Find the section that's currently most visible
-    let currentSection: string | null = null;
-    let minDistance = Infinity;
-
-    for (const id of sectionIds) {
-      const element = document.getElementById(id);
-      if (!element) continue;
-
-      const rect = element.getBoundingClientRect();
-      const distance = Math.abs(rect.top - offset);
-
-      // Check if section is at or above the offset point
-      if (rect.top <= offset && rect.bottom > 0) {
-        if (distance < minDistance) {
-          minDistance = distance;
-          currentSection = id;
-        }
-      }
+    if (now - lastUpdate.current < throttleMs) {
+      // Schedule a trailing-edge call so the final position is always captured
+      if (trailingRef.current) clearTimeout(trailingRef.current);
+      trailingRef.current = setTimeout(() => {
+        lastUpdate.current = Date.now();
+        doUpdate();
+      }, throttleMs);
+      return;
     }
+    lastUpdate.current = now;
+    doUpdate();
 
-    // If no section is at/above offset, use the first visible one
-    if (!currentSection) {
+    function doUpdate() {
+      let currentSection: string | null = null;
+      let minDistance = Infinity;
+
       for (const id of sectionIds) {
         const element = document.getElementById(id);
         if (!element) continue;
 
         const rect = element.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          currentSection = id;
-          break;
+        const distance = Math.abs(rect.top - offset);
+
+        if (rect.top <= offset && rect.bottom > 0) {
+          if (distance < minDistance) {
+            minDistance = distance;
+            currentSection = id;
+          }
         }
       }
-    }
 
-    setActiveSection(currentSection);
+      // If no section is at/above offset, use the first visible one
+      if (!currentSection) {
+        for (const id of sectionIds) {
+          const element = document.getElementById(id);
+          if (!element) continue;
+
+          const rect = element.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            currentSection = id;
+            break;
+          }
+        }
+      }
+
+      setActiveSection(currentSection);
+    }
   }, [sectionIds, offset, throttleMs]);
 
   useEffect(() => {
@@ -66,6 +76,7 @@ export function useScrollSpy({ sectionIds, offset = 100, throttleMs = 100 }: Use
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
+      if (trailingRef.current) clearTimeout(trailingRef.current);
     };
   }, [handleScroll]);
 

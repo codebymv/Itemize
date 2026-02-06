@@ -18,10 +18,12 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AppShell from "@/components/AppShell";
 
-// Pages - Static imports for critical/frequently used pages
-import Home from "./pages/Home";
+// Pages - Static imports for critical pages only
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
+
+// Landing page - lazy loaded to keep Three.js/PricingCards out of main bundle
+const Home = React.lazy(() => import("./pages/Home"));
 
 // Auth pages - Static imports for fast loading
 import Login from "./pages/Login";
@@ -175,7 +177,7 @@ const AppContent = () => {
       <Route path="/" element={<RootRedirect />} />
 
       {/* Public routes with navbar/footer layout */}
-      <Route path="/home" element={<PublicLayout><Home /></PublicLayout>} />
+      <Route path="/home" element={<Home />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* Auth routes (standalone, no navbar/footer) */}
