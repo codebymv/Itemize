@@ -122,8 +122,8 @@ export default function SignatureTemplatesPage() {
                   </div>
                   <h3 className="text-lg font-medium mb-2">No templates yet</h3>
                   <p className="text-muted-foreground mb-4">Create a reusable template for signature requests.</p>
-                  <Button onClick={() => handleCreate()} className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />Create Template
+<Button onClick={() => handleCreate()} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />New Template
                   </Button>
                 </div>
               ) : (

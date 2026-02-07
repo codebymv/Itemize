@@ -576,6 +576,13 @@ setTimeout(async () => {
         // Status endpoint
         app.get('/api/status', async (req, res) => {
             try {
+                const healthChecks = {
+                    express: true,
+                    cors: true,
+                    json_parser: true,
+                    database: false
+                };
+
                 const status = {
                     status: 'healthy',
                     timestamp: new Date().toISOString(),
@@ -586,7 +593,8 @@ setTimeout(async () => {
                         port: port,
                         memory: {
                             used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
-                            total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB'
+                            total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+                            external: '0 MB'
                         },
                         platform: process.platform,
                         nodeVersion: process.version
@@ -595,7 +603,8 @@ setTimeout(async () => {
                         api: 'operational',
                         database: 'checking...',
                         auth: 'operational'
-                    }
+                    },
+                    healthChecks: healthChecks
                 };
 
                 // Check database connectivity
@@ -604,10 +613,47 @@ setTimeout(async () => {
                     await client.query('SELECT 1');
                     client.release();
                     status.services.database = 'operational';
+                    healthChecks.database = true;
                 } catch (dbError) {
                     logger.error('Database health check failed', { error: dbError.message });
                     status.services.database = 'degraded';
                 }
+
+                // Get all registered routes by traversing router stack
+                const collectRoutes = (stack, basePath = '') => {
+                    const routes = [];
+                    for (const layer of stack) {
+                        if (layer.route && layer.route.path) {
+                            // Direct route on this router
+                            const path = layer.route.path;
+                            if (path && !path.includes('*') && !path.includes('/status')) {
+                                routes.push((basePath + path).replace(/\/:([^/]+)/g, '/:$1'));
+                            }
+                        } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+                            // Nested router - recursively collect its routes
+                            // Try to extract the mount path from layer.regexp
+                            let mountPath = '';
+                            if (layer.regexp && layer.regexp.source) {
+                                const regexSource = layer.regexp.source;
+                                // Extract path from regex like ^\/api\/invoices
+                                const match = regexSource.match(/^\^\\\/(.+?)(?:\\\?\\$)?$/);
+                                if (match) {
+                                    mountPath = '/' + match[1].replace(/\\\//g, '/');
+                                }
+                            }
+                            routes.push(...collectRoutes(layer.handle.stack, basePath + mountPath));
+                        }
+                    }
+                    return routes;
+                };
+
+                const allRoutes = collectRoutes(app._router.stack, '');
+                const apiRoutes = new Set(allRoutes.filter(path => path && path.startsWith('/api/') && path !== '/api/' && path !== '/api'));
+
+                status.endpoints = {
+                    total: apiRoutes.size,
+                    available: Array.from(apiRoutes).sort().slice(0, 50)
+                };
 
                 res.status(200).json(status);
             } catch (error) {

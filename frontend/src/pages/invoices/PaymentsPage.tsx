@@ -469,14 +469,14 @@ const filteredPayments = payments.filter(p => {
                             </div>
                             <h3 className="text-lg font-medium mb-2">No payments yet</h3>
                             <p className="text-muted-foreground mb-4">
-                                Record payments manually or they'll appear when invoices are paid
+                                Add payments manually or they'll appear when invoices are paid
                             </p>
                             <Button
                                 onClick={() => setShowCreateModal(true)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                             >
-                                <DollarSign className="h-4 w-4 mr-2" />
-                                Record Payment
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Payment
                             </Button>
                         </div>
                     ) : (

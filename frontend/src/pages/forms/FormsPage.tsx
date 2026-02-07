@@ -259,7 +259,7 @@ export function FormsPage() {
                                 <h3 className="text-lg font-medium mb-2">No forms yet</h3>
                                 <p className="text-muted-foreground mb-4">Create a form to start collecting leads</p>
                                 <Button onClick={handleCreateForm} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                    <Plus className="h-4 w-4 mr-2" />Create Form
+                                    <Plus className="h-4 w-4 mr-2" />New Form
                                 </Button>
                             </div>
                         ) : (

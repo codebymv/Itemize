@@ -279,7 +279,7 @@ export function CampaignsPage() {
                             title="No campaigns yet"
                             description="Create your first email campaign to engage your contacts"
                             icon={Mail}
-                            actionLabel="Create Campaign"
+                            actionLabel="New Campaign"
                             onAction={() => setShowCreateModal(true)}
                             className="p-12"
                         />

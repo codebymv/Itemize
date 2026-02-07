@@ -227,7 +227,7 @@ export function SegmentsPage() {
                                 title="No segments yet"
                                 description="Create segments to group and target contacts"
                                 icon={Filter}
-                                actionLabel="Create Segment"
+                                actionLabel="New Segment"
                                 onAction={() => setShowCreateModal(true)}
                                 className="p-12"
                             />

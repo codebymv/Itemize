@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import api from '@/lib/api';
-import { 
-  Server, 
-  Database, 
-  Activity, 
-  Clock, 
-  HardDrive, 
-  Cpu, 
-  Network,
+import {
+  Server,
+  Database,
+  Cpu,
+  Activity,
+  HardDrive,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/Spinner';
-import BackgroundClouds from '@/components/ui/BackgroundClouds';
+import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useHeader } from '@/contexts/HeaderContext';
+import { cn } from '@/lib/utils';
 
 interface ServerMemory {
   used: string;
@@ -61,18 +64,20 @@ interface StatusData {
 
 const StatusPage: React.FC = () => {
   const { theme } = useTheme();
+  const { setHeaderContent } = useHeader();
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status']));
 
-  const isLight = theme === 'light';
+  const isDark = theme === 'dark';
 
   const fetchStatus = async () => {
     try {
-      setLoading(true);
+      setIsRefreshing(true);
       setError(null);
-      
       const response = await api.get('/api/status');
       setStatusData(response.data);
       setLastUpdated(new Date());
@@ -81,16 +86,54 @@ const StatusPage: React.FC = () => {
       setStatusData(null);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchStatus();
-    
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    setHeaderContent(
+      <div className="flex items-center justify-between w-full min-w-0">
+        <div className="flex items-center gap-2 ml-2 min-w-0">
+          <Server className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <h1 className="text-xl font-semibold italic truncate font-raleway text-black dark:text-white">
+            STATUS
+          </h1>
+        </div>
+        <Button
+          onClick={fetchStatus}
+          disabled={isRefreshing}
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
+        >
+          {isRefreshing ? (
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          Refresh
+        </Button>
+      </div>
+    );
+    return () => setHeaderContent(null);
+  }, [isRefreshing, setHeaderContent]);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
 
   const formatUptime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -101,287 +144,226 @@ const StatusPage: React.FC = () => {
       return `${hours}h ${minutes}m ${secs}s`;
     } else if (minutes > 0) {
       return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
     }
+    return `${secs}s`;
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusColor = (status: string): string => {
     switch (status.toLowerCase()) {
       case 'healthy':
       case 'operational':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'unhealthy':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'degraded':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
       case 'error':
       case 'unavailable':
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'degraded':
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       default:
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+        return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400';
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusIcon = (status: string | boolean) => {
+    if (typeof status === 'boolean') {
+      return status ? (
+        <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+      ) : (
+        <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+      );
+    }
+    
     switch (status.toLowerCase()) {
       case 'healthy':
       case 'operational':
-        return 'text-green-500';
-      case 'unhealthy':
+        return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />;
+      case 'degraded':
+        return <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
       case 'error':
       case 'unavailable':
-        return 'text-red-500';
-      case 'degraded':
-        return 'text-yellow-500';
+        return <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />;
       default:
-        return 'text-yellow-500';
+        return <AlertCircle className="w-4 h-4 text-slate-600 dark:text-slate-400" />;
     }
   };
 
-  const formatServiceName = (service: string) => {
-    switch (service.toLowerCase()) {
-      case 'api':
-        return 'API';
-      case 'database':
-        return 'Database';
-      case 'auth':
-        return 'Authentication';
-      default:
-        return service.charAt(0).toUpperCase() + service.slice(1);
-    }
-  };
-
-  const formatStatusValue = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
-  const formatHealthCheckName = (check: string) => {
-    switch (check.toLowerCase()) {
-      case 'express':
-        return 'Express Server';
-      case 'cors':
-        return 'CORS';
-      case 'json_parser':
-        return 'JSON Parser';
-      case 'database':
-        return 'Database Connection';
-      default:
-        return check.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-  };
-
-  if (loading && !statusData) {
-    return (
-      <div className="bg-background text-foreground p-6 relative overflow-hidden">
-        {/* Background Clouds */}
-        <BackgroundClouds opacity={isLight ? 0.2 : 0.15} cloudCount={12} isLight={isLight} />
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Spinner size="lg" variant="brand" className="mx-auto mb-4" />
-              <p>Loading backend status...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-background text-foreground p-6 force-raleway relative overflow-hidden flex flex-col">
-      {/* Background Clouds */}
-      <BackgroundClouds opacity={isLight ? 0.2 : 0.15} cloudCount={12} isLight={isLight} />
-
-      <div className="max-w-6xl mx-auto relative z-10 flex-1 min-h-0">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Server className="w-8 h-8 mr-3 text-blue-600" />
-              <h1 className="text-3xl font-bold">System Status</h1>
-            </div>
-            <Button
-              onClick={fetchStatus}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-normal flex items-center"
-            >
-              {loading ? (
-                <Spinner size="sm" variant="current" className="mr-2" />
-              ) : (
-                <Activity className="w-4 h-4 mr-2" />
-              )}
-              Refresh
-            </Button>
-          </div>
-          {/* <p className="text-muted-foreground">
-            Real-time status and health information for itemize.cloud services
-          </p> */}
-          <p className="text-sm text-muted-foreground mt-2">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </p>
-        </div>
-
-        {error && (
-          <Card className="mb-6 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
-            <CardContent className="p-4">
-              <div className="flex items-center text-red-700 dark:text-red-300">
-                <XCircle className="w-5 h-5 mr-2" />
-                <span className="font-medium">Error fetching status:</span>
-              </div>
-              <p className="mt-1 text-red-600 dark:text-red-400">{error}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {statusData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Overall Status */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex items-center">
-                  <Server className="w-5 h-5 mr-2 text-blue-600" />
-                  <CardTitle className="text-lg font-semibold">Overall Status</CardTitle>
-                </div>
-                {getStatusIcon(statusData.status)}
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span className={`font-medium ${getStatusColor(statusData.status)}`}>
-                    {formatStatusValue(statusData.status)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Environment:</span>
-                  <span className="font-medium">{formatStatusValue(statusData.environment)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Version:</span>
-                  <span className="font-medium">{statusData.version}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Server Info */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <Cpu className="w-5 h-5 mr-2 text-blue-600" />
-                <CardTitle className="text-lg font-semibold">Server Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Port:</span>
-                  <span className="font-medium">{statusData.server.port}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Platform:</span>
-                  <span className="font-medium">{statusData.server.platform}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Node.js:</span>
-                  <span className="font-medium">{statusData.server.nodeVersion}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Uptime:</span>
-                  <span className="font-medium">{formatUptime(statusData.uptime)}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Memory Usage */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <HardDrive className="w-5 h-5 mr-2 text-blue-600" />
-                <CardTitle className="text-lg font-semibold">Memory Usage</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Used:</span>
-                  <span className="font-medium">{statusData.server.memory.used}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total:</span>
-                  <span className="font-medium">{statusData.server.memory.total}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">External:</span>
-                  <span className="font-medium">{statusData.server.memory.external}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Services Status */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <Network className="w-5 h-5 mr-2 text-blue-600" />
-                <CardTitle className="text-lg font-semibold">Services</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {statusData.services && Object.entries(statusData.services).map(([service, status]) => (
-                  <div key={service} className="flex justify-between">
-                    <span className="text-muted-foreground">{formatServiceName(service)}:</span>
-                    <div className="flex items-center">
-                      {getStatusIcon(status)}
-                      <span className={`ml-2 font-medium ${getStatusColor(status)}`}>
-                        {formatStatusValue(status)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Health Checks */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <CheckCircle className="w-5 h-5 mr-2 text-blue-600" />
-                <CardTitle className="text-lg font-semibold">Health Checks</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {statusData.healthChecks && Object.entries(statusData.healthChecks).map(([check, status]) => (
-                  <div key={check} className="flex justify-between">
-                    <span className="text-muted-foreground">{formatHealthCheckName(check)}:</span>
-                    <div className="flex items-center">
-                      {status ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-red-500" />
-                      )}
-                      <span className={`ml-2 font-medium ${status ? 'text-green-500' : 'text-red-500'}`}>
-                        {status ? 'Pass' : 'Fail'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* API Endpoints */}
-            <Card>
-              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <Database className="w-5 h-5 mr-2 text-blue-600" />
-                <CardTitle className="text-lg font-semibold">API Endpoints</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between mb-3">
-                  <span className="text-muted-foreground">Total Available:</span>
-                  <span className="font-medium text-green-500">{statusData.endpoints?.total || 0}</span>
-                </div>
-                <div className="max-h-32 overflow-y-auto">
-                  {statusData.endpoints?.available?.map((endpoint, index) => (
-                    <div key={index} className="text-sm text-muted-foreground py-1">
-                      {endpoint}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+  const StatusRow = ({ label, status }: { label: string; status: string | boolean }) => (
+    <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+      <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
+      <div className="flex items-center gap-2">
+        {typeof status === 'boolean' ? (
+          <Badge className={status ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}>
+            {status ? 'Pass' : 'Fail'}
+          </Badge>
+        ) : (
+          <>
+            {getStatusIcon(status)}
+            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{typeof status === 'string' ? status.charAt(0).toUpperCase() + status.slice(1) : status}</span>
+          </>
         )}
       </div>
     </div>
   );
+
+  const ExpandableSection = ({
+    id,
+    icon: Icon,
+    title,
+    children,
+    isExpanded: isExpandedProp,
+  }: {
+    id: string;
+    icon: React.ElementType;
+    title: string;
+    children: React.ReactNode;
+    isExpanded?: boolean;
+  }) => {
+    const isExpanded = isExpandedProp ?? expandedSections.has(id);
+    
+    return (
+      <Card className="border-slate-200 dark:border-slate-800">
+        <CardContent className="p-0">
+          <div
+            className="p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
+            onClick={() => toggleSection(id)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+              </div>
+              <div className="p-1">
+                {isExpanded ? (
+                  <ChevronDown className="w-5 h-5 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                )}
+              </div>
+            </div>
+          </div>
+          {isExpanded && <div className="border-t border-slate-200 dark:border-slate-800 p-4">{children}</div>}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (loading && !statusData) {
+    return (
+      <PageContainer>
+        <PageSurface>
+          <div className="p-6 space-y-4">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
+          </div>
+        </PageSurface>
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer>
+      <PageSurface>
+        <div className="space-y-3">
+          {error && (
+            <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
+                  <XCircle className="w-4 h-4" />
+                  <span className="font-medium">Error:</span>
+                  <span className="text-red-600 dark:text-red-400">{error}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {statusData && (
+            <>
+              <ExpandableSection id="status" icon={Activity} title="System Status" isExpanded>
+                <div className="space-y-3">
+                  <StatusRow label="Overall Status" status={statusData.status.charAt(0).toUpperCase() + statusData.status.slice(1)} />
+                  <StatusRow label="Environment" status={statusData.environment.toUpperCase()} />
+                  <StatusRow label="Version" status={statusData.version} />
+                  <StatusRow label="Uptime" status={formatUptime(statusData.uptime)} />
+                </div>
+              </ExpandableSection>
+
+              <ExpandableSection id="server" icon={Server} title="Server Information">
+                <div className="space-y-3">
+                  <StatusRow label="Port" status={String(statusData.server.port)} />
+                  <StatusRow label="Platform" status={statusData.server.platform} />
+                  <StatusRow label="Node.js Version" status={statusData.server.nodeVersion} />
+                  <StatusRow label="Memory Used" status={statusData.server.memory.used} />
+                  <StatusRow label="Memory Total" status={statusData.server.memory.total} />
+                  <StatusRow label="External Memory" status={statusData.server.memory.external} />
+                </div>
+              </ExpandableSection>
+
+              <ExpandableSection id="services" icon={Activity} title="Services">
+                <div className="space-y-3">
+                  {Object.entries(statusData.services).map(([service, status]) => (
+                    <StatusRow
+                      key={service}
+                      label={service === 'api' ? 'API' : service === 'auth' ? 'Authentication' : service.charAt(0).toUpperCase() + service.slice(1)}
+                      status={status}
+                    />
+                  ))}
+                </div>
+              </ExpandableSection>
+
+              <ExpandableSection id="health" icon={CheckCircle} title="Health Checks">
+                <div className="space-y-3">
+                  {statusData.healthChecks && Object.entries(statusData.healthChecks).map(([check, passed]) => (
+                    <StatusRow
+                      key={check}
+                      label={check === 'express' ? 'Express Server' : check === 'cors' ? 'CORS' : check === 'json_parser' ? 'JSON Parser' : check === 'database' ? 'Database' : check}
+                      status={passed}
+                    />
+                  ))}
+                </div>
+              </ExpandableSection>
+
+              <ExpandableSection id="endpoints" icon={Database} title="API Endpoints">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Total Available</span>
+                    <span className="text-lg font-semibold text-green-600 dark:text-green-400 font-mono">
+                      {statusData.endpoints?.total || 0}
+                    </span>
+                  </div>
+                  {statusData.endpoints?.available && statusData.endpoints.available.length > 0 && (
+                    <div className="pt-2">
+                      <div className="max-h-64 overflow-y-auto space-y-0.5 bg-slate-50 dark:bg-slate-900/30 rounded p-2">
+                        {statusData.endpoints.available.map((endpoint, index) => (
+                          <div key={index} className="text-xs text-slate-600 dark:text-slate-400 font-mono py-1 px-2 hover:bg-white dark:hover:bg-slate-800 rounded">
+                            {endpoint}
+                          </div>
+                        ))}
+                      </div>
+                      {statusData.endpoints.total > statusData.endpoints.available.length && (
+                        <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-2">
+                          Showing {statusData.endpoints.available.length} of {statusData.endpoints.total} endpoints
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </ExpandableSection>
+
+              <div className="text-center py-4">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </PageSurface>
+    </PageContainer>
+  );
 };
+
+const Badge = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', className)}>{children}</span>
+);
 
 export default StatusPage;
