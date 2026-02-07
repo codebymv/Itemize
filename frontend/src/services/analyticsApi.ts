@@ -31,7 +31,8 @@ export interface FunnelStage {
 export interface RecentActivity {
     id: number;
     type: string;
-    description: string;
+    title: string;
+    content: string;
     createdAt: string;
     contactId: number | null;
 }

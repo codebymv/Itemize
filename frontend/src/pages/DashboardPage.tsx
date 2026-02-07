@@ -43,7 +43,7 @@ import {
     ArrowDownRight,
 } from 'lucide-react';
 import { useDashboardData } from './dashboard/hooks/useDashboardData';
-import { usePeriodSelector, periodLabels } from './dashboard/hooks/usePeriodSelector';
+import { usePeriodSelector, periodLabels, type PeriodOption } from './dashboard/hooks/usePeriodSelector';
 import { PipelineFunnel } from './dashboard/components/PipelineFunnel';
 import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
 import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
