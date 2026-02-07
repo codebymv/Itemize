@@ -423,10 +423,10 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="font-raleway">
               {UI_LABELS.cancel}
             </Button>
-            <Button
+<Button
               type="submit"
               disabled={!title.trim() || isLoading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
             >
               {isLoading ? `Creating ${config.label}...` : `${UI_LABELS.create} ${config.label}`}
             </Button>
