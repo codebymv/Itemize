@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
@@ -31,7 +31,7 @@ import { useRevealClass } from '@/hooks/useScrollReveal';
 /* ═══════════════════════════════════════════════════════════════ */
 /* Reusable reveal wrapper for sections                           */
 /* ═══════════════════════════════════════════════════════════════ */
-function RevealSection({ 
+const RevealSection = React.memo(function RevealSection({ 
   children, 
   variant = 'fade-up' as const, 
   delay = 0,
@@ -48,7 +48,7 @@ function RevealSection({
       {children}
     </div>
   );
-}
+});
 
 const Home: React.FC = () => {
   const { isAuthenticated, token, currentUser } = useAuthState();
@@ -56,15 +56,22 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
 
-  // Theme-aware base colors
-  const isLight = theme === 'light';
-  const textColor = isLight ? 'text-gray-900' : 'text-slate-100';
-  const secondaryTextColor = isLight ? 'text-gray-600' : 'text-slate-400';
-  const mutedTextColor = isLight ? 'text-gray-400' : 'text-slate-500';
-  const cardBgColor = isLight ? 'bg-white' : 'bg-slate-800';
-  const cardBorderColor = isLight ? 'border-gray-200' : 'border-slate-700';
-  const accentGradient = 'bg-gradient-to-r from-blue-600 to-indigo-600';
-  const accentGradientHover = 'hover:from-blue-700 hover:to-indigo-700';
+  // Theme-aware base colors - memoized to prevent recalculation
+  const themeColors = useMemo(() => {
+    const isLight = theme === 'light';
+    return {
+      isLight,
+      textColor: isLight ? 'text-gray-900' : 'text-slate-100',
+      secondaryTextColor: isLight ? 'text-gray-600' : 'text-slate-400',
+      mutedTextColor: isLight ? 'text-gray-400' : 'text-slate-500',
+      cardBgColor: isLight ? 'bg-white' : 'bg-slate-800',
+      cardBorderColor: isLight ? 'border-gray-200' : 'border-slate-700',
+      accentGradient: 'bg-gradient-to-r from-blue-600 to-indigo-600',
+      accentGradientHover: 'hover:from-blue-700 hover:to-indigo-700',
+    };
+  }, [theme]);
+
+  const { isLight, textColor, secondaryTextColor, mutedTextColor, cardBgColor, cardBorderColor, accentGradient, accentGradientHover } = themeColors;
 
   // Auth redirect
   useEffect(() => {
@@ -87,9 +94,9 @@ const Home: React.FC = () => {
       
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} />
-        <div className={`absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full ${isLight ? 'bg-indigo-400' : 'bg-indigo-600'} opacity-[0.04] blur-[100px]`} />
-        <div className={`absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full ${isLight ? 'bg-violet-300' : 'bg-violet-600'} opacity-[0.03] blur-[100px]`} />
+        <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} style={{ willChange: 'transform' }} />
+        <div className={`absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full ${isLight ? 'bg-indigo-400' : 'bg-indigo-600'} opacity-[0.04] blur-[100px]`} style={{ willChange: 'transform' }} />
+        <div className={`absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full ${isLight ? 'bg-violet-300' : 'bg-violet-600'} opacity-[0.03] blur-[100px]`} style={{ willChange: 'transform' }} />
       </div>
 
       {/* Noise texture */}
@@ -103,7 +110,7 @@ const Home: React.FC = () => {
         {/* SECTION 1: HERO                                                */}
         {/* Centered headline with full-width screenshot below             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="hero" className="pt-28 md:pt-40 pb-4 md:pb-8">
+        <section id="hero" className="pt-28 md:pt-40 pb-4 md:pb-8 contain-layout" style={{ contain: 'layout' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
@@ -158,7 +165,7 @@ const Home: React.FC = () => {
 
             {/* Full-width hero screenshot with perspective */}
             <RevealSection variant="scale" delay={400}>
-              <div className="screenshot-perspective max-w-5xl mx-auto">
+              <div className="screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
                 <AppScreenshot
                   label="Dashboard"
                   sublabel="Replace with screenshot of your real dashboard"
@@ -178,7 +185,7 @@ const Home: React.FC = () => {
         {/* SECTION 2: PROBLEM STATEMENT                                   */}
         {/* Asymmetric cards with stronger visual hierarchy                */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="problem" className="py-20 md:py-32">
+        <section id="problem" className="py-20 md:py-32" style={{ contain: 'layout style' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-16">
@@ -241,7 +248,7 @@ const Home: React.FC = () => {
         {/* SECTION 3: HOW IT WORKS                                        */}
         {/* Connected steps with visual flow line                          */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className={`py-20 md:py-32 relative ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`}>
+        <section id="how-it-works" className={`py-20 md:py-32 relative ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-20">
@@ -320,7 +327,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 4: WORKSPACES DIFFERENTIATOR                           */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="workspaces" className={`py-20 md:py-32 ${isLight ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80' : 'bg-gradient-to-br from-blue-950/30 to-slate-900'}`}>
+        <section id="workspaces" className={`py-20 md:py-32 ${isLight ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80' : 'bg-gradient-to-br from-blue-950/30 to-slate-900'}`} style={{ contain: 'layout style' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Screenshot */}
@@ -385,7 +392,7 @@ const Home: React.FC = () => {
         {/* SECTION 5: FEATURE DEEP-DIVES                                  */}
         {/* Screenshot-based showcases with scroll reveal                  */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="features" className="py-20 md:py-32">
+        <section id="features" className="py-20 md:py-32" style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-20">
@@ -453,7 +460,7 @@ const Home: React.FC = () => {
         {/* SECTION 6: INTEGRATIONS                                        */}
         {/* Real brand logos in a grid                                     */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="integrations" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`}>
+        <section id="integrations" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-16">
@@ -478,7 +485,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 7: TRUST & SECURITY                                    */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="security" className="py-20 md:py-28">
+        <section id="security" className="py-20 md:py-28" style={{ contain: 'layout style' }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-14">
@@ -515,7 +522,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 8: PRICING                                             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="pricing" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`}>
+        <section id="pricing" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-14">
@@ -547,7 +554,7 @@ const Home: React.FC = () => {
         {/* SECTION 9: FINAL CTA                                           */}
         {/* Full-bleed gradient with strong presence                       */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="cta" className="py-24 md:py-36 relative overflow-hidden">
+        <section id="cta" className="py-24 md:py-36 relative overflow-hidden" style={{ contain: 'layout style' }}>
           {/* Gradient background accent */}
           <div className={`absolute inset-0 ${isLight ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50' : 'bg-gradient-to-br from-blue-950/50 via-indigo-950/50 to-violet-950/50'}`} />
           
@@ -606,4 +613,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
+export default React.memo(Home);

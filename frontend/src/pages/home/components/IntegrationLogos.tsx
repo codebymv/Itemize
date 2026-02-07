@@ -7,7 +7,7 @@ interface IntegrationLogoProps {
   children: React.ReactNode;
 }
 
-function IntegrationLogo({ name, isLight, comingSoon, children }: IntegrationLogoProps) {
+const IntegrationLogo = React.memo(function IntegrationLogo({ name, isLight, comingSoon, children }: IntegrationLogoProps) {
   return (
     <div 
       className={`
@@ -31,13 +31,13 @@ function IntegrationLogo({ name, isLight, comingSoon, children }: IntegrationLog
       )}
     </div>
   );
-}
+});
 
 /**
  * Renders integration logos as inline SVGs for maximum quality and theme-awareness.
  * These are simplified brand marks (not full logos to avoid trademark issues).
  */
-export function IntegrationGrid({ isLight }: { isLight: boolean }) {
+export const IntegrationGrid = React.memo(function IntegrationGrid({ isLight }: { isLight: boolean }) {
   const iconColor = isLight ? '#374151' : '#94a3b8';
   const accentColor = isLight ? '#2563eb' : '#60a5fa';
 
@@ -107,6 +107,4 @@ export function IntegrationGrid({ isLight }: { isLight: boolean }) {
       </IntegrationLogo>
     </div>
   );
-}
-
-export default IntegrationGrid;
+});

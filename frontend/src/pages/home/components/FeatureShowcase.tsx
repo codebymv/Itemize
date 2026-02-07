@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { CheckCircle, type LucideIcon } from 'lucide-react';
 import AppScreenshot from './AppScreenshot';
 import { useRevealClass } from '@/hooks/useScrollReveal';
@@ -23,7 +23,7 @@ interface FeatureShowcaseProps {
  * A feature showcase section with scroll-reveal animation,
  * display typography, and a browser-chrome-framed screenshot placeholder.
  */
-function FeatureShowcase({
+const FeatureShowcase = memo(function FeatureShowcase({
   isLight,
   reverse = false,
   badge,
@@ -94,6 +94,6 @@ function FeatureShowcase({
       </div>
     </div>
   );
-}
+});
 
 export default FeatureShowcase;

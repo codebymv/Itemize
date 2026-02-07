@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Monitor } from 'lucide-react';
 
 interface AppScreenshotProps {
@@ -30,7 +30,7 @@ interface AppScreenshotProps {
  * 
  * To swap in real screenshots later, just add src="/screenshots/dashboard.png".
  */
-function AppScreenshot({
+const AppScreenshot = memo(function AppScreenshot({
   label,
   sublabel,
   accentFrom = 'from-blue-500',
@@ -137,6 +137,6 @@ function AppScreenshot({
       )}
     </div>
   );
-}
+});
 
 export default AppScreenshot;
