@@ -48,10 +48,23 @@ export const SharedContentLayout: React.FC<SharedContentLayoutProps> = ({
     }
   };
 
-  return (
+return (
     <div className={`${bgColor} flex-1 min-h-full`}>
+      {/* Global overflow protection text rendering */}
+      <style>{`
+        .shared-content-container *, .shared-content-container *::before, .shared-content-container *::after {
+          box-sizing: border-box;
+        }
+        .shared-content-container img, .shared-content-container pre, .shared-content-container code, .shared-content-container table {
+          max-width: 100%;
+          height: auto;
+        }
+        .shared-content-container video, .shared-content-container iframe {
+          max-width: 100%;
+        }
+      `}</style>
       {/* Main content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-full">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-full shared-content-container">
         {/* Back button */}
         <div className="mb-6">
           <Button

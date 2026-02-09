@@ -292,10 +292,10 @@ export const ShareModal = <TId extends string | number>({
                 >
                   Revoke Sharing
                 </Button>
-                <Button
+<Button
                   type="button"
                   onClick={() => onOpenChange(false)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
                 >
                   Done
                 </Button>
@@ -323,11 +323,11 @@ export const ShareModal = <TId extends string | number>({
                 >
                   Cancel
                 </Button>
-                <Button
+<Button
                   type="button"
                   onClick={handleShare}
                   disabled={isLoading}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
                 >
                   I understand, Share
                 </Button>
@@ -371,11 +371,11 @@ export const ShareModal = <TId extends string | number>({
               >
                 Cancel
               </Button>
-              <Button
+<Button
                 type="button"
                 onClick={handleShare}
                 disabled={isLoading}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
               >
                 Share
               </Button>

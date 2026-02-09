@@ -2,6 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StickyNote } from 'lucide-react';
 
+const NEUTRAL_GRAY = '#808080';
+
 interface SharedNoteData {
   id: number;
   title: string;
@@ -23,52 +25,37 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData, isLive
   // Use the note's color or default to light yellow
   const noteColor = noteData.color_value || '#FFFFE0';
 
-  // Function to render content with HTML formatting
+  // Category display matching canvas logic
+  const displayCategory = noteData.category || 'General';
+  const displayColor = displayCategory === 'General' ? NEUTRAL_GRAY : noteColor;
+
+// Render content - just return it, prose classes are on the parent
   const renderContent = (content: string) => {
     if (!content || content === '<p></p>' || content.trim() === '') {
+      return <p className="text-gray-400 dark:text-gray-300 text-sm italic font-raleway">This note is empty.</p>;
+    }
+
+    // Content is HTML or plain text - render it directly, prose classes handle styling
+    if (content.includes('<') && content.includes('>')) {
+      return <div dangerouslySetInnerHTML={{ __html: content }} />;
+    }
+
+    // Plain text - convert to paragraphs
+    const lines = content.split('\n');
+    return lines.map((line, index) => {
+      if (line.trim() === '') {
+        return <br key={index} />;
+      }
       return (
-        <p
-          className="text-gray-400 dark:text-gray-300 text-sm italic"
-          style={{ fontFamily: '"Raleway", sans-serif' }}
-        >
-          This note is empty.
+        <p key={index} className="text-sm mb-2 last:mb-0 font-raleway">
+          {line}
         </p>
       );
-    }
-
-    // Check if content is HTML or plain text
-    if (content.includes('<') && content.includes('>')) {
-      // Content is HTML - render it directly
-      return (
-        <div
-          className="prose prose-sm max-w-none dark:prose-invert text-gray-900 dark:text-gray-100"
-          style={{ fontFamily: '"Raleway", sans-serif' }}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      );
-    } else {
-      // Content is plain text - convert to paragraphs
-      const lines = content.split('\n');
-      return lines.map((line, index) => {
-        if (line.trim() === '') {
-          return <br key={index} />;
-        }
-
-        return (
-          <p
-            key={index}
-            className="text-gray-900 dark:text-gray-100 text-sm mb-2 last:mb-0"
-            style={{ fontFamily: '"Raleway", sans-serif' }}
-          >
-            {line}
-          </p>
-        );
-      });
-    }
+    });
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-2xl mx-auto">
       <Card
         className="w-full shadow-lg border bg-white dark:bg-slate-800"
         style={{
@@ -93,24 +80,28 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData, isLive
               >
                 {noteData.title}
               </h3>
-              {noteData.category && (
-                <div
-                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1"
-                  style={{
-                    backgroundColor: noteColor,
-                    fontFamily: '"Raleway", sans-serif'
-                  }}
-                >
-                  {noteData.category}
-                </div>
-              )}
+              <div
+                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway border-none"
+                style={{
+                  backgroundColor: displayColor
+                }}
+              >
+                {displayCategory}
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        {/* Content */}
+{/* Content */}
         <CardContent className="pt-0">
-          <div className="relative">
+          <style>{`
+            .shared-note-content p, .shared-note-content div, .shared-note-content span, .shared-note-content code, .shared-note-content pre, .shared-note-content li {
+              overflow-wrap: break-word !important;
+              word-wrap: break-word !important;
+              word-break: break-word !important;
+            }
+          `}</style>
+          <div className="shared-note-content prose prose-sm prose-slate dark:prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&_img]:max-w-full [&_img]:h-auto [&_pre]:max-w-full [&_pre]:whitespace-pre-wrap [&_code]:break-all [&_code]:whitespace-pre-wrap [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:w-full text-gray-900 dark:text-gray-100">
             {renderContent(noteData.content)}
           </div>
         </CardContent>
@@ -119,8 +110,7 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData, isLive
       {/* Creator Attribution */}
       <div className="mt-4 text-center">
         <p 
-          className="text-sm text-gray-500 dark:text-gray-400"
-          style={{ fontFamily: '"Raleway", sans-serif' }}
+          className="text-sm text-gray-500 dark:text-gray-400 font-raleway"
         >
           Created by <span className="font-medium">{noteData.creator_name}</span> on{' '}
           {new Date(noteData.created_at).toLocaleDateString()}

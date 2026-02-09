@@ -27,9 +27,15 @@ interface SharedVaultCardProps {
   vaultData: SharedVaultData;
 }
 
+const NEUTRAL_GRAY = '#808080';
+
 export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) => {
   const { toast } = useToast();
   const vaultColor = vaultData.color_value || '#3B82F6';
+
+  // Category display matching canvas logic
+  const displayCategory = vaultData.category || 'General';
+  const displayColor = displayCategory === 'General' ? NEUTRAL_GRAY : vaultColor;
   
   // Track which items are visible
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());
@@ -81,84 +87,82 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
             <div className="flex items-center gap-2">
               <KeyRound className="h-5 w-5" style={{ color: vaultColor }} />
             </div>
-            <div className="flex-1">
+<div className="flex-1">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate font-raleway">
                 {vaultData.title}
               </h3>
-              {vaultData.category && (
-                <div
-                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway"
-                  style={{
-                    backgroundColor: vaultColor
-                  }}
-                >
-                  {vaultData.category}
-                </div>
-              )}
+              <div
+                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway border-none"
+                style={{
+                  backgroundColor: displayColor
+                }}
+              >
+                {displayCategory}
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        {/* Content */}
+{/* Content */}
         <CardContent className="pt-0">
           <div className="mb-3">
             <span className="text-sm text-muted-foreground">
               {vaultData.items.length} {vaultData.items.length === 1 ? 'item' : 'items'}
             </span>
           </div>
-          
+
           {vaultData.items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">This vault is empty</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-hidden">
               {vaultData.items.map((item) => {
                 const isKeyValue = item.item_type === 'key_value';
                 const isVisible = visibleItems.has(item.id);
                 const isCopied = copiedItem === item.id;
-                
+
                 return (
                   <div
                     key={item.id}
-                    className="group flex items-start gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="group flex items-start gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors min-w-0"
                   >
                     {/* Item type icon */}
                     <div className="flex-shrink-0 pt-0.5">
                       {isKeyValue ? (
-                        <Key className="h-4 w-4" style={{ color: vaultColor }} />
+                        <Key className="h-4 w-4 flex-shrink-0" style={{ color: vaultColor }} />
                       ) : (
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                       )}
                     </div>
-                    
+
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-medium truncate">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-sm font-medium truncate flex-shrink min-w-0 title-overflow">
                           {item.label}
                         </span>
                         {isKeyValue && (
-                          <span className="text-muted-foreground">=</span>
+                          <span className="flex-shrink-0 text-muted-foreground">=</span>
                         )}
                       </div>
-                      
-                      <div className="mt-1">
+
+                      <div className="mt-1 overflow-hidden">
                         {isKeyValue ? (
-                          <code className={`font-mono text-sm break-all ${!isVisible ? 'text-muted-foreground' : ''}`}>
+                          <code className={`font-mono text-sm block break-all break-words whitespace-pre-wrap overflow-hidden ${!isVisible ? 'text-muted-foreground' : ''}`}>
                             {isVisible ? item.value : maskedValue}
                           </code>
                         ) : (
-                          <p className={`text-sm whitespace-pre-wrap break-words ${!isVisible ? 'text-muted-foreground' : ''}`}>
+                          <p className={`text-sm block overflow-hidden break-words ${!isVisible ? 'text-muted-foreground' : ''}`}>
                             {isVisible ? item.value : maskedValue}
                           </p>
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Actions */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -172,7 +176,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
                           <Eye className="h-3.5 w-3.5" />
                         )}
                       </Button>
-                      
+
                       <Button
                         size="sm"
                         variant="ghost"

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Check, CheckSquare } from 'lucide-react';
 
+const NEUTRAL_GRAY = '#808080';
+
 interface SharedListItem {
   id: string;
   text: string;
@@ -36,6 +38,10 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
 
   // Use the list's color or default to blue
   const listColor = listData.color_value || '#3B82F6';
+
+  // Category display matching canvas logic
+  const displayCategory = listData.category || 'General';
+  const displayColor = displayCategory === 'General' ? NEUTRAL_GRAY : listColor;
 
   // Detect changes and animate them
   useEffect(() => {
@@ -96,24 +102,21 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
               />
               <CheckSquare className="h-4 w-4 text-slate-500" />
             </div>
-            <div className="flex-1">
+<div className="flex-1">
               <h3
                 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {listData.title}
               </h3>
-              {listData.category && (
-                <div
-                  className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1"
-                  style={{
-                    backgroundColor: listColor,
-                    fontFamily: '"Raleway", sans-serif'
-                  }}
-                >
-                  {listData.category}
-                </div>
-              )}
+              <div
+                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway border-none"
+                style={{
+                  backgroundColor: displayColor
+                }}
+              >
+                {displayCategory}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -148,12 +151,12 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
             </div>
           )}
           
-          {/* List Items */}
-          <div className="px-6 py-2 space-y-0.5">
+{/* List Items */}
+          <div className="px-6 py-2 space-y-0.5 overflow-hidden">
             {listData.items.map((item) => (
               <div
                 key={item.id}
-                className={`flex items-center py-2 px-2 rounded-md transition-all duration-300 ${
+                className={`flex items-center py-2 px-2 rounded-md transition-all duration-300 min-w-0 ${
                   animatingItems.has(item.id)
                     ? 'bg-blue-50 dark:bg-blue-900/20 scale-[1.02] shadow-sm'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -170,18 +173,22 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
                   </div>
                 </div>
                 <span
-                  className={`flex-1 text-sm transition-all duration-200 ${
+                  className={`flex-1 text-sm transition-all duration-200 truncate ${
                     item.completed
                       ? 'line-through text-gray-500 dark:text-gray-400'
                       : 'text-gray-900 dark:text-gray-100'
                   }`}
                   style={{ fontFamily: '"Raleway", sans-serif' }}
+                  title={item.text}
                 >
                   {item.text}
                 </span>
                 {/* Change indicator */}
+                {!animatingItems.has(item.id) && (
+                  <div className="w-2 h-2 min-w-[8px]" />
+                )}
                 {animatingItems.has(item.id) && (
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                  <div className="w-2 h-2 min-w-[8px] bg-blue-500 rounded-full animate-ping flex-shrink-0" />
                 )}
               </div>
             ))}

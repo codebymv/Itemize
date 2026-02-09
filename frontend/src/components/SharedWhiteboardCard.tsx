@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Palette } from 'lucide-react';
 
+const NEUTRAL_GRAY = '#808080';
+
 interface SharedWhiteboardData {
   id: number;
   title: string;
@@ -28,6 +30,10 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
   const [isMobile, setIsMobile] = useState(false);
   const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
   const [isCanvasLoaded, setIsCanvasLoaded] = useState(false);
+
+  // Category display matching canvas logic
+  const displayCategory = whiteboardData.category || 'General';
+  const displayColor = displayCategory === 'General' ? NEUTRAL_GRAY : (whiteboardData.color_value || '#3B82F6');
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -230,8 +236,8 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
     setIsCanvasLoaded(false);
   }, [whiteboardData.id]);
 
-  const canvasWidth = isMobile ? '100%' : (whiteboardData.canvas_width || 400);
-  const canvasHeight = isMobile ? scaledCanvasHeight || 300 : (whiteboardData.canvas_height || 300);
+const canvasWidth = isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px`;
+  const canvasHeight = isMobile ? `${scaledCanvasHeight || 300}px` : `${whiteboardData.canvas_height || 300}px`;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -246,53 +252,53 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Palette className="h-5 w-5 text-gray-600" />
-            <div className="flex-1">
-              <h3 
+<div className="flex-1">
+              <h3
                 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {whiteboardData.title}
               </h3>
-              {whiteboardData.category && (
-                <p 
-                  className="text-sm text-gray-500 dark:text-gray-400"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
-                >
-                  {whiteboardData.category}
-                </p>
-              )}
+              <div
+                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway border-none"
+                style={{
+                  backgroundColor: displayColor
+                }}
+              >
+                {displayCategory}
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        {/* Canvas Content */}
+{/* Canvas Content */}
         <CardContent className="p-4">
-          <div 
+          <div
             className="relative border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-            style={{ 
+            style={{
               backgroundColor: whiteboardData.background_color || '#FFFFFF',
-              width: '100%',
-              maxWidth: isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px`
             }}
           >
-            <ReactSketchCanvas
-              ref={canvasRef}
-              style={{
-                border: 'none',
-                borderRadius: '0.5rem',
-                pointerEvents: 'none', // Disable all pointer events
-              }}
-              width={canvasWidth}
-              height={canvasHeight}
-              strokeWidth={4}
-              strokeColor="#000000"
-              canvasColor={whiteboardData.background_color || '#FFFFFF'}
-              backgroundImage=""
-              exportWithBackgroundImage={false}
-              allowOnlyPointerType="none" // Disable all pointer types
-              withTimestamp={false}
-              readOnly={true} // Make canvas read-only
-            />
+            <div className="w-full overflow-auto">
+              <ReactSketchCanvas
+                ref={canvasRef}
+                style={{
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  pointerEvents: 'none', // Disable all pointer events
+                  display: 'block',
+                }}
+                width={canvasWidth}
+                height={canvasHeight}
+                strokeWidth={4}
+                strokeColor="#000000"
+                canvasColor={whiteboardData.background_color || '#FFFFFF'}
+                backgroundImage=""
+                exportWithBackgroundImage={false}
+                allowOnlyPointerType="none"
+                withTimestamp={false}
+              />
+            </div>
 
             {/* Read-only overlay to prevent any interaction */}
             <div
