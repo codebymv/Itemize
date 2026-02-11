@@ -122,7 +122,7 @@ export function SharedPage() {
   // Fetch all content
   const fetchAllContent = useCallback(async () => {
     if (!token) return;
-    
+
     setLoading(true);
     try {
       const [listsRes, notesRes, whiteboardsRes, wireframesRes, vaultsRes] = await Promise.all([
@@ -254,27 +254,27 @@ export function SharedPage() {
   // Filter and sort content
   const filteredContent = useMemo(() => {
     let filtered = sharedContent;
-    
+
     // Type filter
     if (typeFilter !== 'all') {
       filtered = filtered.filter(c => c.type === typeFilter);
     }
-    
+
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(c => 
+      filtered = filtered.filter(c =>
         c.title.toLowerCase().includes(query) ||
         c.category.toLowerCase().includes(query)
       );
     }
-    
+
     // Sort
     if (sortBy === 'title') {
       filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
     }
     // Default is 'recent' which is already sorted by shared_at in sharedContent
-    
+
     return filtered;
   }, [sharedContent, typeFilter, searchQuery, sortBy]);
 
@@ -345,33 +345,33 @@ export function SharedPage() {
       switch (contentToUnshare.type) {
         case 'list':
           await apiUnshareList(contentToUnshare.id as string, token);
-          setLists(prev => prev.map(l => 
-            l.id === contentToUnshare.id 
-              ? { ...l, is_public: false, share_token: undefined } 
+          setLists(prev => prev.map(l =>
+            l.id === contentToUnshare.id
+              ? { ...l, is_public: false, share_token: undefined }
               : l
           ));
           break;
         case 'note':
           await apiUnshareNote(contentToUnshare.id as number, token);
-          setNotes(prev => prev.map(n => 
-            n.id === contentToUnshare.id 
-              ? { ...n, is_public: false, share_token: undefined } 
+          setNotes(prev => prev.map(n =>
+            n.id === contentToUnshare.id
+              ? { ...n, is_public: false, share_token: undefined }
               : n
           ));
           break;
         case 'whiteboard':
           await apiUnshareWhiteboard(contentToUnshare.id as number, token);
-          setWhiteboards(prev => prev.map(w => 
-            w.id === contentToUnshare.id 
-              ? { ...w, is_public: false, share_token: undefined } 
+          setWhiteboards(prev => prev.map(w =>
+            w.id === contentToUnshare.id
+              ? { ...w, is_public: false, share_token: undefined }
               : w
           ));
           break;
         case 'vault':
           await apiUnshareVault(contentToUnshare.id as number, token);
-          setVaults(prev => prev.map(v => 
-            v.id === contentToUnshare.id 
-              ? { ...v, is_public: false, share_token: undefined } 
+          setVaults(prev => prev.map(v =>
+            v.id === contentToUnshare.id
+              ? { ...v, is_public: false, share_token: undefined }
               : v
           ));
           break;
@@ -502,176 +502,176 @@ export function SharedPage() {
       </MobileControlsBar>
       <PageContainer>
         <PageSurface>
-        {/* Summary */}
-      <div className="flex items-center justify-end mb-6">
-        <span className="text-sm text-muted-foreground">
-          {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
-        </span>
-      </div>
+          {/* Summary */}
+          <div className="flex items-center justify-end mb-6">
+            <span className="text-sm text-muted-foreground">
+              {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
+            </span>
+          </div>
 
-      {/* Content */}
-      {loading ? (
-        <Card>
-          <CardContent className="p-0">
-            <div className="space-y-2 p-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-16" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : filteredContent.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Share2 className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">No shared content</h3>
-            <p className="text-muted-foreground mb-4">
-              {typeFilter !== 'all'
-                ? 'No content of this type has been shared yet'
-                : 'Share lists, notes, whiteboards, or vaults to see them here'}
-            </p>
-            <Button
-              onClick={() => navigate('/canvas')}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Map className="h-4 w-4 mr-2" />
-              Go to Canvas
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <table className="w-full">
-              <thead className="border-b bg-muted/30">
-                <tr>
-                  <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
-                  <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
-                  <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden md:table-cell">Category</th>
-                  <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden sm:table-cell">Shared</th>
-                  <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden lg:table-cell">Share Link</th>
-                  <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredContent.map(content => {
-                  const Icon = getTypeIcon(content.type);
-                  return (
-                    <tr 
-                      key={`${content.type}-${content.id}`}
-                      className="border-b hover:bg-muted/20 transition-colors"
-                    >
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Icon 
-                            className="h-5 w-5" 
-                            style={{ color: content.color_value || '#3B82F6' }} 
-                          />
-                          <span className="text-xs text-muted-foreground hidden sm:inline">
-                            {getTypeLabel(content.type)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <span className="font-medium">{content.title}</span>
-                      </td>
-                      <td className="p-3 hidden md:table-cell">
-                        <Badge variant="secondary">{content.category}</Badge>
-                      </td>
-                      <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
-                        {formatRelativeTime(content.shared_at)}
-                      </td>
-                      <td className="p-3 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
-                            {content.share_url}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 flex-shrink-0"
-                            onClick={() => handleCopyLink(content)}
-                            aria-label="Copy share link"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="p-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewShared(content)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Shared Page
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCopyLink(content)}>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copy Link
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => handleUnshareClick(content)}
-                            >
-                              <Link2Off className="h-4 w-4 mr-2" />
-                              Disable Sharing
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+          {/* Content */}
+          {loading ? (
+            <Card>
+              <CardContent className="p-0">
+                <div className="space-y-2 p-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : filteredContent.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Share2 className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">No shared content</h3>
+                <p className="text-muted-foreground mb-4">
+                  {typeFilter !== 'all'
+                    ? 'No content of this type has been shared yet'
+                    : 'Share lists, notes, whiteboards, or vaults to see them here'}
+                </p>
+                <Button
+                  onClick={() => navigate('/canvas')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Map className="h-4 w-4 mr-2" />
+                  Go to Canvas
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <table className="w-full">
+                  <thead className="border-b bg-muted/30">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden md:table-cell">Category</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden sm:table-cell">Shared</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden lg:table-cell">Share Link</th>
+                      <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {filteredContent.map(content => {
+                      const Icon = getTypeIcon(content.type);
+                      return (
+                        <tr
+                          key={`${content.type}-${content.id}`}
+                          className="border-b hover:bg-muted/20 transition-colors"
+                        >
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Icon
+                                className="h-5 w-5"
+                                style={{ color: content.color_value || '#3B82F6' }}
+                              />
+                              <span className="text-xs text-muted-foreground hidden sm:inline">
+                                {getTypeLabel(content.type)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className="font-medium">{content.title}</span>
+                          </td>
+                          <td className="p-3 hidden md:table-cell">
+                            <Badge variant="secondary">{content.category}</Badge>
+                          </td>
+                          <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
+                            {formatRelativeTime(content.shared_at)}
+                          </td>
+                          <td className="p-3 hidden lg:table-cell">
+                            <div className="flex items-center gap-2">
+                              <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
+                                {content.share_url}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 flex-shrink-0"
+                                onClick={() => handleCopyLink(content)}
+                                aria-label="Copy share link"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="p-3 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleViewShared(content)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Shared Page
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleCopyLink(content)}>
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Copy Link
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => handleUnshareClick(content)}
+                                >
+                                  <Link2Off className="h-4 w-4 mr-2" />
+                                  Disable Sharing
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Unshare confirmation dialog */}
+          <AlertDialog open={unshareDialogOpen} onOpenChange={setUnshareDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 font-raleway">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  Disable Sharing?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="font-raleway">
+                  This will disable the public share link for "{contentToUnshare?.title}".
+                  Anyone with the current link will no longer be able to access it.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="font-raleway">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleUnshare}
+                  className="bg-red-600 hover:bg-red-700 text-white font-raleway"
+                >
+                  Disable Sharing
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </PageSurface>
+      </PageContainer>
+
+      {/* Route-aware onboarding modal */}
+      {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={handleOnboardingClose}
+          onComplete={handleOnboardingComplete}
+          onDismiss={handleOnboardingDismiss}
+          content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+        />
       )}
-
-      {/* Unshare confirmation dialog */}
-      <AlertDialog open={unshareDialogOpen} onOpenChange={setUnshareDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 font-raleway">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Disable Sharing?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="font-raleway">
-              This will disable the public share link for "{contentToUnshare?.title}". 
-              Anyone with the current link will no longer be able to access it.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-raleway">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleUnshare}
-              className="bg-red-600 hover:bg-red-700 text-white font-raleway"
-            >
-              Disable Sharing
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </PageSurface>
-    </PageContainer>
-
-    {/* Route-aware onboarding modal */}
-    {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={handleOnboardingClose}
-        onComplete={handleOnboardingComplete}
-        onDismiss={handleOnboardingDismiss}
-        content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-      />
-    )}
     </>
   );
 }

@@ -265,15 +265,15 @@ router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (
     
     const user = result.rows[0];
     
-    // Check if user registered with Google
-    if (user.provider === 'google') {
+    // Check if user registered with Google OR has no password (OAuth accounts)
+    if (user.provider === 'google' || !user.password_hash) {
       return res.status(400).json({ 
         error: 'This email is registered with Google. Please sign in with Google.',
         code: 'GOOGLE_ACCOUNT'
       });
     }
     
-    // Verify password
+    // Verify password (only reached if password_hash exists)
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid email or password' });

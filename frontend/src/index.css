@@ -187,7 +187,7 @@
     /* Darker accent to match sidebar-accent and make blue-600 icons pop */
     --accent-foreground: 215 13% 90%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 215 20% 37%;

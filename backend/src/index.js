@@ -16,7 +16,7 @@ const requiredEnvVars = [
 
 const optionalEnvVars = [
     'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET', 
+    'GOOGLE_CLIENT_SECRET',
     'FRONTEND_URL'
 ];
 
@@ -57,7 +57,7 @@ app.set('trust proxy', 1);
 
 // Log startup with structured logger
 logger.info('Starting server', { port, timestamp: new Date().toISOString() });
-logger.info('Environment configuration', { 
+logger.info('Environment configuration', {
     NODE_ENV: process.env.NODE_ENV || 'not set',
     DATABASE_URL: process.env.DATABASE_URL ? '[REDACTED]' : 'not set'
 });
@@ -123,16 +123,23 @@ const corsOrigin = process.env.FRONTEND_URL || (
         : 'http://localhost:5173'
 );
 
+// Allowed origins list
+const allowedOrigins = [
+    corsOrigin,
+    'https://itemize.cloud',
+    'https://itemize.up.railway.app'
+];
+
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (mobile apps, curl, etc.)
         if (!origin) return callback(null, true);
-        
-        // Check if origin matches configured URL or is a GitHub Codespaces URL
-        const isAllowed = origin === corsOrigin || 
+
+        // Check if origin matches allowed origins or is a GitHub Codespaces URL
+        const isAllowed = allowedOrigins.some(allowed => origin === allowed) ||
             origin.includes('.app.github.dev') ||
             origin.includes('localhost');
-        
+
         if (isAllowed) {
             callback(null, true);
         } else {
@@ -224,11 +231,11 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || (
-            process.env.NODE_ENV === 'production'
-                ? 'https://itemize.cloud'
-                : 'http://localhost:5173'
-        ),
+        origin: [
+            process.env.FRONTEND_URL || 'http://localhost:5173',
+            'https://itemize.cloud',
+            'https://itemize.up.railway.app'
+        ],
         methods: ['GET', 'POST']
     }
 });
@@ -252,10 +259,10 @@ server.on('error', (error) => {
 // ===========================
 const gracefulShutdown = async (signal) => {
     logger.info(`Received ${signal}, shutting down gracefully...`);
-    
+
     server.close(async () => {
         logger.info('HTTP server closed');
-        
+
         if (dbPool) {
             try {
                 await dbPool.end();
@@ -264,10 +271,10 @@ const gracefulShutdown = async (signal) => {
                 logger.error('Error closing database pool', { error: err.message });
             }
         }
-        
+
         process.exit(0);
     });
-    
+
     // Force shutdown after 10 seconds
     setTimeout(() => {
         logger.error('Forced shutdown after timeout');
@@ -674,7 +681,7 @@ setTimeout(async () => {
 
         // 404 handler for undefined API routes
         app.use('/api/*', notFoundHandler);
-        
+
         // Structured error handling middleware (must be after all routes)
         app.use(errorHandler);
         logger.info('Error handling middleware initialized');
