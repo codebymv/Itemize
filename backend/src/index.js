@@ -6,30 +6,21 @@
 // Load environment variables first
 require('dotenv').config();
 
-// ===========================
-// Environment Variable Validation (Phase 1.4)
-// ===========================
-const requiredEnvVars = [
-    'JWT_SECRET',
-    'DATABASE_URL'
-];
-
-const optionalEnvVars = [
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'FRONTEND_URL'
-];
-
-const missingRequired = requiredEnvVars.filter(v => !process.env[v]);
-if (missingRequired.length > 0) {
-    console.error(`FATAL: Missing required environment variables: ${missingRequired.join(', ')}`);
-    process.exit(1);
+// Initialize Sentry for error tracking (Phase 4)
+if (process.env.SENTRY_DSN) {
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'development',
+        tracesSampleRate: 0.1,
+        profilesSampleRate: 0.1,
+    });
+    logger.info('Sentry error tracking initialized');
 }
 
-const missingOptional = optionalEnvVars.filter(v => !process.env[v]);
-if (missingOptional.length > 0) {
-    console.warn(`Warning: Missing optional environment variables: ${missingOptional.join(', ')}`);
-}
+// Validate environment variables (Phase 4)
+const { validateEnv } = require('./config/env-validation');
+validateEnv();
 
 // Core dependencies
 const express = require('express');
@@ -86,15 +77,26 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false // Required for some third-party integrations
 }));
 
-// 2. Request logging with tracing
+// 2. Correlation ID middleware (Phase 4)
+const correlationIdMiddleware = require('./middleware/correlation-id');
+app.use(correlationIdMiddleware);
+
+// 3. Request logging with tracing
 app.use(requestLogger);
 
-// 3. Body parsing with limits
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// 4. Body parsing with limits (reduced from 10MB to 1MB for DoS protection)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// 4. Cookie parsing
+// 4. Input sanitization to prevent XSS and injection attacks
+const sanitizeMiddleware = require('./middleware/sanitize');
+app.use('/api', sanitizeMiddleware);
+
+// 5. Cookie parsing
 app.use(cookieParser());
+
+// Database pool monitoring middleware (registered after pool initialization)
+const dbMonitor = require('./middleware/db-monitor');
 
 // 5. HTTP request logging (development)
 if (process.env.NODE_ENV !== 'production') {
@@ -205,19 +207,77 @@ const publicRateLimit = rateLimit({
 // Apply global rate limit to all API routes
 app.use('/api', globalLimiter);
 
-// Health check endpoints - KEEP THESE WORKING
-app.get('/health', (req, res) => {
-    logger.debug('Health check hit');
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+// Enhanced health check endpoint
+app.get('/api/health', async (req, res) => {
+    const startTime = Date.now();
+    const pool = req.dbPool;
+
+    try {
+        const checks = {
+            database: {
+                ok: false,
+                message: 'Unknown',
+                latency: 0,
+            },
+        };
+
+        if (pool) {
+            try {
+                const dbStart = Date.now();
+                const dbResult = await pool.query('SELECT 1');
+                const dbLatency = Date.now() - dbStart;
+                
+                checks.database = {
+                    ok: dbResult.rows.length > 0,
+                    message: dbResult.rows.length > 0 ? 'Connected' : 'No rows returned',
+                    latency: dbLatency,
+                };
+            } catch (err) {
+                checks.database = {
+                    ok: false,
+                    message: err.message,
+                    latency: 0,
+                };
+            }
+        }
+
+        const checksList = {
+            email: {
+                ok: Boolean(process.env.RESEND_API_KEY),
+                message: process.env.RESEND_API_KEY ? 'Configured' : 'Not configured',
+            },
+            twilio: {
+                ok: Boolean(process.env.TWILIO_ACCOUNT_SID),
+                message: process.env.TWILIO_ACCOUNT_SID ? 'Configured' : 'Not configured',
+            },
+            database: checks.database,
+        };
+
+        const isHealthy = Object.values(checksList).every(c => c.ok);
+
+        const response = {
+            status: isHealthy ? 'healthy' : 'degraded',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            environment: process.env.NODE_ENV || 'development',
+            version: process.env.npm_package_version || '1.0.0',
+            checks: checksList,
+        };
+
+        const statusCode = isHealthy ? 200 : 503;
+        return res.status(statusCode).json(response);
+    } catch (error) {
+        console.error('Health check failed:', error);
+        return res.status(503).json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: error.message,
+        });
+    }
 });
 
-app.get('/api/health', (req, res) => {
-    logger.debug('API Health check hit');
-    res.status(200).json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV
-    });
+app.get('/health', (req, res) => {
+    res.redirect('/api/health');
 });
 
 // Docs routes (already modular)
@@ -310,8 +370,11 @@ setTimeout(async () => {
             return;
         }
 
-        // Store pool reference for graceful shutdown
-        dbPool = pool;
+// Store pool reference for graceful shutdown
+dbPool = pool;
+
+// Register database pool monitoring middleware (Phase 4)
+app.use(dbMonitor(pool));
 
         // Initialize database schema
         try {
@@ -519,6 +582,21 @@ setTimeout(async () => {
         const analyticsRoutes = require('./routes/analytics.routes');
         app.use('/api/analytics', analyticsRoutes(pool, authenticateJWT));
         logger.info('Analytics routes initialized');
+
+        // Contact Profiles (unified client view)
+        const contactProfileRoutes = require('./routes/contact-profile.routes');
+        app.use('/api/contacts', contactProfileRoutes);
+        logger.info('Contact Profile routes initialized');
+
+        // Cross-Module Search
+        const searchRoutes = require('./routes/search.routes');
+        app.use('/api', searchRoutes);
+        logger.info('Search routes initialized');
+
+        // Workflow Webhooks
+        const webhooksRoutes = require('./routes/webhooks.routes');
+        app.use('/api/webhooks', webhooksRoutes);
+        logger.info('Webhooks routes initialized');
 
         // Calendar Integrations routes (Google/Outlook sync)
         const calendarIntegrationsRoutes = require('./routes/calendar-integrations.routes');
