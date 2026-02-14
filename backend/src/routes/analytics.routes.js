@@ -40,7 +40,13 @@ module.exports = (pool, authenticateJWT) => {
                 tasksResult,
                 pipelinesResult,
                 recentActivityResult,
-                paymentsResult
+                paymentsResult,
+                invoiceMetricsQuery,
+                recentInvoicesQuery,
+                signatureMetricsQuery,
+                recentSignaturesQuery,
+                workspaceMetricsQuery,
+                recentWorkspaceQuery
             ] = await Promise.all([
                 // Total contacts and status breakdown
                 client.query(`
@@ -147,6 +153,68 @@ module.exports = (pool, authenticateJWT) => {
           FROM payments 
           WHERE organization_id = $1 
             AND status = 'succeeded'
+        `, [orgId]),
+                
+                // Invoice metrics for dashboard
+                client.query(`
+          SELECT 
+            COUNT(*) FILTER (WHERE status = 'pending') as pending,
+            COUNT(*) FILTER (WHERE status = 'overdue') as overdue,
+            COALESCE(SUM(total) FILTER (WHERE paid_at IS NOT NULL 
+                   AND date_trunc('month', paid_at) = date_trunc('month', CURRENT_DATE)), 0) as paid_this_month,
+            COUNT(*) FILTER (WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)) as invoice_count_this_month
+          FROM invoices 
+          WHERE organization_id = $1
+        `, [orgId]),
+                
+                // Recent invoices
+                client.query(`
+          SELECT id, invoice_number, total, status, created_at, due_date
+          FROM invoices
+          WHERE organization_id = $1
+          ORDER BY created_at DESC
+          LIMIT 5
+        `, [orgId]),
+                
+                // Signature metrics for dashboard
+                client.query(`
+          SELECT 
+            COUNT(*) FILTER (WHERE status = 'awaiting' OR status = 'sent') as awaiting_signatures,
+            COUNT(*) FILTER (WHERE status = 'completed' AND date_trunc('week', completed_at) = date_trunc('week', CURRENT_DATE)) as signed_this_week,
+            COUNT(*) FILTER (WHERE id IS NOT NULL) as total_signatures
+          FROM signature_documents
+          WHERE organization_id = $1
+        `, [orgId]),
+                
+                // Recent signatures
+                client.query(`
+          SELECT id, title, status, created_at
+          FROM signature_documents
+          WHERE organization_id = $1
+          ORDER BY created_at DESC
+          LIMIT 5
+        `, [orgId]),
+                
+                // Workspace metrics for dashboard
+                client.query(`
+          SELECT 
+            0 as active_items,
+            COALESCE((SELECT COUNT(*) FROM lists WHERE organization_id = $1), 0) as lists_count,
+            COALESCE((SELECT COUNT(*) FROM notes WHERE organization_id = $1), 0) as notes_count
+        `, [orgId]),
+                
+                // Recent workspace items
+                client.query(`
+          SELECT type, title, created_at
+          FROM (
+            SELECT 'list' as type, title, created_at FROM lists 
+            WHERE organization_id = $1
+            UNION ALL
+            SELECT 'note' as type, title, created_at FROM notes 
+            WHERE organization_id = $1
+          ) merged
+          ORDER BY created_at DESC
+          LIMIT 5
         `, [orgId])
             ]);
 
@@ -238,7 +306,40 @@ module.exports = (pool, authenticateJWT) => {
                     content: row.content,
                     createdAt: row.created_at,
                     contactId: row.contact_id
-                }))
+                })),
+                invoiceMetrics: {
+                    pending: invoiceMetricsQuery.rows[0]?.pending || 0,
+                    overdue: invoiceMetricsQuery.rows[0]?.overdue || 0,
+                    paidThisMonth: invoiceMetricsQuery.rows[0]?.paid_this_month || 0,
+                    countThisMonth: invoiceMetricsQuery.rows[0]?.invoice_count_this_month || 0,
+                    recentInvoices: recentInvoicesQuery.rows.map(inv => ({
+                        id: inv.id,
+                        number: inv.invoice_number || `INV-${inv.id}`,
+                        amount: inv.total || 0,
+                        status: inv.status || 'draft'
+                    }))
+                },
+                signatureMetrics: {
+                    awaiting: signatureMetricsQuery.rows[0]?.awaiting_signatures || 0,
+                    signedThisWeek: signatureMetricsQuery.rows[0]?.signed_this_week || 0,
+                    total: signatureMetricsQuery.rows[0]?.total_signatures || 0,
+                    recentDocuments: recentSignaturesQuery.rows.map(sig => ({
+                        id: sig.id,
+                        title: sig.title || 'Document',
+                        status: sig.status || 'draft',
+                        date: sig.created_at
+                    }))
+                },
+                workspaceMetrics: {
+                    activeItems: workspaceMetricsQuery.rows[0]?.active_items || 0,
+                    lists: workspaceMetricsQuery.rows[0]?.lists_count || 0,
+                    notes: workspaceMetricsQuery.rows[0]?.notes_count || 0,
+                    recentItems: recentWorkspaceQuery.rows.map(item => ({
+                        type: item.type,
+                        title: item.title || 'Item',
+                        date: item.created_at
+                    }))
+                }
             };
 
             return analytics;

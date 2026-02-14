@@ -305,8 +305,8 @@ class AISuggestionService {
         
         return groceryContext;
         
-      case 'todo':
-        return 'This is a to-do list. Suggest practical tasks that might complement the existing ones. Include both quick tasks and more substantial ones. Consider different categories like household maintenance, personal errands, financial tasks, health-related activities, etc.';
+case 'todo':
+        return 'This is a task list. Suggest practical tasks that might complement the existing ones. Include both quick tasks and more substantial ones. Consider different categories like household maintenance, personal errands, financial tasks, health-related activities, etc.';
         
       case 'packing':
         return 'This is a packing list. Suggest essential items people often forget when packing. Consider categories like clothing, toiletries, electronics, documents, medications, and comfort items. Include both obvious necessities and easily forgotten but important items.';
