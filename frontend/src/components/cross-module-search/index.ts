@@ -1,0 +1,1 @@
+export { CrossModuleSearch } from './CrossModuleSearch'

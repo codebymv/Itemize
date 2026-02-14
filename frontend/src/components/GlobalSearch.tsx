@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
+import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, FileSignature, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -12,10 +12,12 @@ import { getContacts } from '@/services/contactsApi';
 import { getSegments } from '@/services/segmentsApi';
 import { getCampaigns } from '@/services/campaignsApi';
 import { getWorkflows } from '@/services/automationsApi';
+import { getInvoices } from '@/services/invoicesApi';
+import { getSignatures } from '@/services/signaturesApi';
 
 interface SearchResult {
   id: string;
-  type: 'page' | 'list' | 'note' | 'contact' | 'whiteboard' | 'wireframe' | 'vault' | 'segment' | 'campaign' | 'automation';
+  type: 'page' | 'list' | 'note' | 'contact' | 'whiteboard' | 'wireframe' | 'vault' | 'segment' | 'campaign' | 'automation' | 'invoice' | 'signature';
   title: string;
   subtitle?: string;
   icon?: LucideIcon;
@@ -298,8 +300,50 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             }
 
             if (query.length > 2) {
-              const contactsData = await getContacts({ search: query, limit: 3 });
-              if (contactsData?.data) {
+              const [contactsData, invoicesData, signaturesData] = await Promise.allSettled([
+                getContacts({ search: query, limit: 3 }),
+                getInvoices({ search: query, limit: 3 }),
+                getSignatures({ search: query, limit: 3 })
+              ]);
+              
+              // Invoices
+              if (invoicesData.status === 'fulfilled' && invoicesData.value?.invoices) {
+                const matchedInvoices = invoicesData.value.invoices
+                  .filter((inv: any) =>
+                    inv.number?.toLowerCase().includes(lowerQuery) ||
+                    inv.contact_name?.toLowerCase().includes(lowerQuery)
+                  )
+                  .slice(0, 3)
+                  .map((inv: any) => ({
+                    id: `invoice-${inv.id}`,
+                    type: 'invoice' as const,
+                    title: inv.number || `Invoice #${inv.id}`,
+                    subtitle: inv.status || 'Invoice',
+                    icon: FileText,
+                    href: `/invoices/${inv.id}`
+                  }));
+                allResults.push(...matchedInvoices);
+              }
+              
+              // Signatures
+              if (signaturesData.status === 'fulfilled' && signaturesData.value?.documents) {
+                const matchedSignatures = signaturesData.value.documents
+                  .filter((sig: any) =>
+                    sig.title?.toLowerCase().includes(lowerQuery)
+                  )
+                  .slice(0, 3)
+                  .map((sig: any) => ({
+                    id: `signature-${sig.id}`,
+                    type: 'signature' as const,
+                    title: sig.title || 'Document',
+                    subtitle: sig.status || 'Document',
+                    icon: FileSignature,
+                    href: `/documents/${sig.id}`
+                  }));
+                allResults.push(...matchedSignatures);
+              }
+
+              if (contactsData.status === 'fulfilled' && contactsData.value?.data) {
                 const matchedContacts = contactsData.data
                   .filter((c: { name?: string; email: string }) =>
                     c.name?.toLowerCase().includes(lowerQuery) || c.email.toLowerCase().includes(lowerQuery)
@@ -424,6 +468,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     result.type === 'segment' ? 'bg-cyan-100 text-cyan-600 dark:bg-cyan-950 dark:text-cyan-400' :
                     result.type === 'campaign' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' :
                     result.type === 'automation' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-400' :
+                    result.type === 'invoice' ? 'bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400' :
+                    result.type === 'signature' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400' :
                     'bg-slate-100 text-slate-600'
                   }`}>
                     {result.icon ? <result.icon className="h-5 w-5" /> : <Search className="h-5 w-5" />}

@@ -49,8 +49,11 @@ import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
 import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
 import { PipelineVelocityCard } from './dashboard/components/PipelineVelocityCard';
 import { RecentActivityList } from './dashboard/components/RecentActivityList';
+import { ActivityTimeline } from '@/components/activity-timeline';
+import { transformApiActivityToDesignSystem } from '@/design-system/utils/transform-api-activity';
 import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
 import { useOrganization } from '@/hooks/useOrganization';
+import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
 
 interface QuickAction {
     title: string;
@@ -277,6 +280,67 @@ export function DashboardPage() {
                         />
                     </div>
 
+                    {/* Module Widgets - Cross-module visibility */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                        <InvoicesWidget
+                            primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
+                            primaryStatColor="text-orange-600"
+                            secondaryStats={[
+                                { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: 'text-red-600' },
+                                { label: 'Paid This Month', value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`, color: 'text-green-600' },
+                            ]}
+                            recentItems={analytics?.invoiceMetrics?.recentInvoices?.map(inv => ({
+                                id: inv.id,
+                                title: inv.number,
+                                subtitle: `$${inv.amount.toLocaleString()}`,
+                                status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600' : inv.status === 'overdue' ? 'text-red-600' : 'text-blue-600' }
+                            })) ?? []}
+                            action={{ label: 'View Invoices', onClick: () => navigate('/invoices') }}
+                            loading={isLoading}
+                        />
+                        <SignaturesWidget
+                            primaryStat={analytics?.signatureMetrics?.awaiting ?? 0}
+                            primaryStatColor="text-blue-600"
+                            secondaryStats={[
+                                { label: 'Signed This Week', value: analytics?.signatureMetrics?.signedThisWeek ?? 0, color: 'text-green-600' },
+                                { label: 'Total Documents', value: analytics?.signatureMetrics?.total ?? 0, color: 'text-gray-600' },
+                            ]}
+                            recentItems={analytics?.signatureMetrics?.recentDocuments?.map(sig => ({
+                                id: sig.id,
+                                title: sig.title,
+                                status: { label: sig.status === 'signed' ? 'Signed' : sig.status === 'sent' ? 'Awaiting' : sig.status, color: sig.status === 'signed' ? 'text-green-600' : sig.status === 'sent' ? 'text-blue-600' : 'text-gray-600' }
+                            })) ?? []}
+                            action={{ label: 'View Documents', onClick: () => navigate('/documents') }}
+                            loading={isLoading}
+                        />
+                        <WorkspaceWidget
+                            primaryStat={analytics?.workspaceMetrics?.activeItems ?? 0}
+                            primaryStatLabel="Active Items"
+                            primaryStatColor="text-purple-600"
+                            secondaryStats={[
+                                { label: 'Lists', value: analytics?.workspaceMetrics?.lists ?? 0, color: 'text-purple-600' },
+                                { label: 'Notes', value: analytics?.workspaceMetrics?.notes ?? 0, color: 'text-blue-600' },
+                            ]}
+                            recentItems={analytics?.workspaceMetrics?.recentItems?.map(item => ({
+                                id: item.id,
+                                title: item.title,
+                                status: undefined
+                            })) ?? []}
+                            action={{ label: 'Open Workspace', onClick: () => navigate('/canvas') }}
+                            loading={isLoading}
+                        />
+                        <ContactsWidget
+                            primaryStat={analytics?.contacts?.newThisWeek ?? 0}
+                            primaryStatLabel="This Week"
+                            primaryStatColor="text-green-600"
+                            secondaryStats={[
+                                { label: 'Total', value: analytics?.contacts?.total ?? 0, color: 'text-gray-600' },
+                                { label: 'Converted', value: analytics?.contacts?.customers ?? 0, color: 'text-blue-600' },
+                            ]}
+                            loading={isLoading}
+                        />
+                    </div>
+
                     {/* Revenue Trends Chart */}
                     <Card className="bg-muted/10 mb-8">
                         <CardHeader>
@@ -389,12 +453,16 @@ export function DashboardPage() {
                                     View Details <ArrowRight className="h-3 w-3 ml-1" />
                                 </Button>
                             </div>
-                            <CardDescription>Latest updates across your CRM</CardDescription>
+                            <CardDescription>Latest updates across all modules</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <RecentActivityList
-                                activities={analytics?.recentActivity ?? []}
+                            <ActivityTimeline
+                                activities={analytics?.recentActivity?.map(transformApiActivityToDesignSystem) ?? []}
                                 isLoading={isLoading}
+                                empty={{
+                                    title: 'No activity yet',
+                                    description: 'Activity will appear here as you use Itemize'
+                                }}
                             />
                         </CardContent>
                     </Card>

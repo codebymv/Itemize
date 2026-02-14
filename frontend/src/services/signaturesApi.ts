@@ -124,6 +124,12 @@ export const listSignatureDocuments = async (params: { status?: SignatureStatus;
   return unwrapResponse<{ items: SignatureDocument[]; pagination: any }>(response.data);
 };
 
+export const getSignatures = async (params: { status?: SignatureStatus; page?: number; limit?: number; search?: string } = {}) => {
+  const response = await api.get('/api/signatures/documents', { params });
+  const result = unwrapResponse<{ items: SignatureDocument[]; pagination: any }>(response.data);
+  return { documents: result.items, pagination: result.pagination };
+};
+
 export const getSignatureDocument = async (id: number) => {
   const response = await api.get(`/api/signatures/documents/${id}`);
   return unwrapResponse<SignatureDocumentDetails>(response.data);

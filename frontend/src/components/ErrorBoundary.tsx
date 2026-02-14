@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -35,17 +36,20 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Report error to Sentry (if configured)
+    Sentry.captureException(error, {
+      captureContext: {
+        extra: { componentStack: errorInfo.componentStack }
+      }
+    });
+
     // Log the error to console (always, even in production)
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
+
     this.setState({
       error,
       errorInfo,
     });
-
-    // Here you could also send the error to an error reporting service
-    // e.g., Sentry, LogRocket, etc.
-    // reportErrorToService(error, errorInfo);
   }
 
   handleReload = (): void => {

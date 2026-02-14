@@ -1,5 +1,5 @@
 import axios, { AxiosHeaders, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { storage } from '@/lib/storage';
+import { getUserFriendlyError } from './error-messages';
 
 // Create a list of blocked endpoint patterns that shouldn't be called
 const BLOCKED_ENDPOINTS = [
@@ -84,19 +84,28 @@ const AUTH_TOKEN_KEY = 'itemize_auth_token';
 
 /**
  * Get the stored auth token
+ * 
+ * @deprecated Backend uses httpOnly cookies instead of localStorage.
+ * This function is deprecated and will be removed.
  */
 export const getAuthToken = (): string | null => {
-  return storage.getItem('itemize_auth_token');
+  console.warn('[Auth] getAuthToken is deprecated. Backend uses httpOnly cookies.');
+  return null;
 };
 
 /**
  * Set the auth token (called after login)
+ * 
+ * @deprecated Backend uses httpOnly cookies instead of localStorage.
+ * This function is deprecated and will be removed.
  */
 export const setAuthToken = (token: string | null): void => {
-  if (token) {
-    storage.setItem(AUTH_TOKEN_KEY, token);
+  console.warn('[Auth] setAuthToken is deprecated. Backend uses httpOnly cookies.');
+  // No-op - cookies handle everything automatically
+  if (!token) {
+    sessionStorage.removeItem('token_check');
   } else {
-    storage.removeItem(AUTH_TOKEN_KEY);
+    sessionStorage.setItem('token_check', 'token');
   }
 };
 
@@ -123,13 +132,8 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    // Add Bearer token authentication (Gleam-style approach)
-    // This works reliably on mobile Safari unlike httpOnly cookies
-    const token = getAuthToken();
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
+    // Note: Authentication handled via httpOnly cookies automatically sent by browser
+    // No manual Authorization header needed - cookies are more secure
 
     return config;
   },
@@ -178,6 +182,10 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const config = error.config as RetryConfig | undefined;
     
+    // Transform error to user-friendly message
+    const userError = getUserFriendlyError(error);
+    (error as any).userFriendlyError = userError;
+    
     // Handle 401 unauthorized - attempt token refresh
     if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh') && !config.url?.includes('/auth/login')) {
       // Prevent infinite refresh loops
@@ -185,8 +193,10 @@ api.interceptors.response.use(
         console.error('[Auth] Max refresh attempts reached, forcing logout');
         // Clear auth state and redirect
         setAuthToken(null);
-        storage.removeItem('itemize_user');
-        storage.removeItem('itemize_expiry');
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.removeItem('itemize_user');
+          window.sessionStorage.removeItem('itemize_expiry');
+        }
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login?session=expired';
         }
@@ -219,8 +229,8 @@ api.interceptors.response.use(
           setAuthToken(refreshResponse.data.token);
           
           // Also update user data if provided
-          if (refreshResponse.data?.user) {
-            storage.setJson('itemize_user', refreshResponse.data.user);
+          if (refreshResponse.data?.user && typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem('itemize_user', JSON.stringify(refreshResponse.data.user));
           }
           
           // Reset refresh attempts on success
@@ -249,8 +259,10 @@ api.interceptors.response.use(
         
         // Clear all auth data
         setAuthToken(null);
-        storage.removeItem('itemize_user');
-        storage.removeItem('itemize_expiry');
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.removeItem('itemize_user');
+          window.sessionStorage.removeItem('itemize_expiry');
+        }
         
         // Show user-friendly message and redirect
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {

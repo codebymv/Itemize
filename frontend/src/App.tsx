@@ -1,9 +1,14 @@
 // Import API interceptor first to ensure it's initialized before any API calls
 import "@/lib/api";
+import { initSentry } from "@/lib/sentry";
+
+// Initialize Sentry error tracking
+initSentry();
 
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -12,6 +17,8 @@ import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -90,8 +97,49 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSessionExpiration } from "@/hooks/useSessionExpiration";
 import { CookieConsent } from "@/components/CookieConsent";
 
-const queryClient = new QueryClient();
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const isProduction = import.meta.env.PROD;
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Retry failed queries
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors
+        if (error && 'response' in error) {
+          const status = (error as any).response?.status;
+          if (status && status >= 400 && status < 500) {
+            return false;
+          }
+        }
+        // Max 3 retries for network/5xx errors
+        return failureCount < 3;
+      },
+      
+      // Retry delay (exponential backoff)
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      
+      // Cache for this long (5 minutes)
+      staleTime: 5 * 60 * 1000,
+      
+      // Keep cache for 10 minutes after stale
+      cacheTime: 10 * 60 * 1000,
+      
+      // Refetch on component mount (use cache if available)
+      refetchOnMount: 'always',
+      
+      // Refetch on window focus if data is stale (production only)
+      refetchOnWindowFocus: isProduction ? false : true,
+    },
+    
+    mutations: {
+      // Retry mutations once if network error
+      retry: 1,
+      
+      // Don't wait between retries for mutations
+      retryDelay: 0,
+    },
+  },
+});
 
 // Subscription provider wrapper that gets auth state
 const SubscriptionProviderWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -273,16 +321,26 @@ const AppContent = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem={false}
-        themes={['light', 'dark']}
-      >
-        <GoogleOAuthProvider clientId={googleClientId}>
+const App = () => {
+  // Enforce HTTPS in production
+  useEffect(() => {
+    if (import.meta.env.PROD) {
+      if (window.location.protocol !== 'https:') {
+        window.location.href = window.location.href.replace('http:', 'https:');
+      }
+    }
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          themes={['light', 'dark']}
+        >
+          <GoogleOAuthProvider clientId={googleClientId}>
           <BrowserRouter
             future={{
               v7_startTransition: true,
@@ -304,11 +362,13 @@ const App = () => (
                 </SubscriptionProviderWrapper>
               </OnboardingProvider>
             </AuthProvider>
-          </BrowserRouter>
-        </GoogleOAuthProvider>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+</BrowserRouter>
+          </GoogleOAuthProvider>
+        </ThemeProvider>
+      </TooltipProvider>
+      <ReactQueryDevtools />
+    </QueryClientProvider>
+  );
+};
 
 export default App;

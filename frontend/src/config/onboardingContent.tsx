@@ -62,14 +62,14 @@ export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
     ]
   },
 
-  lists: {
+lists: {
     title: "Welcome to Lists",
-    description: "Create and manage todo lists with powerful organization features",
+    description: "Create and manage lists with powerful organization features",
     version: "1.0",
     steps: [
       {
         title: "Create Lists",
-        description: "Organize your tasks into lists. Add items, check them off, and stay productive.",
+        description: "Organize your content into lists. Add items, check them off, and stay productive.",
         icon: <CheckSquare className="h-12 w-12 text-primary" />,
         tips: [
           "Click 'New List' to create a list",
