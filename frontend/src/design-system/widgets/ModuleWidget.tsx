@@ -16,18 +16,6 @@ import {
   Loader2,
 } from 'lucide-react'
 import { semanticColors, designTokens } from '@/design-system/design-tokens'
-import {
-  Receipt,
-  FileSignature,
-  Map,
-  Users,
-  TrendingUp,
-  ArrowRight,
-  Clock,
-  DollarSign,
-  Loader2,
-} from 'lucide-react'
-import { semanticColors, designTokens } from '@/design-system/design-tokens'
 
 interface ModuleWidgetProps {
   title: string
