@@ -42,6 +42,8 @@ const { initScheduler } = require('./scheduler');
 // Create Express app
 const app = express();
 const port = process.env.PORT || 3001;
+const HEALTHCHECK_STARTUP_GRACE_MS = parseInt(process.env.HEALTHCHECK_STARTUP_GRACE_MS || '60000', 10);
+const healthcheckStartedAt = Date.now();
 
 // Trust proxy headers in production (Railway/other proxies)
 app.set('trust proxy', 1);
@@ -211,6 +213,34 @@ app.use('/api', globalLimiter);
 app.get('/api/health', async (req, res) => {
     const startTime = Date.now();
     const pool = req.dbPool || dbPool;
+    const now = Date.now();
+    const inStartupGrace = now - healthcheckStartedAt < HEALTHCHECK_STARTUP_GRACE_MS;
+
+    if (!pool && inStartupGrace) {
+        return res.status(200).json({
+            status: 'starting',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            environment: process.env.NODE_ENV || 'development',
+            version: process.env.npm_package_version || '1.0.0',
+            checks: {
+                database: {
+                    ok: false,
+                    message: 'Database not initialized yet',
+                    latency: 0,
+                },
+                email: {
+                    ok: Boolean(process.env.RESEND_API_KEY),
+                    message: process.env.RESEND_API_KEY ? 'Configured' : 'Not configured',
+                },
+                twilio: {
+                    ok: Boolean(process.env.TWILIO_ACCOUNT_SID),
+                    message: process.env.TWILIO_ACCOUNT_SID ? 'Configured' : 'Not configured',
+                },
+            },
+            startup: `Grace period ${HEALTHCHECK_STARTUP_GRACE_MS}ms`,
+        });
+    }
 
     try {
         const checks = {
@@ -238,6 +268,7 @@ app.get('/api/health', async (req, res) => {
                     message: err.message,
                     latency: 0,
                 };
+                logger.error('Database health check failed', { error: err.message });
             }
         }
 
@@ -256,7 +287,10 @@ app.get('/api/health', async (req, res) => {
             },
         };
 
-        const requiredHealthy = Object.values(requiredChecks).every(c => c.ok);
+        const databaseOptionalDuringStartup = !pool;
+        const requiredHealthy = databaseOptionalDuringStartup
+            ? true
+            : Object.values(requiredChecks).every(c => c.ok);
         const optionalHealthy = Object.values(optionalChecks).every(c => c.ok);
 
         const response = {
@@ -266,6 +300,7 @@ app.get('/api/health', async (req, res) => {
             environment: process.env.NODE_ENV || 'development',
             version: process.env.npm_package_version || '1.0.0',
             checks: { ...requiredChecks, ...optionalChecks },
+            startup: databaseOptionalDuringStartup ? 'database not initialized yet' : undefined,
         };
 
         const statusCode = requiredHealthy ? 200 : 503;
