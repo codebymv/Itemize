@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { updateCanvasPositions as apiUpdateCanvasPositions, CanvasPositionUpdate } from '@/services/api';
 import { POSITION_UPDATE_DEBOUNCE_MS, POSITION_UPDATE_RETRY_MS } from '../constants/canvasConstants';
 
-export function useCanvasPositionSync(token: string | null) {
+export function useCanvasPositionSync() {
   const positionUpdateQueueRef = useRef<Map<string, CanvasPositionUpdate>>(new Map());
   const positionUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -20,7 +20,8 @@ export function useCanvasPositionSync(token: string | null) {
     positionUpdateQueueRef.current.clear();
 
     try {
-      await apiUpdateCanvasPositions(pendingUpdates, token);
+      // Cookies are sent automatically by axios
+      await apiUpdateCanvasPositions(pendingUpdates);
     } catch (error: any) {
       console.error('Failed to update canvas positions:', error);
 
@@ -33,7 +34,7 @@ export function useCanvasPositionSync(token: string | null) {
         }, retryDelayMs);
       }
     }
-  }, [token]);
+  }, []);
 
   const enqueuePositionUpdate = useCallback((update: CanvasPositionUpdate) => {
     positionUpdateQueueRef.current.set(`${update.type}:${update.id}`, update);

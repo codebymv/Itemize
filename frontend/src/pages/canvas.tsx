@@ -86,13 +86,12 @@ const CanvasPage: React.FC = () => {
   const [newVaultInitialPosition, setNewVaultInitialPosition] = useState<{ x: number, y: number } | null>(null);
 
   const { toast } = useToast();
-  const { token } = useAuthState();
-
-  const { enqueuePositionUpdate } = useCanvasPositionSync(token);
+const { currentUser } = useAuthState();
+  const { enqueuePositionUpdate } = useCanvasPositionSync();
   const updateWireframe = useCallback((updated: Wireframe) => {
     setWireframes(prev => prev.map(w => w.id === updated.id ? updated : w));
   }, [setWireframes]);
-  const { socket, isConnected } = useCanvasWebSocket(token, updateWireframe);
+  const { socket, isConnected } = useCanvasWebSocket(currentUser, updateWireframe);
   const {
     searchQuery,
     setSearchQuery,
@@ -132,8 +131,8 @@ const CanvasPage: React.FC = () => {
     handleShareList,
     handleShareNote,
     handleShareWhiteboard,
-    handleShareVault,
-  } = useCanvasSharing(lists, notes, whiteboards, vaults, token);
+handleShareVault,
+  } = useCanvasSharing(lists, notes, whiteboards, vaults);
 
 
   // Database-backed category management
@@ -170,7 +169,7 @@ const CanvasPage: React.FC = () => {
     handleDeleteVault,
     handleVaultPositionChange,
   } = useCanvasCRUD(
-    token,
+    null,
     { isCategoryInUse, addCategory },
     { setLists, setNotes, setWhiteboards, setWireframes, setVaults },
     enqueuePositionUpdate

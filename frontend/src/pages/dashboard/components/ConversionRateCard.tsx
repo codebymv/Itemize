@@ -36,7 +36,7 @@ export function ConversionRateCard({
         );
     }
 
-    return (
+return (
         <Card>
             <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -44,7 +44,7 @@ export function ConversionRateCard({
                         <Icon className="h-5 w-5" />
                     </div>
                     <div className="text-right">
-                        <div className="text-2xl font-bold">{rate.toFixed(1)}%</div>
+                        <div className={`text-2xl font-bold ${color}`}>{rate.toFixed(1)}%</div>
                     </div>
                 </div>
                 <div className="mt-2">
@@ -52,8 +52,8 @@ export function ConversionRateCard({
                     <p className="text-xs text-muted-foreground">
                         {numerator} of {denominator}
                     </p>
+                    <Progress value={rate} className="mt-2 h-2" />
                 </div>
-                <Progress value={rate} className="mt-2 h-2" />
             </CardContent>
         </Card>
     );

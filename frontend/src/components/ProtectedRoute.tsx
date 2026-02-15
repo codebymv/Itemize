@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { currentUser, loading } = useAuthState();
-  
+
   if (loading) {
     return <PageLoading className="min-h-screen" />;
   }

@@ -11,7 +11,7 @@ Welcome to **Itemize.cloud** – your personal space for organizing thoughts, ta
 - Drag and drop items to organize them visually.
 
 ### 2. **Lists**
-- Create simple to-do lists, shopping lists, or any other collection of items.
+- Create task lists, shopping lists, or any other collection of items.
 - Each list can have a title, category, and color.
 
 ### 3. **Notes**

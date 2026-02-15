@@ -1,4 +1,4 @@
-# Listify full-stack application
+# Itemize - Business Operations Platform
 
 ## 📚 Documentation
 
@@ -12,7 +12,7 @@ This project's documentation has been organized into separate files for better r
 
 For a quick start guide, see the [Getting Started](./!docs/getting-started.md) documentation.
 
-A modern, responsive todo list application built with React (frontend) and Node.js/Express (backend), designed for deployment on Railway with PostgreSQL.
+A comprehensive business operations platform built with React (frontend) and Node.js/Express (backend), designed for deployment on Railway with PostgreSQL. Includes invoicing, CRM, campaigns, e-signatures, workflows, and collaboration tools.
 
 ## 🚀 Quick Start
 
@@ -50,7 +50,7 @@ npm run dev:frontend
 ## 📁 Project Structure
 
 ```
-Prototype1/
+Itemize/
 ├── package.json          # Root package.json with scripts
 ├── README.md            # This file
 ├── backend/             # Node.js/Express API
@@ -80,10 +80,10 @@ Prototype1/
 ## 🗄️ Database Setup (Local Development)
 
 1. Install PostgreSQL locally
-2. Create a database named `listify`
+2. Create a database named `itemize`
 3. Copy `backend/.env.example` to `backend/.env`
 4. Update the `DATABASE_URL` in `.env`
-5. Run the schema: `psql -d listify -f backend/schema.sql`
+5. Run the schema: `psql -d itemize -f backend/schema.sql`
 
 ## 🚀 Railway Deployment
 
@@ -106,7 +106,7 @@ Prototype1/
 
 ### Backend (.env)
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/listify
+DATABASE_URL=postgresql://username:password@localhost:5432/itemize
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
@@ -119,15 +119,39 @@ VITE_API_URL=http://localhost:3001
 
 ## 📋 Features
 
-- ✅ Create, edit, and delete todo lists
-- ✅ Add, complete, and remove list items
-- ✅ Categorize lists
-- ✅ Search and filter functionality
+**Core Workspaces**
+- ✅ Canvas-based list and item management
+- ✅ Notes with sharing and collaboration
+- ✅ Whiteboards for visual planning
+- ✅ Wireframes and diagrams
+- ✅ Encrypted vaults for sensitive data
+
+**Business Operations**
+- ✅ Invoicing and estimates
+- ✅ Campaign management
+- ✅ Contacts and CRM
+- ✅ E-signatures
+- ✅ Forms and data collection
+- ✅ Workflows and automation
+
+**Communication**
+- ✅ Email templates and broadcasts
+- ✅ SMS templates and campaigns
+- ✅ Calendar integrations
+- ✅ Segments and audience targeting
+
+**Analytics & Operations**
+- ✅ Analytics and reporting
+- ✅ Pipelines and sales tracking
+- ✅ Reputation management
+- ✅ Social integrations
+
+**Platform**
 - ✅ Responsive design with Tailwind CSS
 - ✅ Modern UI components with shadcn/ui
 - ✅ PostgreSQL database with JSONB storage
 - ✅ RESTful API with Express.js
-- 🔄 OAuth integration (planned)
+- ✅ OAuth and authentication
 
 ## 🛡️ Tech Stack
 

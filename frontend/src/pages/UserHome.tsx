@@ -45,11 +45,7 @@ const UserHome = () => {
   const fetchLists = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/lists', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await api.get('/api/lists');
       
       // Map response data to our List type, ensuring correct category mapping and defaults
       const listsWithDataMapped = response.data.map((listFromBackend: any) => ({
@@ -80,10 +76,6 @@ const UserHome = () => {
         title,
         category: type,
         items: []
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
       });
       
       const newList: List = {

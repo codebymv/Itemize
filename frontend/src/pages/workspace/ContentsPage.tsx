@@ -201,8 +201,6 @@ export function ContentsPage() {
   }, []);
 
   const fetchAllContent = useCallback(async () => {
-    if (!token) return;
-
     setLoading(true);
     try {
       const [listsRes, notesRes, whiteboardsRes, wireframesRes, vaultsRes] = await Promise.all([

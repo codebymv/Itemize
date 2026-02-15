@@ -170,7 +170,7 @@ const Home: React.FC = () => {
               <RevealSection variant="fade-up" delay={0} isFastScrolling={isFastScrolling}>
                 <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
                   The CRM that works{' '}
-                  <span className="landing-gradient-text">for you</span>
+                  <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
                   <br />
                   not against you
                 </h1>

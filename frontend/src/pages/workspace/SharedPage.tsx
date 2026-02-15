@@ -121,8 +121,6 @@ export function SharedPage() {
 
   // Fetch all content
   const fetchAllContent = useCallback(async () => {
-    if (!token) return;
-
     setLoading(true);
     try {
       const [listsRes, notesRes, whiteboardsRes, wireframesRes, vaultsRes] = await Promise.all([
@@ -339,7 +337,7 @@ export function SharedPage() {
 
   // Handle unshare
   const handleUnshare = async () => {
-    if (!contentToUnshare || !token) return;
+    if (!contentToUnshare) return;
 
     try {
       switch (contentToUnshare.type) {

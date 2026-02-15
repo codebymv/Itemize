@@ -3,8 +3,21 @@ import { format, formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'd
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { semanticColors, designTokens } from '@/design-system/design-tokens'
+import { semanticColors } from '@/design-system/design-tokens'
 import type { Activity, ActivityType } from '@/design-system/types/activity.types'
+
+import {
+  Users,
+  Receipt,
+  FileSignature,
+  Megaphone,
+  Zap,
+  CheckSquare,
+  Calendar,
+  TrendingUp,
+  Activity,
+  Sparkles,
+} from 'lucide-react'
 
 interface ActivityTimelineProps {
   activities: Activity[]
@@ -17,42 +30,118 @@ interface ActivityTimelineProps {
   className?: string
 }
 
-const activityTypeIcons: Record<ActivityType, { icon: string; color: string }> = {
-  created: { icon: '➕', color: 'text-green-600' },
-  updated: { icon: '✏️', color: 'text-blue-600' },
-  deleted: { icon: '🗑️', color: 'text-red-600' },
-  sent: { icon: '📤', color: 'text-blue-600' },
-  received: { icon: '📥', color: 'text-purple-600' },
-  signed: { icon: '✍️', color: 'text-green-600' },
-  paid: { icon: '💳', color: 'text-green-600' },
-  viewed: { icon: '👁️', color: 'text-gray-600' },
-  commented: { icon: '💬', color: 'text-purple-600' },
-  mentioned: { icon: '@', color: 'text-blue-600' },
-  status_changed: { icon: '🔄', color: 'text-orange-600' },
-  workflow_triggered: { icon: '⚡', color: 'text-yellow-600' },
-  scheduled: { icon: '📅', color: 'text-blue-600' },
-  completed: { icon: '✅', color: 'text-green-600' },
-  published: { icon: '📢', color: 'text-blue-600' },
-  archived: { icon: '🗄️', color: 'text-gray-600' },
-  restored: { icon: '♻️', color: 'text-green-600' },
-  assigned: { icon: '👤', color: 'text-blue-600' },
-  tagged: { icon: '🏷️', color: 'text-orange-600' },
+const itemTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  contact: Users,
+  invoice: Receipt,
+  signature: FileSignature,
+  campaign: Megaphone,
+  workflow: Sparkles,
+  note: CheckSquare,
+  list: CheckSquare,
+  contract: FileSignature,
+  booking: Calendar,
+  deal: TrendingUp,
 }
 
-const itemLabels = {
-  invoice: 'Invoice',
-  contact: 'Contact',
-  signature: 'Signature',
-  campaign: 'Campaign',
-  workflow: 'Workflow',
-  note: 'Note',
-  list: 'List',
-  contract: 'Contract',
-  payment: 'Payment',
-  booking: 'Booking',
-  form: 'Form',
-  landing_page: 'Page',
-} as const
+const activityTypeColors: Record<ActivityType, string> = {
+  created: 'text-blue-600 dark:text-blue-400',
+  updated: 'text-blue-600 dark:text-blue-400',
+  deleted: 'text-red-600 dark:text-red-400',
+  sent: 'text-blue-600 dark:text-blue-400',
+  received: 'text-blue-600 dark:text-blue-400',
+  signed: 'text-green-600 dark:text-green-400',
+  paid: 'text-green-600 dark:text-green-400',
+  viewed: 'text-gray-600 dark:text-gray-400',
+  commented: 'text-blue-600 dark:text-blue-400',
+  mentioned: 'text-blue-600 dark:text-blue-400',
+  status_changed: 'text-orange-600 dark:text-orange-400',
+  workflow_triggered: 'text-orange-600 dark:text-orange-400',
+  scheduled: 'text-blue-600 dark:text-blue-400',
+  completed: 'text-green-600 dark:text-green-400',
+  published: 'text-blue-600 dark:text-blue-400',
+  archived: 'text-gray-600 dark:text-gray-400',
+  restored: 'text-green-600 dark:text-green-400',
+  assigned: 'text-blue-600 dark:text-blue-400',
+  tagged: 'text-orange-600 dark:text-orange-400',
+}
+
+function ActivityItem({
+  activity,
+  onSelect,
+}: {
+  activity: Activity
+  onSelect?: (activity: Activity) => void
+}) {
+  const ItemIcon = itemTypeIcons[activity.itemType] || Users
+  const typeColor = activityTypeColors[activity.type] || 'text-blue-600 dark:text-blue-400'
+  const timeAgo = formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })
+
+  return (
+    <Card
+      className={cn(
+        'p-4 transition-all',
+        onSelect && 'cursor-pointer hover:shadow-md',
+        'bg-muted/10'
+      )}
+      onClick={() => onSelect?.(activity)}
+    >
+      <div className="flex gap-4">
+        <div className={cn('flex-shrink-0', typeColor)}>
+          <ItemIcon className="h-5 w-5" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-sm">{activity.title}</span>
+              {activity.target && (
+                <>
+                  <span className="text-muted-foreground text-sm">
+                    {getActionVerb(activity.type)}
+                  </span>
+                  <a
+                    href={activity.target.url}
+                    className='text-sm hover:underline text-blue-600 dark:text-blue-400'
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {activity.target.name}
+                  </a>
+                </>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {timeAgo}
+            </span>
+          </div>
+
+          {activity.description && (
+            <p className="text-sm text-muted-foreground mb-2">
+              {activity.description}
+            </p>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function ActivityTimelineSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[...Array(5)].map((_, i) => (
+        <Card key={i} className="p-4 bg-muted/10">
+          <div className="flex gap-4">
+            <Skeleton className="h-5 w-5" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
 
 export function ActivityTimeline({
   activities,
@@ -68,7 +157,7 @@ export function ActivityTimeline({
   if (!activities || activities.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <div className="text-4xl mb-4">📋</div>
+        <Activity className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-lg font-medium mb-2">{empty?.title || 'No activity yet'}</h3>
         <p className="text-sm text-muted-foreground">
           {empty?.description || 'Activity will appear here as you use Itemize'}
@@ -96,98 +185,6 @@ export function ActivityTimeline({
             ))}
           </div>
         </div>
-      ))}
-    </div>
-  )
-}
-
-function ActivityItem({
-  activity,
-  onSelect,
-}: {
-  activity: Activity
-  onSelect?: (activity: Activity) => void
-}) {
-  const typeInfo = activityTypeIcons[activity.type]
-  const timeAgo = formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })
-
-  return (
-    <Card
-      className={cn(
-        'p-4 transition-all',
-        onSelect && 'cursor-pointer hover:shadow-md',
-        'bg-muted/10'
-      )}
-      onClick={() => onSelect?.(activity)}
-    >
-      <div className="flex gap-4">
-        <div className={cn('flex-shrink-0 text-xl', typeInfo.color)}>
-          {typeInfo.icon}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{activity.title}</span>
-              {activity.target && (
-                <>
-                  <span className="text-muted-foreground text-sm">
-                    {getActionVerb(activity.type)}
-                  </span>
-                  <a
-                    href={activity.target.url}
-                    className={cn(
-                      'text-sm hover:underline',
-                      getItemColor(activity.itemType)
-                    )}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {activity.target.name}
-                  </a>
-                </>
-              )}
-            </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {timeAgo}
-            </span>
-          </div>
-
-          {activity.description && (
-            <p className="text-sm text-muted-foreground mb-2">
-              {activity.description}
-            </p>
-          )}
-
-          {activity.actor && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                {activity.actor.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="truncate">{activity.actor.name}</span>
-              {activity.metadata?.actionedBySystem && (
-                <span className="text-muted-foreground">· Automated</span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function ActivityTimelineSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[...Array(5)].map((_, i) => (
-        <Card key={i} className="p-4 bg-muted/10">
-          <div className="flex gap-4">
-            <Skeleton className="h-5 w-5 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/2" />
-            </div>
-          </div>
-        </Card>
       ))}
     </div>
   )
@@ -241,33 +238,6 @@ function formatGroupDate(date: string): string {
   if (date === 'yesterday') return 'Yesterday'
   if (date === 'this week') return 'This Week'
   return date
-}
-
-function getItemColor(itemType: Activity['itemType']): string {
-  switch (itemType) {
-    case 'invoice':
-    case 'payment':
-      return semanticColors.module.invoice
-    case 'contact':
-      return semanticColors.module.contact
-    case 'signature':
-    case 'contract':
-      return semanticColors.module.signature
-    case 'campaign':
-      return semanticColors.module.campaign
-    case 'workflow':
-      return semanticColors.module.workflow
-    case 'note':
-    case 'list':
-      return semanticColors.module.workflow
-    case 'booking':
-      return semanticColors.module.calendar
-    case 'form':
-    case 'landing_page':
-      return 'text-purple-600 dark:text-purple-400'
-    default:
-      return 'text-blue-600 dark:text-blue-400'
-  }
 }
 
 function getActionVerb(type: ActivityType): string {

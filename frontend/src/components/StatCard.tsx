@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useStatStyles, type StatTheme } from '@/hooks/useStatStyles';
 
 interface StatCardProps {
@@ -22,17 +22,21 @@ export const StatCard = memo(({
   icon: Icon,
   description,
   colorTheme = 'gray',
-  isLoading
+  isLoading,
 }: StatCardProps) => {
   const { badgeClass, iconBgClass, valueClass, iconClass } = useStatStyles(colorTheme);
 
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="p-4">
-          <Skeleton className="h-4 w-20 mb-2" />
-          <Skeleton className="h-8 w-24 mb-2" />
-          <Skeleton className="h-3 w-32" />
+        <CardContent className="py-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-8 w-16" />
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -40,21 +44,17 @@ export const StatCard = memo(({
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <Badge className={`text-xs mb-2 ${badgeClass}`}>
-              {badgeText}
-            </Badge>
-            <p className={`text-2xl font-bold ${valueClass}`}>
-              {value}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {description ?? title}
-            </p>
-          </div>
+      <CardContent className="py-6">
+        <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBgClass}`}>
             <Icon className={`h-5 w-5 ${iconClass}`} />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-muted-foreground mb-1">{badgeText}</p>
+            <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
+            {description && (
+              <p className="text-xs text-muted-foreground mt-1">{description}</p>
+            )}
           </div>
         </div>
       </CardContent>

@@ -1,17 +1,17 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getApiUrl } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { List, Note, Wireframe } from '@/types';
+import { User } from '@/contexts/AuthContext';
 
-export function useCanvasWebSocket(token: string | null, onWireframeUpdate: (update: any) => void) {
+export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: (update: any) => void) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!token) return;
+    if (!currentUser) return;
 
     const BACKEND_URL = getApiUrl();
     logger.log('Canvas: Connecting to WebSocket at:', BACKEND_URL);
@@ -19,15 +19,13 @@ export function useCanvasWebSocket(token: string | null, onWireframeUpdate: (upd
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
-      auth: {
-        token,
-      },
+      // No explicit auth: backend uses httpOnly cookies automatically
     });
 
     newSocket.on('connect', () => {
       logger.log('Canvas: WebSocket connected, joining user canvas');
       setIsConnected(true);
-      newSocket.emit('joinUserCanvas', { token });
+      newSocket.emit('joinUserCanvas', {});
     });
 
     newSocket.on('disconnect', () => {
@@ -57,50 +55,24 @@ export function useCanvasWebSocket(token: string | null, onWireframeUpdate: (upd
 
     newSocket.on('error', (error) => {
       logger.error('Canvas: WebSocket error:', error);
-      
-      if (error?.details === 'jwt expired' || error?.message?.includes('jwt expired')) {
-        logger.log('Canvas: JWT expired, will reconnect after token refresh');
-      } else {
-        toast({
-          title: "Connection Error",
-          description: error.message || "Failed to connect to real-time updates",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Connection Error",
+        description: error.message || "Failed to connect to real-time updates",
+        variant: "destructive",
+      });
     });
 
     newSocket.on('connect_error', (error) => {
       logger.error('Canvas: WebSocket connection error:', error);
-      if (error.message?.includes('jwt expired') || error.message?.includes('unauthorized')) {
-        logger.log('Canvas: Auth error, waiting for token refresh...');
-        setIsConnected(false);
-      }
     });
 
     setSocket(newSocket);
 
-    const handleTokenRefresh = (event: CustomEvent) => {
-      const newToken = event.detail?.token;
-      logger.log('Canvas: Token refreshed, reconnecting WebSocket...');
-      
-      newSocket.disconnect();
-      newSocket.auth = { token: newToken };
-      newSocket.connect();
-      
-      toast({
-        title: "Connection Restored",
-        description: "Your session has been refreshed.",
-      });
-    };
-
-    window.addEventListener('auth:token-refreshed', handleTokenRefresh as EventListener);
-
     return () => {
       logger.log('Canvas: Cleaning up WebSocket connection');
-      window.removeEventListener('auth:token-refreshed', handleTokenRefresh as EventListener);
       newSocket.disconnect();
     };
-  }, [token, toast, onWireframeUpdate]);
+  }, [currentUser?.uid, toast, onWireframeUpdate]);
 
   return { socket, isConnected };
 }

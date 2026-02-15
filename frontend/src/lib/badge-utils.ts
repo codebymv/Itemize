@@ -31,9 +31,9 @@ export const STATUS_BADGE_CLASSES = {
   neutral: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
 
   // Info/Draft states
-  draft: 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300',
-  info: 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300',
-  new: 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300',
+  draft: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  new: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
 
   // Error/Destructive states
   cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',

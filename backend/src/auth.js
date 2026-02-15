@@ -50,7 +50,7 @@ const REFRESH_TOKEN_EXPIRY = '30d'; // Long-lived refresh token
 // Strict rate limiting for authentication endpoints (5 attempts per 15 minutes)
 const authRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per window
+    max: 20, // Increased limit for auth flow
     message: { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -86,7 +86,7 @@ const REFRESH_COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for refresh token
-  path: '/api/auth',
+  path: '/',
 };
 
 // Error handler wrapper
@@ -288,8 +288,10 @@ router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (
     const { accessToken, refreshToken } = generateTokens(user);
     
     // Set cookies
-    res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+    logger.info("[Auth] Cookies set", { accessToken: !!accessToken, refreshToken: !!refreshToken });
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+    logger.info("[Auth] Refresh cookie set");
 
     logger.info('User logged in', { email: user.email });
 
@@ -364,7 +366,9 @@ router.post('/verify-email', authRateLimit, validate(verifyEmailSchema), asyncHa
 
     // Set cookies
     res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+    logger.info("[Auth] Cookies set", { accessToken: !!accessToken, refreshToken: !!refreshToken });
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+    logger.info("[Auth] Refresh cookie set");
 
     // Send welcome email (non-blocking)
     if (isEmailServiceConfigured()) {
@@ -678,6 +682,11 @@ router.post('/change-password', asyncHandler(async (req, res) => {
  * Handle Google OAuth login
  */
 router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
+  // Prevent caching of auth responses
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   try {
     const { googleId, email, name } = req.body;
     
@@ -754,7 +763,9 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
     
     // Set cookies
     res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+    logger.info("[Auth] Cookies set", { accessToken: !!accessToken, refreshToken: !!refreshToken });
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+    logger.info("[Auth] Refresh cookie set");
     
     res.status(200).json({
       token: accessToken,
@@ -777,6 +788,11 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
  * Handle Google One Tap verification
  */
 router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) => {
+  // Prevent caching of auth responses
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   try {
     const { credential } = req.body;
     
@@ -857,7 +873,9 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
     
     // Set cookies
     res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
+    logger.info("[Auth] Cookies set", { accessToken: !!accessToken, refreshToken: !!refreshToken });
     res.cookie('itemize_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+    logger.info("[Auth] Refresh cookie set");
     
     res.status(200).json({
       token: accessToken,
@@ -884,6 +902,11 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
  * Get current user profile
  */
 router.get('/me', asyncHandler(async (req, res) => {
+  // Prevent caching of auth responses
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -1005,6 +1028,11 @@ router.post('/logout', (req, res) => {
  * Refresh access token
  */
 router.post('/refresh', asyncHandler(async (req, res) => {
+  // Prevent caching of auth responses
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   const refreshToken = req.cookies?.itemize_refresh;
 
   if (!refreshToken) {
@@ -1052,6 +1080,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       );
       
       res.cookie('itemize_auth', newAccessToken, ACCESS_COOKIE_OPTIONS);
+    logger.info("[Auth] Cookies set", { accessToken: !!accessToken, refreshToken: !!refreshToken });
       res.json({ 
         success: true,
         token: newAccessToken

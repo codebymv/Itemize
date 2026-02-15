@@ -75,35 +75,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Store redirect path for post-auth navigation
   const pendingRedirectRef = useRef<string | null>(null);
 
-  // Initialize authentication state from localStorage (Gleam-style approach)
+  // Initialize authentication state using cookie-based auth
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check for saved auth token and user data in localStorage
-        const savedToken = getAuthToken();
-        const savedUser = storage.getItem('itemize_user');
-        const expiryTime = storage.getItem('itemize_expiry');
-        
-        // If we have token, user data, and not expired, restore auth state
-        if (savedToken && savedUser && expiryTime && parseInt(expiryTime) > Date.now()) {
-          try {
-            const userData = JSON.parse(savedUser);
-            setToken(savedToken);
-            setCurrentUser(userData);
-          } catch (parseError) {
-            // Clean up invalid data
-            setAuthToken(null);
-            storage.removeItem('itemize_user');
-            storage.removeItem('itemize_expiry');
-          }
-        } else {
-          // Clean up expired data
-          setAuthToken(null);
-          storage.removeItem('itemize_user');
-          storage.removeItem('itemize_expiry');
+        // Fetch user from backend using httpOnly cookies
+        const response = await api.get('/api/auth/me');
+
+        // After api.ts transformation, response.data is directly the user object
+        if (response.data && response.data.id) {
+          setCurrentUser({
+            uid: response.data.id,
+            name: response.data.name,
+            email: response.data.email,
+            role: response.data.role,
+          });
+          setToken(null); // null = using cookies
         }
       } catch (error) {
-        logger.error('Error initializing auth:', error);
+        // 401 or other errors mean user is not authenticated
+        // Clear any stale data
+        setAuthToken(null);
+        storage.removeItem('itemize_user');
+        storage.removeItem('itemize_expiry');
+        logger.debug('Not authenticated (user not logged in)');
       } finally {
         setLoading(false);
       }
@@ -112,20 +107,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  // Helper to save user data and token after successful auth (Gleam-style)
+  // Helper to save user data after successful auth (cookies handle the token)
   const saveAuthState = useCallback((userData: User, authToken: string) => {
     // Set expiry to match refresh token duration (30 days)
     const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
     
-    // Store token in localStorage (Gleam-style - works on mobile Safari)
-    setAuthToken(authToken);
-    
-    // Store user data
+    // Store user data (token is handled by httpOnly cookies now, set to null to avoid sending auth header)
     storage.setJson('itemize_user', userData);
     storage.setItem('itemize_expiry', expiryTime.toString());
     
-    // Update React state
-    setToken(authToken);
+    // Update React state - token is null since we use cookies
+    setToken(null);
     setCurrentUser(userData);
   }, []);
 
@@ -233,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         throw new AuthError(response.data.error || 'Login failed', response.data.code || 'UNKNOWN');
       }
-    } catch (error: any) {
+    } catch (error) {
       // Handle axios error response
       if (error.response?.data) {
         throw new AuthError(
@@ -256,7 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new AuthError(response.data.error || 'Registration failed', response.data.code || 'UNKNOWN');
       }
       // Don't auto-login - user needs to verify email first
-    } catch (error: any) {
+    } catch (error) {
       // Handle axios error response
       if (error.response?.data) {
         throw new AuthError(

@@ -17,7 +17,7 @@ export function useCanvasSharing(
   notes: Note[],
   whiteboards: Whiteboard[],
   vaults: Vault[],
-  token: string | null
+  
 ) {
   const { toast } = useToast();
   const [showShareModal, setShowShareModal] = useState(false);
@@ -199,7 +199,7 @@ export function useCanvasSharing(
       },
       onUnshare: async () => undefined
     }
-  }), [token]);
+  }), []);
 
   return {
     showShareModal,

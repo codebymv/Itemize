@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuthState } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import {
@@ -33,7 +32,6 @@ interface CanvasData {
 }
 
 export function useCanvasData(): CanvasData {
-  const { token } = useAuthState();
   const { toast } = useToast();
 
   const [lists, setLists] = useState<List[]>([]);
@@ -56,7 +54,7 @@ export function useCanvasData(): CanvasData {
     try {
       setLoadingLists(true);
       setError(null);
-      const fetchedLists = await fetchCanvasLists(token);
+      const fetchedLists = await fetchCanvasLists(null);
       setLists(Array.isArray(fetchedLists) ? fetchedLists : []);
     } catch (err) {
       logger.error('Error fetching lists:', err);
@@ -67,10 +65,9 @@ export function useCanvasData(): CanvasData {
   };
 
   const fetchNotes = async () => {
-    if (!token) return;
     try {
       setLoadingNotes(true);
-      const response = await getNotes(token);
+      const response = await getNotes(null);
       const fetchedNotes = response?.notes || response || [];
       setNotes(Array.isArray(fetchedNotes) ? fetchedNotes : []);
     } catch (err) {
@@ -83,10 +80,9 @@ export function useCanvasData(): CanvasData {
   };
 
   const fetchWhiteboards = async () => {
-    if (!token) return;
     try {
       setLoadingWhiteboards(true);
-      const response = await getWhiteboards(token);
+      const response = await getWhiteboards(null);
       const fetchedWhiteboards = response?.whiteboards || response || [];
       setWhiteboards(Array.isArray(fetchedWhiteboards) ? fetchedWhiteboards : []);
     } catch (err) {
@@ -99,10 +95,9 @@ export function useCanvasData(): CanvasData {
   };
 
   const fetchWireframes = async () => {
-    if (!token) return;
     try {
       setLoadingWireframes(true);
-      const response = await getWireframes(token);
+      const response = await getWireframes(null);
       const fetchedWireframes = response?.wireframes || response || [];
       setWireframes(Array.isArray(fetchedWireframes) ? fetchedWireframes : []);
     } catch (err) {
@@ -115,10 +110,9 @@ export function useCanvasData(): CanvasData {
   };
 
   const fetchVaults = async () => {
-    if (!token) return;
     try {
       setLoadingVaults(true);
-      const response = await getVaults(token);
+      const response = await getVaults(null);
       const fetchedVaults = response?.vaults || response || [];
       setVaults(Array.isArray(fetchedVaults) ? fetchedVaults : []);
     } catch (err) {
@@ -142,7 +136,7 @@ export function useCanvasData(): CanvasData {
 
   useEffect(() => {
     void refresh();
-  }, [token]);
+  }, []);
 
   return {
     lists,

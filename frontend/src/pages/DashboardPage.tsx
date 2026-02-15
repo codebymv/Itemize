@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useAuthState } from '@/contexts/AuthContext';
@@ -65,6 +66,45 @@ interface QuickAction {
 
 export function DashboardPage() {
     const { currentUser } = useAuthState();
+
+    // Pro tip dismiss state
+    const [proTipDismissed, setProTipDismissed] = useState(false);
+
+    // Collapsible widget state
+    const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(new Set());
+
+    // Responsive detection
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Initialize collapse state based on screen size
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Set initial collapsed state on mobile
+    useEffect(() => {
+        if (isMobile) {
+            setCollapsedWidgets(new Set(['invoices', 'signatures', 'workspace', 'contacts']));
+        }
+    }, [isMobile]);
+
+    // Helper functions
+    const isWidgetCollapsed = (widgetId: string) => collapsedWidgets.has(widgetId);
+
+    const toggleWidgetCollapse = (widgetId: string) => {
+        setCollapsedWidgets(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(widgetId)) {
+                newSet.delete(widgetId);
+            } else {
+                newSet.add(widgetId);
+            }
+            return newSet;
+        });
+    };
     const navigate = useNavigate();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
@@ -96,7 +136,7 @@ export function DashboardPage() {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <LayoutDashboard className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    <LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <h1
                         className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                     >
@@ -281,45 +321,49 @@ export function DashboardPage() {
                     </div>
 
                     {/* Module Widgets - Cross-module visibility */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-start mb-8">
                         <InvoicesWidget
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
-                            primaryStatColor="text-orange-600"
+                            primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: 'text-red-600' },
-                                { label: 'Paid This Month', value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`, color: 'text-green-600' },
+                                { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: 'text-orange-600 dark:text-orange-400' },
+                                { label: 'Paid This Month', value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`, color: 'text-green-600 dark:text-green-400' },
                             ]}
                             recentItems={analytics?.invoiceMetrics?.recentInvoices?.map(inv => ({
                                 id: inv.id,
                                 title: inv.number,
                                 subtitle: `$${inv.amount.toLocaleString()}`,
-                                status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600' : inv.status === 'overdue' ? 'text-red-600' : 'text-blue-600' }
+                                status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600 dark:text-green-400' : inv.status === 'overdue' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400' }
                             })) ?? []}
                             action={{ label: 'View Invoices', onClick: () => navigate('/invoices') }}
                             loading={isLoading}
+                            isCollapsed={isWidgetCollapsed('invoices')}
+                            onToggleCollapse={() => toggleWidgetCollapse('invoices')}
                         />
                         <SignaturesWidget
                             primaryStat={analytics?.signatureMetrics?.awaiting ?? 0}
-                            primaryStatColor="text-blue-600"
+                            primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Signed This Week', value: analytics?.signatureMetrics?.signedThisWeek ?? 0, color: 'text-green-600' },
-                                { label: 'Total Documents', value: analytics?.signatureMetrics?.total ?? 0, color: 'text-gray-600' },
+                                { label: 'Signed This Week', value: analytics?.signatureMetrics?.signedThisWeek ?? 0, color: 'text-green-600 dark:text-green-400' },
+                                { label: 'Total Documents', value: analytics?.signatureMetrics?.total ?? 0, color: 'text-gray-600 dark:text-gray-400' },
                             ]}
                             recentItems={analytics?.signatureMetrics?.recentDocuments?.map(sig => ({
                                 id: sig.id,
                                 title: sig.title,
-                                status: { label: sig.status === 'signed' ? 'Signed' : sig.status === 'sent' ? 'Awaiting' : sig.status, color: sig.status === 'signed' ? 'text-green-600' : sig.status === 'sent' ? 'text-blue-600' : 'text-gray-600' }
+                                status: { label: sig.status === 'signed' ? 'Signed' : sig.status === 'sent' ? 'Awaiting' : sig.status, color: sig.status === 'signed' ? 'text-green-600 dark:text-green-400' : sig.status === 'sent' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400' }
                             })) ?? []}
                             action={{ label: 'View Documents', onClick: () => navigate('/documents') }}
                             loading={isLoading}
+                            isCollapsed={isWidgetCollapsed('signatures')}
+                            onToggleCollapse={() => toggleWidgetCollapse('signatures')}
                         />
                         <WorkspaceWidget
                             primaryStat={analytics?.workspaceMetrics?.activeItems ?? 0}
                             primaryStatLabel="Active Items"
-                            primaryStatColor="text-purple-600"
+                            primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Lists', value: analytics?.workspaceMetrics?.lists ?? 0, color: 'text-purple-600' },
-                                { label: 'Notes', value: analytics?.workspaceMetrics?.notes ?? 0, color: 'text-blue-600' },
+                                { label: 'Lists', value: analytics?.workspaceMetrics?.lists ?? 0, color: 'text-blue-600 dark:text-blue-400' },
+                                { label: 'Notes', value: analytics?.workspaceMetrics?.notes ?? 0, color: 'text-blue-600 dark:text-blue-400' },
                             ]}
                             recentItems={analytics?.workspaceMetrics?.recentItems?.map(item => ({
                                 id: item.id,
@@ -328,16 +372,26 @@ export function DashboardPage() {
                             })) ?? []}
                             action={{ label: 'Open Workspace', onClick: () => navigate('/canvas') }}
                             loading={isLoading}
+                            isCollapsed={isWidgetCollapsed('workspace')}
+                            onToggleCollapse={() => toggleWidgetCollapse('workspace')}
                         />
                         <ContactsWidget
                             primaryStat={analytics?.contacts?.newThisWeek ?? 0}
                             primaryStatLabel="This Week"
-                            primaryStatColor="text-green-600"
+                            primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Total', value: analytics?.contacts?.total ?? 0, color: 'text-gray-600' },
-                                { label: 'Converted', value: analytics?.contacts?.customers ?? 0, color: 'text-blue-600' },
+                                { label: 'Total', value: analytics?.contacts?.total ?? 0, color: 'text-gray-600 dark:text-gray-400' },
+                                { label: 'Converted', value: analytics?.contacts?.customers ?? 0, color: 'text-green-600 dark:text-green-400' },
                             ]}
+                            recentItems={analytics?.contacts?.recentContacts?.map(contact => ({
+                                id: contact.id,
+                                title: contact.name,
+                                subtitle: contact.email
+                            })) ?? []}
+                            action={{ label: 'View Contacts', onClick: () => navigate('/contacts') }}
                             loading={isLoading}
+                            isCollapsed={isWidgetCollapsed('contacts')}
+                            onToggleCollapse={() => toggleWidgetCollapse('contacts')}
                         />
                     </div>
 
@@ -347,7 +401,7 @@ export function DashboardPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4 text-blue-600" />
+                                        <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                         Revenue Trends
                                     </CardTitle>
                                     <CardDescription>
@@ -358,11 +412,11 @@ export function DashboardPage() {
                                     <div className="text-right">
                                         <div className="flex items-center gap-1 text-sm">
                                             {(revenueData.summary.growthRate ?? 0) >= 0 ? (
-                                                <ArrowUpRight className="h-4 w-4 text-green-500" />
+                                                <ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />
                                             ) : (
-                                                <ArrowDownRight className="h-4 w-4 text-red-500" />
+                                                <ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />
                                             )}
-                                            <span className={(revenueData.summary.growthRate ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                            <span className={(revenueData.summary.growthRate ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                                                 {(revenueData.summary.growthRate ?? 0) > 0 ? '+' : ''}{revenueData.summary.growthRate ?? 0}%
                                             </span>
                                         </div>
@@ -385,7 +439,7 @@ export function DashboardPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <Workflow className="h-4 w-4 text-blue-600" />
+                                        <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                         Pipeline Overview
                                     </CardTitle>
                                     <Button
@@ -412,7 +466,7 @@ export function DashboardPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <CardTitle className="text-base flex items-center gap-2">
-                                            <BarChart3 className="h-4 w-4 text-blue-600" />
+                                            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                             Pipeline Velocity
                                         </CardTitle>
                                         <CardDescription>
@@ -442,7 +496,7 @@ export function DashboardPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle className="text-base flex items-center gap-2">
-                                    <Activity className="h-4 w-4 text-blue-600" />
+                                    <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                     Recent Activity
                                 </CardTitle>
                                 <Button
@@ -474,7 +528,7 @@ export function DashboardPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <Target className="h-4 w-4 text-blue-600" />
+                                        <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                         Conversion Rates
                                     </CardTitle>
                                     <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
@@ -489,7 +543,7 @@ export function DashboardPage() {
                                         numerator={conversionData?.conversions?.leadToCustomer?.customers ?? 0}
                                         denominator={conversionData?.conversions?.leadToCustomer?.total ?? 0}
                                         icon={Users}
-                                        color="text-gray-600"
+                                        color="text-blue-600 dark:text-blue-400"
                                         isLoading={conversionLoading}
                                     />
                                     <ConversionRateCard
@@ -498,7 +552,7 @@ export function DashboardPage() {
                                         numerator={conversionData?.conversions?.dealWinRate?.won ?? 0}
                                         denominator={conversionData?.conversions?.dealWinRate?.totalClosed ?? 0}
                                         icon={TrendingUp}
-                                        color="text-green-600"
+                                        color="text-green-600 dark:text-green-400"
                                         isLoading={conversionLoading}
                                     />
                                     <ConversionRateCard
@@ -507,7 +561,7 @@ export function DashboardPage() {
                                         numerator={conversionData?.conversions?.formToContact?.converted ?? 0}
                                         denominator={conversionData?.conversions?.formToContact?.submissions ?? 0}
                                         icon={CheckSquare}
-                                        color="text-purple-600"
+                                        color="text-blue-600 dark:text-blue-400"
                                         isLoading={conversionLoading}
                                     />
                                     <Card>
@@ -517,7 +571,7 @@ export function DashboardPage() {
                                                     <DollarSign className="h-5 w-5" />
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-2xl font-bold">
+                                                    <div className="text-2xl font-bold text-green-600">
                                                         ${(conversionData?.conversions?.dealWinRate?.wonValue ?? 0).toLocaleString()}
                                                     </div>
                                                 </div>
@@ -539,7 +593,7 @@ export function DashboardPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
-                                        <Mail className="h-4 w-4 text-blue-600" />
+                                        <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                         Communication
                                     </CardTitle>
                                     <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
@@ -588,27 +642,38 @@ export function DashboardPage() {
                     </div>
 
                     {/* Getting Started Tip */}
-                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-100 dark:border-blue-900">
-                        <CardHeader>
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="h-5 w-5 text-blue-600" />
-                                <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">
-                                Set up automated workflows to send emails, create tasks, and update contacts when
-                                deals move through your pipeline. Visit the{' '}
-                                <button
-                                    onClick={() => navigate('/automations')}
-                                    className="text-blue-600 hover:underline"
-                                >
-                                    Automations
-                                </button>{' '}
-                                page to get started.
-                            </p>
-                        </CardContent>
-                    </Card>
+                    {!proTipDismissed && (
+                        <Card className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-100 dark:border-blue-900">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
+                                    </div>
+                                    <button
+                                        onClick={() => setProTipDismissed(true)}
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                        aria-label="Dismiss"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">
+                                    Set up automated workflows to send emails, create tasks, and update contacts when
+                                    deals move through your pipeline. Visit the{' '}
+                                    <button
+                                        onClick={() => navigate('/automations')}
+                                        className="text-blue-600 hover:underline"
+                                    >
+                                        Automations
+                                    </button>{' '}
+                                    page to get started.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
                 </PageSurface>
             </PageContainer>
         </>

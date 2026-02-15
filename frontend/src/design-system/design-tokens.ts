@@ -135,18 +135,35 @@ export const spacingMixins = {
 
 export const semanticColors = {
   status: {
-    active: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-    paused: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
-    completed: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-    pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
-    draft: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-    published: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+    // Success states (green)
+    active: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    completed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    paid: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    published: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    confirmed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    // Warning/pending states (orange)
+    pending: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    in_progress: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    sent: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    overdue: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    // Info states (blue)
+    draft: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
+    info: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
+    // Error states (red)
+    cancelled: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
+    failed: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
+    expired: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
+    // Inactive states (gray)
+    inactive: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
+    archived: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
+    paused: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
   },
   module: {
     invoice: 'text-blue-600 dark:text-blue-400',
-    contact: 'text-green-600 dark:text-green-400',
-    signature: 'text-purple-600 dark:text-purple-400',
+    contact: 'text-blue-600 dark:text-blue-400',
+    signature: 'text-blue-600 dark:text-blue-400',
     workflow: 'text-orange-600 dark:text-orange-400',
+    workspace: 'text-blue-600 dark:text-blue-400',
     campaign: 'text-indigo-600 dark:text-indigo-400',
     social: 'text-pink-600 dark:text-pink-400',
     calendar: 'text-teal-600 dark:text-teal-400',
