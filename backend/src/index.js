@@ -210,7 +210,7 @@ app.use('/api', globalLimiter);
 // Enhanced health check endpoint
 app.get('/api/health', async (req, res) => {
     const startTime = Date.now();
-    const pool = req.dbPool;
+    const pool = req.dbPool || dbPool;
 
     try {
         const checks = {
@@ -241,7 +241,11 @@ app.get('/api/health', async (req, res) => {
             }
         }
 
-        const checksList = {
+        const requiredChecks = {
+            database: checks.database,
+        };
+
+        const optionalChecks = {
             email: {
                 ok: Boolean(process.env.RESEND_API_KEY),
                 message: process.env.RESEND_API_KEY ? 'Configured' : 'Not configured',
@@ -250,21 +254,21 @@ app.get('/api/health', async (req, res) => {
                 ok: Boolean(process.env.TWILIO_ACCOUNT_SID),
                 message: process.env.TWILIO_ACCOUNT_SID ? 'Configured' : 'Not configured',
             },
-            database: checks.database,
         };
 
-        const isHealthy = Object.values(checksList).every(c => c.ok);
+        const requiredHealthy = Object.values(requiredChecks).every(c => c.ok);
+        const optionalHealthy = Object.values(optionalChecks).every(c => c.ok);
 
         const response = {
-            status: isHealthy ? 'healthy' : 'degraded',
+            status: requiredHealthy ? (optionalHealthy ? 'healthy' : 'degraded') : 'unhealthy',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             environment: process.env.NODE_ENV || 'development',
             version: process.env.npm_package_version || '1.0.0',
-            checks: checksList,
+            checks: { ...requiredChecks, ...optionalChecks },
         };
 
-        const statusCode = isHealthy ? 200 : 503;
+        const statusCode = requiredHealthy ? 200 : 503;
         return res.status(statusCode).json(response);
     } catch (error) {
         console.error('Health check failed:', error);
