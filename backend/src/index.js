@@ -6,6 +6,9 @@
 // Load environment variables first
 require('dotenv').config();
 
+// Structured logging
+const { logger, requestLogger } = require('./utils/logger');
+
 // Initialize Sentry for error tracking (Phase 4)
 if (process.env.SENTRY_DSN) {
     const Sentry = require('@sentry/node');
@@ -32,9 +35,6 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-
-// Structured logging
-const { logger, requestLogger } = require('./utils/logger');
 
 // Background job scheduler
 const { initScheduler } = require('./scheduler');
