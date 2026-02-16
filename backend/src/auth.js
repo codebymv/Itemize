@@ -313,6 +313,7 @@ res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
     res.json({
       success: true,
       token: accessToken,
+      refreshToken,
       user: {
         uid: user.id,
         email: user.email,
@@ -397,6 +398,7 @@ router.post('/verify-email', authRateLimit, validate(verifyEmailSchema), asyncHa
       success: true,
       message: 'Email verified successfully!',
       token: accessToken,
+      refreshToken,
       user: {
         uid: user.id,
         email: user.email,
@@ -1048,7 +1050,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
 
-  const refreshToken = req.cookies?.itemize_refresh;
+  const refreshToken = req.cookies?.itemize_refresh || req.body?.refreshToken;
 
   if (!refreshToken) {
     return res.status(401).json({ error: 'No refresh token provided' });
@@ -1095,7 +1097,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       );
       
       res.cookie('itemize_auth', newAccessToken, ACCESS_COOKIE_OPTIONS);
-    logger.info("[Auth] Cookies set", { accessToken: !!accessToken, refreshToken: !!refreshToken });
+      logger.info('[Auth] Access token refreshed', { accessToken: true, refreshToken: true });
       res.json({ 
         success: true,
         token: newAccessToken

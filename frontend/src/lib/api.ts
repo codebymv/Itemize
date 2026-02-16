@@ -81,32 +81,43 @@ const api = axios.create({
 
 // Token storage key (matching Gleam's approach)
 const AUTH_TOKEN_KEY = 'itemize_auth_token';
+const REFRESH_TOKEN_KEY = 'itemize_refresh_token';
 
 /**
  * Get the stored auth token
- * 
- * @deprecated Backend uses httpOnly cookies instead of localStorage.
- * This function is deprecated and will be removed.
  */
 export const getAuthToken = (): string | null => {
-  console.warn('[Auth] getAuthToken is deprecated. Backend uses httpOnly cookies.');
-  return null;
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(AUTH_TOKEN_KEY);
+};
+
+export const getRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
 };
 
 /**
  * Set the auth token (called after login)
- * 
- * @deprecated Backend uses httpOnly cookies instead of localStorage.
- * This function is deprecated and will be removed.
  */
 export const setAuthToken = (token: string | null): void => {
-  console.warn('[Auth] setAuthToken is deprecated. Backend uses httpOnly cookies.');
-  // No-op - cookies handle everything automatically
+  if (typeof window === 'undefined') return;
   if (!token) {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem('token_check');
-  } else {
-    sessionStorage.setItem('token_check', 'token');
+    return;
   }
+  window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+  sessionStorage.setItem('token_check', 'token');
+};
+
+export const setRefreshToken = (token: string | null): void => {
+  if (typeof window === 'undefined') return;
+  if (!token) {
+    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+    return;
+  }
+  window.localStorage.setItem(REFRESH_TOKEN_KEY, token);
 };
 
 // Add a request interceptor to handle dynamic baseURL, blocked endpoints, and authentication
@@ -132,8 +143,14 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    // Note: Authentication handled via httpOnly cookies automatically sent by browser
-    // No manual Authorization header needed - cookies are more secure
+    // Attach Authorization header when available (fallback to cookies if not)
+    const authToken = getAuthToken();
+    if (authToken) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${authToken}`,
+      };
+    }
 
     return config;
   },
@@ -217,11 +234,12 @@ api.interceptors.response.use(
         console.log('[Auth] Attempting token refresh...');
         
         // Attempt to refresh the token - withCredentials ensures cookies are sent
+        const refreshToken = getRefreshToken();
         const refreshResponse = await axios.create({
           baseURL: config.baseURL,
           withCredentials: true,
           timeout: 10000,
-        }).post('/api/auth/refresh');
+        }).post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
         
         // If refresh returns a new token, save it
         if (refreshResponse.data?.token) {
