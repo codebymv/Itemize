@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
-import api, { getApiUrl, setAuthToken, getAuthToken, setRefreshToken } from '@/lib/api';
+import api, { getApiUrl, setAuthToken, getAuthToken, setRefreshToken, isLoggedOut, setLoggedOut } from '@/lib/api';
 import { storage } from '@/lib/storage';
 import axios from 'axios'; // Keep axios for Google API calls
 import { toast } from '@/components/ui/use-toast'; // Import toast
@@ -79,6 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        if (isLoggedOut()) {
+          setToken(null);
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
         // Fetch user from backend using httpOnly cookies
         const response = await api.get('/api/auth/me');
 
@@ -136,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (refreshToken) {
       setRefreshToken(refreshToken);
     }
+    setLoggedOut(false);
     
     // Update React state with access token
     setToken(authToken);
@@ -291,6 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(null);
     storage.removeItem('itemize_user');
     storage.removeItem('itemize_expiry');
+    setLoggedOut(true);
     
     // Sign out from Google
     try {

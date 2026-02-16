@@ -82,6 +82,7 @@ const api = axios.create({
 // Token storage key (matching Gleam's approach)
 const AUTH_TOKEN_KEY = 'itemize_auth_token';
 const REFRESH_TOKEN_KEY = 'itemize_refresh_token';
+const LOGGED_OUT_KEY = 'itemize_logged_out';
 
 /**
  * Get the stored auth token
@@ -94,6 +95,20 @@ export const getAuthToken = (): string | null => {
 export const getRefreshToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   return window.localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+export const isLoggedOut = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(LOGGED_OUT_KEY) === '1';
+};
+
+export const setLoggedOut = (loggedOut: boolean): void => {
+  if (typeof window === 'undefined') return;
+  if (loggedOut) {
+    window.localStorage.setItem(LOGGED_OUT_KEY, '1');
+  } else {
+    window.localStorage.removeItem(LOGGED_OUT_KEY);
+  }
 };
 
 /**
@@ -205,6 +220,9 @@ api.interceptors.response.use(
     
     // Handle 401 unauthorized - attempt token refresh
     if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh') && !config.url?.includes('/auth/login')) {
+      if (isLoggedOut()) {
+        return Promise.reject(error);
+      }
       // Prevent infinite refresh loops
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
         console.error('[Auth] Max refresh attempts reached, forcing logout');
