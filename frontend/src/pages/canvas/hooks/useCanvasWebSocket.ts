@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getApiUrl } from '@/lib/api';
+import { getApiUrl, getAuthToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { User } from '@/contexts/AuthContext';
@@ -19,13 +19,15 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
+      withCredentials: true,
       // No explicit auth: backend uses httpOnly cookies automatically
     });
 
     newSocket.on('connect', () => {
       logger.log('Canvas: WebSocket connected, joining user canvas');
       setIsConnected(true);
-      newSocket.emit('joinUserCanvas', {});
+      const authToken = getAuthToken();
+      newSocket.emit('joinUserCanvas', { token: authToken ?? 'httponly' });
     });
 
     newSocket.on('disconnect', () => {
