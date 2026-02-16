@@ -73,12 +73,26 @@ const strictRateLimit = rateLimit({
 // Cookie configuration for httpOnly secure cookies
 // NOTE: sameSite must be 'none' for cross-origin requests (frontend and backend on different domains)
 // When sameSite is 'none', secure MUST be true
+const FRONTEND_URL = process.env.FRONTEND_URL;
+let COOKIE_DOMAIN;
+if (process.env.COOKIE_DOMAIN) {
+  COOKIE_DOMAIN = process.env.COOKIE_DOMAIN;
+} else if (process.env.NODE_ENV === 'production' && FRONTEND_URL) {
+  try {
+    const hostname = new URL(FRONTEND_URL).hostname.replace(/^www\./, '');
+    COOKIE_DOMAIN = `.${hostname}`;
+  } catch (error) {
+    logger.warn('Invalid FRONTEND_URL; skipping cookie domain', { FRONTEND_URL });
+  }
+}
+
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin
   maxAge: 15 * 60 * 1000, // 15 minutes for access token
   path: '/',
+  ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
 };
 
 const REFRESH_COOKIE_OPTIONS = {
@@ -87,6 +101,7 @@ const REFRESH_COOKIE_OPTIONS = {
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for refresh token
   path: '/',
+  ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
 };
 
 // Error handler wrapper
