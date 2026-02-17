@@ -98,7 +98,7 @@ export const useTokenRefresh = (onTokenRefreshed?: (token: string) => void) => {
     const handleTokenRefreshed = (event: CustomEvent) => {
       const { token } = event.detail;
       console.log('[Session] Token refreshed, updating connections...');
-      
+
       if (onTokenRefreshed) {
         onTokenRefreshed(token);
       }
