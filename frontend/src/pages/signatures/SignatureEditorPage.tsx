@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Plus, UploadCloud, Save, Send, FileSignature, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ import SendSignatureModal from './components/SendSignatureModal';
 export default function SignatureEditorPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
   const { currentUser } = useAuthState();
@@ -87,6 +88,31 @@ export default function SignatureEditorPage() {
       })
       .finally(() => setLoading(false));
   }, [id, toast]);
+
+  // Pre-fill recipient from URL (e.g. from Contact "Send Document" or Invoice "Send for Signature")
+  useEffect(() => {
+    if (id) return;
+    const contactName = searchParams.get('contactName');
+    const contactEmail = searchParams.get('contactEmail');
+    const invoiceIdParam = searchParams.get('invoiceId');
+    if (contactName || contactEmail) {
+      setRecipients((prev) => {
+        if (prev.length > 0) return prev;
+        return [
+          {
+            id: 0,
+            name: contactName || '',
+            email: contactEmail || '',
+            role_name: 'Signer',
+            order_index: 0,
+          } as SignatureRecipient,
+        ];
+      });
+    }
+    if (invoiceIdParam) {
+      setTitle((t) => t || `Invoice #${invoiceIdParam} - Signature`);
+    }
+  }, [searchParams, id]);
 
   const canUpload = useMemo(() => Boolean(document?.id), [document]);
 

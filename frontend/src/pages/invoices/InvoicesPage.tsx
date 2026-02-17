@@ -357,14 +357,30 @@ export function InvoicesPage() {
         setShowPaymentModal(true);
     };
 
-    // Record a manual payment
+    // Record a manual payment (with optimistic update)
     const handleRecordPayment = async (paymentData: PaymentData) => {
         if (!organizationId || !selectedInvoiceForPayment) return;
-        
+        const inv = selectedInvoiceForPayment;
+        const newAmountPaid = inv.amount_paid + paymentData.amount;
+        const newAmountDue = inv.amount_due - paymentData.amount;
+        const newStatus = newAmountDue <= 0 ? 'paid' : 'partial';
+        const previousInvoices = invoices;
+        setInvoices((prev) =>
+            prev.map((i) =>
+                i.id === inv.id
+                    ? {
+                          ...i,
+                          amount_paid: newAmountPaid,
+                          amount_due: newAmountDue,
+                          status: newStatus,
+                      }
+                    : i
+            )
+        );
         setRecordingPayment(true);
         try {
             await recordPayment(
-                selectedInvoiceForPayment.id,
+                inv.id,
                 {
                     amount: paymentData.amount,
                     payment_method: paymentData.payment_method,
@@ -372,15 +388,13 @@ export function InvoicesPage() {
                 },
                 organizationId
             );
-            
             toast({ title: 'Payment Recorded', description: `Payment of $${paymentData.amount.toFixed(2)} has been recorded.` });
             setShowPaymentModal(false);
             setSelectedInvoiceForPayment(null);
             setFullInvoiceDataForPayment(null);
-            
-            // Refresh invoices to show updated payment status
             fetchInvoices();
         } catch (error: any) {
+            setInvoices(previousInvoices);
             const errorMessage = error?.response?.data?.error || 'Failed to record payment';
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {

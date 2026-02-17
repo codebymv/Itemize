@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/hooks/use-toast';
+import { toast, useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import api, { getRefreshToken, setAuthToken } from '@/lib/api';
 
 /**
  * Hook to handle session expiration events
@@ -25,6 +27,66 @@ export const useSessionExpiration = () => {
       window.removeEventListener('auth:session-expired', handleSessionExpired);
     };
   }, [navigate]);
+};
+
+/**
+ * Hook to show "session expiring soon" warning with "Stay signed in" action.
+ * Listens for auth:session-expiring (dispatched by api.ts proactive timer).
+ */
+export const useSessionWarning = () => {
+  const { toast: toastFn, dismiss } = useToast();
+  const expiringToastIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const handleSessionExpiring = () => {
+      const t = toastFn({
+        title: 'Your session expires soon',
+        description: 'Stay signed in to continue.',
+        variant: 'default',
+        action: (
+          <ToastAction
+            altText="Stay signed in"
+            onClick={async () => {
+              try {
+                const refreshToken = getRefreshToken();
+                const res = await api.post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
+                if (res.data?.token) {
+                  setAuthToken(res.data.token);
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('auth:token-refreshed', {
+                      detail: { token: res.data.token },
+                    }));
+                  }
+                  if (expiringToastIdRef.current) {
+                    dismiss(expiringToastIdRef.current);
+                    expiringToastIdRef.current = null;
+                  }
+                  toastFn({
+                    title: "You're signed in",
+                    description: 'Your session has been extended.',
+                  });
+                }
+              } catch {
+                toastFn({
+                  title: 'Could not extend session',
+                  description: 'Please sign in again.',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            Stay signed in
+          </ToastAction>
+        ),
+      });
+      expiringToastIdRef.current = typeof t?.id === 'string' ? t.id : null;
+    };
+
+    window.addEventListener('auth:session-expiring', handleSessionExpiring);
+    return () => {
+      window.removeEventListener('auth:session-expiring', handleSessionExpiring);
+    };
+  }, []);
 };
 
 /**

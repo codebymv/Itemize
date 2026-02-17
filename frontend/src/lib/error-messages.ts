@@ -7,6 +7,8 @@ export interface UserError {
   message: string;
   type: ErrorType;
   action?: string;
+  /** For plan-limit 403: link to upgrade (e.g. /payment-settings) */
+  upgradeUrl?: string;
 }
 
 export function getUserFriendlyError(error: unknown): UserError {
@@ -64,6 +66,17 @@ export function getUserFriendlyError(error: unknown): UserError {
 
     // 403 Forbidden
     if (status === 403) {
+      const code = responseData?.code || responseData?.error?.code;
+      const isPlanLimit = code === 'PLAN_LIMIT_REACHED' || code === 'PLAN_LIMIT';
+      if (isPlanLimit) {
+        return {
+          title: 'Plan limit reached',
+          message: typeof responseData?.error === 'string' ? responseData.error : "You've reached the limit for your current plan. Upgrade to add more.",
+          type: 'client',
+          action: 'Upgrade your plan',
+          upgradeUrl: '/payment-settings',
+        };
+      }
       return {
         title: 'Access Denied',
         message: 'You do not have permission to access this resource.',
@@ -84,9 +97,15 @@ export function getUserFriendlyError(error: unknown): UserError {
 
     // 429 Too Many Requests
     if (status === 429) {
+      const details = responseData?.error?.details || responseData?.details;
+      const remaining = details?.remaining;
+      const message =
+        typeof remaining === 'number'
+          ? `You're making too many requests. You can try again in a few minutes. ${remaining} remaining this period.`
+          : 'You are making too many requests. Please wait a moment and try again.';
       return {
         title: 'Too Many Requests',
-        message: 'You are making too many requests. Please wait a moment and try again.',
+        message,
         type: 'client',
         action: 'Wait a moment, then try again',
       };

@@ -84,6 +84,49 @@ const AUTH_TOKEN_KEY = 'itemize_auth_token';
 const REFRESH_TOKEN_KEY = 'itemize_refresh_token';
 const LOGGED_OUT_KEY = 'itemize_logged_out';
 
+// Proactive session-expiring warning: fire 2 min before access token expiry
+const SESSION_WARNING_BEFORE_EXPIRY_MS = 2 * 60 * 1000;
+let sessionExpiringTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Decode JWT payload (no verification; we only need exp for client-side scheduling).
+ * Returns { exp } (seconds since epoch) or null if invalid.
+ */
+function decodeJwtExp(token: string): { exp: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    if (typeof decoded.exp !== 'number') return null;
+    return { exp: decoded.exp };
+  } catch {
+    return null;
+  }
+}
+
+function clearSessionExpiringTimer(): void {
+  if (sessionExpiringTimeoutId !== null) {
+    clearTimeout(sessionExpiringTimeoutId);
+    sessionExpiringTimeoutId = null;
+  }
+}
+
+function scheduleSessionExpiringWarning(token: string): void {
+  clearSessionExpiringTimer();
+  const decoded = decodeJwtExp(token);
+  if (!decoded) return;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const msUntilWarning = (decoded.exp - nowSec) * 1000 - SESSION_WARNING_BEFORE_EXPIRY_MS;
+  if (msUntilWarning <= 0) return;
+  sessionExpiringTimeoutId = setTimeout(() => {
+    sessionExpiringTimeoutId = null;
+    if (typeof window !== 'undefined' && !isLoggedOut()) {
+      window.dispatchEvent(new CustomEvent('auth:session-expiring'));
+    }
+  }, msUntilWarning);
+}
+
 /**
  * Get the stored auth token
  */
@@ -112,11 +155,12 @@ export const setLoggedOut = (loggedOut: boolean): void => {
 };
 
 /**
- * Set the auth token (called after login)
+ * Set the auth token (called after login or refresh)
  */
 export const setAuthToken = (token: string | null): void => {
   if (typeof window === 'undefined') return;
   if (!token) {
+    clearSessionExpiringTimer();
     window.localStorage.removeItem(AUTH_TOKEN_KEY);
     window.localStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem('token_check');
@@ -124,6 +168,7 @@ export const setAuthToken = (token: string | null): void => {
   }
   window.localStorage.setItem(AUTH_TOKEN_KEY, token);
   sessionStorage.setItem('token_check', 'token');
+  scheduleSessionExpiringWarning(token);
 };
 
 export const setRefreshToken = (token: string | null): void => {

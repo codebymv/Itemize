@@ -121,9 +121,9 @@ export default function Login() {
               </AlertDescription>
             </Alert>
           )}
-          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
+          <h1 className={`text-2xl font-semibold leading-none tracking-tight ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
             Welcome back
-          </CardTitle>
+          </h1>
           <CardDescription className={isLight ? '' : 'text-slate-400'}>
             Sign in to your Itemize account
           </CardDescription>

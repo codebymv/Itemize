@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import {
     ArrowLeft,
     Save,
     Send,
+    FileSignature,
     Plus,
     Trash2,
     Building,
@@ -78,6 +79,7 @@ interface Contact {
 export function InvoiceEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
@@ -258,21 +260,33 @@ export function InvoiceEditorPage() {
                         {saving ? 'Saving...' : 'Save Draft'}
                     </Button>
                     {!isNew && (
-                        <Button
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => setShowSendModal(true)}
-                            disabled={saving}
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send Invoice
-                        </Button>
+                        <>
+                            <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={() => setShowSendModal(true)}
+                                disabled={saving}
+                            >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Invoice
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
+                                disabled={saving}
+                            >
+                                <FileSignature className="h-4 w-4 mr-2" />
+                                Send for Signature
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, isNew, saving, lineItems, navigate]);
+    }, [theme, setHeaderContent, isNew, id, saving, lineItems, navigate]);
 
     // Initialize
     useEffect(() => {
@@ -314,6 +328,19 @@ export function InvoiceEditorPage() {
                         })));
                     }
                 } else {
+                    // Pre-fill from URL (e.g. from Contact detail "Create Invoice")
+                    const contactIdParam = searchParams.get('contactId');
+                    const contactNameParam = searchParams.get('contactName');
+                    const contactEmailParam = searchParams.get('contactEmail');
+                    if (contactIdParam || contactNameParam || contactEmailParam) {
+                        const numId = contactIdParam ? parseInt(contactIdParam, 10) : undefined;
+                        if (numId) setContactId(numId);
+                        loadContactData({
+                            id: numId,
+                            name: contactNameParam || undefined,
+                            email: contactEmailParam || undefined,
+                        });
+                    }
                     // Auto-select last used business for new invoices
                     const businessesList = Array.isArray(businessesData) ? businessesData : businessesData?.businesses || [];
                     if (businessesList.length > 0) {
@@ -369,15 +396,27 @@ export function InvoiceEditorPage() {
                     {saving ? 'Saving...' : 'Save'}
                 </Button>
                 {!isNew && (
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                        onClick={() => setShowSendModal(true)}
-                        disabled={saving}
-                    >
-                        <Send className="h-4 w-4 mr-2" />
-                        Send
-                    </Button>
+                    <>
+                        <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                            onClick={() => setShowSendModal(true)}
+                            disabled={saving}
+                        >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-blue-600 text-blue-600"
+                            onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
+                            disabled={saving}
+                        >
+                            <FileSignature className="h-4 w-4 mr-2" />
+                            Sign
+                        </Button>
+                    </>
                 )}
             </MobileControlsBar>
             <div className="container mx-auto p-6 max-w-5xl">

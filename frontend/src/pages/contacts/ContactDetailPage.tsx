@@ -14,6 +14,7 @@ import {
   MessageSquare,
   CheckSquare,
   FileText,
+  FileSignature,
   Palette,
   ListChecks,
   Plus,
@@ -578,6 +579,36 @@ export function ContactDetailPage() {
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    contactId: String(contact.id),
+                    contactName: getContactDisplayName(contact),
+                    ...(contact.email && { contactEmail: contact.email }),
+                  });
+                  navigate(`/invoices/new?${params.toString()}`);
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Create Invoice
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    contactId: String(contact.id),
+                    contactName: getContactDisplayName(contact),
+                    ...(contact.email && { contactEmail: contact.email }),
+                  });
+                  navigate(`/documents/new?${params.toString()}`);
+                }}
+              >
+                <FileSignature className="h-4 w-4 mr-2" />
+                Send Document
+              </Button>
               {contact.email && (
                 <Button variant="outline" className="w-full justify-start" onClick={() => setShowEmailModal(true)}>
                   <Mail className="h-4 w-4 mr-2" />

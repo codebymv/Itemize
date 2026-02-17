@@ -2,7 +2,6 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
 import {
     Sidebar,
     SidebarContent,
@@ -125,12 +124,12 @@ const mainNavItems: NavItem[] = [
         ],
     },
     {
-        title: 'Signatures',
+        title: 'Documents',
         icon: FileSignature,
         path: '/documents',
         items: [
             {
-                title: 'Documents',
+                title: 'All Documents',
                 path: '/documents',
             },
             {
@@ -278,24 +277,11 @@ export function AppSidebar() {
     const navigate = useNavigate();
     const { theme } = useTheme();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
-    const isMobileDevice = useIsMobile();
     const { setSearchOpen } = useSearch();
 
     const isCollapsed = state === 'collapsed';
 
-    // Filter nav items based on mobile - remove Canvas from Workspace group on mobile
-    const filteredMainNavItems = React.useMemo(() => {
-        return mainNavItems.map(item => {
-            if (item.title === 'Workspace' && item.items && isMobileDevice) {
-                // Filter out Canvas sub-item on mobile
-                return {
-                    ...item,
-                    items: item.items.filter(subItem => subItem.title !== 'Canvas')
-                };
-            }
-            return item;
-        });
-    }, [isMobileDevice]);
+    const filteredMainNavItems = mainNavItems;
 
     // Auto-close sidebar on mobile when route changes
     React.useEffect(() => {
@@ -311,32 +297,11 @@ export function AppSidebar() {
 
     const handleItemClick = (item: NavItem, disabled?: boolean) => {
         if (disabled) return;
-        
-        // If it's a grouping with sub-items, navigate to first sub-item
+        if (isCollapsed) toggleSidebar();
         if (item.items && item.items.length > 0) {
-            // If collapsed, expand sidebar first, then navigate
-            if (isCollapsed) {
-                toggleSidebar();
-                // Delay to allow sidebar to expand and component to re-render before navigation
-                setTimeout(() => {
-                    navigate(item.items![0].path);
-                }, 200);
-            } else {
-                // Already expanded, navigate immediately
-                navigate(item.items[0].path);
-            }
+            navigate(item.items[0].path);
         } else {
-            // Regular item (no sub-items)
-            if (isCollapsed) {
-                // Expand sidebar first, then navigate
-                toggleSidebar();
-                setTimeout(() => {
-                    navigate(item.path);
-                }, 200);
-            } else {
-                // Already expanded, navigate immediately
-                navigate(item.path);
-            }
+            navigate(item.path);
         }
     };
 

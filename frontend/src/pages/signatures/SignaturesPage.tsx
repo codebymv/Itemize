@@ -13,6 +13,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getStatusBadgeClass } from '@/lib/badge-utils';
+import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import {
   SignatureDocument,
@@ -342,7 +343,9 @@ export function SignaturesPage() {
           <Card>
             <CardContent className="p-0">
               {loading ? (
-                <div className="p-6 text-sm text-muted-foreground">Loading...</div>
+                <div className="p-6">
+                  <ListRowSkeleton count={5} />
+                </div>
               ) : filteredDocuments.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">

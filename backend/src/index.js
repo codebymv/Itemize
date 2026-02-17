@@ -168,13 +168,20 @@ app.use('/uploads', (req, res, next) => {
 // Rate Limiting (Phase 7)
 // ===========================
 
+// Helper to send 429 with Retry-After header (seconds)
+const rateLimitHandler = (message, retryAfterSeconds = 60) => (req, res) => {
+    res.set('Retry-After', String(retryAfterSeconds));
+    res.status(429).json(message);
+};
+
 // Global API rate limit
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 1000, // 1000 requests per 15 min per IP
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: { message: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' } }
+    message: { error: { message: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' } },
+    handler: rateLimitHandler({ error: { message: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' } }, 900),
 });
 
 // Stricter limit for write operations
@@ -184,7 +191,8 @@ const writeLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => `${req.ip}-${req.user?.id || 'anon'}`,
-    message: { error: { message: 'Too many write requests', code: 'RATE_LIMIT_EXCEEDED' } }
+    message: { error: { message: 'Too many write requests', code: 'RATE_LIMIT_EXCEEDED' } },
+    handler: rateLimitHandler({ error: { message: 'Too many write requests', code: 'RATE_LIMIT_EXCEEDED' } }),
 });
 
 // Higher limit for high-frequency canvas position updates
@@ -194,16 +202,18 @@ const positionLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => `${req.ip}-${req.user?.id || 'anon'}`,
-    message: { error: { message: 'Too many position updates', code: 'RATE_LIMIT_EXCEEDED' } }
+    message: { error: { message: 'Too many position updates', code: 'RATE_LIMIT_EXCEEDED' } },
+    handler: rateLimitHandler({ error: { message: 'Too many position updates', code: 'RATE_LIMIT_EXCEEDED' } }),
 });
 
 // Rate limiting for public endpoints
 const publicRateLimit = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 100,
+    max: 300,
     message: { error: { message: 'Too many requests from this IP', code: 'RATE_LIMIT_EXCEEDED' } },
     standardHeaders: true,
     legacyHeaders: false,
+    handler: rateLimitHandler({ error: { message: 'Too many requests from this IP', code: 'RATE_LIMIT_EXCEEDED' } }, 3600),
 });
 
 // Apply global rate limit to all API routes

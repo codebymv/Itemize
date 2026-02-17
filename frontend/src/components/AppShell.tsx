@@ -24,6 +24,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
+import { useSessionWarning } from '@/hooks/useSessionExpiration';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +53,7 @@ const adminNavItems = [
 function AppShellContent({ children }: { children: React.ReactNode }) {
     const { currentUser } = useAuthState();
     const { logout } = useAuthActions();
+    useSessionWarning();
     const { theme, setTheme } = useTheme();
     const { toast } = useToast();
     const { headerContent } = useHeader();
@@ -126,6 +128,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
             <SidebarProvider defaultOpen={true}>
                 <AppSidebar />
                 <SidebarInset className="overflow-x-hidden">
+                    <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md">
+                        Skip to main content
+                    </a>
                     {/* Top header bar */}
                 <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full overflow-hidden">
                     <div className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
@@ -273,7 +278,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* Main content */}
-                <main className={cn(
+                <main id="main-content" tabIndex={-1} className={cn(
                     "flex-1 overflow-x-hidden overflow-y-auto relative",
                     location.pathname.startsWith('/help')
                         ? "h-[calc(100vh-3.5rem-2.5rem)]"

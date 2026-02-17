@@ -31,12 +31,15 @@ interface CreateContactModalProps {
   organizationId: number;
   onClose: () => void;
   onCreated: (contact: Contact) => void;
+  /** When provided, used instead of createContact() for optimistic-update support */
+  createContactAsync?: (data: CreateContactData) => Promise<Contact>;
 }
 
 export function CreateContactModal({
   organizationId,
   onClose,
   onCreated,
+  createContactAsync,
 }: CreateContactModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -62,7 +65,8 @@ export function CreateContactModal({
         ...values,
         organization_id: organizationId,
       };
-      const contact = await createContact(contactData);
+      const doCreate = createContactAsync ?? createContact;
+      const contact = await doCreate(contactData);
       onCreated(contact);
       form.reset();
     } catch (error: any) {

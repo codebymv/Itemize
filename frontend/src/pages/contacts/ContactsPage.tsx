@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
 import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, CheckCircle, AlertCircle, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Contact, ContactsResponse } from '@/types';
-import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV } from '@/services/contactsApi';
+import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV, createContact, CreateContactData } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
@@ -52,9 +53,6 @@ export function ContactsPage() {
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('contacts');
 
-  // State
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
   const { organizationId, isLoading: orgLoading, error: initError } = useOrganization({
     onError: (error: any) => {
       return error?.response?.status === 500
@@ -73,6 +71,75 @@ export function ContactsPage() {
     limit: 50,
     total: 0,
     totalPages: 0,
+  });
+
+  const queryClient = useQueryClient();
+  const contactsQueryKey = useMemo(
+    () => ['contacts', organizationId, searchQuery, statusFilter, pagination.page, pagination.limit],
+    [organizationId, searchQuery, statusFilter, pagination.page, pagination.limit]
+  );
+
+  const { data: contactsData, isLoading: loading, refetch: fetchContacts } = useQuery({
+    queryKey: contactsQueryKey,
+    queryFn: () => getContacts({
+      organization_id: organizationId!,
+      search: searchQuery || undefined,
+      status: statusFilter !== 'all' ? (statusFilter as 'active' | 'inactive' | 'archived') : undefined,
+      page: pagination.page,
+      limit: pagination.limit,
+      sort_by: 'created_at',
+      sort_order: 'desc',
+    }),
+    enabled: !!organizationId && !orgLoading,
+  });
+
+  const contacts = contactsData?.contacts ?? [];
+  useEffect(() => {
+    if (contactsData?.pagination) {
+      setPagination(prev => ({ ...prev, ...contactsData.pagination }));
+    }
+  }, [contactsData?.pagination]);
+
+  const createContactMutation = useMutation({
+    mutationFn: (data: CreateContactData) => createContact(data),
+    onMutate: async (newContact) => {
+      await queryClient.cancelQueries({ queryKey: contactsQueryKey });
+      const previous = queryClient.getQueryData<ContactsResponse>(contactsQueryKey);
+      const tempContact: Contact = {
+        id: -Date.now(),
+        organization_id: organizationId!,
+        first_name: newContact.first_name ?? '',
+        last_name: newContact.last_name ?? '',
+        email: newContact.email ?? '',
+        phone: newContact.phone,
+        company: newContact.company,
+        job_title: newContact.job_title,
+        address: {},
+        source: 'manual',
+        status: (newContact.status as 'active' | 'inactive' | 'archived') ?? 'active',
+        custom_fields: {},
+        tags: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData<ContactsResponse>(contactsQueryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          contacts: [tempContact, ...old.contacts],
+          pagination: { ...old.pagination, total: old.pagination.total + 1 },
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(contactsQueryKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: contactsQueryKey });
+    },
   });
 
   const contactStats = useMemo(() => {
@@ -142,58 +209,6 @@ export function ContactsPage() {
     [searchQuery, statusFilter, theme, organizationId]
   );
 
-  useEffect(() => {
-    if (orgLoading) {
-      setLoading(true);
-      return;
-    }
-
-    if (!organizationId) {
-      setLoading(false);
-    }
-  }, [orgLoading, organizationId, initError]);
-
-  // Fetch contacts
-  const fetchContacts = useCallback(async () => {
-    if (!organizationId) {
-      if (!orgLoading) {
-        setContacts([]);
-        setPagination(prev => ({ ...prev, total: 0, totalPages: 1 }));
-        setLoading(false);
-      }
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await getContacts({
-        organization_id: organizationId,
-        search: searchQuery || undefined,
-        status: statusFilter !== 'all' ? statusFilter as any : undefined,
-        page: pagination.page,
-        limit: pagination.limit,
-        sort_by: 'created_at',
-        sort_order: 'desc',
-      });
-
-      setContacts(response.contacts);
-      setPagination(response.pagination);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-      toast({
-        title: 'Error',
-        description: toastMessages.failedToLoad('contacts'),
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId, orgLoading, searchQuery, statusFilter, pagination.page, pagination.limit, toast]);
-
-  useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
-
   // Handle search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -260,14 +275,12 @@ export function ContactsPage() {
     }
   };
 
-  // Handle contact created
   const handleContactCreated = (contact: Contact) => {
     setShowCreateModal(false);
     toast({
       title: 'Created',
       description: toastMessages.created('contact'),
     });
-    fetchContacts();
   };
 
   // Handle contact click
@@ -534,6 +547,7 @@ export function ContactsPage() {
           organizationId={organizationId}
           onClose={() => setShowCreateModal(false)}
           onCreated={handleContactCreated}
+          createContactAsync={createContactMutation.mutateAsync}
         />
       )}
 

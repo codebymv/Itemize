@@ -55,6 +55,7 @@ import { transformApiActivityToDesignSystem } from '@/design-system/utils/transf
 import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
+import { FirstRunBanner } from '@/components/FirstRunBanner';
 
 interface QuickAction {
     title: string;
@@ -67,16 +68,30 @@ interface QuickAction {
 export function DashboardPage() {
     const { currentUser } = useAuthState();
 
+    const DASHBOARD_COLLAPSED_KEY = 'itemize_dashboard_collapsed';
+
     // Pro tip dismiss state
     const [proTipDismissed, setProTipDismissed] = useState(false);
 
-    // Collapsible widget state
-    const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(new Set());
+    // Collapsible widget state (persisted to localStorage)
+    const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(() => {
+        if (typeof window === 'undefined') return new Set();
+        try {
+            const raw = window.localStorage.getItem(DASHBOARD_COLLAPSED_KEY);
+            if (raw) {
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? new Set(arr) : new Set();
+            }
+        } catch {
+            // ignore
+        }
+        return new Set();
+    });
 
     // Responsive detection
     const [isMobile, setIsMobile] = useState(false);
 
-    // Initialize collapse state based on screen size
+    // Initialize mobile detection
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
         checkMobile();
@@ -84,10 +99,18 @@ export function DashboardPage() {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Set initial collapsed state on mobile
+    // On mobile, if no persisted state yet, default to widgets collapsed and persist
     useEffect(() => {
-        if (isMobile) {
-            setCollapsedWidgets(new Set(['invoices', 'signatures', 'workspace', 'contacts']));
+        if (typeof window === 'undefined' || !isMobile) return;
+        const raw = window.localStorage.getItem(DASHBOARD_COLLAPSED_KEY);
+        if (raw === null || raw === '[]') {
+            const defaultCollapsed = new Set(['invoices', 'signatures', 'workspace', 'contacts']);
+            setCollapsedWidgets(defaultCollapsed);
+            try {
+                window.localStorage.setItem(DASHBOARD_COLLAPSED_KEY, JSON.stringify([...defaultCollapsed]));
+            } catch {
+                // ignore
+            }
         }
     }, [isMobile]);
 
@@ -101,6 +124,11 @@ export function DashboardPage() {
                 newSet.delete(widgetId);
             } else {
                 newSet.add(widgetId);
+            }
+            try {
+                window.localStorage.setItem(DASHBOARD_COLLAPSED_KEY, JSON.stringify([...newSet]));
+            } catch {
+                // ignore
             }
             return newSet;
         });
@@ -241,13 +269,22 @@ export function DashboardPage() {
                 <PageSurface>
                     {/* Welcome Section */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-light tracking-tight mb-2">
+                        <h1 className="text-2xl font-light tracking-tight mb-2">
                             Welcome back, <span className="font-medium">{firstName}</span>
-                        </h2>
+                        </h1>
                         <p className="text-muted-foreground">
                             Here's an overview of your CRM performance
                         </p>
                     </div>
+
+                    {/* First-run CTA when user has no content yet */}
+                    <FirstRunBanner
+                        show={
+                            !isLoading &&
+                            (analytics?.contacts?.total ?? 0) === 0 &&
+                            (analytics?.invoiceMetrics?.recentInvoices?.length ?? 0) === 0
+                        }
+                    />
 
                     {/* CRM Stats Grid */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -611,7 +648,7 @@ export function DashboardPage() {
 
                     {/* Quick Actions */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
+                        <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                             {quickActions.map((action) => (
                                 <Card
