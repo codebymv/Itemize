@@ -341,7 +341,7 @@ handleShareVault,
   // Note: Race condition prevention refs removed since WebSocket creation events are disabled
 
   // Utility function for intelligent positioning of mobile-created items
-  const getIntelligentPosition = () => {
+  const getIntelligentPosition = (currentLists: List[], currentNotes: Note[], currentWhiteboards: Whiteboard[], currentWireframes: Wireframe[]) => {
     const centerX = 2000; // Canvas center X coordinate
     const centerY = 2000; // Canvas center Y coordinate  
     const baseSpreadRadius = 300; // Base random spread area around center
@@ -399,25 +399,25 @@ handleShareVault,
 
   // List handlers come from useCanvasCRUD
   const handleOpenNewNoteModal = (position?: { x: number, y: number }) => {
-    setNewNoteInitialPosition(position || getIntelligentPosition());
+    setNewNoteInitialPosition(position || getIntelligentPosition(lists, notes, whiteboards, wireframes));
     setShowNewNoteModal(true);
   };
 
   const handleOpenNewListModal = (position?: { x: number, y: number }) => {
-    setNewListInitialPosition(position || getIntelligentPosition());
+    setNewListInitialPosition(position || getIntelligentPosition(lists, notes, whiteboards, wireframes));
     setShowNewListModal(true);
   };
 
   const handleOpenNewWhiteboardModal = (position?: { x: number, y: number }) => {
     logger.log('handleOpenNewWhiteboardModal called with position:', position);
-    setNewWhiteboardInitialPosition(position || getIntelligentPosition());
+    setNewWhiteboardInitialPosition(position || getIntelligentPosition(lists, notes, whiteboards, wireframes));
     setShowNewWhiteboardModal(true);
   };
 
   // Handler for button context menu actions
   const handleButtonAddList = () => {
     setShowButtonContextMenu(false);
-    const position = getIntelligentPosition(); // Use intelligent positioning for button creation
+    const position = getIntelligentPosition(lists, notes, whiteboards, wireframes); // Use intelligent positioning for button creation
     if (isMobileView) {
       setMobileListInitialPosition(position);
       setShowCreateModal(true);
@@ -429,7 +429,7 @@ handleShareVault,
 
   const handleButtonAddNote = () => {
     setShowButtonContextMenu(false);
-    const position = getIntelligentPosition(); // Use intelligent positioning for button creation
+    const position = getIntelligentPosition(lists, notes, whiteboards, wireframes); // Use intelligent positioning for button creation
     if (isMobileView) {
       setMobileNoteInitialPosition(position);
       setShowCreateNoteModal(true);
@@ -441,13 +441,13 @@ handleShareVault,
 
   const handleButtonAddWhiteboard = () => {
     setShowButtonContextMenu(false);
-    setNewWhiteboardInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
+    setNewWhiteboardInitialPosition(getIntelligentPosition(lists, notes, whiteboards, wireframes)); // Use intelligent positioning for button creation
     setShowNewWhiteboardModal(true);
   };
 
   const handleButtonAddWireframe = () => {
     setShowButtonContextMenu(false);
-    setNewWireframeInitialPosition(getIntelligentPosition()); // Use intelligent positioning for button creation
+    setNewWireframeInitialPosition(getIntelligentPosition(lists, notes, whiteboards, wireframes)); // Use intelligent positioning for button creation
     setShowNewWireframeModal(true);
   };
 

@@ -161,7 +161,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         finalTitle,
         finalCategory,
         values.color || config.defaultColor,
-        position || { x: 0, y: 0 }
+        position || undefined
       );
 
       if (config.requireResult && !result) {
