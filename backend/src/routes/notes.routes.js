@@ -110,8 +110,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     content,
                     category,
                     color_value,
-                    position_x,
-                    position_y,
+                    x,
+                    y,
                     width,
                     height,
                     z_index

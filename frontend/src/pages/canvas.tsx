@@ -657,11 +657,11 @@ handleShareVault,
                 onOpenNewListModal={handleOpenNewListModal}
                 onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
                 onOpenNewWireframeModal={(position) => {
-                  setNewWireframeInitialPosition(position);
+                  setNewWireframeInitialPosition(position || getIntelligentPosition());
                   setShowNewWireframeModal(true);
                 }}
                 onOpenNewVaultModal={(position) => {
-                  setNewVaultInitialPosition(position);
+                  setNewVaultInitialPosition(position || getIntelligentPosition());
                   setShowNewVaultModal(true);
                 }}
                 searchQuery={searchQuery}

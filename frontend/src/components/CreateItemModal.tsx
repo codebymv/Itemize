@@ -154,9 +154,11 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     setIsLoading(true);
     setError('');
 
+    const finalTitle = values.title.trim() || config.titlePlaceholder.replace('Enter ', '');
+
     try {
       const result = await onCreate(
-        values.title.trim(),
+        finalTitle,
         finalCategory,
         values.color || config.defaultColor,
         position || { x: 0, y: 0 }

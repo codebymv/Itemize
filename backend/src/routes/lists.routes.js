@@ -93,7 +93,6 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 return res.status(400).json({ error: 'Title is required' });
             }
 
-            // Handle both 'category' and 'type' field names for compatibility
             const categoryValue = category || type || 'General';
 
             const result = await withDbClient(pool, async (client) => client.query(
@@ -104,8 +103,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     JSON.stringify(items || []),
                     req.user.id,
                     color_value || null,
-                    position_x || 0,
-                    position_y || 0,
+                    x,
+                    y,
                     width || 340,
                     height || 265
                 ]

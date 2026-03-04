@@ -96,9 +96,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 color_value = '#3B82F6'
             } = req.body;
 
-            if (typeof position_x !== 'number' || typeof position_y !== 'number') {
-                return sendBadRequest(res, 'position_x and position_y are required and must be numbers.');
-            }
+            const x = typeof position_x === 'number' ? position_x : 2000;
+            const y = typeof position_y === 'number' ? position_y : 2000;
 
             // Validate and process canvas_data
             let processedCanvasData;
@@ -128,8 +127,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                         canvas_width,
                         canvas_height,
                         background_color,
-                        position_x,
-                        position_y,
+                        x,
+                        y,
                         z_index,
                         color_value
                     ]
