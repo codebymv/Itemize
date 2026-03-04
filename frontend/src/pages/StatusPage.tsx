@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHeader } from '@/contexts/HeaderContext';
+import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
 
 interface ServerMemory {
@@ -262,6 +263,7 @@ const StatusPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <BackgroundClouds />
       <PageSurface>
         <div className="space-y-3">
           {error && (
