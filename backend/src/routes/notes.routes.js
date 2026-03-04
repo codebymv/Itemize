@@ -98,9 +98,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 color_value = '#3B82F6'
             } = req.body;
 
-            if (typeof position_x !== 'number' || typeof position_y !== 'number') {
-                return res.status(400).json({ error: 'position_x and position_y are required and must be numbers.' });
-            }
+            const x = typeof position_x === 'number' ? position_x : 2000;
+            const y = typeof position_y === 'number' ? position_y : 2000;
 
             const result = await withDbClient(pool, async (client) => client.query(
                 `INSERT INTO notes (user_id, title, content, category, color_value, position_x, position_y, width, height, z_index) 

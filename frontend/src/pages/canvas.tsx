@@ -398,19 +398,19 @@ handleShareVault,
   // Vault handlers come from useCanvasCRUD
 
   // List handlers come from useCanvasCRUD
-  const handleOpenNewNoteModal = (position: { x: number, y: number }) => {
-    setNewNoteInitialPosition(position);
+  const handleOpenNewNoteModal = (position?: { x: number, y: number }) => {
+    setNewNoteInitialPosition(position || getIntelligentPosition());
     setShowNewNoteModal(true);
   };
 
-  const handleOpenNewListModal = (position: { x: number, y: number }) => {
-    setNewListInitialPosition(position);
+  const handleOpenNewListModal = (position?: { x: number, y: number }) => {
+    setNewListInitialPosition(position || getIntelligentPosition());
     setShowNewListModal(true);
   };
 
-  const handleOpenNewWhiteboardModal = (position: { x: number, y: number }) => {
+  const handleOpenNewWhiteboardModal = (position?: { x: number, y: number }) => {
     logger.log('handleOpenNewWhiteboardModal called with position:', position);
-    setNewWhiteboardInitialPosition(position);
+    setNewWhiteboardInitialPosition(position || getIntelligentPosition());
     setShowNewWhiteboardModal(true);
   };
 
