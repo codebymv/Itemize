@@ -46,10 +46,7 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Don't render clouds on mobile devices
-  if (isMobile) {
-    return null;
-  }
+
 
   return (
     <div
