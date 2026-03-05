@@ -541,27 +541,27 @@ export function ContentsPage() {
   }, [lists, notes, whiteboards, wireframes, vaults]);
 
   const createNote = async (title: string, category: string, color: string) => {
-    await apiCreateNote({ title, content: '', color_value: color, width: 570, height: 350, z_index: 0, position_x: 0, position_y: 0 }, token);
+    await apiCreateNote({ title, content: '', category, color_value: color, width: 570, height: 350, z_index: 0 }, token);
     fetchAllContent();
   };
 
   const createList = async (title: string, type: string, color: string) => {
-    await apiCreateList({ title, type, items: [], position_x: 0, position_y: 0, color_value: color }, token);
+    await apiCreateList({ title, type, items: [], color_value: color }, token);
     fetchAllContent();
   };
 
   const createWhiteboard = async (title: string, category: string, color: string) => {
-    await apiCreateWhiteboard({ title, color_value: color, position_x: 0, position_y: 0, z_index: 0 }, token);
+    await apiCreateWhiteboard({ title, category, color_value: color, z_index: 0 }, token);
     fetchAllContent();
   };
 
   const createWireframe = async (title: string, category: string, color: string) => {
-    await apiCreateWireframe({ title, color_value: color, position_x: 0, position_y: 0, z_index: 0 }, token);
+    await apiCreateWireframe({ title, category, color_value: color, z_index: 0 }, token);
     fetchAllContent();
   };
 
   const createVault = async (title: string, category: string, color: string) => {
-    await apiCreateVault({ title, color_value: color, position_x: 0, position_y: 0, z_index: 0 }, token);
+    await apiCreateVault({ title, category, color_value: color, z_index: 0 }, token);
     fetchAllContent();
   };
 
@@ -828,11 +828,11 @@ export function ContentsPage() {
         )}
       </div>
 
-      {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={(open) => { setShowNewNoteModal(open); if (!open) fetchAllContent(); }} itemType="note" onCreate={(_, __, color) => createNote('', '', color)} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={(open) => { setShowNewListModal(open); if (!open) fetchAllContent(); }} itemType="list" onCreate={createList} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={(open) => { setShowNewWhiteboardModal(open); if (!open) fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={(open) => { setShowNewWireframeModal(open); if (!open) fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
-      {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={(open) => { setShowNewVaultModal(open); if (!open) fetchAllContent(); }} itemType="vault" onCreate={createVault} position={{ x: 0, y: 0 }} existingCategories={categoriesForModal} />}
+      {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={(open) => { setShowNewNoteModal(open); if (!open) fetchAllContent(); }} itemType="note" onCreate={createNote} existingCategories={categoriesForModal} />}
+      {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={(open) => { setShowNewListModal(open); if (!open) fetchAllContent(); }} itemType="list" onCreate={createList} existingCategories={categoriesForModal} />}
+      {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={(open) => { setShowNewWhiteboardModal(open); if (!open) fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} existingCategories={categoriesForModal} />}
+      {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={(open) => { setShowNewWireframeModal(open); if (!open) fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} existingCategories={categoriesForModal} />}
+      {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={(open) => { setShowNewVaultModal(open); if (!open) fetchAllContent(); }} itemType="vault" onCreate={createVault} existingCategories={categoriesForModal} />}
 
       {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
         <OnboardingModal

@@ -6,9 +6,10 @@ import { MIN_LIST_WIDTH } from '../constants/dimensions';
 export interface CreateNotePayload {
   title?: string;
   content?: string;
+  category?: string;
   color_value: string;
-  position_x: number;
-  position_y: number;
+  position_x?: number;
+  position_y?: number;
   width?: number;
   height?: number;
   z_index?: number;
@@ -42,8 +43,8 @@ export interface CreateWhiteboardPayload {
   canvas_width?: number;
   canvas_height?: number;
   background_color?: string;
-  position_x: number;
-  position_y: number;
+  position_x?: number;
+  position_y?: number;
   z_index?: number;
   color_value?: string;
 }
@@ -371,8 +372,8 @@ export interface CreateWireframePayload {
   title?: string;
   category?: string;
   flow_data?: FlowData | string;
-  position_x: number;
-  position_y: number;
+  position_x?: number;
+  position_y?: number;
   z_index?: number;
   color_value?: string;
 }
@@ -460,8 +461,8 @@ export const deleteCategory = async (categoryId: number, token?: string) => {
 export interface CreateVaultPayload {
   title?: string;
   category?: string;
-  position_x: number;
-  position_y: number;
+  position_x?: number;
+  position_y?: number;
   width?: number;
   height?: number;
   z_index?: number;
