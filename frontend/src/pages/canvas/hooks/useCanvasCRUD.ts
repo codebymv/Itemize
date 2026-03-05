@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import {
@@ -42,22 +42,22 @@ export function useCanvasCRUD(
   enqueuePositionUpdate: (update: any) => void
 ) {
   const { toast } = useToast();
-  const [recentlyCreatedListIds] = useState<Set<string>>(new Set());
+  const recentlyCreatedListIds = useRef<Set<string>>(new Set());
   const { isCategoryInUse, addCategory } = categoriesHook;
   const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } = updateState;
 
-  const handleCreateNote = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+  const handleCreateNote = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
     try {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateNotePayload = {
-        title: title,
+        title: title || 'Untitled Note',
         content: '',
         color_value: color,
-        position_x: position.x,
-        position_y: position.y,
+        position_x: position?.x || 2000,
+        position_y: position?.y || 2000,
         width: 570,
         height: 350,
         z_index: 0,
@@ -143,21 +143,21 @@ export function useCanvasCRUD(
     }
   };
 
-  const handleCreateWhiteboard = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+  const handleCreateWhiteboard = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
     try {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateWhiteboardPayload = {
-        title: title,
+        title: title || 'Untitled Whiteboard',
         category: category,
         canvas_data: '{"paths": [], "shapes": []}',
         canvas_width: 750,
         canvas_height: 620,
         background_color: '#FFFFFF',
-        position_x: position.x,
-        position_y: position.y,
+        position_x: position?.x || 2000,
+        position_y: position?.y || 2000,
         z_index: 0,
         color_value: color,
       };
@@ -180,8 +180,8 @@ export function useCanvasCRUD(
   };
 
   const handleUpdateWhiteboard = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    let originalWhiteboards: Whiteboard[] = [];
     try {
-      let originalWhiteboards: Whiteboard[] = [];
       setWhiteboards(prev => {
         originalWhiteboards = prev;
         return prev.map(w => w.id === whiteboardId ? { ...w, ...updatedData } : w);
@@ -240,18 +240,18 @@ export function useCanvasCRUD(
     }
   };
 
-  const handleCreateWireframe = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+  const handleCreateWireframe = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
     try {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateWireframePayload = {
-        title: title,
+        title: title || 'Untitled Wireframe',
         category: category,
         flow_data: '{"nodes": [], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}',
-        position_x: position.x,
-        position_y: position.y,
+        position_x: position?.x || 2000,
+        position_y: position?.y || 2000,
         z_index: 0,
         color_value: color,
       };
@@ -322,17 +322,17 @@ export function useCanvasCRUD(
     });
   };
 
-  const handleCreateVault = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+  const handleCreateVault = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
     try {
       if (!isCategoryInUse(category) && category !== 'General') {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateVaultPayload = {
-        title: title,
+        title: title || 'Untitled Vault',
         category: category,
-        position_x: position.x,
-        position_y: position.y,
+        position_x: position?.x || 2000,
+        position_y: position?.y || 2000,
         z_index: 0,
         color_value: color,
       };
@@ -516,18 +516,18 @@ export function useCanvasCRUD(
     }
   };
 
-  const handleCreateList = async (title: string, type: string, color: string, position: { x: number; y: number }) => {
+  const handleCreateList = async (title: string, type: string, color: string, position?: { x: number; y: number }) => {
     try {
       if (!isCategoryInUse(type) && type !== 'General') {
         await addCategory({ name: type, color_value: color });
       }
 
       const response = await apiCreateList({
-        title,
+        title: title || 'Untitled List',
         type,
         items: [],
-        position_x: position.x,
-        position_y: position.y,
+        position_x: position?.x || 2000,
+        position_y: position?.y || 2000,
         color_value: color
       }, token);
 
