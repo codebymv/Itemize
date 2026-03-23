@@ -566,11 +566,6 @@ app.use(dbMonitor(pool));
         app.use('/api/billing', billingRoutes(pool, authenticateJWT));
         logger.info('Billing routes initialized');
 
-        // Legacy Subscriptions routes (for backward compatibility)
-        // TODO: Remove once frontend is fully migrated to /api/billing
-        const subscriptionsRoutes = require('./routes/subscriptions.routes');
-        app.use('/api/subscriptions', subscriptionsRoutes(pool));
-        logger.info('Subscriptions routes initialized');
 
         // Reputation Management routes
         const reputationRoutes = require('./routes/reputation.routes');
