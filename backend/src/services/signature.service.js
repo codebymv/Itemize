@@ -673,21 +673,20 @@ async function sendForSignature(pool, emailService, documentId, organizationId, 
 
 async function scheduleReminders(pool, documentId, daysFromNow = 2) {
     return withTransaction(pool, async (client) => {
-        const recipientsResult = await client.query(
-            'SELECT id FROM signature_recipients WHERE document_id = $1 AND status IN (\'pending\', \'sent\', \'viewed\')',
-            [documentId]
-        );
         const scheduledAt = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000);
-        for (const recipient of recipientsResult.rows) {
-            await client.query(`
-                INSERT INTO signature_reminders (document_id, recipient_id, scheduled_at, status)
-                VALUES ($1, $2, $3, 'pending')
-            `, [documentId, recipient.id, scheduledAt]);
-        }
+
+        await client.query(`
+            INSERT INTO signature_reminders (document_id, recipient_id, scheduled_at, status)
+            SELECT document_id, id, $1, 'pending'
+            FROM signature_recipients
+            WHERE document_id = $2 AND status IN ('pending', 'sent', 'viewed')
+        `, [scheduledAt, documentId]);
+
         await client.query(`
             INSERT INTO signature_audit_log (document_id, event_type, description, created_at)
             VALUES ($1, 'reminder_scheduled', 'Signature reminders scheduled', CURRENT_TIMESTAMP)
         `, [documentId]);
+
         return { scheduledAt };
     });
 }
