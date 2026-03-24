@@ -337,29 +337,38 @@ module.exports = (pool, authenticateJWT) => {
                     // Delete existing items and recreate
                     await client.query('DELETE FROM estimate_items WHERE estimate_id = $1', [id]);
 
-                    for (let i = 0; i < items.length; i++) {
-                        const item = items[i];
-                        const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-                        const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+                    if (items.length > 0) {
+                        let valuesClauses = [];
+                        let insertParams = [];
+                        let pIdx = 1;
+
+                        for (let i = 0; i < items.length; i++) {
+                            const item = items[i];
+                            const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
+                            const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+
+                            valuesClauses.push(`($${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++})`);
+                            insertParams.push(
+                                id,
+                                req.organizationId,
+                                item.product_id || null,
+                                item.name,
+                                item.description || null,
+                                item.quantity || 1,
+                                item.unit_price || 0,
+                                item.tax_rate || 0,
+                                itemTax,
+                                itemTotal + itemTax,
+                                i
+                            );
+                        }
 
                         await client.query(`
                             INSERT INTO estimate_items (
                                 estimate_id, organization_id, product_id, name, description,
                                 quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                        `, [
-                            id,
-                            req.organizationId,
-                            item.product_id || null,
-                            item.name,
-                            item.description || null,
-                            item.quantity || 1,
-                            item.unit_price || 0,
-                            item.tax_rate || 0,
-                            itemTax,
-                            itemTotal + itemTax,
-                            i
-                        ]);
+                            ) VALUES ${valuesClauses.join(', ')}
+                        `, insertParams);
                     }
                 }
 
