@@ -428,54 +428,59 @@ async function replaceFields(pool, documentId, fields) {
 
         let inserted = [];
         if (fields && fields.length > 0) {
-            const values = [];
-            const flatParams = [];
-            let paramIndex = 1;
+            const documentIds = [];
+            const recipientIds = [];
+            const roleNames = [];
+            const fieldTypes = [];
+            const pageNumbers = [];
+            const xPositions = [];
+            const yPositions = [];
+            const widths = [];
+            const heights = [];
+            const labels = [];
+            const isRequireds = [];
+            const fieldValues = [];
+            const fontSizes = [];
+            const fontFamilies = [];
+            const textAligns = [];
+            const lockeds = [];
 
             for (const field of fields) {
-                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13}, $${paramIndex + 14}, $${paramIndex + 15})`);
-                flatParams.push(
-                    documentId,
-                    field.recipient_id || null,
-                    field.role_name || null,
-                    field.field_type,
-                    field.page_number || 1,
-                    field.x_position,
-                    field.y_position,
-                    field.width,
-                    field.height,
-                    field.label || null,
-                    field.is_required !== undefined ? field.is_required : true,
-                    field.value || null,
-                    field.font_size || null,
-                    field.font_family || null,
-                    field.text_align || null,
-                    field.locked || false
-                );
-                paramIndex += 16;
+                documentIds.push(documentId);
+                recipientIds.push(field.recipient_id || null);
+                roleNames.push(field.role_name || null);
+                fieldTypes.push(field.field_type);
+                pageNumbers.push(field.page_number || 1);
+                xPositions.push(field.x_position);
+                yPositions.push(field.y_position);
+                widths.push(field.width);
+                heights.push(field.height);
+                labels.push(field.label || null);
+                isRequireds.push(field.is_required !== undefined ? field.is_required : true);
+                fieldValues.push(field.value || null);
+                fontSizes.push(field.font_size || null);
+                fontFamilies.push(field.font_family || null);
+                textAligns.push(field.text_align || null);
+                lockeds.push(field.locked || false);
             }
 
             const result = await client.query(`
                 INSERT INTO signature_fields (
-                    document_id,
-                    recipient_id,
-                    role_name,
-                    field_type,
-                    page_number,
-                    x_position,
-                    y_position,
-                    width,
-                    height,
-                    label,
-                    is_required,
-                    value,
-                    font_size,
-                    font_family,
-                    text_align,
-                    locked
-                ) VALUES ${values.join(', ')}
+                    document_id, recipient_id, role_name, field_type, page_number,
+                    x_position, y_position, width, height, label,
+                    is_required, value, font_size, font_family, text_align, locked
+                )
+                SELECT * FROM UNNEST (
+                    $1::uuid[], $2::uuid[], $3::text[], $4::text[], $5::int[],
+                    $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::text[],
+                    $11::boolean[], $12::text[], $13::int[], $14::text[], $15::text[], $16::boolean[]
+                )
                 RETURNING *
-            `, flatParams);
+            `, [
+                documentIds, recipientIds, roleNames, fieldTypes, pageNumbers,
+                xPositions, yPositions, widths, heights, labels,
+                isRequireds, fieldValues, fontSizes, fontFamilies, textAligns, lockeds
+            ]);
             inserted = result.rows;
         }
 
