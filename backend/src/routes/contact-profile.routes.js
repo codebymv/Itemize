@@ -177,7 +177,14 @@ router.get('/:id/profile', async (req, res) => {
         amount: pay.amount || 0,
         date: pay.date,
       })),
-      communications: [], // TODO: Integrate with inbox
+      communications: communications.map(comm => ({
+        id: comm.id?.toString() || '0',
+        type: comm.type || 'email',
+        direction: comm.direction || 'outbound',
+        subject: comm.subject || '',
+        content: comm.content || '',
+        date: comm.date,
+      })),
       notes: notes.map(note => ({
         id: note.id?.toString() || '0',
         title: note.title || 'Note',
