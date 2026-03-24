@@ -1258,55 +1258,56 @@ async function replaceTemplateRoles(pool, templateId, roles) {
 async function replaceTemplateFields(pool, templateId, fields) {
     return withTransaction(pool, async (client) => {
         await client.query('DELETE FROM signature_template_fields WHERE template_id = $1', [templateId]);
-        let inserted = [];
-        if (fields && fields.length > 0) {
-            const values = [];
-            const flatParams = [];
-            let paramIndex = 1;
 
-            for (const field of fields) {
-                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13})`);
-                flatParams.push(
-                    templateId,
-                    field.role_name || null,
-                    field.field_type,
-                    field.page_number || 1,
-                    field.x_position,
-                    field.y_position,
-                    field.width,
-                    field.height,
-                    field.label || null,
-                    field.is_required !== undefined ? field.is_required : true,
-                    field.font_size || null,
-                    field.font_family || null,
-                    field.text_align || null,
-                    field.locked || false
-                );
-                paramIndex += 14;
-            }
-
-            const result = await client.query(`
-                INSERT INTO signature_template_fields (
-                    template_id,
-                    role_name,
-                    field_type,
-                    page_number,
-                    x_position,
-                    y_position,
-                    width,
-                    height,
-                    label,
-                    is_required,
-                    font_size,
-                    font_family,
-                    text_align,
-                    locked
-                ) VALUES ${values.join(', ')}
-                RETURNING *
-            `, flatParams);
-            inserted = result.rows;
+        if (!fields || fields.length === 0) {
+            return [];
         }
-        return inserted;
+
+        const values = [];
+        const flatValues = [];
+        let paramIndex = 1;
+
+        for (const field of fields) {
+            values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            flatValues.push(
+                templateId,
+                field.role_name || null,
+                field.field_type,
+                field.page_number || 1,
+                field.x_position,
+                field.y_position,
+                field.width,
+                field.height,
+                field.label || null,
+                field.is_required !== undefined ? field.is_required : true,
+                field.font_size || null,
+                field.font_family || null,
+                field.text_align || null,
+                field.locked || false
+            );
+        }
+
+        const result = await client.query(`
+            INSERT INTO signature_template_fields (
+                template_id,
+                role_name,
+                field_type,
+                page_number,
+                x_position,
+                y_position,
+                width,
+                height,
+                label,
+                is_required,
+                font_size,
+                font_family,
+                text_align,
+                locked
+            ) VALUES ${values.join(', ')}
+            RETURNING *
+        `, flatValues);
+
+        return result.rows;
     });
 }
 
