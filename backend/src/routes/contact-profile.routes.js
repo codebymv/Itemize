@@ -123,6 +123,29 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch lists', { error: err.message });
     }
 
+    // 8. Get communications (inbox messages)
+    let communications = [];
+    try {
+      const commsQuery = `
+        SELECT
+          m.id,
+          m.channel as type,
+          CASE WHEN m.sender_type = 'contact' THEN 'inbound' ELSE 'outbound' END as direction,
+          c.subject,
+          m.content,
+          m.created_at as date
+        FROM messages m
+        JOIN conversations c ON m.conversation_id = c.id
+        WHERE c.contact_id = $1 AND c.organization_id = $2
+        ORDER BY m.created_at DESC
+        LIMIT 50
+      `;
+      const commsRes = await pool.query(commsQuery, [id, organization_id]);
+      communications = commsRes.rows;
+    } catch (err) {
+      logger.warn('Failed to fetch communications', { error: err.message });
+    }
+
     // Build response
     const response = {
       contact: {
@@ -161,7 +184,14 @@ router.get('/:id/profile', async (req, res) => {
         amount: pay.amount || 0,
         date: pay.date,
       })),
-      communications: [], // TODO: Integrate with inbox
+      communications: communications.map(comm => ({
+        id: comm.id?.toString() || '0',
+        type: comm.type || 'email',
+        direction: comm.direction || 'outbound',
+        subject: comm.subject || '',
+        content: comm.content || '',
+        date: comm.date,
+      })),
       notes: notes.map(note => ({
         id: note.id?.toString() || '0',
         title: note.title || 'Note',
