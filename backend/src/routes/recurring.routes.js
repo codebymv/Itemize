@@ -557,29 +557,43 @@ module.exports = (pool, authenticateJWT) => {
                 const invoiceId = invoiceResult.rows[0].id;
 
                 // Create invoice items
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-                    const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+                if (items && items.length > 0) {
+                    const lineItemValues = [];
+                    const lineItemParams = [];
+                    let paramIndex = 1;
+
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
+                        const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+
+                        lineItemParams.push(
+                            invoiceId,
+                            req.organizationId,
+                            item.product_id || null,
+                            item.name,
+                            item.description || null,
+                            item.quantity || 1,
+                            item.unit_price || 0,
+                            item.tax_rate || 0,
+                            itemTax,
+                            itemTotal + itemTax,
+                            i
+                        );
+
+                        const placeholders = [];
+                        for (let j = 0; j < 11; j++) {
+                            placeholders.push(`$${paramIndex++}`);
+                        }
+                        lineItemValues.push(`(${placeholders.join(', ')})`);
+                    }
 
                     await client.query(`
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                    `, [
-                        invoiceId,
-                        req.organizationId,
-                        item.product_id || null,
-                        item.name,
-                        item.description || null,
-                        item.quantity || 1,
-                        item.unit_price || 0,
-                        item.tax_rate || 0,
-                        itemTax,
-                        itemTotal + itemTax,
-                        i
-                    ]);
+                        ) VALUES ${lineItemValues.join(', ')}
+                    `, lineItemParams);
                 }
 
                 // Calculate next run date
