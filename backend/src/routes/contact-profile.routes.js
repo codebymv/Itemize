@@ -123,6 +123,16 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch lists', { error: err.message });
     }
 
+    // 8. Get bookings
+    let bookings = [];
+    try {
+      const bookingsQuery = `SELECT * FROM bookings WHERE contact_id = $1 ORDER BY start_time DESC LIMIT 20`;
+      const bookingsRes = await pool.query(bookingsQuery, [id]);
+      bookings = bookingsRes.rows;
+    } catch (err) {
+      logger.warn('Failed to fetch bookings', { error: err.message });
+    }
+
     // Build response
     const response = {
       contact: {
@@ -174,7 +184,13 @@ router.get('/:id/profile', async (req, res) => {
         category: list.category,
       })),
       tasks: [], // TODO: Integrate with task system
-      bookings: [], // TODO: Integrate with bookings
+      bookings: bookings.map(booking => ({
+        id: booking.id?.toString() || '0',
+        title: booking.title || 'Booking',
+        status: booking.status || 'pending',
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+      })),
       timeline: activities.map(act => ({
         id: act.id?.toString() || '0',
         type: act.type || 'created',
