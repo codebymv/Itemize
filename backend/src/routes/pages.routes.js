@@ -606,22 +606,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 // Delete existing sections
                 await client.query('DELETE FROM page_sections WHERE page_id = $1', [id]);
 
-                // Insert new sections
-                for (let i = 0; i < sections.length; i++) {
-                    const section = sections[i];
+                // Insert new sections in bulk
+                if (sections.length > 0) {
+                    const values = [];
+                    const params = [];
+                    let paramIdx = 1;
+
+                    for (let i = 0; i < sections.length; i++) {
+                        const section = sections[i];
+                        values.push(`($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`);
+                        params.push(
+                            id,
+                            req.organizationId,
+                            section.section_type,
+                            section.name || null,
+                            JSON.stringify(section.content || {}),
+                            JSON.stringify(section.settings || {}),
+                            i
+                        );
+                    }
+
                     await client.query(`
                         INSERT INTO page_sections (
                             page_id, organization_id, section_type, name, content, settings, section_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    `, [
-                        id,
-                        req.organizationId,
-                        section.section_type,
-                        section.name || null,
-                        JSON.stringify(section.content || {}),
-                        JSON.stringify(section.settings || {}),
-                        i
-                    ]);
+                        ) VALUES ${values.join(', ')}
+                    `, params);
                 }
 
                 // Update page timestamp
