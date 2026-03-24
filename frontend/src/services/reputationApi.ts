@@ -304,6 +304,17 @@ export const sendReviewRequest = async (
     return response.data;
 };
 
+
+export const resendReviewRequest = async (
+    requestId: number,
+    organizationId?: number
+): Promise<ReviewRequest> => {
+    const response = await api.post(`/api/reputation/requests/${requestId}/resend`, {}, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
 export const sendBulkReviewRequests = async (
     data: {
         contact_ids: number[];
@@ -437,6 +448,7 @@ export default {
     // Requests
     getReviewRequests,
     sendReviewRequest,
+    resendReviewRequest,
     sendBulkReviewRequests,
     deleteReviewRequest,
     // Widgets
