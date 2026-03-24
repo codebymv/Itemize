@@ -365,8 +365,28 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
             [documentId, organizationId]
         );
 
-        const inserted = [];
-        for (const recipient of recipients) {
+        let inserted = [];
+        if (recipients && recipients.length > 0) {
+            const values = [];
+            const flatParams = [];
+            let paramIndex = 1;
+
+            for (const recipient of recipients) {
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`);
+                flatParams.push(
+                    documentId,
+                    organizationId,
+                    recipient.contact_id || null,
+                    recipient.name || null,
+                    recipient.email,
+                    recipient.signing_order || 1,
+                    recipient.identity_method || 'none',
+                    recipient.role_name || null,
+                    recipient.routing_status || 'locked'
+                );
+                paramIndex += 9;
+            }
+
             const result = await client.query(`
                 INSERT INTO signature_recipients (
                     document_id,
@@ -378,20 +398,11 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
                     identity_method,
                     role_name,
                     routing_status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, [
-                documentId,
-                organizationId,
-                recipient.contact_id || null,
-                recipient.name || null,
-                recipient.email,
-                recipient.signing_order || 1,
-                recipient.identity_method || 'none',
-                recipient.role_name || null,
-                recipient.routing_status || 'locked'
-            ]);
-            inserted.push(result.rows[0]);
+            `, flatParams);
+
+            inserted = result.rows;
         }
 
         // Map fields to recipients by role name if present
@@ -415,8 +426,35 @@ async function replaceFields(pool, documentId, fields) {
             [documentId]
         );
 
-        const inserted = [];
-        for (const field of fields) {
+        let inserted = [];
+        if (fields && fields.length > 0) {
+            const values = [];
+            const flatParams = [];
+            let paramIndex = 1;
+
+            for (const field of fields) {
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13}, $${paramIndex + 14}, $${paramIndex + 15})`);
+                flatParams.push(
+                    documentId,
+                    field.recipient_id || null,
+                    field.role_name || null,
+                    field.field_type,
+                    field.page_number || 1,
+                    field.x_position,
+                    field.y_position,
+                    field.width,
+                    field.height,
+                    field.label || null,
+                    field.is_required !== undefined ? field.is_required : true,
+                    field.value || null,
+                    field.font_size || null,
+                    field.font_family || null,
+                    field.text_align || null,
+                    field.locked || false
+                );
+                paramIndex += 16;
+            }
+
             const result = await client.query(`
                 INSERT INTO signature_fields (
                     document_id,
@@ -435,30 +473,10 @@ async function replaceFields(pool, documentId, fields) {
                     font_family,
                     text_align,
                     locked
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8,
-                    $9, $10, $11, $12, $13, $14, $15, $16
-                )
+                ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, [
-                documentId,
-                field.recipient_id || null,
-                field.role_name || null,
-                field.field_type,
-                field.page_number || 1,
-                field.x_position,
-                field.y_position,
-                field.width,
-                field.height,
-                field.label || null,
-                field.is_required !== undefined ? field.is_required : true,
-                field.value || null,
-                field.font_size || null,
-                field.font_family || null,
-                field.text_align || null,
-                field.locked || false
-            ]);
-            inserted.push(result.rows[0]);
+            `, flatParams);
+            inserted = result.rows;
         }
 
         return inserted;
@@ -1207,21 +1225,31 @@ async function uploadTemplateFile(pool, organizationId, templateId, file) {
 async function replaceTemplateRoles(pool, templateId, roles) {
     return withTransaction(pool, async (client) => {
         await client.query('DELETE FROM signature_template_roles WHERE template_id = $1', [templateId]);
-        const inserted = [];
-        for (const role of roles) {
+        let inserted = [];
+        if (roles && roles.length > 0) {
+            const values = [];
+            const flatParams = [];
+            let paramIndex = 1;
+
+            for (const role of roles) {
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2})`);
+                flatParams.push(
+                    templateId,
+                    role.role_name,
+                    role.signing_order || 1
+                );
+                paramIndex += 3;
+            }
+
             const result = await client.query(`
                 INSERT INTO signature_template_roles (
                     template_id,
                     role_name,
                     signing_order
-                ) VALUES ($1, $2, $3)
+                ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, [
-                templateId,
-                role.role_name,
-                role.signing_order || 1
-            ]);
-            inserted.push(result.rows[0]);
+            `, flatParams);
+            inserted = result.rows;
         }
         return inserted;
     });
@@ -1230,30 +1258,18 @@ async function replaceTemplateRoles(pool, templateId, roles) {
 async function replaceTemplateFields(pool, templateId, fields) {
     return withTransaction(pool, async (client) => {
         await client.query('DELETE FROM signature_template_fields WHERE template_id = $1', [templateId]);
-        const inserted = [];
+
+        if (!fields || fields.length === 0) {
+            return [];
+        }
+
+        const values = [];
+        const flatValues = [];
+        let paramIndex = 1;
+
         for (const field of fields) {
-            const result = await client.query(`
-                INSERT INTO signature_template_fields (
-                    template_id,
-                    role_name,
-                    field_type,
-                    page_number,
-                    x_position,
-                    y_position,
-                    width,
-                    height,
-                    label,
-                    is_required,
-                    font_size,
-                    font_family,
-                    text_align,
-                    locked
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8,
-                    $9, $10, $11, $12, $13, $14
-                )
-                RETURNING *
-            `, [
+            values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            flatValues.push(
                 templateId,
                 field.role_name || null,
                 field.field_type,
@@ -1268,10 +1284,30 @@ async function replaceTemplateFields(pool, templateId, fields) {
                 field.font_family || null,
                 field.text_align || null,
                 field.locked || false
-            ]);
-            inserted.push(result.rows[0]);
+            );
         }
-        return inserted;
+
+        const result = await client.query(`
+            INSERT INTO signature_template_fields (
+                template_id,
+                role_name,
+                field_type,
+                page_number,
+                x_position,
+                y_position,
+                width,
+                height,
+                label,
+                is_required,
+                font_size,
+                font_family,
+                text_align,
+                locked
+            ) VALUES ${values.join(', ')}
+            RETURNING *
+        `, flatValues);
+
+        return result.rows;
     });
 }
 
@@ -1359,8 +1395,28 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
 
         const recipients = data.recipients || [];
         const recipientMap = new Map();
-        for (const recipient of recipients) {
-            const signingOrder = roleOrderMap.get(recipient.role_name) || recipient.signing_order || 1;
+
+        if (recipients && recipients.length > 0) {
+            const values = [];
+            const flatParams = [];
+            let paramIndex = 1;
+
+            for (const recipient of recipients) {
+                const signingOrder = roleOrderMap.get(recipient.role_name) || recipient.signing_order || 1;
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, 'locked')`);
+                flatParams.push(
+                    document.id,
+                    organizationId,
+                    recipient.contact_id || null,
+                    recipient.name || null,
+                    recipient.email,
+                    signingOrder,
+                    recipient.role_name || null,
+                    recipient.identity_method || 'none'
+                );
+                paramIndex += 8;
+            }
+
             const recipientResult = await client.query(`
                 INSERT INTO signature_recipients (
                     document_id,
@@ -1372,27 +1428,52 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     role_name,
                     identity_method,
                     routing_status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'locked')
+                ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, [
-                document.id,
-                organizationId,
-                recipient.contact_id || null,
-                recipient.name || null,
-                recipient.email,
-                signingOrder,
-                recipient.role_name || null,
-                recipient.identity_method || 'none'
-            ]);
-            recipientMap.set(recipient.role_name || recipient.email, recipientResult.rows[0].id);
+            `, flatParams);
+
+            for (let i = 0; i < recipients.length; i++) {
+                const rec = recipients[i];
+                // Match rows using returned values, assuming they return in order of insertion or just using role/email directly from returned row
+                const row = recipientResult.rows[i];
+                if (row) {
+                    recipientMap.set(rec.role_name || rec.email, row.id);
+                }
+            }
         }
 
         const fieldsResult = await client.query(
             'SELECT * FROM signature_template_fields WHERE template_id = $1 ORDER BY id ASC',
             [templateId]
         );
-        for (const field of fieldsResult.rows) {
-            const recipientId = field.role_name ? recipientMap.get(field.role_name) || null : null;
+        if (fieldsResult.rows && fieldsResult.rows.length > 0) {
+            const values = [];
+            const flatParams = [];
+            let paramIndex = 1;
+
+            for (const field of fieldsResult.rows) {
+                const recipientId = field.role_name ? recipientMap.get(field.role_name) || null : null;
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13}, $${paramIndex + 14})`);
+                flatParams.push(
+                    document.id,
+                    recipientId,
+                    field.role_name || null,
+                    field.field_type,
+                    field.page_number,
+                    field.x_position,
+                    field.y_position,
+                    field.width,
+                    field.height,
+                    field.label,
+                    field.is_required,
+                    field.font_size,
+                    field.font_family,
+                    field.text_align,
+                    field.locked
+                );
+                paramIndex += 15;
+            }
+
             await client.query(`
                 INSERT INTO signature_fields (
                     document_id,
@@ -1410,27 +1491,8 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     font_family,
                     text_align,
                     locked
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8,
-                    $9, $10, $11, $12, $13, $14, $15
-                )
-            `, [
-                document.id,
-                recipientId,
-                field.role_name || null,
-                field.field_type,
-                field.page_number,
-                field.x_position,
-                field.y_position,
-                field.width,
-                field.height,
-                field.label,
-                field.is_required,
-                field.font_size,
-                field.font_family,
-                field.text_align,
-                field.locked
-            ]);
+                ) VALUES ${values.join(', ')}
+            `, flatParams);
         }
 
         return document;

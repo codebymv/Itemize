@@ -556,20 +556,20 @@ module.exports = (pool, authenticateJWT) => {
 
                 const invoiceId = invoiceResult.rows[0].id;
 
-                // Create invoice items
-                if (items.length > 0) {
+                // Create invoice items using bulk insert
+                if (items && items.length > 0) {
                     const values = [];
-                    const params = [];
-                    let paramOffset = 1;
+                    const placeholders = [];
+                    let paramIndex = 1;
 
                     for (let i = 0; i < items.length; i++) {
                         const item = items[i];
                         const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
                         const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
 
-                        values.push(`($${paramOffset}, $${paramOffset+1}, $${paramOffset+2}, $${paramOffset+3}, $${paramOffset+4}, $${paramOffset+5}, $${paramOffset+6}, $${paramOffset+7}, $${paramOffset+8}, $${paramOffset+9}, $${paramOffset+10})`);
+                        placeholders.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
 
-                        params.push(
+                        values.push(
                             invoiceId,
                             req.organizationId,
                             item.product_id || null,
@@ -582,16 +582,14 @@ module.exports = (pool, authenticateJWT) => {
                             itemTotal + itemTax,
                             i
                         );
-
-                        paramOffset += 11;
                     }
 
                     await client.query(`
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ${values.join(', ')}
-                    `, params);
+                        ) VALUES ${placeholders.join(', ')}
+                    `, values);
                 }
 
                 // Calculate next run date
