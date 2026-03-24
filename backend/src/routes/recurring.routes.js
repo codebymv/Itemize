@@ -556,10 +556,10 @@ module.exports = (pool, authenticateJWT) => {
 
                 const invoiceId = invoiceResult.rows[0].id;
 
-                // Create invoice items
+                // Create invoice items using bulk insert
                 if (items && items.length > 0) {
-                    const lineItemValues = [];
-                    const lineItemParams = [];
+                    const values = [];
+                    const placeholders = [];
                     let paramIndex = 1;
 
                     for (let i = 0; i < items.length; i++) {
@@ -567,7 +567,9 @@ module.exports = (pool, authenticateJWT) => {
                         const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
                         const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
 
-                        lineItemParams.push(
+                        placeholders.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+
+                        values.push(
                             invoiceId,
                             req.organizationId,
                             item.product_id || null,
@@ -580,20 +582,14 @@ module.exports = (pool, authenticateJWT) => {
                             itemTotal + itemTax,
                             i
                         );
-
-                        const placeholders = [];
-                        for (let j = 0; j < 11; j++) {
-                            placeholders.push(`$${paramIndex++}`);
-                        }
-                        lineItemValues.push(`(${placeholders.join(', ')})`);
                     }
 
                     await client.query(`
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ${lineItemValues.join(', ')}
-                    `, lineItemParams);
+                        ) VALUES ${placeholders.join(', ')}
+                    `, values);
                 }
 
                 // Calculate next run date
