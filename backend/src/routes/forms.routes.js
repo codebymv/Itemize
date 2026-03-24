@@ -215,33 +215,33 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Add default fields if none provided
                 if (fields && Array.isArray(fields) && fields.length > 0) {
-                    const values = [];
-                    const params = [];
-                    let paramIndex = 1;
+                    const u_form_ids = [];
+                    const u_field_types = [];
+                    const u_labels = [];
+                    const u_placeholders = [];
+                    const u_help_texts = [];
+                    const u_is_requireds = [];
+                    const u_validations = [];
+                    const u_options = [];
+                    const u_field_orders = [];
+                    const u_widths = [];
+                    const u_conditions = [];
+                    const u_map_to_contact_fields = [];
 
                     for (let i = 0; i < fields.length; i++) {
                         const field = fields[i];
-                        const rowPlaceholders = [];
-
-                        params.push(
-                            createdForm.id,
-                            field.field_type,
-                            field.label,
-                            field.placeholder || null,
-                            field.help_text || null,
-                            field.is_required || false,
-                            JSON.stringify(field.validation || {}),
-                            JSON.stringify(field.options || []),
-                            i,
-                            field.width || 'full',
-                            JSON.stringify(field.conditions || []),
-                            field.map_to_contact_field || null
-                        );
-
-                        for (let j = 0; j < 12; j++) {
-                            rowPlaceholders.push(`$${paramIndex++}`);
-                        }
-                        values.push(`(${rowPlaceholders.join(', ')})`);
+                        u_form_ids.push(createdForm.id);
+                        u_field_types.push(field.field_type);
+                        u_labels.push(field.label);
+                        u_placeholders.push(field.placeholder || null);
+                        u_help_texts.push(field.help_text || null);
+                        u_is_requireds.push(field.is_required || false);
+                        u_validations.push(JSON.stringify(field.validation || {}));
+                        u_options.push(JSON.stringify(field.options || []));
+                        u_field_orders.push(i);
+                        u_widths.push(field.width || 'full');
+                        u_conditions.push(JSON.stringify(field.conditions || []));
+                        u_map_to_contact_fields.push(field.map_to_contact_field || null);
                     }
 
                     await client.query(`
@@ -249,8 +249,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
                             conditions, map_to_contact_field
-                        ) VALUES ${values.join(', ')}
-                    `, params);
+                        ) SELECT * FROM UNNEST (
+                            $1::int[], $2::text[], $3::text[], $4::text[], $5::text[],
+                            $6::boolean[], $7::jsonb[], $8::jsonb[], $9::int[], $10::text[],
+                            $11::jsonb[], $12::text[]
+                        )
+                    `, [
+                        u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
+                        u_is_requireds, u_validations, u_options, u_field_orders, u_widths,
+                        u_conditions, u_map_to_contact_fields
+                    ]);
                 } else {
                     // Default name and email fields
                     await client.query(`
@@ -379,33 +387,33 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Insert new fields
                 if (fields && fields.length > 0) {
-                    const values = [];
-                    const params = [];
-                    let paramIndex = 1;
+                    const u_form_ids = [];
+                    const u_field_types = [];
+                    const u_labels = [];
+                    const u_placeholders = [];
+                    const u_help_texts = [];
+                    const u_is_requireds = [];
+                    const u_validations = [];
+                    const u_options = [];
+                    const u_field_orders = [];
+                    const u_widths = [];
+                    const u_conditions = [];
+                    const u_map_to_contact_fields = [];
 
                     for (let i = 0; i < fields.length; i++) {
                         const field = fields[i];
-                        const rowPlaceholders = [];
-
-                        params.push(
-                            id,
-                            field.field_type,
-                            field.label,
-                            field.placeholder || null,
-                            field.help_text || null,
-                            field.is_required || false,
-                            JSON.stringify(field.validation || {}),
-                            JSON.stringify(field.options || []),
-                            i,
-                            field.width || 'full',
-                            JSON.stringify(field.conditions || []),
-                            field.map_to_contact_field || null
-                        );
-
-                        for (let j = 0; j < 12; j++) {
-                            rowPlaceholders.push(`$${paramIndex++}`);
-                        }
-                        values.push(`(${rowPlaceholders.join(', ')})`);
+                        u_form_ids.push(id);
+                        u_field_types.push(field.field_type);
+                        u_labels.push(field.label);
+                        u_placeholders.push(field.placeholder || null);
+                        u_help_texts.push(field.help_text || null);
+                        u_is_requireds.push(field.is_required || false);
+                        u_validations.push(JSON.stringify(field.validation || {}));
+                        u_options.push(JSON.stringify(field.options || []));
+                        u_field_orders.push(i);
+                        u_widths.push(field.width || 'full');
+                        u_conditions.push(JSON.stringify(field.conditions || []));
+                        u_map_to_contact_fields.push(field.map_to_contact_field || null);
                     }
 
                     await client.query(`
@@ -413,8 +421,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
                             conditions, map_to_contact_field
-                        ) VALUES ${values.join(', ')}
-                    `, params);
+                        ) SELECT * FROM UNNEST (
+                            $1::int[], $2::text[], $3::text[], $4::text[], $5::text[],
+                            $6::boolean[], $7::jsonb[], $8::jsonb[], $9::int[], $10::text[],
+                            $11::jsonb[], $12::text[]
+                        )
+                    `, [
+                        u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
+                        u_is_requireds, u_validations, u_options, u_field_orders, u_widths,
+                        u_conditions, u_map_to_contact_fields
+                    ]);
                 }
 
                 // Fetch updated fields
@@ -516,32 +532,32 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 if (fieldsResult.rows && fieldsResult.rows.length > 0) {
-                    const values = [];
-                    const params = [];
-                    let paramIndex = 1;
+                    const u_form_ids = [];
+                    const u_field_types = [];
+                    const u_labels = [];
+                    const u_placeholders = [];
+                    const u_help_texts = [];
+                    const u_is_requireds = [];
+                    const u_validations = [];
+                    const u_options = [];
+                    const u_field_orders = [];
+                    const u_widths = [];
+                    const u_conditions = [];
+                    const u_map_to_contact_fields = [];
 
                     for (const field of fieldsResult.rows) {
-                        const rowPlaceholders = [];
-
-                        params.push(
-                            newForm.id,
-                            field.field_type,
-                            field.label,
-                            field.placeholder,
-                            field.help_text,
-                            field.is_required,
-                            JSON.stringify(field.validation),
-                            JSON.stringify(field.options),
-                            field.field_order,
-                            field.width,
-                            JSON.stringify(field.conditions),
-                            field.map_to_contact_field
-                        );
-
-                        for (let j = 0; j < 12; j++) {
-                            rowPlaceholders.push(`$${paramIndex++}`);
-                        }
-                        values.push(`(${rowPlaceholders.join(', ')})`);
+                        u_form_ids.push(newForm.id);
+                        u_field_types.push(field.field_type);
+                        u_labels.push(field.label);
+                        u_placeholders.push(field.placeholder);
+                        u_help_texts.push(field.help_text);
+                        u_is_requireds.push(field.is_required);
+                        u_validations.push(JSON.stringify(field.validation));
+                        u_options.push(JSON.stringify(field.options));
+                        u_field_orders.push(field.field_order);
+                        u_widths.push(field.width);
+                        u_conditions.push(JSON.stringify(field.conditions));
+                        u_map_to_contact_fields.push(field.map_to_contact_field);
                     }
 
                     await client.query(`
@@ -549,8 +565,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
                             conditions, map_to_contact_field
-                        ) VALUES ${values.join(', ')}
-                    `, params);
+                        ) SELECT * FROM UNNEST (
+                            $1::int[], $2::text[], $3::text[], $4::text[], $5::text[],
+                            $6::boolean[], $7::jsonb[], $8::jsonb[], $9::int[], $10::text[],
+                            $11::jsonb[], $12::text[]
+                        )
+                    `, [
+                        u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
+                        u_is_requireds, u_validations, u_options, u_field_orders, u_widths,
+                        u_conditions, u_map_to_contact_fields
+                    ]);
                 }
 
                 // Fetch new fields
