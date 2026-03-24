@@ -123,27 +123,20 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch lists', { error: err.message });
     }
 
-    // 8. Get communications (inbox messages)
-    let communications = [];
+    // 8. Get tasks associated with contact
+    let tasks = [];
     try {
-      const commsQuery = `
-        SELECT
-          m.id,
-          m.channel as type,
-          CASE WHEN m.sender_type = 'contact' THEN 'inbound' ELSE 'outbound' END as direction,
-          c.subject,
-          m.content,
-          m.created_at as date
-        FROM messages m
-        JOIN conversations c ON m.conversation_id = c.id
-        WHERE c.contact_id = $1 AND c.organization_id = $2
-        ORDER BY m.created_at DESC
-        LIMIT 50
+      const tasksQuery = `
+        SELECT *
+        FROM tasks
+        WHERE contact_id = $1
+        ORDER BY due_date ASC NULLS LAST, created_at DESC
+        LIMIT 20
       `;
-      const commsRes = await pool.query(commsQuery, [id, organization_id]);
-      communications = commsRes.rows;
+      const tasksRes = await pool.query(tasksQuery, [id]);
+      tasks = tasksRes.rows;
     } catch (err) {
-      logger.warn('Failed to fetch communications', { error: err.message });
+      logger.warn('Failed to fetch tasks', { error: err.message });
     }
 
     // Build response
@@ -203,7 +196,15 @@ router.get('/:id/profile', async (req, res) => {
         title: list.title || 'List',
         category: list.category,
       })),
-      tasks: [], // TODO: Integrate with task system
+      tasks: tasks.map(task => ({
+        id: task.id?.toString() || '0',
+        title: task.title || 'Task',
+        description: task.description || '',
+        status: task.status || 'pending',
+        priority: task.priority || 'medium',
+        dueDate: task.due_date,
+        completedAt: task.completed_at,
+      })),
       bookings: [], // TODO: Integrate with bookings
       timeline: activities.map(act => ({
         id: act.id?.toString() || '0',

@@ -109,7 +109,7 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
             <Input
               value={formData.tax_id}
               onChange={(e) => onFormChange('tax_id' as keyof BusinessFormData, e.target.value)}
-              placeholder="XX-XXXXXXX"
+              placeholder="e.g. 12-3456789 or GB123456789"
             />
           </div>
           <div className="space-y-2">
