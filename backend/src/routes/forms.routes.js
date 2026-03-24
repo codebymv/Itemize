@@ -215,15 +215,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Add default fields if none provided
                 if (fields && Array.isArray(fields) && fields.length > 0) {
+                    const values = [];
+                    const params = [];
+                    let paramIndex = 1;
+
                     for (let i = 0; i < fields.length; i++) {
                         const field = fields[i];
-                        await client.query(`
-              INSERT INTO form_fields (
-                form_id, field_type, label, placeholder, help_text,
-                is_required, validation, options, field_order, width,
-                conditions, map_to_contact_field
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            `, [
+                        const rowPlaceholders = [];
+
+                        params.push(
                             createdForm.id,
                             field.field_type,
                             field.label,
@@ -236,8 +236,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             field.width || 'full',
                             JSON.stringify(field.conditions || []),
                             field.map_to_contact_field || null
-                        ]);
+                        );
+
+                        for (let j = 0; j < 12; j++) {
+                            rowPlaceholders.push(`$${paramIndex++}`);
+                        }
+                        values.push(`(${rowPlaceholders.join(', ')})`);
                     }
+
+                    await client.query(`
+                        INSERT INTO form_fields (
+                            form_id, field_type, label, placeholder, help_text,
+                            is_required, validation, options, field_order, width,
+                            conditions, map_to_contact_field
+                        ) VALUES ${values.join(', ')}
+                    `, params);
                 } else {
                     // Default name and email fields
                     await client.query(`
@@ -365,28 +378,43 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 await client.query('DELETE FROM form_fields WHERE form_id = $1', [id]);
 
                 // Insert new fields
-                for (let i = 0; i < fields.length; i++) {
-                    const field = fields[i];
+                if (fields && fields.length > 0) {
+                    const values = [];
+                    const params = [];
+                    let paramIndex = 1;
+
+                    for (let i = 0; i < fields.length; i++) {
+                        const field = fields[i];
+                        const rowPlaceholders = [];
+
+                        params.push(
+                            id,
+                            field.field_type,
+                            field.label,
+                            field.placeholder || null,
+                            field.help_text || null,
+                            field.is_required || false,
+                            JSON.stringify(field.validation || {}),
+                            JSON.stringify(field.options || []),
+                            i,
+                            field.width || 'full',
+                            JSON.stringify(field.conditions || []),
+                            field.map_to_contact_field || null
+                        );
+
+                        for (let j = 0; j < 12; j++) {
+                            rowPlaceholders.push(`$${paramIndex++}`);
+                        }
+                        values.push(`(${rowPlaceholders.join(', ')})`);
+                    }
+
                     await client.query(`
-            INSERT INTO form_fields (
-              form_id, field_type, label, placeholder, help_text,
-              is_required, validation, options, field_order, width,
-              conditions, map_to_contact_field
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-          `, [
-                        id,
-                        field.field_type,
-                        field.label,
-                        field.placeholder || null,
-                        field.help_text || null,
-                        field.is_required || false,
-                        JSON.stringify(field.validation || {}),
-                        JSON.stringify(field.options || []),
-                        i,
-                        field.width || 'full',
-                        JSON.stringify(field.conditions || []),
-                        field.map_to_contact_field || null
-                    ]);
+                        INSERT INTO form_fields (
+                            form_id, field_type, label, placeholder, help_text,
+                            is_required, validation, options, field_order, width,
+                            conditions, map_to_contact_field
+                        ) VALUES ${values.join(', ')}
+                    `, params);
                 }
 
                 // Fetch updated fields
@@ -487,27 +515,42 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     [id]
                 );
 
-                for (const field of fieldsResult.rows) {
+                if (fieldsResult.rows && fieldsResult.rows.length > 0) {
+                    const values = [];
+                    const params = [];
+                    let paramIndex = 1;
+
+                    for (const field of fieldsResult.rows) {
+                        const rowPlaceholders = [];
+
+                        params.push(
+                            newForm.id,
+                            field.field_type,
+                            field.label,
+                            field.placeholder,
+                            field.help_text,
+                            field.is_required,
+                            JSON.stringify(field.validation),
+                            JSON.stringify(field.options),
+                            field.field_order,
+                            field.width,
+                            JSON.stringify(field.conditions),
+                            field.map_to_contact_field
+                        );
+
+                        for (let j = 0; j < 12; j++) {
+                            rowPlaceholders.push(`$${paramIndex++}`);
+                        }
+                        values.push(`(${rowPlaceholders.join(', ')})`);
+                    }
+
                     await client.query(`
-            INSERT INTO form_fields (
-              form_id, field_type, label, placeholder, help_text,
-              is_required, validation, options, field_order, width,
-              conditions, map_to_contact_field
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-          `, [
-                        newForm.id,
-                        field.field_type,
-                        field.label,
-                        field.placeholder,
-                        field.help_text,
-                        field.is_required,
-                        JSON.stringify(field.validation),
-                        JSON.stringify(field.options),
-                        field.field_order,
-                        field.width,
-                        JSON.stringify(field.conditions),
-                        field.map_to_contact_field
-                    ]);
+                        INSERT INTO form_fields (
+                            form_id, field_type, label, placeholder, help_text,
+                            is_required, validation, options, field_order, width,
+                            conditions, map_to_contact_field
+                        ) VALUES ${values.join(', ')}
+                    `, params);
                 }
 
                 // Fetch new fields
