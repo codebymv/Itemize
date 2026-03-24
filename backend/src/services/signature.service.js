@@ -407,12 +407,24 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
 
         // Map fields to recipients by role name if present
         const roleMap = new Map(inserted.map((rec) => [rec.role_name, rec.id]).filter(([role]) => role));
-        for (const [roleName, recipientId] of roleMap.entries()) {
+        if (roleMap.size > 0) {
+            const roleNames = [];
+            const recipientIds = [];
+
+            for (const [roleName, recipientId] of roleMap.entries()) {
+                roleNames.push(roleName);
+                recipientIds.push(recipientId);
+            }
+
             await client.query(`
                 UPDATE signature_fields
-                SET recipient_id = $1
-                WHERE document_id = $2 AND role_name = $3
-            `, [recipientId, documentId, roleName]);
+                SET recipient_id = update_data.recipient_id
+                FROM (
+                    SELECT unnest($1::text[]) AS role_name, unnest($2::uuid[]) AS recipient_id
+                ) AS update_data
+                WHERE signature_fields.document_id = $3
+                  AND signature_fields.role_name = update_data.role_name
+            `, [roleNames, recipientIds, documentId]);
         }
 
         return inserted;
