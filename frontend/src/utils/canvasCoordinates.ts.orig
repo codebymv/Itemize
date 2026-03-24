@@ -1,10 +1,10 @@
 /**
  * Canvas Coordinate Normalization Utilities
- * 
+ *
  * These utilities handle transforming stroke coordinates between:
  * - Absolute pixel coordinates (used for rendering)
  * - Normalized coordinates (0-1 range, used for storage)
- * 
+ *
  * This allows whiteboards to be viewed on different screen sizes
  * without losing stroke precision.
  */
@@ -61,7 +61,6 @@ export function isNormalizedData(data: unknown): data is NormalizedCanvasData {
   const obj = data as Record<string, unknown>;
   return (
     obj.metadata !== undefined &&
-    obj.metadata !== null &&
     typeof obj.metadata === 'object' &&
     (obj.metadata as CanvasDataMetadata).normalized === true
   );
@@ -218,7 +217,7 @@ export function processCanvasDataForLoad(
         strokeWidth: path.strokeWidth * avgScale,
       }));
     }
-    
+
     // No scaling needed
     return data;
   }
