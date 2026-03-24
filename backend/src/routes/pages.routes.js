@@ -284,15 +284,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 const createdPage = pageResult.rows[0];
 
-                // Create sections if provided
+                // Create sections if provided (optimized bulk insert)
                 if (sections && Array.isArray(sections) && sections.length > 0) {
+                    const values = [];
+                    const params = [];
                     for (let i = 0; i < sections.length; i++) {
                         const section = sections[i];
-                        await client.query(`
-                            INSERT INTO page_sections (
-                                page_id, organization_id, section_type, name, content, settings, section_order
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                        `, [
+                        const offset = i * 7;
+                        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
+                        params.push(
                             createdPage.id,
                             req.organizationId,
                             section.section_type,
@@ -300,8 +300,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             JSON.stringify(section.content || {}),
                             JSON.stringify(section.settings || {}),
                             i
-                        ]);
+                        );
                     }
+                    await client.query(`
+                        INSERT INTO page_sections (
+                            page_id, organization_id, section_type, name, content, settings, section_order
+                        ) VALUES ${values.join(', ')}
+                    `, params);
                 }
 
                 // Fetch complete page with sections
@@ -606,22 +611,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 // Delete existing sections
                 await client.query('DELETE FROM page_sections WHERE page_id = $1', [id]);
 
-                // Insert new sections
-                for (let i = 0; i < sections.length; i++) {
-                    const section = sections[i];
+                // Insert new sections (optimized bulk insert)
+                if (sections.length > 0) {
+                    const values = [];
+                    const params = [];
+                    for (let i = 0; i < sections.length; i++) {
+                        const section = sections[i];
+                        const offset = i * 7;
+                        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
+                        params.push(
+                            id,
+                            req.organizationId,
+                            section.section_type,
+                            section.name || null,
+                            JSON.stringify(section.content || {}),
+                            JSON.stringify(section.settings || {}),
+                            i
+                        );
+                    }
                     await client.query(`
                         INSERT INTO page_sections (
                             page_id, organization_id, section_type, name, content, settings, section_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    `, [
-                        id,
-                        req.organizationId,
-                        section.section_type,
-                        section.name || null,
-                        JSON.stringify(section.content || {}),
-                        JSON.stringify(section.settings || {}),
-                        i
-                    ]);
+                        ) VALUES ${values.join(', ')}
+                    `, params);
                 }
 
                 // Update page timestamp
