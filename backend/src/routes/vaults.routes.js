@@ -14,7 +14,7 @@ const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError, sendP
 /**
  * Create vaults routes with injected dependencies
  * @param {Object} pool - Database connection pool
- * @param {Function} authenticateJWT - JWT authentication middleware  
+ * @param {Function} authenticateJWT - JWT authentication middleware
  * @param {Object} broadcast - Broadcast functions for WebSocket updates
  */
 module.exports = (pool, authenticateJWT, broadcast) => {
@@ -52,7 +52,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const total = parseInt(countResult.rows[0].count);
 
             const vaultsResult = await client.query(
-                `SELECT v.id, v.user_id, v.title, v.category, v.color_value, v.position_x, v.position_y, v.width, v.height, v.z_index, 
+                `SELECT v.id, v.user_id, v.title, v.category, v.color_value, v.position_x, v.position_y, v.width, v.height, v.z_index,
                         v.is_locked, v.created_at, v.updated_at, v.share_token, v.is_public, v.shared_at,
                         COUNT(vi.id)::int as item_count
                  FROM vaults v
@@ -60,7 +60,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                  ${whereClause}
                  GROUP BY v.id, v.user_id, v.title, v.category, v.color_value, v.position_x, v.position_y, v.width, v.height, v.z_index,
                           v.is_locked, v.created_at, v.updated_at, v.share_token, v.is_public, v.shared_at
-                 ORDER BY v.updated_at DESC 
+                 ORDER BY v.updated_at DESC
                  LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
                 [...params, limit, offset]
             );
@@ -81,8 +81,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { master_password } = req.query; // Optional for locked vaults
             const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
-                    `SELECT id, user_id, title, category, color_value, position_x, position_y, width, height, z_index, 
-                            is_locked, encryption_salt, master_password_hash, created_at, updated_at, share_token, is_public, shared_at 
+                    `SELECT id, user_id, title, category, color_value, position_x, position_y, width, height, z_index,
+                            is_locked, encryption_salt, master_password_hash, created_at, updated_at, share_token, is_public, shared_at
                      FROM vaults WHERE id = $1 AND user_id = $2`,
                     [vaultId, req.user.id]
                 );
@@ -116,7 +116,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                 // Get items
                 const itemsResult = await client.query(
-                    `SELECT id, vault_id, item_type, label, encrypted_value, iv, order_index, created_at, updated_at 
+                    `SELECT id, vault_id, item_type, label, encrypted_value, iv, order_index, created_at, updated_at
                      FROM vault_items WHERE vault_id = $1 ORDER BY order_index ASC`,
                     [vaultId]
                 );
@@ -197,7 +197,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
 
                 const result = await client.query(
-                    `INSERT INTO vaults (user_id, title, category, color_value, position_x, position_y, width, height, z_index, is_locked, encryption_salt, master_password_hash) 
+                    `INSERT INTO vaults (user_id, title, category, color_value, position_x, position_y, width, height, z_index, is_locked, encryption_salt, master_password_hash)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
                     [
                         req.user.id,
@@ -289,7 +289,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    `UPDATE vaults SET position_x = $1, position_y = $2, updated_at = CURRENT_TIMESTAMP 
+                    `UPDATE vaults SET position_x = $1, position_y = $2, updated_at = CURRENT_TIMESTAMP
                      WHERE id = $3 AND user_id = $4 RETURNING *`,
                     [position_x, position_y, vaultId, req.user.id]
                 );
@@ -372,10 +372,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     return { status: 'not_found' };
                 }
 
-                for (let i = 0; i < item_ids.length; i++) {
+                if (item_ids.length > 0) {
+                    const orderIndices = item_ids.map((_, i) => i);
                     await client.query(
-                        'UPDATE vault_items SET order_index = $1 WHERE id = $2 AND vault_id = $3',
-                        [i, item_ids[i], vaultId]
+                        `UPDATE vault_items AS vi
+                         SET order_index = data.new_order
+                         FROM (SELECT unnest($1::int[]) AS id, unnest($2::int[]) AS new_order) AS data
+                         WHERE vi.id = data.id AND vi.vault_id = $3`,
+                        [item_ids, orderIndices, vaultId]
                     );
                 }
 
@@ -435,7 +439,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 const { encrypted, iv } = encrypt(value);
 
                 const insertResult = await client.query(
-                    `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index) 
+                    `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index)
                      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
                     [vaultId, item_type, label.trim(), encrypted, iv, nextOrder]
                 );
@@ -506,7 +510,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     const { encrypted, iv } = encrypt(value);
 
                     const insertResult = await client.query(
-                        `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index) 
+                        `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index)
                          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
                         [vaultId, item_type, label.trim(), encrypted, iv, nextOrder++]
                     );
@@ -588,7 +592,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
 
                 const updateResult = await client.query(
-                    `UPDATE vault_items SET label = $1, encrypted_value = $2, iv = $3, updated_at = CURRENT_TIMESTAMP 
+                    `UPDATE vault_items SET label = $1, encrypted_value = $2, iv = $3, updated_at = CURRENT_TIMESTAMP
                      WHERE id = $4 AND vault_id = $5 RETURNING *`,
                     [newLabel, newEncryptedValue, newIv, itemId, vaultId]
                 );
@@ -697,7 +701,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
 
                 await client.query(
-                    `UPDATE vaults SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP 
+                    `UPDATE vaults SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP
                      WHERE id = $2 AND user_id = $3`,
                     [shareToken, vaultId, req.user.id]
                 );
@@ -752,7 +756,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
-                    `SELECT id, title, category, color_value, is_locked, created_at, updated_at 
+                    `SELECT id, title, category, color_value, is_locked, created_at, updated_at
                      FROM vaults WHERE share_token = $1 AND is_public = TRUE`,
                     [token]
                 );
@@ -768,7 +772,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
 
                 const itemsResult = await client.query(
-                    `SELECT id, item_type, label, encrypted_value, iv, order_index, created_at, updated_at 
+                    `SELECT id, item_type, label, encrypted_value, iv, order_index, created_at, updated_at
                      FROM vault_items WHERE vault_id = $1 ORDER BY order_index ASC`,
                     [vault.id]
                 );
@@ -861,7 +865,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 const newHash = await hashMasterPassword(master_password);
 
                 await client.query(
-                    `UPDATE vaults SET is_locked = TRUE, encryption_salt = $1, master_password_hash = $2 
+                    `UPDATE vaults SET is_locked = TRUE, encryption_salt = $1, master_password_hash = $2
                      WHERE id = $3 AND user_id = $4`,
                     [newSalt, newHash, vaultId, req.user.id]
                 );
@@ -879,7 +883,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 return sendError(res, 'Invalid current password', 401, 'UNAUTHORIZED');
             }
 
-            sendSuccess(res, { 
+            sendSuccess(res, {
                 message: 'Vault locked successfully',
                 encryption_salt: result.salt
             });
@@ -921,7 +925,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
 
                 await client.query(
-                    `UPDATE vaults SET is_locked = FALSE, encryption_salt = NULL, master_password_hash = NULL 
+                    `UPDATE vaults SET is_locked = FALSE, encryption_salt = NULL, master_password_hash = NULL
                      WHERE id = $1 AND user_id = $2`,
                     [vaultId, req.user.id]
                 );
