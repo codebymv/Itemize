@@ -1230,30 +1230,18 @@ async function replaceTemplateRoles(pool, templateId, roles) {
 async function replaceTemplateFields(pool, templateId, fields) {
     return withTransaction(pool, async (client) => {
         await client.query('DELETE FROM signature_template_fields WHERE template_id = $1', [templateId]);
-        const inserted = [];
+
+        if (!fields || fields.length === 0) {
+            return [];
+        }
+
+        const values = [];
+        const flatValues = [];
+        let paramIndex = 1;
+
         for (const field of fields) {
-            const result = await client.query(`
-                INSERT INTO signature_template_fields (
-                    template_id,
-                    role_name,
-                    field_type,
-                    page_number,
-                    x_position,
-                    y_position,
-                    width,
-                    height,
-                    label,
-                    is_required,
-                    font_size,
-                    font_family,
-                    text_align,
-                    locked
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8,
-                    $9, $10, $11, $12, $13, $14
-                )
-                RETURNING *
-            `, [
+            values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            flatValues.push(
                 templateId,
                 field.role_name || null,
                 field.field_type,
@@ -1268,10 +1256,30 @@ async function replaceTemplateFields(pool, templateId, fields) {
                 field.font_family || null,
                 field.text_align || null,
                 field.locked || false
-            ]);
-            inserted.push(result.rows[0]);
+            );
         }
-        return inserted;
+
+        const result = await client.query(`
+            INSERT INTO signature_template_fields (
+                template_id,
+                role_name,
+                field_type,
+                page_number,
+                x_position,
+                y_position,
+                width,
+                height,
+                label,
+                is_required,
+                font_size,
+                font_family,
+                text_align,
+                locked
+            ) VALUES ${values.join(', ')}
+            RETURNING *
+        `, flatValues);
+
+        return result.rows;
     });
 }
 
