@@ -177,41 +177,39 @@ module.exports = (pool, authenticateJWT) => {
                 const createdCalendar = calendarResult.rows[0];
 
                 // Create default availability windows if provided
-                if (availability_windows && Array.isArray(availability_windows) && availability_windows.length > 0) {
-                    const valueStrings = [];
-                    const params = [];
-
-                    availability_windows.forEach((window, index) => {
-                        const offset = index * 5;
-                        valueStrings.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
-                        params.push(
-                            createdCalendar.id,
-                            window.day_of_week,
-                            window.start_time,
-                            window.end_time,
-                            window.is_active !== false
-                        );
-                    });
-
-                    await client.query(`
-                        INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time, is_active)
-                        VALUES ${valueStrings.join(', ')}
-                    `, params);
-                } else if (!availability_windows || !Array.isArray(availability_windows) || availability_windows.length === 0) {
+                if (availability_windows && Array.isArray(availability_windows)) {
+                    if (availability_windows.length > 0) {
+                        const values = [];
+                        const params = [];
+                        availability_windows.forEach((window, index) => {
+                            const offset = index * 5;
+                            values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+                            params.push(
+                                createdCalendar.id,
+                                window.day_of_week,
+                                window.start_time,
+                                window.end_time,
+                                window.is_active !== false
+                            );
+                        });
+                        await client.query(`
+              INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time, is_active)
+              VALUES ${values.join(', ')}
+            `, params);
+                    }
+                } else {
                     // Create default Mon-Fri 9am-5pm availability
-                    const valueStrings = [];
+                    const values = [];
                     const params = [];
-
                     for (let day = 1; day <= 5; day++) {
                         const offset = (day - 1) * 4;
-                        valueStrings.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`);
+                        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`);
                         params.push(createdCalendar.id, day, '09:00', '17:00');
                     }
-
                     await client.query(`
-                        INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time)
-                        VALUES ${valueStrings.join(', ')}
-                    `, params);
+            INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time)
+            VALUES ${values.join(', ')}
+          `, params);
                 }
                 return createdCalendar;
             });
@@ -372,14 +370,14 @@ module.exports = (pool, authenticateJWT) => {
                 // Delete existing windows
                 await client.query('DELETE FROM availability_windows WHERE calendar_id = $1', [id]);
 
-                // Insert new windows
+                // Insert new windows in a single batch
                 if (availability_windows.length > 0) {
-                    const valueStrings = [];
+                    const values = [];
                     const params = [];
 
                     availability_windows.forEach((window, index) => {
                         const offset = index * 5;
-                        valueStrings.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+                        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
                         params.push(
                             id,
                             window.day_of_week,
@@ -390,9 +388,9 @@ module.exports = (pool, authenticateJWT) => {
                     });
 
                     await client.query(`
-                        INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time, is_active)
-                        VALUES ${valueStrings.join(', ')}
-                    `, params);
+            INSERT INTO availability_windows (calendar_id, day_of_week, start_time, end_time, is_active)
+            VALUES ${values.join(', ')}
+          `, params);
                 }
                 // Fetch updated windows
                 const result = await client.query(

@@ -123,6 +123,22 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch lists', { error: err.message });
     }
 
+    // 8. Get tasks associated with contact
+    let tasks = [];
+    try {
+      const tasksQuery = `
+        SELECT *
+        FROM tasks
+        WHERE contact_id = $1
+        ORDER BY due_date ASC NULLS LAST, created_at DESC
+        LIMIT 20
+      `;
+      const tasksRes = await pool.query(tasksQuery, [id]);
+      tasks = tasksRes.rows;
+    } catch (err) {
+      logger.warn('Failed to fetch tasks', { error: err.message });
+    }
+
     // Build response
     const response = {
       contact: {
@@ -161,7 +177,14 @@ router.get('/:id/profile', async (req, res) => {
         amount: pay.amount || 0,
         date: pay.date,
       })),
-      communications: [], // TODO: Integrate with inbox
+      communications: communications.map(comm => ({
+        id: comm.id?.toString() || '0',
+        type: comm.type || 'email',
+        direction: comm.direction || 'outbound',
+        subject: comm.subject || '',
+        content: comm.content || '',
+        date: comm.date,
+      })),
       notes: notes.map(note => ({
         id: note.id?.toString() || '0',
         title: note.title || 'Note',
@@ -173,7 +196,15 @@ router.get('/:id/profile', async (req, res) => {
         title: list.title || 'List',
         category: list.category,
       })),
-      tasks: [], // TODO: Integrate with task system
+      tasks: tasks.map(task => ({
+        id: task.id?.toString() || '0',
+        title: task.title || 'Task',
+        description: task.description || '',
+        status: task.status || 'pending',
+        priority: task.priority || 'medium',
+        dueDate: task.due_date,
+        completedAt: task.completed_at,
+      })),
       bookings: [], // TODO: Integrate with bookings
       timeline: activities.map(act => ({
         id: act.id?.toString() || '0',
