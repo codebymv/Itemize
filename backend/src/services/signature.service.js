@@ -365,16 +365,15 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
             [documentId, organizationId]
         );
 
-        const inserted = [];
+        let inserted = [];
         if (recipients && recipients.length > 0) {
             const values = [];
-            const args = [];
+            const flatParams = [];
             let paramIndex = 1;
 
             for (const recipient of recipients) {
-                values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
-
-                args.push(
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`);
+                flatParams.push(
                     documentId,
                     organizationId,
                     recipient.contact_id || null,
@@ -385,6 +384,7 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
                     recipient.role_name || null,
                     recipient.routing_status || 'locked'
                 );
+                paramIndex += 9;
             }
 
             const result = await client.query(`
@@ -400,9 +400,9 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
                     routing_status
                 ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, args);
+            `, flatParams);
 
-            inserted.push(...result.rows);
+            inserted = result.rows;
         }
 
         // Map fields to recipients by role name if present
@@ -426,16 +426,15 @@ async function replaceFields(pool, documentId, fields) {
             [documentId]
         );
 
-        const inserted = [];
+        let inserted = [];
         if (fields && fields.length > 0) {
             const values = [];
-            const args = [];
+            const flatParams = [];
             let paramIndex = 1;
 
             for (const field of fields) {
-                values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
-
-                args.push(
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13}, $${paramIndex + 14}, $${paramIndex + 15})`);
+                flatParams.push(
                     documentId,
                     field.recipient_id || null,
                     field.role_name || null,
@@ -453,6 +452,7 @@ async function replaceFields(pool, documentId, fields) {
                     field.text_align || null,
                     field.locked || false
                 );
+                paramIndex += 16;
             }
 
             const result = await client.query(`
@@ -475,9 +475,8 @@ async function replaceFields(pool, documentId, fields) {
                     locked
                 ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, args);
-
-            inserted.push(...result.rows);
+            `, flatParams);
+            inserted = result.rows;
         }
 
         return inserted;
@@ -1226,20 +1225,20 @@ async function uploadTemplateFile(pool, organizationId, templateId, file) {
 async function replaceTemplateRoles(pool, templateId, roles) {
     return withTransaction(pool, async (client) => {
         await client.query('DELETE FROM signature_template_roles WHERE template_id = $1', [templateId]);
-        const inserted = [];
+        let inserted = [];
         if (roles && roles.length > 0) {
             const values = [];
-            const args = [];
+            const flatParams = [];
             let paramIndex = 1;
 
             for (const role of roles) {
-                values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
-
-                args.push(
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2})`);
+                flatParams.push(
                     templateId,
                     role.role_name,
                     role.signing_order || 1
                 );
+                paramIndex += 3;
             }
 
             const result = await client.query(`
@@ -1249,9 +1248,8 @@ async function replaceTemplateRoles(pool, templateId, roles) {
                     signing_order
                 ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, args);
-
-            inserted.push(...result.rows);
+            `, flatParams);
+            inserted = result.rows;
         }
         return inserted;
     });
@@ -1260,56 +1258,56 @@ async function replaceTemplateRoles(pool, templateId, roles) {
 async function replaceTemplateFields(pool, templateId, fields) {
     return withTransaction(pool, async (client) => {
         await client.query('DELETE FROM signature_template_fields WHERE template_id = $1', [templateId]);
-        const inserted = [];
-        if (fields && fields.length > 0) {
-            const values = [];
-            const args = [];
-            let paramIndex = 1;
 
-            for (const field of fields) {
-                values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
-
-                args.push(
-                    templateId,
-                    field.role_name || null,
-                    field.field_type,
-                    field.page_number || 1,
-                    field.x_position,
-                    field.y_position,
-                    field.width,
-                    field.height,
-                    field.label || null,
-                    field.is_required !== undefined ? field.is_required : true,
-                    field.font_size || null,
-                    field.font_family || null,
-                    field.text_align || null,
-                    field.locked || false
-                );
-            }
-
-            const result = await client.query(`
-                INSERT INTO signature_template_fields (
-                    template_id,
-                    role_name,
-                    field_type,
-                    page_number,
-                    x_position,
-                    y_position,
-                    width,
-                    height,
-                    label,
-                    is_required,
-                    font_size,
-                    font_family,
-                    text_align,
-                    locked
-                ) VALUES ${values.join(', ')}
-                RETURNING *
-            `, args);
-
-            inserted.push(...result.rows);
+        if (!fields || fields.length === 0) {
+            return [];
         }
-        return inserted;
+
+        const values = [];
+        const flatValues = [];
+        let paramIndex = 1;
+
+        for (const field of fields) {
+            values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            flatValues.push(
+                templateId,
+                field.role_name || null,
+                field.field_type,
+                field.page_number || 1,
+                field.x_position,
+                field.y_position,
+                field.width,
+                field.height,
+                field.label || null,
+                field.is_required !== undefined ? field.is_required : true,
+                field.font_size || null,
+                field.font_family || null,
+                field.text_align || null,
+                field.locked || false
+            );
+        }
+
+        const result = await client.query(`
+            INSERT INTO signature_template_fields (
+                template_id,
+                role_name,
+                field_type,
+                page_number,
+                x_position,
+                y_position,
+                width,
+                height,
+                label,
+                is_required,
+                font_size,
+                font_family,
+                text_align,
+                locked
+            ) VALUES ${values.join(', ')}
+            RETURNING *
+        `, flatValues);
+
+        return result.rows;
     });
 }
 
@@ -1400,14 +1398,13 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
 
         if (recipients && recipients.length > 0) {
             const values = [];
-            const args = [];
+            const flatParams = [];
             let paramIndex = 1;
 
             for (const recipient of recipients) {
                 const signingOrder = roleOrderMap.get(recipient.role_name) || recipient.signing_order || 1;
-                values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, 'locked')`);
-
-                args.push(
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, 'locked')`);
+                flatParams.push(
                     document.id,
                     organizationId,
                     recipient.contact_id || null,
@@ -1417,9 +1414,10 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     recipient.role_name || null,
                     recipient.identity_method || 'none'
                 );
+                paramIndex += 8;
             }
 
-            const recipientsResult = await client.query(`
+            const recipientResult = await client.query(`
                 INSERT INTO signature_recipients (
                     document_id,
                     organization_id,
@@ -1432,12 +1430,15 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     routing_status
                 ) VALUES ${values.join(', ')}
                 RETURNING *
-            `, args);
+            `, flatParams);
 
-            for (let i = 0; i < recipientsResult.rows.length; i++) {
-                const row = recipientsResult.rows[i];
-                const input = recipients[i];
-                recipientMap.set(input.role_name || input.email, row.id);
+            for (let i = 0; i < recipients.length; i++) {
+                const rec = recipients[i];
+                // Match rows using returned values, assuming they return in order of insertion or just using role/email directly from returned row
+                const row = recipientResult.rows[i];
+                if (row) {
+                    recipientMap.set(rec.role_name || rec.email, row.id);
+                }
             }
         }
 
@@ -1445,18 +1446,15 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
             'SELECT * FROM signature_template_fields WHERE template_id = $1 ORDER BY id ASC',
             [templateId]
         );
-
-        if (fieldsResult.rows.length > 0) {
+        if (fieldsResult.rows && fieldsResult.rows.length > 0) {
             const values = [];
-            const args = [];
+            const flatParams = [];
             let paramIndex = 1;
 
             for (const field of fieldsResult.rows) {
                 const recipientId = field.role_name ? recipientMap.get(field.role_name) || null : null;
-
-                values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
-
-                args.push(
+                values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13}, $${paramIndex + 14})`);
+                flatParams.push(
                     document.id,
                     recipientId,
                     field.role_name || null,
@@ -1473,6 +1471,7 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     field.text_align,
                     field.locked
                 );
+                paramIndex += 15;
             }
 
             await client.query(`
@@ -1493,7 +1492,7 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     text_align,
                     locked
                 ) VALUES ${values.join(', ')}
-            `, args);
+            `, flatParams);
         }
 
         return document;
