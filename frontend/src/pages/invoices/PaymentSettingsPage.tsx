@@ -828,7 +828,7 @@ export function PaymentSettingsPage() {
                             <Input
                                 value={businessFormData.tax_id}
                                 onChange={(e) => setBusinessFormData(prev => ({ ...prev, tax_id: e.target.value }))}
-                                placeholder="XX-XXXXXXX"
+                                placeholder="e.g. 12-3456789 or GB123456789"
                             />
                         </div>
                         <div className="space-y-2">

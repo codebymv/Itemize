@@ -9,6 +9,7 @@
 const BaseService = require('./BaseService');
 const Stripe = require('stripe');
 const { PLAN_NAMES, PRICING, getTierLevel } = require('../config/plans');
+const emailService = require('./emailService');
 
 class StripeSubscriptionService extends BaseService {
     constructor(pool) {
@@ -649,7 +650,40 @@ class StripeSubscriptionService extends BaseService {
             await this.logSubscriptionEvent(organizationId, subscription.id, 'trial_ending', {
                 trialEnd: subscription.trial_end
             });
-            // TODO: Send email notification
+
+            try {
+                // Get organization email
+                const orgResult = await this.pool.query(
+                    'SELECT email, name FROM organizations WHERE id = $1',
+                    [organizationId]
+                );
+
+                const org = orgResult.rows[0];
+                if (org && org.email) {
+                    const trialEndDate = new Date(subscription.trial_end * 1000).toLocaleDateString();
+                    const template = {
+                        subject: 'Your trial is ending soon',
+                        body_html: `
+                            <h2>Hello ${org.name || 'there'},</h2>
+                            <p>We hope you are enjoying your trial. This is a quick reminder that your trial period will end on <strong>${trialEndDate}</strong>.</p>
+                            <p>To ensure uninterrupted access to all features, please make sure your billing information is up to date.</p>
+                            <br/>
+                            <a href="{{billingUrl}}" class="button-primary">Update Billing Information</a>
+                        `
+                    };
+
+                    await emailService.sendTemplateEmail({
+                        template,
+                        contact: { email: org.email, first_name: org.name }
+                    });
+
+                    this.logInfo('Sent trial ending email notification', { organizationId, email: org.email });
+                } else {
+                    this.logWarn('Could not send trial ending email - organization or email not found', { organizationId });
+                }
+            } catch (error) {
+                this.logError('Failed to send trial ending email notification', error);
+            }
         }
     }
 
