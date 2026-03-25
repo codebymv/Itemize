@@ -24,7 +24,7 @@ import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import { getReviewRequests, deleteReviewRequest, sendReviewRequest } from '@/services/reputationApi';
+import { getReviewRequests, deleteReviewRequest, sendReviewRequest, resendReviewRequest } from '@/services/reputationApi';
 import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
@@ -142,8 +142,14 @@ export function ReputationRequestsPage() {
     }, [fetchRequests]);
 
     const handleResend = async (id: number) => {
-        // TODO: Implement resend functionality when backend endpoint is available
-        toast({ title: 'Coming soon', description: 'Resend functionality will be available soon' });
+        if (!organizationId) return;
+        try {
+            await resendReviewRequest(id, organizationId);
+            toast({ title: 'Success', description: 'Review request resent successfully' });
+            fetchRequests(); // Refresh the list to update statuses/timestamps
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to resend request', variant: 'destructive' });
+        }
     };
 
     const handleDelete = async (id: number) => {

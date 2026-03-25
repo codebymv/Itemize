@@ -554,6 +554,87 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     });
 
     /**
+     * POST /api/reputation/requests/:id/resend - Resend review request
+     */
+    router.post('/requests/:id/resend', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const request = await withDbClient(pool, async (client) => {
+                // Get existing request
+                const result = await client.query(
+                    'SELECT * FROM review_requests WHERE id = $1 AND organization_id = $2',
+                    [id, req.organizationId]
+                );
+
+                if (result.rows.length === 0) {
+                    return null;
+                }
+
+                const existingRequest = result.rows[0];
+
+                // Update request
+                const updatedResult = await client.query(`
+                    UPDATE review_requests SET
+                        status = 'sent',
+                        email_sent = CASE WHEN channel IN ('email', 'both') THEN true ELSE email_sent END,
+                        email_sent_at = CASE WHEN channel IN ('email', 'both') THEN CURRENT_TIMESTAMP ELSE email_sent_at END,
+                        sms_sent = CASE WHEN channel IN ('sms', 'both') THEN true ELSE sms_sent END,
+                        sms_sent_at = CASE WHEN channel IN ('sms', 'both') THEN CURRENT_TIMESTAMP ELSE sms_sent_at END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1
+                    RETURNING *
+                `, [id]);
+
+                const requestData = updatedResult.rows[0];
+
+                // Get organization details for email/sms
+                const orgResult = await client.query('SELECT name FROM organizations WHERE id = $1', [req.organizationId]);
+                const orgName = orgResult.rows[0]?.name || 'us';
+
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                const reviewLink = `${frontendUrl}/r/${requestData.unique_token}`;
+
+                // Get custom message or use default
+                const messageBody = requestData.custom_message || `Hi ${requestData.contact_name || 'there'}, we'd love to hear about your experience with ${orgName}. Please leave us a review: ${reviewLink}`;
+
+                // Send email if requested
+                if (requestData.channel === 'email' || requestData.channel === 'both') {
+                    if (requestData.contact_email && emailService.isEnabled()) {
+                        await emailService.sendEmail({
+                            to: requestData.contact_email,
+                            subject: `How did we do? Leave a review for ${orgName}`,
+                            text: messageBody,
+                            html: `<p>${messageBody.replace(/\n/g, '<br>')}</p>`,
+                        });
+                    }
+                }
+
+                // Send SMS if requested
+                if (requestData.channel === 'sms' || requestData.channel === 'both') {
+                    if (requestData.contact_phone && smsService.isEnabled()) {
+                        await smsService.sendSms({
+                            to: requestData.contact_phone,
+                            message: messageBody,
+                        });
+                    }
+                }
+
+                return requestData;
+            });
+
+            if (!request) {
+                return res.status(404).json({ error: 'Review request not found' });
+            }
+
+            res.json(request);
+        } catch (error) {
+            console.error('Error resending review request:', error);
+            return sendError(res, 'Failed to resend review request');
+        }
+    });
+
+    /**
      * POST /api/reputation/requests/bulk - Send bulk review requests
      */
     router.post('/requests/bulk', authenticateJWT, requireOrganization, async (req, res) => {
