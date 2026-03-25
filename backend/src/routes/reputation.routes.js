@@ -8,6 +8,8 @@ const router = express.Router();
 const crypto = require('crypto');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const emailService = require('../services/emailService');
+const smsService = require('../services/smsService');
 
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -482,6 +484,51 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // If not scheduled, send immediately
                 if (!scheduled_at) {
+                    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                    const reviewLink = `${frontendUrl}/review/${uniqueToken}`;
+                    const orgName = req.organization?.name || 'us'; // Fallback if org name not in req, but we should probably fetch it if not present. Let's do a quick query for org name.
+
+                    const orgResult = await client.query('SELECT name FROM organizations WHERE id = $1', [req.organizationId]);
+                    const organizationName = orgResult.rows[0]?.name || 'our business';
+
+                    const messageContent = custom_message || `Hi ${contactInfo.name || 'there'},\n\nThank you for choosing ${organizationName}. We'd love to hear about your experience! Please take a moment to leave us a review:\n\n${reviewLink}\n\nThank you!`;
+
+                    let emailSent = false;
+                    let smsSent = false;
+
+                    if (channel === 'email' || channel === 'both') {
+                        if (contactInfo.email) {
+                            const emailSubject = `We'd love your feedback on ${organizationName}`;
+                            const emailHtml = `
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                    <h2>How did we do?</h2>
+                                    <p>${messageContent.replace(/\n/g, '<br>')}</p>
+                                    <div style="margin-top: 20px;">
+                                        <a href="${reviewLink}" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Leave a Review</a>
+                                    </div>
+                                </div>
+                            `;
+
+                            await emailService.sendEmail({
+                                to: contactInfo.email,
+                                subject: emailSubject,
+                                html: emailHtml,
+                                text: messageContent
+                            });
+                            emailSent = true;
+                        }
+                    }
+
+                    if (channel === 'sms' || channel === 'both') {
+                        if (contactInfo.phone) {
+                            await smsService.sendDirectSms({
+                                to: contactInfo.phone,
+                                message: messageContent
+                            });
+                            smsSent = true;
+                        }
+                    }
+
                     // Mark as sent
                     await client.query(`
                         UPDATE review_requests SET
@@ -491,13 +538,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             sms_sent_at = CASE WHEN $2 THEN CURRENT_TIMESTAMP ELSE NULL END
                         WHERE id = $3
                     `, [
-                        channel === 'email' || channel === 'both',
-                        channel === 'sms' || channel === 'both',
+                        emailSent,
+                        smsSent,
                         request.id
                     ]);
-
-                    // TODO: Actually send email/SMS
-                    // For now, just update status
                 }
 
                 return request;
@@ -528,10 +572,64 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     WHERE id = ANY($1) AND organization_id = $2
                 `, [contact_ids, req.organizationId]);
 
+                const orgResult = await client.query('SELECT name FROM organizations WHERE id = $1', [req.organizationId]);
+                const organizationName = orgResult.rows[0]?.name || 'our business';
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
                 const requests = [];
                 
                 for (const contact of contactsResult.rows) {
                     const uniqueToken = crypto.randomBytes(32).toString('hex');
+                    const reviewLink = `${frontendUrl}/review/${uniqueToken}`;
+
+                    const contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+                    const messageContent = custom_message || `Hi ${contactName || 'there'},\n\nThank you for choosing ${organizationName}. We'd love to hear about your experience! Please take a moment to leave us a review:\n\n${reviewLink}\n\nThank you!`;
+
+                    let emailSent = false;
+                    let smsSent = false;
+
+                    const activeChannel = channel || 'email';
+
+                    if (activeChannel === 'email' || activeChannel === 'both') {
+                        if (contact.email) {
+                            const emailSubject = `We'd love your feedback on ${organizationName}`;
+                            const emailHtml = `
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                    <h2>How did we do?</h2>
+                                    <p>${messageContent.replace(/\n/g, '<br>')}</p>
+                                    <div style="margin-top: 20px;">
+                                        <a href="${reviewLink}" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Leave a Review</a>
+                                    </div>
+                                </div>
+                            `;
+
+                            try {
+                                await emailService.sendEmail({
+                                    to: contact.email,
+                                    subject: emailSubject,
+                                    html: emailHtml,
+                                    text: messageContent
+                                });
+                                emailSent = true;
+                            } catch (e) {
+                                console.error('Error sending bulk email to', contact.email, e);
+                            }
+                        }
+                    }
+
+                    if (activeChannel === 'sms' || activeChannel === 'both') {
+                        if (contact.phone) {
+                            try {
+                                await smsService.sendDirectSms({
+                                    to: contact.phone,
+                                    message: messageContent
+                                });
+                                smsSent = true;
+                            } catch (e) {
+                                console.error('Error sending bulk SMS to', contact.phone, e);
+                            }
+                        }
+                    }
 
                     const result = await client.query(`
                         INSERT INTO review_requests (
@@ -545,15 +643,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         contact.id,
                         contact.email,
                         contact.phone,
-                        `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
-                        channel || 'email',
+                        contactName,
+                        activeChannel,
                         custom_message || null,
                         preferred_platform || null,
                         uniqueToken,
-                        channel === 'email' || channel === 'both',
-                        (channel === 'email' || channel === 'both') ? new Date() : null,
-                        channel === 'sms' || channel === 'both',
-                        (channel === 'sms' || channel === 'both') ? new Date() : null
+                        emailSent,
+                        emailSent ? new Date() : null,
+                        smsSent,
+                        smsSent ? new Date() : null
                     ]);
 
                     requests.push(result.rows[0]);
