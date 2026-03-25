@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import api from '@/lib/api';
-import { List, Note, Whiteboard, Vault } from '@/types';
+import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 
 interface ShareItem {
   id: string | number;
@@ -16,12 +16,13 @@ export function useCanvasSharing(
   lists: List[],
   notes: Note[],
   whiteboards: Whiteboard[],
+  wireframes: Wireframe[],
   vaults: Vault[],
-  
 ) {
   const { toast } = useToast();
   const [showShareModal, setShowShareModal] = useState(false);
   const [currentShareItem, setCurrentShareItem] = useState<ShareItem | null>(null);
+  const token = localStorage.getItem('token');
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
@@ -88,6 +89,29 @@ export function useCanvasSharing(
       });
     } catch (error) {
       logger.error('Error unsharing whiteboard:', error);
+      throw error;
+    }
+  };
+
+  const handleWireframeShare = async (wireframeId: number): Promise<{ shareToken: string; shareUrl: string }> => {
+    try {
+      const response = await api.post(`/api/wireframes/${wireframeId}/share`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sharing wireframe:', error);
+      throw error;
+    }
+  };
+
+  const handleWireframeUnshare = async (wireframeId: number): Promise<void> => {
+    try {
+      await api.delete(`/api/wireframes/${wireframeId}/share`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      logger.error('Error unsharing wireframe:', error);
       throw error;
     }
   };
@@ -169,6 +193,24 @@ export function useCanvasSharing(
     setShowShareModal(true);
   };
 
+  const handleShareWireframe = (wireframeId: number) => {
+    const wireframe = wireframes.find(w => w.id === wireframeId);
+    if (!wireframe) return;
+
+    const existingShareData = wireframe.share_token && wireframe.is_public ? {
+      shareToken: wireframe.share_token,
+      shareUrl: `${window.location.protocol}//${window.location.host}/shared/wireframe/${wireframe.share_token}`
+    } : undefined;
+
+    setCurrentShareItem({
+      id: wireframeId,
+      title: wireframe.title,
+      itemType: 'wireframe',
+      shareData: existingShareData
+    });
+    setShowShareModal(true);
+  };
+
   const handleShareVault = (vaultId: number) => {
     const vault = vaults.find(v => v.id === vaultId);
     if (!vault) return;
@@ -193,12 +235,7 @@ export function useCanvasSharing(
     note: { onShare: handleNoteShare, onUnshare: handleNoteUnshare },
     whiteboard: { onShare: handleWhiteboardShare, onUnshare: handleWhiteboardUnshare },
     vault: { onShare: handleVaultShare, onUnshare: handleVaultUnshare },
-    wireframe: {
-      onShare: async () => {
-        throw new Error('Wireframe sharing not implemented');
-      },
-      onUnshare: async () => undefined
-    }
+    wireframe: { onShare: handleWireframeShare, onUnshare: handleWireframeUnshare }
   }), []);
 
   return {
@@ -210,6 +247,7 @@ export function useCanvasSharing(
     handleShareList,
     handleShareNote,
     handleShareWhiteboard,
+    handleShareWireframe,
     handleShareVault,
   };
 }
