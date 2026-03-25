@@ -185,6 +185,16 @@ export const getPlatforms = async (organizationId?: number): Promise<ReviewPlatf
     return response.data;
 };
 
+export const resendReviewRequest = async (
+    requestId: number,
+    organizationId?: number
+): Promise<ReviewRequest> => {
+    const response = await api.post(`/api/reputation/requests/${requestId}/resend`, {}, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
+    });
+    return response.data;
+};
+
 export const addPlatform = async (
     platform: Partial<ReviewPlatform>,
     organizationId?: number
@@ -439,6 +449,7 @@ export default {
     sendReviewRequest,
     sendBulkReviewRequests,
     deleteReviewRequest,
+    resendReviewRequest,
     // Widgets
     getWidgets,
     createWidget,
