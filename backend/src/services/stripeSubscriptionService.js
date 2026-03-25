@@ -651,6 +651,7 @@ class StripeSubscriptionService extends BaseService {
                 trialEnd: subscription.trial_end
             });
 
+            // Send email notification for trial ending
             try {
                 // Get organization email
                 const orgResult = await this.pool.query(
