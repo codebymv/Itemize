@@ -22,6 +22,7 @@ const {
     CALENDAR_LIMITS,
     getPlanFromStripePrice
 } = require('../lib/subscription.constants');
+const emailService = require('./emailService');
 
 class StripeService {
     constructor(pool) {
@@ -248,7 +249,7 @@ class StripeService {
 
         // Find organization by Stripe customer ID
         const orgResult = await this.pool.query(
-            'SELECT id, plan, billing_period_start FROM organizations WHERE stripe_customer_id = $1',
+            'SELECT id, name, email, plan, billing_period_start FROM organizations WHERE stripe_customer_id = $1',
             [customerId]
         );
 
@@ -363,7 +364,31 @@ class StripeService {
         
         if (planRank[plan] > planRank[previousPlan]) {
             logger.info(`[Stripe] Organization ${org.id} upgraded from ${previousPlan} to ${plan}`);
-            // TODO: Send upgrade email
+
+            if (org.email) {
+                try {
+                    const template = {
+                        subject: 'Subscription Upgrade Successful',
+                        body_html: `
+                            <h2>Hello ${org.name || 'there'},</h2>
+                            <p>Great news! Your organization has successfully upgraded to the <strong>${plan}</strong> plan.</p>
+                            <p>You now have access to all the features and increased limits associated with your new plan.</p>
+                            <p>Thank you for your continued business!</p>
+                            <br/>
+                            <p>The Team</p>
+                        `
+                    };
+
+                    await emailService.sendTemplateEmail({
+                        template,
+                        contact: { email: org.email, first_name: org.name }
+                    });
+                } catch (error) {
+                    logger.error(`[Stripe] Failed to send upgrade email to organization ${org.id}:`, error);
+                }
+            } else {
+                logger.warn(`[Stripe] Cannot send upgrade email to org ${org.id} - missing email address`);
+            }
         }
     }
 

@@ -628,7 +628,21 @@ const { currentUser } = useAuthState();
                 onWhiteboardShare={handleShareWhiteboard}
                 onWireframeUpdate={handleUpdateWireframe}
                 onWireframeDelete={handleDeleteWireframe}
-                onWireframeShare={handleShareWireframe}
+                onWireframeShare={(wireframeId) => {
+                  const wireframe = wireframes.find(w => w.id === wireframeId);
+                  if (wireframe) {
+                    setCurrentShareItem({
+                      id: wireframeId,
+                      title: wireframe.title || 'Untitled Wireframe',
+                      itemType: 'wireframe',
+                      shareData: wireframe.share_token && wireframe.is_public ? {
+                        shareToken: wireframe.share_token,
+                        shareUrl: `${window.location.origin}/shared/wireframe/${wireframe.share_token}`
+                      } : undefined
+                    });
+                    setShowShareModal(true);
+                  }
+                }}
                 onWireframePositionUpdate={handleWireframePositionChange}
                 onVaultUpdate={handleUpdateVault}
                 onVaultDelete={handleDeleteVault}
