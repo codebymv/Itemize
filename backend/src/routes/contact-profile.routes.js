@@ -139,6 +139,26 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch tasks', { error: err.message });
     }
 
+    // 9. Get bookings
+    let bookings = [];
+    try {
+      const bookingsQuery = `
+        SELECT id, calendar_id, title, start_time, end_time, status, source
+        FROM bookings
+        WHERE contact_id = $1
+        ORDER BY start_time DESC
+        LIMIT 20
+      `;
+      const bookingsRes = await pool.query(bookingsQuery, [id]);
+      bookings = bookingsRes.rows;
+    } catch (err) {
+      logger.warn('Failed to fetch bookings', { error: err.message });
+    }
+
+    // 10. Get communications
+    let communications = [];
+    // TODO: Integrate with communications correctly
+
     // Build response
     const response = {
       contact: {
@@ -205,7 +225,15 @@ router.get('/:id/profile', async (req, res) => {
         dueDate: task.due_date,
         completedAt: task.completed_at,
       })),
-      bookings: [], // TODO: Integrate with bookings
+      bookings: bookings.map(booking => ({
+        id: booking.id?.toString() || '0',
+        title: booking.title || 'Booking',
+        calendarId: booking.calendar_id?.toString() || '0',
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        status: booking.status || 'confirmed',
+        source: booking.source || 'booking_page'
+      })),
       timeline: activities.map(act => ({
         id: act.id?.toString() || '0',
         type: act.type || 'created',
