@@ -131,8 +131,9 @@ const { currentUser } = useAuthState();
     handleShareList,
     handleShareNote,
     handleShareWhiteboard,
-handleShareVault,
-  } = useCanvasSharing(lists, notes, whiteboards, vaults);
+    handleShareWireframe,
+    handleShareVault,
+  } = useCanvasSharing(lists, notes, whiteboards, wireframes, vaults);
 
 
   // Database-backed category management
@@ -627,10 +628,7 @@ handleShareVault,
                 onWhiteboardShare={handleShareWhiteboard}
                 onWireframeUpdate={handleUpdateWireframe}
                 onWireframeDelete={handleDeleteWireframe}
-                onWireframeShare={(wireframeId) => {
-                  // TODO: Implement wireframe sharing
-                  logger.log('Share wireframe:', wireframeId);
-                }}
+                onWireframeShare={handleShareWireframe}
                 onWireframePositionUpdate={handleWireframePositionChange}
                 onVaultUpdate={handleUpdateVault}
                 onVaultDelete={handleDeleteVault}
