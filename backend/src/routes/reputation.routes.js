@@ -8,8 +8,6 @@ const router = express.Router();
 const crypto = require('crypto');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
-const emailService = require('../services/emailService');
-const smsService = require('../services/smsService');
 
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -498,37 +496,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         request.id
                     ]);
 
-                                    // Actually send email/SMS
-                if (request.channel === 'email' || request.channel === 'both') {
-                    if (request.contact_email) {
-                        try {
-                            const reviewUrl = request.redirect_url || 'https://example.com/review'; // fallback
-                            const html = `<p>Hi ${request.contact_name || 'there'},</p><p>We would love to hear your feedback! Please click <a href="${reviewUrl}">here</a> to leave a review.</p><p>${request.custom_message || ''}</p>`;
-                            await emailService.sendEmail({
-                                to: request.contact_email,
-                                subject: 'We would love your feedback!',
-                                html: html,
-                            });
-                        } catch (e) {
-                            console.error('Error sending resend email:', e);
-                        }
-                    }
-                }
-
-                if (request.channel === 'sms' || request.channel === 'both') {
-                    if (request.contact_phone) {
-                        try {
-                            const reviewUrl = request.redirect_url || 'https://example.com/review';
-                            const message = `Hi ${request.contact_name || 'there'}, we would love to hear your feedback! Please click here to leave a review: ${reviewUrl} ${request.custom_message || ''}`;
-                            await smsService.sendSms({
-                                to: request.contact_phone,
-                                message: message,
-                            });
-                        } catch (e) {
-                            console.error('Error sending resend SMS:', e);
-                        }
-                    }
-                }
+                    // TODO: Actually send email/SMS
                     // For now, just update status
                 }
 
@@ -1167,82 +1135,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         } catch (error) {
             console.error('Error submitting review:', error);
             return sendError(res, 'Failed to submit review');
-        }
-    });
-/**
-     * POST /api/reputation/requests/:id/resend - Resend review request
-     */
-    router.post('/requests/:id/resend', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            const result = await withDbClient(pool, async (client) => {
-                const requestResult = await client.query(
-                    'SELECT * FROM review_requests WHERE id = $1 AND organization_id = $2',
-                    [id, req.organizationId]
-                );
-
-                if (requestResult.rows.length === 0) {
-                    return { status: 404, error: 'Review request not found' };
-                }
-
-                const request = requestResult.rows[0];
-
-                const updateResult = await client.query(`
-                    UPDATE review_requests SET
-                        status = 'sent',
-                        email_sent = CASE WHEN channel IN ('email', 'both') THEN TRUE ELSE email_sent END,
-                        email_sent_at = CASE WHEN channel IN ('email', 'both') THEN CURRENT_TIMESTAMP ELSE email_sent_at END,
-                        sms_sent = CASE WHEN channel IN ('sms', 'both') THEN TRUE ELSE sms_sent END,
-                        sms_sent_at = CASE WHEN channel IN ('sms', 'both') THEN CURRENT_TIMESTAMP ELSE sms_sent_at END,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $1
-                    RETURNING *
-                `, [request.id]);
-
-                                // Actually send email/SMS
-                if (request.channel === 'email' || request.channel === 'both') {
-                    if (request.contact_email) {
-                        try {
-                            const reviewUrl = request.redirect_url || 'https://example.com/review'; // fallback
-                            const html = `<p>Hi ${request.contact_name || 'there'},</p><p>We would love to hear your feedback! Please click <a href="${reviewUrl}">here</a> to leave a review.</p><p>${request.custom_message || ''}</p>`;
-                            await emailService.sendEmail({
-                                to: request.contact_email,
-                                subject: 'We would love your feedback!',
-                                html: html,
-                            });
-                        } catch (e) {
-                            console.error('Error sending resend email:', e);
-                        }
-                    }
-                }
-
-                if (request.channel === 'sms' || request.channel === 'both') {
-                    if (request.contact_phone) {
-                        try {
-                            const reviewUrl = request.redirect_url || 'https://example.com/review';
-                            const message = `Hi ${request.contact_name || 'there'}, we would love to hear your feedback! Please click here to leave a review: ${reviewUrl} ${request.custom_message || ''}`;
-                            await smsService.sendSms({
-                                to: request.contact_phone,
-                                message: message,
-                            });
-                        } catch (e) {
-                            console.error('Error sending resend SMS:', e);
-                        }
-                    }
-                }
-
-                return { status: 200, request: updateResult.rows[0] };
-            });
-
-            if (result.error) {
-                return res.status(result.status).json({ error: result.error });
-            }
-
-            res.json(result.request);
-        } catch (error) {
-            console.error('Error resending review request:', error);
-            return sendError(res, 'Failed to resend review request');
         }
     });
 
