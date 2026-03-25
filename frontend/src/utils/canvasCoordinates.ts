@@ -61,7 +61,6 @@ export function isNormalizedData(data: unknown): data is NormalizedCanvasData {
   const obj = data as Record<string, unknown>;
   return (
     obj.metadata !== undefined &&
-    obj.metadata !== null &&
     typeof obj.metadata === 'object' &&
     (obj.metadata as CanvasDataMetadata).normalized === true
   );

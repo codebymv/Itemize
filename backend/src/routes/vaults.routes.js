@@ -372,15 +372,10 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     return { status: 'not_found' };
                 }
 
-                if (item_ids.length > 0) {
-                    const indices = Array.from({ length: item_ids.length }, (_, i) => i);
-
+                for (let i = 0; i < item_ids.length; i++) {
                     await client.query(
-                        `UPDATE vault_items AS v
-                         SET order_index = t.new_order
-                         FROM unnest($1::int[], $2::int[]) AS t(id, new_order)
-                         WHERE v.id = t.id AND v.vault_id = $3`,
-                        [item_ids, indices, vaultId]
+                        'UPDATE vault_items SET order_index = $1 WHERE id = $2 AND vault_id = $3',
+                        [i, item_ids[i], vaultId]
                     );
                 }
 
