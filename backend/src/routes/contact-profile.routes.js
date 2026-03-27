@@ -158,31 +158,6 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch tasks', { error: err.message });
     }
 
-    // 9. Get communications (inbox messages)
-    let communications = [];
-    try {
-      const commsQuery = `
-        SELECT m.id, m.channel as type, m.sender_type, m.content, m.created_at as date,
-               c.subject
-        FROM messages m
-        JOIN conversations c ON m.conversation_id = c.id
-        WHERE c.contact_id = $1
-        ORDER BY m.created_at DESC
-        LIMIT 50
-      `;
-      const commsRes = await pool.query(commsQuery, [id]);
-      communications = commsRes.rows.map(row => ({
-        id: row.id?.toString() || '0',
-        type: row.type || 'email',
-        direction: row.sender_type === 'contact' ? 'inbound' : 'outbound',
-        subject: row.subject || '',
-        content: row.content || '',
-        date: row.date
-      }));
-    } catch (err) {
-      logger.warn('Failed to fetch communications', { error: err.message });
-    }
-
     // Build response
     const response = {
       contact: {
@@ -241,15 +216,6 @@ router.get('/:id/profile', async (req, res) => {
         priority: task.priority || 'medium',
         dueDate: task.due_date,
         completedAt: task.completed_at,
-      })),
-      bookings: bookings.map(booking => ({
-        id: booking.id?.toString() || '0',
-        title: booking.title || 'Booking',
-        calendarId: booking.calendar_id?.toString() || '0',
-        startTime: booking.start_time,
-        endTime: booking.end_time,
-        status: booking.status || 'confirmed',
-        source: booking.source || 'booking_page'
       })),
       timeline: activities.map(act => ({
         id: act.id?.toString() || '0',

@@ -18,7 +18,7 @@ import { AISuggestProvider } from "@/context/AISuggestContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "dummy-client-id.apps.googleusercontent.com";
 
 // Layout components
 import Navbar from "@/components/Navbar";
