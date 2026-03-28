@@ -396,6 +396,8 @@ const Home: React.FC = () => {
                     isLight={isLight}
                     showChrome={true}
                     className="screenshot-tilt"
+                    src="/screenshots/workspaces.png"
+                    alt="Itemize Workspaces Screenshot"
                   />
                 </div>
               </RevealSection>
