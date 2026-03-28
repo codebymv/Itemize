@@ -16,7 +16,7 @@ import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 
 // Global storage for autocomplete suggestions (persists across editor recreations)
-let globalAutocompleteStorage: {
+const globalAutocompleteStorage: {
   suggestion: string | null;
   triggerSuggestions: (() => void) | null;
   setSuggestionDebounce: ((wordCount: number) => void) | null;

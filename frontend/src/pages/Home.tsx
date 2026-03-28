@@ -221,13 +221,15 @@ const Home: React.FC = () => {
               <div className="screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
                 <AppScreenshot
                   label="Dashboard"
-                  sublabel="Replace with screenshot of your real dashboard"
+                  sublabel="Dashboard view"
                   accentFrom="from-blue-500"
                   accentTo="to-indigo-600"
                   isLight={isLight}
                   showChrome={true}
                   aspectRatio="aspect-[16/10]"
                   className="screenshot-tilt"
+                  src="/screenshots/dashboard.png"
+                  alt="Itemize Dashboard Screenshot"
                 />
               </div>
             </RevealSection>

@@ -89,9 +89,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await api.get('/api/auth/me');
 
         // After api.ts transformation, response.data is directly the user object
-        if (response.data && response.data.id) {
+        if (response.data && (response.data.id || response.data.uid)) {
           setCurrentUser({
-            uid: response.data.id,
+            uid: response.data.id || response.data.uid,
             name: response.data.name,
             email: response.data.email,
             role: response.data.role,
@@ -99,6 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Prefer stored access token when present
           const storedToken = getAuthToken();
           setToken(storedToken);
+        } else {
+          // If response.data exists but doesn't have an id, user is not authenticated
+          throw new Error('Invalid user data received');
         }
       } catch (error) {
         // 401 or other errors mean user is not authenticated

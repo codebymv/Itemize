@@ -261,7 +261,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   useEffect(() => {
     if (isMobile && canvasContainerRef.current) {
       const observer = new ResizeObserver(entries => {
-        for (let entry of entries) {
+        for (const entry of entries) {
           const renderedWidth = entry.contentRect.width;
           if (whiteboard.canvas_width && renderedWidth > 0) {
             const scale = renderedWidth / whiteboard.canvas_width;
@@ -286,7 +286,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (!canvasContainerRef.current) return;
 
     const observer = new ResizeObserver(entries => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
           logger.log('🎨 Container dimensions changed:', { width, height });

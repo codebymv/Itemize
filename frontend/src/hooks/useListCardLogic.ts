@@ -141,7 +141,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
         }
       }
 
-      let updateData: Partial<List> = { type: category };
+      const updateData: Partial<List> = { type: category };
       if (category !== 'General') {
         const selectedCategory = existingCategories.find(c => c.name === category);
         if (selectedCategory?.color_value) {
