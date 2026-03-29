@@ -186,6 +186,62 @@ def main():
                                     "stage_id": "lead",
                                     "probability": 20,
                                     "pipeline_id": 1
+                                },
+                                {
+                                    "id": 105,
+                                    "title": "Agency Partnership",
+                                    "value": 35000,
+                                    "stage_id": "lead",
+                                    "probability": 30,
+                                    "pipeline_id": 1,
+                                    "contact": { "first_name": "Emma", "last_name": "Wilson", "email": "emma@agency.com" }
+                                },
+                                {
+                                    "id": 106,
+                                    "title": "CorpNet Software Licensing",
+                                    "value": 85000,
+                                    "stage_id": "proposal",
+                                    "probability": 60,
+                                    "expected_close_date": "2024-07-15",
+                                    "pipeline_id": 1,
+                                    "contact": { "first_name": "James", "last_name": "Brown" },
+                                    "tags": ["Software", "Q3 Target"]
+                                },
+                                {
+                                    "id": 107,
+                                    "title": "Studio Design Rebrand",
+                                    "value": 18000,
+                                    "stage_id": "meeting",
+                                    "probability": 50,
+                                    "pipeline_id": 1,
+                                    "contact": { "first_name": "Olivia", "last_name": "Davis" }
+                                },
+                                {
+                                    "id": 108,
+                                    "title": "Logistics Fleet Tracking",
+                                    "value": 110000,
+                                    "stage_id": "proposal",
+                                    "probability": 80,
+                                    "pipeline_id": 1,
+                                    "contact": { "first_name": "William", "last_name": "Miller" }
+                                },
+                                {
+                                    "id": 109,
+                                    "title": "Retail Net POS Upgrade",
+                                    "value": 45000,
+                                    "stage_id": "contract",
+                                    "probability": 95,
+                                    "pipeline_id": 1,
+                                    "contact": { "first_name": "Sophia", "last_name": "Moore" },
+                                    "tags": ["Hardware", "Strategic"]
+                                },
+                                {
+                                    "id": 110,
+                                    "title": "Local Bakery Site",
+                                    "value": 5000,
+                                    "stage_id": "lead",
+                                    "probability": 10,
+                                    "pipeline_id": 1
                                 }
                             ]
                         }
