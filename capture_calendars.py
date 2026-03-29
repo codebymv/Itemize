@@ -29,13 +29,19 @@ async def mock_calendar_routes(page):
     # Mock /api/organizations/*
     await page.route("**/api/organizations/*", lambda route: route.fulfill(
         status=200,
-        json={"success": True, "data": {"organization": {"id": 1, "name": "Test Org"}}}
+        json={"success": True, "data": {"id": 1, "name": "Test Org"}}
     ))
 
     # Mock /api/onboarding/progress
     await page.route("**/api/onboarding/progress*", lambda route: route.fulfill(
         status=200,
         json={"success": True, "data": {"seen": ["canvas", "all", "dashboard", "workspaces", "calendars", "calendar", "booking", "bookings"], "dismissed": ["canvas", "all", "dashboard", "workspaces", "calendars", "calendar", "booking", "bookings"], "completed": ["canvas", "all", "dashboard", "workspaces", "calendars", "calendar", "booking", "bookings"]}}
+    ))
+
+    # Mock /api/calendar-integrations/connections
+    await page.route("**/api/calendar-integrations/connections*", lambda route: route.fulfill(
+        status=200,
+        json=[]
     ))
 
     # Mock /api/calendars
@@ -114,7 +120,7 @@ async def mock_calendar_routes(page):
     await page.route("**/socket.io/?*", lambda route: route.fulfill(status=200, body="ok"))
 
     # Catch-all for API to prevent hanging
-    await page.route(lambda url: "api/" in url and "api/auth/me" not in url and "api/users/me" not in url and "api/organizations" not in url and "api/onboarding/progress" not in url and "api/calendars" not in url, lambda route: route.fulfill(status=200, json={"success": True, "data": {}}))
+    await page.route(lambda url: "api/" in url and "api/auth/me" not in url and "api/users/me" not in url and "api/organizations" not in url and "api/onboarding/progress" not in url and "api/calendars" not in url and "api/calendar-integrations" not in url, lambda route: route.fulfill(status=200, json={"success": True, "data": {}}))
 
 async def main():
     async with async_playwright() as p:
