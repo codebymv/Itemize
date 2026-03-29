@@ -485,7 +485,7 @@ const Home: React.FC = () => {
                 title="Visual deal tracking that makes sense"
                 description="Drag deals through custom stages, see your revenue forecast at a glance, and never let an opportunity slip through the cracks."
                 features={['Drag-and-drop Kanban boards', 'Custom pipeline stages and deal values', 'Revenue forecasting and probability', 'Win/loss tracking and analytics']}
-                screenshot={{ label: 'Pipelines', sublabel: 'Kanban board with drag-and-drop deal management', accentFrom: 'from-emerald-500', accentTo: 'to-teal-500' }}
+                screenshot={{ label: 'Pipelines', sublabel: 'Kanban board with drag-and-drop deal management', accentFrom: 'from-emerald-500', accentTo: 'to-teal-500', src: '/screenshots/pipelines.png' }}
               />
 
               {/* Feature 3: Calendars & Booking */}
