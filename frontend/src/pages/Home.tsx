@@ -507,7 +507,7 @@ const Home: React.FC = () => {
                 title="Set it up once, let it work forever"
                 description="Build visual workflows that automatically send emails, update contacts, create tasks, and trigger actions -- so you can focus on what matters."
                 features={['Visual drag-and-drop workflow builder', 'Email sequences with templates', '8 action types including webhooks', '6 trigger types with conditional logic']}
-                screenshot={{ label: 'Automations', sublabel: 'Visual workflow builder with drag-and-drop nodes', accentFrom: 'from-pink-500', accentTo: 'to-rose-500' }}
+                screenshot={{ label: 'Automations', sublabel: 'Visual workflow builder with drag-and-drop nodes', accentFrom: 'from-pink-500', accentTo: 'to-rose-500', src: '/screenshots/automations.png' }}
               />
             </div>
           </div>
