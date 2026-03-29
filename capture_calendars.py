@@ -163,12 +163,6 @@ async def main():
                 /* Hide toasts */
                 [role="region"][aria-label="Notifications (F8)"] { display: none !important; }
                 .Toastify { display: none !important; }
-                /* Hide modals and overlays */
-                [role="dialog"] { display: none !important; }
-                [data-radix-focus-guard] { display: none !important; }
-                body[data-scroll-locked] { overflow: auto !important; padding-right: 0 !important; }
-                /* Hide backdrop/overlays */
-                div[data-state="open"][class*="fixed inset-0"] { display: none !important; }
                 /* Hide banners */
                 #cookie-consent, .cookie-banner { display: none !important; }
             `;
@@ -180,6 +174,23 @@ async def main():
 
         # Wait a bit for React to render and animations to settle
         await page.wait_for_timeout(2000)
+
+        # Dismiss any Onboarding Modal that may appear
+        try:
+            skip_btn = page.locator("button", has_text="Skip Tour")
+            if await skip_btn.is_visible():
+                await skip_btn.click()
+                await page.wait_for_timeout(500)
+        except Exception:
+            pass
+
+        try:
+            get_started_btn = page.locator("button", has_text="Get Started")
+            if await get_started_btn.is_visible():
+                await get_started_btn.click()
+                await page.wait_for_timeout(500)
+        except Exception:
+            pass
 
         # Take the screenshot
         await page.screenshot(path="frontend/public/screenshots/calendars.png")
