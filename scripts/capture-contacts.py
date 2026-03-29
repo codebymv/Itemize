@@ -79,21 +79,23 @@ def main():
 
         # Mock Contacts
         mock_contacts = [
-            { "id": "c1", "name": "Sarah Johnson", "email": "sarah@company.co", "phone": "(555) 123-4567", "company": "TechCorp", "status": "active", "tags": [{"id": "t1", "name": "Customer", "color": "blue"}], "activities": [] },
-            { "id": "c2", "name": "Mike Chen", "email": "mike@startup.io", "phone": "(555) 987-6543", "company": "StartupIO", "status": "active", "tags": [{"id": "t2", "name": "Lead", "color": "green"}], "activities": [] },
-            { "id": "c3", "name": "Emma Wilson", "email": "emma@agency.com", "phone": "(555) 246-8101", "company": "Creative Agency", "status": "inactive", "tags": [{"id": "t3", "name": "Vendor", "color": "purple"}], "activities": [] },
-            { "id": "c4", "name": "James Brown", "email": "james@corp.net", "phone": "(555) 135-7924", "company": "CorpNet", "status": "active", "tags": [{"id": "t1", "name": "Customer", "color": "blue"}], "activities": [] },
-            { "id": "c5", "name": "Olivia Davis", "email": "olivia@studio.design", "phone": "(555) 369-2580", "company": "Studio Design", "status": "active", "tags": [{"id": "t2", "name": "Lead", "color": "green"}], "activities": [] },
-            { "id": "c6", "name": "William Miller", "email": "will@logistics.com", "phone": "(555) 741-8529", "company": "Logistics Co", "status": "inactive", "tags": [], "activities": [] },
-            { "id": "c7", "name": "Sophia Moore", "email": "sophia@retail.net", "phone": "(555) 852-9630", "company": "Retail Net", "status": "active", "tags": [{"id": "t1", "name": "Customer", "color": "blue"}], "activities": [] },
+            { "id": 1, "first_name": "Sarah", "last_name": "Johnson", "email": "sarah@company.co", "phone": "(555) 123-4567", "company": "TechCorp", "status": "active", "tags": [], "created_at": "2023-01-10T08:00:00Z" },
+            { "id": 2, "first_name": "Mike", "last_name": "Chen", "email": "mike@startup.io", "phone": "(555) 987-6543", "company": "StartupIO", "status": "active", "tags": [], "created_at": "2023-01-11T09:30:00Z" },
+            { "id": 3, "first_name": "Emma", "last_name": "Wilson", "email": "emma@agency.com", "phone": "(555) 246-8101", "company": "Creative Agency", "status": "inactive", "tags": [], "created_at": "2023-01-12T10:15:00Z" },
+            { "id": 4, "first_name": "James", "last_name": "Brown", "email": "james@corp.net", "phone": "(555) 135-7924", "company": "CorpNet", "status": "active", "tags": [], "created_at": "2023-01-13T11:45:00Z" },
+            { "id": 5, "first_name": "Olivia", "last_name": "Davis", "email": "olivia@studio.design", "phone": "(555) 369-2580", "company": "Studio Design", "status": "active", "tags": [], "created_at": "2023-01-14T14:20:00Z" },
+            { "id": 6, "first_name": "William", "last_name": "Miller", "email": "will@logistics.com", "phone": "(555) 741-8529", "company": "Logistics Co", "status": "inactive", "tags": [], "created_at": "2023-01-15T15:10:00Z" },
+            { "id": 7, "first_name": "Sophia", "last_name": "Moore", "email": "sophia@retail.net", "phone": "(555) 852-9630", "company": "Retail Net", "status": "active", "tags": [], "created_at": "2023-01-16T16:05:00Z" },
         ]
 
         page.route("**/api/contacts**", lambda route: route.fulfill(
             status=200,
             json={
                 "success": True,
-                "data": mock_contacts,
-                "pagination": { "total": len(mock_contacts), "page": 1, "limit": 10, "totalPages": 1 }
+                "data": {
+                    "contacts": mock_contacts,
+                    "pagination": { "total": len(mock_contacts), "page": 1, "limit": 10, "totalPages": 1 }
+                }
             }
         ))
 
@@ -167,6 +169,7 @@ def main():
             localStorage.setItem('onboarding_completed', 'true');
             localStorage.setItem('has_seen_contacts_tour', 'true');
             localStorage.setItem('hide_cookie_banner', 'true');
+            localStorage.setItem('cookie-consent', 'true');
             localStorage.setItem('theme', 'light');
         """)
 
@@ -179,7 +182,18 @@ def main():
                     transition: none !important;
                     animation: none !important;
                 }
-                .toast, [role="dialog"], #onboarding-modal, .cookie-banner {
+                .toast, [role="dialog"], #onboarding-modal, .cookie-banner, [role="alertdialog"], .fixed.bottom-0.z-50 {
+                    display: none !important;
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+                div[data-state="open"] {
+                    background-color: transparent !important;
+                }
+                body {
+                    pointer-events: auto !important;
+                }
+                [data-radix-focus-guard] {
                     display: none !important;
                 }
             `;
@@ -202,9 +216,22 @@ def main():
         # Extra wait for the spinner to disappear
         page.wait_for_selector(".lucide-loader-2", state="hidden", timeout=5000)
 
+        # Handle the cookie banner if it's there
+        try:
+            # Look for a button containing "Accept" and click it
+            page.click("text='Accept'", timeout=2000)
+        except Exception:
+            pass
+
         # Scrub DOM
         page.evaluate("""
-            document.querySelectorAll('.toast, [role="dialog"], #onboarding-modal, .cookie-banner').forEach(el => el.remove());
+            document.querySelectorAll('.toast, [role="dialog"], #onboarding-modal, .cookie-banner, [role="alertdialog"], [data-radix-focus-guard], .fixed.bottom-0.z-50').forEach(el => el.remove());
+
+            // remove any radix dialog backdrops which have a specific class or attributes
+            document.querySelectorAll('div[data-state="open"][class*="fixed inset-0"]').forEach(el => el.remove());
+
+            // reset body pointer events
+            document.body.style.pointerEvents = "auto";
 
             // hide any remaining loaders just in case
             document.querySelectorAll('.animate-spin').forEach(el => el.remove());
