@@ -496,7 +496,7 @@ const Home: React.FC = () => {
                 title="Let clients book, you stay focused"
                 description="Share your availability and let clients book directly. Automatic reminders reduce no-shows and save hours of back-and-forth scheduling."
                 features={['Online booking pages with custom slugs', 'Google Calendar two-way sync', 'Automatic email reminders', 'Buffer times and daily limits']}
-                screenshot={{ label: 'Calendars', sublabel: 'Booking calendar management and scheduling', accentFrom: 'from-orange-500', accentTo: 'to-amber-500' }}
+                screenshot={{ label: 'Calendars', sublabel: 'Booking calendar management and scheduling', accentFrom: 'from-orange-500', accentTo: 'to-amber-500', src: '/screenshots/calendars.png' }}
               />
 
               {/* Feature 4: Automations */}
