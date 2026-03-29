@@ -14,6 +14,12 @@ def generate_valid_jwt():
     return jwt.encode(payload, secret, algorithm="HS256")
 
 async def mock_calendar_routes(page):
+    # Mock /api/auth/me
+    await page.route("**/api/auth/me*", lambda route: route.fulfill(
+        status=200,
+        json={"id": 1, "name": "Test User", "email": "test@example.com", "organization_id": 1, "role": "USER"}
+    ))
+
     # Mock /api/users/me
     await page.route("**/api/users/me*", lambda route: route.fulfill(
         status=200,
@@ -136,6 +142,10 @@ async def main():
             localStorage.setItem('has_seen_canvas_tour', 'true');
             localStorage.setItem('hide_cookie_banner', 'true');
             localStorage.setItem('itemize-theme', 'light');
+
+            // Itemize specific auth state
+            localStorage.setItem('itemize_user', JSON.stringify({{"uid": 1, "name": "Test User", "email": "test@example.com", "role": "USER"}}));
+            localStorage.setItem('itemize_expiry', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
         """)
 
         # 3. Defensive DOM Manipulation
