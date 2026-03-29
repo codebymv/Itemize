@@ -17,25 +17,25 @@ async def mock_calendar_routes(page):
     # Mock /api/auth/me
     await page.route("**/api/auth/me*", lambda route: route.fulfill(
         status=200,
-        json={"id": 1, "name": "Test User", "email": "test@example.com", "organization_id": 1, "role": "USER"}
+        json={"success": True, "data": {"id": "1", "uid": "1", "name": "Test User", "email": "test@example.com", "role": "USER"}}
     ))
 
     # Mock /api/users/me
     await page.route("**/api/users/me*", lambda route: route.fulfill(
         status=200,
-        json={"user": {"id": 1, "name": "Test User", "email": "test@example.com", "organization_id": 1}}
+        json={"success": True, "data": {"user": {"id": 1, "name": "Test User", "email": "test@example.com", "organization_id": 1}}}
     ))
 
     # Mock /api/organizations/*
     await page.route("**/api/organizations/*", lambda route: route.fulfill(
         status=200,
-        json={"organization": {"id": 1, "name": "Test Org"}}
+        json={"success": True, "data": {"organization": {"id": 1, "name": "Test Org"}}}
     ))
 
     # Mock /api/onboarding/progress
     await page.route("**/api/onboarding/progress*", lambda route: route.fulfill(
         status=200,
-        json={"seen": ["canvas", "all", "dashboard", "workspaces", "calendars"], "dismissed": ["canvas", "all", "dashboard", "workspaces", "calendars"], "completed": ["canvas", "all", "dashboard", "workspaces", "calendars"]}
+        json={"success": True, "data": {"seen": ["canvas", "all", "dashboard", "workspaces", "calendars", "calendar", "booking", "bookings"], "dismissed": ["canvas", "all", "dashboard", "workspaces", "calendars", "calendar", "booking", "bookings"], "completed": ["canvas", "all", "dashboard", "workspaces", "calendars", "calendar", "booking", "bookings"]}}
     ))
 
     # Mock /api/calendars
@@ -114,7 +114,7 @@ async def mock_calendar_routes(page):
     await page.route("**/socket.io/?*", lambda route: route.fulfill(status=200, body="ok"))
 
     # Catch-all for API to prevent hanging
-    await page.route("**/api/**", lambda route: route.fulfill(status=200, json={"success": True, "data": {}}))
+    await page.route(lambda url: "api/" in url and "api/auth/me" not in url and "api/users/me" not in url and "api/organizations" not in url and "api/onboarding/progress" not in url and "api/calendars" not in url, lambda route: route.fulfill(status=200, json={"success": True, "data": {}}))
 
 async def main():
     async with async_playwright() as p:
@@ -125,11 +125,13 @@ async def main():
         )
         page = await context.new_page()
 
+        page.on("console", lambda msg: print(f"Browser console: {msg.text}"))
+
         # 1. Setup Routes and Mocks
         await mock_calendar_routes(page)
 
         # 2. Establish Origin and Inject State
-        await page.goto("http://localhost:5174", wait_until="networkidle")
+        await page.goto("http://localhost:5173", wait_until="networkidle")
 
         valid_jwt = generate_valid_jwt()
 
@@ -144,7 +146,7 @@ async def main():
             localStorage.setItem('itemize-theme', 'light');
 
             // Itemize specific auth state
-            localStorage.setItem('itemize_user', JSON.stringify({{"uid": 1, "name": "Test User", "email": "test@example.com", "role": "USER"}}));
+            localStorage.setItem('itemize_user', JSON.stringify({{"id": 1, "uid": 1, "name": "Test User", "email": "test@example.com", "role": "USER"}}));
             localStorage.setItem('itemize_expiry', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
         """)
 
@@ -155,8 +157,12 @@ async def main():
                 /* Hide toasts */
                 [role="region"][aria-label="Notifications (F8)"] { display: none !important; }
                 .Toastify { display: none !important; }
-                /* Hide modals */
+                /* Hide modals and overlays */
                 [role="dialog"] { display: none !important; }
+                [data-radix-focus-guard] { display: none !important; }
+                body[data-scroll-locked] { overflow: auto !important; padding-right: 0 !important; }
+                /* Hide backdrop/overlays */
+                div[data-state="open"][class*="fixed inset-0"] { display: none !important; }
                 /* Hide banners */
                 #cookie-consent, .cookie-banner { display: none !important; }
             `;
@@ -164,7 +170,7 @@ async def main():
         """)
 
         # 4. Navigate to Calendars and Capture
-        await page.goto("http://localhost:5174/calendars", wait_until="networkidle")
+        await page.goto("http://localhost:5173/calendars", wait_until="networkidle")
 
         # Wait a bit for React to render and animations to settle
         await page.wait_for_timeout(2000)
