@@ -13,6 +13,8 @@ import ReactFlow, {
   MarkerType,
   NodeTypes,
   Panel,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -69,7 +71,8 @@ import {
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Custom node component for workflow steps
-const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const StepNode = ({ data, selected }: { data: Record<string, any>; selected: boolean }) => {
   const iconMap: Record<string, React.ReactNode> = {
     send_email: <Mail className="h-4 w-4" />,
     add_tag: <Tag className="h-4 w-4" />,
@@ -96,6 +99,7 @@ const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
     <div 
       className={`px-4 py-3 rounded-lg border-2 min-w-[180px] ${colorMap[data.step_type] || 'bg-muted border-border'} ${selected ? 'ring-2 ring-blue-600' : ''}`}
     >
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-slate-400" />
       <div className="flex items-center gap-2">
         {iconMap[data.step_type] || <Zap className="h-4 w-4" />}
         <span className="font-medium text-sm">{data.label}</span>
@@ -103,12 +107,14 @@ const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
       {data.description && (
         <p className="text-xs text-muted-foreground mt-1">{data.description}</p>
       )}
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-slate-400" />
     </div>
   );
 };
 
 // Trigger node component
-const TriggerNode = ({ data, selected }: { data: any; selected: boolean }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TriggerNode = ({ data, selected }: { data: Record<string, any>; selected: boolean }) => {
   return (
     <div 
       className={`px-4 py-3 rounded-lg border-2 min-w-[180px] bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 ${selected ? 'ring-2 ring-blue-600' : ''}`}
@@ -118,6 +124,7 @@ const TriggerNode = ({ data, selected }: { data: any; selected: boolean }) => {
         <span className="font-medium text-sm">Trigger</span>
       </div>
       <p className="text-xs text-muted-foreground mt-1">{data.label}</p>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-slate-400" />
     </div>
   );
 };
@@ -172,6 +179,7 @@ export function WorkflowBuilderPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [triggerType, setTriggerType] = useState<string>('contact_added');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [triggerConfig, setTriggerConfig] = useState<Record<string, any>>({});
   const [isActive, setIsActive] = useState(false);
 
@@ -185,6 +193,91 @@ export function WorkflowBuilderPage() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
 
   const isNewWorkflow = !id || id === 'new';
+
+
+  useEffect(() => {
+    if (!organizationId) {
+      setLoading(false);
+    }
+  }, [organizationId]);
+
+  const handleSave = useCallback(async () => {
+    if (!organizationId || !name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a workflow name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Convert nodes to steps
+      const stepNodes = nodes
+        .filter(n => n.type === 'step')
+        .sort((a, b) => a.position.y - b.position.y);
+
+      const steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[] = stepNodes.map((node, index) => ({
+        step_order: index + 1,
+        step_type: node.data.step_type,
+        step_config: node.data.step_config || {},
+      }));
+
+      if (isNewWorkflow) {
+        const newWorkflow = await createWorkflow({
+          organization_id: organizationId,
+          name,
+          description,
+          trigger_type: triggerType as Workflow['trigger_type'],
+          trigger_config: triggerConfig,
+          steps,
+        });
+        toast({ title: 'Created', description: 'Workflow created successfully' });
+        navigate(`/automations/${newWorkflow.id}`);
+      } else if (id) {
+        await updateWorkflow(parseInt(id), {
+          organization_id: organizationId,
+          name,
+          description,
+          trigger_type: triggerType as Workflow['trigger_type'],
+          trigger_config: triggerConfig,
+          steps,
+        });
+        toast({ title: 'Saved', description: 'Workflow saved successfully' });
+      }
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to save workflow',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast]);
+
+  const handleToggleActive = useCallback(async () => {
+    if (!organizationId || !id) return;
+
+    try {
+      if (isActive) {
+        await deactivateWorkflow(parseInt(id), organizationId);
+        setIsActive(false);
+        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
+      } else {
+        await activateWorkflow(parseInt(id), organizationId);
+        setIsActive(true);
+        toast({ title: 'Activated', description: 'Workflow activated successfully' });
+      }
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to update workflow',
+        variant: 'destructive',
+      });
+    }
+  }, [organizationId, id, isActive, toast]);
 
   // Set header content
   useEffect(() => {
@@ -233,13 +326,7 @@ export function WorkflowBuilderPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [name, isActive, saving, isNewWorkflow, theme, navigate, setHeaderContent]);
-
-  useEffect(() => {
-    if (!organizationId) {
-      setLoading(false);
-    }
-  }, [organizationId]);
+  }, [name, isActive, saving, isNewWorkflow, theme, navigate, setHeaderContent, handleSave, handleToggleActive]);
 
   // Fetch workflow and email templates
   useEffect(() => {
@@ -332,7 +419,7 @@ export function WorkflowBuilderPage() {
     };
 
     fetchData();
-  }, [organizationId, id, isNewWorkflow]);
+  }, [organizationId, id, isNewWorkflow, setEdges, setNodes, toast]);
 
   const getStepLabel = (stepType: string) => {
     return STEP_TYPES.find(s => s.value === stepType)?.label || stepType;
@@ -346,11 +433,12 @@ export function WorkflowBuilderPage() {
         return `Add: ${step.step_config?.tag_name || 'tag'}`;
       case 'remove_tag':
         return `Remove: ${step.step_config?.tag_name || 'tag'}`;
-      case 'wait':
+      case 'wait': {
         const days = step.step_config?.delay_days || 0;
         const hours = step.step_config?.delay_hours || 0;
         const mins = step.step_config?.delay_minutes || 0;
         return `Wait ${days}d ${hours}h ${mins}m`;
+      }
       case 'create_task':
         return step.step_config?.title || 'Create task';
       default:
@@ -413,6 +501,7 @@ export function WorkflowBuilderPage() {
     setShowStepConfig(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpdateNodeConfig = (config: Record<string, any>) => {
     if (!selectedNode) return;
 
@@ -425,11 +514,13 @@ export function WorkflowBuilderPage() {
     );
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getStepDescriptionFromConfig = (stepType: string, config: Record<string, any>) => {
     switch (stepType) {
-      case 'send_email':
+      case 'send_email': {
         const template = emailTemplates.find(t => t.id === config.template_id);
         return template?.name || 'Select template';
+      }
       case 'add_tag':
         return `Add: ${config.tag_name || 'tag'}`;
       case 'remove_tag':
@@ -443,83 +534,6 @@ export function WorkflowBuilderPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!organizationId || !name.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a workflow name',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Convert nodes to steps
-      const stepNodes = nodes
-        .filter(n => n.type === 'step')
-        .sort((a, b) => a.position.y - b.position.y);
-
-      const steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[] = stepNodes.map((node, index) => ({
-        step_order: index + 1,
-        step_type: node.data.step_type,
-        step_config: node.data.step_config || {},
-      }));
-
-      if (isNewWorkflow) {
-        const newWorkflow = await createWorkflow({
-          organization_id: organizationId,
-          name,
-          description,
-          trigger_type: triggerType as Workflow['trigger_type'],
-          trigger_config: triggerConfig,
-          steps,
-        });
-        toast({ title: 'Created', description: 'Workflow created successfully' });
-        navigate(`/automations/${newWorkflow.id}`);
-      } else if (id) {
-        await updateWorkflow(parseInt(id), {
-          organization_id: organizationId,
-          name,
-          description,
-          trigger_type: triggerType as Workflow['trigger_type'],
-          trigger_config: triggerConfig,
-          steps,
-        });
-        toast({ title: 'Saved', description: 'Workflow saved successfully' });
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to save workflow',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleToggleActive = async () => {
-    if (!organizationId || !id) return;
-
-    try {
-      if (isActive) {
-        await deactivateWorkflow(parseInt(id), organizationId);
-        setIsActive(false);
-        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
-      } else {
-        await activateWorkflow(parseInt(id), organizationId);
-        setIsActive(true);
-        toast({ title: 'Activated', description: 'Workflow activated successfully' });
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to update workflow',
-        variant: 'destructive',
-      });
-    }
-  };
 
   if (loading) {
     return <PageLoading message="Loading workflow..." className="h-full" />;
@@ -551,59 +565,67 @@ export function WorkflowBuilderPage() {
         </Button>
       </MobileControlsBar>
       <div className="h-full flex">
-        {/* Left sidebar - Step palette */}
-      <div className="w-64 border-r bg-muted/20 p-4 overflow-y-auto">
-        <h3 className="font-medium mb-4">Workflow Settings</h3>
-        
-        <div className="space-y-4 mb-6">
-          <div>
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Workflow name"
-            />
+      {/* Left sidebar - Step palette */}
+      <div className="w-64 border-r bg-sidebar p-3 overflow-y-auto text-sidebar-foreground">
+        <div className="mb-6">
+          <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none">
+            <span className="font-raleway text-sm font-semibold text-foreground">Workflow Settings</span>
           </div>
-          <div>
-            <Label>Description</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
-              rows={2}
-            />
-          </div>
-          <div>
-            <Label>Trigger</Label>
-            <Select value={triggerType} onValueChange={setTriggerType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TRIGGER_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+          <div className="space-y-4 px-2 mt-2">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Name</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Workflow name"
+                className="h-8 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Description</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description"
+                rows={3}
+                className="resize-none bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Trigger</Label>
+              <Select value={triggerType} onValueChange={setTriggerType}>
+                <SelectTrigger className="h-8 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRIGGER_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        <h3 className="font-medium mb-4">Add Steps</h3>
-        <div className="space-y-2">
-          {STEP_TYPES.map((step) => (
-            <Button
-              key={step.value}
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleAddStep(step.value)}
-            >
-              <step.icon className="h-4 w-4 mr-2" />
-              {step.label}
-            </Button>
-          ))}
+        <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none">
+          <span className="font-raleway text-sm font-semibold text-foreground">Add Steps</span>
         </div>
+        <ul className="flex w-full min-w-0 flex-col gap-1 mt-1">
+          {STEP_TYPES.map((step) => (
+            <li key={step.value} className="relative">
+              <button
+                className="group/menu-button flex h-9 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 font-raleway text-sidebar-foreground"
+                onClick={() => handleAddStep(step.value)}
+              >
+                <step.icon className="h-4 w-4 shrink-0 text-gray-600 dark:text-gray-400 group-hover/menu-button:text-blue-600 transition-colors" />
+                <span className="truncate">{step.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Main canvas */}
