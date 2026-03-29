@@ -474,7 +474,7 @@ const Home: React.FC = () => {
                 title="Every customer, every interaction, one view"
                 description="Stop searching through emails and spreadsheets. See your complete customer history, notes, deals, and communications in one unified profile."
                 features={['Unlimited contacts with custom fields', 'Activity timeline and interaction history', 'Smart tags and segmentation', 'CSV import and bulk operations']}
-                screenshot={{ label: 'Contacts', sublabel: 'Full contact management with search and filters', accentFrom: 'from-blue-500', accentTo: 'to-cyan-500' }}
+                screenshot={{ label: 'Contacts', sublabel: 'Full contact management with search and filters', accentFrom: 'from-blue-500', accentTo: 'to-cyan-500', src: '/screenshots/contacts.png' }}
               />
 
               {/* Feature 2: Sales Pipelines */}
