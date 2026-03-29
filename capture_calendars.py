@@ -149,6 +149,10 @@ async def main():
             localStorage.setItem('onboarding_completed', 'true');
             localStorage.setItem('has_seen_canvas_tour', 'true');
             localStorage.setItem('hide_cookie_banner', 'true');
+            localStorage.setItem('itemize_cookie_consent', JSON.stringify({{
+                "version": "1.0",
+                "preferences": {{ "essential": true, "analytics": true, "marketing": true, "consentGiven": true, "consentDate": "2026-03-29T21:19:11.111Z" }}
+            }}));
             localStorage.setItem('itemize-theme', 'light');
 
             // Itemize specific auth state
