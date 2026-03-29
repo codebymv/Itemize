@@ -162,7 +162,7 @@ def main():
             ]
         }
 
-        page.route("**/api/automations/workflows/1**", lambda route: route.fulfill(
+        page.route("**/api/workflows/1**", lambda route: route.fulfill(
             status=200,
             json={
                 "success": True,
@@ -292,6 +292,14 @@ def main():
         except:
             pass
 
+        # Select a node to show the config sidebar
+        try:
+            # Click on the node that has "Wait / Delay" to bring up the configuration sheet
+            page.click('.react-flow__node:has-text("Wait / Delay")', timeout=2000, force=True)
+            time.sleep(1)
+        except Exception as e:
+            print(f"Could not click node: {e}")
+
         # Try to drag the canvas up to show more nodes below
         page.mouse.move(600, 400)
         page.mouse.down()
@@ -299,6 +307,13 @@ def main():
         page.mouse.up()
 
         time.sleep(1)
+
+        # Focus on a safe non-interactive element to ensure selection clears
+        page.evaluate("document.body.focus();")
+
+        # Try removing selection via JS explicitly
+        page.evaluate("window.getSelection().removeAllRanges();")
+        time.sleep(0.5)
 
         # Handle the cookie banner if it's there
         try:
@@ -309,10 +324,20 @@ def main():
 
         # Scrub DOM
         page.evaluate("""
-            document.querySelectorAll('.toast, [role="dialog"], #onboarding-modal, .cookie-banner, [role="alertdialog"], [data-radix-focus-guard], .fixed.bottom-0.z-50').forEach(el => el.remove());
+            document.querySelectorAll('.toast, #onboarding-modal, .cookie-banner, [role="alertdialog"], [data-radix-focus-guard], .fixed.bottom-0.z-50').forEach(el => el.remove());
 
-            // remove any radix dialog backdrops which have a specific class or attributes
-            document.querySelectorAll('div[data-state="open"][class*="fixed inset-0"]').forEach(el => el.remove());
+            // keep role="dialog" if it contains the step config sidebar (Sheet)
+            document.querySelectorAll('[role="dialog"]').forEach(el => {
+                if (!el.textContent.includes('Configure Step')) {
+                    el.remove();
+                }
+            });
+
+            // remove any radix dialog backdrops which have a specific class or attributes but are not the sheet backdrop
+            document.querySelectorAll('div[data-state="open"][class*="fixed inset-0"]').forEach(el => {
+                // Remove backdrop entirely for a cleaner screenshot
+                el.remove();
+            });
 
             // reset body pointer events
             document.body.style.pointerEvents = "auto";

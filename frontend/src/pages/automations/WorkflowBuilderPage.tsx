@@ -13,6 +13,8 @@ import ReactFlow, {
   MarkerType,
   NodeTypes,
   Panel,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -69,7 +71,8 @@ import {
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Custom node component for workflow steps
-const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const StepNode = ({ data, selected }: { data: Record<string, any>; selected: boolean }) => {
   const iconMap: Record<string, React.ReactNode> = {
     send_email: <Mail className="h-4 w-4" />,
     add_tag: <Tag className="h-4 w-4" />,
@@ -96,6 +99,7 @@ const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
     <div 
       className={`px-4 py-3 rounded-lg border-2 min-w-[180px] ${colorMap[data.step_type] || 'bg-muted border-border'} ${selected ? 'ring-2 ring-blue-600' : ''}`}
     >
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-slate-400" />
       <div className="flex items-center gap-2">
         {iconMap[data.step_type] || <Zap className="h-4 w-4" />}
         <span className="font-medium text-sm">{data.label}</span>
@@ -103,12 +107,14 @@ const StepNode = ({ data, selected }: { data: any; selected: boolean }) => {
       {data.description && (
         <p className="text-xs text-muted-foreground mt-1">{data.description}</p>
       )}
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-slate-400" />
     </div>
   );
 };
 
 // Trigger node component
-const TriggerNode = ({ data, selected }: { data: any; selected: boolean }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TriggerNode = ({ data, selected }: { data: Record<string, any>; selected: boolean }) => {
   return (
     <div 
       className={`px-4 py-3 rounded-lg border-2 min-w-[180px] bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 ${selected ? 'ring-2 ring-blue-600' : ''}`}
@@ -118,6 +124,7 @@ const TriggerNode = ({ data, selected }: { data: any; selected: boolean }) => {
         <span className="font-medium text-sm">Trigger</span>
       </div>
       <p className="text-xs text-muted-foreground mt-1">{data.label}</p>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-slate-400" />
     </div>
   );
 };
@@ -172,6 +179,7 @@ export function WorkflowBuilderPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [triggerType, setTriggerType] = useState<string>('contact_added');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [triggerConfig, setTriggerConfig] = useState<Record<string, any>>({});
   const [isActive, setIsActive] = useState(false);
 
@@ -185,6 +193,91 @@ export function WorkflowBuilderPage() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
 
   const isNewWorkflow = !id || id === 'new';
+
+
+  useEffect(() => {
+    if (!organizationId) {
+      setLoading(false);
+    }
+  }, [organizationId]);
+
+  const handleSave = useCallback(async () => {
+    if (!organizationId || !name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a workflow name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Convert nodes to steps
+      const stepNodes = nodes
+        .filter(n => n.type === 'step')
+        .sort((a, b) => a.position.y - b.position.y);
+
+      const steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[] = stepNodes.map((node, index) => ({
+        step_order: index + 1,
+        step_type: node.data.step_type,
+        step_config: node.data.step_config || {},
+      }));
+
+      if (isNewWorkflow) {
+        const newWorkflow = await createWorkflow({
+          organization_id: organizationId,
+          name,
+          description,
+          trigger_type: triggerType as Workflow['trigger_type'],
+          trigger_config: triggerConfig,
+          steps,
+        });
+        toast({ title: 'Created', description: 'Workflow created successfully' });
+        navigate(`/automations/${newWorkflow.id}`);
+      } else if (id) {
+        await updateWorkflow(parseInt(id), {
+          organization_id: organizationId,
+          name,
+          description,
+          trigger_type: triggerType as Workflow['trigger_type'],
+          trigger_config: triggerConfig,
+          steps,
+        });
+        toast({ title: 'Saved', description: 'Workflow saved successfully' });
+      }
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to save workflow',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast]);
+
+  const handleToggleActive = useCallback(async () => {
+    if (!organizationId || !id) return;
+
+    try {
+      if (isActive) {
+        await deactivateWorkflow(parseInt(id), organizationId);
+        setIsActive(false);
+        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
+      } else {
+        await activateWorkflow(parseInt(id), organizationId);
+        setIsActive(true);
+        toast({ title: 'Activated', description: 'Workflow activated successfully' });
+      }
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to update workflow',
+        variant: 'destructive',
+      });
+    }
+  }, [organizationId, id, isActive, toast]);
 
   // Set header content
   useEffect(() => {
@@ -233,13 +326,7 @@ export function WorkflowBuilderPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [name, isActive, saving, isNewWorkflow, theme, navigate, setHeaderContent]);
-
-  useEffect(() => {
-    if (!organizationId) {
-      setLoading(false);
-    }
-  }, [organizationId]);
+  }, [name, isActive, saving, isNewWorkflow, theme, navigate, setHeaderContent, handleSave, handleToggleActive]);
 
   // Fetch workflow and email templates
   useEffect(() => {
@@ -332,7 +419,7 @@ export function WorkflowBuilderPage() {
     };
 
     fetchData();
-  }, [organizationId, id, isNewWorkflow]);
+  }, [organizationId, id, isNewWorkflow, setEdges, setNodes, toast]);
 
   const getStepLabel = (stepType: string) => {
     return STEP_TYPES.find(s => s.value === stepType)?.label || stepType;
@@ -346,11 +433,12 @@ export function WorkflowBuilderPage() {
         return `Add: ${step.step_config?.tag_name || 'tag'}`;
       case 'remove_tag':
         return `Remove: ${step.step_config?.tag_name || 'tag'}`;
-      case 'wait':
+      case 'wait': {
         const days = step.step_config?.delay_days || 0;
         const hours = step.step_config?.delay_hours || 0;
         const mins = step.step_config?.delay_minutes || 0;
         return `Wait ${days}d ${hours}h ${mins}m`;
+      }
       case 'create_task':
         return step.step_config?.title || 'Create task';
       default:
@@ -413,6 +501,7 @@ export function WorkflowBuilderPage() {
     setShowStepConfig(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpdateNodeConfig = (config: Record<string, any>) => {
     if (!selectedNode) return;
 
@@ -425,11 +514,13 @@ export function WorkflowBuilderPage() {
     );
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getStepDescriptionFromConfig = (stepType: string, config: Record<string, any>) => {
     switch (stepType) {
-      case 'send_email':
+      case 'send_email': {
         const template = emailTemplates.find(t => t.id === config.template_id);
         return template?.name || 'Select template';
+      }
       case 'add_tag':
         return `Add: ${config.tag_name || 'tag'}`;
       case 'remove_tag':
@@ -443,83 +534,6 @@ export function WorkflowBuilderPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!organizationId || !name.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a workflow name',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Convert nodes to steps
-      const stepNodes = nodes
-        .filter(n => n.type === 'step')
-        .sort((a, b) => a.position.y - b.position.y);
-
-      const steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[] = stepNodes.map((node, index) => ({
-        step_order: index + 1,
-        step_type: node.data.step_type,
-        step_config: node.data.step_config || {},
-      }));
-
-      if (isNewWorkflow) {
-        const newWorkflow = await createWorkflow({
-          organization_id: organizationId,
-          name,
-          description,
-          trigger_type: triggerType as Workflow['trigger_type'],
-          trigger_config: triggerConfig,
-          steps,
-        });
-        toast({ title: 'Created', description: 'Workflow created successfully' });
-        navigate(`/automations/${newWorkflow.id}`);
-      } else if (id) {
-        await updateWorkflow(parseInt(id), {
-          organization_id: organizationId,
-          name,
-          description,
-          trigger_type: triggerType as Workflow['trigger_type'],
-          trigger_config: triggerConfig,
-          steps,
-        });
-        toast({ title: 'Saved', description: 'Workflow saved successfully' });
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to save workflow',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleToggleActive = async () => {
-    if (!organizationId || !id) return;
-
-    try {
-      if (isActive) {
-        await deactivateWorkflow(parseInt(id), organizationId);
-        setIsActive(false);
-        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
-      } else {
-        await activateWorkflow(parseInt(id), organizationId);
-        setIsActive(true);
-        toast({ title: 'Activated', description: 'Workflow activated successfully' });
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to update workflow',
-        variant: 'destructive',
-      });
-    }
-  };
 
   if (loading) {
     return <PageLoading message="Loading workflow..." className="h-full" />;
