@@ -123,25 +123,6 @@ router.get('/:id/profile', async (req, res) => {
       logger.warn('Failed to fetch lists', { error: err.message });
     }
 
-        // 9. Get communications
-    let communications = [];
-    try {
-      const commsQuery = `
-        SELECT m.id, m.channel as type,
-               CASE WHEN m.sender_type = 'contact' THEN 'inbound' ELSE 'outbound' END as direction,
-               c.subject, m.content, m.created_at as date
-        FROM messages m
-        JOIN conversations c ON m.conversation_id = c.id
-        WHERE c.contact_id = $1
-        ORDER BY m.created_at DESC
-        LIMIT 20
-      `;
-      const commsRes = await pool.query(commsQuery, [id]);
-      communications = commsRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch communications', { error: err.message });
-    }
-
     // 8. Get tasks associated with contact
     let tasks = [];
     try {
