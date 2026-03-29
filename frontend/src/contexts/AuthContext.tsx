@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthToken(null);
         storage.removeItem('itemize_user');
         storage.removeItem('itemize_expiry');
-        logger.debug('Not authenticated (user not logged in)');
+        console.error('Auth Error:', error); logger.debug('Not authenticated (user not logged in)');
       } finally {
         setLoading(false);
       }
