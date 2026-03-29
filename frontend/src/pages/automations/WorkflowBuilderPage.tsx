@@ -551,59 +551,67 @@ export function WorkflowBuilderPage() {
         </Button>
       </MobileControlsBar>
       <div className="h-full flex">
-        {/* Left sidebar - Step palette */}
-      <div className="w-64 border-r bg-muted/20 p-4 overflow-y-auto">
-        <h3 className="font-medium mb-4">Workflow Settings</h3>
-        
-        <div className="space-y-4 mb-6">
-          <div>
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Workflow name"
-            />
+      {/* Left sidebar - Step palette */}
+      <div className="w-64 border-r bg-sidebar p-3 overflow-y-auto text-sidebar-foreground">
+        <div className="mb-6">
+          <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none">
+            <span className="font-raleway text-sm font-semibold text-foreground">Workflow Settings</span>
           </div>
-          <div>
-            <Label>Description</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
-              rows={2}
-            />
-          </div>
-          <div>
-            <Label>Trigger</Label>
-            <Select value={triggerType} onValueChange={setTriggerType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TRIGGER_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+          <div className="space-y-4 px-2 mt-2">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Name</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Workflow name"
+                className="h-8 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Description</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description"
+                rows={3}
+                className="resize-none bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Trigger</Label>
+              <Select value={triggerType} onValueChange={setTriggerType}>
+                <SelectTrigger className="h-8 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRIGGER_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        <h3 className="font-medium mb-4">Add Steps</h3>
-        <div className="space-y-2">
-          {STEP_TYPES.map((step) => (
-            <Button
-              key={step.value}
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleAddStep(step.value)}
-            >
-              <step.icon className="h-4 w-4 mr-2" />
-              {step.label}
-            </Button>
-          ))}
+        <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none">
+          <span className="font-raleway text-sm font-semibold text-foreground">Add Steps</span>
         </div>
+        <ul className="flex w-full min-w-0 flex-col gap-1 mt-1">
+          {STEP_TYPES.map((step) => (
+            <li key={step.value} className="relative">
+              <button
+                className="group/menu-button flex h-9 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 font-raleway text-sidebar-foreground"
+                onClick={() => handleAddStep(step.value)}
+              >
+                <step.icon className="h-4 w-4 shrink-0 text-gray-600 dark:text-gray-400 group-hover/menu-button:text-blue-600 transition-colors" />
+                <span className="truncate">{step.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Main canvas */}

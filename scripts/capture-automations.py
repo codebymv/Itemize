@@ -322,7 +322,7 @@ def main():
         """)
 
         print("Taking screenshot...")
-        page.screenshot(path="../frontend/public/screenshots/automations.png")
+        page.screenshot(path="frontend/public/screenshots/automations.png")
         print("Done!")
 
         browser.close()
