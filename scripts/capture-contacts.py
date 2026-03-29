@@ -26,21 +26,31 @@ def main():
 
         # 1. Network Interception & Data Mocking
 
-        # Mock /api/users/me
-        page.route("**/api/users/me", lambda route: route.fulfill(
+        # Route generic requests first so specific routes override them
+        page.route("**/api/**", lambda route: route.fulfill(
             status=200,
-            json={
-                "success": True,
-                "data": {
-                    "id": "mock_user_123",
-                    "email": "user@example.com",
-                    "firstName": "Mock",
-                    "lastName": "User",
-                    "organizationId": "mock_org_456",
-                    "role": "admin"
-                }
-            }
+            json={"success": True, "data": []}
         ))
+
+        # Mock /api/users/me and /api/auth/me
+        def handle_user_me(route):
+            route.fulfill(
+                status=200,
+                json={
+                    "success": True,
+                    "data": {
+                        "id": "mock_user_123",
+                        "email": "user@example.com",
+                        "firstName": "Mock",
+                        "lastName": "User",
+                        "organizationId": "mock_org_456",
+                        "role": "admin"
+                    }
+                }
+            )
+
+        page.route("**/api/users/me", handle_user_me)
+        page.route("**/api/auth/me", handle_user_me)
 
         # Mock /api/organizations/*
         page.route("**/api/organizations/*", lambda route: route.fulfill(
@@ -141,12 +151,6 @@ def main():
             }
         ))
 
-        # Route generic requests to avoid waiting for them if backend is not up
-        page.route("**/api/**", lambda route: route.fulfill(
-            status=200,
-            json={"success": True, "data": []}
-        ))
-
         # 2. State Injection
 
         # Navigate to base URL to establish origin
@@ -159,6 +163,7 @@ def main():
             localStorage.setItem('itemize_token', '{valid_jwt}');
             localStorage.setItem('token', '{valid_jwt}');
             localStorage.setItem('itemize_logged_out', '0');
+            localStorage.setItem('itemize_user', JSON.stringify({{"uid":"mock_user_123","name":"Mock User","email":"user@example.com","role":"admin"}}));
             localStorage.setItem('onboarding_completed', 'true');
             localStorage.setItem('has_seen_contacts_tour', 'true');
             localStorage.setItem('hide_cookie_banner', 'true');
@@ -182,6 +187,10 @@ def main():
         """)
 
         # 4. Capture
+
+        # Reload to ensure React context picks up the injected state
+        page.reload()
+        page.wait_for_load_state("networkidle")
 
         print("Navigating to /contacts...")
         page.goto("http://localhost:5173/contacts")
