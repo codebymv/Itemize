@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import {
   Server,
@@ -13,6 +14,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +68,7 @@ interface StatusData {
 
 const StatusPage: React.FC = () => {
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const headerContext = React.useContext(HeaderContext);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -266,8 +269,20 @@ const StatusPage: React.FC = () => {
   }
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-5xl mx-auto">
       <BackgroundClouds />
+      {!headerContext && (
+        <div className="mb-4">
+          <Button
+            onClick={() => navigate(-1)}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        </div>
+      )}
       <PageSurface>
         {!headerContext && headerNode}
         <div className="space-y-3">

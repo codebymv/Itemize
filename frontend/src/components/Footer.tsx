@@ -71,10 +71,10 @@ const Footer: React.FC = () => {
                 <li>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start pl-2 text-muted-foreground hover:text-foreground"
+                    className={`w-full justify-start pl-2 group ${location.pathname.startsWith('/canvas') ? 'text-foreground font-medium bg-accent/50' : 'text-muted-foreground hover:text-foreground'}`}
                     onClick={() => handleNavigate('/canvas')}
                   >
-                    <Palette className="mr-2 h-4 w-4" />
+                    <Palette className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/canvas') ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
                     Canvas
                   </Button>
                 </li>
@@ -82,20 +82,20 @@ const Footer: React.FC = () => {
               <li>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start pl-2 text-muted-foreground hover:text-foreground"
+                  className={`w-full justify-start pl-2 group ${location.pathname.startsWith('/help') ? 'text-foreground font-medium bg-accent/50' : 'text-muted-foreground hover:text-foreground'}`}
                   onClick={() => handleNavigate('/help')}
                 >
-                  <Book className="mr-2 h-4 w-4" />
+                  <Book className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/help') ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
                   Help
                 </Button>
               </li>
               <li>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start pl-2 text-muted-foreground hover:text-foreground"
+                  className={`w-full justify-start pl-2 group ${location.pathname.startsWith('/status') ? 'text-foreground font-medium bg-accent/50' : 'text-muted-foreground hover:text-foreground'}`}
                   onClick={() => handleNavigate('/status')}
                 >
-                  <Activity className="mr-2 h-4 w-4" />
+                  <Activity className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/status') ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
                   Status
                 </Button>
               </li>
