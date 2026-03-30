@@ -46,14 +46,18 @@ const FeatureShowcase = memo(function FeatureShowcase({
         className={`${textReveal.className} ${reverse ? 'lg:order-2' : 'lg:order-1'}`}
         style={textReveal.style}
       >
-        {/* Badge */}
-        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 bg-gradient-to-r ${badge.color} text-white shadow-lg shadow-blue-500/10`}>
-          <badge.icon className="h-4 w-4" />
-          {badge.label}
+        {/* Category Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className={`flex flex-shrink-0 items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br ${badge.color} shadow-lg shadow-blue-500/20`}>
+            <badge.icon className="h-6 w-6 text-white" />
+          </div>
+          <h2 className={`text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r ${badge.color}`}>
+            {badge.label}
+          </h2>
         </div>
 
         {/* Title - uses display font */}
-        <h3 className={`landing-heading text-2xl md:text-3xl lg:text-4xl font-extrabold ${textColor} mb-5 leading-tight`}>
+        <h3 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-6 leading-tight`}>
           {title}
         </h3>
 

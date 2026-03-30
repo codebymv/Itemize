@@ -5,7 +5,7 @@ interface HeaderContextType {
     setHeaderContent: (content: ReactNode) => void;
 }
 
-const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
+export const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
 
 export function HeaderProvider({ children }: { children: ReactNode }) {
     const [headerContent, setHeaderContent] = useState<ReactNode>(null);

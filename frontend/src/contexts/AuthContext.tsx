@@ -103,13 +103,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // If response.data exists but doesn't have an id, user is not authenticated
           throw new Error('Invalid user data received');
         }
-      } catch (error) {
+      } catch (error: any) {
         // 401 or other errors mean user is not authenticated
         // Clear any stale data
         setAuthToken(null);
         storage.removeItem('itemize_user');
         storage.removeItem('itemize_expiry');
-        console.error('Auth Error:', error); logger.debug('Not authenticated (user not logged in)');
+        
+        if (error?.response?.status === 401) {
+          logger.debug('Not authenticated (user not logged in)');
+        } else {
+          console.error('Auth Error:', error); 
+          logger.debug('Not authenticated (user not logged in)');
+        }
       } finally {
         setLoading(false);
       }
@@ -139,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
     
     // Store user data and access token for Authorization header
-    storage.setJson('itemize_user', userData);
+    storage.setJson('itemize_user', userData as unknown as Record<string, unknown>);
     storage.setItem('itemize_expiry', expiryTime.toString());
     setAuthToken(authToken);
     if (refreshToken) {

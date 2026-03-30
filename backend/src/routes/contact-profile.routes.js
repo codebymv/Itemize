@@ -159,7 +159,7 @@ router.get('/:id/profile', async (req, res) => {
     }
 
     // 9. Get communications (inbox messages)
-    let communications = [];
+    communications = [];
     try {
       const commsQuery = `
         SELECT m.id, m.channel as type, m.sender_type, m.content, m.created_at as date,

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Monitor } from 'lucide-react';
+import { Monitor, Lock } from 'lucide-react';
 
 interface AppScreenshotProps {
   /** Label shown inside the placeholder (e.g. "Dashboard", "Pipeline View") */
@@ -64,9 +64,9 @@ const AppScreenshot = memo(function AppScreenshot({
             <div className="w-3 h-3 rounded-full bg-green-400/80" />
           </div>
           {/* URL bar */}
-          <div className={`flex-1 ${chromeUrlBg} rounded-md px-3 py-1 flex items-center gap-2`}>
-            <div className={`w-3 h-3 rounded-sm ${isLight ? 'bg-gray-200' : 'bg-slate-500'}`} />
-            <span className={`text-xs ${chromeUrlText} select-none`}>itemize.cloud</span>
+          <div className={`flex-1 mx-4 ${chromeUrlBg} rounded-md px-3 py-1 flex items-center justify-center gap-1.5 shadow-sm`}>
+            <Lock className={`w-3 h-3 opacity-70 ${chromeUrlText}`} />
+            <span className={`text-[11px] font-medium tracking-wide ${chromeUrlText} select-none`}>itemize.cloud</span>
           </div>
         </div>
       )}

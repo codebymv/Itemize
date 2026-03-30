@@ -4,9 +4,9 @@ import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { 
-  ArrowRight, 
-  CheckCircle, 
+import {
+  ArrowRight,
+  CheckCircle,
   Users,
   TrendingUp,
   Calendar,
@@ -20,8 +20,10 @@ import {
   CheckSquare,
   StickyNote,
   Palette,
+  Map,
 } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
+import Footer from '@/components/Footer';
 import { PricingCards } from '@/components/subscription';
 import AppScreenshot from './home/components/AppScreenshot';
 import FeatureShowcase from './home/components/FeatureShowcase';
@@ -31,15 +33,15 @@ import { useRevealClass } from '@/hooks/useScrollReveal';
 /* ═══════════════════════════════════════════════════════════════ */
 /* Reusable reveal wrapper for sections                           */
 /* ═══════════════════════════════════════════════════════════════ */
-const RevealSection = React.memo(function RevealSection({ 
-  children, 
-  variant = 'fade-up' as const, 
+const RevealSection = React.memo(function RevealSection({
+  children,
+  variant = 'fade-up' as const,
   delay = 0,
   className = '',
   isFastScrolling = false,
-}: { 
-  children: React.ReactNode; 
-  variant?: 'fade-up' | 'fade' | 'scale'; 
+}: {
+  children: React.ReactNode;
+  variant?: 'fade-up' | 'fade' | 'scale';
   delay?: number;
   className?: string;
   isFastScrolling?: boolean;
@@ -57,7 +59,7 @@ const Home: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
-  
+
   // Scroll velocity tracking
   const [isFastScrolling, setIsFastScrolling] = useState(false);
   const scrollTimeoutRef = React.useRef<NodeJS.Timeout>();
@@ -74,28 +76,28 @@ const Home: React.FC = () => {
     const handleScroll = () => {
       const now = performance.now();
       const y = window.scrollY;
-      
+
       if (lastTime > 0) {
         const deltaTime = now - lastTime;
         const deltaY = Math.abs(y - lastY);
         const velocity = deltaY / deltaTime;
-        
+
         if (velocity > velocityThreshold) {
           setIsFastScrolling(true);
-          
+
           if (scrollTimeoutRef.current) {
             clearTimeout(scrollTimeoutRef.current);
           }
-          
+
           scrollTimeoutRef.current = setTimeout(() => {
             setIsFastScrolling(false);
           }, scrollCooldown);
         }
       }
-      
+
       lastY = y;
       lastTime = now;
-      
+
       rafId = requestAnimationFrame(handleScroll);
     };
 
@@ -144,7 +146,7 @@ const Home: React.FC = () => {
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
       {/* Background effects */}
       <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={10} isLight={isLight} />
-      
+
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} style={{ willChange: 'transform' }} />
@@ -158,7 +160,7 @@ const Home: React.FC = () => {
       <LandingNav />
 
       <div className="relative z-10">
-        
+
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 1: HERO                                                */}
         {/* Centered headline with full-width screenshot below             */}
@@ -178,14 +180,14 @@ const Home: React.FC = () => {
 
               <RevealSection variant="fade-up" delay={100} isFastScrolling={isFastScrolling}>
                 <p className={`text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
-                  Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts, 
+                  Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
                   deals, and workflows together with beautiful workspaces.
                 </p>
               </RevealSection>
 
               <RevealSection variant="fade-up" delay={200} isFastScrolling={isFastScrolling}>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                  <Button 
+                  <Button
                     onClick={handleGetStarted}
                     className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
                     size="lg"
@@ -193,14 +195,7 @@ const Home: React.FC = () => {
                     Start Free Trial
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button 
-                    variant="outline"
-                    className={`rounded-xl px-8 py-6 text-lg font-semibold ${isLight ? 'border-gray-300 hover:bg-gray-50 text-gray-700' : 'border-slate-600 hover:bg-slate-800 text-slate-300'}`}
-                    size="lg"
-                    onClick={() => scrollToSection('how-it-works')}
-                  >
-                    See How It Works
-                  </Button>
+
                 </div>
               </RevealSection>
 
@@ -248,42 +243,48 @@ const Home: React.FC = () => {
                   Sound familiar?
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor}`}>
-                  Tired of juggling disconnected tools?
+                  Stop juggling disconnected tools
                 </h2>
               </div>
             </RevealSection>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-16">
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8 mb-16">
               {[
-                { 
-                  title: 'Scattered Data', 
+                {
+                  title: 'Scattered Data',
                   desc: 'Customer info spread across spreadsheets, emails, and sticky notes. Nothing connects.',
                   gradient: 'from-red-500 to-orange-500',
-                  number: '01',
+                  image: '/illustrations/scattered-data.png',
                 },
-                { 
-                  title: 'Tool Overload', 
+                {
+                  title: 'Tool Overload',
                   desc: 'Paying for CRM + calendar + forms + automation separately. Stitching them together is a nightmare.',
                   gradient: 'from-orange-500 to-amber-500',
-                  number: '02',
+                  image: '/illustrations/tool-overload.png',
                 },
-                { 
-                  title: 'No Clear Picture', 
+                {
+                  title: 'No Clear Picture',
                   desc: "Can't see your pipeline, contacts, and tasks in one view. Decisions are based on gut, not data.",
                   gradient: 'from-amber-500 to-yellow-500',
-                  number: '03',
+                  image: '/illustrations/no-clear-picture.png',
                 },
               ].map((pain, i) => (
                 <RevealSection key={i} variant="fade-up" delay={i * 100} isFastScrolling={isFastScrolling}>
-                  <div className={`relative ${cardBgColor} rounded-2xl border ${cardBorderColor} p-8 h-full group hover:shadow-lg transition-all duration-300`}>
-                    {/* Number accent */}
-                    <span className={`absolute top-6 right-6 text-5xl font-extrabold ${isLight ? 'text-gray-100' : 'text-slate-700'} select-none leading-none`}>
-                      {pain.number}
-                    </span>
-                    {/* Gradient top bar */}
-                    <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${pain.gradient} mb-6`} />
-                    <h3 className={`landing-heading text-xl font-bold ${textColor} mb-3 relative`}>{pain.title}</h3>
-                    <p className={`${secondaryTextColor} leading-relaxed relative`}>{pain.desc}</p>
+                  <div className={`relative ${cardBgColor} rounded-3xl border ${cardBorderColor} overflow-hidden h-full group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col`}>
+                    <div className="relative h-48 sm:h-56 w-full overflow-hidden bg-slate-900 border-b border-black/5 dark:border-white/5">
+                      <img
+                        src={pain.image}
+                        alt={pain.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-95 group-hover:opacity-100"
+                      />
+                      {/* Gradient to blend the dark image into the card's background */}
+                      <div className={`absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/20 to-transparent' : 'from-slate-800 via-slate-800/20 to-transparent'}`} />
+                    </div>
+                    <div className="p-8 pt-6 flex-1 relative z-10 flex flex-col">
+                      <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${pain.gradient} mb-6`} />
+                      <h3 className={`landing-heading text-xl font-bold ${textColor} mb-3`}>{pain.title}</h3>
+                      <p className={`${secondaryTextColor} leading-relaxed flex-1`}>{pain.desc}</p>
+                    </div>
                   </div>
                 </RevealSection>
               ))}
@@ -292,92 +293,14 @@ const Home: React.FC = () => {
             <RevealSection isFastScrolling={isFastScrolling}>
               <div className="text-center">
                 <p className={`text-xl font-semibold ${textColor}`}>
-                  There's a better way <span className="landing-gradient-text font-bold">→</span>
+                  There's a better way <span className="landing-gradient-text font-bold">↓</span>
                 </p>
               </div>
             </RevealSection>
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 3: HOW IT WORKS                                        */}
-        {/* Connected steps with visual flow line                          */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className={`py-20 md:py-32 relative ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <RevealSection isFastScrolling={isFastScrolling}>
-              <div className="text-center mb-20">
-                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
-                  How It Works
-                </p>
-                <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor}`}>
-                  Three steps to a better business
-                </h2>
-              </div>
-            </RevealSection>
 
-            <div className="relative">
-              {/* Connecting line (desktop) */}
-              <div className={`hidden md:block absolute top-24 left-[16.66%] right-[16.66%] h-px ${isLight ? 'bg-gray-200' : 'bg-slate-700'}`} />
-
-              <div className="grid md:grid-cols-3 gap-12 md:gap-8">
-                {[
-                  { 
-                    step: '1', 
-                    title: 'Organize', 
-                    desc: 'Bring all your contacts, notes, and ideas into one unified workspace. No more switching tabs.',
-                    icon: Layers,
-                    gradient: 'from-blue-500 to-blue-600',
-                    shadow: 'shadow-blue-500/20',
-                  },
-                  { 
-                    step: '2', 
-                    title: 'Automate', 
-                    desc: 'Set up workflows that handle follow-ups, reminders, and busywork. It runs while you sleep.',
-                    icon: Zap,
-                    gradient: 'from-indigo-500 to-indigo-600',
-                    shadow: 'shadow-indigo-500/20',
-                  },
-                  { 
-                    step: '3', 
-                    title: 'Grow', 
-                    desc: 'Focus on relationships and closing deals while the system works for you. Watch the numbers climb.',
-                    icon: TrendingUp,
-                    gradient: 'from-emerald-500 to-emerald-600',
-                    shadow: 'shadow-emerald-500/20',
-                  },
-                ].map((item, i) => (
-                  <RevealSection key={i} variant="fade-up" delay={i * 150} isFastScrolling={isFastScrolling}>
-                    <div className="text-center relative">
-                      {/* Step circle */}
-                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mx-auto mb-8 shadow-xl ${item.shadow} relative z-10`}>
-                        <item.icon className="h-9 w-9 text-white" />
-                      </div>
-                      <div className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-3`}>
-                        Step {item.step}
-                      </div>
-                      <h3 className={`landing-heading text-2xl font-bold ${textColor} mb-4`}>{item.title}</h3>
-                      <p className={`${secondaryTextColor} leading-relaxed max-w-xs mx-auto`}>{item.desc}</p>
-                    </div>
-                  </RevealSection>
-                ))}
-              </div>
-            </div>
-
-            <RevealSection delay={500} isFastScrolling={isFastScrolling}>
-              <div className="text-center mt-16">
-                <Button 
-                  onClick={handleGetStarted}
-                  className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
-                  size="lg"
-                >
-                  Start Organizing Today
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-            </RevealSection>
-          </div>
-        </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 4: WORKSPACES DIFFERENTIATOR                           */}
@@ -405,16 +328,22 @@ const Home: React.FC = () => {
               {/* Content */}
               <RevealSection variant="fade-up" delay={150} className="order-1 lg:order-2" isFastScrolling={isFastScrolling}>
                 <div>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
-                    <Sparkles className="h-4 w-4" />
-                    Unique to Itemize
+                  {/* Category Header */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="flex flex-shrink-0 items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg shadow-blue-500/20">
+                      <Map className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className={`text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r ${accentGradient}`}>
+                      Workspaces
+                    </h2>
                   </div>
+
                   <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight`}>
-                    The only CRM with built-in{' '}
-                    <span className={`bg-clip-text text-transparent ${accentGradient}`}>Workspaces</span>
+                    The only CRM with a built-in{' '}
+                    <span className={`bg-clip-text text-transparent ${accentGradient}`}>Workspace Canvas</span>
                   </h2>
                   <p className={`text-lg leading-relaxed ${secondaryTextColor} mb-8`}>
-                    Other CRMs force you to keep notes in separate apps. Itemize includes 
+                    Other CRMs force you to keep notes in separate apps. Itemize includes
                     powerful lists, notes, and whiteboards -- right alongside your contacts and deals.
                   </p>
                   <ul className="space-y-5 mb-10">
@@ -432,7 +361,7 @@ const Home: React.FC = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button 
+                  <Button
                     onClick={handleGetStarted}
                     className={`rounded-xl px-6 py-5 ${accentGradient} ${accentGradientHover} text-white font-semibold shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
                   >
@@ -517,11 +446,11 @@ const Home: React.FC = () => {
         {/* SECTION 6: INTEGRATIONS                                        */}
         {/* Real brand logos in a grid                                     */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="integrations" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
+        <section id="integrations" className={`pt-20 md:pt-32 pb-10 md:pb-16 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection isFastScrolling={isFastScrolling}>
               <div className="text-center mb-16">
-                <p className={`text-sm font-bold uppercase tracking-widest ${mutedTextColor} mb-4`}>
+                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
                   Integrations
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-5`}>
@@ -542,62 +471,64 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 7: TRUST & SECURITY                                    */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="security" className="py-20 md:py-28" style={{ contain: 'layout style' }}>
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <RevealSection isFastScrolling={isFastScrolling}>
-              <div className="text-center mb-14">
-                <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-4`}>
-                  Your data, protected
-                </h2>
-                <p className={`max-w-xl mx-auto text-lg ${secondaryTextColor}`}>
-                  Security isn't an afterthought -- it's built into everything we do.
-                </p>
-              </div>
-            </RevealSection>
+        {false && (
+          <section id="security" className="py-20 md:py-28" style={{ contain: 'layout style' }}>
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+              <RevealSection isFastScrolling={isFastScrolling}>
+                <div className="text-center mb-14">
+                  <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-4`}>
+                    Your data, protected
+                  </h2>
+                  <p className={`max-w-xl mx-auto text-lg ${secondaryTextColor}`}>
+                    Security isn't an afterthought -- it's built into everything we do.
+                  </p>
+                </div>
+              </RevealSection>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { icon: Lock, label: '256-bit Encryption', desc: 'End-to-end data protection' },
-                { icon: Shield, label: 'GDPR Ready', desc: 'Full compliance built in' },
-                { icon: Cloud, label: '99.9% Uptime', desc: 'Reliable infrastructure' },
-                { icon: Key, label: 'Secure Auth', desc: 'OAuth2 and 2FA support' },
-              ].map((item, i) => (
-                <RevealSection key={i} variant="fade-up" delay={i * 80} isFastScrolling={isFastScrolling}>
-                  <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-all duration-300 hover:shadow-md`}>
-                    <div className={`w-14 h-14 rounded-2xl ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'} flex items-center justify-center mx-auto mb-4`}>
-                      <item.icon className={`h-7 w-7 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { icon: Lock, label: '256-bit Encryption', desc: 'End-to-end data protection' },
+                  { icon: Shield, label: 'GDPR Ready', desc: 'Full compliance built in' },
+                  { icon: Cloud, label: '99.9% Uptime', desc: 'Reliable infrastructure' },
+                  { icon: Key, label: 'Secure Auth', desc: 'OAuth2 and 2FA support' },
+                ].map((item, i) => (
+                  <RevealSection key={i} variant="fade-up" delay={i * 80} isFastScrolling={isFastScrolling}>
+                    <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-all duration-300 hover:shadow-md`}>
+                      <div className={`w-14 h-14 rounded-2xl ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'} flex items-center justify-center mx-auto mb-4`}>
+                        <item.icon className={`h-7 w-7 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
+                      </div>
+                      <h3 className={`font-bold ${textColor} mb-1`}>{item.label}</h3>
+                      <p className={`text-sm ${mutedTextColor}`}>{item.desc}</p>
                     </div>
-                    <h3 className={`font-bold ${textColor} mb-1`}>{item.label}</h3>
-                    <p className={`text-sm ${mutedTextColor}`}>{item.desc}</p>
-                  </div>
-                </RevealSection>
-              ))}
+                  </RevealSection>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 8: PRICING                                             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="pricing" className={`py-20 md:py-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
+        <section id="pricing" className={`pt-10 md:pt-16 pb-20 md:pb-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection isFastScrolling={isFastScrolling}>
               <div className="text-center mb-14">
-                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-emerald-600' : 'text-emerald-400'} mb-4`}>
+                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
                   Pricing
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-5`}>
-                  No surprises, just straightforward plans
+                  Plans for your business to scale
                 </h2>
                 <p className={`max-w-2xl mx-auto text-lg ${secondaryTextColor}`}>
-                  Try it out for free, and move up only when your team needs it.
+                  Test drive for free. Upgrade whenever your team is ready.
                 </p>
               </div>
             </RevealSection>
-            
+
             <RevealSection variant="fade-up" delay={100} isFastScrolling={isFastScrolling}>
               <div className={`${cardBgColor} rounded-2xl p-6 md:p-10 border ${cardBorderColor}`}>
-                <PricingCards 
+                <PricingCards
                   variant="landing"
                   showYearlyToggle={false}
                   onUpgrade={() => handleGetStarted()}
@@ -614,18 +545,17 @@ const Home: React.FC = () => {
         <section id="cta" className="py-24 md:py-36 relative overflow-hidden" style={{ contain: 'layout style' }}>
           {/* Gradient background accent */}
           <div className={`absolute inset-0 ${isLight ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50' : 'bg-gradient-to-br from-blue-950/50 via-indigo-950/50 to-violet-950/50'}`} />
-          
+
           <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <RevealSection isFastScrolling={isFastScrolling}>
-              <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight`}>
-                Ready to simplify{' '}
-                <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
+              <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight whitespace-nowrap`}>
+                Ready to simplify <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
               </h2>
               <p className={`text-lg md:text-xl ${secondaryTextColor} mb-10 max-w-2xl mx-auto leading-relaxed`}>
-                Join businesses using Itemize to organize, automate, and grow. 
+                Join Itemize to organize, automate, and grow.
                 Start your free trial today.
               </p>
-              <Button 
+              <Button
                 onClick={handleGetStarted}
                 className={`rounded-xl px-10 py-7 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/25 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/35 hover:-translate-y-0.5`}
                 size="lg"
@@ -642,29 +572,8 @@ const Home: React.FC = () => {
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* FOOTER                                                         */}
-        {/* Clean, minimal                                                 */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <footer className={`py-12 border-t ${cardBorderColor}`}>
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={isLight ? "/textblack.png" : "/textwhite.png"}
-                  alt="Itemize" 
-                  className="h-7 w-auto"
-                />
-              </div>
-              <div className={`flex gap-8 text-sm font-medium ${secondaryTextColor}`}>
-                <button onClick={() => scrollToSection('features')} className="hover:text-blue-600 transition-colors">Features</button>
-                <button onClick={() => navigate('/help')} className="hover:text-blue-600 transition-colors">Help</button>
-                <button onClick={() => navigate('/status')} className="hover:text-blue-600 transition-colors">Status</button>
-              </div>
-              <p className={`text-sm ${mutedTextColor}`}>
-                &copy; 2026 Itemize. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </div>
   );

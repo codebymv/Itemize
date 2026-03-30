@@ -205,11 +205,8 @@ api.interceptors.request.use(
 
     // Attach Authorization header when available (fallback to cookies if not)
     const authToken = getAuthToken();
-    if (authToken) {
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${authToken}`,
-      };
+    if (authToken && config.headers) {
+      config.headers.set('Authorization', `Bearer ${authToken}`);
     }
 
     return config;
@@ -271,13 +268,14 @@ api.interceptors.response.use(
       // Prevent infinite refresh loops
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
         console.error('[Auth] Max refresh attempts reached, forcing logout');
+        const hadSession = !!getAuthToken();
         // Clear auth state and redirect
         setAuthToken(null);
         if (typeof window !== 'undefined' && window.sessionStorage) {
           window.sessionStorage.removeItem('itemize_user');
           window.sessionStorage.removeItem('itemize_expiry');
         }
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (hadSession && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login?session=expired';
         }
         return Promise.reject(error);
@@ -332,7 +330,14 @@ api.interceptors.response.use(
           throw new Error('No token received from refresh endpoint');
         }
       } catch (refreshError: any) {
-        console.error('[Auth] Token refresh failed:', refreshError.message);
+        if (refreshError?.response?.status === 401) {
+          console.log('[Auth] Automatic session refresh completed (no active session)');
+        } else {
+          console.error('[Auth] Token refresh failed:', refreshError.message);
+        }
+        
+        // Check if they ever had a local token before clearing it, to prevent kicking fresh public users!
+        const hadSession = !!getAuthToken();
         
         // Refresh failed - clear auth state
         processQueue(refreshError as Error);
@@ -345,8 +350,9 @@ api.interceptors.response.use(
           window.sessionStorage.removeItem('itemize_expiry');
         }
         
-        // Show user-friendly message and redirect
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        // Only redirect & toast if they were ACTUALLY logged in previously and their session just died.
+        // Public pages for fresh visitors correctly have no session, so they should NOT be redirected!
+        if (hadSession && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           // Dispatch event to show toast notification
           window.dispatchEvent(new CustomEvent('auth:session-expired'));
           

@@ -227,6 +227,8 @@ const AppContent = () => {
       {/* Public routes with navbar/footer layout */}
       <Route path="/home" element={<Home />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/status" element={<PublicLayout><StatusPage /></PublicLayout>} />
+      <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
 
       {/* Auth routes (standalone, no navbar/footer) */}
       <Route path="/login" element={<Login />} />
@@ -244,7 +246,6 @@ const AppContent = () => {
 
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/help/*" element={<AuthenticatedLayout><DocsPage /></AuthenticatedLayout>} />
         <Route path="/dashboard" element={<AuthenticatedLayout><DashboardPage /></AuthenticatedLayout>} />
         <Route path="/contacts" element={<AuthenticatedLayout><ContactsPage /></AuthenticatedLayout>} />
         <Route path="/contacts/:id" element={<AuthenticatedLayout><ContactDetailPage /></AuthenticatedLayout>} />
@@ -267,7 +268,6 @@ const AppContent = () => {
         <Route path="/preferences" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/payment-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
-        <Route path="/status" element={<AuthenticatedLayout><StatusPage /></AuthenticatedLayout>} />
 
         {/* Segments */}
         <Route path="/segments" element={<AuthenticatedLayout><SegmentsPage /></AuthenticatedLayout>} />

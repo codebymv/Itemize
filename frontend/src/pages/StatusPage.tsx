@@ -18,11 +18,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useHeader } from '@/contexts/HeaderContext';
+import { HeaderContext } from '@/contexts/HeaderContext';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
 
 interface ServerMemory {
+// ... preserving types
   used: string;
   total: string;
   external: string;
@@ -65,7 +66,7 @@ interface StatusData {
 
 const StatusPage: React.FC = () => {
   const { theme } = useTheme();
-  const { setHeaderContent } = useHeader();
+  const headerContext = React.useContext(HeaderContext);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +81,9 @@ const StatusPage: React.FC = () => {
       setIsRefreshing(true);
       setError(null);
       const response = await api.get('/api/status');
+      if (typeof response.data === 'string') {
+        throw new Error('The server is currently booting up or unavailable. Please try again in a few seconds.');
+      }
       setStatusData(response.data);
       setLastUpdated(new Date());
     } catch (err: any) {
@@ -97,32 +101,32 @@ const StatusPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <Server className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate font-raleway text-black dark:text-white">
-            STATUS
-          </h1>
-        </div>
-        <Button
-          onClick={fetchStatus}
-          disabled={isRefreshing}
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
-        >
-          {isRefreshing ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          Refresh
-        </Button>
+  const headerNode = (
+    <div className={headerContext ? "flex items-center justify-between w-full min-w-0" : "flex items-center justify-between w-full mb-6"}>
+      <div className="flex items-center gap-2 min-w-0">
+        <Server className="h-5 w-5 text-blue-600 flex-shrink-0" />
+        <h1 className="text-xl font-semibold italic truncate font-raleway text-black dark:text-white">
+          STATUS
+        </h1>
       </div>
-    );
-    return () => setHeaderContent(null);
-  }, [isRefreshing, setHeaderContent]);
+      <Button
+        onClick={fetchStatus}
+        disabled={isRefreshing}
+        size="sm"
+        className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
+      >
+        <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+        Refresh
+      </Button>
+    </div>
+  );
+
+  useEffect(() => {
+    if (headerContext?.setHeaderContent) {
+      headerContext.setHeaderContent(headerNode);
+      return () => headerContext.setHeaderContent(null);
+    }
+  }, [isRefreshing, headerContext]);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => {
@@ -265,6 +269,7 @@ const StatusPage: React.FC = () => {
     <PageContainer>
       <BackgroundClouds />
       <PageSurface>
+        {!headerContext && headerNode}
         <div className="space-y-3">
           {error && (
             <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
@@ -278,14 +283,14 @@ const StatusPage: React.FC = () => {
             </Card>
           )}
 
-          {statusData && (
+          {statusData && typeof statusData === 'object' && statusData.status && (
             <>
               <ExpandableSection id="status" icon={Activity} title="System Status" isExpanded>
                 <div className="space-y-3">
-                  <StatusRow label="Overall Status" status={statusData.status.charAt(0).toUpperCase() + statusData.status.slice(1)} />
-                  <StatusRow label="Environment" status={statusData.environment.toUpperCase()} />
-                  <StatusRow label="Version" status={statusData.version} />
-                  <StatusRow label="Uptime" status={formatUptime(statusData.uptime)} />
+                  <StatusRow label="Overall Status" status={statusData.status ? statusData.status.charAt(0).toUpperCase() + statusData.status.slice(1) : 'Unknown'} />
+                  <StatusRow label="Environment" status={statusData.environment ? statusData.environment.toUpperCase() : 'PRODUCTION'} />
+                  <StatusRow label="Version" status={statusData.version || '1.0.0'} />
+                  <StatusRow label="Uptime" status={formatUptime(statusData.uptime || 0)} />
                 </div>
               </ExpandableSection>
 
