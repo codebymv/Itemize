@@ -411,7 +411,7 @@ const Home: React.FC = () => {
                   </div>
                   <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight`}>
                     The only CRM with built-in{' '}
-                    <span className="landing-gradient-text">Workspaces</span>
+                    <span className={`bg-clip-text text-transparent ${accentGradient}`}>Workspaces</span>
                   </h2>
                   <p className={`text-lg leading-relaxed ${secondaryTextColor} mb-8`}>
                     Other CRMs force you to keep notes in separate apps. Itemize includes 
