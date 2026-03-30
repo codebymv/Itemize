@@ -11,6 +11,8 @@ interface AppScreenshotProps {
   accentTo?: string;
   /** Whether to show browser chrome (window frame) */
   showChrome?: boolean;
+  /** Whether this is a high-priority hero image (disables lazy loading) */
+  priority?: boolean;
   /** Light/dark theme */
   isLight: boolean;
   /** Aspect ratio class (default: aspect-[16/10]) */
@@ -41,6 +43,7 @@ const AppScreenshot = memo(function AppScreenshot({
   src,
   alt,
   className = '',
+  priority = false,
 }: AppScreenshotProps) {
   const chromeBg = isLight ? 'bg-gray-100' : 'bg-slate-700';
   const chromeBtn = isLight ? 'bg-gray-300' : 'bg-slate-500';
@@ -77,7 +80,8 @@ const AppScreenshot = memo(function AppScreenshot({
           src={src} 
           alt={alt || label}
           className={`w-full h-auto object-contain object-top`}
-          loading="lazy"
+          loading={priority ? undefined : "lazy"}
+          {...(priority ? { fetchPriority: 'high' } as any : {})}
         />
       ) : (
         <div className={`${aspectRatio} relative overflow-hidden`}>

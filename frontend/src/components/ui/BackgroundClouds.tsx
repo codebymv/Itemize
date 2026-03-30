@@ -17,8 +17,15 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
     height: typeof window !== 'undefined' ? window.innerHeight : 800
   });
   const [isMobile, setIsMobile] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // Defer the heavy 3D canvas calculation so it doesn't block the first DOM paint
+    let rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
+        setIsMounted(true);
+      });
+    });
     // Detect if device is mobile/tablet
     const checkIfMobile = () => {
       const userAgent = navigator.userAgent || '';
@@ -43,10 +50,16 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
     handleResize();
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
 
+
+  // Prevent rendering entirely if on mobile, or if the main thread hasn't finished its first pass
+  if (isMobile || !isMounted) return null;
 
   return (
     <div
@@ -70,4 +83,4 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
   );
 };
 
-export default BackgroundClouds;
+export default React.memo(BackgroundClouds);

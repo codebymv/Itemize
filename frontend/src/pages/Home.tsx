@@ -38,15 +38,14 @@ const RevealSection = React.memo(function RevealSection({
   variant = 'fade-up' as const,
   delay = 0,
   className = '',
-  isFastScrolling = false,
 }: {
   children: React.ReactNode;
   variant?: 'fade-up' | 'fade' | 'scale';
   delay?: number;
   className?: string;
-  isFastScrolling?: boolean;
+  
 }) {
-  const reveal = useRevealClass(variant, { delay, isFastScrolling });
+  const reveal = useRevealClass(variant, { delay });
   return (
     <div ref={reveal.ref} className={`${reveal.className} ${className}`} style={reveal.style}>
       {children}
@@ -149,9 +148,9 @@ const Home: React.FC = () => {
 
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} style={{ willChange: 'transform' }} />
-        <div className={`absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full ${isLight ? 'bg-indigo-400' : 'bg-indigo-600'} opacity-[0.04] blur-[100px]`} style={{ willChange: 'transform' }} />
-        <div className={`absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full ${isLight ? 'bg-violet-300' : 'bg-violet-600'} opacity-[0.03] blur-[100px]`} style={{ willChange: 'transform' }} />
+        <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} />
+        <div className={`absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full ${isLight ? 'bg-indigo-400' : 'bg-indigo-600'} opacity-[0.04] blur-[100px]`} />
+        <div className={`absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full ${isLight ? 'bg-violet-300' : 'bg-violet-600'} opacity-[0.03] blur-[100px]`} />
       </div>
 
       {/* Noise texture */}
@@ -169,65 +168,55 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-              <RevealSection variant="fade-up" delay={0} isFastScrolling={isFastScrolling}>
-                <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
-                  The CRM that works{' '}
-                  <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
-                  <br />
-                  not against you
-                </h1>
-              </RevealSection>
+              <h1 className={`animate-fade-in-up landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
+                The CRM that works{' '}
+                <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
+                <br />
+                not against you
+              </h1>
 
-              <RevealSection variant="fade-up" delay={100} isFastScrolling={isFastScrolling}>
-                <p className={`text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
-                  Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
-                  deals, and workflows together with beautiful workspaces.
-                </p>
-              </RevealSection>
+              <p className={`animate-fade-in-up animation-delay-100 text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
+                Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
+                deals, and workflows together with beautiful workspaces.
+              </p>
 
-              <RevealSection variant="fade-up" delay={200} isFastScrolling={isFastScrolling}>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                  <Button
-                    onClick={handleGetStarted}
-                    className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
-                    size="lg"
-                  >
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
+              <div className="animate-fade-in-up animation-delay-200 flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                <Button
+                  onClick={handleGetStarted}
+                  className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
+                  size="lg"
+                >
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
 
-                </div>
-              </RevealSection>
-
-              <RevealSection variant="fade" delay={300} isFastScrolling={isFastScrolling}>
-                <div className="flex flex-wrap gap-6 justify-center">
-                  {['14-day free trial', 'No credit card required', 'Cancel anytime'].map((text) => (
-                    <span key={text} className={`flex items-center gap-2 text-sm font-medium ${mutedTextColor}`}>
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      {text}
-                    </span>
-                  ))}
-                </div>
-              </RevealSection>
+              <div className="animate-fade-in animation-delay-300 flex flex-wrap gap-6 justify-center">
+                {['14-day free trial', 'No credit card required', 'Cancel anytime'].map((text) => (
+                  <span key={text} className={`flex items-center gap-2 text-sm font-medium ${mutedTextColor}`}>
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    {text}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Full-width hero screenshot with perspective */}
-            <RevealSection variant="scale" delay={400} isFastScrolling={isFastScrolling}>
-              <div className="screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
-                <AppScreenshot
-                  label="Dashboard"
-                  sublabel="Dashboard view"
-                  accentFrom="from-blue-500"
-                  accentTo="to-indigo-600"
-                  isLight={isLight}
-                  showChrome={true}
-                  aspectRatio="aspect-[16/10]"
-                  className="screenshot-tilt"
-                  src="/screenshots/dashboard.png"
-                  alt="Itemize Dashboard Screenshot"
-                />
-              </div>
-            </RevealSection>
+            <div className="animate-scale-in animation-delay-400 screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
+              <AppScreenshot
+                label="Dashboard"
+                sublabel="Dashboard view"
+                accentFrom="from-blue-500"
+                accentTo="to-indigo-600"
+                isLight={isLight}
+                showChrome={true}
+                aspectRatio="aspect-[16/10]"
+                className="screenshot-tilt"
+                src="/screenshots/dashboard.png"
+                priority={true}
+                alt="Itemize Dashboard Screenshot"
+              />
+            </div>
           </div>
         </section>
 
@@ -237,7 +226,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section id="problem" className="py-20 md:py-32" style={{ contain: 'layout style' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <RevealSection isFastScrolling={isFastScrolling}>
+            <RevealSection>
               <div className="text-center mb-16">
                 <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-red-500' : 'text-red-400'} mb-4`}>
                   Sound familiar?
@@ -269,7 +258,7 @@ const Home: React.FC = () => {
                   image: '/illustrations/no-clear-picture.png',
                 },
               ].map((pain, i) => (
-                <RevealSection key={i} variant="fade-up" delay={i * 100} isFastScrolling={isFastScrolling}>
+                <RevealSection key={i} variant="fade-up" delay={i * 100}>
                   <div className={`relative ${cardBgColor} rounded-3xl border ${cardBorderColor} overflow-hidden h-full group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col`}>
                     <div className="relative h-48 sm:h-56 w-full overflow-hidden bg-slate-900 border-b border-black/5 dark:border-white/5">
                       <img
@@ -290,7 +279,7 @@ const Home: React.FC = () => {
               ))}
             </div>
 
-            <RevealSection isFastScrolling={isFastScrolling}>
+            <RevealSection>
               <div className="text-center">
                 <p className={`text-xl font-semibold ${textColor}`}>
                   There's a better way <span className="landing-gradient-text font-bold">↓</span>
@@ -309,7 +298,7 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Screenshot */}
-              <RevealSection variant="fade-up" delay={0} className="order-2 lg:order-1" isFastScrolling={isFastScrolling}>
+              <RevealSection variant="fade-up" delay={0} className="order-2 lg:order-1">
                 <div className="screenshot-perspective">
                   <AppScreenshot
                     label="Workspaces"
@@ -326,7 +315,7 @@ const Home: React.FC = () => {
               </RevealSection>
 
               {/* Content */}
-              <RevealSection variant="fade-up" delay={150} className="order-1 lg:order-2" isFastScrolling={isFastScrolling}>
+              <RevealSection variant="fade-up" delay={150} className="order-1 lg:order-2">
                 <div>
                   {/* Category Header */}
                   <div className="flex items-center gap-4 mb-6">
@@ -380,7 +369,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section id="features" className="py-20 md:py-32" style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <RevealSection isFastScrolling={isFastScrolling}>
+            <RevealSection>
               <div className="text-center mb-20">
                 <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
                   Features
@@ -395,6 +384,7 @@ const Home: React.FC = () => {
             </RevealSection>
 
             <div className="space-y-28 md:space-y-36">
+              <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
               {/* Feature 1: Contact Management */}
               <FeatureShowcase
                 isLight={isLight}
@@ -448,7 +438,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section id="integrations" className={`pt-20 md:pt-32 pb-10 md:pb-16 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <RevealSection isFastScrolling={isFastScrolling}>
+            <RevealSection>
               <div className="text-center mb-16">
                 <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
                   Integrations
@@ -462,8 +452,8 @@ const Home: React.FC = () => {
               </div>
             </RevealSection>
 
-            <RevealSection variant="fade-up" delay={150} isFastScrolling={isFastScrolling}>
-              <IntegrationGrid isLight={isLight} />
+            <RevealSection variant="fade-up" delay={150}>
+              <Suspense fallback={<div className="h-40 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}><IntegrationGrid isLight={isLight} /></Suspense>
             </RevealSection>
           </div>
         </section>
@@ -474,7 +464,7 @@ const Home: React.FC = () => {
         {false && (
           <section id="security" className="py-20 md:py-28" style={{ contain: 'layout style' }}>
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-              <RevealSection isFastScrolling={isFastScrolling}>
+              <RevealSection>
                 <div className="text-center mb-14">
                   <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-4`}>
                     Your data, protected
@@ -492,7 +482,7 @@ const Home: React.FC = () => {
                   { icon: Cloud, label: '99.9% Uptime', desc: 'Reliable infrastructure' },
                   { icon: Key, label: 'Secure Auth', desc: 'OAuth2 and 2FA support' },
                 ].map((item, i) => (
-                  <RevealSection key={i} variant="fade-up" delay={i * 80} isFastScrolling={isFastScrolling}>
+                  <RevealSection key={i} variant="fade-up" delay={i * 80}>
                     <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-all duration-300 hover:shadow-md`}>
                       <div className={`w-14 h-14 rounded-2xl ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'} flex items-center justify-center mx-auto mb-4`}>
                         <item.icon className={`h-7 w-7 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
@@ -512,7 +502,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section id="pricing" className={`pt-10 md:pt-16 pb-20 md:pb-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <RevealSection isFastScrolling={isFastScrolling}>
+            <RevealSection>
               <div className="text-center mb-14">
                 <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
                   Pricing
@@ -526,7 +516,7 @@ const Home: React.FC = () => {
               </div>
             </RevealSection>
 
-            <RevealSection variant="fade-up" delay={100} isFastScrolling={isFastScrolling}>
+            <RevealSection variant="fade-up" delay={100}>
               <div className={`${cardBgColor} rounded-2xl p-6 md:p-10 border ${cardBorderColor}`}>
                 <PricingCards
                   variant="landing"
@@ -547,7 +537,7 @@ const Home: React.FC = () => {
           <div className={`absolute inset-0 ${isLight ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50' : 'bg-gradient-to-br from-blue-950/50 via-indigo-950/50 to-violet-950/50'}`} />
 
           <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <RevealSection isFastScrolling={isFastScrolling}>
+            <RevealSection>
               <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight whitespace-nowrap`}>
                 Ready to simplify <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
               </h2>

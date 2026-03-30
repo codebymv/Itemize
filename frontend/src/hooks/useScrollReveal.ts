@@ -81,7 +81,7 @@ export function useRevealClass<T extends HTMLElement = HTMLDivElement>(
   // Skip delays and use shorter duration when scrolling fast
   const effectiveDelay = isFastScrolling ? 0 : delay;
   const duration = isFastScrolling ? '200' : '700';
-  const transitionStyle = `transition-all duration-${duration} ease-out`;
+  const transitionStyle = `transition-[transform,opacity] duration-${duration} ease-out`;
 
   const className = [
     transitionStyle,
