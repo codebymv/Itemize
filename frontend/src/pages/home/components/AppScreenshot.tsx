@@ -76,7 +76,7 @@ const AppScreenshot = memo(function AppScreenshot({
         <img 
           src={src} 
           alt={alt || label}
-          className={`w-full ${aspectRatio} object-cover object-top`}
+          className={`w-full h-auto object-contain object-top`}
           loading="lazy"
         />
       ) : (
