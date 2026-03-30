@@ -190,36 +190,64 @@ const Home: React.FC = () => {
               </div>
             </RevealSection>
 
-            <div className="grid md:grid-cols-3 gap-6 md:gap-8 mb-16">
-              {[
-                {
-                  title: 'Scattered Data',
-                  desc: 'Customer info spread across spreadsheets, emails, and sticky notes. Nothing connects.',
-                  gradient: 'from-red-500 to-orange-500',
-                  image: '/illustrations/scattered-data.png',
-                },
-                {
-                  title: 'Tool Overload',
-                  desc: 'Paying for CRM + calendar + forms + automation separately. Stitching them together is a nightmare.',
-                  gradient: 'from-orange-500 to-amber-500',
-                  image: '/illustrations/tool-overload.png',
-                },
-                {
-                  title: 'No Clear Picture',
-                  desc: "Can't see your pipeline, contacts, and tasks in one view. Decisions are based on gut, not data.",
-                  gradient: 'from-amber-500 to-yellow-500',
-                  image: '/illustrations/no-clear-picture.png',
-                },
-              ].map((pain, i) => (
-                <RevealSection key={i} variant="fade-up" delay={i * 100}>
-                  <div className={`relative ${cardBgColor} rounded-3xl border ${cardBorderColor} overflow-hidden h-full group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col`}>
+            {/* 
+              On mobile: horizontal scroll-snap carousel (single card visible at a time).
+              On md+: standard 3-column grid.
+            */}
+            <div className="relative mb-16">
+              {/* Scroll track */}
+              <div
+                id="pain-carousel"
+                className="flex md:grid md:grid-cols-3 gap-5 md:gap-8
+                           overflow-x-auto md:overflow-x-visible
+                           scroll-snap-x mandatory md:scroll-snap-type-none
+                           pb-4 md:pb-0
+                           -mx-4 px-4 md:mx-0 md:px-0"
+                style={{
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+              >
+                {[
+                  {
+                    title: 'Scattered Data',
+                    desc: 'Customer info spread across spreadsheets, emails, and sticky notes. Nothing connects.',
+                    gradient: 'from-red-500 to-orange-500',
+                    image: '/illustrations/scattered-data.png',
+                  },
+                  {
+                    title: 'Tool Overload',
+                    desc: 'Paying for CRM + calendar + forms + automation separately. Stitching them together is a nightmare.',
+                    gradient: 'from-orange-500 to-amber-500',
+                    image: '/illustrations/tool-overload.png',
+                  },
+                  {
+                    title: 'No Clear Picture',
+                    desc: "Can't see your pipeline, contacts, and tasks in one view. Decisions are based on gut, not data.",
+                    gradient: 'from-amber-500 to-yellow-500',
+                    image: '/illustrations/no-clear-picture.png',
+                  },
+                ].map((pain, i) => (
+                  <div
+                    key={i}
+                    className={`
+                      flex-shrink-0 w-[82vw] sm:w-[72vw] md:w-auto
+                      relative ${cardBgColor} rounded-3xl border ${cardBorderColor}
+                      overflow-hidden h-full group
+                      hover:shadow-xl hover:-translate-y-1 transition-[transform,box-shadow] duration-300
+                      flex flex-col
+                    `}
+                    style={{ scrollSnapAlign: 'center' }}
+                  >
                     <div className="relative h-48 sm:h-56 w-full overflow-hidden bg-slate-900 border-b border-black/5 dark:border-white/5">
                       <img
                         src={pain.image}
                         alt={pain.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-95 group-hover:opacity-100"
+                        loading="lazy"
                       />
-                      {/* Gradient to blend the dark image into the card's background */}
                       <div className={`absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/20 to-transparent' : 'from-slate-800 via-slate-800/20 to-transparent'}`} />
                     </div>
                     <div className="p-8 pt-6 flex-1 relative z-10 flex flex-col">
@@ -228,8 +256,25 @@ const Home: React.FC = () => {
                       <p className={`${secondaryTextColor} leading-relaxed flex-1`}>{pain.desc}</p>
                     </div>
                   </div>
-                </RevealSection>
-              ))}
+                ))}
+              </div>
+
+              {/* Mobile-only dot indicators */}
+              <div className="flex justify-center gap-2 mt-4 md:hidden">
+                {[0, 1, 2].map((i) => (
+                  <button
+                    key={i}
+                    aria-label={`Go to slide ${i + 1}`}
+                    onClick={() => {
+                      const el = document.getElementById('pain-carousel');
+                      if (el) el.scrollTo({ left: i * el.offsetWidth * 0.82, behavior: 'smooth' });
+                    }}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      isLight ? 'bg-gray-300 hover:bg-blue-500' : 'bg-slate-600 hover:bg-blue-400'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
 
             <RevealSection>

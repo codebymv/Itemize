@@ -81,7 +81,7 @@ const AppScreenshot = memo(function AppScreenshot({
           alt={alt || label}
           className={`w-full h-auto object-contain object-top`}
           loading={priority ? undefined : "lazy"}
-          {...(priority ? { fetchPriority: 'high' } as any : {})}
+          fetchPriority={priority ? "high" : undefined}
         />
       ) : (
         <div className={`${aspectRatio} relative overflow-hidden`}>
