@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
@@ -24,11 +24,16 @@ import {
 } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import Footer from '@/components/Footer';
-import { PricingCards } from '@/components/subscription';
 import AppScreenshot from './home/components/AppScreenshot';
-import FeatureShowcase from './home/components/FeatureShowcase';
-import { IntegrationGrid } from './home/components/IntegrationLogos';
 import { useRevealClass } from '@/hooks/useScrollReveal';
+
+const FeatureShowcase = lazy(() => import('./home/components/FeatureShowcase'));
+const IntegrationGrid = lazy(() =>
+  import('./home/components/IntegrationLogos').then(m => ({ default: m.IntegrationGrid }))
+);
+const PricingCards = lazy(() =>
+  import('@/components/subscription').then(m => ({ default: m.PricingCards }))
+);
 
 /* ═══════════════════════════════════════════════════════════════ */
 /* Reusable reveal wrapper for sections                           */
@@ -43,7 +48,6 @@ const RevealSection = React.memo(function RevealSection({
   variant?: 'fade-up' | 'fade' | 'scale';
   delay?: number;
   className?: string;
-  
 }) {
   const reveal = useRevealClass(variant, { delay });
   return (
@@ -58,57 +62,6 @@ const Home: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
-
-  // Scroll velocity tracking
-  const [isFastScrolling, setIsFastScrolling] = useState(false);
-  const scrollTimeoutRef = React.useRef<NodeJS.Timeout>();
-  const lastScrollYRef = React.useRef(0);
-  const lastScrollTimeRef = React.useRef(0);
-  const velocityThreshold = 15; // pixels per ms to consider "fast"
-  const scrollCooldown = 150; // ms to stay in "fast" state after scroll stops
-
-  useEffect(() => {
-    let rafId: number;
-    let lastY = 0;
-    let lastTime = 0;
-
-    const handleScroll = () => {
-      const now = performance.now();
-      const y = window.scrollY;
-
-      if (lastTime > 0) {
-        const deltaTime = now - lastTime;
-        const deltaY = Math.abs(y - lastY);
-        const velocity = deltaY / deltaTime;
-
-        if (velocity > velocityThreshold) {
-          setIsFastScrolling(true);
-
-          if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
-          }
-
-          scrollTimeoutRef.current = setTimeout(() => {
-            setIsFastScrolling(false);
-          }, scrollCooldown);
-        }
-      }
-
-      lastY = y;
-      lastTime = now;
-
-      rafId = requestAnimationFrame(handleScroll);
-    };
-
-    rafId = requestAnimationFrame(handleScroll);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [velocityThreshold, scrollCooldown]);
 
   // Theme-aware base colors - memoized to prevent recalculation
   const themeColors = useMemo(() => {
@@ -383,52 +336,53 @@ const Home: React.FC = () => {
               </div>
             </RevealSection>
 
-            <div className="space-y-28 md:space-y-36">
-              <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
-              {/* Feature 1: Contact Management */}
-              <FeatureShowcase
-                isLight={isLight}
-                reverse={false}
-                badge={{ icon: Users, label: 'Contact Management', color: 'from-blue-500 to-cyan-500' }}
-                title="Every customer, every interaction, one view"
-                description="Stop searching through emails and spreadsheets. See your complete customer history, notes, deals, and communications in one unified profile."
-                features={['Unlimited contacts with custom fields', 'Activity timeline and interaction history', 'Smart tags and segmentation', 'CSV import and bulk operations']}
-                screenshot={{ label: 'Contacts', sublabel: 'Full contact management with search and filters', accentFrom: 'from-blue-500', accentTo: 'to-cyan-500', src: '/screenshots/contacts.png' }}
-              />
+            <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
+              <div className="space-y-28 md:space-y-36">
+                {/* Feature 1: Contact Management */}
+                <FeatureShowcase
+                  isLight={isLight}
+                  reverse={false}
+                  badge={{ icon: Users, label: 'Contact Management', color: 'from-blue-500 to-cyan-500' }}
+                  title="Every customer, every interaction, one view"
+                  description="Stop searching through emails and spreadsheets. See your complete customer history, notes, deals, and communications in one unified profile."
+                  features={['Unlimited contacts with custom fields', 'Activity timeline and interaction history', 'Smart tags and segmentation', 'CSV import and bulk operations']}
+                  screenshot={{ label: 'Contacts', sublabel: 'Full contact management with search and filters', accentFrom: 'from-blue-500', accentTo: 'to-cyan-500', src: '/screenshots/contacts.png' }}
+                />
 
-              {/* Feature 2: Sales Pipelines */}
-              <FeatureShowcase
-                isLight={isLight}
-                reverse={true}
-                badge={{ icon: TrendingUp, label: 'Sales Pipelines', color: 'from-emerald-500 to-teal-500' }}
-                title="Visual deal tracking that makes sense"
-                description="Drag deals through custom stages, see your revenue forecast at a glance, and never let an opportunity slip through the cracks."
-                features={['Drag-and-drop Kanban boards', 'Custom pipeline stages and deal values', 'Revenue forecasting and probability', 'Win/loss tracking and analytics']}
-                screenshot={{ label: 'Pipelines', sublabel: 'Kanban board with drag-and-drop deal management', accentFrom: 'from-emerald-500', accentTo: 'to-teal-500', src: '/screenshots/pipelines.png' }}
-              />
+                {/* Feature 2: Sales Pipelines */}
+                <FeatureShowcase
+                  isLight={isLight}
+                  reverse={true}
+                  badge={{ icon: TrendingUp, label: 'Sales Pipelines', color: 'from-emerald-500 to-teal-500' }}
+                  title="Visual deal tracking that makes sense"
+                  description="Drag deals through custom stages, see your revenue forecast at a glance, and never let an opportunity slip through the cracks."
+                  features={['Drag-and-drop Kanban boards', 'Custom pipeline stages and deal values', 'Revenue forecasting and probability', 'Win/loss tracking and analytics']}
+                  screenshot={{ label: 'Pipelines', sublabel: 'Kanban board with drag-and-drop deal management', accentFrom: 'from-emerald-500', accentTo: 'to-teal-500', src: '/screenshots/pipelines.png' }}
+                />
 
-              {/* Feature 3: Calendars & Booking */}
-              <FeatureShowcase
-                isLight={isLight}
-                reverse={false}
-                badge={{ icon: Calendar, label: 'Calendars & Booking', color: 'from-orange-500 to-amber-500' }}
-                title="Let clients book, you stay focused"
-                description="Share your availability and let clients book directly. Automatic reminders reduce no-shows and save hours of back-and-forth scheduling."
-                features={['Online booking pages with custom slugs', 'Google Calendar two-way sync', 'Automatic email reminders', 'Buffer times and daily limits']}
-                screenshot={{ label: 'Calendars', sublabel: 'Booking calendar management and scheduling', accentFrom: 'from-orange-500', accentTo: 'to-amber-500', src: '/screenshots/calendars.png' }}
-              />
+                {/* Feature 3: Calendars & Booking */}
+                <FeatureShowcase
+                  isLight={isLight}
+                  reverse={false}
+                  badge={{ icon: Calendar, label: 'Calendars & Booking', color: 'from-orange-500 to-amber-500' }}
+                  title="Let clients book, you stay focused"
+                  description="Share your availability and let clients book directly. Automatic reminders reduce no-shows and save hours of back-and-forth scheduling."
+                  features={['Online booking pages with custom slugs', 'Google Calendar two-way sync', 'Automatic email reminders', 'Buffer times and daily limits']}
+                  screenshot={{ label: 'Calendars', sublabel: 'Booking calendar management and scheduling', accentFrom: 'from-orange-500', accentTo: 'to-amber-500', src: '/screenshots/calendars.png' }}
+                />
 
-              {/* Feature 4: Automations */}
-              <FeatureShowcase
-                isLight={isLight}
-                reverse={true}
-                badge={{ icon: Zap, label: 'Automations', color: 'from-pink-500 to-rose-500' }}
-                title="Set it up once, let it work forever"
-                description="Build visual workflows that automatically send emails, update contacts, create tasks, and trigger actions -- so you can focus on what matters."
-                features={['Visual drag-and-drop workflow builder', 'Email sequences with templates', '8 action types including webhooks', '6 trigger types with conditional logic']}
-                screenshot={{ label: 'Automations', sublabel: 'Visual workflow builder with drag-and-drop nodes', accentFrom: 'from-pink-500', accentTo: 'to-rose-500', src: '/screenshots/automations.png' }}
-              />
-            </div>
+                {/* Feature 4: Automations */}
+                <FeatureShowcase
+                  isLight={isLight}
+                  reverse={true}
+                  badge={{ icon: Zap, label: 'Automations', color: 'from-pink-500 to-rose-500' }}
+                  title="Set it up once, let it work forever"
+                  description="Build visual workflows that automatically send emails, update contacts, create tasks, and trigger actions -- so you can focus on what matters."
+                  features={['Visual drag-and-drop workflow builder', 'Email sequences with templates', '8 action types including webhooks', '6 trigger types with conditional logic']}
+                  screenshot={{ label: 'Automations', sublabel: 'Visual workflow builder with drag-and-drop nodes', accentFrom: 'from-pink-500', accentTo: 'to-rose-500', src: '/screenshots/automations.png' }}
+                />
+              </div>
+            </Suspense>
           </div>
         </section>
 
