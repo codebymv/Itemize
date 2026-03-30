@@ -171,6 +171,18 @@ export const LandingNav: React.FC = () => {
                       'w-[480px] p-4',
                       isLight ? 'bg-white' : 'bg-slate-800'
                     )}>
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
+                        <Users className={cn(
+                          'h-5 w-5',
+                          isLight ? 'text-blue-600' : 'text-blue-400'
+                        )} />
+                        <span className={cn(
+                          'font-semibold',
+                          isLight ? 'text-gray-900' : 'text-slate-100'
+                        )}>
+                          Core CRM Features
+                        </span>
+                      </div>
                       <div className="grid gap-3 grid-cols-2">
                         {FEATURE_ITEMS.map((item) => (
                           <button
@@ -207,6 +219,16 @@ export const LandingNav: React.FC = () => {
                           </button>
                         ))}
                       </div>
+                      <button
+                        onClick={() => handleNavClick('features')}
+                        className={cn(
+                          'flex items-center gap-1 mt-4 pt-4 border-t w-full text-sm font-medium transition-colors',
+                          isLight ? 'border-gray-200 text-blue-600 hover:text-blue-700' : 'border-slate-700 text-blue-400 hover:text-blue-300'
+                        )}
+                      >
+                        Explore all features
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
                     </div>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -246,14 +268,19 @@ export const LandingNav: React.FC = () => {
                             key={item.title}
                             onClick={() => handleNavClick('workspaces')}
                             className={cn(
-                              'flex items-center gap-3 w-full p-2 rounded-lg transition-colors text-left',
+                              'flex items-start gap-3 w-full p-3 rounded-lg transition-colors text-left',
                               isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-700'
                             )}
                           >
-                            <item.icon className={cn(
-                              'h-4 w-4',
-                              isLight ? 'text-gray-600' : 'text-slate-400'
-                            )} />
+                            <div className={cn(
+                              'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
+                              isLight ? 'bg-indigo-50' : 'bg-indigo-900/30'
+                            )}>
+                              <item.icon className={cn(
+                                'h-5 w-5',
+                                isLight ? 'text-indigo-600' : 'text-indigo-400'
+                              )} />
+                            </div>
                             <div>
                               <div className={cn(
                                 'font-medium text-sm',
@@ -262,7 +289,7 @@ export const LandingNav: React.FC = () => {
                                 {item.title}
                               </div>
                               <div className={cn(
-                                'text-xs',
+                                'text-xs mt-0.5',
                                 isLight ? 'text-gray-500' : 'text-slate-400'
                               )}>
                                 {item.description}
@@ -274,12 +301,12 @@ export const LandingNav: React.FC = () => {
                       <button
                         onClick={() => handleNavClick('workspaces')}
                         className={cn(
-                          'flex items-center gap-1 mt-3 pt-3 border-t text-sm font-medium',
-                          isLight ? 'border-gray-200 text-blue-600 hover:text-blue-700' : 'border-slate-700 text-blue-400 hover:text-blue-300'
+                          'flex items-center gap-1 mt-4 pt-4 border-t w-full text-sm font-medium transition-colors',
+                          isLight ? 'border-gray-200 text-indigo-600 hover:text-indigo-700' : 'border-slate-700 text-indigo-400 hover:text-indigo-300'
                         )}
                       >
                         Learn more
-                        <ArrowRight className="h-3 w-3" />
+                        <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
                   </NavigationMenuContent>
