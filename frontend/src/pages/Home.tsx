@@ -587,10 +587,10 @@ const Home: React.FC = () => {
                   Pricing
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-5`}>
-                  Simple, transparent pricing
+                  No surprises, just straightforward plans
                 </h2>
                 <p className={`max-w-2xl mx-auto text-lg ${secondaryTextColor}`}>
-                  Start free, upgrade when you need more power. No hidden fees.
+                  Try it out for free, and move up only when your team needs it.
                 </p>
               </div>
             </RevealSection>
@@ -619,7 +619,7 @@ const Home: React.FC = () => {
             <RevealSection isFastScrolling={isFastScrolling}>
               <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight`}>
                 Ready to simplify{' '}
-                <span className="landing-gradient-text">your business?</span>
+                <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
               </h2>
               <p className={`text-lg md:text-xl ${secondaryTextColor} mb-10 max-w-2xl mx-auto leading-relaxed`}>
                 Join businesses using Itemize to organize, automate, and grow. 

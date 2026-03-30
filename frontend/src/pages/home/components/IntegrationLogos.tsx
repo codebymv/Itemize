@@ -96,15 +96,6 @@ export const IntegrationGrid = React.memo(function IntegrationGrid({ isLight }: 
           <path d="M20 17v3l-5.5 4M20 20l5.5 4" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       </IntegrationLogo>
-
-      {/* Zapier */}
-      <IntegrationLogo name="Zapier" isLight={isLight} comingSoon>
-        <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-          <rect width="40" height="40" rx="8" fill="#FF4A00" fillOpacity="0.1" />
-          <path d="M24 16l-4 8h6l-4 8" stroke="#FF4A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M14 16h6M14 24h4" stroke="#FF4A00" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </IntegrationLogo>
     </div>
   );
 });
