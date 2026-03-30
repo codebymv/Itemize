@@ -66,7 +66,7 @@ const AppScreenshot = memo(function AppScreenshot({
           {/* URL bar */}
           <div className={`flex-1 ${chromeUrlBg} rounded-md px-3 py-1 flex items-center gap-2`}>
             <div className={`w-3 h-3 rounded-sm ${isLight ? 'bg-gray-200' : 'bg-slate-500'}`} />
-            <span className={`text-xs ${chromeUrlText} select-none`}>app.itemize.com</span>
+            <span className={`text-xs ${chromeUrlText} select-none`}>itemize.cloud</span>
           </div>
         </div>
       )}
