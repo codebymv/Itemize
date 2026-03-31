@@ -255,7 +255,7 @@ module.exports = (pool, authenticateJWT) => {
                         INSERT INTO estimate_items (
                             estimate_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) SELECT * FROM UNNEST (
+                        ) SELECT * FROM UNNEST(
                             $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
                             $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
                         )
@@ -392,7 +392,7 @@ module.exports = (pool, authenticateJWT) => {
                             INSERT INTO estimate_items (
                                 estimate_id, organization_id, product_id, name, description,
                                 quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                            ) SELECT * FROM UNNEST (
+                            ) SELECT * FROM UNNEST(
                                 $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
                                 $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
                             )
@@ -756,7 +756,6 @@ module.exports = (pool, authenticateJWT) => {
 
                     for (let i = 0; i < itemsResult.rows.length; i++) {
                         const item = itemsResult.rows[i];
-
                         u_invoice_ids.push(invoiceId);
                         u_organization_ids.push(req.organizationId);
                         u_product_ids.push(item.product_id);
@@ -774,7 +773,7 @@ module.exports = (pool, authenticateJWT) => {
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) SELECT * FROM UNNEST (
+                        ) SELECT * FROM UNNEST(
                             $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
                             $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
                         )
