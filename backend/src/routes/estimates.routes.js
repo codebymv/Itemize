@@ -221,38 +221,48 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Create line items
                 if (items.length > 0) {
-                    const values = [];
-                    const params = [];
+                    const u_estimate_ids = [];
+                    const u_organization_ids = [];
+                    const u_product_ids = [];
+                    const u_names = [];
+                    const u_descriptions = [];
+                    const u_quantities = [];
+                    const u_unit_prices = [];
+                    const u_tax_rates = [];
+                    const u_tax_amounts = [];
+                    const u_totals = [];
+                    const u_sort_orders = [];
 
                     for (let i = 0; i < items.length; i++) {
                         const item = items[i];
                         const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
                         const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
 
-                        const offset = i * 11;
-                        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`);
-
-                        params.push(
-                            estimateId,
-                            req.organizationId,
-                            item.product_id || null,
-                            item.name,
-                            item.description || null,
-                            item.quantity || 1,
-                            item.unit_price || 0,
-                            item.tax_rate || 0,
-                            itemTax,
-                            itemTotal + itemTax,
-                            i
-                        );
+                        u_estimate_ids.push(estimateId);
+                        u_organization_ids.push(req.organizationId);
+                        u_product_ids.push(item.product_id || null);
+                        u_names.push(item.name);
+                        u_descriptions.push(item.description || null);
+                        u_quantities.push(item.quantity || 1);
+                        u_unit_prices.push(item.unit_price || 0);
+                        u_tax_rates.push(item.tax_rate || 0);
+                        u_tax_amounts.push(itemTax);
+                        u_totals.push(itemTotal + itemTax);
+                        u_sort_orders.push(i);
                     }
 
                     await client.query(`
                         INSERT INTO estimate_items (
                             estimate_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ${values.join(', ')}
-                    `, params);
+                        ) SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
+                            $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                        )
+                    `, [
+                        u_estimate_ids, u_organization_ids, u_product_ids, u_names, u_descriptions,
+                        u_quantities, u_unit_prices, u_tax_rates, u_tax_amounts, u_totals, u_sort_orders
+                    ]);
                 }
 
                 const fullEstimateResult = await client.query(`
@@ -348,38 +358,48 @@ module.exports = (pool, authenticateJWT) => {
                     await client.query('DELETE FROM estimate_items WHERE estimate_id = $1', [id]);
 
                     if (items.length > 0) {
-                        const values = [];
-                        const params = [];
+                        const u_estimate_ids = [];
+                        const u_organization_ids = [];
+                        const u_product_ids = [];
+                        const u_names = [];
+                        const u_descriptions = [];
+                        const u_quantities = [];
+                        const u_unit_prices = [];
+                        const u_tax_rates = [];
+                        const u_tax_amounts = [];
+                        const u_totals = [];
+                        const u_sort_orders = [];
 
                         for (let i = 0; i < items.length; i++) {
                             const item = items[i];
                             const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
                             const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
 
-                            const offset = i * 11;
-                            values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`);
-
-                            params.push(
-                                id,
-                                req.organizationId,
-                                item.product_id || null,
-                                item.name,
-                                item.description || null,
-                                item.quantity || 1,
-                                item.unit_price || 0,
-                                item.tax_rate || 0,
-                                itemTax,
-                                itemTotal + itemTax,
-                                i
-                            );
+                            u_estimate_ids.push(id);
+                            u_organization_ids.push(req.organizationId);
+                            u_product_ids.push(item.product_id || null);
+                            u_names.push(item.name);
+                            u_descriptions.push(item.description || null);
+                            u_quantities.push(item.quantity || 1);
+                            u_unit_prices.push(item.unit_price || 0);
+                            u_tax_rates.push(item.tax_rate || 0);
+                            u_tax_amounts.push(itemTax);
+                            u_totals.push(itemTotal + itemTax);
+                            u_sort_orders.push(i);
                         }
 
                         await client.query(`
                             INSERT INTO estimate_items (
                                 estimate_id, organization_id, product_id, name, description,
                                 quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                            ) VALUES ${values.join(', ')}
-                        `, params);
+                            ) SELECT * FROM UNNEST (
+                                $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
+                                $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                            )
+                        `, [
+                            u_estimate_ids, u_organization_ids, u_product_ids, u_names, u_descriptions,
+                            u_quantities, u_unit_prices, u_tax_rates, u_tax_amounts, u_totals, u_sort_orders
+                        ]);
                     }
                 }
 
@@ -722,35 +742,46 @@ module.exports = (pool, authenticateJWT) => {
                 const invoiceId = invoiceResult.rows[0].id;
 
                 if (itemsResult.rows.length > 0) {
-                    const values = [];
-                    const params = [];
+                    const u_invoice_ids = [];
+                    const u_organization_ids = [];
+                    const u_product_ids = [];
+                    const u_names = [];
+                    const u_descriptions = [];
+                    const u_quantities = [];
+                    const u_unit_prices = [];
+                    const u_tax_rates = [];
+                    const u_tax_amounts = [];
+                    const u_totals = [];
+                    const u_sort_orders = [];
 
                     for (let i = 0; i < itemsResult.rows.length; i++) {
                         const item = itemsResult.rows[i];
-                        const offset = i * 11;
-                        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`);
 
-                        params.push(
-                            invoiceId,
-                            req.organizationId,
-                            item.product_id,
-                            item.name,
-                            item.description,
-                            item.quantity,
-                            item.unit_price,
-                            item.tax_rate,
-                            item.tax_amount,
-                            item.total,
-                            item.sort_order
-                        );
+                        u_invoice_ids.push(invoiceId);
+                        u_organization_ids.push(req.organizationId);
+                        u_product_ids.push(item.product_id);
+                        u_names.push(item.name);
+                        u_descriptions.push(item.description);
+                        u_quantities.push(item.quantity);
+                        u_unit_prices.push(item.unit_price);
+                        u_tax_rates.push(item.tax_rate);
+                        u_tax_amounts.push(item.tax_amount);
+                        u_totals.push(item.total);
+                        u_sort_orders.push(item.sort_order);
                     }
 
                     await client.query(`
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ${values.join(', ')}
-                    `, params);
+                        ) SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
+                            $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                        )
+                    `, [
+                        u_invoice_ids, u_organization_ids, u_product_ids, u_names, u_descriptions,
+                        u_quantities, u_unit_prices, u_tax_rates, u_tax_amounts, u_totals, u_sort_orders
+                    ]);
                 }
 
                 await client.query(`
