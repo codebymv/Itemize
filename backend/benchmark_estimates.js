@@ -29,7 +29,7 @@ async function runBenchmark() {
 
     await withTransaction(pool, async (client) => {
         // Mock estimateNumber
-        const estimateNumber = 'EST-BENCHMARK';
+        const estimateNumber = `EST-BENCHMARK-${Date.now()}`;
 
         // Calculate totals
         let subtotal = 0;
@@ -69,29 +69,39 @@ async function runBenchmark() {
         const estimateId = estimateResult.rows[0].id;
 
         // Create line items
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-            const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+        if (items.length > 0) {
+            const values = [];
+            const params = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
+                const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+
+                const offset = i * 11;
+                values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`);
+
+                params.push(
+                    estimateId,
+                    req.organizationId,
+                    item.product_id || null,
+                    item.name,
+                    item.description || null,
+                    item.quantity || 1,
+                    item.unit_price || 0,
+                    item.tax_rate || 0,
+                    itemTax,
+                    itemTotal + itemTax,
+                    i
+                );
+            }
 
             await client.query(`
                 INSERT INTO estimate_items (
                     estimate_id, organization_id, product_id, name, description,
                     quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            `, [
-                estimateId,
-                req.organizationId,
-                item.product_id || null,
-                item.name,
-                item.description || null,
-                item.quantity || 1,
-                item.unit_price || 0,
-                item.tax_rate || 0,
-                itemTax,
-                itemTotal + itemTax,
-                i
-            ]);
+                ) VALUES ${values.join(', ')}
+            `, params);
         }
     });
 
