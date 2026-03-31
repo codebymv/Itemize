@@ -29,7 +29,7 @@ async function runBenchmark() {
 
     await withTransaction(pool, async (client) => {
         // Mock estimateNumber
-        const estimateNumber = 'EST-BENCHMARK';
+        const estimateNumber = `EST-BENCHMARK-${Date.now()}`;
 
         // Calculate totals
         let subtotal = 0;
