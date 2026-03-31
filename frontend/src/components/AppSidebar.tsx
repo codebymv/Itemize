@@ -42,7 +42,6 @@ import {
     Star,
     Receipt,
     Search,
-    Command,
     FileSignature,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -272,12 +271,24 @@ const secondaryNavItems: NavItem[] = [
     },
 ];
 
+function isAppleModifierPlatform(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    const clientPlatform = nav.userAgentData?.platform?.toLowerCase();
+    if (clientPlatform === 'macos' || clientPlatform === 'ios') return true;
+    if (clientPlatform === 'windows' || clientPlatform === 'android' || clientPlatform === 'linux') return false;
+    const platform = navigator.platform ?? '';
+    if (/^(Mac|iPhone|iPod|iPad)/i.test(platform)) return true;
+    return /Mac OS X|Macintosh|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export function AppSidebar() {
     const location = useLocation();
     const navigate = useNavigate();
     const { theme } = useTheme();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
     const { setSearchOpen } = useSearch();
+    const [searchShortcutHint, setSearchShortcutHint] = React.useState<'apple' | 'other' | null>(null);
 
     const isCollapsed = state === 'collapsed';
 
@@ -289,6 +300,10 @@ export function AppSidebar() {
             setOpenMobile(false);
         }
     }, [location.pathname, isMobile, setOpenMobile]);
+
+    React.useEffect(() => {
+        setSearchShortcutHint(isAppleModifierPlatform() ? 'apple' : 'other');
+    }, []);
 
     const handleNavigate = (path: string, disabled?: boolean) => {
         if (disabled) return;
@@ -354,7 +369,9 @@ export function AppSidebar() {
                         className="flex-1 h-auto px-0 border-none bg-transparent focus-visible:ring-0 text-sm"
                         readOnly
                     />
-                    <Command className="h-3.5 w-3.5 opacity-50" />
+                    <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                        <span className="text-xs">{searchShortcutHint === 'apple' ? '⌘' : 'Ctrl'}</span>K
+                    </kbd>
                 </div>
             </div>
 
