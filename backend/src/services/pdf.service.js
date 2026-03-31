@@ -173,7 +173,7 @@ let cachedIconDataUrl = null;
 let cachedTextWhiteDataUrl = null;
 let cachedTextBlackDataUrl = null;
 
-function getItemizeLogo() {
+async function getItemizeLogoAsync() {
     // Return cached version if available
     if (cachedLogoDataUrl !== null) {
         return cachedLogoDataUrl;
@@ -182,23 +182,23 @@ function getItemizeLogo() {
     try {
         // Try to load from frontend public directory (local development)
         const logoPath = path.join(__dirname, '../../frontend/public/cover.png');
-        if (fs.existsSync(logoPath)) {
-            const logoBuffer = fs.readFileSync(logoPath);
+        try {
+            const logoBuffer = await fs.promises.readFile(logoPath);
             const base64 = logoBuffer.toString('base64');
             cachedLogoDataUrl = `data:image/png;base64,${base64}`;
             logger.info('Itemize logo loaded from local file');
             return cachedLogoDataUrl;
-        }
+        } catch (e) { /* file does not exist, continue to fallback */ }
         
         // Fallback: try relative to backend
         const altPath = path.join(__dirname, '../public/cover.png');
-        if (fs.existsSync(altPath)) {
-            const logoBuffer = fs.readFileSync(altPath);
+        try {
+            const logoBuffer = await fs.promises.readFile(altPath);
             const base64 = logoBuffer.toString('base64');
             cachedLogoDataUrl = `data:image/png;base64,${base64}`;
             logger.info('Itemize logo loaded from backend public directory');
             return cachedLogoDataUrl;
-        }
+        } catch (e) { /* file does not exist, continue to fallback */ }
         
         // In production (Railway), we might need to fetch from URL
         // For now, return null and use text fallback
@@ -229,13 +229,13 @@ async function getItemizeIconAsync() {
         ];
         
         for (const iconPath of possiblePaths) {
-            if (fs.existsSync(iconPath)) {
-                const iconBuffer = fs.readFileSync(iconPath);
+            try {
+                const iconBuffer = await fs.promises.readFile(iconPath);
                 const base64 = iconBuffer.toString('base64');
                 cachedIconDataUrl = `data:image/png;base64,${base64}`;
                 logger.info(`Itemize icon loaded from filesystem: ${iconPath}`);
                 return cachedIconDataUrl;
-            }
+            } catch (e) { /* continue loop */ }
         }
         
         // Fallback: try to fetch via HTTP (for production environments)
@@ -270,7 +270,7 @@ function getItemizeIcon() {
     return null;
 }
 
-function getItemizeTextWhite() {
+async function getItemizeTextWhiteAsync() {
     // Return cached version if available
     if (cachedTextWhiteDataUrl !== null) {
         return cachedTextWhiteDataUrl;
@@ -279,21 +279,21 @@ function getItemizeTextWhite() {
     try {
         // Try to load from frontend public directory (local development)
         const textPath = path.join(__dirname, '../../frontend/public/textwhite.png');
-        if (fs.existsSync(textPath)) {
-            const textBuffer = fs.readFileSync(textPath);
+        try {
+            const textBuffer = await fs.promises.readFile(textPath);
             const base64 = textBuffer.toString('base64');
             cachedTextWhiteDataUrl = `data:image/png;base64,${base64}`;
             return cachedTextWhiteDataUrl;
-        }
+        } catch (e) { /* file does not exist, continue to fallback */ }
         
         // Fallback: try relative to backend
         const altPath = path.join(__dirname, '../public/textwhite.png');
-        if (fs.existsSync(altPath)) {
-            const textBuffer = fs.readFileSync(altPath);
+        try {
+            const textBuffer = await fs.promises.readFile(altPath);
             const base64 = textBuffer.toString('base64');
             cachedTextWhiteDataUrl = `data:image/png;base64,${base64}`;
             return cachedTextWhiteDataUrl;
-        }
+        } catch (e) { /* file does not exist, continue to fallback */ }
         
         cachedTextWhiteDataUrl = false;
         return null;
@@ -321,13 +321,13 @@ async function getItemizeTextBlackAsync() {
         ];
         
         for (const textPath of possiblePaths) {
-            if (fs.existsSync(textPath)) {
-                const textBuffer = fs.readFileSync(textPath);
+            try {
+                const textBuffer = await fs.promises.readFile(textPath);
                 const base64 = textBuffer.toString('base64');
                 cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
                 logger.info(`Itemize text black loaded from filesystem: ${textPath}`);
                 return cachedTextBlackDataUrl;
-            }
+            } catch (e) { /* continue loop */ }
         }
         
         // Fallback: try to fetch via HTTP (for production environments)
