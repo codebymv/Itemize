@@ -14,6 +14,15 @@ const path = require('path');
 // Try to load puppeteer
 let puppeteer = null;
 
+const fileExistsAsync = async (filePath) => {
+    try {
+        await fs.promises.access(filePath, fs.constants.F_OK);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 try {
     puppeteer = require('puppeteer');
     logger.info('Puppeteer loaded - PDF generation enabled');
@@ -229,8 +238,8 @@ async function getItemizeIconAsync() {
         ];
         
         for (const iconPath of possiblePaths) {
-            if (fs.existsSync(iconPath)) {
-                const iconBuffer = fs.readFileSync(iconPath);
+            if (await fileExistsAsync(iconPath)) {
+                const iconBuffer = await fs.promises.readFile(iconPath);
                 const base64 = iconBuffer.toString('base64');
                 cachedIconDataUrl = `data:image/png;base64,${base64}`;
                 logger.info(`Itemize icon loaded from filesystem: ${iconPath}`);
@@ -321,8 +330,8 @@ async function getItemizeTextBlackAsync() {
         ];
         
         for (const textPath of possiblePaths) {
-            if (fs.existsSync(textPath)) {
-                const textBuffer = fs.readFileSync(textPath);
+            if (await fileExistsAsync(textPath)) {
+                const textBuffer = await fs.promises.readFile(textPath);
                 const base64 = textBuffer.toString('base64');
                 cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
                 logger.info(`Itemize text black loaded from filesystem: ${textPath}`);
