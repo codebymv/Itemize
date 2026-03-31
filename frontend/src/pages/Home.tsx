@@ -245,10 +245,11 @@ const Home: React.FC = () => {
                       <img
                         src={pain.image}
                         alt={pain.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-95 group-hover:opacity-100"
+                        className="w-full h-full object-cover grayscale contrast-125 brightness-90 transition-transform duration-700 group-hover:scale-105 opacity-95 group-hover:opacity-100 mix-blend-luminosity"
                         loading="lazy"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/20 to-transparent' : 'from-slate-800 via-slate-800/20 to-transparent'}`} />
+                      <div className="absolute inset-0 bg-slate-500/30 mix-blend-multiply pointer-events-none" />
+                      <div className={`absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-slate-800 via-slate-800/40 to-transparent'}`} />
                     </div>
                     <div className="p-8 pt-6 flex-1 relative z-10 flex flex-col">
                       <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${pain.gradient} mb-6`} />
@@ -460,7 +461,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 7: TRUST & SECURITY                                    */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {false && (
+        {/*
           <section id="security" className="py-20 md:py-28" style={{ contain: 'layout style' }}>
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
               <RevealSection>
@@ -494,7 +495,7 @@ const Home: React.FC = () => {
               </div>
             </div>
           </section>
-        )}
+        */}
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 8: PRICING                                             */}
@@ -537,8 +538,8 @@ const Home: React.FC = () => {
 
           <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <RevealSection>
-              <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight whitespace-nowrap`}>
-                Ready to simplify <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
+              <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight md:whitespace-nowrap`}>
+                Ready to simplify <br className="block md:hidden" /><span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
               </h2>
               <p className={`text-lg md:text-xl ${secondaryTextColor} mb-10 max-w-2xl mx-auto leading-relaxed`}>
                 Join Itemize to organize, automate, and grow.
