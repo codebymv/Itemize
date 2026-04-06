@@ -411,6 +411,33 @@ async function addOrganizationMembersIndexes(pool) {
 }
 
 /**
+ * Add indexes to users table
+ */
+async function addUsersIndexes(pool) {
+    const client = await pool.connect();
+    try {
+        // Critical index for auth lookups
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)
+        `);
+        // Index for role-based queries
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_users_role ON users(role) WHERE role IS NOT NULL
+        `);
+        // Index for created_at sorting
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)
+        `);
+        
+        console.log('✅ users indexes created/verified');
+    } catch (error) {
+        console.log('⚠️ Some users indexes may already exist:', error.message);
+    } finally {
+        client.release();
+    }
+}
+
+/**
  * Run all index migrations
  */
 async function runAllIndexMigrations(pool) {
@@ -432,6 +459,7 @@ async function runAllIndexMigrations(pool) {
     await addFormSubmissionsIndexes(pool);
     await addConversationsIndexes(pool);
     await addOrganizationMembersIndexes(pool);
+    await addUsersIndexes(pool);
     
     console.log('✅ All database index migrations completed');
 }
@@ -453,5 +481,6 @@ module.exports = {
     addPageAnalyticsIndexes,
     addFormSubmissionsIndexes,
     addConversationsIndexes,
-    addOrganizationMembersIndexes
+    addOrganizationMembersIndexes,
+    addUsersIndexes,
 };

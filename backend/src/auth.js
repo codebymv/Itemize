@@ -697,6 +697,8 @@ router.post('/change-password', asyncHandler(async (req, res) => {
 /**
  * POST /api/auth/google-login
  * Handle Google OAuth login
+ * SECURITY: This endpoint receives user data from client - MUST be used with google-credential flow
+ * for production. Consider deprecating in favor of google-credential.
  */
 router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
   // Prevent caching of auth responses
@@ -711,7 +713,21 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
       return res.status(400).json({ error: 'Missing user information' });
     }
 
-    logger.info('Processing Google login', { email });
+    // Input validation
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    if (trimmedName.length < 1 || trimmedName.length > 100) {
+      return res.status(400).json({ error: 'Invalid name length (1-100 characters)' });
+    }
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    logger.warn('[Auth] google-login endpoint used - consider migrating to google-credential for better security', { email: trimmedEmail });
     
     const pool = req.dbPool;
     
@@ -817,12 +833,40 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
       return res.status(400).json({ error: 'Missing credential' });
     }
 
-    // Verify the Google ID token
-    const response = await axios.get(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
+    // Verify the Google ID token with proper encoding and audience validation
+    const verifyResponse = await axios.get(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
     );
     
-    const { sub: googleId, email, name, picture } = response.data;
+    const { sub: googleId, email, name, picture, aud, iss } = verifyResponse.data;
+    
+    // SECURITY: Verify the token audience matches our client ID
+    if (aud !== GOOGLE_CLIENT_ID) {
+      logger.error('[Auth] Google token audience mismatch', { 
+        expected: GOOGLE_CLIENT_ID, 
+        received: aud,
+        email 
+      });
+      return res.status(401).json({ error: 'Invalid token audience' });
+    }
+    
+    // Verify issuer is Google
+    if (iss !== 'accounts.google.com' && iss !== 'https://accounts.google.com') {
+      logger.error('[Auth] Invalid token issuer', { iss, email });
+      return res.status(401).json({ error: 'Invalid token issuer' });
+    }
+    
+    // Input validation
+    const trimmedName = name?.trim() || 'User';
+    if (trimmedName.length < 1 || trimmedName.length > 100) {
+      return res.status(400).json({ error: 'Invalid name length' });
+    }
+    
+    const trimmedEmail = email.toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
     
     const pool = req.dbPool;
     
@@ -978,19 +1022,51 @@ router.get('/me', asyncHandler(async (req, res) => {
 router.put('/me', asyncHandler(async (req, res) => {
   const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
   if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ 
+      success: false, 
+      error: { message: 'Authentication required', code: 'AUTH_REQUIRED' } 
+    });
   }
 
   let decoded;
   try {
     decoded = jwt.verify(token, JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        error: { message: 'Token expired', code: 'TOKEN_EXPIRED' } 
+      });
+    }
+    return res.status(401).json({ 
+      success: false, 
+      error: { message: 'Invalid token', code: 'INVALID_TOKEN' } 
+    });
   }
 
   const { name } = req.body;
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    return res.status(400).json({ error: 'Name is required' });
+  
+  // Input validation with length limits
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ 
+      success: false, 
+      error: { message: 'Name is required', code: 'NAME_REQUIRED' } 
+    });
+  }
+  
+  const trimmedName = name.trim();
+  if (trimmedName.length < 1) {
+    return res.status(400).json({ 
+      success: false, 
+      error: { message: 'Name cannot be empty', code: 'NAME_EMPTY' } 
+    });
+  }
+  
+  if (trimmedName.length > 100) {
+    return res.status(400).json({ 
+      success: false, 
+      error: { message: 'Name must be 100 characters or less', code: 'NAME_TOO_LONG' } 
+    });
   }
 
   const pool = req.dbPool;
@@ -1131,17 +1207,35 @@ const authenticateJWT = (req, res, next) => {
     }
   }
 
-  if (token) {
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-      if (err) {
-        return res.sendStatus(401);
-      }
-      req.user = user;
-      next();
+  if (!token) {
+    return res.status(401).json({ 
+      success: false, 
+      error: { message: 'Authentication required', code: 'NO_TOKEN' } 
     });
-  } else {
-    res.sendStatus(401);
   }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          success: false, 
+          error: { message: 'Token expired', code: 'TOKEN_EXPIRED' } 
+        });
+      }
+      if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({ 
+          success: false, 
+          error: { message: 'Invalid token', code: 'INVALID_TOKEN' } 
+        });
+      }
+      return res.status(401).json({ 
+        success: false, 
+        error: { message: 'Authentication failed', code: 'AUTH_FAILED' } 
+      });
+    }
+    req.user = user;
+    next();
+  });
 };
 
 /**

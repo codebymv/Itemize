@@ -6,6 +6,7 @@
 const cron = require('node-cron');
 const { runAllInvoiceJobs } = require('./jobs/invoice-jobs');
 const { runSignatureReminderJobs } = require('./jobs/signature-jobs');
+const { scheduleTrialReminderCron } = require('./jobs/trialReminderCron');
 const { logger } = require('./utils/logger');
 
 let schedulerInitialized = false;
@@ -46,6 +47,9 @@ function initScheduler(pool) {
     }, {
         timezone: 'America/New_York'
     });
+
+    // Schedule trial reminder cron job (daily at 9:00 AM)
+    scheduleTrialReminderCron();
 
     // Also run immediately on startup in development to catch any missed jobs
     if (process.env.NODE_ENV === 'development') {

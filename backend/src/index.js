@@ -87,12 +87,21 @@ app.use(correlationIdMiddleware);
 app.use(requestLogger);
 
 // 4. Body parsing with limits (reduced from 10MB to 1MB for DoS protection)
+// NOTE: Stripe webhook route uses express.raw() and must be mounted BEFORE this
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 4. Input sanitization to prevent XSS and injection attacks
+// NOTE: Exclude webhook path from sanitization (raw body needed for signature verification)
 const sanitizeMiddleware = require('./middleware/sanitize');
-app.use('/api', sanitizeMiddleware);
+app.use('/api', (req, res, next) => {
+    if (req.path === '/billing/webhook') {
+        return next();
+    }
+    sanitizeMiddleware(req, res, next);
+});
 
 // 5. Cookie parsing
 app.use(cookieParser());
@@ -295,6 +304,22 @@ app.get('/api/health', async (req, res) => {
                 ok: Boolean(process.env.TWILIO_ACCOUNT_SID),
                 message: process.env.TWILIO_ACCOUNT_SID ? 'Configured' : 'Not configured',
             },
+            stripe: {
+                ok: Boolean(process.env.STRIPE_SECRET_KEY),
+                message: process.env.STRIPE_SECRET_KEY ? 'Configured' : 'Not configured',
+            },
+            aws: {
+                ok: Boolean(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
+                message: (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ? 'Configured' : 'Not configured',
+            },
+            google: {
+                ok: Boolean(process.env.GOOGLE_CLIENT_ID),
+                message: process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured',
+            },
+            sentry: {
+                ok: Boolean(process.env.SENTRY_DSN),
+                message: process.env.SENTRY_DSN ? 'Configured' : 'Not configured',
+            },
         };
 
         const databaseOptionalDuringStartup = !pool;
@@ -401,7 +426,13 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection', { reason: String(reason), promise: String(promise) });
+    logger.error('Unhandled Rejection', { reason: String(reason) });
+    // In production, unhandled rejections should crash the process
+    // to prevent undefined state
+    if (process.env.NODE_ENV === 'production') {
+        logger.error('Crashing process due to unhandled rejection in production');
+        process.exit(1);
+    }
 });
 
 // Deferred initialization for database-dependent services

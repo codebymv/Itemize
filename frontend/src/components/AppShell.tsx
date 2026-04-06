@@ -10,6 +10,9 @@ import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarC
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
+import { TrialBanner } from '@/components/trial/TrialBanner';
+import { TrialBadge } from '@/components/trial/TrialBadge';
+import { useBillingStatus } from '@/hooks/useBillingStatus';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -61,6 +64,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const { subscription } = useSubscriptionState();
     const [searchOpen, setSearchOpen] = useState(false);
+    const { data: billingStatus } = useBillingStatus();
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -143,6 +147,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        {/* Trial Badge - Compact indicator */}
+                        <TrialBadge
+                            trialEndsAt={billingStatus?.trial_ends_at || null}
+                            compact={true}
+                        />
+
                         {/* Theme toggle - only visible on desktop */}
                         <Button
                             variant="ghost"
@@ -276,6 +286,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                         <Breadcrumbs />
                     </div>
                 )}
+
+                {/* Trial Banner - Shows only during active trial */}
+                <TrialBanner
+                    trialEndsAt={billingStatus?.trial_ends_at || null}
+                    trialPlan={billingStatus?.plan}
+                />
 
                 {/* Main content */}
                 <main id="main-content" tabIndex={-1} className={cn(

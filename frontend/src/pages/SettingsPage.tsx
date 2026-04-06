@@ -27,6 +27,10 @@ import { cn } from '@/lib/utils';
 import { PricingCards } from '@/components/subscription';
 import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
 import { Plan } from '@/lib/subscription';
+import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
+import { UsageIndicator, UsageIndicatorGrid } from '@/components/trial/UsageIndicator';
+import { useUsageStats } from '@/hooks/useUsageStats';
+import { Mail, MessageSquare, Zap } from 'lucide-react';
 import {
   Settings,
   User,
@@ -124,6 +128,7 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
   const { startCheckout } = useSubscriptionFeatures();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
+  const { data: usageStats } = useUsageStats();
 
   const handleUpgrade = async (planId: Plan) => {
     if (currentPlan === planId) return;
@@ -140,6 +145,9 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
 
   return (
     <div className="space-y-6">
+      {/* Trial Status Card - Shows only during active trial */}
+      <TrialStatusCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Account Information</CardTitle>
@@ -160,6 +168,41 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
           <SubscriptionStatus />
         </CardContent>
       </Card>
+
+      {/* Usage Statistics */}
+      {usageStats && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Current Usage</CardTitle>
+            <CardDescription>Track your resource consumption</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UsageIndicatorGrid>
+              <UsageIndicator
+                resourceType="emails"
+                used={usageStats.usage.emails.used}
+                limit={typeof usageStats.usage.emails.limit === 'number' ? usageStats.usage.emails.limit : -1}
+                label="Emails"
+                icon={<Mail className="h-5 w-5" />}
+              />
+              <UsageIndicator
+                resourceType="sms"
+                used={usageStats.usage.sms.used}
+                limit={typeof usageStats.usage.sms.limit === 'number' ? usageStats.usage.sms.limit : -1}
+                label="SMS"
+                icon={<MessageSquare className="h-5 w-5" />}
+              />
+              <UsageIndicator
+                resourceType="apiCalls"
+                used={usageStats.usage.apiCalls.used}
+                limit={typeof usageStats.usage.apiCalls.limit === 'number' ? usageStats.usage.apiCalls.limit : -1}
+                label="API Calls"
+                icon={<Zap className="h-5 w-5" />}
+              />
+            </UsageIndicatorGrid>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

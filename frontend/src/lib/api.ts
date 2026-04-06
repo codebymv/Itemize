@@ -161,6 +161,7 @@ export const setAuthToken = (token: string | null): void => {
   if (typeof window === 'undefined') return;
   if (!token) {
     clearSessionExpiringTimer();
+    stopRefreshResetInterval();
     window.localStorage.removeItem(AUTH_TOKEN_KEY);
     window.localStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem('token_check');
@@ -239,10 +240,28 @@ let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
 const REFRESH_ATTEMPT_RESET_TIME = 60000; // 1 minute
 
-// Reset refresh attempts counter periodically
-setInterval(() => {
-  refreshAttempts = 0;
-}, REFRESH_ATTEMPT_RESET_TIME);
+// Interval ID for cleanup
+let refreshResetIntervalId: ReturnType<typeof setInterval> | null = null;
+
+// Reset refresh attempts counter periodically (cleanup on logout)
+const startRefreshResetInterval = () => {
+  if (refreshResetIntervalId) {
+    clearInterval(refreshResetIntervalId);
+  }
+  refreshResetIntervalId = setInterval(() => {
+    refreshAttempts = 0;
+  }, REFRESH_ATTEMPT_RESET_TIME);
+};
+
+const stopRefreshResetInterval = () => {
+  if (refreshResetIntervalId) {
+    clearInterval(refreshResetIntervalId);
+    refreshResetIntervalId = null;
+  }
+};
+
+// Start the interval
+startRefreshResetInterval();
 
 // Add a response interceptor for error handling and retry logic
 api.interceptors.response.use(

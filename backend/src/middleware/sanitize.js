@@ -1,9 +1,18 @@
 const DOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
 
-function sanitizeObject(obj) {
+const ALLOWED_TAGS = ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+const ALLOWED_ATTR = ['href', 'target', 'class', 'id', 'style'];
+
+function sanitizeObject(obj, depth = 0) {
+  if (depth > 10) {
+    return;
+  }
   for (const key in obj) {
     if (obj[key] !== null && typeof obj[key] === 'object') {
-      sanitizeObject(obj[key]);
+      sanitizeObject(obj[key], depth + 1);
     } else if (typeof obj[key] === 'string') {
       obj[key] = sanitizeString(obj[key]);
     }
@@ -11,12 +20,18 @@ function sanitizeObject(obj) {
 }
 
 function sanitizeString(str) {
-  if (!str) return '';
-  return str
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+  if (!str || typeof str !== 'string') return '';
+  
+  const sanitized = purify.sanitize(str, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    ALLOW_DATA_ATTR: false,
+  });
+  
+  return sanitized
     .replace(/javascript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
     .replace(/&(?![a-zA-Z0-9#]+;)/g, '&amp;');
 }
 
@@ -34,7 +49,8 @@ module.exports = (req, res, next) => {
 };
 
 module.exports.sanitizeString = sanitizeString;
-module.exports.sanitizeHtml = (html) => DOMPurify.sanitize(html, {
-  ALLOWED_TAGS: ['B', 'I', 'EM', 'STRONG', 'A', 'UL', 'OL', 'LI', 'P', 'BR', 'DIV', 'SPAN'],
-  ALLOWED_ATTR: ['href', 'target', 'class', 'style'],
+module.exports.sanitizeHtml = (html) => purify.sanitize(html, {
+  ALLOWED_TAGS,
+  ALLOWED_ATTR,
+  ALLOW_DATA_ATTR: false,
 });

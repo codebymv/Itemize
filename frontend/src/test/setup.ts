@@ -7,6 +7,15 @@
 import '@testing-library/jest-dom';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import * as fc from 'fast-check';
+
+// Configure fast-check for property-based testing
+// Minimum 100 iterations per property test as per spec requirements
+export const propertyTestConfig = {
+  numRuns: 100,
+  verbose: true,
+  seed: Date.now(), // Use current timestamp for reproducibility
+};
 
 // Cleanup after each test
 afterEach(() => {
