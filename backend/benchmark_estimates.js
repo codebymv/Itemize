@@ -29,7 +29,7 @@ async function runBenchmark() {
 
     await withTransaction(pool, async (client) => {
         // Mock estimateNumber
-        const estimateNumber = 'EST-BENCHMARK';
+        const estimateNumber = `EST-BENCHMARK-${Date.now()}`;
 
         // Calculate totals
         let subtotal = 0;
@@ -69,28 +69,61 @@ async function runBenchmark() {
         const estimateId = estimateResult.rows[0].id;
 
         // Create line items
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-            const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+        if (items.length > 0) {
+            const productIds = [];
+            const names = [];
+            const descriptions = [];
+            const quantities = [];
+            const unitPrices = [];
+            const taxRates = [];
+            const taxAmounts = [];
+            const totals = [];
+            const sortOrders = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
+                const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+
+                productIds.push(item.product_id || null);
+                names.push(item.name);
+                descriptions.push(item.description || null);
+                quantities.push(item.quantity || 1);
+                unitPrices.push(item.unit_price || 0);
+                taxRates.push(item.tax_rate || 0);
+                taxAmounts.push(itemTax);
+                totals.push(itemTotal + itemTax);
+                sortOrders.push(i);
+            }
 
             await client.query(`
                 INSERT INTO estimate_items (
                     estimate_id, organization_id, product_id, name, description,
                     quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                )
+                SELECT
+                    $1, $2,
+                    unnest($3::int[]),
+                    unnest($4::text[]),
+                    unnest($5::text[]),
+                    unnest($6::numeric[]),
+                    unnest($7::numeric[]),
+                    unnest($8::numeric[]),
+                    unnest($9::numeric[]),
+                    unnest($10::numeric[]),
+                    unnest($11::int[])
             `, [
                 estimateId,
                 req.organizationId,
-                item.product_id || null,
-                item.name,
-                item.description || null,
-                item.quantity || 1,
-                item.unit_price || 0,
-                item.tax_rate || 0,
-                itemTax,
-                itemTotal + itemTax,
-                i
+                productIds,
+                names,
+                descriptions,
+                quantities,
+                unitPrices,
+                taxRates,
+                taxAmounts,
+                totals,
+                sortOrders
             ]);
         }
     });
