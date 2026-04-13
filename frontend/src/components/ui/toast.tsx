@@ -54,16 +54,29 @@ const Toast = React.forwardRef<
 })
 Toast.displayName = ToastPrimitives.Root.displayName
 
+const toastActionVariants = cva(
+  "inline-flex h-8 shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "border bg-transparent hover:bg-secondary group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+        primary: "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 group-[.destructive]:bg-destructive group-[.destructive]:border-destructive group-[.destructive]:hover:bg-destructive/90",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
 const ToastAction = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Action>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action> &
+    VariantProps<typeof toastActionVariants>
+>(({ className, variant, ...props }, ref) => (
   <ToastPrimitives.Action
     ref={ref}
-    className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
-      className
-    )}
+    className={cn(toastActionVariants({ variant }), className)}
     {...props}
   />
 ))

@@ -153,9 +153,9 @@ const hasRecentItems = recentItems !== undefined;
               </div>
             )}
 
-            <CollapsibleContent className="space-y-2 border-t pt-4">
+            <CollapsibleContent>
               {hasItems ? (
-                <div className="max-h-24 overflow-y-auto space-y-2">
+                <div className="space-y-2 border-t pt-4">
                   {recentItems.slice(0, 5).map((item) => (
                     <div key={item.id} className="flex items-center justify-between py-1">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -175,10 +175,12 @@ const hasRecentItems = recentItems !== undefined;
                   ))}
                 </div>
               ) : (
-                <div className="py-4 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {emptyListMessage || `Your ${title.toLowerCase()} will appear here`}
-                  </p>
+                <div className="border-t pt-4">
+                  <div className="py-1">
+                    <p className="text-sm text-muted-foreground">
+                      {emptyListMessage || `Your ${title.toLowerCase()} will appear here`}
+                    </p>
+                  </div>
                 </div>
               )}
             </CollapsibleContent>

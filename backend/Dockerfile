@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -79,7 +79,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 # Install only production dependencies
-RUN npm ci --only=production && \
+RUN npm install --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy application code

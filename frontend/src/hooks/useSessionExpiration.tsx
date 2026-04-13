@@ -46,6 +46,7 @@ export const useSessionWarning = () => {
         action: (
           <ToastAction
             altText="Stay signed in"
+            variant="primary"
             onClick={async () => {
               try {
                 const refreshToken = getRefreshToken();

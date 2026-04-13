@@ -62,7 +62,6 @@ interface QuickAction {
     description: string;
     icon: LucideIcon;
     action: () => void;
-    primary?: boolean;
 }
 
 export function DashboardPage() {
@@ -208,7 +207,6 @@ export function DashboardPage() {
             description: 'View and manage your CRM contacts',
             icon: Users,
             action: () => navigate('/contacts'),
-            primary: true,
         },
         {
             title: 'View Pipelines',
@@ -284,6 +282,7 @@ export function DashboardPage() {
                             (analytics?.contacts?.total ?? 0) === 0 &&
                             (analytics?.invoiceMetrics?.recentInvoices?.length ?? 0) === 0
                         }
+                        onNavigate={(path) => navigate(path)}
                     />
 
                     {/* CRM Stats Grid */}
@@ -653,17 +652,14 @@ export function DashboardPage() {
                             {quickActions.map((action) => (
                                 <Card
                                     key={action.title}
-                                    className={`cursor-pointer transition-all hover:shadow-md ${action.primary
-                                            ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20'
-                                            : 'bg-muted/20'
-                                        }`}
+                                    className="cursor-pointer transition-all hover:shadow-md bg-muted/20 hover:border-blue-200 dark:hover:border-blue-800"
                                     onClick={() => action.action()}
                                 >
                                     <CardHeader className="pb-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${action.primary ? 'bg-blue-100 dark:bg-blue-900' : 'bg-muted'}`}>
-                                                    <action.icon className={`h-4 w-4 ${action.primary ? 'text-blue-600' : 'text-muted-foreground'}`} />
+                                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                                                    <action.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                                 </div>
                                                 <div>
                                                     <CardTitle className="text-sm">{action.title}</CardTitle>
