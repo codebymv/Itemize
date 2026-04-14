@@ -18,67 +18,59 @@ module.exports = (pool, authenticateJWT, broadcast) => {
       const updated = [];
       const failed = [];
 
-      await withDbClient(pool, async (client) => {
-        const updatesByType = {
-          list: [],
-          note: [],
-          whiteboard: [],
-          wireframe: [],
-          vault: []
-        };
+      // Group updates by type
+      const updatesByType = {
+        list: [],
+        note: [],
+        whiteboard: [],
+        wireframe: [],
+        vault: []
+      };
 
-        for (const update of updates) {
-          const { type, id, position_x, position_y } = update || {};
+      for (const update of updates) {
+        const { type, id, position_x, position_y, width, height } = update || {};
 
-          if (!type || id === undefined || id === null || typeof position_x !== 'number' || typeof position_y !== 'number') {
-            failed.push({ type, id, error: 'Invalid update payload' });
-            continue;
-          }
-
-          if (updatesByType[type]) {
-            updatesByType[type].push(update);
-          } else {
-            failed.push({ type, id, error: 'Unknown update type' });
-          }
+        if (!type || id === undefined || id === null || typeof position_x !== 'number' || typeof position_y !== 'number') {
+          failed.push({ type, id, error: 'Invalid update payload' });
+          continue;
         }
 
-        if (updatesByType.list.length > 0) {
-          const u_ids = [];
-          const u_pos_xs = [];
-          const u_pos_ys = [];
-          const u_widths = [];
+        if (updatesByType[type]) {
+          updatesByType[type].push(update);
+        } else {
+          failed.push({ type, id, error: 'Unknown update type' });
+        }
+      }
 
-          for (const update of updatesByType.list) {
-            u_ids.push(update.id);
-            u_pos_xs.push(update.position_x);
-            u_pos_ys.push(update.position_y);
-            u_widths.push(update.width ?? null);
+      await withDbClient(pool, async (client) => {
+        // Process lists
+        if (updatesByType.list.length > 0) {
+          const ids = [];
+          const xs = [];
+          const ys = [];
+          const widths = [];
+
+          for (const u of updatesByType.list) {
+            ids.push(u.id);
+            xs.push(u.position_x);
+            ys.push(u.position_y);
+            widths.push(u.width ?? null);
           }
 
           const result = await client.query(`
             UPDATE lists AS l
-            SET
-              position_x = u.position_x,
-              position_y = u.position_y,
-              width = COALESCE(u.width, l.width)
-            FROM (
-              SELECT * FROM UNNEST(
-                $1::int[], $2::numeric[], $3::numeric[], $4::numeric[]
-              ) AS t(id, position_x, position_y, width)
-            ) AS u
+            SET position_x = u.position_x,
+                position_y = u.position_y,
+                width = COALESCE(u.width, l.width)
+            FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[])) AS u(id, position_x, position_y, width)
             WHERE l.id = u.id AND l.user_id = $5
             RETURNING l.*
-          `, [u_ids, u_pos_xs, u_pos_ys, u_widths, req.user.id]);
+          `, [ids, xs, ys, widths, req.user.id]);
 
-          const foundIds = new Set(result.rows.map(r => r.id));
-
-          for (const update of updatesByType.list) {
-            if (!foundIds.has(update.id)) {
-              failed.push({ type: 'list', id: update.id, error: 'List not found' });
-            }
-          }
-
+          const returnedIds = new Set();
           for (const row of result.rows) {
+            returnedIds.add(row.id);
+
             if (row.is_public && row.share_token && broadcast?.listUpdate) {
               broadcast.listUpdate(row.share_token, 'POSITION_UPDATE', {
                 id: row.id,
@@ -86,88 +78,82 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 position_y: row.position_y
               });
             }
+
             updated.push({ type: 'list', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width });
+          }
+
+          for (const id of ids) {
+            if (!returnedIds.has(id)) {
+              failed.push({ type: 'list', id, error: 'List not found' });
+            }
           }
         }
 
+        // Process notes
         if (updatesByType.note.length > 0) {
-          const u_ids = [];
-          const u_pos_xs = [];
-          const u_pos_ys = [];
-          const u_widths = [];
-          const u_heights = [];
+          const ids = [];
+          const xs = [];
+          const ys = [];
+          const widths = [];
+          const heights = [];
 
-          for (const update of updatesByType.note) {
-            u_ids.push(update.id);
-            u_pos_xs.push(update.position_x);
-            u_pos_ys.push(update.position_y);
-            u_widths.push(update.width ?? null);
-            u_heights.push(update.height ?? null);
+          for (const u of updatesByType.note) {
+            ids.push(u.id);
+            xs.push(u.position_x);
+            ys.push(u.position_y);
+            widths.push(u.width ?? null);
+            heights.push(u.height ?? null);
           }
 
           const result = await client.query(`
             UPDATE notes AS n
-            SET
-              position_x = u.position_x,
-              position_y = u.position_y,
-              width = COALESCE(u.width, n.width),
-              height = COALESCE(u.height, n.height)
-            FROM (
-              SELECT * FROM UNNEST(
-                $1::int[], $2::numeric[], $3::numeric[], $4::numeric[], $5::numeric[]
-              ) AS t(id, position_x, position_y, width, height)
-            ) AS u
+            SET position_x = u.position_x,
+                position_y = u.position_y,
+                width = COALESCE(u.width, n.width),
+                height = COALESCE(u.height, n.height)
+            FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[], $5::float[])) AS u(id, position_x, position_y, width, height)
             WHERE n.id = u.id AND n.user_id = $6
             RETURNING n.*
-          `, [u_ids, u_pos_xs, u_pos_ys, u_widths, u_heights, req.user.id]);
+          `, [ids, xs, ys, widths, heights, req.user.id]);
 
-          const foundIds = new Set(result.rows.map(r => r.id));
-
-          for (const update of updatesByType.note) {
-            if (!foundIds.has(update.id)) {
-              failed.push({ type: 'note', id: update.id, error: 'Note not found' });
-            }
+          const returnedIds = new Set();
+          for (const row of result.rows) {
+            returnedIds.add(row.id);
+            updated.push({ type: 'note', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width, height: row.height });
           }
 
-          for (const row of result.rows) {
-            updated.push({ type: 'note', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width, height: row.height });
+          for (const id of ids) {
+            if (!returnedIds.has(id)) {
+              failed.push({ type: 'note', id, error: 'Note not found' });
+            }
           }
         }
 
+        // Process whiteboards
         if (updatesByType.whiteboard.length > 0) {
-          const u_ids = [];
-          const u_pos_xs = [];
-          const u_pos_ys = [];
+          const ids = [];
+          const xs = [];
+          const ys = [];
 
-          for (const update of updatesByType.whiteboard) {
-            u_ids.push(update.id);
-            u_pos_xs.push(update.position_x);
-            u_pos_ys.push(update.position_y);
+          for (const u of updatesByType.whiteboard) {
+            ids.push(u.id);
+            xs.push(u.position_x);
+            ys.push(u.position_y);
           }
 
           const result = await client.query(`
             UPDATE whiteboards AS w
-            SET
-              position_x = u.position_x,
-              position_y = u.position_y
-            FROM (
-              SELECT * FROM UNNEST(
-                $1::int[], $2::numeric[], $3::numeric[]
-              ) AS t(id, position_x, position_y)
-            ) AS u
+            SET position_x = u.position_x,
+                position_y = u.position_y
+            FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[])) AS u(id, position_x, position_y)
             WHERE w.id = u.id AND w.user_id = $4
             RETURNING w.*
-          `, [u_ids, u_pos_xs, u_pos_ys, req.user.id]);
+          `, [ids, xs, ys, req.user.id]);
 
-          const foundIds = new Set(result.rows.map(r => r.id));
-
-          for (const update of updatesByType.whiteboard) {
-            if (!foundIds.has(update.id)) {
-              failed.push({ type: 'whiteboard', id: update.id, error: 'Whiteboard not found' });
-            }
-          }
-
+          const returnedIds = new Set();
           for (const row of result.rows) {
+            returnedIds.add(row.id);
+
             if (row.is_public && row.share_token && broadcast?.whiteboardUpdate) {
               broadcast.whiteboardUpdate(row.share_token, 'POSITION_UPDATE', {
                 id: row.id,
@@ -175,45 +161,43 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 position_y: row.position_y
               });
             }
+
             updated.push({ type: 'whiteboard', id: row.id, position_x: row.position_x, position_y: row.position_y });
+          }
+
+          for (const id of ids) {
+            if (!returnedIds.has(id)) {
+              failed.push({ type: 'whiteboard', id, error: 'Whiteboard not found' });
+            }
           }
         }
 
+        // Process wireframes
         if (updatesByType.wireframe.length > 0) {
-          const u_ids = [];
-          const u_pos_xs = [];
-          const u_pos_ys = [];
+          const ids = [];
+          const xs = [];
+          const ys = [];
 
-          for (const update of updatesByType.wireframe) {
-            u_ids.push(update.id);
-            u_pos_xs.push(Math.round(update.position_x));
-            u_pos_ys.push(Math.round(update.position_y));
+          for (const u of updatesByType.wireframe) {
+            ids.push(u.id);
+            xs.push(Math.round(u.position_x));
+            ys.push(Math.round(u.position_y));
           }
 
           const result = await client.query(`
             UPDATE wireframes AS w
-            SET
-              position_x = u.position_x,
-              position_y = u.position_y,
-              updated_at = NOW()
-            FROM (
-              SELECT * FROM UNNEST(
-                $1::int[], $2::numeric[], $3::numeric[]
-              ) AS t(id, position_x, position_y)
-            ) AS u
+            SET position_x = u.position_x,
+                position_y = u.position_y,
+                updated_at = NOW()
+            FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[])) AS u(id, position_x, position_y)
             WHERE w.id = u.id AND w.user_id = $4
             RETURNING w.*
-          `, [u_ids, u_pos_xs, u_pos_ys, req.user.id]);
+          `, [ids, xs, ys, req.user.id]);
 
-          const foundIds = new Set(result.rows.map(r => r.id));
-
-          for (const update of updatesByType.wireframe) {
-            if (!foundIds.has(update.id)) {
-              failed.push({ type: 'wireframe', id: update.id, error: 'Wireframe not found' });
-            }
-          }
-
+          const returnedIds = new Set();
           for (const row of result.rows) {
+            returnedIds.add(row.id);
+
             if (row.is_public && row.share_token && broadcast?.wireframeUpdate) {
               broadcast.wireframeUpdate(row.share_token, 'POSITION_UPDATE', {
                 id: row.id,
@@ -228,52 +212,55 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 position_y: row.position_y
               });
             }
+
             updated.push({ type: 'wireframe', id: row.id, position_x: row.position_x, position_y: row.position_y });
+          }
+
+          for (const id of ids) {
+            if (!returnedIds.has(id)) {
+              failed.push({ type: 'wireframe', id, error: 'Wireframe not found' });
+            }
           }
         }
 
+        // Process vaults
         if (updatesByType.vault.length > 0) {
-          const u_ids = [];
-          const u_pos_xs = [];
-          const u_pos_ys = [];
-          const u_widths = [];
-          const u_heights = [];
+          const ids = [];
+          const xs = [];
+          const ys = [];
+          const widths = [];
+          const heights = [];
 
-          for (const update of updatesByType.vault) {
-            u_ids.push(update.id);
-            u_pos_xs.push(update.position_x);
-            u_pos_ys.push(update.position_y);
-            u_widths.push(update.width ?? null);
-            u_heights.push(update.height ?? null);
+          for (const u of updatesByType.vault) {
+            ids.push(u.id);
+            xs.push(u.position_x);
+            ys.push(u.position_y);
+            widths.push(u.width ?? null);
+            heights.push(u.height ?? null);
           }
 
           const result = await client.query(`
             UPDATE vaults AS v
-            SET
-              position_x = u.position_x,
-              position_y = u.position_y,
-              width = COALESCE(u.width, v.width),
-              height = COALESCE(u.height, v.height),
-              updated_at = CURRENT_TIMESTAMP
-            FROM (
-              SELECT * FROM UNNEST(
-                $1::int[], $2::numeric[], $3::numeric[], $4::numeric[], $5::numeric[]
-              ) AS t(id, position_x, position_y, width, height)
-            ) AS u
+            SET position_x = u.position_x,
+                position_y = u.position_y,
+                width = COALESCE(u.width, v.width),
+                height = COALESCE(u.height, v.height),
+                updated_at = CURRENT_TIMESTAMP
+            FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[], $5::float[])) AS u(id, position_x, position_y, width, height)
             WHERE v.id = u.id AND v.user_id = $6
             RETURNING v.*
-          `, [u_ids, u_pos_xs, u_pos_ys, u_widths, u_heights, req.user.id]);
+          `, [ids, xs, ys, widths, heights, req.user.id]);
 
-          const foundIds = new Set(result.rows.map(r => r.id));
-
-          for (const update of updatesByType.vault) {
-            if (!foundIds.has(update.id)) {
-              failed.push({ type: 'vault', id: update.id, error: 'Vault not found' });
-            }
+          const returnedIds = new Set();
+          for (const row of result.rows) {
+            returnedIds.add(row.id);
+            updated.push({ type: 'vault', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width, height: row.height });
           }
 
-          for (const row of result.rows) {
-            updated.push({ type: 'vault', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width, height: row.height });
+          for (const id of ids) {
+            if (!returnedIds.has(id)) {
+              failed.push({ type: 'vault', id, error: 'Vault not found' });
+            }
           }
         }
       });
