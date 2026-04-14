@@ -1,4 +1,8 @@
-/**
+const fs = require('fs');
+
+let content = fs.readFileSync('backend/src/routes/canvas.routes.js', 'utf8');
+
+const newCode = `/**
  * Canvas Routes - Batch canvas position updates
  */
 const express = require('express');
@@ -60,14 +64,14 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           }
 
           const result = await client.query(
-            `UPDATE notes AS n
+            \`UPDATE notes AS n
              SET position_x = u.position_x,
                  position_y = u.position_y,
                  width = COALESCE(u.width, n.width),
                  height = COALESCE(u.height, n.height)
              FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[], $5::float[])) AS u(id, position_x, position_y, width, height)
              WHERE n.id = u.id AND n.user_id = $6
-             RETURNING n.*, u.id as input_id`,
+             RETURNING n.*, u.id as input_id\`,
             [ids, xs, ys, ws, hs, req.user.id]
           );
 
@@ -98,13 +102,13 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           }
 
           const result = await client.query(
-            `UPDATE lists AS l
+            \`UPDATE lists AS l
              SET position_x = u.position_x,
                  position_y = u.position_y,
                  width = COALESCE(u.width, l.width)
              FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[])) AS u(id, position_x, position_y, width)
              WHERE l.id = u.id AND l.user_id = $5
-             RETURNING l.*, u.id as input_id`,
+             RETURNING l.*, u.id as input_id\`,
             [ids, xs, ys, ws, req.user.id]
           );
 
@@ -140,12 +144,12 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           }
 
           const result = await client.query(
-            `UPDATE whiteboards AS w
+            \`UPDATE whiteboards AS w
              SET position_x = u.position_x,
                  position_y = u.position_y
              FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[])) AS u(id, position_x, position_y)
              WHERE w.id = u.id AND w.user_id = $4
-             RETURNING w.*, u.id as input_id`,
+             RETURNING w.*, u.id as input_id\`,
             [ids, xs, ys, req.user.id]
           );
 
@@ -181,13 +185,13 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           }
 
           const result = await client.query(
-            `UPDATE wireframes AS w
+            \`UPDATE wireframes AS w
              SET position_x = u.position_x,
                  position_y = u.position_y,
                  updated_at = NOW()
              FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[])) AS u(id, position_x, position_y)
              WHERE w.id = u.id AND w.user_id = $4
-             RETURNING w.*, u.id as input_id`,
+             RETURNING w.*, u.id as input_id\`,
             [ids, xs, ys, req.user.id]
           );
 
@@ -234,7 +238,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           }
 
           const result = await client.query(
-            `UPDATE vaults AS v
+            \`UPDATE vaults AS v
              SET position_x = u.position_x,
                  position_y = u.position_y,
                  width = COALESCE(u.width, v.width),
@@ -242,7 +246,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                  updated_at = CURRENT_TIMESTAMP
              FROM (SELECT * FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[], $5::float[])) AS u(id, position_x, position_y, width, height)
              WHERE v.id = u.id AND v.user_id = $6
-             RETURNING v.*, u.id as input_id`,
+             RETURNING v.*, u.id as input_id\`,
             [ids, xs, ys, ws, hs, req.user.id]
           );
 
@@ -268,3 +272,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
   return router;
 };
+`;
+
+fs.writeFileSync('backend/src/routes/canvas.routes.js', newCode);
+console.log('Successfully patched canvas.routes.js');
