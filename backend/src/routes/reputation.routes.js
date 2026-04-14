@@ -659,6 +659,21 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 const requests = [];
                 
+                // Parallel arrays for bulk insert
+                const arr_orgId = [];
+                const arr_contactId = [];
+                const arr_contactEmail = [];
+                const arr_contactPhone = [];
+                const arr_contactName = [];
+                const arr_channel = [];
+                const arr_customMessage = [];
+                const arr_preferredPlatform = [];
+                const arr_uniqueToken = [];
+                const arr_emailSent = [];
+                const arr_emailSentAt = [];
+                const arr_smsSent = [];
+                const arr_smsSentAt = [];
+
                 for (const contact of contactsResult.rows) {
                     const uniqueToken = crypto.randomBytes(32).toString('hex');
                     const reviewLink = `${frontendUrl}/review/${uniqueToken}`;
@@ -712,30 +727,55 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         }
                     }
 
+                    arr_orgId.push(req.organizationId);
+                    arr_contactId.push(contact.id);
+                    arr_contactEmail.push(contact.email);
+                    arr_contactPhone.push(contact.phone);
+                    arr_contactName.push(contactName);
+                    arr_channel.push(activeChannel);
+                    arr_customMessage.push(custom_message || null);
+                    arr_preferredPlatform.push(preferred_platform || null);
+                    arr_uniqueToken.push(uniqueToken);
+                    arr_emailSent.push(emailSent);
+                    arr_emailSentAt.push(emailSent ? new Date() : null);
+                    arr_smsSent.push(smsSent);
+                    arr_smsSentAt.push(smsSent ? new Date() : null);
+                }
+
+                if (arr_orgId.length > 0) {
                     const result = await client.query(`
                         INSERT INTO review_requests (
                             organization_id, contact_id, contact_email, contact_phone, contact_name,
                             channel, custom_message, preferred_platform, unique_token, status,
                             email_sent, email_sent_at, sms_sent, sms_sent_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'sent', $10, $11, $12, $13)
+                        )
+                        SELECT
+                            org_id, c_id, c_email, c_phone, c_name,
+                            c_channel, c_msg, c_plat, c_token, 'sent',
+                            c_email_sent, c_email_sent_at, c_sms_sent, c_sms_sent_at
+                        FROM UNNEST(
+                            $1::int[],
+                            $2::int[],
+                            $3::varchar[],
+                            $4::varchar[],
+                            $5::varchar[],
+                            $6::varchar[],
+                            $7::text[],
+                            $8::varchar[],
+                            $9::varchar[],
+                            $10::boolean[],
+                            $11::timestamptz[],
+                            $12::boolean[],
+                            $13::timestamptz[]
+                        ) AS t(org_id, c_id, c_email, c_phone, c_name, c_channel, c_msg, c_plat, c_token, c_email_sent, c_email_sent_at, c_sms_sent, c_sms_sent_at)
                         RETURNING id
                     `, [
-                        req.organizationId,
-                        contact.id,
-                        contact.email,
-                        contact.phone,
-                        contactName,
-                        activeChannel,
-                        custom_message || null,
-                        preferred_platform || null,
-                        uniqueToken,
-                        emailSent,
-                        emailSent ? new Date() : null,
-                        smsSent,
-                        smsSent ? new Date() : null
+                        arr_orgId, arr_contactId, arr_contactEmail, arr_contactPhone, arr_contactName,
+                        arr_channel, arr_customMessage, arr_preferredPlatform, arr_uniqueToken,
+                        arr_emailSent, arr_emailSentAt, arr_smsSent, arr_smsSentAt
                     ]);
 
-                    requests.push(result.rows[0]);
+                    requests.push(...result.rows);
                 }
 
                 return requests;
