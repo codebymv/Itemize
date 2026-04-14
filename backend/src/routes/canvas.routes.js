@@ -18,6 +18,70 @@ module.exports = (pool, authenticateJWT, broadcast) => {
       const updated = [];
       const failed = [];
 
+<<<<<<< HEAD
+      await withDbClient(pool, async (client) => {
+        // Group updates by type to execute in batches
+        const updatesByType = {
+          list: [],
+          note: [],
+          whiteboard: [],
+          wireframe: [],
+          vault: []
+        };
+
+        for (const update of updates) {
+          const { type, id, position_x, position_y } = update || {};
+
+          if (!type || id === undefined || id === null || typeof position_x !== 'number' || typeof position_y !== 'number') {
+            failed.push({ type, id, error: 'Invalid update payload' });
+            continue;
+          }
+
+          if (updatesByType[type]) {
+            updatesByType[type].push(update);
+          } else {
+            failed.push({ type, id, error: 'Unknown update type' });
+          }
+        }
+
+        // --- LISTS ---
+        if (updatesByType.list.length > 0) {
+          const ids = [];
+          const positionsX = [];
+          const positionsY = [];
+          const widths = [];
+
+          for (const update of updatesByType.list) {
+            ids.push(update.id);
+            positionsX.push(update.position_x);
+            positionsY.push(update.position_y);
+            widths.push(update.width ?? null);
+          }
+
+          const result = await client.query(
+            `UPDATE lists AS t
+             SET position_x = u.position_x,
+                 position_y = u.position_y,
+                 width = COALESCE(u.width, t.width)
+             FROM (SELECT UNNEST($1::int[]) AS id,
+                          UNNEST($2::real[]) AS position_x,
+                          UNNEST($3::real[]) AS position_y,
+                          UNNEST($4::real[]) AS width) AS u
+             WHERE t.id = u.id AND t.user_id = $5
+             RETURNING t.*`,
+            [ids, positionsX, positionsY, widths, req.user.id]
+          );
+
+          const updatedIds = new Set(result.rows.map(row => row.id));
+
+          for (const update of updatesByType.list) {
+            if (!updatedIds.has(update.id)) {
+              failed.push({ type: 'list', id: update.id, error: 'List not found' });
+            }
+          }
+
+          for (const row of result.rows) {
+=======
       // Group updates by type
       const updatesByType = {
         list: [],
@@ -71,6 +135,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           for (const row of result.rows) {
             returnedIds.add(row.id);
 
+>>>>>>> master
             if (row.is_public && row.share_token && broadcast?.listUpdate) {
               broadcast.listUpdate(row.share_token, 'POSITION_UPDATE', {
                 id: row.id,
@@ -78,6 +143,90 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 position_y: row.position_y
               });
             }
+<<<<<<< HEAD
+            updated.push({ type: 'list', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width });
+          }
+        }
+
+        // --- NOTES ---
+        if (updatesByType.note.length > 0) {
+          const ids = [];
+          const positionsX = [];
+          const positionsY = [];
+          const widths = [];
+          const heights = [];
+
+          for (const update of updatesByType.note) {
+            ids.push(update.id);
+            positionsX.push(update.position_x);
+            positionsY.push(update.position_y);
+            widths.push(update.width ?? null);
+            heights.push(update.height ?? null);
+          }
+
+          const result = await client.query(
+            `UPDATE notes AS t
+             SET position_x = u.position_x,
+                 position_y = u.position_y,
+                 width = COALESCE(u.width, t.width),
+                 height = COALESCE(u.height, t.height)
+             FROM (SELECT UNNEST($1::int[]) AS id,
+                          UNNEST($2::real[]) AS position_x,
+                          UNNEST($3::real[]) AS position_y,
+                          UNNEST($4::real[]) AS width,
+                          UNNEST($5::real[]) AS height) AS u
+             WHERE t.id = u.id AND t.user_id = $6
+             RETURNING t.*`,
+            [ids, positionsX, positionsY, widths, heights, req.user.id]
+          );
+
+          const updatedIds = new Set(result.rows.map(row => row.id));
+
+          for (const update of updatesByType.note) {
+            if (!updatedIds.has(update.id)) {
+              failed.push({ type: 'note', id: update.id, error: 'Note not found' });
+            }
+          }
+
+          for (const row of result.rows) {
+            updated.push({ type: 'note', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width, height: row.height });
+          }
+        }
+
+        // --- WHITEBOARDS ---
+        if (updatesByType.whiteboard.length > 0) {
+          const ids = [];
+          const positionsX = [];
+          const positionsY = [];
+
+          for (const update of updatesByType.whiteboard) {
+            ids.push(update.id);
+            positionsX.push(update.position_x);
+            positionsY.push(update.position_y);
+          }
+
+          const result = await client.query(
+            `UPDATE whiteboards AS t
+             SET position_x = u.position_x,
+                 position_y = u.position_y
+             FROM (SELECT UNNEST($1::int[]) AS id,
+                          UNNEST($2::real[]) AS position_x,
+                          UNNEST($3::real[]) AS position_y) AS u
+             WHERE t.id = u.id AND t.user_id = $4
+             RETURNING t.*`,
+            [ids, positionsX, positionsY, req.user.id]
+          );
+
+          const updatedIds = new Set(result.rows.map(row => row.id));
+
+          for (const update of updatesByType.whiteboard) {
+            if (!updatedIds.has(update.id)) {
+              failed.push({ type: 'whiteboard', id: update.id, error: 'Whiteboard not found' });
+            }
+          }
+
+          for (const row of result.rows) {
+=======
 
             updated.push({ type: 'list', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width });
           }
@@ -154,6 +303,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           for (const row of result.rows) {
             returnedIds.add(row.id);
 
+>>>>>>> master
             if (row.is_public && row.share_token && broadcast?.whiteboardUpdate) {
               broadcast.whiteboardUpdate(row.share_token, 'POSITION_UPDATE', {
                 id: row.id,
@@ -161,6 +311,46 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 position_y: row.position_y
               });
             }
+<<<<<<< HEAD
+            updated.push({ type: 'whiteboard', id: row.id, position_x: row.position_x, position_y: row.position_y });
+          }
+        }
+
+        // --- WIREFRAMES ---
+        if (updatesByType.wireframe.length > 0) {
+          const ids = [];
+          const positionsX = [];
+          const positionsY = [];
+
+          for (const update of updatesByType.wireframe) {
+            ids.push(update.id);
+            positionsX.push(Math.round(update.position_x));
+            positionsY.push(Math.round(update.position_y));
+          }
+
+          const result = await client.query(
+            `UPDATE wireframes AS t
+             SET position_x = u.position_x,
+                 position_y = u.position_y,
+                 updated_at = NOW()
+             FROM (SELECT UNNEST($1::int[]) AS id,
+                          UNNEST($2::real[]) AS position_x,
+                          UNNEST($3::real[]) AS position_y) AS u
+             WHERE t.id = u.id AND t.user_id = $4
+             RETURNING t.*`,
+            [ids, positionsX, positionsY, req.user.id]
+          );
+
+          const updatedIds = new Set(result.rows.map(row => row.id));
+
+          for (const update of updatesByType.wireframe) {
+            if (!updatedIds.has(update.id)) {
+              failed.push({ type: 'wireframe', id: update.id, error: 'Wireframe not found' });
+            }
+          }
+
+          for (const row of result.rows) {
+=======
 
             updated.push({ type: 'whiteboard', id: row.id, position_x: row.position_x, position_y: row.position_y });
           }
@@ -198,6 +388,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
           for (const row of result.rows) {
             returnedIds.add(row.id);
 
+>>>>>>> master
             if (row.is_public && row.share_token && broadcast?.wireframeUpdate) {
               broadcast.wireframeUpdate(row.share_token, 'POSITION_UPDATE', {
                 id: row.id,
@@ -212,6 +403,56 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 position_y: row.position_y
               });
             }
+<<<<<<< HEAD
+            updated.push({ type: 'wireframe', id: row.id, position_x: row.position_x, position_y: row.position_y });
+          }
+        }
+
+        // --- VAULTS ---
+        if (updatesByType.vault.length > 0) {
+          const ids = [];
+          const positionsX = [];
+          const positionsY = [];
+          const widths = [];
+          const heights = [];
+
+          for (const update of updatesByType.vault) {
+            ids.push(update.id);
+            positionsX.push(update.position_x);
+            positionsY.push(update.position_y);
+            widths.push(update.width ?? null);
+            heights.push(update.height ?? null);
+          }
+
+          const result = await client.query(
+            `UPDATE vaults AS t
+             SET position_x = u.position_x,
+                 position_y = u.position_y,
+                 width = COALESCE(u.width, t.width),
+                 height = COALESCE(u.height, t.height),
+                 updated_at = CURRENT_TIMESTAMP
+             FROM (SELECT UNNEST($1::int[]) AS id,
+                          UNNEST($2::real[]) AS position_x,
+                          UNNEST($3::real[]) AS position_y,
+                          UNNEST($4::real[]) AS width,
+                          UNNEST($5::real[]) AS height) AS u
+             WHERE t.id = u.id AND t.user_id = $6
+             RETURNING t.*`,
+            [ids, positionsX, positionsY, widths, heights, req.user.id]
+          );
+
+          const updatedIds = new Set(result.rows.map(row => row.id));
+
+          for (const update of updatesByType.vault) {
+            if (!updatedIds.has(update.id)) {
+              failed.push({ type: 'vault', id: update.id, error: 'Vault not found' });
+            }
+          }
+
+          for (const row of result.rows) {
+            updated.push({ type: 'vault', id: row.id, position_x: row.position_x, position_y: row.position_y, width: row.width, height: row.height });
+          }
+=======
 
             updated.push({ type: 'wireframe', id: row.id, position_x: row.position_x, position_y: row.position_y });
           }
@@ -262,6 +503,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
               failed.push({ type: 'vault', id, error: 'Vault not found' });
             }
           }
+>>>>>>> master
         }
       });
 
