@@ -133,55 +133,32 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
             const meData = await meResponse.json();
 
             await withDbClient(pool, async (client) => {
-                // Store each page as a channel
-                for (const page of pagesData.data || []) {
-                    // Store Facebook Page
-                    await client.query(`
-                        INSERT INTO social_channels (
-                            organization_id, channel_type, external_id, name, username,
-                            page_id, page_access_token, user_id, user_access_token,
-                            is_connected, created_by
-                        ) VALUES ($1, 'facebook', $2, $3, $4, $5, $6, $7, $8, TRUE, $9)
-                        ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            page_access_token = EXCLUDED.page_access_token,
-                            user_access_token = EXCLUDED.user_access_token,
-                            is_connected = TRUE,
-                            connection_error = NULL,
-                            updated_at = CURRENT_TIMESTAMP
-                    `, [
-                        organization_id,
-                        page.id,
-                        page.name,
-                        page.name,
-                        page.id,
-                        page.access_token,
-                        meData.id,
-                        userAccessToken,
-                        user_id
-                    ]);
+                const pages = pagesData.data || [];
+                if (pages.length === 0) return;
 
-                    // Store Instagram if connected
-                    if (page.instagram_business_account) {
+                // Collect Facebook data
+                const fbData = pages.map(page => [
+                    organization_id,
+                    'facebook',
+                    page.id,
+                    page.name,
+                    page.name,
+                    page.id,
+                    page.access_token,
+                    meData.id,
+                    userAccessToken,
+                    true,
+                    user_id
+                ]);
+
+                // Collect Instagram data
+                const igData = pages
+                    .filter(page => page.instagram_business_account)
+                    .map(page => {
                         const ig = page.instagram_business_account;
-                        await client.query(`
-                            INSERT INTO social_channels (
-                                organization_id, channel_type, external_id, name, username,
-                                profile_picture_url, instagram_business_account_id,
-                                page_id, page_access_token, user_id, user_access_token,
-                                is_connected, created_by
-                            ) VALUES ($1, 'instagram', $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11)
-                            ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
-                                name = EXCLUDED.name,
-                                username = EXCLUDED.username,
-                                profile_picture_url = EXCLUDED.profile_picture_url,
-                                page_access_token = EXCLUDED.page_access_token,
-                                user_access_token = EXCLUDED.user_access_token,
-                                is_connected = TRUE,
-                                connection_error = NULL,
-                                updated_at = CURRENT_TIMESTAMP
-                        `, [
+                        return [
                             organization_id,
+                            'instagram',
                             ig.id,
                             ig.username || 'Instagram',
                             ig.username,
@@ -191,9 +168,81 @@ module.exports = (pool, authenticateJWT, publicRateLimit, io) => {
                             page.access_token,
                             meData.id,
                             userAccessToken,
+                            true,
                             user_id
-                        ]);
-                    }
+                        ];
+                    });
+
+                if (fbData.length > 0) {
+                    await client.query(`
+                        INSERT INTO social_channels (
+                            organization_id, channel_type, external_id, name, username,
+                            page_id, page_access_token, user_id, user_access_token,
+                            is_connected, created_by
+                        )
+                        SELECT * FROM UNNEST(
+                            $1::int[], $2::varchar[], $3::varchar[], $4::varchar[], $5::varchar[],
+                            $6::varchar[], $7::text[], $8::varchar[], $9::text[], $10::boolean[], $11::int[]
+                        )
+                        ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
+                            name = EXCLUDED.name,
+                            page_access_token = EXCLUDED.page_access_token,
+                            user_access_token = EXCLUDED.user_access_token,
+                            is_connected = TRUE,
+                            connection_error = NULL,
+                            updated_at = CURRENT_TIMESTAMP
+                    `, [
+                        fbData.map(d => d[0]),
+                        fbData.map(d => d[1]),
+                        fbData.map(d => d[2]),
+                        fbData.map(d => d[3]),
+                        fbData.map(d => d[4]),
+                        fbData.map(d => d[5]),
+                        fbData.map(d => d[6]),
+                        fbData.map(d => d[7]),
+                        fbData.map(d => d[8]),
+                        fbData.map(d => d[9]),
+                        fbData.map(d => d[10])
+                    ]);
+                }
+
+                if (igData.length > 0) {
+                    await client.query(`
+                        INSERT INTO social_channels (
+                            organization_id, channel_type, external_id, name, username,
+                            profile_picture_url, instagram_business_account_id,
+                            page_id, page_access_token, user_id, user_access_token,
+                            is_connected, created_by
+                        )
+                        SELECT * FROM UNNEST(
+                            $1::int[], $2::varchar[], $3::varchar[], $4::varchar[], $5::varchar[],
+                            $6::text[], $7::varchar[], $8::varchar[], $9::text[], $10::varchar[],
+                            $11::text[], $12::boolean[], $13::int[]
+                        )
+                        ON CONFLICT (organization_id, channel_type, external_id) DO UPDATE SET
+                            name = EXCLUDED.name,
+                            username = EXCLUDED.username,
+                            profile_picture_url = EXCLUDED.profile_picture_url,
+                            page_access_token = EXCLUDED.page_access_token,
+                            user_access_token = EXCLUDED.user_access_token,
+                            is_connected = TRUE,
+                            connection_error = NULL,
+                            updated_at = CURRENT_TIMESTAMP
+                    `, [
+                        igData.map(d => d[0]),
+                        igData.map(d => d[1]),
+                        igData.map(d => d[2]),
+                        igData.map(d => d[3]),
+                        igData.map(d => d[4]),
+                        igData.map(d => d[5]),
+                        igData.map(d => d[6]),
+                        igData.map(d => d[7]),
+                        igData.map(d => d[8]),
+                        igData.map(d => d[9]),
+                        igData.map(d => d[10]),
+                        igData.map(d => d[11]),
+                        igData.map(d => d[12])
+                    ]);
                 }
             });
 
