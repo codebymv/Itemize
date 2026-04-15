@@ -137,28 +137,58 @@ async function runRecurringInvoiceGeneration(pool) {
                 const invoiceId = invoiceResult.rows[0].id;
 
                 // Create invoice items
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-                    const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+                if (items && items.length > 0) {
+                    const invoiceIds = [];
+                    const orgIds = [];
+                    const productIds = [];
+                    const names = [];
+                    const descriptions = [];
+                    const quantities = [];
+                    const unitPrices = [];
+                    const taxRates = [];
+                    const taxAmounts = [];
+                    const totals = [];
+                    const sortOrders = [];
+
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
+                        const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+
+                        invoiceIds.push(invoiceId);
+                        orgIds.push(template.organization_id);
+                        productIds.push(item.product_id || null);
+                        names.push(item.name);
+                        descriptions.push(item.description || null);
+                        quantities.push(item.quantity || 1);
+                        unitPrices.push(item.unit_price || 0);
+                        taxRates.push(item.tax_rate || 0);
+                        taxAmounts.push(itemTax);
+                        totals.push(itemTotal + itemTax);
+                        sortOrders.push(i);
+                    }
 
                     await client.query(`
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                        )
+                        SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::int[], $4::varchar[], $5::text[],
+                            $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                        )
                     `, [
-                        invoiceId,
-                        template.organization_id,
-                        item.product_id || null,
-                        item.name,
-                        item.description || null,
-                        item.quantity || 1,
-                        item.unit_price || 0,
-                        item.tax_rate || 0,
-                        itemTax,
-                        itemTotal + itemTax,
-                        i
+                        invoiceIds,
+                        orgIds,
+                        productIds,
+                        names,
+                        descriptions,
+                        quantities,
+                        unitPrices,
+                        taxRates,
+                        taxAmounts,
+                        totals,
+                        sortOrders
                     ]);
                 }
 
