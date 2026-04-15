@@ -932,6 +932,8 @@ async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
 
         const htmlContent = campaign.content_html || campaign.template_html || '';
         const textContent = campaign.content_text || campaign.template_text || '';
+        let lastStatusCheckTime = Date.now();
+        let campaignStatus = 'sending';
 
         const flushUpdates = async () => {
             if (pendingUpdates.length === 0) {
@@ -976,16 +978,24 @@ async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
 
         for (const recipient of recipients) {
             try {
-                if (processedCount % 10 === 0) {
+                // Check campaign status at most once every 5 seconds to reduce DB load
+                if (Date.now() - lastStatusCheckTime > 5000) {
+                    lastStatusCheckTime = Date.now();
                     const statusCheck = await client.query(
                         'SELECT status FROM email_campaigns WHERE id = $1',
                         [campaignId]
                     );
 
-                    if (!statusCheck.rows.length || !['sending'].includes(statusCheck.rows[0].status)) {
-                        console.log(`Campaign ${campaignId} stopped - status: ${statusCheck.rows[0]?.status}`);
-                        break;
+                    if (statusCheck.rows.length) {
+                        campaignStatus = statusCheck.rows[0].status;
+                    } else {
+                        campaignStatus = 'unknown';
                     }
+                }
+
+                if (campaignStatus !== 'sending') {
+                    console.log(`Campaign ${campaignId} stopped - status: ${campaignStatus}`);
+                    break;
                 }
 
                 const variables = {
