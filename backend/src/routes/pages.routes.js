@@ -286,22 +286,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Create sections if provided
                 if (sections && Array.isArray(sections) && sections.length > 0) {
-                    for (let i = 0; i < sections.length; i++) {
-                        const section = sections[i];
-                        await client.query(`
-                            INSERT INTO page_sections (
-                                page_id, organization_id, section_type, name, content, settings, section_order
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                        `, [
-                            createdPage.id,
-                            req.organizationId,
-                            section.section_type,
-                            section.name || null,
-                            JSON.stringify(section.content || {}),
-                            JSON.stringify(section.settings || {}),
-                            i
-                        ]);
-                    }
+                    await client.query(`
+                        INSERT INTO page_sections (
+                            page_id, organization_id, section_type, name, content, settings, section_order
+                        )
+                        SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::jsonb[], $6::jsonb[], $7::int[]
+                        )
+                    `, [
+                        sections.map(() => createdPage.id),
+                        sections.map(() => req.organizationId),
+                        sections.map(s => s.section_type),
+                        sections.map(s => s.name || null),
+                        sections.map(s => JSON.stringify(s.content || {})),
+                        sections.map(s => JSON.stringify(s.settings || {})),
+                        sections.map((_, i) => i)
+                    ]);
                 }
 
                 // Fetch complete page with sections
@@ -541,19 +541,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     [id]
                 );
 
-                for (const section of sectionsResult.rows) {
+                if (sectionsResult.rows.length > 0) {
                     await client.query(`
                         INSERT INTO page_sections (
                             page_id, organization_id, section_type, name, content, settings, section_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        )
+                        SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::jsonb[], $6::jsonb[], $7::int[]
+                        )
                     `, [
-                        newPage.id,
-                        req.organizationId,
-                        section.section_type,
-                        section.name,
-                        JSON.stringify(section.content),
-                        JSON.stringify(section.settings),
-                        section.section_order
+                        sectionsResult.rows.map(() => newPage.id),
+                        sectionsResult.rows.map(() => req.organizationId),
+                        sectionsResult.rows.map(s => s.section_type),
+                        sectionsResult.rows.map(s => s.name),
+                        sectionsResult.rows.map(s => JSON.stringify(s.content)),
+                        sectionsResult.rows.map(s => JSON.stringify(s.settings)),
+                        sectionsResult.rows.map(s => s.section_order)
                     ]);
                 }
                 const newSectionsResult = await client.query(
@@ -607,20 +610,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 await client.query('DELETE FROM page_sections WHERE page_id = $1', [id]);
 
                 // Insert new sections
-                for (let i = 0; i < sections.length; i++) {
-                    const section = sections[i];
+                if (sections && sections.length > 0) {
                     await client.query(`
                         INSERT INTO page_sections (
                             page_id, organization_id, section_type, name, content, settings, section_order
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        )
+                        SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::jsonb[], $6::jsonb[], $7::int[]
+                        )
                     `, [
-                        id,
-                        req.organizationId,
-                        section.section_type,
-                        section.name || null,
-                        JSON.stringify(section.content || {}),
-                        JSON.stringify(section.settings || {}),
-                        i
+                        sections.map(() => id),
+                        sections.map(() => req.organizationId),
+                        sections.map(s => s.section_type),
+                        sections.map(s => s.name || null),
+                        sections.map(s => JSON.stringify(s.content || {})),
+                        sections.map(s => JSON.stringify(s.settings || {})),
+                        sections.map((_, i) => i)
                     ]);
                 }
 

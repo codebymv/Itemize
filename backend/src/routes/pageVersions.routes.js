@@ -247,23 +247,23 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 await client.query('DELETE FROM page_sections WHERE page_id = $1', [id]);
 
                 // Create sections from version
-                if (content.sections && Array.isArray(content.sections)) {
-                    for (let i = 0; i < content.sections.length; i++) {
-                        const section = content.sections[i];
-                        await client.query(`
-                            INSERT INTO page_sections (
-                                page_id, organization_id, section_type, name, content, settings, section_order
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                        `, [
-                            id,
-                            organizationId,
-                            section.section_type,
-                            section.name || null,
-                            JSON.stringify(section.content || {}),
-                            JSON.stringify(section.settings || {}),
-                            i
-                        ]);
-                    }
+                if (content.sections && Array.isArray(content.sections) && content.sections.length > 0) {
+                    await client.query(`
+                        INSERT INTO page_sections (
+                            page_id, organization_id, section_type, name, content, settings, section_order
+                        )
+                        SELECT * FROM UNNEST (
+                            $1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::jsonb[], $6::jsonb[], $7::int[]
+                        )
+                    `, [
+                        content.sections.map(() => id),
+                        content.sections.map(() => organizationId),
+                        content.sections.map(s => s.section_type),
+                        content.sections.map(s => s.name || null),
+                        content.sections.map(s => JSON.stringify(s.content || {})),
+                        content.sections.map(s => JSON.stringify(s.settings || {})),
+                        content.sections.map((_, i) => i)
+                    ]);
                 }
 
                 // Update version status
