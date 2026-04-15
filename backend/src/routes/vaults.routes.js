@@ -496,6 +496,13 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                 const createdItems = [];
 
+                const itemTypes = [];
+                const labels = [];
+                const encryptedValues = [];
+                const ivs = [];
+                const orderIndexes = [];
+                const values = [];
+
                 for (const item of items) {
                     const { item_type = 'key_value', label, value } = item;
 
@@ -505,22 +512,34 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                     const { encrypted, iv } = encrypt(value);
 
+                    itemTypes.push(item_type);
+                    labels.push(label.trim());
+                    encryptedValues.push(encrypted);
+                    ivs.push(iv);
+                    orderIndexes.push(nextOrder++);
+                    values.push(value);
+                }
+
+                if (itemTypes.length > 0) {
                     const insertResult = await client.query(
                         `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index)
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                        [vaultId, item_type, label.trim(), encrypted, iv, nextOrder++]
+                         SELECT $1, * FROM UNNEST($2::varchar[], $3::varchar[], $4::text[], $5::varchar[], $6::int[])
+                         AS t(item_type, label, encrypted_value, iv, order_index)
+                         RETURNING *`,
+                        [vaultId, itemTypes, labels, encryptedValues, ivs, orderIndexes]
                     );
 
-                    const createdItem = insertResult.rows[0];
-                    createdItems.push({
-                        id: createdItem.id,
-                        vault_id: createdItem.vault_id,
-                        item_type: createdItem.item_type,
-                        label: createdItem.label,
-                        value: value,
-                        order_index: createdItem.order_index,
-                        created_at: createdItem.created_at,
-                        updated_at: createdItem.updated_at
+                    insertResult.rows.forEach((createdItem, index) => {
+                        createdItems.push({
+                            id: createdItem.id,
+                            vault_id: createdItem.vault_id,
+                            item_type: createdItem.item_type,
+                            label: createdItem.label,
+                            value: values[index],
+                            order_index: createdItem.order_index,
+                            created_at: createdItem.created_at,
+                            updated_at: createdItem.updated_at
+                        });
                     });
                 }
 
