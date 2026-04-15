@@ -313,6 +313,12 @@ const addOrganizationSubscriptionFields = async (pool) => {
             ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMP WITH TIME ZONE
         `);
         
+        // === Trial Acknowledgment ===
+        await pool.query(`
+            ALTER TABLE organizations 
+            ADD COLUMN IF NOT EXISTS trial_end_acknowledged_at TIMESTAMP WITH TIME ZONE
+        `);
+        
         // === Create Indexes ===
         await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_org_subscription_status ON organizations(subscription_status)

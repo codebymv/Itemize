@@ -127,6 +127,21 @@ module.exports = (pool, authenticateJWT) => {
         return sendSuccess(res, { url });
     }));
 
+    // POST /api/billing/acknowledge-trial-end - Mark trial end as acknowledged
+    router.post('/acknowledge-trial-end', authenticateJWT, asyncHandler(async (req, res) => {
+        const organizationId = req.user.organization_id;
+        if (!organizationId) {
+            return sendBadRequest(res, 'No organization associated with user');
+        }
+
+        await pool.query(
+            'UPDATE organizations SET trial_end_acknowledged_at = NOW() WHERE id = $1',
+            [organizationId]
+        );
+
+        return sendSuccess(res, { acknowledged: true });
+    }));
+
     // GET /api/billing/usage - Get current usage stats
     router.get('/usage', authenticateJWT, asyncHandler(async (req, res) => {
         const organizationId = req.user.organization_id;

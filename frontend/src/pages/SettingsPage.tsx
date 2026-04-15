@@ -26,6 +26,7 @@ import { getAssetUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { PricingCards } from '@/components/subscription';
 import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
+import { CheckoutSuccessModal } from '@/components/subscription/CheckoutSuccessModal';
 import { Plan } from '@/lib/subscription';
 import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
 import { UsageIndicator, UsageIndicatorGrid } from '@/components/trial/UsageIndicator';
@@ -308,7 +309,11 @@ function PreferencesSettings() {
   );
 }
 
-function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.ReactNode) => void }) {
+function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutSuccess }: {
+  setSaveButton?: (button: React.ReactNode) => void;
+  showCheckoutSuccess?: boolean;
+  onCloseCheckoutSuccess?: () => void;
+}) {
   const {
     loading,
     initialLoad,
@@ -379,6 +384,10 @@ function PaymentsSettings({ setSaveButton }: { setSaveButton?: (button: React.Re
 
   return (
     <div className="space-y-6">
+      <CheckoutSuccessModal
+        open={!!showCheckoutSuccess}
+        onClose={() => onCloseCheckoutSuccess?.()}
+      />
       <div>
         <h3 className="text-lg font-medium">Payments</h3>
         <p className="text-sm text-muted-foreground">
@@ -435,9 +444,27 @@ export function SettingsPage() {
   const { setHeaderContent } = useHeader();
   const { theme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { refreshSubscription } = useSubscriptionFeatures();
   const [saveButton, setSaveButton] = useState<React.ReactNode>(null);
+  const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
 
   const activeNavItem = settingsNav.find(item => item.path === location.pathname) || settingsNav[0];
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const checkoutStatus = params.get('checkout');
+
+    if (checkoutStatus === 'success') {
+      setShowCheckoutSuccess(true);
+      refreshSubscription();
+      navigate(location.pathname, { replace: true });
+    } else if (checkoutStatus === 'canceled') {
+      toast({ title: 'Checkout canceled', description: 'You can upgrade anytime from the Payments page.' });
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate, toast, refreshSubscription]);
 
   useEffect(() => {
     setHeaderContent(
@@ -470,7 +497,13 @@ export function SettingsPage() {
 
           <div className="min-w-0 flex-1" key={location.pathname}>
             {location.pathname === '/preferences' && <PreferencesSettings />}
-            {location.pathname === '/payment-settings' && <PaymentsSettings setSaveButton={setSaveButton} />}
+            {location.pathname === '/payment-settings' && (
+              <PaymentsSettings
+                setSaveButton={setSaveButton}
+                showCheckoutSuccess={showCheckoutSuccess}
+                onCloseCheckoutSuccess={() => setShowCheckoutSuccess(false)}
+              />
+            )}
             {location.pathname === '/settings' && <AccountSettings />}
           </div>
         </div>

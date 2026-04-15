@@ -98,7 +98,7 @@ class StripeService {
 
         // Get organization data
         const orgResult = await this.pool.query(
-            'SELECT name, stripe_customer_id FROM organizations WHERE id = $1',
+            'SELECT name, stripe_customer_id, subscription_status FROM organizations WHERE id = $1',
             [organizationId]
         );
         const org = orgResult.rows[0];
@@ -109,8 +109,31 @@ class StripeService {
         // Get or create customer
         const customerId = await this.getOrCreateCustomer(organizationId, { 
             name: org.name,
-            email: `org-${organizationId}@itemize.cloud` // fallback email
+            email: `org-${organizationId}@itemize.cloud`
         });
+
+        // Duplicate subscription guard: redirect to portal if already subscribed
+        if (mode === 'subscription' && org.stripe_customer_id) {
+            try {
+                const subscriptions = await this.stripe.subscriptions.list({
+                    customer: org.stripe_customer_id,
+                    status: 'all',
+                    limit: 5,
+                });
+                const activeSub = subscriptions.data.find(
+                    s => s.status === 'active' || s.status === 'trialing'
+                );
+                if (activeSub) {
+                    logger.info('[Stripe] Active subscription found, redirecting to portal', {
+                        organizationId, subscriptionId: activeSub.id,
+                    });
+                    const portalUrl = await this.createPortalSession(organizationId, successUrl);
+                    return portalUrl;
+                }
+            } catch (err) {
+                logger.warn('[Stripe] Failed to check existing subscriptions, proceeding with checkout', { error: err.message });
+            }
+        }
 
         try {
             const session = await this.stripe.checkout.sessions.create({
@@ -452,7 +475,7 @@ class StripeService {
      * Get billing status for an organization
      */
     async getBillingStatus(organizationId) {
-        const result = await this.pool.query(`
+        let result = await this.pool.query(`
             SELECT 
                 plan,
                 subscription_status,
@@ -474,13 +497,131 @@ class StripeService {
                 forms_limit,
                 calendars_limit,
                 trial_ends_at,
+                trial_end_acknowledged_at,
                 cancel_at_period_end,
                 canceled_at
             FROM organizations
             WHERE id = $1
         `, [organizationId]);
 
-        return result.rows[0] || null;
+        const org = result.rows[0];
+        if (!org) return null;
+
+        // Defensive sync: if org has a Stripe customer but local state looks stale, resync
+        const localStale = org.stripe_customer_id &&
+            (!org.subscription_status || org.subscription_status === 'none') &&
+            (!org.trial_ends_at || new Date(org.trial_ends_at) < new Date());
+
+        if (localStale && this.isConfigured()) {
+            try {
+                await this.syncSubscriptionFromStripe(organizationId, org.stripe_customer_id);
+                const refreshed = await this.pool.query(`
+                    SELECT 
+                        plan, subscription_status, billing_period,
+                        billing_period_start, billing_period_end,
+                        stripe_customer_id, stripe_subscription_id,
+                        emails_used, emails_limit, sms_used, sms_limit,
+                        api_calls_used, api_calls_limit,
+                        contacts_limit, users_limit, workflows_limit,
+                        landing_pages_limit, forms_limit, calendars_limit,
+                        trial_ends_at, trial_end_acknowledged_at,
+                        cancel_at_period_end, canceled_at
+                    FROM organizations WHERE id = $1
+                `, [organizationId]);
+                return refreshed.rows[0] || org;
+            } catch (err) {
+                logger.warn('[Stripe] Defensive sync failed, returning local data', { error: err.message });
+            }
+        }
+
+        return org;
+    }
+
+    /**
+     * Sync subscription state from Stripe to the local database
+     */
+    async syncSubscriptionFromStripe(organizationId, stripeCustomerId) {
+        const subscriptions = await this.stripe.subscriptions.list({
+            customer: stripeCustomerId,
+            status: 'all',
+            limit: 10,
+        });
+
+        const activeSub = subscriptions.data.find(
+            s => s.status === 'active' || s.status === 'trialing'
+        );
+
+        if (!activeSub) {
+            logger.info('[Stripe] No active subscription found during sync', { organizationId });
+            return;
+        }
+
+        const priceId = activeSub.items.data[0]?.price?.id;
+        const plan = priceId ? getPlanFromStripePrice(priceId) : null;
+
+        if (!plan) {
+            logger.warn('[Stripe] Could not map price to plan during sync', { priceId });
+            return;
+        }
+
+        const updates = {
+            plan,
+            subscription_status: activeSub.status,
+            stripe_subscription_id: activeSub.id,
+            billing_period_start: activeSub.current_period_start
+                ? new Date(activeSub.current_period_start * 1000)
+                : null,
+            billing_period_end: activeSub.current_period_end
+                ? new Date(activeSub.current_period_end * 1000)
+                : null,
+            trial_ends_at: activeSub.trial_end
+                ? new Date(activeSub.trial_end * 1000)
+                : null,
+            cancel_at_period_end: activeSub.cancel_at_period_end || false,
+        };
+
+        await this.pool.query(`
+            UPDATE organizations SET
+                plan = $1,
+                subscription_status = $2,
+                stripe_subscription_id = $3,
+                billing_period_start = $4,
+                billing_period_end = $5,
+                trial_ends_at = $6,
+                cancel_at_period_end = $7,
+                emails_limit = $8,
+                sms_limit = $9,
+                api_calls_limit = $10,
+                contacts_limit = $11,
+                users_limit = $12,
+                workflows_limit = $13,
+                landing_pages_limit = $14,
+                forms_limit = $15,
+                calendars_limit = $16
+            WHERE id = $17
+        `, [
+            updates.plan,
+            updates.subscription_status,
+            updates.stripe_subscription_id,
+            updates.billing_period_start,
+            updates.billing_period_end,
+            updates.trial_ends_at,
+            updates.cancel_at_period_end,
+            EMAIL_LIMITS[plan] || 1000,
+            SMS_LIMITS[plan] || 100,
+            API_LIMITS[plan] || 100,
+            CONTACTS_LIMITS[plan] || 100,
+            USERS_LIMITS[plan] || 1,
+            WORKFLOW_LIMITS[plan] || 3,
+            LANDING_PAGE_LIMITS[plan] || 1,
+            FORM_LIMITS[plan] || 3,
+            CALENDAR_LIMITS[plan] || 1,
+            organizationId,
+        ]);
+
+        logger.info('[Stripe] Synced subscription from Stripe', {
+            organizationId, plan: updates.plan, status: updates.subscription_status,
+        });
     }
 }
 

@@ -32,6 +32,7 @@ export interface BillingStatus {
     forms_limit: number;
     calendars_limit: number;
     trial_ends_at: string | null;
+    trial_end_acknowledged_at: string | null;
     cancel_at_period_end: boolean;
     canceled_at: string | null;
 }
@@ -207,8 +208,8 @@ export async function redirectToCheckout(params: {
         planId,
         billingPeriod,
         mode: 'subscription',
-        successUrl: `${window.location.origin}/settings?tab=billing&success=true`,
-        cancelUrl: `${window.location.origin}/settings?tab=billing&canceled=true`
+        successUrl: `${window.location.origin}/payment-settings?checkout=success`,
+        cancelUrl: `${window.location.origin}/payment-settings?checkout=canceled`
     });
 
     if (result.success && result.data?.url) {
@@ -233,6 +234,18 @@ export async function redirectToPortal(): Promise<void> {
     }
 }
 
+/**
+ * Acknowledge trial end (mark modal as seen)
+ */
+export async function acknowledgeTrialEnd(): Promise<ApiResponse<{ acknowledged: boolean }>> {
+    try {
+        const response = await api.post('/api/billing/acknowledge-trial-end');
+        return unwrapResponse<{ acknowledged: boolean }>(response.data);
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Failed to acknowledge trial end' };
+    }
+}
+
 // Export all functions as a namespace for convenience
 export const billingApi = {
     getBillingStatus,
@@ -241,7 +254,8 @@ export const billingApi = {
     createPortalSession,
     getUsageStats,
     redirectToCheckout,
-    redirectToPortal
+    redirectToPortal,
+    acknowledgeTrialEnd
 };
 
 export default billingApi;

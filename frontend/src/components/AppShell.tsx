@@ -12,7 +12,10 @@ import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
 import { TrialBanner } from '@/components/trial/TrialBanner';
 import { TrialBadge } from '@/components/trial/TrialBadge';
+import { TrialEndedBillingActiveModal } from '@/components/subscription/TrialEndedBillingActiveModal';
+import { TrialExpiredModal } from '@/components/subscription/TrialExpiredModal';
 import { useBillingStatus } from '@/hooks/useBillingStatus';
+import { billingApi } from '@/services/billingApi';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -64,6 +67,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const { subscription } = useSubscriptionState();
     const [searchOpen, setSearchOpen] = useState(false);
+    const [showTrialEndedBilling, setShowTrialEndedBilling] = useState(false);
+    const [showTrialExpired, setShowTrialExpired] = useState(false);
     const { data: billingStatus } = useBillingStatus();
 
     useEffect(() => {
@@ -88,6 +93,32 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
+
+    useEffect(() => {
+        if (!billingStatus) return;
+        const trialEnded =
+            !!billingStatus.trial_ends_at &&
+            new Date(billingStatus.trial_ends_at) <= new Date() &&
+            !billingStatus.trial_end_acknowledged_at;
+
+        if (!trialEnded) return;
+
+        if (billingStatus.subscription_status === 'active') {
+            setShowTrialEndedBilling(true);
+        } else if (billingStatus.subscription_status === 'canceled' || billingStatus.plan === 'free') {
+            setShowTrialExpired(true);
+        }
+    }, [billingStatus]);
+
+    const handleTrialModalClose = async () => {
+        setShowTrialEndedBilling(false);
+        setShowTrialExpired(false);
+        try {
+            await billingApi.acknowledgeTrialEnd();
+        } catch {
+            // Best-effort; modal won't re-show until next page load if this fails
+        }
+    };
 
     const getUserInitials = (name: string, email: string): string => {
         if (name && name.trim()) {
@@ -286,6 +317,18 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                         <Breadcrumbs />
                     </div>
                 )}
+
+                {/* Trial lifecycle modals */}
+                <TrialEndedBillingActiveModal
+                    open={showTrialEndedBilling}
+                    onClose={handleTrialModalClose}
+                    billing={billingStatus || null}
+                />
+                <TrialExpiredModal
+                    open={showTrialExpired}
+                    onClose={handleTrialModalClose}
+                    billing={billingStatus || null}
+                />
 
                 {/* Trial Banner - Shows only during active trial */}
                 <TrialBanner

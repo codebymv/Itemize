@@ -12,6 +12,9 @@ export { UpgradePrompt } from './UpgradePrompt';
 export { PricingCards } from './PricingCards';
 export { BillingPanel } from './BillingPanel';
 export { SubscriptionStatus } from './SubscriptionStatus';
+export { CheckoutSuccessModal } from './CheckoutSuccessModal';
+export { TrialEndedBillingActiveModal } from './TrialEndedBillingActiveModal';
+export { TrialExpiredModal } from './TrialExpiredModal';
 export { 
     UpgradeCTA, 
     LockedFeatureBadge, 
