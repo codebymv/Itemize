@@ -1,82 +1,88 @@
-const { Pool } = require('pg');
-function benchmark() {
-  const items = Array.from({ length: 5000 }).map((_, i) => ({
-    name: `Item ${i}`,
-    quantity: 1,
-    unit_price: 10.0,
-    tax_rate: 5.0,
-    description: `Description ${i}`,
-  }));
+const { performance } = require('perf_hooks');
 
-  const estimateId = 1;
-  const organizationId = 1;
+// Mock out the client object to simulate the query taking ~1ms
+const client = {
+    query: async () => {
+        // Simulating network/DB latency
+        await new Promise(resolve => setTimeout(resolve, 1));
+        return { rows: [{ status: 'sending' }] };
+    }
+};
 
-  // Measure original construction
-  const startOriginal = Date.now();
-  const values = [];
-  const params = [];
+async function runBenchmark() {
+    console.log('Starting benchmark...');
 
-  for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-      const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+    const recipientsCount = 1000;
+    const recipients = Array.from({ length: recipientsCount }).map((_, i) => ({
+        id: i,
+        email: `test${i}@example.com`,
+        first_name: `First${i}`,
+        last_name: `Last${i}`
+    }));
 
-      const offset = i * 11;
-      values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`);
+    // 1. Benchmark current approach (querying every 10 iterations)
+    console.log(`\nBenchmarking CURRENT approach (query every 10 iterations) for ${recipientsCount} recipients...`);
+    let start1 = performance.now();
+    let processedCount1 = 0;
+    let queriedCount1 = 0;
 
-      params.push(
-          estimateId,
-          organizationId,
-          item.product_id || null,
-          item.name,
-          item.description || null,
-          item.quantity || 1,
-          item.unit_price || 0,
-          item.tax_rate || 0,
-          itemTax,
-          itemTotal + itemTax,
-          i
-      );
-  }
-  const queryStr = values.join(', '); // Simulate building query string
-  const endOriginal = Date.now();
+    for (const recipient of recipients) {
+        // Mock email sending delay (commented out so we measure just the overhead)
+        // await new Promise(resolve => setTimeout(resolve, 1));
 
-  console.log(`Original Parameter count: ${params.length}`);
-  console.log(`Original Time (creation only): ${endOriginal - startOriginal}ms`);
+        if (processedCount1 % 10 === 0) {
+            queriedCount1++;
+            const statusCheck = await client.query(
+                'SELECT status FROM test_email_campaigns WHERE id = $1',
+                ['mock-id']
+            );
 
-  // Measure Unnest construction
-  const startUnnest = Date.now();
-  const estimateIds = new Array(items.length).fill(estimateId);
-  const orgIds = new Array(items.length).fill(organizationId);
-  const productIds = [];
-  const names = [];
-  const descriptions = [];
-  const quantities = [];
-  const unitPrices = [];
-  const taxRates = [];
-  const taxAmounts = [];
-  const totals = [];
-  const sortOrders = [];
+            if (!statusCheck.rows.length || !['sending'].includes(statusCheck.rows[0].status)) {
+                break;
+            }
+        }
+        processedCount1++;
+    }
+    let end1 = performance.now();
+    console.log(`CURRENT approach took: ${(end1 - start1).toFixed(2)} ms (queried DB ${queriedCount1} times)`);
 
-  for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const itemTotal = (item.quantity || 1) * (item.unit_price || 0);
-      const itemTax = itemTotal * ((item.tax_rate || 0) / 100);
+    // 2. Benchmark optimized approach (time-based check, every 5s)
+    console.log(`\nBenchmarking OPTIMIZED approach (time-based, check every 5s) for ${recipientsCount} recipients...`);
+    let start2 = performance.now();
+    let processedCount2 = 0;
+    let queriedCount2 = 0;
+    let lastStatusCheck = performance.now();
 
-      productIds.push(item.product_id || null);
-      names.push(item.name);
-      descriptions.push(item.description || null);
-      quantities.push(item.quantity || 1);
-      unitPrices.push(item.unit_price || 0);
-      taxRates.push(item.tax_rate || 0);
-      taxAmounts.push(itemTax);
-      totals.push(itemTotal + itemTax);
-      sortOrders.push(i);
-  }
+    const initialStatusCheck = await client.query(
+        'SELECT status FROM test_email_campaigns WHERE id = $1',
+        ['mock-id']
+    );
+    let campaignStatus = initialStatusCheck.rows.length > 0 ? initialStatusCheck.rows[0].status : 'unknown';
+    queriedCount2++;
 
-  const endUnnest = Date.now();
-  console.log(`Unnest Parameter count: 11 (arrays of length 5000)`);
-  console.log(`Unnest Time (creation only): ${endUnnest - startUnnest}ms`);
+    for (const recipient of recipients) {
+        // Mock email sending delay (commented out so we measure just the overhead)
+        // await new Promise(resolve => setTimeout(resolve, 1));
+
+        if (performance.now() - lastStatusCheck > 5000) {
+            queriedCount2++;
+            lastStatusCheck = performance.now();
+            const statusCheck = await client.query(
+                'SELECT status FROM test_email_campaigns WHERE id = $1',
+                ['mock-id']
+            );
+            campaignStatus = statusCheck.rows.length > 0 ? statusCheck.rows[0].status : 'unknown';
+        }
+
+        if (campaignStatus !== 'sending') {
+            break;
+        }
+        processedCount2++;
+    }
+    let end2 = performance.now();
+    console.log(`OPTIMIZED approach took: ${(end2 - start2).toFixed(2)} ms (queried DB ${queriedCount2} times)`);
+
+    const improvement = (((end1 - start1) - (end2 - start2)) / (end1 - start1) * 100).toFixed(2);
+    console.log(`\nImprovement: ${improvement}% faster!`);
 }
-
-benchmark();
+runBenchmark();
