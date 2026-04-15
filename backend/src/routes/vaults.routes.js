@@ -495,6 +495,12 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 let nextOrder = orderResult.rows[0].next_order;
 
                 const createdItems = [];
+                const itemTypes = [];
+                const labels = [];
+                const encrypteds = [];
+                const ivs = [];
+                const orderIndices = [];
+                const plainValues = [];
 
                 for (const item of items) {
                     const { item_type = 'key_value', label, value } = item;
@@ -505,23 +511,36 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                     const { encrypted, iv } = encrypt(value);
 
+                    itemTypes.push(item_type);
+                    labels.push(label.trim());
+                    encrypteds.push(encrypted);
+                    ivs.push(iv);
+                    orderIndices.push(nextOrder++);
+                    plainValues.push(value);
+                }
+
+                if (itemTypes.length > 0) {
                     const insertResult = await client.query(
                         `INSERT INTO vault_items (vault_id, item_type, label, encrypted_value, iv, order_index)
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                        [vaultId, item_type, label.trim(), encrypted, iv, nextOrder++]
+                         SELECT $1, u.item_type, u.label, u.encrypted, u.iv, u.order_index
+                         FROM UNNEST ($2::text[], $3::text[], $4::text[], $5::text[], $6::int[])
+                         AS u(item_type, label, encrypted, iv, order_index) RETURNING *`,
+                        [vaultId, itemTypes, labels, encrypteds, ivs, orderIndices]
                     );
 
-                    const createdItem = insertResult.rows[0];
-                    createdItems.push({
-                        id: createdItem.id,
-                        vault_id: createdItem.vault_id,
-                        item_type: createdItem.item_type,
-                        label: createdItem.label,
-                        value: value,
-                        order_index: createdItem.order_index,
-                        created_at: createdItem.created_at,
-                        updated_at: createdItem.updated_at
-                    });
+                    for (let i = 0; i < insertResult.rows.length; i++) {
+                        const createdItem = insertResult.rows[i];
+                        createdItems.push({
+                            id: createdItem.id,
+                            vault_id: createdItem.vault_id,
+                            item_type: createdItem.item_type,
+                            label: createdItem.label,
+                            value: plainValues[i],
+                            order_index: createdItem.order_index,
+                            created_at: createdItem.created_at,
+                            updated_at: createdItem.updated_at
+                        });
+                    }
                 }
 
                 await client.query(
