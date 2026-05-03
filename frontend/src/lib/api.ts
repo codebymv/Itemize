@@ -79,31 +79,12 @@ const api = axios.create({
   timeout: 30000, // 30 second timeout
 });
 
-// Token storage key (matching Gleam's approach)
-const AUTH_TOKEN_KEY = 'itemize_auth_token';
-const REFRESH_TOKEN_KEY = 'itemize_refresh_token';
 const LOGGED_OUT_KEY = 'itemize_logged_out';
+const CSRF_HEADER = 'X-CSRF-Token';
 
-// Proactive session-expiring warning: fire 2 min before access token expiry
-const SESSION_WARNING_BEFORE_EXPIRY_MS = 2 * 60 * 1000;
 let sessionExpiringTimeoutId: ReturnType<typeof setTimeout> | null = null;
-
-/**
- * Decode JWT payload (no verification; we only need exp for client-side scheduling).
- * Returns { exp } (seconds since epoch) or null if invalid.
- */
-function decodeJwtExp(token: string): { exp: number } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    if (typeof decoded.exp !== 'number') return null;
-    return { exp: decoded.exp };
-  } catch {
-    return null;
-  }
-}
+let csrfToken: string | null = null;
+let csrfRequest: Promise<string> | null = null;
 
 function clearSessionExpiringTimer(): void {
   if (sessionExpiringTimeoutId !== null) {
@@ -112,13 +93,9 @@ function clearSessionExpiringTimer(): void {
   }
 }
 
-function scheduleSessionExpiringWarning(token: string): void {
+function scheduleSessionExpiringWarning(): void {
   clearSessionExpiringTimer();
-  const decoded = decodeJwtExp(token);
-  if (!decoded) return;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const msUntilWarning = (decoded.exp - nowSec) * 1000 - SESSION_WARNING_BEFORE_EXPIRY_MS;
-  if (msUntilWarning <= 0) return;
+  const msUntilWarning = 13 * 60 * 1000;
   sessionExpiringTimeoutId = setTimeout(() => {
     sessionExpiringTimeoutId = null;
     if (typeof window !== 'undefined' && !isLoggedOut()) {
@@ -127,17 +104,13 @@ function scheduleSessionExpiringWarning(token: string): void {
   }, msUntilWarning);
 }
 
-/**
- * Get the stored auth token
- */
+// Cookie-only auth: tokens are httpOnly cookies and are intentionally unreadable.
 export const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(AUTH_TOKEN_KEY);
+  return null;
 };
 
 export const getRefreshToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
+  return null;
 };
 
 export const isLoggedOut = (): boolean => {
@@ -154,36 +127,61 @@ export const setLoggedOut = (loggedOut: boolean): void => {
   }
 };
 
-/**
- * Set the auth token (called after login or refresh)
- */
 export const setAuthToken = (token: string | null): void => {
-  if (typeof window === 'undefined') return;
   if (!token) {
     clearSessionExpiringTimer();
     stopRefreshResetInterval();
-    window.localStorage.removeItem(AUTH_TOKEN_KEY);
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-    sessionStorage.removeItem('token_check');
     return;
   }
-  window.localStorage.setItem(AUTH_TOKEN_KEY, token);
-  sessionStorage.setItem('token_check', 'token');
-  scheduleSessionExpiringWarning(token);
+  scheduleSessionExpiringWarning();
 };
 
 export const setRefreshToken = (token: string | null): void => {
-  if (typeof window === 'undefined') return;
-  if (!token) {
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-    return;
-  }
-  window.localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  void token;
+};
+
+export const markAuthenticatedSession = (): void => {
+  setLoggedOut(false);
+  scheduleSessionExpiringWarning();
+};
+
+export const clearAuthenticatedSession = (): void => {
+  clearSessionExpiringTimer();
+  stopRefreshResetInterval();
+  csrfToken = null;
+  csrfRequest = null;
+};
+
+const isMutatingMethod = (method?: string) => {
+  const normalized = method?.toUpperCase();
+  return normalized === 'POST' || normalized === 'PUT' || normalized === 'PATCH' || normalized === 'DELETE';
+};
+
+export const fetchCsrfToken = async (): Promise<string> => {
+  if (csrfToken) return csrfToken;
+  if (csrfRequest) return csrfRequest;
+
+  csrfRequest = axios.create({
+    baseURL: getApiUrl(),
+    withCredentials: true,
+    timeout: 10000,
+  }).get('/api/auth/csrf').then((response) => {
+    const token = response.data?.csrfToken || response.headers?.['x-csrf-token'];
+    if (!token) {
+      throw new Error('CSRF token not returned by server');
+    }
+    csrfToken = token;
+    return token;
+  }).finally(() => {
+    csrfRequest = null;
+  });
+
+  return csrfRequest;
 };
 
 // Add a request interceptor to handle dynamic baseURL, blocked endpoints, and authentication
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Update baseURL based on current hostname
     const isProductionDomain = PRODUCTION_DOMAIN
       ? window.location.hostname === PRODUCTION_DOMAIN
@@ -204,10 +202,12 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    // Attach Authorization header when available (fallback to cookies if not)
-    const authToken = getAuthToken();
-    if (authToken && config.headers) {
-      config.headers.set('Authorization', `Bearer ${authToken}`);
+    if (isMutatingMethod(config.method) && !requestPath.includes('/auth/csrf')) {
+      const token = await fetchCsrfToken();
+      if (!config.headers) {
+        config.headers = new AxiosHeaders();
+      }
+      config.headers.set(CSRF_HEADER, token);
     }
 
     return config;
@@ -287,14 +287,13 @@ api.interceptors.response.use(
       // Prevent infinite refresh loops
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
         console.error('[Auth] Max refresh attempts reached, forcing logout');
-        const hadSession = !!getAuthToken();
         // Clear auth state and redirect
-        setAuthToken(null);
+        clearAuthenticatedSession();
         if (typeof window !== 'undefined' && window.sessionStorage) {
           window.sessionStorage.removeItem('itemize_user');
           window.sessionStorage.removeItem('itemize_expiry');
         }
-        if (hadSession && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login?session=expired';
         }
         return Promise.reject(error);
@@ -313,18 +312,16 @@ api.interceptors.response.use(
       try {
         console.log('[Auth] Attempting token refresh...');
         
-        // Attempt to refresh the token - withCredentials ensures cookies are sent
-        const refreshToken = getRefreshToken();
         const refreshResponse = await axios.create({
           baseURL: config.baseURL,
           withCredentials: true,
           timeout: 10000,
-        }).post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
+          headers: { [CSRF_HEADER]: await fetchCsrfToken() },
+        }).post('/api/auth/refresh');
         
-        // If refresh returns a new token, save it
-        if (refreshResponse.data?.token) {
+        if (refreshResponse.data?.success) {
           console.log('[Auth] Token refreshed successfully');
-          setAuthToken(refreshResponse.data.token);
+          markAuthenticatedSession();
           
           // Also update user data if provided
           if (refreshResponse.data?.user && typeof window !== 'undefined' && window.sessionStorage) {
@@ -336,17 +333,15 @@ api.interceptors.response.use(
           processQueue(null);
           isRefreshing = false;
           
-          // Dispatch custom event for other parts of app (like WebSocket)
+          // Dispatch custom event for other parts of app
           if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('auth:token-refreshed', {
-              detail: { token: refreshResponse.data.token }
-            }));
+            window.dispatchEvent(new CustomEvent('auth:session-refreshed'));
           }
           
           // Retry the original request with new token
           return api(config);
         } else {
-          throw new Error('No token received from refresh endpoint');
+          throw new Error('Refresh endpoint did not confirm success');
         }
       } catch (refreshError: any) {
         if (refreshError?.response?.status === 401) {
@@ -355,15 +350,12 @@ api.interceptors.response.use(
           console.error('[Auth] Token refresh failed:', refreshError.message);
         }
         
-        // Check if they ever had a local token before clearing it, to prevent kicking fresh public users!
-        const hadSession = !!getAuthToken();
-        
         // Refresh failed - clear auth state
         processQueue(refreshError as Error);
         isRefreshing = false;
         
         // Clear all auth data
-        setAuthToken(null);
+        clearAuthenticatedSession();
         if (typeof window !== 'undefined' && window.sessionStorage) {
           window.sessionStorage.removeItem('itemize_user');
           window.sessionStorage.removeItem('itemize_expiry');
@@ -371,7 +363,7 @@ api.interceptors.response.use(
         
         // Only redirect & toast if they were ACTUALLY logged in previously and their session just died.
         // Public pages for fresh visitors correctly have no session, so they should NOT be redirected!
-        if (hadSession && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           // Dispatch event to show toast notification
           window.dispatchEvent(new CustomEvent('auth:session-expired'));
           

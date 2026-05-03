@@ -92,7 +92,7 @@ const getOrgHeader = (organizationId?: number) => {
 export const getSmsTemplates = async (
   organizationId?: number,
   filters?: { category?: string; is_active?: string; search?: string }
-) => {
+): Promise<{ templates: SmsTemplate[]; total?: number }> => {
   const params = new URLSearchParams();
   if (organizationId) params.append('organization_id', String(organizationId));
   if (filters?.category) params.append('category', filters.category);
@@ -102,7 +102,7 @@ export const getSmsTemplates = async (
   const response = await api.get(`/api/sms-templates?${params.toString()}`, {
     headers: getOrgHeader(organizationId),
   });
-  return unwrapResponse(response.data);
+  return unwrapResponse<{ templates: SmsTemplate[]; total?: number }>(response.data);
 };
 
 /**
@@ -150,10 +150,12 @@ export const deleteSmsTemplate = async (id: number, organizationId?: number) => 
  */
 export const sendTestSms = async (
   templateId: number,
-  toPhone: string,
+  toPhoneOrOrganizationId: string | number,
   organizationId?: number,
   sampleData?: Record<string, string>
 ) => {
+  const toPhone = typeof toPhoneOrOrganizationId === 'string' ? toPhoneOrOrganizationId : '';
+  const orgId = typeof toPhoneOrOrganizationId === 'number' ? toPhoneOrOrganizationId : organizationId;
   const response = await api.post(
     `/api/sms-templates/${templateId}/send-test`,
     {
@@ -161,7 +163,7 @@ export const sendTestSms = async (
       sample_data: sampleData,
     },
     {
-      headers: getOrgHeader(organizationId),
+      headers: getOrgHeader(orgId),
     }
   );
   return unwrapResponse(response.data);

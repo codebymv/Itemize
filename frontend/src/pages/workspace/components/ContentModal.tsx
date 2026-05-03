@@ -50,7 +50,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
   const { token } = useAuthState();
 
   // Local state for the content data
-  const [localData, setLocalData] = useState(content.originalData);
+  const [localData, setLocalData] = useState<any>(content.originalData);
 
   // Update handlers for each content type
   const handleListUpdate = useCallback(async (updatedList: List) => {

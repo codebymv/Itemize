@@ -121,7 +121,7 @@ export function EmailTemplatesPage() {
         if (!organizationId) return;
         setLoading(true);
         try {
-            const response = await getEmailTemplates(organizationId, categoryFilter !== 'all' ? categoryFilter : undefined);
+            const response = await getEmailTemplates(organizationId, categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
             setTemplates(response.templates || []);
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load templates', variant: 'destructive' });

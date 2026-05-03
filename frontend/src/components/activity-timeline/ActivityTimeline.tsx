@@ -15,13 +15,14 @@ import {
   CheckSquare,
   Calendar,
   TrendingUp,
-  Activity,
+  Activity as ActivityIcon,
   Sparkles,
 } from 'lucide-react'
 
 interface ActivityTimelineProps {
   activities: Activity[]
   loading?: boolean
+  isLoading?: boolean
   empty?: {
     title?: string
     description?: string
@@ -146,18 +147,19 @@ function ActivityTimelineSkeleton() {
 export function ActivityTimeline({
   activities,
   loading = false,
+  isLoading,
   empty,
   onSelectActivity,
   className,
 }: ActivityTimelineProps) {
-  if (loading) {
+  if (loading || isLoading) {
     return <ActivityTimelineSkeleton />
   }
 
   if (!activities || activities.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <Activity className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+        <ActivityIcon className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-lg font-medium mb-2">{empty?.title || 'No activity yet'}</h3>
         <p className="text-sm text-muted-foreground">
           {empty?.description || 'Activity will appear here as you use Itemize'}

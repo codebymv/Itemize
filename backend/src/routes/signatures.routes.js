@@ -274,16 +274,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (!documentId) {
             return sendBadRequest(res, 'Invalid document id');
         }
-        const updated = await signatureService.deleteDocumentFile(pool, req.organizationId, documentId);
-        if (!updated) return sendNotFound(res, 'Document not found');
-        return sendSuccess(res, updated);
-    }));
-
-    router.delete('/signatures/documents/:id/file', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
-        const documentId = parseInt(req.params.id, 10);
-        if (!documentId) {
-            return sendBadRequest(res, 'Invalid document id');
-        }
         const updated = await signatureService.removeDocumentFile(pool, req.organizationId, documentId);
         if (!updated) return sendNotFound(res, 'Document not found');
         return sendSuccess(res, updated);
@@ -442,8 +432,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     }));
 
     router.post('/public/sign/:token/verify', publicRateLimit, asyncHandler(async (req, res) => {
-        // Placeholder for OTP verification
-        return sendSuccess(res, { verified: true });
+        return sendError(res, 'Additional signer verification is not enabled. Possession of a valid signing link is the verification method for this release.', 410, 'SIGNER_VERIFICATION_NOT_ENABLED');
     }));
 
     router.post('/public/sign/:token', publicRateLimit, asyncHandler(async (req, res) => {

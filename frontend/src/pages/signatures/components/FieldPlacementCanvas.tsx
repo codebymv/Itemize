@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SignatureField } from '@/services/signaturesApi';
-import { getAssetUrl, getApiUrl, getAuthToken } from '@/lib/api';
+import { getAssetUrl, getApiUrl } from '@/lib/api';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -58,10 +58,9 @@ export default function FieldPlacementCanvas({
     if (!resolvedUrl) return '';
     if (resolvedUrl.startsWith(getApiUrl()) && resolvedUrl.includes('/uploads/')) return resolvedUrl;
     if (documentId) {
-      const token = getAuthToken();
       return {
         url: `${getApiUrl()}/api/signatures/documents/${documentId}/file`,
-        httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined
+        withCredentials: true
       };
     }
     return resolvedUrl;

@@ -2,7 +2,8 @@ export interface Segment {
   id: number;
   name: string;
   description?: string;
-  type: 'dynamic' | 'static';
+  type?: 'dynamic' | 'static';
+  segment_type?: 'dynamic' | 'static';
   contact_count: number;
   filters?: unknown;
   created_at: string;

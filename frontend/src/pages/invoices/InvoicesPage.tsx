@@ -83,13 +83,13 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 interface Invoice {
     id: number;
     invoice_number: string;
-    contact_id: number;
+    contact_id?: number;
     contact_first_name?: string;
     contact_last_name?: string;
     customer_name?: string;
     customer_email?: string;
     currency?: string;
-    status: 'draft' | 'sent' | 'viewed' | 'paid' | 'partial' | 'overdue' | 'cancelled';
+    status: 'draft' | 'sent' | 'viewed' | 'paid' | 'partial' | 'overdue' | 'cancelled' | 'refunded';
     total: number;
     amount_paid: number;
     amount_due: number;

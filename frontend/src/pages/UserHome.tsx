@@ -32,7 +32,7 @@ const UserHome = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
-  const { isAuthenticated, token } = useAuthState();
+  const { isAuthenticated } = useAuthState();
   const { categories } = useDatabaseCategories();
 
   // Fetch all lists from the API
@@ -119,11 +119,7 @@ const UserHome = () => {
  
   const deleteList = async (listId: string): Promise<boolean> => {
     try {
-      await api.delete(`/api/lists/${listId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await api.delete(`/api/lists/${listId}`);
       
       setLists(prev => prev.filter(list => list.id !== listId));
       toast({
@@ -152,11 +148,7 @@ const UserHome = () => {
         color_value: updatedList.color_value // Add color_value to the payload
       };
       
-      await api.put(`/api/lists/${updatedList.id}`, listData, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await api.put(`/api/lists/${updatedList.id}`, listData);
       
       const newCategory = updatedList.type;
       const oldList = lists.find(list => list.id === updatedList.id);

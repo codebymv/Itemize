@@ -16,9 +16,9 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
-  const [label, setLabel] = useState((data as TextBoxNodeData).label || 'Text');
+  const [label, setLabel] = useState((data as unknown as TextBoxNodeData).label || 'Text');
   
-  const nodeData = data as TextBoxNodeData;
+  const nodeData = data as unknown as TextBoxNodeData;
   const fontSize = nodeData.fontSize || 'sm';
   const dataLabel = nodeData.label || 'Text';
   

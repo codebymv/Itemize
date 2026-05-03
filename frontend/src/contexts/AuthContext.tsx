@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
-import api, { getApiUrl, setAuthToken, getAuthToken, setRefreshToken, isLoggedOut, setLoggedOut } from '@/lib/api';
+import api, { getApiUrl, markAuthenticatedSession, clearAuthenticatedSession, isLoggedOut, setLoggedOut } from '@/lib/api';
 import { storage } from '@/lib/storage';
 import axios from 'axios'; // Keep axios for Google API calls
 import { toast } from '@/components/ui/use-toast'; // Import toast
@@ -96,9 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: response.data.email,
             role: response.data.role,
           });
-          // Prefer stored access token when present
-          const storedToken = getAuthToken();
-          setToken(storedToken);
+          markAuthenticatedSession();
+          setToken(null);
         } else {
           // If response.data exists but doesn't have an id, user is not authenticated
           throw new Error('Invalid user data received');
@@ -106,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error: any) {
         // 401 or other errors mean user is not authenticated
         // Clear any stale data
-        setAuthToken(null);
+        clearAuthenticatedSession();
         storage.removeItem('itemize_user');
         storage.removeItem('itemize_expiry');
         
@@ -124,37 +123,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  // Keep token state in sync with refresh events
-  useEffect(() => {
-    const handleTokenRefreshed = (event: CustomEvent) => {
-      const nextToken = event.detail?.token;
-      if (typeof nextToken === 'string' && nextToken.length > 0) {
-        setToken(nextToken);
-      }
-    };
-
-    window.addEventListener('auth:token-refreshed', handleTokenRefreshed as EventListener);
-    return () => {
-      window.removeEventListener('auth:token-refreshed', handleTokenRefreshed as EventListener);
-    };
-  }, []);
-
   // Helper to save user data after successful auth (cookies handle the token)
-  const saveAuthState = useCallback((userData: User, authToken: string, refreshToken?: string) => {
+  const saveAuthState = useCallback((userData: User) => {
     // Set expiry to match refresh token duration (30 days)
     const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
     
-    // Store user data and access token for Authorization header
+    // Store non-sensitive user data; auth tokens remain in httpOnly cookies.
     storage.setJson('itemize_user', userData as unknown as Record<string, unknown>);
     storage.setItem('itemize_expiry', expiryTime.toString());
-    setAuthToken(authToken);
-    if (refreshToken) {
-      setRefreshToken(refreshToken);
-    }
+    markAuthenticatedSession();
     setLoggedOut(false);
     
-    // Update React state with access token
-    setToken(authToken);
+    setToken(null);
     setCurrentUser(userData);
   }, []);
 
@@ -188,13 +168,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           logger.debug('auth', 'Backend auth response:', response.data);
           
-          const { user: userData, token: authToken, refreshToken } = response.data;
-          
-          // Save auth state with token (Gleam-style)
-          if (!authToken) {
-            throw new Error('No token received from backend');
-          }
-          saveAuthState(userData, authToken, refreshToken);
+          const { user: userData } = response.data;
+          saveAuthState(userData);
           
           toast({
             title: 'Welcome!',
@@ -251,15 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.data.success || response.data.user) {
         const userData = response.data.user;
-        const authToken = response.data.token;
-        const refreshToken = response.data.refreshToken;
-        
-        if (!authToken) {
-          throw new AuthError('No token received from server', 'NO_TOKEN');
-        }
-        
-        // Save auth state with token (Gleam-style)
-        saveAuthState(userData, authToken, refreshToken);
+        saveAuthState(userData);
       } else {
         throw new AuthError(response.data.error || 'Login failed', response.data.code || 'UNKNOWN');
       }
@@ -303,8 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setCurrentUser(null);
     
-    // Clear all auth data from localStorage (Gleam-style)
-    setAuthToken(null);
+    clearAuthenticatedSession();
     storage.removeItem('itemize_user');
     storage.removeItem('itemize_expiry');
     setLoggedOut(true);
@@ -338,14 +304,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         credential: credentialResponse.credential
       }, { withCredentials: true });
 
-      const { user: userData, token: authToken, refreshToken } = response.data;
-      
-      if (!authToken) {
-        throw new Error('No token received from backend');
-      }
-      
-      // Save auth state with token (Gleam-style)
-      saveAuthState(userData, authToken, refreshToken);
+      const { user: userData } = response.data;
+      saveAuthState(userData);
       
       toast({
         title: 'Welcome!',

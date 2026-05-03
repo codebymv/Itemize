@@ -113,7 +113,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         });
         
         // Validate canvas data format - should be an array of CanvasPath objects
-        let dataToLoad = whiteboard.canvas_data;
+        let dataToLoad: any = whiteboard.canvas_data;
         
         // Handle different data formats from database
         if (typeof dataToLoad === 'string') {

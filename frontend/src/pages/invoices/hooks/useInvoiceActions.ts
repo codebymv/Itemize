@@ -10,7 +10,9 @@ import {
   deleteInvoice,
   Invoice,
 } from '@/services/invoicesApi';
-import type { SendOptions, RecurringOptions, PaymentData } from '../components/SendInvoiceModal';
+import type { SendOptions } from '../components/SendInvoiceModal';
+import type { RecurringOptions } from '../components/MakeRecurringModal';
+import type { PaymentData } from '../components/RecordPaymentModal';
 
 export interface InvoiceActions {
   handleOpenSendModal: (invoice: Invoice, setStates: (invoice: Invoice) => void) => Promise<void>;
@@ -167,7 +169,6 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
   }, []);
 
   const confirmDelete = useCallback(async (invoice: Invoice, organizationId: number, setStates: () => void) => {
-    setDeleting(true);
     try {
       await deleteInvoice(invoice.id, organizationId);
       toast({ title: 'Deleted', description: `Invoice ${invoice.invoice_number} deleted successfully` });
@@ -175,8 +176,6 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
       fetchInvoices();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete invoice', variant: 'destructive' });
-    } finally {
-      setDeleting(false);
     }
   }, [toast, fetchInvoices]);
 

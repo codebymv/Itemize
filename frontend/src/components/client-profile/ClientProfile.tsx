@@ -2,6 +2,7 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Mail,
@@ -17,7 +18,7 @@ import { ActivityTimeline } from '../activity-timeline'
 import { ClientDocumentsTab } from './ClientDocumentsTab'
 import { ClientCommunicationsTab } from './ClientCommunicationsTab'
 import { ClientPaymentsTab } from './ClientPaymentsTab'
-import type { ClientProfile } from '../../design-system/types/client.types'
+import type { ClientProfile } from '@/design-system/types/client.types'
 
 interface ClientProfileProps {
   client: ClientProfile

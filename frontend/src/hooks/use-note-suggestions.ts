@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { getApiUrl } from '@/lib/api';
+import api from '@/lib/api';
 import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 
@@ -43,7 +42,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const lastApiCall = useRef<number>(0);
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // Get the last few sentences as context (more efficient than full content)
   const getContextWindow = useCallback((content: string): string => {
@@ -202,7 +201,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
 
   // Fetch AI suggestions (cost-controlled)
   const fetchAISuggestions = useCallback(async (forceRefresh = false) => {
-    if (!token || !enabled) return;
+    if (!isAuthenticated || !enabled) return;
     
     const context = getContextWindow(noteContent);
     if (!context || !shouldTriggerAI(noteContent)) {
@@ -240,16 +239,12 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       lastApiCall.current = Date.now();
       setLastTriggerContext(context);
       
-      const apiUrl = getApiUrl();
-      
-      const response = await axios.post<NoteSuggestionResponse>(`${apiUrl}/api/note-suggestions`, {
+      const response = await api.post<NoteSuggestionResponse>('/api/note-suggestions', {
         content: context,
         category: noteCategory,
         // Request both sentence completions and paragraph continuations
         requestTypes: ['completion', 'continuation']
       }, {
-        withCredentials: true,
-        headers: { 'Authorization': `Bearer ${token}` },
         timeout: 10000 // 10 second timeout
       });
 
@@ -285,7 +280,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     } finally {
       setIsLoading(false);
     }
-  }, [token, enabled, noteContent, noteCategory, getContextWindow, shouldTriggerAI, getCachedSuggestions, cacheSuggestions, getLocalSuggestions]);
+  }, [isAuthenticated, enabled, noteContent, noteCategory, getContextWindow, shouldTriggerAI, getCachedSuggestions, cacheSuggestions, getLocalSuggestions]);
 
   // Debounced fetch with smart triggering
   const debouncedFetch = useCallback(() => {

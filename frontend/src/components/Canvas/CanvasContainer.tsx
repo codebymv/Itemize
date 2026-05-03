@@ -24,7 +24,7 @@ interface CanvasContainerProps {
   onOpenNewListModal?: (position: { x: number; y: number }) => void;
   onListShare?: (listId: string) => void;
   lists: List[];
-  onListUpdate: (updatedList: List) => Promise<void>;
+  onListUpdate: (updatedList: List) => Promise<unknown>;
   onListPositionUpdate: (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
   onListDelete: (listId: string) => Promise<boolean>;
   notes: Note[];

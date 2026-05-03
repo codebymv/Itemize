@@ -134,7 +134,9 @@ export const useVaultCardLogic = ({
   }, [vault.id, onDelete]);
   
   const { isSavingColor, saveColor: handleSaveVaultColor } = useCardColorManagement({
-    onSave: (newColor) => onUpdate(vault.id, { color_value: newColor }),
+    onSave: async (newColor) => {
+      await onUpdate(vault.id, { color_value: newColor });
+    },
     onError: () => {
       toast({
         title: "Error",
@@ -155,8 +157,12 @@ export const useVaultCardLogic = ({
     handleAddCustomCategory,
     handleUpdateCategoryColor
   } = useCardCategoryManagement({
-    onUpdateCategory: (category) => onUpdate(vault.id, { category }),
-    onAddCustomCategory: (category) => onUpdate(vault.id, { category }),
+    onUpdateCategory: async (category) => {
+      await onUpdate(vault.id, { category });
+    },
+    onAddCustomCategory: async (category) => {
+      await onUpdate(vault.id, { category });
+    },
     onUpdateCategoryColor: (categoryName, newColor) => {
       if (!updateCategory) return;
       return updateCategory(categoryName, { color_value: newColor });

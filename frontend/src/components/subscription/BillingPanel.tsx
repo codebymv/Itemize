@@ -16,6 +16,7 @@ import {
     Zap, 
     Crown, 
     Building2,
+    User,
     Mail,
     MessageSquare,
     Globe,
@@ -36,6 +37,7 @@ import {
 
 // Plan icons
 const PLAN_ICONS: Record<Plan, typeof Zap> = {
+    free: User,
     starter: Zap,
     unlimited: Crown,
     pro: Building2,

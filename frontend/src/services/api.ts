@@ -121,9 +121,7 @@ export interface CreateCategoryPayload {
 }
 
 // Helper function to get auth headers with token
-const getAuthHeaders = (token?: string) => {
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+const getAuthHeaders = (_token?: string) => ({});
 
 // List API functions
 export const fetchCanvasLists = async (token?: string) => {
@@ -677,3 +675,5 @@ export const unshareWhiteboard = async (whiteboardId: number, token?: string) =>
   });
   return response.data;
 };
+
+export default api;

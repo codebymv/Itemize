@@ -132,6 +132,7 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
   const { data: usageStats } = useUsageStats();
 
   const handleUpgrade = async (planId: Plan) => {
+    if (planId === 'free') return;
     if (currentPlan === planId) return;
 
     setIsLoading(true);

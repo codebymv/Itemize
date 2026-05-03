@@ -2,7 +2,7 @@ export interface Campaign {
   id: number;
   name: string;
   subject: string;
-  status: 'draft' | 'scheduled' | 'sending' | 'paused' | 'sent' | 'failed';
+  status: 'draft' | 'scheduled' | 'sending' | 'paused' | 'sent' | 'failed' | 'cancelled';
   recipient_count: number;
   sent_count: number;
   open_rate?: number;

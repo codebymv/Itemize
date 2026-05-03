@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast, useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import api, { getRefreshToken, setAuthToken } from '@/lib/api';
+import api, { markAuthenticatedSession } from '@/lib/api';
 
 /**
  * Hook to handle session expiration events
@@ -49,14 +49,11 @@ export const useSessionWarning = () => {
             variant="primary"
             onClick={async () => {
               try {
-                const refreshToken = getRefreshToken();
-                const res = await api.post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
-                if (res.data?.token) {
-                  setAuthToken(res.data.token);
+                const res = await api.post('/api/auth/refresh');
+                if (res.data?.success) {
+                  markAuthenticatedSession();
                   if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('auth:token-refreshed', {
-                      detail: { token: res.data.token },
-                    }));
+                    window.dispatchEvent(new CustomEvent('auth:session-refreshed'));
                   }
                   if (expiringToastIdRef.current) {
                     dismiss(expiringToastIdRef.current);
@@ -94,21 +91,20 @@ export const useSessionWarning = () => {
  * Hook to handle token refresh events
  * Useful for reconnecting WebSockets or refreshing data after token refresh
  */
-export const useTokenRefresh = (onTokenRefreshed?: (token: string) => void) => {
+export const useTokenRefresh = (onSessionRefreshed?: () => void) => {
   useEffect(() => {
-    const handleTokenRefreshed = (event: CustomEvent) => {
-      const { token } = event.detail;
-      console.log('[Session] Token refreshed, updating connections...');
+    const handleSessionRefreshed = () => {
+      console.log('[Session] Session refreshed, updating connections...');
 
-      if (onTokenRefreshed) {
-        onTokenRefreshed(token);
+      if (onSessionRefreshed) {
+        onSessionRefreshed();
       }
     };
 
-    window.addEventListener('auth:token-refreshed', handleTokenRefreshed as EventListener);
+    window.addEventListener('auth:session-refreshed', handleSessionRefreshed as EventListener);
 
     return () => {
-      window.removeEventListener('auth:token-refreshed', handleTokenRefreshed as EventListener);
+      window.removeEventListener('auth:session-refreshed', handleSessionRefreshed as EventListener);
     };
-  }, [onTokenRefreshed]);
+  }, [onSessionRefreshed]);
 };

@@ -1,5 +1,8 @@
-import type { Invoice, Signature, Contact, Deal } from '@/types'
+import type { Contact } from '@/types'
+import type { Invoice } from '@/services/invoicesApi'
+import type { SignatureDocument as Signature } from '@/services/signaturesApi'
 import type { ClientProfile } from '../types/client.types'
+import type { Activity } from '../types/activity.types'
 
 /**
  * Transforms API response to design system ClientProfile format
@@ -26,29 +29,29 @@ export function transformApiToClientProfile(apiData: {
       email: contact.email,
       phone: contact.phone,
       company: contact.company,
-      title: contact.title,
-      city: contact.city,
-      state: contact.state,
-      country: contact.country,
-      status: contact.status || 'active',
-      notes: contact.notes,
+      title: contact.job_title,
+      city: contact.address?.city,
+      state: contact.address?.state,
+      country: contact.address?.country,
+      status: contact.status === 'archived' ? 'inactive' : (contact.status || 'active'),
+      notes: undefined,
       tags: contact.tags || [],
     },
     invoices: invoices.map((inv) => ({
       id: inv.id.toString(),
       number: inv.invoice_number || `INV-${inv.id}`,
-      status: inv.status || 'draft',
+      status: normalizeInvoiceStatus(inv.status),
       total: inv.total || 0,
-      date: inv.date,
+      date: inv.issue_date,
       dueDate: inv.due_date,
       url: `/invoices/${inv.id}`,
     })),
     signatures: signatures.map((sig) => ({
       id: sig.id.toString(),
       title: sig.title || 'Document',
-      status: sig.status || 'draft',
+      status: normalizeSignatureStatus(sig.status),
       sentDate: sig.sent_at,
-      signedDate: sig.signed_at,
+      signedDate: sig.completed_at,
       url: `/documents/${sig.id}`,
     })),
     payments: payments.map((pay) => ({
@@ -96,6 +99,7 @@ export function transformApiToClientProfile(apiData: {
     timeline: (activities || []).map((activity) => ({
       id: activity.id.toString(),
       type: activity.type,
+      itemType: inferItemType(activity),
       title: activity.title,
       description: activity.description,
       timestamp: new Date(activity.created_at),
@@ -147,7 +151,18 @@ export function transformApiSearchResult(apiResult: any) {
   }
 }
 
-function inferItemType(activity: any): string {
+function normalizeInvoiceStatus(status: Invoice['status'] | undefined) {
+  return status === 'partial' || status === 'refunded' ? 'paid' : (status || 'draft')
+}
+
+function normalizeSignatureStatus(status: Signature['status'] | undefined) {
+  if (status === 'completed') return 'signed'
+  if (status === 'in_progress') return 'viewed'
+  if (status === 'cancelled') return 'expired'
+  return status || 'draft'
+}
+
+function inferItemType(activity: any): Activity['itemType'] {
   const title = activity.title?.toLowerCase() || ''
   const type = activity.type?.toLowerCase() || ''
 

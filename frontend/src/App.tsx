@@ -122,7 +122,7 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       
       // Keep cache for 10 minutes after stale
-      cacheTime: 10 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       
       // Refetch on component mount (use cache if available)
       refetchOnMount: 'always',

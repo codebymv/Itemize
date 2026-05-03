@@ -103,8 +103,8 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                     JSON.stringify(items || []),
                     req.user.id,
                     color_value || null,
-                    x,
-                    y,
+                    typeof position_x === 'number' ? position_x : 0,
+                    typeof position_y === 'number' ? position_y : 0,
                     width || 340,
                     height || 265
                 ]

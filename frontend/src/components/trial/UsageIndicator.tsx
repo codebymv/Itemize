@@ -56,6 +56,7 @@ const stateStyles = {
   unlimited: {
     container: 'bg-green-100 dark:bg-green-900',
     text: 'text-green-800 dark:text-green-300',
+    progress: 'bg-green-600',
   },
 };
 

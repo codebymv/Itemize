@@ -15,9 +15,9 @@ const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
-  const [label, setLabel] = useState((data as RectangleNodeData).label || 'Rectangle');
+  const [label, setLabel] = useState((data as unknown as RectangleNodeData).label || 'Rectangle');
 
-  const dataLabel = (data as RectangleNodeData).label || 'Rectangle';
+  const dataLabel = (data as unknown as RectangleNodeData).label || 'Rectangle';
 
   useEffect(() => {
     if (!isEditing) {

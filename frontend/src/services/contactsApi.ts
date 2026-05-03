@@ -85,10 +85,11 @@ export interface ContactsQueryParams {
   organization_id?: number;
 }
 
-export const getContacts = async (params: ContactsQueryParams = {}): Promise<ContactsResponse> => {
+export const getContacts = async (params: ContactsQueryParams = {}, organizationId?: number): Promise<ContactsResponse> => {
+  const orgId = organizationId ?? params.organization_id;
   const response = await api.get('/api/contacts', {
     params,
-    headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {}
+    headers: orgId ? { 'x-organization-id': orgId.toString() } : {}
   });
   return unwrapResponse<ContactsResponse>(response.data);
 };

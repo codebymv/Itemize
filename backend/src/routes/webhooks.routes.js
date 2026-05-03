@@ -1,7 +1,42 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const { logger } = require('../utils/logger');
 const { validate, webhookEvent } = require('../validators/schemas');
+
+const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
+
+function safeEqualHex(expected, actual) {
+  const expectedBuffer = Buffer.from(expected, 'hex');
+  const actualBuffer = Buffer.from(String(actual || ''), 'hex');
+  return expectedBuffer.length === actualBuffer.length && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+function verifyWorkflowWebhook(req, secret) {
+  const signature = req.headers['x-itemize-signature'];
+  const timestamp = req.headers['x-itemize-timestamp'];
+
+  if (!signature || !timestamp) {
+    return { ok: false, status: 401, message: 'Missing webhook signature headers' };
+  }
+
+  const timestampMs = Number(timestamp);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > WEBHOOK_TIMESTAMP_TOLERANCE_MS) {
+    return { ok: false, status: 401, message: 'Webhook timestamp is invalid or expired' };
+  }
+
+  const rawBody = req.rawBody && Buffer.isBuffer(req.rawBody)
+    ? req.rawBody.toString('utf8')
+    : JSON.stringify(req.body || {});
+  const signedPayload = `${timestamp}.${rawBody}`;
+  const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
+
+  if (!safeEqualHex(expected, signature)) {
+    return { ok: false, status: 401, message: 'Invalid webhook signature' };
+  }
+
+  return { ok: true };
+}
 
 /**
  * POST /api/webhooks/:workflowId
@@ -21,7 +56,7 @@ router.post('/:workflowId', validate(webhookEvent), async (req, res) => {
 
     // Validate workflow exists and is active
     const workflowQuery = `
-      SELECT id, name, is_active, actions
+      SELECT id, organization_id, name, is_active, webhook_secret
       FROM workflows
       WHERE id = $1
     `;
@@ -32,6 +67,11 @@ router.post('/:workflowId', validate(webhookEvent), async (req, res) => {
     }
     
     const workflow = workflowRes.rows[0];
+    const signatureCheck = verifyWorkflowWebhook(req, workflow.webhook_secret);
+    if (!signatureCheck.ok) {
+      return res.status(signatureCheck.status).json({ error: signatureCheck.message });
+    }
+
     if (!workflow.is_active) {
       return res.status(200).json({ 
         success: false, 
@@ -63,7 +103,14 @@ router.post('/:workflowId', validate(webhookEvent), async (req, res) => {
     const successes = [];
 
     try {
-      const actions = workflow.actions;
+      const stepsResult = await pool.query(
+        'SELECT step_type, step_config FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order ASC, id ASC',
+        [workflowId]
+      );
+      const actions = stepsResult.rows.map((step) => ({
+        type: step.step_type,
+        ...(step.step_config || {})
+      }));
       
       if (!actions || !Array.isArray(actions)) {
         logger.warn('No actions defined for workflow', { workflowId });

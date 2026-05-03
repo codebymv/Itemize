@@ -29,7 +29,7 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const isLight = theme === 'light';
   const { setNodes, getNode, getNodes } = useReactFlow();
   
-  const nodeData = data as ArrowNodeData;
+  const nodeData = data as unknown as ArrowNodeData;
   const endOffset = nodeData.endOffset || { x: 100, y: 0 };
   const boundsAligned = nodeData.boundsAligned;
   
@@ -115,7 +115,7 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       : [node];
 
     dragGroupRef.current = activeNodes.map((n) => {
-      const nodeEndOffset = (n.data as ArrowNodeData)?.endOffset || { x: 100, y: 0 };
+      const nodeEndOffset = (n.data as unknown as ArrowNodeData)?.endOffset || { x: 100, y: 0 };
       const nodeMinX = Math.min(0, nodeEndOffset.x) - BOUNDS_PADDING;
       const nodeMinY = Math.min(0, nodeEndOffset.y) - BOUNDS_PADDING;
       const nodeStartWorldX = n.position.x - nodeMinX;

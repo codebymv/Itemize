@@ -377,6 +377,9 @@ export interface Deal {
   updated_at: string;
   // Joined data
   contact?: Contact;
+  contact_first_name?: string;
+  contact_last_name?: string;
+  contact_company?: string;
   pipeline?: Pipeline;
 }
 

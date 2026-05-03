@@ -48,11 +48,17 @@ interface LineItem {
 
 interface Contact {
     id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
     phone?: string;
-    address?: string;
+    address?: string | {
+        street?: string;
+        city?: string;
+        state?: string;
+        zip?: string;
+        country?: string;
+    } | Record<string, any>;
 }
 
 export function EstimateEditorPage() {
@@ -208,10 +214,10 @@ export function EstimateEditorPage() {
         const selectedContact = contacts.find(c => c.id === parseInt(contactIdStr));
         if (selectedContact) {
             setContactId(selectedContact.id);
-            setCustomerName(`${selectedContact.first_name} ${selectedContact.last_name}`.trim());
+            setCustomerName(`${selectedContact.first_name || ''} ${selectedContact.last_name || ''}`.trim());
             setCustomerEmail(selectedContact.email || '');
             setCustomerPhone(selectedContact.phone || '');
-            setCustomerAddress(selectedContact.address || '');
+            setCustomerAddress(typeof selectedContact.address === 'string' ? selectedContact.address : '');
         }
     };
 

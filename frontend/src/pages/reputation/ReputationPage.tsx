@@ -116,7 +116,17 @@ export function ReputationPage() {
                 ),
                 getReputationAnalytics(30, organizationId)
             ]);
-            setReviews(reviewsRes.reviews || []);
+            setReviews((reviewsRes.reviews || []).map((review) => ({
+                id: review.id,
+                platform: review.platform,
+                reviewer_name: review.reviewer_name || 'Anonymous',
+                rating: review.rating,
+                content: review.review_text || '',
+                status: review.status === 'responded' ? 'responded' : review.status === 'flagged' ? 'flagged' : 'pending',
+                sentiment: review.sentiment || 'neutral',
+                created_at: review.created_at,
+                response: review.response_text,
+            })));
             // Map the API response to our expected format
             if (analyticsRes?.overall) {
                 setAnalytics({

@@ -103,7 +103,17 @@ export function SMSTemplatesPage() {
         setLoading(true);
         try {
             const response = await getSMSTemplates(organizationId);
-            setTemplates(response.templates || []);
+            setTemplates((response.templates || []).map((template) => ({
+                id: template.id,
+                name: template.name,
+                content: template.message,
+                category: template.category,
+                is_active: template.is_active,
+                variables: template.variables || [],
+                character_count: template.message?.length || 0,
+                segment_count: Math.max(1, Math.ceil((template.message?.length || 0) / 160)),
+                created_at: template.created_at,
+            })));
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load templates', variant: 'destructive' });
         } finally {
@@ -119,7 +129,17 @@ export function SMSTemplatesPage() {
         if (!organizationId) return;
         try {
             const copy = await duplicateSMSTemplate(id, organizationId);
-            setTemplates(prev => [copy, ...prev]);
+            setTemplates(prev => [{
+                id: copy.id,
+                name: copy.name,
+                content: copy.message,
+                category: copy.category,
+                is_active: copy.is_active,
+                variables: copy.variables || [],
+                character_count: copy.message?.length || 0,
+                segment_count: Math.max(1, Math.ceil((copy.message?.length || 0) / 160)),
+                created_at: copy.created_at,
+            }, ...prev]);
             toast({ title: 'Duplicated', description: 'Template duplicated successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });

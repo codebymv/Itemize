@@ -15,9 +15,9 @@ const CircleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
-  const [label, setLabel] = useState((data as CircleNodeData).label || 'Circle');
+  const [label, setLabel] = useState((data as unknown as CircleNodeData).label || 'Circle');
 
-  const dataLabel = (data as CircleNodeData).label || 'Circle';
+  const dataLabel = (data as unknown as CircleNodeData).label || 'Circle';
 
   useEffect(() => {
     if (!isEditing) {

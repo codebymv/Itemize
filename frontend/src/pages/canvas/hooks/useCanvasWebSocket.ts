@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getApiUrl, getAuthToken } from '@/lib/api';
+import { getApiUrl } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { User } from '@/contexts/AuthContext';
@@ -26,8 +26,7 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
     newSocket.on('connect', () => {
       logger.log('Canvas: WebSocket connected, joining user canvas');
       setIsConnected(true);
-      const authToken = getAuthToken();
-      newSocket.emit('joinUserCanvas', { token: authToken ?? 'httponly' });
+      newSocket.emit('joinUserCanvas', { token: 'httponly' });
     });
 
     newSocket.on('disconnect', () => {

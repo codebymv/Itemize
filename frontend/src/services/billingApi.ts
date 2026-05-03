@@ -7,6 +7,13 @@
 import api from '../lib/api';
 import type { Plan } from '@/lib/subscription';
 
+const unwrapResponse = <T>(payload: any): ApiResponse<T> => {
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+        return payload as ApiResponse<T>;
+    }
+    return { success: true, data: payload as T };
+};
+
 // ============================================
 // Types
 // ============================================

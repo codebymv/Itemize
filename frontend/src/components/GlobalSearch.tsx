@@ -136,10 +136,6 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
     };
   }, [open]);
 
-  const getToken = useCallback(() => {
-    return localStorage.getItem('itemize_auth_token');
-  }, []);
-
   const getOrgId = useCallback(() => {
     return localStorage.getItem('current_org_id');
   }, []);
@@ -165,15 +161,14 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         allResults.push(...matchedPages);
 
         if (query.length > 1) {
-          const token = getToken();
           try {
             const [listsData, notesData, whiteboardsData, wireframesData, vaultsData, segmentsData, campaignsData, automationsData] = await Promise.allSettled([
-              fetchCanvasLists(token),
-              getNotes(token),
-              getWhiteboards(token),
-              getWireframes(token),
-              getVaults(token),
-              getSegments({ search: query, limit: 3 }),
+              fetchCanvasLists(),
+              getNotes(),
+              getWhiteboards(),
+              getWireframes(),
+              getVaults(),
+              getSegments({ search: query }),
               getCampaigns({ search: query, limit: 3 }),
               getWorkflows(Number(getOrgId() || 0), { search: query }).catch(() => ({ workflows: [] }))
             ]);
@@ -254,8 +249,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               allResults.push(...matchedVaults);
             }
 
-            if (segmentsData.status === 'fulfilled' && Array.isArray(segmentsData)) {
-              const matchedSegments = segmentsData
+            if (segmentsData.status === 'fulfilled' && Array.isArray(segmentsData.value)) {
+              const matchedSegments = segmentsData.value
                 .filter((s: { name: string }) => s.name.toLowerCase().includes(lowerQuery))
                 .slice(0, 3)
                 .map((s: { id: number; name: string }) => ({
@@ -284,8 +279,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               allResults.push(...matchedCampaigns);
             }
 
-            if (automationsData.status === 'fulfilled' && automationsData?.workflows) {
-              const matchedAutomations = automationsData.workflows
+            if (automationsData.status === 'fulfilled' && automationsData.value?.workflows) {
+              const matchedAutomations = automationsData.value.workflows
                 .filter((a: { name: string }) => a.name.toLowerCase().includes(lowerQuery))
                 .slice(0, 3)
                 .map((a: { id: number; name: string }) => ({
@@ -343,20 +338,25 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 allResults.push(...matchedSignatures);
               }
 
-              if (contactsData.status === 'fulfilled' && contactsData.value?.data) {
-                const matchedContacts = contactsData.data
-                  .filter((c: { name?: string; email: string }) =>
-                    c.name?.toLowerCase().includes(lowerQuery) || c.email.toLowerCase().includes(lowerQuery)
+              if (contactsData.status === 'fulfilled' && contactsData.value?.contacts) {
+                const matchedContacts = contactsData.value.contacts
+                  .filter((c) => {
+                    const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+                    return name.toLowerCase().includes(lowerQuery) || (c.email || '').toLowerCase().includes(lowerQuery);
+                  }
                   )
                   .slice(0, 3)
-                  .map((c: { id: string; name?: string; email: string }) => ({
+                  .map((c) => {
+                    const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+                    return {
                     id: `contact-${c.id}`,
                     type: 'contact' as const,
-                    title: c.name || c.email,
-                    subtitle: c.email,
+                    title: name || c.email || 'Contact',
+                    subtitle: c.email || '',
                     icon: Users,
                     href: '/contacts'
-                  }));
+                  };
+                });
                 allResults.push(...matchedContacts);
               }
             }
@@ -375,7 +375,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
 
     const debounce = setTimeout(search, 300);
     return () => clearTimeout(debounce);
-  }, [query, getToken, getOrgId]);
+  }, [query, getOrgId]);
 
   const handleSelect = (result: SearchResult) => {
     navigate(result.href);

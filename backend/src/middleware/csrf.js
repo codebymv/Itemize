@@ -45,9 +45,34 @@ function csrfProtection(req, res, next) {
         '/api/billing/webhook',
         '/api/webhooks/',
         '/api/chat-widget/incoming',
+        '/api/social/webhook',
+        '/api/sms-templates/webhook',
     ];
     
     if (webhookPaths.some(path => req.path.startsWith(path))) {
+        return next();
+    }
+
+    // Login, registration, password recovery, and OAuth callbacks establish
+    // sessions. They are rate limited and do not rely on an existing session.
+    const sessionBootstrapPaths = [
+        '/api/auth/login',
+        '/api/auth/register',
+        '/api/auth/verify-email',
+        '/api/auth/resend-verification',
+        '/api/auth/forgot-password',
+        '/api/auth/reset-password',
+        '/api/auth/google-login',
+        '/api/auth/google-credential',
+    ];
+
+    if (sessionBootstrapPaths.includes(req.path)) {
+        return next();
+    }
+
+    // CSRF protects browser cookie-authenticated writes. Public endpoints
+    // without an Itemize session cookie rely on their own token/signature model.
+    if (!req.cookies?.itemize_auth && !req.cookies?.itemize_refresh) {
         return next();
     }
 
@@ -110,7 +135,7 @@ function setCsrfToken(req, res, next) {
         res.cookie(CSRF_COOKIE_NAME, token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
         });
@@ -120,6 +145,19 @@ function setCsrfToken(req, res, next) {
     }
     
     next();
+}
+
+function issueCsrfToken(req, res) {
+    const token = generateToken();
+    res.cookie(CSRF_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/'
+    });
+    res.setHeader('X-CSRF-Token', token);
+    res.json({ success: true, csrfToken: token });
 }
 
 /**
@@ -177,6 +215,7 @@ module.exports = {
     setCsrfToken,
     getCsrfToken,
     doubleSubmitCsrf,
+    issueCsrfToken,
     generateToken,
     CSRF_HEADER_NAME,
     CSRF_COOKIE_NAME,

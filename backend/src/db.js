@@ -324,6 +324,26 @@ const initializeDatabase = async (pool) => {
     // Module migrations (each module handles its own tables)
     await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
     await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
+    await runMigrationOnce(pool, 'workflow_webhook_secrets', async (p) => {
+      await p.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
+      await p.query(`
+        ALTER TABLE workflows
+        ADD COLUMN IF NOT EXISTS webhook_secret VARCHAR(128);
+      `);
+      await p.query(`
+        UPDATE workflows
+        SET webhook_secret = encode(gen_random_bytes(32), 'hex')
+        WHERE webhook_secret IS NULL;
+      `);
+      await p.query(`
+        ALTER TABLE workflows
+        ALTER COLUMN webhook_secret SET DEFAULT encode(gen_random_bytes(32), 'hex');
+      `);
+      await p.query(`
+        CREATE INDEX IF NOT EXISTS idx_workflows_webhook_secret ON workflows(webhook_secret);
+      `);
+      return true;
+    });
     await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);

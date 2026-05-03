@@ -35,7 +35,9 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
   } = useCardTitleEditing({
     title: wireframe.title || 'Untitled Wireframe',
     compareTitle: wireframe.title,
-    onSave: (nextTitle) => onUpdate(wireframe.id, { title: nextTitle })
+    onSave: async (nextTitle) => {
+      await onUpdate(wireframe.id, { title: nextTitle });
+    }
   });
   
   // Wireframe operations
@@ -44,7 +46,9 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
   }, [wireframe.id, onDelete]);
   
   const { isSavingColor, saveColor: handleSaveWireframeColor } = useCardColorManagement({
-    onSave: (newColor) => onUpdate(wireframe.id, { color_value: newColor }),
+    onSave: async (newColor) => {
+      await onUpdate(wireframe.id, { color_value: newColor });
+    },
     onError: () => {
       toast({
         title: "Error",
@@ -65,8 +69,12 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
     handleAddCustomCategory,
     handleUpdateCategoryColor
   } = useCardCategoryManagement({
-    onUpdateCategory: (category) => onUpdate(wireframe.id, { category }),
-    onAddCustomCategory: (category) => onUpdate(wireframe.id, { category }),
+    onUpdateCategory: async (category) => {
+      await onUpdate(wireframe.id, { category });
+    },
+    onAddCustomCategory: async (category) => {
+      await onUpdate(wireframe.id, { category });
+    },
     onUpdateCategoryColor: (categoryName, newColor) => {
       if (!updateCategory) return;
       return updateCategory(categoryName, { color_value: newColor });

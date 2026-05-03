@@ -2,7 +2,7 @@
  * Utility functions for formatting invoice-related data
  */
 
-import { Contact } from '@/services/contactsApi';
+import { Contact } from '@/types';
 import { Invoice } from '@/services/invoicesApi';
 
 /**

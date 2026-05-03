@@ -17,6 +17,7 @@ const {
 module.exports = (pool, authenticateJWT) => {
     const router = express.Router();
     const stripeService = new StripeService(pool);
+    const { requireOrganization } = require('../middleware/organization')(pool);
 
     // ============================================
     // Public Webhook Route (No Auth)
@@ -48,12 +49,8 @@ module.exports = (pool, authenticateJWT) => {
     // ============================================
 
     // GET /api/billing - Get current billing status
-    router.get('/', authenticateJWT, asyncHandler(async (req, res) => {
-        const organizationId = req.user.organization_id;
-        if (!organizationId) {
-            return sendBadRequest(res, 'No organization associated with user');
-        }
-
+    router.get('/', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        const organizationId = req.organizationId;
         const billingStatus = await stripeService.getBillingStatus(organizationId);
 
         if (!billingStatus) {
@@ -70,13 +67,9 @@ module.exports = (pool, authenticateJWT) => {
     }));
 
     // POST /api/billing/checkout - Create Checkout Session
-    router.post('/checkout', authenticateJWT, asyncHandler(async (req, res) => {
+    router.post('/checkout', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         const { priceId, planId, billingPeriod = 'monthly', mode = 'subscription', successUrl, cancelUrl } = req.body;
-        const organizationId = req.user.organization_id;
-
-        if (!organizationId) {
-            return sendBadRequest(res, 'No organization associated with user');
-        }
+        const organizationId = req.organizationId;
 
         if (!successUrl || !cancelUrl) {
             return sendBadRequest(res, 'Missing required parameters: successUrl, cancelUrl');
@@ -107,13 +100,9 @@ module.exports = (pool, authenticateJWT) => {
     }));
 
     // POST /api/billing/portal - Create Customer Portal Session
-    router.post('/portal', authenticateJWT, asyncHandler(async (req, res) => {
+    router.post('/portal', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         const { returnUrl } = req.body;
-        const organizationId = req.user.organization_id;
-
-        if (!organizationId) {
-            return sendBadRequest(res, 'No organization associated with user');
-        }
+        const organizationId = req.organizationId;
 
         if (!returnUrl) {
             return sendBadRequest(res, 'Return URL is required');
@@ -128,12 +117,8 @@ module.exports = (pool, authenticateJWT) => {
     }));
 
     // POST /api/billing/acknowledge-trial-end - Mark trial end as acknowledged
-    router.post('/acknowledge-trial-end', authenticateJWT, asyncHandler(async (req, res) => {
-        const organizationId = req.user.organization_id;
-        if (!organizationId) {
-            return sendBadRequest(res, 'No organization associated with user');
-        }
-
+    router.post('/acknowledge-trial-end', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        const organizationId = req.organizationId;
         await pool.query(
             'UPDATE organizations SET trial_end_acknowledged_at = NOW() WHERE id = $1',
             [organizationId]
@@ -143,12 +128,8 @@ module.exports = (pool, authenticateJWT) => {
     }));
 
     // GET /api/billing/usage - Get current usage stats
-    router.get('/usage', authenticateJWT, asyncHandler(async (req, res) => {
-        const organizationId = req.user.organization_id;
-        if (!organizationId) {
-            return sendBadRequest(res, 'No organization associated with user');
-        }
-
+    router.get('/usage', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        const organizationId = req.organizationId;
         // Get usage from organization record
         const result = await pool.query(`
             SELECT 

@@ -28,7 +28,7 @@ interface InvoiceData {
   customer_address?: string;
   issue_date: string;
   due_date: string;
-  payment_terms: number;
+  payment_terms: string | number;
   currency: string;
   tax_rate: number;
   items: Array<{
@@ -84,6 +84,7 @@ export function useInvoiceSave({
     try {
       const invoiceData = {
         ...data,
+        payment_terms: String(data.payment_terms ?? ''),
         items: validItems.map((item) => ({
           product_id: item.product_id,
           name: item.name,

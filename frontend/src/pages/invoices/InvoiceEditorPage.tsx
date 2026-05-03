@@ -63,9 +63,9 @@ import { formatCurrency, getPaymentTermsLabel } from './utils/invoiceFormatters'
 
 interface Contact {
     id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
     phone?: string;
     address?: string | {
         street?: string;
@@ -300,8 +300,8 @@ export function InvoiceEditorPage() {
                     getPaymentSettings(organizationId)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
-                setProducts(Array.isArray(productsData) ? productsData : productsData?.products || []);
-                setBusinesses(Array.isArray(businessesData) ? businessesData : businessesData?.businesses || []);
+                setProducts(Array.isArray(productsData) ? productsData : (productsData as any)?.products || []);
+                setBusinesses(Array.isArray(businessesData) ? businessesData : (businessesData as any)?.businesses || []);
                 setSettings(settingsData);
 
                 // Load existing invoice if editing
@@ -342,7 +342,7 @@ export function InvoiceEditorPage() {
                         });
                     }
                     // Auto-select last used business for new invoices
-                    const businessesList = Array.isArray(businessesData) ? businessesData : businessesData?.businesses || [];
+                    const businessesList = Array.isArray(businessesData) ? businessesData : (businessesData as any)?.businesses || [];
                     if (businessesList.length > 0) {
                         const lastUsed = businessesList.find(b => b.last_used_at);
                         if (lastUsed) {

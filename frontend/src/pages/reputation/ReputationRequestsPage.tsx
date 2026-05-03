@@ -39,7 +39,7 @@ interface ReviewRequest {
     contact_email?: string;
     contact_phone?: string;
     method: 'email' | 'sms';
-    status: 'pending' | 'sent' | 'clicked' | 'completed';
+    status: 'pending' | 'sent' | 'clicked' | 'completed' | 'failed' | 'opened' | 'unsubscribed';
     sent_at?: string;
     clicked_at?: string;
     completed_at?: string;
@@ -129,7 +129,19 @@ export function ReputationRequestsPage() {
                 { status: statusFilter !== 'all' ? statusFilter as any : undefined },
                 organizationId
             );
-            setRequests(response.requests || []);
+            setRequests((response.requests || []).map((request) => ({
+                id: request.id,
+                contact_id: request.contact_id || 0,
+                contact_name: request.contact_name || '',
+                contact_email: request.contact_email,
+                contact_phone: request.contact_phone,
+                method: request.channel === 'sms' ? 'sms' : 'email',
+                status: request.status,
+                sent_at: request.email_sent_at || request.sms_sent_at,
+                clicked_at: request.clicked_at,
+                completed_at: (request as any).completed_at,
+                created_at: request.created_at,
+            })));
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load requests', variant: 'destructive' });
         } finally {

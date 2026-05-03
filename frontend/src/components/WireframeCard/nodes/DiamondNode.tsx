@@ -15,9 +15,9 @@ const DiamondNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
-  const [label, setLabel] = useState((data as DiamondNodeData).label || 'Diamond');
+  const [label, setLabel] = useState((data as unknown as DiamondNodeData).label || 'Diamond');
 
-  const dataLabel = (data as DiamondNodeData).label || 'Diamond';
+  const dataLabel = (data as unknown as DiamondNodeData).label || 'Diamond';
 
   useEffect(() => {
     if (!isEditing) {

@@ -273,7 +273,7 @@ export const createInvoice = async (
         tax_rate?: number;
         notes?: string;
         terms_and_conditions?: string;
-        payment_terms?: number;
+        payment_terms?: number | string;
     },
     organizationId?: number
 ): Promise<Invoice> => {
@@ -285,7 +285,7 @@ export const createInvoice = async (
 
 export const updateInvoice = async (
     invoiceId: number,
-    invoice: Partial<Invoice> & { items?: InvoiceItem[] },
+    invoice: Partial<Omit<Invoice, 'payment_terms'>> & { payment_terms?: number | string; items?: InvoiceItem[] },
     organizationId?: number
 ): Promise<Invoice> => {
     const response = await api.put(`/api/invoices/${invoiceId}`, invoice, {

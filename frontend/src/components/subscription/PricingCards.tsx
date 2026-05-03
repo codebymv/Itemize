@@ -79,6 +79,11 @@ const ITEMIZE_PLAN_META: Record<Plan, {
     displayName: string;
     tagline: string;
 }> = {
+    free: {
+        name: 'Free',
+        displayName: 'Free',
+        tagline: 'Get started for free',
+    },
     starter: {
         name: 'Starter',
         displayName: 'Starter',

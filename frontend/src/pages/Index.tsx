@@ -10,7 +10,7 @@ import { ListCard } from "@/components/ListCard";
 import { ShareModal } from "@/components/ShareModal";
 import QuickAddForm from "@/components/QuickAddForm";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
-import api, { getAuthToken } from '@/lib/api';
+import api from '@/lib/api';
 
 interface ListItem {
   id: string;
@@ -156,9 +156,7 @@ const Index = () => {
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/lists/${listId}/share`, {}, {
-        headers: { Authorization: `Bearer ${getAuthToken()}` }
-      });
+      const response = await api.post(`/api/lists/${listId}/share`, {});
       return response.data;
     } catch (error) {
       console.error('Error sharing list:', error);
@@ -168,9 +166,7 @@ const Index = () => {
 
   const handleListUnshare = async (listId: string): Promise<void> => {
     try {
-      await api.delete(`/api/lists/${listId}/share`, {
-        headers: { Authorization: `Bearer ${getAuthToken()}` }
-      });
+      await api.delete(`/api/lists/${listId}/share`);
     } catch (error) {
       console.error('Error unsharing list:', error);
       throw error;

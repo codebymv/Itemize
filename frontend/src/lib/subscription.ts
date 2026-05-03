@@ -227,6 +227,7 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
         label: 'Advanced Workflows',
         description: 'Complex multi-step automation workflows',
         limit: {
+            free: 0,
             starter: 5,
             unlimited: 25,
             pro: Infinity

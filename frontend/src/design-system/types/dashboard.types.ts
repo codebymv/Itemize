@@ -54,3 +54,4 @@ export interface BookingSummaryWidgetData {
   upcomingThisWeek: number
   today: number
   completedThisMonth: number
+}

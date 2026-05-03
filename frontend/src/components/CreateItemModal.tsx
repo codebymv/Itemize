@@ -20,8 +20,10 @@ interface LocalCategory {
 type ItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
 
 interface CreateItemModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   itemType: ItemType;
   onCreate: (title: string, category: string, color: string, position: { x: number; y: number }) => Promise<unknown> | void;
   existingCategories: LocalCategory[];
@@ -75,12 +77,18 @@ const itemConfig = {
 export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   open,
   onOpenChange,
+  isOpen,
+  onClose,
   itemType,
   onCreate,
   existingCategories,
   position,
   updateCategory
 }) => {
+  const resolvedOpen = open ?? isOpen ?? false;
+  const handleOpenChange = onOpenChange ?? ((nextOpen: boolean) => {
+    if (!nextOpen) onClose?.();
+  });
   const config = itemConfig[itemType];
   const Icon = config.icon;
 
@@ -169,7 +177,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         return;
       }
 
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (err) {
       setError(`Failed to create ${config.label.toLowerCase()}. Please try again.`);
     } finally {
@@ -177,15 +185,15 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     }
   };
 
-  if (!open) return null;
+  if (!resolvedOpen) return null;
 
   return (
     <Dialog
-      open={open}
+      open={resolvedOpen}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           setError('');
-          onOpenChange(false);
+          handleOpenChange(false);
         }
       }}
     >
@@ -422,7 +430,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
           )}
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="font-raleway">
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="font-raleway">
               {UI_LABELS.cancel}
             </Button>
 <Button

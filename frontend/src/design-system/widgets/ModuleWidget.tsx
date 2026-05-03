@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { semanticColors, designTokens } from '@/design-system/design-tokens'
 
-interface ModuleWidgetProps {
+export interface ModuleWidgetProps {
   title: string
   description?: string
   icon: React.ElementType
@@ -246,7 +246,9 @@ const hasRecentItems = recentItems !== undefined;
 
 // Pre-configured widgets for common modules
 
-export function InvoicesWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColor'>) {
+type PresetWidgetProps = Omit<ModuleWidgetProps, 'icon' | 'iconColor' | 'title'>
+
+export function InvoicesWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={Receipt}
@@ -259,7 +261,7 @@ export function InvoicesWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColo
   )
 }
 
-export function SignaturesWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColor'>) {
+export function SignaturesWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={FileSignature}
@@ -272,7 +274,7 @@ export function SignaturesWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconCo
   )
 }
 
-export function WorkspaceWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColor'>) {
+export function WorkspaceWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={Map}
@@ -285,7 +287,7 @@ export function WorkspaceWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconCol
   )
 }
 
-export function ContactsWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColor'>) {
+export function ContactsWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={Users}
@@ -298,7 +300,7 @@ export function ContactsWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColo
   )
 }
 
-export function DealsWidget(props: Omit<ModuleWidgetProps, 'icon' | 'iconColor'>) {
+export function DealsWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={TrendingUp}

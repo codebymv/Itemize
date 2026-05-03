@@ -105,7 +105,7 @@ export default function SignatureEditorPage() {
             email: contactEmail || '',
             role_name: 'Signer',
             order_index: 0,
-          } as SignatureRecipient,
+          } as unknown as SignatureRecipient,
         ];
       });
     }

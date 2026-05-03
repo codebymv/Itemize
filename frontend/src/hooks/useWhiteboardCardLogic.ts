@@ -8,8 +8,8 @@ import logger from '@/lib/logger';
 
 interface UseWhiteboardCardLogicProps {
   whiteboard: Whiteboard;
-  onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
-  onDelete: (whiteboardId: number) => Promise<void>;
+  onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<unknown>;
+  onDelete: (whiteboardId: number) => Promise<unknown>;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
@@ -35,7 +35,9 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
   } = useCardTitleEditing({
     title: whiteboard.title || 'Untitled Whiteboard',
     compareTitle: whiteboard.title,
-    onSave: (nextTitle) => onUpdate(whiteboard.id, { title: nextTitle })
+    onSave: async (nextTitle) => {
+      await onUpdate(whiteboard.id, { title: nextTitle });
+    }
   });
   
   // Whiteboard operations
@@ -44,7 +46,9 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
   }, [whiteboard.id, onDelete]);
   
   const { isSavingColor, saveColor: handleSaveWhiteboardColor } = useCardColorManagement({
-    onSave: (newColor) => onUpdate(whiteboard.id, { color_value: newColor }),
+    onSave: async (newColor) => {
+      await onUpdate(whiteboard.id, { color_value: newColor });
+    },
     onError: () => {
       toast({
         title: "Error",
@@ -65,8 +69,12 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     handleAddCustomCategory,
     handleUpdateCategoryColor
   } = useCardCategoryManagement({
-    onUpdateCategory: (category) => onUpdate(whiteboard.id, { category }),
-    onAddCustomCategory: (category) => onUpdate(whiteboard.id, { category }),
+    onUpdateCategory: async (category) => {
+      await onUpdate(whiteboard.id, { category });
+    },
+    onAddCustomCategory: async (category) => {
+      await onUpdate(whiteboard.id, { category });
+    },
     onUpdateCategoryColor: (categoryName, newColor) =>
       updateCategory(categoryName, { color_value: newColor }),
     onEmptyCategory: () => {

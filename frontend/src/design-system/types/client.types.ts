@@ -88,16 +88,6 @@ export interface ClientProfile {
   bookings: ClientBooking[]
   notes: ClientNote[]
   lists: ClientList[]
-  timeline: Array<{
-    id: string
-    type: string
-    title: string
-    description?: string
-    timestamp: Date
-    target?: {
-      id: string
-      name: string
-      url: string
-    }
-  }>
+  timeline: Activity[]
 }
+import type { Activity } from './activity.types'

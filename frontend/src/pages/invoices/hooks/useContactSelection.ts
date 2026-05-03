@@ -7,9 +7,9 @@ import { formatAddress } from '../utils/invoiceFormatters';
 
 export interface Contact {
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
   phone?: string;
   address?: string | {
     street?: string;
@@ -60,7 +60,7 @@ export function useContactSelection(): UseContactSelectionReturn {
       if (selectedContact) {
         setContactId(selectedContact.id);
         setCustomerName(
-          `${selectedContact.first_name} ${selectedContact.last_name}`.trim()
+          `${selectedContact.first_name || ''} ${selectedContact.last_name || ''}`.trim()
         );
         setCustomerEmail(selectedContact.email || '');
         setCustomerPhone(selectedContact.phone || '');

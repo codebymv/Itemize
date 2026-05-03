@@ -152,7 +152,19 @@ export function CampaignsPage() {
         if (!organizationId) return;
         try {
             const copy = await duplicateCampaign(id, organizationId);
-            setCampaigns(prev => [copy, ...prev]);
+            setCampaigns(prev => [{
+                id: copy.id,
+                name: copy.name,
+                subject: copy.subject,
+                status: copy.status,
+                recipient_count: copy.total_recipients || 0,
+                sent_count: copy.total_sent || 0,
+                open_rate: copy.open_rate,
+                click_rate: copy.click_rate,
+                scheduled_at: copy.scheduled_at,
+                sent_at: copy.completed_at,
+                created_at: copy.created_at,
+            }, ...prev]);
             toast({ title: 'Duplicated', description: 'Campaign duplicated successfully' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });

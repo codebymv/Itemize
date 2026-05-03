@@ -39,6 +39,7 @@ interface InvoicePreviewProps {
     currency: string;
     notes: string;
     termsAndConditions: string;
+    status?: string;
 }
 
 export function InvoicePreview({

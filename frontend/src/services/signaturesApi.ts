@@ -20,6 +20,7 @@ export interface SignatureDocument {
   organization_id: number;
   title: string;
   document_number?: string;
+  file_name?: string;
   description?: string;
   message?: string;
   status: SignatureStatus;

@@ -12,9 +12,9 @@ interface StickyNoteNodeData {
 const StickyNoteNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
-  const [label, setLabel] = useState((data as StickyNoteNodeData).label || 'Note');
+  const [label, setLabel] = useState((data as unknown as StickyNoteNodeData).label || 'Note');
 
-  const dataLabel = (data as StickyNoteNodeData).label || 'Note';
+  const dataLabel = (data as unknown as StickyNoteNodeData).label || 'Note';
   
   useEffect(() => {
     if (!isEditing) {

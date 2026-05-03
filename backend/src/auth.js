@@ -312,8 +312,6 @@ res.cookie('itemize_auth', accessToken, ACCESS_COOKIE_OPTIONS);
 
     res.json({
       success: true,
-      token: accessToken,
-      refreshToken,
       user: {
         uid: user.id,
         email: user.email,
@@ -397,8 +395,6 @@ router.post('/verify-email', authRateLimit, validate(verifyEmailSchema), asyncHa
     res.json({
       success: true,
       message: 'Email verified successfully!',
-      token: accessToken,
-      refreshToken,
       user: {
         uid: user.id,
         email: user.email,
@@ -607,7 +603,7 @@ router.post('/reset-password', authRateLimit, validate(resetPasswordSchema), asy
  */
 router.post('/change-password', asyncHandler(async (req, res) => {
   // Authenticate first
-  const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
+  const token = req.cookies?.itemize_auth;
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -801,7 +797,7 @@ router.post('/google-login', authRateLimit, asyncHandler(async (req, res) => {
     logger.info("[Auth] Refresh cookie set");
     
     res.status(200).json({
-      token: accessToken,
+      success: true,
       user: {
         uid: user.id,
         email: user.email,
@@ -939,7 +935,7 @@ router.post('/google-credential', authRateLimit, asyncHandler(async (req, res) =
     logger.info("[Auth] Refresh cookie set");
     
     res.status(200).json({
-      token: accessToken,
+      success: true,
       user: {
         uid: user.id,
         email: user.email,
@@ -968,7 +964,7 @@ router.get('/me', asyncHandler(async (req, res) => {
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
 
-  const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
+  const token = req.cookies?.itemize_auth;
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -1020,7 +1016,7 @@ router.get('/me', asyncHandler(async (req, res) => {
  * Update current user profile
  */
 router.put('/me', asyncHandler(async (req, res) => {
-  const token = req.cookies?.itemize_auth || req.headers.authorization?.split(' ')[1];
+  const token = req.cookies?.itemize_auth;
   if (!token) {
     return res.status(401).json({ 
       success: false, 
@@ -1126,7 +1122,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
 
-  const refreshToken = req.cookies?.itemize_refresh || req.body?.refreshToken;
+  const refreshToken = req.cookies?.itemize_refresh;
 
   if (!refreshToken) {
     return res.status(401).json({ error: 'No refresh token provided' });
@@ -1174,10 +1170,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       
       res.cookie('itemize_auth', newAccessToken, ACCESS_COOKIE_OPTIONS);
       logger.info('[Auth] Access token refreshed', { accessToken: true, refreshToken: true });
-      res.json({ 
-        success: true,
-        token: newAccessToken
-      });
+      res.json({ success: true });
     } finally {
       client.release();
     }
@@ -1198,14 +1191,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
  * Middleware to authenticate JWT
  */
 const authenticateJWT = (req, res, next) => {
-  let token = req.cookies?.itemize_auth;
-  
-  if (!token) {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    }
-  }
+  const token = req.cookies?.itemize_auth;
 
   if (!token) {
     return res.status(401).json({ 

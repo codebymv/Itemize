@@ -669,11 +669,11 @@ const { currentUser } = useAuthState();
                 onOpenNewListModal={handleOpenNewListModal}
                 onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
                 onOpenNewWireframeModal={(position) => {
-                  setNewWireframeInitialPosition(position || getIntelligentPosition());
+                  setNewWireframeInitialPosition(position || getIntelligentPosition(lists, notes, whiteboards, wireframes));
                   setShowNewWireframeModal(true);
                 }}
                 onOpenNewVaultModal={(position) => {
-                  setNewVaultInitialPosition(position || getIntelligentPosition());
+                  setNewVaultInitialPosition(position || getIntelligentPosition(lists, notes, whiteboards, wireframes));
                   setShowNewVaultModal(true);
                 }}
                 searchQuery={searchQuery}
@@ -803,7 +803,7 @@ const { currentUser } = useAuthState();
               onAddWireframe={handleButtonAddWireframe}
               onAddVault={() => {
                 setShowButtonContextMenu(false);
-                setNewVaultInitialPosition(getIntelligentPosition());
+                setNewVaultInitialPosition(getIntelligentPosition(lists, notes, whiteboards, wireframes));
                 setShowNewVaultModal(true);
               }}
               onClose={() => setShowButtonContextMenu(false)}

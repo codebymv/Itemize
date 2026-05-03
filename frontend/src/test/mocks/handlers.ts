@@ -80,7 +80,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE}/lists`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const newList = {
       ...body,
       id: Date.now(),
@@ -92,7 +92,7 @@ export const handlers = [
   }),
 
   http.put(`${API_BASE}/lists/:id`, async ({ request, params }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const updated = {
       ...mockLists[0],
       ...body,
@@ -112,7 +112,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE}/notes`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const newNote = {
       ...body,
       id: Date.now(),
@@ -124,7 +124,7 @@ export const handlers = [
   }),
 
   http.put(`${API_BASE}/notes/:id`, async ({ request, params }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const updated = {
       ...mockNotes[0],
       ...body,
@@ -144,7 +144,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE}/whiteboards`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const newWhiteboard = {
       ...body,
       id: Date.now(),
@@ -156,7 +156,7 @@ export const handlers = [
   }),
 
   http.put(`${API_BASE}/whiteboards/:id`, async ({ request, params }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const updated = {
       ...mockWhiteboards[0],
       ...body,
@@ -176,7 +176,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE}/categories`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const newCategory = {
       ...body,
       id: Date.now(),
@@ -186,7 +186,7 @@ export const handlers = [
   }),
 
   http.put(`${API_BASE}/categories/:id`, async ({ request, params }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const updated = {
       ...mockCategories[0],
       ...body,

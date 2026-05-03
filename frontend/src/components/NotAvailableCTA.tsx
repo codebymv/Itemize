@@ -2,7 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 
 interface NotAvailableCTAProps {
-  contentType: 'list' | 'note' | 'whiteboard';
+  contentType: 'list' | 'note' | 'whiteboard' | 'vault';
   error?: string;
   onBackToHome: () => void;
 }

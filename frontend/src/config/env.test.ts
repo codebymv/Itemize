@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { validateEnv, getEnvVar } from './env';
+import { describe, it, expect } from 'vitest';
+import { env } from './env';
 
 describe.skip('Environment Validation', () => {
   it('is tested in application initialization', () => {
-    Environment validation happens at app startup via env.ts
+    expect(env).toBeDefined();
   });
 });

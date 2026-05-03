@@ -22,13 +22,10 @@ export function useCanvasSharing(
   const { toast } = useToast();
   const [showShareModal, setShowShareModal] = useState(false);
   const [currentShareItem, setCurrentShareItem] = useState<ShareItem | null>(null);
-  const token = localStorage.getItem('token');
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/lists/${listId}/share`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.post(`/api/lists/${listId}/share`, {});
       return response.data;
     } catch (error) {
       logger.error('Error sharing list:', error);
@@ -38,9 +35,7 @@ export function useCanvasSharing(
 
   const handleListUnshare = async (listId: string): Promise<void> => {
     try {
-      await api.delete(`/api/lists/${listId}/share`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/lists/${listId}/share`);
     } catch (error) {
       logger.error('Error unsharing list:', error);
       throw error;
@@ -49,9 +44,7 @@ export function useCanvasSharing(
 
   const handleNoteShare = async (noteId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/notes/${noteId}/share`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.post(`/api/notes/${noteId}/share`, {});
       return response.data;
     } catch (error) {
       logger.error('Error sharing note:', error);
@@ -61,9 +54,7 @@ export function useCanvasSharing(
 
   const handleNoteUnshare = async (noteId: number): Promise<void> => {
     try {
-      await api.delete(`/api/notes/${noteId}/share`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/notes/${noteId}/share`);
     } catch (error) {
       logger.error('Error unsharing note:', error);
       throw error;
@@ -72,9 +63,7 @@ export function useCanvasSharing(
 
   const handleWhiteboardShare = async (whiteboardId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/whiteboards/${whiteboardId}/share`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.post(`/api/whiteboards/${whiteboardId}/share`, {});
       return response.data;
     } catch (error) {
       logger.error('Error sharing whiteboard:', error);
@@ -84,9 +73,7 @@ export function useCanvasSharing(
 
   const handleWhiteboardUnshare = async (whiteboardId: number): Promise<void> => {
     try {
-      await api.delete(`/api/whiteboards/${whiteboardId}/share`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/whiteboards/${whiteboardId}/share`);
     } catch (error) {
       logger.error('Error unsharing whiteboard:', error);
       throw error;
@@ -95,9 +82,7 @@ export function useCanvasSharing(
 
   const handleWireframeShare = async (wireframeId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/wireframes/${wireframeId}/share`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.post(`/api/wireframes/${wireframeId}/share`, {});
       return response.data;
     } catch (error) {
       logger.error('Error sharing wireframe:', error);
@@ -107,9 +92,7 @@ export function useCanvasSharing(
 
   const handleWireframeUnshare = async (wireframeId: number): Promise<void> => {
     try {
-      await api.delete(`/api/wireframes/${wireframeId}/share`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/wireframes/${wireframeId}/share`);
     } catch (error) {
       logger.error('Error unsharing wireframe:', error);
       throw error;
@@ -118,9 +101,7 @@ export function useCanvasSharing(
 
   const handleVaultShare = async (vaultId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/vaults/${vaultId}/share`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.post(`/api/vaults/${vaultId}/share`, {});
       return response.data;
     } catch (error) {
       logger.error('Error sharing vault:', error);
@@ -130,9 +111,7 @@ export function useCanvasSharing(
 
   const handleVaultUnshare = async (vaultId: number): Promise<void> => {
     try {
-      await api.delete(`/api/vaults/${vaultId}/share`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/vaults/${vaultId}/share`);
     } catch (error) {
       logger.error('Error unsharing vault:', error);
       throw error;

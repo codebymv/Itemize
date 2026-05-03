@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, FileText, DollarSign, Clock } from 'lucide-react'
 import { semanticColors } from '@/design-system/design-tokens'
-import type { ClientInvoice, ClientSignature } from '../types/client.types'
+import type { ClientInvoice, ClientSignature } from '@/design-system/types/client.types'
 
 interface ClientDocumentsTabProps {
   invoices: ClientInvoice[]

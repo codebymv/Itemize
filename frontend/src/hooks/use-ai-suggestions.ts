@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { getApiUrl } from '@/lib/api';
+import api from '@/lib/api';
 import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 
@@ -47,7 +46,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
   const lastRequestTime = useRef<number>(0);
   const lastInitializedKey = useRef<string>('');
   
-  const { token } = useAuth(); // Get the authentication token
+  const { isAuthenticated } = useAuth();
 
   // Reset current suggestion when input is cleared or feature is disabled
   useEffect(() => {
@@ -119,8 +118,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       return;
     }
 
-    // Don't attempt to fetch if we don't have a token
-    if (!token) {
+    if (!isAuthenticated) {
       setError('You must be logged in to use AI suggestions');
       return;
     }
@@ -164,16 +162,9 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setError(null);
       lastRequestTime.current = Date.now();
       
-      const apiUrl = getApiUrl();
-      
-      const response = await axios.post<SuggestionResponse>(`${apiUrl}/api/suggestions`, {
+      const response = await api.post<SuggestionResponse>('/api/suggestions', {
         listTitle,
         existingItems: existingItems.filter(item => item.trim() !== '')
-      }, {
-        withCredentials: true,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
 
       if (response.data && response.data.suggestions && response.data.suggestions.length > 0) {
@@ -204,7 +195,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     } finally {
       setIsLoading(false);
     }
-  }, [enabled, listTitle, existingItems, token, getCachedSuggestions, cacheSuggestions]);
+  }, [enabled, listTitle, existingItems, isAuthenticated, getCachedSuggestions, cacheSuggestions]);
 
   // Debounced fetch suggestions
   const debouncedFetchSuggestions = useCallback(() => {

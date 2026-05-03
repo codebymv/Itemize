@@ -21,7 +21,7 @@ interface MobileListViewProps {
   onAddList: () => void;
   onAddNote: () => void;
   onAddWhiteboard: () => void;
-  onUpdateList: (list: List) => Promise<boolean>;
+  onUpdateList: (list: List) => Promise<unknown>;
   onUpdateNote: (noteId: number, data: any) => Promise<Note | null>;
   onUpdateWhiteboard: (whiteboardId: number, data: any) => Promise<Whiteboard | null>;
   onDeleteList: (listId: string) => Promise<boolean>;
@@ -37,7 +37,7 @@ interface MobileListViewProps {
   isWhiteboardCollapsed: (id: number) => boolean;
   toggleWhiteboardCollapsed: (id: number) => void;
   listToggleCallbacks: Record<string, () => void>;
-  addCategory: (data: { name: string; color_value: string }) => Promise<void>;
+  addCategory: (data: { name: string; color_value: string }) => Promise<unknown>;
   updateCategory: (name: string, data: any) => Promise<void>;
   editCategory: (name: string, data: any) => Promise<void>;
 }

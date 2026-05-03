@@ -46,6 +46,11 @@ export interface DashboardAnalytics {
         newThisMonth: number;
         newThisWeek: number;
         growth: ContactGrowth[];
+        recentContacts?: Array<{
+            id: string;
+            name: string;
+            email?: string;
+        }>;
     };
     deals: {
         total: number;
@@ -76,6 +81,36 @@ export interface DashboardAnalytics {
         total: number;
     };
     recentActivity: RecentActivity[];
+    invoiceMetrics?: {
+        pending: number;
+        overdue: number;
+        paidThisMonth: number;
+        recentInvoices: Array<{
+            id: string;
+            number: string;
+            amount: number;
+            status: string;
+        }>;
+    };
+    signatureMetrics?: {
+        awaiting: number;
+        signedThisWeek: number;
+        total: number;
+        recentDocuments: Array<{
+            id: string;
+            title: string;
+            status: string;
+        }>;
+    };
+    workspaceMetrics?: {
+        activeItems: number;
+        lists: number;
+        notes: number;
+        recentItems: Array<{
+            id: string;
+            title: string;
+        }>;
+    };
 }
 
 export interface DealPerformance {

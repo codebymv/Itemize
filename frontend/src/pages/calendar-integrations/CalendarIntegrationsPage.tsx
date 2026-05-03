@@ -32,7 +32,7 @@ import {
 interface CalendarConnection {
     id: number;
     provider: string;
-    email: string;
+    email?: string;
     is_active: boolean;
     sync_enabled: boolean;
     last_synced_at?: string;
@@ -97,7 +97,7 @@ export function CalendarIntegrationsPage() {
         setLoading(true);
         try {
             const response = await getCalendarConnections(organizationId);
-            setConnections(response.connections || []);
+            setConnections(response || []);
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load connections', variant: 'destructive' });
         } finally {

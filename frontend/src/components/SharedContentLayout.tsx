@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 interface SharedContentLayoutProps {
   children: React.ReactNode;
   title: string;
-  contentType: 'list' | 'note' | 'whiteboard';
+  contentType: 'list' | 'note' | 'whiteboard' | 'vault';
   onBackToHome?: () => void;
   showCTA?: boolean; // Whether to show the "Create your own..." CTA section
   isError?: boolean; // Whether this is an error state (reduces spacing)

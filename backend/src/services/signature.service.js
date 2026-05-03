@@ -918,6 +918,8 @@ async function submitSignature(pool, token, payload, audit = {}) {
             UPDATE signature_recipients SET
                 status = 'signed',
                 signed_at = CURRENT_TIMESTAMP,
+                signing_token_hash = NULL,
+                token_expires_at = NULL,
                 ip_address = $1,
                 user_agent = $2
             WHERE id = $3
@@ -1107,6 +1109,8 @@ async function declineSignature(pool, token, reason, audit = {}) {
                 status = 'declined',
                 declined_at = CURRENT_TIMESTAMP,
                 decline_reason = $1,
+                signing_token_hash = NULL,
+                token_expires_at = NULL,
                 ip_address = $2,
                 user_agent = $3
             WHERE id = $4
