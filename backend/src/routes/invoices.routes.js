@@ -2028,14 +2028,30 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
         const sig = req.headers['stripe-signature'];
         const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        const isProd = process.env.NODE_ENV === 'production';
+        const devSkipVerify =
+            !isProd &&
+            process.env.STRIPE_WEBHOOK_SKIP_VERIFY === 'true';
 
         let event;
 
         try {
-            if (endpointSecret) {
+            if (isProd) {
+                if (!endpointSecret || !sig) {
+                    logger.warn('[Stripe webhook] Production requires STRIPE_WEBHOOK_SECRET and Stripe-Signature');
+                    return sendBadRequest(res, 'Webhook verification required');
+                }
                 event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+            } else if (endpointSecret && sig) {
+                event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+            } else if (devSkipVerify) {
+                const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+                event = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            } else if (!endpointSecret) {
+                const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+                event = typeof raw === 'string' ? JSON.parse(raw) : raw;
             } else {
-                event = JSON.parse(req.body);
+                return sendBadRequest(res, 'Missing stripe-signature header');
             }
         } catch (err) {
             console.error('Webhook signature verification failed:', err.message);

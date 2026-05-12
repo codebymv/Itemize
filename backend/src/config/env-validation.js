@@ -1,3 +1,59 @@
+const { logger } = require('../utils/logger');
+
+/**
+ * Production deployment guardrails — mirror patterns from Gleam release hardening.
+ * Warns only (does not exit) so misconfiguration is visible in logs during boot.
+ */
+function validateProductionChecks() {
+    if (process.env.NODE_ENV !== 'production') {
+        return;
+    }
+
+    if (!process.env.SENTRY_DSN) {
+        logger.warn('PRODUCTION: Set backend SENTRY_DSN (Railway/hosting env) for error tracking.');
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    if (!frontendUrl) {
+        logger.warn('PRODUCTION: FRONTEND_URL must be set to the canonical production app URL.');
+    } else {
+        try {
+            const u = new URL(frontendUrl);
+            if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+                logger.warn(
+                    'PRODUCTION: FRONTEND_URL must not use localhost or 127.0.0.1. Use your public app URL.'
+                );
+            }
+        } catch {
+            logger.warn(`PRODUCTION: FRONTEND_URL must be a valid absolute URL (current value invalid).`);
+        }
+    }
+
+}
+
+/**
+ * Refuse to boot in production with dev-only webhook bypass flags.
+ */
+function assertNoUnsafeProductionFlags() {
+    if (process.env.NODE_ENV !== 'production') {
+        return;
+    }
+
+    if (process.env.SKIP_TWILIO_WEBHOOK_VALIDATION === 'true') {
+        logger.error(
+            'SECURITY: SKIP_TWILIO_WEBHOOK_VALIDATION=true is not permitted in production. Remove it from your host env.'
+        );
+        process.exit(1);
+    }
+
+    if (process.env.STRIPE_WEBHOOK_SKIP_VERIFY === 'true') {
+        logger.error(
+            'SECURITY: STRIPE_WEBHOOK_SKIP_VERIFY=true is not permitted in production. Remove it from your host env.'
+        );
+        process.exit(1);
+    }
+}
+
 const REQUIRED_ENV_VARS = [
     { 
         var: 'JWT_SECRET', 
@@ -109,12 +165,16 @@ module.exports.validateEnv = () => {
         errors.forEach(e => console.error(`  - ${e}`));
         process.exit(1);
     }
+
+    assertNoUnsafeProductionFlags();
     
     // Log warnings
     if (warnings.length > 0) {
         console.warn('Warning: Missing optional configuration:');
         warnings.forEach(w => console.warn(`  - ${w}`));
     }
+
+    validateProductionChecks();
     
     return {
         allPresent: errors.length === 0,

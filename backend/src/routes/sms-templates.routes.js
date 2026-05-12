@@ -6,8 +6,52 @@
 const express = require('express');
 const router = express.Router();
 const smsService = require('../services/smsService');
+const { logger } = require('../utils/logger');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+
+/**
+ * Twilio-signed webhooks only in production when auth token is set (unless dev bypass).
+ * Set SKIP_TWILIO_WEBHOOK_VALIDATION=true in local/dev only — blocked at startup in production.
+ * @returns {boolean} false if response already sent
+ */
+function verifyTwilioWebhookOrRespond(req, res) {
+    if (process.env.SKIP_TWILIO_WEBHOOK_VALIDATION === 'true' && process.env.NODE_ENV !== 'production') {
+        return true;
+    }
+
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    if (!token) {
+        return true;
+    }
+
+    const twilioSignature = req.headers['x-twilio-signature'];
+    const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+
+    if (process.env.NODE_ENV === 'production') {
+        if (!twilioSignature) {
+            logger.warn('[Twilio webhook] Missing X-Twilio-Signature');
+            res.status(403).send('Forbidden');
+            return false;
+        }
+        if (!smsService.validateWebhookSignature(twilioSignature, url, req.body)) {
+            logger.warn('[Twilio webhook] Invalid signature');
+            res.status(403).send('Invalid signature');
+            return false;
+        }
+        return true;
+    }
+
+    if (twilioSignature) {
+        if (!smsService.validateWebhookSignature(twilioSignature, url, req.body)) {
+            logger.warn('[Twilio webhook] Invalid signature (non-production)');
+            res.status(403).send('Invalid signature');
+            return false;
+        }
+    }
+
+    return true;
+}
 
 /**
  * Create SMS templates routes with injected dependencies
@@ -569,15 +613,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
    */
   router.post('/webhook/status', publicRateLimit, async (req, res) => {
     try {
-      // Validate Twilio signature (if enabled)
-      const twilioSignature = req.headers['x-twilio-signature'];
-      if (twilioSignature && process.env.TWILIO_AUTH_TOKEN) {
-        const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-        const isValid = smsService.validateWebhookSignature(twilioSignature, url, req.body);
-        if (!isValid) {
-          console.warn('Invalid Twilio webhook signature');
-          return res.status(403).send('Invalid signature');
-        }
+      if (!verifyTwilioWebhookOrRespond(req, res)) {
+        return;
       }
 
       const {
@@ -638,15 +675,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
    */
   router.post('/webhook/inbound', publicRateLimit, async (req, res) => {
     try {
-      // Validate Twilio signature (if enabled)
-      const twilioSignature = req.headers['x-twilio-signature'];
-      if (twilioSignature && process.env.TWILIO_AUTH_TOKEN) {
-        const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-        const isValid = smsService.validateWebhookSignature(twilioSignature, url, req.body);
-        if (!isValid) {
-          console.warn('Invalid Twilio webhook signature');
-          return res.status(403).send('Invalid signature');
-        }
+      if (!verifyTwilioWebhookOrRespond(req, res)) {
+        return;
       }
 
       const {

@@ -141,12 +141,18 @@ const corsOrigin = process.env.FRONTEND_URL || (
         : 'http://localhost:5173'
 );
 
-// Allowed origins list
-const allowedOrigins = [
+// Allowed origins: primary URL, fixed deploy hosts, optional comma-separated EXTRA_CORS_ORIGINS (e.g. staging).
+const extraCorsOrigins = (process.env.EXTRA_CORS_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const allowedOrigins = [...new Set([
     corsOrigin,
     'https://itemize.cloud',
-    'https://itemize.up.railway.app'
-];
+    'https://itemize.up.railway.app',
+    ...extraCorsOrigins,
+])];
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -154,9 +160,10 @@ app.use(cors({
         if (!origin) return callback(null, true);
 
         // Check if origin matches allowed origins or is a GitHub Codespaces URL
-        const isAllowed = allowedOrigins.some(allowed => origin === allowed) ||
+        const isAllowed =
+            allowedOrigins.some((allowed) => origin === allowed) ||
             origin.includes('.app.github.dev') ||
-            origin.includes('localhost');
+            (process.env.NODE_ENV !== 'production' && origin.includes('localhost'));
 
         if (isAllowed) {
             callback(null, true);

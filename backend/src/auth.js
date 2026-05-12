@@ -50,7 +50,7 @@ const REFRESH_TOKEN_EXPIRY = '30d'; // Long-lived refresh token
 // Strict rate limiting for authentication endpoints (5 attempts per 15 minutes)
 const authRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // Increased limit for auth flow
+    max: process.env.NODE_ENV === 'development' ? 100 : 20,
     message: { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -64,7 +64,7 @@ const authRateLimit = rateLimit({
 // Stricter rate limiting for email-sending endpoints (10 attempts per 15 minutes)
 const strictRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: process.env.NODE_ENV === 'development' ? 80 : 10,
     message: { error: 'Too many requests. Please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
