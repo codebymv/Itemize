@@ -1,7 +1,3 @@
-const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
-
 // Database migrations for canvas feature
 const runCanvasMigration = async (pool) => {
   console.log('Running canvas feature migration...');

@@ -1,5 +1,7 @@
 import api from '@/lib/api'
 
+type WorkflowPayload = Record<string, unknown>
+
 export const workflowsApi = {
   getAll: async () => {
     const response = await api.get('/api/workflows')
@@ -11,12 +13,12 @@ export const workflowsApi = {
     return response.data.data
   },
 
-  create: async (workflow: any) => {
+  create: async (workflow: WorkflowPayload) => {
     const response = await api.post('/api/workflows', workflow)
     return response.data.data
   },
 
-  update: async (id: string, updates: any) => {
+  update: async (id: string, updates: WorkflowPayload) => {
     const response = await api.put(`/api/workflows/${id}`, updates)
     return response.data.data
   },
@@ -31,7 +33,7 @@ export const workflowsApi = {
     return response.data.data
   },
 
-  trigger: async ({ workflowId, eventType, data }: { workflowId: string; eventType: string; data: any }) => {
+  trigger: async ({ workflowId, eventType, data }: { workflowId: string; eventType: string; data: WorkflowPayload }) => {
     const response = await api.post(`/api/webhooks/${workflowId}`, { eventType, data })
     return response.data
   },

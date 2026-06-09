@@ -44,6 +44,9 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
 import { getContactStatusBadgeClass } from '@/lib/badge-utils';
 
+const getApiStatus = (error: unknown): number | undefined =>
+  (error as { response?: { status?: number } })?.response?.status;
+
 export function ContactsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -54,8 +57,8 @@ export function ContactsPage() {
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('contacts');
 
   const { organizationId, isLoading: orgLoading, error: initError } = useOrganization({
-    onError: (error: any) => {
-      return error?.response?.status === 500
+    onError: (error) => {
+      return getApiStatus(error) === 500
         ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
         : 'Failed to initialize organization. Please check your connection.';
     }

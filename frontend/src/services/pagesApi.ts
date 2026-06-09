@@ -4,7 +4,9 @@
  */
 import api from '@/lib/api';
 
-const unwrapResponse = <T>(payload: any): T => {
+export type PageContentRecord = Record<string, unknown>;
+
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -61,7 +63,7 @@ export interface PageSection {
     organization_id?: number;
     section_type: SectionType;
     name?: string;
-    content: Record<string, any>;
+    content: PageContentRecord;
     settings: Partial<PageSectionSettings>;
     section_order: number;
     created_at?: string;
@@ -401,7 +403,7 @@ export const addSection = async (
     section: {
         section_type: SectionType;
         name?: string;
-        content?: Record<string, any>;
+        content?: PageContentRecord;
         settings?: Partial<PageSectionSettings>;
         position?: number;
     },
@@ -494,7 +496,7 @@ export const updatePublicPageAnalytics = async (
 // Section Templates
 // ======================
 
-export const SECTION_TEMPLATES: Record<SectionType, { name: string; icon: string; defaultContent: Record<string, any> }> = {
+export const SECTION_TEMPLATES: Record<SectionType, { name: string; icon: string; defaultContent: PageContentRecord }> = {
     hero: {
         name: 'Hero',
         icon: 'Layout',

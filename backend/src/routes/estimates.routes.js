@@ -10,6 +10,14 @@ const { withDbClient, withTransaction } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 const emailService = require('../services/emailService');
 const { sendEstimateEmail } = require('../services/invoice-email.service');
+const {
+    ESTIMATE_ITEM_UNNEST_COLUMNS,
+    INVOICE_ITEM_UNNEST_COLUMNS,
+    estimateColumns,
+    estimateItemColumns,
+    invoiceColumns,
+    paymentSettingsColumns
+} = require('./estimates.columns');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -68,7 +76,7 @@ module.exports = (pool, authenticateJWT) => {
                 );
 
                 const estimatesResult = await client.query(`
-                    SELECT e.*, c.first_name as contact_first_name, c.last_name as contact_last_name
+                    SELECT ${estimateColumns('e')}, c.first_name as contact_first_name, c.last_name as contact_last_name
                     FROM estimates e
                     LEFT JOIN contacts c ON e.contact_id = c.id
                     ${whereClause}
@@ -102,7 +110,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const result = await withDbClient(pool, async (client) => {
                 const estimateResult = await client.query(`
-                    SELECT e.*, c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
+                    SELECT ${estimateColumns('e')}, c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
                     FROM estimates e
                     LEFT JOIN contacts c ON e.contact_id = c.id
                     WHERE e.id = $1 AND e.organization_id = $2
@@ -113,7 +121,7 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 const itemsResult = await client.query(`
-                    SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
+                    SELECT ${estimateItemColumns()} FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
                 `, [id]);
 
                 const estimate = estimateResult.rows[0];
@@ -196,7 +204,7 @@ module.exports = (pool, authenticateJWT) => {
                         valid_until, subtotal, tax_amount, discount_amount, discount_type, discount_value,
                         total, notes, terms_and_conditions, created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-                    RETURNING *
+                    RETURNING ${estimateColumns()}
                 `, [
                     req.organizationId,
                     estimateNumber,
@@ -255,9 +263,21 @@ module.exports = (pool, authenticateJWT) => {
                         INSERT INTO estimate_items (
                             estimate_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) SELECT * FROM UNNEST(
+                        ) SELECT ${ESTIMATE_ITEM_UNNEST_COLUMNS} FROM UNNEST(
                             $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
                             $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                        ) AS items(
+                            estimate_id,
+                            organization_id,
+                            product_id,
+                            name,
+                            description,
+                            quantity,
+                            unit_price,
+                            tax_rate,
+                            tax_amount,
+                            total,
+                            sort_order
                         )
                     `, [
                         u_estimate_ids, u_organization_ids, u_product_ids, u_names, u_descriptions,
@@ -266,11 +286,11 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 const fullEstimateResult = await client.query(`
-                    SELECT * FROM estimates WHERE id = $1
+                    SELECT ${estimateColumns()} FROM estimates WHERE id = $1
                 `, [estimateId]);
 
                 const itemsResult = await client.query(`
-                    SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
+                    SELECT ${estimateItemColumns()} FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
                 `, [estimateId]);
 
                 const createdEstimate = fullEstimateResult.rows[0];
@@ -392,9 +412,21 @@ module.exports = (pool, authenticateJWT) => {
                             INSERT INTO estimate_items (
                                 estimate_id, organization_id, product_id, name, description,
                                 quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                            ) SELECT * FROM UNNEST(
+                            ) SELECT ${ESTIMATE_ITEM_UNNEST_COLUMNS} FROM UNNEST(
                                 $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
                                 $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                            ) AS items(
+                                estimate_id,
+                                organization_id,
+                                product_id,
+                                name,
+                                description,
+                                quantity,
+                                unit_price,
+                                tax_rate,
+                                tax_amount,
+                                total,
+                                sort_order
                             )
                         `, [
                             u_estimate_ids, u_organization_ids, u_product_ids, u_names, u_descriptions,
@@ -451,8 +483,8 @@ module.exports = (pool, authenticateJWT) => {
                     `, updateParams);
                 }
 
-                const estimateResult = await client.query('SELECT * FROM estimates WHERE id = $1', [id]);
-                const itemsResult = await client.query('SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order', [id]);
+                const estimateResult = await client.query(`SELECT ${estimateColumns()} FROM estimates WHERE id = $1`, [id]);
+                const itemsResult = await client.query(`SELECT ${estimateItemColumns()} FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order`, [id]);
 
                 const estimate = estimateResult.rows[0];
                 estimate.items = itemsResult.rows;
@@ -508,7 +540,7 @@ module.exports = (pool, authenticateJWT) => {
             const result = await withDbClient(pool, async (client) => {
                 // Fetch estimate with business info
                 const estimateResult = await client.query(`
-                    SELECT e.*, 
+                    SELECT ${estimateColumns('e')},
                            b.name as business_name, 
                            b.email as business_email,
                            b.phone as business_phone,
@@ -539,13 +571,13 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Fetch estimate items for PDF generation
                 const itemsResult = await client.query(`
-                    SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
+                    SELECT ${estimateItemColumns()} FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
                 `, [id]);
                 estimate.items = itemsResult.rows;
 
                 // Fetch payment settings for business info (fallback)
                 const settingsResult = await client.query(`
-                    SELECT * FROM payment_settings WHERE organization_id = $1
+                    SELECT ${paymentSettingsColumns()} FROM payment_settings WHERE organization_id = $1
                 `, [req.organizationId]);
 
                 const settings = settingsResult.rows[0] || {};
@@ -603,7 +635,7 @@ module.exports = (pool, authenticateJWT) => {
                             sent_at = CURRENT_TIMESTAMP,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = $1 AND organization_id = $2
-                        RETURNING *
+                        RETURNING ${estimateColumns()}
                     `, [id, req.organizationId]);
                     updatedEstimate = updateResult.rows[0];
                 }
@@ -665,7 +697,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const result = await withTransaction(pool, async (client) => {
                 const estimateResult = await client.query(`
-                    SELECT * FROM estimates WHERE id = $1 AND organization_id = $2
+                    SELECT ${estimateColumns()} FROM estimates WHERE id = $1 AND organization_id = $2
                 `, [id, req.organizationId]);
 
                 if (estimateResult.rows.length === 0) {
@@ -679,7 +711,7 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 const itemsResult = await client.query(`
-                    SELECT * FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
+                    SELECT ${estimateItemColumns()} FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
                 `, [id]);
 
                 const settingsResult = await client.query(
@@ -717,7 +749,7 @@ module.exports = (pool, authenticateJWT) => {
                         due_date, subtotal, tax_amount, discount_amount, discount_type, discount_value,
                         total, amount_due, notes, terms_and_conditions, created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-                    RETURNING *
+                    RETURNING ${invoiceColumns()}
                 `, [
                     req.organizationId,
                     invoiceNumber,
@@ -773,9 +805,21 @@ module.exports = (pool, authenticateJWT) => {
                         INSERT INTO invoice_items (
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
-                        ) SELECT * FROM UNNEST(
+                        ) SELECT ${INVOICE_ITEM_UNNEST_COLUMNS} FROM UNNEST(
                             $1::int[], $2::int[], $3::int[], $4::text[], $5::text[],
                             $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                        ) AS items(
+                            invoice_id,
+                            organization_id,
+                            product_id,
+                            name,
+                            description,
+                            quantity,
+                            unit_price,
+                            tax_rate,
+                            tax_amount,
+                            total,
+                            sort_order
                         )
                     `, [
                         u_invoice_ids, u_organization_ids, u_product_ids, u_names, u_descriptions,

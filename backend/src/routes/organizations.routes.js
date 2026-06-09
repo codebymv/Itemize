@@ -15,6 +15,7 @@ const {
   sendForbidden,
   sendError
 } = require('../utils/response');
+const { organizationColumns, organizationMemberColumns } = require('./organization-columns');
 
 /**
  * Create organizations routes with injected dependencies
@@ -75,7 +76,7 @@ module.exports = (pool, authenticateJWT) => {
   router.get('/', authenticateJWT, asyncHandler(async (req, res) => {
       const result = await withDbClient(pool, async (client) => {
         return client.query(`
-        SELECT o.*, om.role, om.joined_at
+        SELECT ${organizationColumns('o')}, om.role, om.joined_at
         FROM organizations o
         JOIN organization_members om ON o.id = om.organization_id
         WHERE om.user_id = $1
@@ -89,7 +90,7 @@ module.exports = (pool, authenticateJWT) => {
   router.get('/:organizationId', authenticateJWT, requireOrgAccess(), asyncHandler(async (req, res) => {
       const result = await withDbClient(pool, async (client) => {
         return client.query(
-        'SELECT * FROM organizations WHERE id = $1',
+        `SELECT ${organizationColumns()} FROM organizations WHERE id = $1`,
         [req.organizationId]
       );
       });
@@ -115,7 +116,7 @@ module.exports = (pool, authenticateJWT) => {
         const orgResult = await client.query(`
           INSERT INTO organizations (name, slug, settings)
           VALUES ($1, $2, $3)
-          RETURNING *
+          RETURNING ${organizationColumns()}
         `, [name.trim(), slug, JSON.stringify(settings || {})]);
 
         const createdOrg = orgResult.rows[0];
@@ -149,7 +150,7 @@ module.exports = (pool, authenticateJWT) => {
             logo_url = COALESCE($3, logo_url),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $4
-        RETURNING *
+        RETURNING ${organizationColumns()}
       `, [name, settings ? JSON.stringify(settings) : null, logo_url, req.organizationId]);
       });
 
@@ -173,7 +174,7 @@ module.exports = (pool, authenticateJWT) => {
   router.get('/:organizationId/members', authenticateJWT, requireOrgAccess(), asyncHandler(async (req, res) => {
       const result = await withDbClient(pool, async (client) => {
         return client.query(`
-        SELECT om.*, u.email, u.name as user_name
+        SELECT ${organizationMemberColumns('om')}, u.email, u.name as user_name
         FROM organization_members om
         JOIN users u ON om.user_id = u.id
         WHERE om.organization_id = $1
@@ -223,7 +224,7 @@ module.exports = (pool, authenticateJWT) => {
         return client.query(`
           INSERT INTO organization_members (organization_id, user_id, role, invited_by, joined_at)
           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-          RETURNING *
+          RETURNING ${organizationMemberColumns()}
         `, [req.organizationId, userId, memberRole, req.user.id]);
       });
 
@@ -265,7 +266,7 @@ module.exports = (pool, authenticateJWT) => {
           UPDATE organization_members 
           SET role = $1
           WHERE id = $2 AND organization_id = $3
-          RETURNING *
+          RETURNING ${organizationMemberColumns()}
         `, [role, memberId, req.organizationId]);
       });
 
@@ -326,7 +327,7 @@ module.exports = (pool, authenticateJWT) => {
   router.post('/ensure-default', authenticateJWT, asyncHandler(async (req, res) => {
       const existingOrgs = await withDbClient(pool, async (client) => {
         return client.query(`
-          SELECT o.*, om.role
+          SELECT ${organizationColumns('o')}, om.role
           FROM organizations o
           JOIN organization_members om ON o.id = om.organization_id
           WHERE om.user_id = $1
@@ -354,7 +355,7 @@ module.exports = (pool, authenticateJWT) => {
         const orgResult = await client.query(`
           INSERT INTO organizations (name, slug, settings)
           VALUES ($1, $2, $3)
-          RETURNING *
+          RETURNING ${organizationColumns()}
         `, [orgName, slug, JSON.stringify({ personal: true })]);
 
         const createdOrg = orgResult.rows[0];

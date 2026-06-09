@@ -6,7 +6,7 @@ const { logger } = require('../../utils/logger');
 let s3Service = null;
 try {
     s3Service = require('../s3.service');
-} catch (e) {
+} catch {
     logger.info('S3 service not available - signature uploads will use local storage');
 }
 
@@ -41,7 +41,7 @@ function getS3KeyFromUrl(fileUrl) {
         const bucket = process.env.AWS_S3_BUCKET || 'itemize-uploads';
         if (!url.hostname.startsWith(`${bucket}.s3.`)) return null;
         return url.pathname.replace(/^\//, '');
-    } catch (error) {
+    } catch {
         return null;
     }
 }

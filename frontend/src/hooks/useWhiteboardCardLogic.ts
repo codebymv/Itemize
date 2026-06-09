@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Whiteboard, Category } from '@/types';
+import type { CanvasData } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
@@ -13,8 +14,17 @@ interface UseWhiteboardCardLogicProps {
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
 }
+
+type SketchPoint = { x: number; y: number };
+type SketchPathRecord = {
+  drawMode?: unknown;
+  strokeColor?: unknown;
+  strokeWidth?: unknown;
+  paths?: unknown;
+  path?: unknown;
+};
 
 export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseWhiteboardCardLogicProps) => {
   const { toast } = useToast();
@@ -105,22 +115,23 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
   });
   
   // Canvas operations
-  const handleCanvasChange = useCallback((canvasData: any) => {
+  const handleCanvasChange = useCallback((canvasData: unknown) => {
     // This can be used for real-time feedback if needed
     logger.debug('whiteboard', 'Canvas changed:', canvasData);
   }, []);
   
-  const handleCanvasSave = useCallback(async (data: { canvas_data: any; updated_at: string }) => {
+  const handleCanvasSave = useCallback(async (data: { canvas_data: unknown; updated_at: string }) => {
     try {
+      const canvasPathCount = Array.isArray(data.canvas_data) ? data.canvas_data.length : 0;
       logger.debug('whiteboard', 'Saving canvas data:', {
         whiteboardId: whiteboard.id,
-        pathCount: data.canvas_data?.length || 0,
+        pathCount: canvasPathCount,
         dataType: typeof data.canvas_data,
         isArray: Array.isArray(data.canvas_data)
       });
 
       // Sanitize canvas data to prevent JSON serialization issues
-      let sanitizedCanvasData = data.canvas_data;
+      let sanitizedCanvasData: CanvasData['paths'] = [];
       
       if (Array.isArray(data.canvas_data)) {
         try {
@@ -129,19 +140,20 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
           sanitizedCanvasData = data.canvas_data.map(path => {
             if (typeof path === 'object' && path !== null) {
               // Create a clean object with only the essential properties
+              const pathRecord = path as SketchPathRecord;
               const cleanPath = {
-                drawMode: path.drawMode || true,
-                strokeColor: typeof path.strokeColor === 'string' ? path.strokeColor : '#2563eb',
-                strokeWidth: typeof path.strokeWidth === 'number' ? path.strokeWidth : 2,
-                paths: Array.isArray(path.paths) ? path.paths : (Array.isArray(path.path) ? path.path : [])
+                drawMode: pathRecord.drawMode || true,
+                strokeColor: typeof pathRecord.strokeColor === 'string' ? pathRecord.strokeColor : '#2563eb',
+                strokeWidth: typeof pathRecord.strokeWidth === 'number' ? pathRecord.strokeWidth : 2,
+                paths: Array.isArray(pathRecord.paths) ? pathRecord.paths : (Array.isArray(pathRecord.path) ? pathRecord.path : [])
               };
               
               // Ensure paths array contains only valid coordinate objects
               if (Array.isArray(cleanPath.paths)) {
-                cleanPath.paths = cleanPath.paths.filter(point => 
-                  point && typeof point === 'object' && 
-                  typeof point.x === 'number' && 
-                  typeof point.y === 'number'
+                cleanPath.paths = cleanPath.paths.filter((point): point is SketchPoint =>
+                  point && typeof point === 'object' &&
+                  typeof (point as Partial<SketchPoint>).x === 'number' &&
+                  typeof (point as Partial<SketchPoint>).y === 'number'
                 );
               }
               
@@ -155,8 +167,8 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
           JSON.parse(testSerialization);
           
           logger.debug('whiteboard', 'Canvas data sanitized successfully:', {
-            originalPaths: data.canvas_data?.length || 0,
-            sanitizedPaths: sanitizedCanvasData?.length || 0,
+            originalPaths: canvasPathCount,
+            sanitizedPaths: sanitizedCanvasData.length,
             dataPreview: testSerialization.substring(0, 200)
           });
           
@@ -171,7 +183,7 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
       }
 
       // Send the sanitized canvas data
-      await onUpdate(whiteboard.id, { canvas_data: sanitizedCanvasData });
+      await onUpdate(whiteboard.id, { canvas_data: sanitizedCanvasData as unknown as Whiteboard['canvas_data'] });
       
       logger.debug('whiteboard', 'Canvas save completed successfully');
     } catch (error) {

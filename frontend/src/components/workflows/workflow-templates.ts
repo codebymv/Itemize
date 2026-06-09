@@ -2,7 +2,7 @@ export interface WorkflowAction {
   id: string
   type: 'send_invoice' | 'update_deal' | 'send_email' | 'create_task' | 'send_review_request' | 'add_segment' | 'update_contact_status'
   config: {
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -10,7 +10,7 @@ export interface WorkflowTrigger {
   id: string
   type: 'contract_signed' | 'invoice_paid' | 'deal_status_changed' | 'form_submitted' | 'contact_created'
   config?: {
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 

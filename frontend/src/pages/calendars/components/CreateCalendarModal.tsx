@@ -23,6 +23,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarType } from '@/types';
 import { createCalendar, CalendarCreateData } from '@/services/calendarsApi';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+    return responseData?.error || responseData?.message || fallback;
+};
+
 interface CreateCalendarModalProps {
     organizationId: number;
     onClose: () => void;
@@ -96,11 +101,11 @@ export function CreateCalendarModal({
         try {
             const calendar = await createCalendar(formData);
             onCreated(calendar);
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error creating calendar:', error);
             toast({
                 title: 'Error',
-                description: error.response?.data?.error || 'Failed to create calendar',
+                description: getApiErrorMessage(error, 'Failed to create calendar'),
                 variant: 'destructive',
             });
         } finally {

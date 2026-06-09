@@ -28,6 +28,11 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { createDealFormSchema, type CreateDealFormValues } from '@/lib/formSchemas';
 import logger from '@/lib/logger';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 interface CreateDealModalProps {
   pipelineId: number;
   stages: PipelineStage[];
@@ -89,11 +94,11 @@ export function CreateDealModal({
       });
       onCreated(deal);
       form.reset();
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error creating deal:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create deal',
+        description: getApiErrorMessage(error, 'Failed to create deal'),
         variant: 'destructive',
       });
     } finally {

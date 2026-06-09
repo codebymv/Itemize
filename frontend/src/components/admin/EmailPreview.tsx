@@ -14,6 +14,9 @@ interface EmailPreviewProps {
 
 type ViewMode = 'desktop' | 'mobile';
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error ? error.message : fallback;
+
 export function EmailPreview({
     subject,
     bodyHtml,
@@ -50,9 +53,9 @@ export function EmailPreview({
             });
 
             setPreviewHtml(response.html || null);
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error generating preview:', err);
-            setError(err.message || 'Failed to generate preview');
+            setError(getErrorMessage(err, 'Failed to generate preview'));
         } finally {
             setLoading(false);
         }

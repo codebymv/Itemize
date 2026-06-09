@@ -2,6 +2,7 @@ const express = require('express');
 const { withDbClient } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
 const crypto = require('crypto');
+const { REVIEW_WIDGET_COLUMNS } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -15,7 +16,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     router.get('/widgets', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const result = await withDbClient(pool, async (client) => client.query(
-                'SELECT * FROM review_widgets WHERE organization_id = $1 ORDER BY name ASC',
+                `SELECT ${REVIEW_WIDGET_COLUMNS} FROM review_widgets WHERE organization_id = $1 ORDER BY name ASC`,
                 [req.organizationId]
             ));
             res.json(result.rows);
@@ -61,7 +62,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     show_rating_stars, show_reviewer_photo, show_review_date, show_platform_icon,
                     min_rating, platforms, max_reviews, hide_no_text_reviews
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-                RETURNING *
+                RETURNING ${REVIEW_WIDGET_COLUMNS}
             `, [
                 req.organizationId,
                 widgetKey,
@@ -120,7 +121,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
             const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE review_widgets SET ${fields.join(', ')}
                 WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
-                RETURNING *
+                RETURNING ${REVIEW_WIDGET_COLUMNS}
             `, params));
 
             if (result.rows.length === 0) {

@@ -7,6 +7,8 @@ const express = require('express');
 const { logger } = require('../utils/logger');
 const emailService = require('../services/emailService');
 const { wrapInBrandedTemplate } = require('../services/email-template.service');
+const { emailLogColumns } = require('./admin-email-columns');
+const { emailTemplateColumns } = require('./template-columns');
 
 module.exports = (pool, authenticateJWT, requireAdmin) => {
     const router = express.Router();
@@ -248,7 +250,7 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
             // Get logs
             const logsQuery = `
                 SELECT 
-                    el.*,
+                    ${emailLogColumns('el')},
                     u.name as sent_by_name,
                     u.email as sent_by_email
                 FROM email_logs el
@@ -313,7 +315,7 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
 
             const result = await pool.query(
                 `SELECT 
-                    el.*,
+                    ${emailLogColumns('el')},
                     u.name as sent_by_name,
                     u.email as sent_by_email
                 FROM email_logs el
@@ -379,7 +381,7 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
 
             let query = `
                 SELECT 
-                    et.*,
+                    ${emailTemplateColumns('et')},
                     u.name as created_by_name,
                     o.name as organization_name
                 FROM email_templates et

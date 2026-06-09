@@ -96,7 +96,7 @@ export interface SendMessageData {
     content: string;
     channel?: string;
     content_html?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 export const sendMessage = async (

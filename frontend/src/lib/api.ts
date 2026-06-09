@@ -1,6 +1,10 @@
 import axios, { AxiosHeaders, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { getUserFriendlyError } from './error-messages';
 
+type UserFriendlyAxiosError = AxiosError & {
+  userFriendlyError?: ReturnType<typeof getUserFriendlyError>;
+};
+
 // Create a list of blocked endpoint patterns that shouldn't be called
 const BLOCKED_ENDPOINTS = [
   '/api/credits/recent-expirations',
@@ -277,7 +281,7 @@ api.interceptors.response.use(
     
     // Transform error to user-friendly message
     const userError = getUserFriendlyError(error);
-    (error as any).userFriendlyError = userError;
+    (error as UserFriendlyAxiosError).userFriendlyError = userError;
     
     // Handle 401 unauthorized - attempt token refresh
     if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh') && !config.url?.includes('/auth/login')) {
@@ -343,11 +347,15 @@ api.interceptors.response.use(
         } else {
           throw new Error('Refresh endpoint did not confirm success');
         }
-      } catch (refreshError: any) {
-        if (refreshError?.response?.status === 401) {
+      } catch (refreshError: unknown) {
+        const status = refreshError && typeof refreshError === 'object'
+          ? (refreshError as { response?: { status?: number } }).response?.status
+          : undefined;
+        const message = refreshError instanceof Error ? refreshError.message : 'Token refresh failed';
+        if (status === 401) {
           console.log('[Auth] Automatic session refresh completed (no active session)');
         } else {
-          console.error('[Auth] Token refresh failed:', refreshError.message);
+          console.error('[Auth] Token refresh failed:', message);
         }
         
         // Refresh failed - clear auth state

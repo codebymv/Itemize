@@ -46,6 +46,13 @@ interface LandingPage {
     updated_at: string;
 }
 
+type LandingPageStatus = LandingPage['status'];
+
+const LANDING_PAGE_STATUSES: LandingPageStatus[] = ['draft', 'published', 'archived'];
+
+const isLandingPageStatus = (value: string): value is LandingPageStatus =>
+    LANDING_PAGE_STATUSES.includes(value as LandingPageStatus);
+
 export function LandingPagesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -131,7 +138,7 @@ export function LandingPagesPage() {
         setLoading(true);
         try {
             const response = await getPages(
-                { status: statusFilter !== 'all' ? statusFilter as any : undefined },
+                { status: statusFilter !== 'all' && isLandingPageStatus(statusFilter) ? statusFilter : undefined },
                 organizationId
             );
             setPages((response.pages || []).map(p => ({

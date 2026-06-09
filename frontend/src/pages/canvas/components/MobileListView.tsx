@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ListCard } from '@/components/ListCard';
 import { NoteCard } from '@/components/NoteCard';
 import { WhiteboardCard } from '@/components/WhiteboardCard';
-import { List, Note, Whiteboard } from '@/types';
+import { Category, List, Note, Whiteboard } from '@/types';
 
 interface MobileListViewProps {
   filteredLists: List[];
@@ -13,7 +13,7 @@ interface MobileListViewProps {
   allLists: List[];
   allNotes: Note[];
   allWhiteboards: Whiteboard[];
-  dbCategories: any[];
+  dbCategories: Category[];
   selectedFilter: string | null;
   setSelectedFilter: (filter: string | null) => void;
   getUniqueTypes: () => string[];
@@ -22,8 +22,8 @@ interface MobileListViewProps {
   onAddNote: () => void;
   onAddWhiteboard: () => void;
   onUpdateList: (list: List) => Promise<unknown>;
-  onUpdateNote: (noteId: number, data: any) => Promise<Note | null>;
-  onUpdateWhiteboard: (whiteboardId: number, data: any) => Promise<Whiteboard | null>;
+  onUpdateNote: (noteId: number, data: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
+  onUpdateWhiteboard: (whiteboardId: number, data: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
   onDeleteList: (listId: string) => Promise<boolean>;
   onDeleteNote: (noteId: number) => Promise<boolean>;
   onDeleteWhiteboard: (whiteboardId: number) => Promise<boolean>;
@@ -38,8 +38,8 @@ interface MobileListViewProps {
   toggleWhiteboardCollapsed: (id: number) => void;
   listToggleCallbacks: Record<string, () => void>;
   addCategory: (data: { name: string; color_value: string }) => Promise<unknown>;
-  updateCategory: (name: string, data: any) => Promise<void>;
-  editCategory: (name: string, data: any) => Promise<void>;
+  updateCategory: (name: string, data: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  editCategory: (name: string, data: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
 export function MobileListView({

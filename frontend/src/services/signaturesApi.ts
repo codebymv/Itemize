@@ -1,6 +1,15 @@
 import api from '@/lib/api';
 
-const unwrapResponse = <T>(payload: any): T => {
+type ApiPayload = Record<string, unknown>;
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
     return payload.data as T;
   }
@@ -80,6 +89,31 @@ export interface SignatureField {
   locked?: boolean;
 }
 
+export interface PublicSignatureDocument {
+  id: number;
+  title: string;
+  description?: string;
+  message?: string;
+  file_url?: string;
+}
+
+export interface PublicSignatureField {
+  id: number;
+  field_type: SignatureField['field_type'];
+  page_number: number;
+  x_position: number;
+  y_position: number;
+  width: number;
+  height: number;
+  label?: string;
+  is_required?: boolean;
+}
+
+export interface PublicSigningData {
+  document: PublicSignatureDocument;
+  fields: PublicSignatureField[];
+}
+
 export interface SignatureDocumentDetails {
   document: SignatureDocument;
   recipients: SignatureRecipient[];
@@ -122,12 +156,12 @@ export const deleteSignatureDocumentFile = async (id: number) => {
 
 export const listSignatureDocuments = async (params: { status?: SignatureStatus; page?: number; limit?: number } = {}) => {
   const response = await api.get('/api/signatures/documents', { params });
-  return unwrapResponse<{ items: SignatureDocument[]; pagination: any }>(response.data);
+  return unwrapResponse<{ items: SignatureDocument[]; pagination: Pagination }>(response.data);
 };
 
 export const getSignatures = async (params: { status?: SignatureStatus; page?: number; limit?: number; search?: string } = {}) => {
   const response = await api.get('/api/signatures/documents', { params });
-  const result = unwrapResponse<{ items: SignatureDocument[]; pagination: any }>(response.data);
+  const result = unwrapResponse<{ items: SignatureDocument[]; pagination: Pagination }>(response.data);
   return { documents: result.items, pagination: result.pagination };
 };
 
@@ -184,22 +218,22 @@ export const getSignatureEmailPreview = async (data: SignatureEmailPreviewReques
 
 export const getSignatureAudit = async (id: number) => {
   const response = await api.get(`/api/signatures/documents/${id}/audit`);
-  return unwrapResponse<any[]>(response.data);
+  return unwrapResponse<SignatureDocumentDetails['audit']>(response.data);
 };
 
 export const getPublicSigningData = async (token: string) => {
   const response = await api.get(`/api/public/sign/${token}`);
-  return unwrapResponse<any>(response.data);
+  return unwrapResponse<PublicSigningData>(response.data);
 };
 
 export const submitPublicSignature = async (token: string, payload: { fields: Array<{ id: number; value: string }> }) => {
   const response = await api.post(`/api/public/sign/${token}`, payload);
-  return unwrapResponse<any>(response.data);
+  return unwrapResponse<ApiPayload>(response.data);
 };
 
 export const declinePublicSignature = async (token: string, reason?: string) => {
   const response = await api.post(`/api/public/sign/${token}/decline`, { reason });
-  return unwrapResponse<any>(response.data);
+  return unwrapResponse<ApiPayload>(response.data);
 };
 
 // Templates
@@ -274,7 +308,7 @@ export const getSignatureTemplate = async (id: number) => {
   return unwrapResponse<{ template: SignatureTemplate; roles: SignatureTemplateRole[]; fields: SignatureTemplateField[] }>(response.data);
 };
 
-export const instantiateSignatureTemplate = async (id: number, payload: any) => {
+export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload) => {
   const response = await api.post(`/api/signatures/templates/${id}/instantiate`, payload);
   return unwrapResponse<SignatureDocument>(response.data);
 };

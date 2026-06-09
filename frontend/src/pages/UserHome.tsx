@@ -25,6 +25,15 @@ interface List {
   color_value?: string | null; // Updated to match global type and backend
 }
 
+interface BackendList {
+  id: string;
+  title: string;
+  category?: string;
+  items?: ListItem[];
+  createdAt: string;
+  color_value?: string | null;
+}
+
 const UserHome = () => {
   const [lists, setLists] = useState<List[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +57,7 @@ const UserHome = () => {
       const response = await api.get('/api/lists');
       
       // Map response data to our List type, ensuring correct category mapping and defaults
-      const listsWithDataMapped = response.data.map((listFromBackend: any) => ({
+      const listsWithDataMapped = (response.data as BackendList[]).map((listFromBackend) => ({
         id: listFromBackend.id,
         title: listFromBackend.title,
         type: listFromBackend.category || 'General', // Map backend 'category' to frontend 'type'

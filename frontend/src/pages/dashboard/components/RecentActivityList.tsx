@@ -12,10 +12,11 @@ import {
     GitBranch,
     Bot,
     Clock,
+    type LucideIcon,
 } from 'lucide-react';
 
 interface getActivityConfigReturn {
-    icon: React.ForwardRefExoticComponent<any>;
+    icon: LucideIcon;
     color: string;
     bgColor: string;
 }
@@ -97,7 +98,7 @@ const formatTime = (dateString: string): string => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-const Icon = ({ icon: IconComponent, className }: { icon: any; className?: string }) => (
+const Icon = ({ icon: IconComponent, className }: { icon: LucideIcon; className?: string }) => (
     <IconComponent className={className} />
 );
 

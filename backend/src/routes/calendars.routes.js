@@ -7,10 +7,9 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { calendarColumns, availabilityWindowColumns, dateOverrideColumns } = require('./calendar-columns');
 
 /**
  * Create calendars routes with injected dependencies
@@ -43,7 +42,7 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const result = await withDbClient(pool, async (client) => client.query(`
-        SELECT c.*,
+        SELECT ${calendarColumns('c')},
                u.name as assigned_to_name,
                (SELECT COUNT(*) FROM bookings WHERE calendar_id = c.id AND status = 'confirmed') as upcoming_bookings
         FROM calendars c
@@ -68,7 +67,7 @@ module.exports = (pool, authenticateJWT) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get calendar
                 const calendarResult = await client.query(`
-        SELECT c.*,
+        SELECT ${calendarColumns('c')},
                u.name as assigned_to_name
         FROM calendars c
         LEFT JOIN users u ON c.assigned_to = u.id
@@ -81,14 +80,14 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Get availability windows
                 const availabilityResult = await client.query(`
-        SELECT * FROM availability_windows
+        SELECT ${availabilityWindowColumns()} FROM availability_windows
         WHERE calendar_id = $1
         ORDER BY day_of_week, start_time
       `, [id]);
 
                 // Get date overrides
                 const overridesResult = await client.query(`
-        SELECT * FROM calendar_date_overrides
+        SELECT ${dateOverrideColumns()} FROM calendar_date_overrides
         WHERE calendar_id = $1 AND override_date >= CURRENT_DATE
         ORDER BY override_date
       `, [id]);
@@ -153,7 +152,7 @@ module.exports = (pool, authenticateJWT) => {
             min_notice_hours, max_future_days, assigned_to, assignment_mode,
             confirmation_email, reminder_email, reminder_hours, color, created_by
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-          RETURNING *
+          RETURNING ${calendarColumns()}
         `, [
                     req.organizationId,
                     name.trim(),
@@ -265,7 +264,7 @@ module.exports = (pool, authenticateJWT) => {
           is_active = COALESCE($15, is_active),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $16 AND organization_id = $17
-        RETURNING *
+        RETURNING ${calendarColumns()}
       `, [
                 name?.trim(),
                 description,
@@ -394,7 +393,7 @@ module.exports = (pool, authenticateJWT) => {
                 }
                 // Fetch updated windows
                 const result = await client.query(
-                    'SELECT * FROM availability_windows WHERE calendar_id = $1 ORDER BY day_of_week, start_time',
+                    `SELECT ${availabilityWindowColumns()} FROM availability_windows WHERE calendar_id = $1 ORDER BY day_of_week, start_time`,
                     [id]
                 );
 
@@ -442,7 +441,7 @@ module.exports = (pool, authenticateJWT) => {
         VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (calendar_id, override_date) 
         DO UPDATE SET is_available = $3, start_time = $4, end_time = $5, reason = $6
-        RETURNING *
+        RETURNING ${dateOverrideColumns()}
       `, [id, override_date, is_available || false, start_time, end_time, reason]);
 
                 return { exists: true, result };

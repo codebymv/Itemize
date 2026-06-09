@@ -33,7 +33,7 @@ interface UnifiedContent {
   updated_at: string;
   is_public?: boolean;
   share_token?: string;
-  originalData: any;
+  originalData: unknown;
 }
 
 interface ContentCardProps {

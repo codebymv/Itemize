@@ -62,11 +62,56 @@ const { runAllESignatureMigrations, runESignatureMvpPlusMigrations } = require('
 
 // Import Vault migrations (encrypted storage)
 const { runVaultMigrations } = require('./db_vault_migrations');
+const { listColumns } = require('./routes/list-columns');
 
-// In-memory storage fallbacks if database fails
-const inMemoryUsers = [];
-const inMemoryLists = [];
-let useInMemory = false;
+const userColumns = [
+  'id',
+  'email',
+  'name',
+  'google_id',
+  'created_at',
+  'updated_at',
+  'default_organization_id'
+].join(', ');
+
+const ensureOrganizationBillingColumns = async (pool) => {
+  await pool.query(`
+    ALTER TABLE organizations
+      ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'starter',
+      ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'none',
+      ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly',
+      ADD COLUMN IF NOT EXISTS billing_period_start TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS trial_end_acknowledged_at TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS emails_used INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS emails_limit INTEGER DEFAULT 1000,
+      ADD COLUMN IF NOT EXISTS sms_used INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS sms_limit INTEGER DEFAULT 500,
+      ADD COLUMN IF NOT EXISTS api_calls_used INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS api_calls_limit INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS contacts_limit INTEGER DEFAULT 5000,
+      ADD COLUMN IF NOT EXISTS users_limit INTEGER DEFAULT 3,
+      ADD COLUMN IF NOT EXISTS workflows_limit INTEGER DEFAULT 5,
+      ADD COLUMN IF NOT EXISTS landing_pages_limit INTEGER DEFAULT 10,
+      ADD COLUMN IF NOT EXISTS forms_limit INTEGER DEFAULT 10,
+      ADD COLUMN IF NOT EXISTS calendars_limit INTEGER DEFAULT 3,
+      ADD COLUMN IF NOT EXISTS current_plan_id INTEGER REFERENCES subscription_plans(id),
+      ADD COLUMN IF NOT EXISTS features_override JSONB DEFAULT '{}'::jsonb,
+      ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMP WITH TIME ZONE
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_org_subscription_status ON organizations(subscription_status)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_org_plan ON organizations(plan)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_org_stripe_customer ON organizations(stripe_customer_id)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_org_stripe_subscription ON organizations(stripe_subscription_id)');
+
+  return true;
+};
 
 // Connection configuration with better error handling
 const createDbConnection = () => {
@@ -77,13 +122,10 @@ const createDbConnection = () => {
 
     if (!dbUrl) {
       console.warn('DATABASE_URL not found in environment. Using in-memory storage.');
-      useInMemory = true;
       return null;
     }
 
     // For Railway deployments, we need to parse the connection info more granularly
-    let connectionConfig;
-
     try {
       // Try to extract host from connection string to log it for debugging
       const matches = dbUrl.match(/postgresql:\/\/.*?@([^:]+)(:[0-9]+)?/);
@@ -122,10 +164,9 @@ const createDbConnection = () => {
     });
 
     // Set up event handlers
-    pool.on('connect', (client) => {
+    pool.on('connect', (_client) => {
       console.log('✅ Connected to PostgreSQL database successfully');
       console.log(`📊 Pool stats: Total=${pool.totalCount}, Idle=${pool.idleCount}, Waiting=${pool.waitingCount}`);
-      useInMemory = false;
     });
 
     pool.on('error', (err, client) => {
@@ -137,7 +178,6 @@ const createDbConnection = () => {
       // Don't crash the application on pool errors
       if (err.code === 'ENETUNREACH' || err.code === 'ENOTFOUND') {
         console.warn('🌐 Network unreachable or host not found. Switching to in-memory storage.');
-        useInMemory = true;
       } else if (err.message && err.message.includes('timeout')) {
         console.warn('⏰ Database connection timeout detected. Pool may be exhausted.');
         console.warn('Consider checking database connectivity and pool configuration.');
@@ -150,14 +190,14 @@ const createDbConnection = () => {
       }
     });
 
-    pool.on('acquire', (client) => {
+    pool.on('acquire', (_client) => {
       // Only log in development to reduce noise in production
       if (process.env.NODE_ENV === 'development') {
         console.log('🔗 Client acquired from pool');
       }
     });
 
-    pool.on('release', (client) => {
+    pool.on('release', (_client) => {
       // Only log in development to reduce noise in production
       if (process.env.NODE_ENV === 'development') {
         console.log('🔓 Client released back to pool');
@@ -197,12 +237,10 @@ const createDbConnection = () => {
     pool.query('SELECT 1 as health_check')
       .then(() => {
         console.log('✅ Database connection test successful');
-        useInMemory = false;
       })
       .catch((err) => {
         console.error('❌ Database connection test failed:', err.message, err.stack);
         console.warn('Switching to in-memory storage');
-        useInMemory = true;
       });
 
     return pool;
@@ -414,6 +452,7 @@ const initializeDatabase = async (pool) => {
     
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);
+    await runMigrationOnce(pool, 'organization_billing_columns_v2', ensureOrganizationBillingColumns);
     await runMigrationOnce(pool, 'module_esignatures', runAllESignatureMigrations);
     await runMigrationOnce(pool, 'module_esignatures_mvp_plus', runESignatureMvpPlusMigrations);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
@@ -519,7 +558,7 @@ const userOperations = {
 
     return retryDbOperation(async () => {
       const result = await pool.query(
-        'SELECT * FROM public.users WHERE id = $1',
+        `SELECT ${userColumns} FROM public.users WHERE id = $1`,
         [id]
       );
       return result.rows[0] || null;
@@ -535,7 +574,7 @@ const userOperations = {
     console.log('Looking up user by email:', email);
     return retryDbOperation(async () => {
       const result = await pool.query(
-        'SELECT * FROM public.users WHERE email = $1',
+        `SELECT ${userColumns} FROM public.users WHERE email = $1`,
         [email]
       );
       return result.rows[0] || null;
@@ -559,7 +598,7 @@ const userOperations = {
             name = $1, 
             google_id = $2,
             updated_at = CURRENT_TIMESTAMP
-           WHERE id = $3 RETURNING *`,
+           WHERE id = $3 RETURNING ${userColumns}`,
           [userData.name, userData.googleId, user.id]
         );
         return updateResult.rows[0];
@@ -569,7 +608,7 @@ const userOperations = {
       const createResult = await pool.query(
         `INSERT INTO public.users (email, name, google_id, created_at, updated_at) 
          VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
-         RETURNING *`,
+         RETURNING ${userColumns}`,
         [userData.email, userData.name, userData.googleId]
       );
 
@@ -584,7 +623,7 @@ const listOperations = {
   findAllByUserId: async (pool, userId) => {
     try {
       const result = await pool.query(
-        'SELECT * FROM public.lists WHERE user_id = $1 ORDER BY created_at DESC',
+        `SELECT ${listColumns()} FROM public.lists WHERE user_id = $1 ORDER BY created_at DESC`,
         [userId]
       );
       return result.rows;
@@ -597,7 +636,7 @@ const listOperations = {
   // Find one list by ID (and optionally verify user ownership)
   findById: async (pool, listId, userId = null) => {
     try {
-      let query = 'SELECT * FROM public.lists WHERE id = $1';
+      let query = `SELECT ${listColumns()} FROM public.lists WHERE id = $1`;
       let params = [listId];
 
       // If userId provided, verify ownership
@@ -620,7 +659,7 @@ const listOperations = {
       const result = await pool.query(
         `INSERT INTO public.lists (title, category, items, user_id) 
          VALUES ($1, $2, $3, $4) 
-         RETURNING *`,
+         RETURNING ${listColumns()}`,
         [
           listData.title,
           listData.category || 'General',
@@ -645,7 +684,7 @@ const listOperations = {
           items = $3,
           updated_at = CURRENT_TIMESTAMP
          WHERE id = $4 AND user_id = $5
-         RETURNING *`,
+         RETURNING ${listColumns()}`,
         [
           listData.title,
           listData.category,
@@ -685,7 +724,7 @@ const listOperations = {
           position_y = $2,
           updated_at = CURRENT_TIMESTAMP
          WHERE id = $3 AND user_id = $4
-         RETURNING *`,
+         RETURNING ${listColumns()}`,
         [position.x, position.y, listId, userId]
       );
 
@@ -700,7 +739,7 @@ const listOperations = {
   findAllForCanvas: async (pool, userId) => {
     try {
       const result = await pool.query(
-        'SELECT * FROM public.lists WHERE user_id = $1 ORDER BY created_at DESC',
+        `SELECT ${listColumns()} FROM public.lists WHERE user_id = $1 ORDER BY created_at DESC`,
         [userId]
       );
       return result.rows;

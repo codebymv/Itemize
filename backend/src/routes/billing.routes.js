@@ -10,8 +10,7 @@ const { sendSuccess, sendBadRequest, sendNotFound } = require('../utils/response
 const StripeService = require('../services/stripe.service');
 const {
     getAllPlans,
-    PLAN_TO_STRIPE_PRICES,
-    PLANS
+    PLAN_TO_STRIPE_PRICES
 } = require('../lib/subscription.constants');
 
 module.exports = (pool, authenticateJWT) => {

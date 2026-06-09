@@ -5,6 +5,7 @@
  */
 const { google } = require('googleapis');
 const { logger } = require('../utils/logger');
+const { calendarSyncEventColumns } = require('../routes/calendar-columns');
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -284,7 +285,7 @@ const syncBookingsToGoogle = async (pool, connection, bookings) => {
         try {
             // Check if already synced
             const existingSync = await pool.query(
-                'SELECT * FROM calendar_sync_events WHERE connection_id = $1 AND booking_id = $2',
+                `SELECT ${calendarSyncEventColumns()} FROM calendar_sync_events WHERE connection_id = $1 AND booking_id = $2`,
                 [connection.id, booking.id]
             );
 

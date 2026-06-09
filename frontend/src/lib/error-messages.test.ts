@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { getUserFriendlyError, getErrorTitle, getErrorMessage } from './error-messages';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosHeaders } from 'axios';
+import type { AxiosResponse } from 'axios';
+
+const mockResponse = (status: number, data: unknown = {}): AxiosResponse => ({
+  status,
+  data,
+  statusText: '',
+  headers: {},
+  config: { headers: new AxiosHeaders() },
+});
 
 describe('getUserFriendlyError', () => {
   it('should handle non-Axios errors', () => {
@@ -32,7 +41,7 @@ describe('getUserFriendlyError', () => {
 
   it('should handle 401 errors', () => {
     const error = new AxiosError('Unauthorized');
-    error.response = { status: 401, data: {} } as any;
+    error.response = mockResponse(401);
     const result = getUserFriendlyError(error);
 
     expect(result.title).toBe('Session Expired');
@@ -42,7 +51,7 @@ describe('getUserFriendlyError', () => {
 
   it('should handle 403 errors', () => {
     const error = new AxiosError('Forbidden');
-    error.response = { status: 403, data: {} } as any;
+    error.response = mockResponse(403);
     const result = getUserFriendlyError(error);
 
     expect(result.title).toBe('Access Denied');
@@ -52,7 +61,7 @@ describe('getUserFriendlyError', () => {
 
   it('should handle 404 errors', () => {
     const error = new AxiosError('Not Found');
-    error.response = { status: 404, data: {} } as any;
+    error.response = mockResponse(404);
     const result = getUserFriendlyError(error);
 
     expect(result.title).toBe('Not Found');
@@ -61,7 +70,7 @@ describe('getUserFriendlyError', () => {
 
   it('should handle 429 errors', () => {
     const error = new AxiosError('Too Many Requests');
-    error.response = { status: 429, data: {} } as any;
+    error.response = mockResponse(429);
     const result = getUserFriendlyError(error);
 
     expect(result.title).toBe('Too Many Requests');
@@ -71,7 +80,7 @@ describe('getUserFriendlyError', () => {
 
   it('should handle 500 errors', () => {
     const error = new AxiosError('Server Error');
-    error.response = { status: 500, data: {} } as any;
+    error.response = mockResponse(500);
     const result = getUserFriendlyError(error);
 
     expect(result.title).toBe('Server Error');
@@ -81,10 +90,7 @@ describe('getUserFriendlyError', () => {
 
   it('should prefer server-provided error messages', () => {
     const error = new AxiosError('Custom Error');
-    error.response = {
-      status: 400,
-      data: { message: 'This is a server-provided message' }
-    } as any;
+    error.response = mockResponse(400, { message: 'This is a server-provided message' });
     const result = getUserFriendlyError(error);
 
     expect(result.message).toBe('This is a server-provided message');
@@ -92,7 +98,7 @@ describe('getUserFriendlyError', () => {
 
   it('should handle generic 4xx errors', () => {
     const error = new AxiosError('Bad Request');
-    error.response = { status: 400, data: {} } as any;
+    error.response = mockResponse(400);
     const result = getUserFriendlyError(error);
 
     expect(result.title).toBe('Request Failed');

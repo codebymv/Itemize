@@ -2,8 +2,9 @@
  * Forms API Service
  */
 import api from '@/lib/api';
+import type { JsonRecord } from '@/types';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -145,7 +146,7 @@ export const getPublicForm = async (slug: string): Promise<PublicFormData> => {
 
 export const submitPublicForm = async (
     slug: string,
-    data: Record<string, any>
+    data: JsonRecord
 ): Promise<{ success: boolean; message: string; redirect_url?: string }> => {
     const response = await api.post(`/api/public/form/${slug}`, { data });
     return unwrapResponse<{ success: boolean; message: string; redirect_url?: string }>(response.data);

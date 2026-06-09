@@ -4,8 +4,9 @@
  */
 
 import api from '@/lib/api';
+import type { PageSection, PageSettings, PageTheme } from './pagesApi';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -32,8 +33,8 @@ export interface PageContent {
     name: string;
     description?: string;
     slug: string;
-    theme?: any;
-    settings?: any;
+    theme?: Partial<PageTheme>;
+    settings?: Partial<PageSettings>;
     seo_title?: string;
     seo_description?: string;
     seo_keywords?: string;
@@ -42,7 +43,7 @@ export interface PageContent {
     custom_css?: string;
     custom_js?: string;
     custom_head?: string;
-    sections?: any[];
+    sections?: PageSection[];
 }
 
 // ======================

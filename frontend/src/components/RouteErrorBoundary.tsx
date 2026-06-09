@@ -47,8 +47,12 @@ class ErrorBoundaryComponent extends React.Component<
     }
 
     // Report error to tracking service (if configured)
-    if (typeof window !== 'undefined' && (window as any).Sentry) {
-      (window as any).Sentry.captureException(error);
+    const sentryWindow = window as Window & {
+      Sentry?: { captureException: (error: Error) => void };
+    };
+
+    if (typeof window !== 'undefined' && sentryWindow.Sentry) {
+      sentryWindow.Sentry.captureException(error);
     }
   }
 

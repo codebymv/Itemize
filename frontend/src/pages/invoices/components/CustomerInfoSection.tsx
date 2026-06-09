@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { JsonRecord } from '@/types';
 
 interface Contact {
   id: number;
@@ -23,7 +24,13 @@ interface Contact {
   last_name?: string;
   email?: string;
   phone?: string;
-  address?: any;
+  address?: string | JsonRecord | {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
 }
 
 interface CustomerInfoSectionProps {

@@ -80,6 +80,14 @@ import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object') {
+        const maybeApiError = error as { response?: { data?: { error?: string } }; message?: string };
+        return maybeApiError.response?.data?.error || maybeApiError.message || fallback;
+    }
+    return fallback;
+};
+
 interface Invoice {
     id: number;
     invoice_number: string;
@@ -266,8 +274,8 @@ export function InvoicesPage() {
             setShowSendModal(false);
             setSelectedInvoiceForSend(null);
             fetchInvoices();
-        } catch (error: any) {
-            const errorMessage = error?.response?.data?.error || 'Failed to send invoice';
+        } catch (error: unknown) {
+            const errorMessage = getApiErrorMessage(error, 'Failed to send invoice');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setSending(false);
@@ -325,8 +333,8 @@ export function InvoicesPage() {
             
             // Navigate to recurring invoices page to see the new template
             navigate('/recurring-invoices');
-        } catch (error: any) {
-            const errorMessage = error?.response?.data?.error || 'Failed to create recurring template';
+        } catch (error: unknown) {
+            const errorMessage = getApiErrorMessage(error, 'Failed to create recurring template');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setConverting(false);
@@ -393,9 +401,9 @@ export function InvoicesPage() {
             setSelectedInvoiceForPayment(null);
             setFullInvoiceDataForPayment(null);
             fetchInvoices();
-        } catch (error: any) {
+        } catch (error: unknown) {
             setInvoices(previousInvoices);
-            const errorMessage = error?.response?.data?.error || 'Failed to record payment';
+            const errorMessage = getApiErrorMessage(error, 'Failed to record payment');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
             setRecordingPayment(false);
@@ -963,7 +971,7 @@ export function InvoicesPage() {
                                                             customerEmail={expandedInvoiceData.customer_email}
                                                             customerPhone={expandedInvoiceData.customer_phone}
                                                             customerAddress={expandedInvoiceData.customer_address}
-                                                            items={(expandedInvoiceData.items || []).map((item: any) => ({
+                                                            items={(expandedInvoiceData.items || []).map((item) => ({
                                                                 name: item.name,
                                                                 description: item.description,
                                                                 quantity: item.quantity,

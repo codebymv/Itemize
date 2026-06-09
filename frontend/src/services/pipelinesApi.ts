@@ -3,9 +3,9 @@
  * Handles all pipeline and deal-related API calls
  */
 import api from '@/lib/api';
-import { Pipeline, Deal, PipelineStage } from '@/types';
+import { Pipeline, Deal, PipelineStage, JsonRecord } from '@/types';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
     return payload.data as T;
   }
@@ -110,7 +110,7 @@ export interface CreateDealData {
   probability?: number;
   expected_close_date?: string;
   assigned_to?: number;
-  custom_fields?: Record<string, any>;
+  custom_fields?: JsonRecord;
   tags?: string[];
   organization_id?: number;
 }

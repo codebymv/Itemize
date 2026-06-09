@@ -111,6 +111,13 @@ interface RecurringInvoice {
     source_invoice_number?: string;
 }
 
+type RecurringFrequency = RecurringInvoice['frequency'];
+
+const RECURRING_FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
+
+const isRecurringFrequency = (value: string): value is RecurringFrequency =>
+    RECURRING_FREQUENCIES.includes(value as RecurringFrequency);
+
 interface Contact {
     id: number;
     first_name?: string;
@@ -133,6 +140,16 @@ const FREQUENCY_LABELS: Record<string, string> = {
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     yearly: 'Yearly',
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object' && 'response' in error) {
+        const response = (error as { response?: { data?: { error?: unknown } } }).response;
+        if (typeof response?.data?.error === 'string') {
+            return response.data.error;
+        }
+    }
+    return fallback;
 };
 
 export function RecurringInvoicesPage() {
@@ -362,8 +379,8 @@ export function RecurringInvoicesPage() {
                 description: `${response.data.invoice_number} created successfully` 
             });
             fetchRecurringInvoices();
-        } catch (error: any) {
-            const message = error.response?.data?.error || 'Failed to generate invoice';
+        } catch (error: unknown) {
+            const message = getApiErrorMessage(error, 'Failed to generate invoice');
             toast({ title: 'Error', description: message, variant: 'destructive' });
         } finally {
             setGeneratingInvoice(null);
@@ -1013,7 +1030,14 @@ export function RecurringInvoicesPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Frequency *</Label>
-                                <Select value={frequency} onValueChange={(v) => setFrequency(v as any)}>
+                                <Select
+                                    value={frequency}
+                                    onValueChange={(v) => {
+                                        if (isRecurringFrequency(v)) {
+                                            setFrequency(v);
+                                        }
+                                    }}
+                                >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>

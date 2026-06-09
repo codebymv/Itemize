@@ -1,5 +1,7 @@
 const { logger } = require('../../utils/logger');
 
+/* global document */
+
 let puppeteer = null;
 
 try {
@@ -73,7 +75,7 @@ async function generatePDF(html) {
             return Promise.all(
                 Array.from(document.images).map(img => {
                     if (img.complete) return Promise.resolve();
-                    return new Promise((resolve, reject) => {
+                    return new Promise((resolve) => {
                         img.onload = resolve;
                         img.onerror = () => {
                             console.warn('Image failed to load:', img.src);

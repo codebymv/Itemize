@@ -11,6 +11,13 @@ export interface UserError {
   upgradeUrl?: string;
 }
 
+type ErrorResponseData = {
+  message?: string;
+  code?: string;
+  error?: string | { code?: string; details?: { remaining?: number } };
+  details?: { remaining?: number };
+};
+
 export function getUserFriendlyError(error: unknown): UserError {
   if (!(error instanceof AxiosError)) {
     return {
@@ -42,7 +49,7 @@ export function getUserFriendlyError(error: unknown): UserError {
   // HTTP errors
   if (error.response) {
     const status = error.response.status;
-    const responseData = error.response.data as any;
+    const responseData = error.response.data as ErrorResponseData;
 
     // Server returned user-friendly message
     if (responseData?.message) {
@@ -66,7 +73,7 @@ export function getUserFriendlyError(error: unknown): UserError {
 
     // 403 Forbidden
     if (status === 403) {
-      const code = responseData?.code || responseData?.error?.code;
+      const code = responseData?.code || (typeof responseData?.error === 'object' ? responseData.error.code : undefined);
       const isPlanLimit = code === 'PLAN_LIMIT_REACHED' || code === 'PLAN_LIMIT';
       if (isPlanLimit) {
         return {
@@ -97,7 +104,7 @@ export function getUserFriendlyError(error: unknown): UserError {
 
     // 429 Too Many Requests
     if (status === 429) {
-      const details = responseData?.error?.details || responseData?.details;
+      const details = (typeof responseData?.error === 'object' ? responseData.error.details : undefined) || responseData?.details;
       const remaining = details?.remaining;
       const message =
         typeof remaining === 'number'

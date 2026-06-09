@@ -1,270 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const { logger } = require('../utils/logger');
+const { fetchProfileData } = require('./contact-profile/queries');
+const { buildContactProfileResponse } = require('./contact-profile/response');
 
 /**
  * GET /api/contacts/:id/profile
  * Returns complete client profile with all cross-module data
  */
 router.get('/:id/profile', async (req, res) => {
-  const { id } = req.params;
-  const { organization_id } = req.headers;
-
-  try {
-    logger.info('Fetching client profile', { contactId: id });
-
+    const { id } = req.params;
+    const organizationId = req.headers.organization_id;
     const pool = req.dbPool;
-    
-    if (!pool) {
-      return res.status(503).json({ error: 'Database connection not available' });
-    }
 
-    // 1. Get contact
-    const contactQuery = `
-      SELECT id, first_name, last_name, email, phone, company, 
-             title, city, state, country, status, notes
-      FROM contacts 
-      WHERE id = $1 AND organization_id = $2
-    `;
-    const contactRes = await pool.query(contactQuery, [id, organization_id]);
-    
-    if (contactRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Contact not found' });
-    }
-    const contact = contactRes.rows[0];
-
-    // 2. Get invoices (checks if contact_id column exists)
-    let invoices = [];
     try {
-      const invoicesQuery = `SELECT * FROM invoices WHERE contact_id = $1 ORDER BY created_at DESC LIMIT 10`;
-      const invoicesRes = await pool.query(invoicesQuery, [id]);
-      invoices = invoicesRes.rows;
-    } catch (err) {
-      // Column might not exist yet, log and continue
-      logger.warn('Failed to fetch invoices', { error: err.message });
+        logger.info('Fetching client profile', { contactId: id });
+
+        if (!pool) {
+            return res.status(503).json({ error: 'Database connection not available' });
+        }
+
+        const profileData = await fetchProfileData({
+            pool,
+            contactId: id,
+            organizationId,
+            logger
+        });
+
+        if (!profileData) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+
+        res.json(buildContactProfileResponse(profileData));
+    } catch (error) {
+        logger.error('Error fetching client profile', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Internal server error' });
     }
-
-    // 3. Get signatures (join through signature_recipients)
-    let signatures = [];
-    try {
-      const signaturesQuery = `
-        SELECT sd.*, sr.status, sr.signed_at 
-        FROM signature_documents sd
-        JOIN signature_recipients sr ON sd.id = sr.document_id
-        WHERE sr.contact_id = $1
-        ORDER BY sd.created_at DESC
-        LIMIT 10
-      `;
-      const signaturesRes = await pool.query(signaturesQuery, [id]);
-      signatures = signaturesRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch signatures', { error: err.message });
-    }
-
-    // 4. Get payments
-    let payments = [];
-    if (invoices.length > 0) {
-      const invoicesIds = invoices.map(inv => inv.id);
-      try {
-        const paymentsQuery = `
-          SELECT p.*, i.invoice_number 
-          FROM payments p
-          JOIN invoices i ON p.invoice_id = i.id
-          WHERE i.id = ANY($1)
-          ORDER BY p.date DESC
-        `;
-        const paymentsRes = await pool.query(paymentsQuery, [invoicesIds]);
-        payments = paymentsRes.rows;
-      } catch (err) {
-        logger.warn('Failed to fetch payments', { error: err.message });
-      }
-    }
-
-    // 5. Get activities (contact_activities table)
-    let activities = [];
-    try {
-      const activitiesQuery = `
-        SELECT * FROM contact_activities 
-        WHERE contact_id = $1 
-        ORDER BY created_at DESC 
-        LIMIT 50
-      `;
-      const activitiesRes = await pool.query(activitiesQuery, [id]);
-      activities = activitiesRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch activities', { error: err.message });
-    }
-
-    // 6. Get notes (checks if contact_id column exists)
-    let notes = [];
-    try {
-      const notesQuery = `SELECT * FROM notes WHERE contact_id = $1 ORDER BY created_at DESC LIMIT 20`;
-      const notesRes = await pool.query(notesQuery, [id]);
-      notes = notesRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch notes', { error: err.message });
-    }
-
-    // 7. Get lists shared with contact
-    let lists = [];
-    try {
-      const listsQuery = `
-        SELECT l.* 
-        FROM lists l 
-        LEFT JOIN list_contacts lc ON l.id = lc.list_id 
-        WHERE lc.contact_id = $1 OR l.id IN (
-          SELECT list_id FROM list_items WHERE contact_id = $1
-        )
-        LIMIT 20
-      `;
-      const listsRes = await pool.query(listsQuery, [id]);
-      lists = listsRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch lists', { error: err.message });
-    }
-
-        // 9. Get communications
-    let communications = [];
-    try {
-      const commsQuery = `
-        SELECT m.id, m.channel as type,
-               CASE WHEN m.sender_type = 'contact' THEN 'inbound' ELSE 'outbound' END as direction,
-               c.subject, m.content, m.created_at as date
-        FROM messages m
-        JOIN conversations c ON m.conversation_id = c.id
-        WHERE c.contact_id = $1
-        ORDER BY m.created_at DESC
-        LIMIT 20
-      `;
-      const commsRes = await pool.query(commsQuery, [id]);
-      communications = commsRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch communications', { error: err.message });
-    }
-
-    // 8. Get tasks associated with contact
-    let tasks = [];
-    try {
-      const tasksQuery = `
-        SELECT *
-        FROM tasks
-        WHERE contact_id = $1
-        ORDER BY due_date ASC NULLS LAST, created_at DESC
-        LIMIT 20
-      `;
-      const tasksRes = await pool.query(tasksQuery, [id]);
-      tasks = tasksRes.rows;
-    } catch (err) {
-      logger.warn('Failed to fetch tasks', { error: err.message });
-    }
-
-    // 9. Get communications (inbox messages)
-    communications = [];
-    try {
-      const commsQuery = `
-        SELECT m.id, m.channel as type, m.sender_type, m.content, m.created_at as date,
-               c.subject
-        FROM messages m
-        JOIN conversations c ON m.conversation_id = c.id
-        WHERE c.contact_id = $1
-        ORDER BY m.created_at DESC
-        LIMIT 50
-      `;
-      const commsRes = await pool.query(commsQuery, [id]);
-      communications = commsRes.rows.map(row => ({
-        id: row.id?.toString() || '0',
-        type: row.type || 'email',
-        direction: row.sender_type === 'contact' ? 'inbound' : 'outbound',
-        subject: row.subject || '',
-        content: row.content || '',
-        date: row.date
-      }));
-    } catch (err) {
-      logger.warn('Failed to fetch communications', { error: err.message });
-    }
-
-    // Build response
-    const response = {
-      contact: {
-        id: contact.id.toString(),
-        firstName: contact.first_name || '',
-        lastName: contact.last_name || '',
-        email: contact.email,
-        phone: contact.phone,
-        company: contact.company,
-        title: contact.title,
-        city: contact.city,
-        state: contact.state,
-        country: contact.country,
-        status: contact.status || 'active',
-        notes: contact.notes,
-      },
-      invoices: invoices.map(inv => ({
-        id: inv.id.toString(),
-        number: inv.invoice_number || `INV-${inv.id}`,
-        status: inv.status || 'draft',
-        total: inv.total || 0,
-        date: inv.created_at,
-        dueDate: inv.due_date,
-      })),
-      signatures: signatures.map(sig => ({
-        id: sig.id.toString(),
-        title: sig.title || 'Document',
-        status: sig.status || 'draft',
-        sentDate: sig.sent_at,
-        signedDate: sig.signed_at,
-      })),
-      payments: payments.map(pay => ({
-        id: pay.id?.toString() || '0',
-        invoiceId: pay.invoice_id?.toString() || '0',
-        invoiceNumber: pay.invoice_number || '',
-        amount: pay.amount || 0,
-        date: pay.date,
-      })),
-      communications,
-      notes: notes.map(note => ({
-        id: note.id?.toString() || '0',
-        title: note.title || 'Note',
-        content: note.content || '',
-        createdAt: note.created_at,
-      })),
-      lists: lists.map(list => ({
-        id: list.id?.toString() || '0',
-        title: list.title || 'List',
-        category: list.category,
-      })),
-      tasks: tasks.map(task => ({
-        id: task.id?.toString() || '0',
-        title: task.title || 'Task',
-        description: task.description || '',
-        status: task.status || 'pending',
-        priority: task.priority || 'medium',
-        dueDate: task.due_date,
-        completedAt: task.completed_at,
-      })),
-      bookings: bookings.map(booking => ({
-        id: booking.id?.toString() || '0',
-        title: booking.title || 'Booking',
-        calendarId: booking.calendar_id?.toString() || '0',
-        startTime: booking.start_time,
-        endTime: booking.end_time,
-        status: booking.status || 'confirmed',
-        source: booking.source || 'booking_page'
-      })),
-      timeline: activities.map(act => ({
-        id: act.id?.toString() || '0',
-        type: act.type || 'created',
-        title: act.title,
-        description: act.content,
-        timestamp: act.created_at,
-      })),
-    };
-
-    res.json(response);
-  } catch (error) {
-    logger.error('Error fetching client profile', { error: error.message, stack: error.stack });
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 module.exports = router;

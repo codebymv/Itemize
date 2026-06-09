@@ -1,6 +1,7 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
+const { REPUTATION_SETTINGS_COLUMNS } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -14,7 +15,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     router.get('/settings', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const result = await withDbClient(pool, async (client) => client.query(
-                'SELECT * FROM reputation_settings WHERE organization_id = $1',
+                `SELECT ${REPUTATION_SETTINGS_COLUMNS} FROM reputation_settings WHERE organization_id = $1`,
                 [req.organizationId]
             ));
 
@@ -66,7 +67,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     new_review_notify_slack = COALESCE(EXCLUDED.new_review_notify_slack, reputation_settings.new_review_notify_slack),
                     slack_webhook_url = EXCLUDED.slack_webhook_url,
                     updated_at = CURRENT_TIMESTAMP
-                RETURNING *
+                RETURNING ${REPUTATION_SETTINGS_COLUMNS}
             `, [
                 req.organizationId,
                 settings.auto_request_enabled,

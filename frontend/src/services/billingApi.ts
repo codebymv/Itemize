@@ -7,11 +7,19 @@
 import api from '../lib/api';
 import type { Plan } from '@/lib/subscription';
 
-const unwrapResponse = <T>(payload: any): ApiResponse<T> => {
+const unwrapResponse = <T>(payload: unknown): ApiResponse<T> => {
     if (payload && typeof payload === 'object' && 'success' in payload) {
         return payload as ApiResponse<T>;
     }
     return { success: true, data: payload as T };
+};
+
+const getApiErrorMessage = (error: unknown): string => {
+    if (error && typeof error === 'object') {
+        const maybeAxiosError = error as { response?: { data?: { error?: string } }; message?: string };
+        return maybeAxiosError.response?.data?.error || maybeAxiosError.message || 'Request failed';
+    }
+    return 'Request failed';
 };
 
 // ============================================
@@ -123,10 +131,10 @@ export async function getBillingStatus(): Promise<ApiResponse<BillingStatus>> {
     try {
         const response = await api.get('/api/billing');
         return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return {
             success: false,
-            error: error.response?.data?.error || error.message
+            error: getApiErrorMessage(error)
         };
     }
 }
@@ -138,10 +146,10 @@ export async function getPlans(): Promise<ApiResponse<PlanInfo[]>> {
     try {
         const response = await api.get('/api/billing/plans');
         return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return {
             success: false,
-            error: error.response?.data?.error || error.message
+            error: getApiErrorMessage(error)
         };
     }
 }
@@ -160,10 +168,10 @@ export async function createCheckoutSession(params: {
     try {
         const response = await api.post('/api/billing/checkout', params);
         return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return {
             success: false,
-            error: error.response?.data?.error || error.message
+            error: getApiErrorMessage(error)
         };
     }
 }
@@ -175,10 +183,10 @@ export async function createPortalSession(returnUrl: string): Promise<ApiRespons
     try {
         const response = await api.post('/api/billing/portal', { returnUrl });
         return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return {
             success: false,
-            error: error.response?.data?.error || error.message
+            error: getApiErrorMessage(error)
         };
     }
 }
@@ -190,10 +198,10 @@ export async function getUsageStats(): Promise<ApiResponse<UsageStats>> {
     try {
         const response = await api.get('/api/billing/usage');
         return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return {
             success: false,
-            error: error.response?.data?.error || error.message
+            error: getApiErrorMessage(error)
         };
     }
 }
@@ -248,8 +256,8 @@ export async function acknowledgeTrialEnd(): Promise<ApiResponse<{ acknowledged:
     try {
         const response = await api.post('/api/billing/acknowledge-trial-end');
         return unwrapResponse<{ acknowledged: boolean }>(response.data);
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Failed to acknowledge trial end' };
+    } catch (error: unknown) {
+        return { success: false, error: getApiErrorMessage(error) || 'Failed to acknowledge trial end' };
     }
 }
 

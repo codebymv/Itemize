@@ -5,6 +5,8 @@
 
 const emailService = require('./emailService');
 const smsService = require('./smsService');
+const { workflowColumns, workflowStepColumns, workflowEnrollmentColumns } = require('../routes/workflow-columns');
+const { emailTemplateColumns, smsTemplateColumns } = require('../routes/template-columns');
 
 class AutomationEngine {
   constructor(pool) {
@@ -28,7 +30,7 @@ class AutomationEngine {
 
       // Find active workflows matching this trigger type
       const workflows = await client.query(
-        `SELECT * FROM workflows 
+        `SELECT ${workflowColumns()} FROM workflows
          WHERE organization_id = $1 
          AND trigger_type = $2 
          AND is_active = true`,
@@ -108,7 +110,7 @@ class AutomationEngine {
     try {
       // Check if already enrolled
       const existing = await client.query(
-        'SELECT * FROM workflow_enrollments WHERE workflow_id = $1 AND contact_id = $2',
+        `SELECT ${workflowEnrollmentColumns()} FROM workflow_enrollments WHERE workflow_id = $1 AND contact_id = $2`,
         [workflowId, contactId]
       );
 
@@ -126,7 +128,7 @@ class AutomationEngine {
                trigger_data = $1, context = '{}', error_message = NULL, completed_at = NULL,
                next_action_at = CURRENT_TIMESTAMP
            WHERE id = $2
-           RETURNING *`,
+           RETURNING ${workflowEnrollmentColumns()}`,
           [JSON.stringify(triggerData), enrollment.id]
         );
         return result.rows[0];
@@ -137,7 +139,7 @@ class AutomationEngine {
         `INSERT INTO workflow_enrollments 
           (workflow_id, contact_id, trigger_data, status, current_step, next_action_at)
         VALUES ($1, $2, $3, 'active', 1, CURRENT_TIMESTAMP)
-        RETURNING *`,
+        RETURNING ${workflowEnrollmentColumns()}`,
         [workflowId, contactId, JSON.stringify(triggerData)]
       );
 
@@ -166,7 +168,7 @@ class AutomationEngine {
       // Get enrollment with contact and workflow data
       const enrollmentResult = await client.query(
         `SELECT 
-          we.*,
+          ${workflowEnrollmentColumns('we')},
           c.first_name, c.last_name, c.email, c.phone, c.company, c.job_title,
           c.custom_fields as contact_custom_fields, c.tags as contact_tags,
           w.name as workflow_name, w.organization_id
@@ -185,7 +187,7 @@ class AutomationEngine {
 
       // Get current step
       const stepResult = await client.query(
-        `SELECT * FROM workflow_steps 
+        `SELECT ${workflowStepColumns()} FROM workflow_steps
          WHERE workflow_id = $1 AND step_order = $2`,
         [enrollment.workflow_id, enrollment.current_step]
       );
@@ -233,7 +235,7 @@ class AutomationEngine {
 
       // Check if there's a next step
       const nextStepCheck = await client.query(
-        'SELECT * FROM workflow_steps WHERE workflow_id = $1 AND step_order = $2',
+        `SELECT ${workflowStepColumns()} FROM workflow_steps WHERE workflow_id = $1 AND step_order = $2`,
         [enrollment.workflow_id, nextStep]
       );
 
@@ -334,7 +336,7 @@ class AutomationEngine {
     try {
       // Get email template
       const templateResult = await client.query(
-        'SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2',
+        `SELECT ${emailTemplateColumns()} FROM email_templates WHERE id = $1 AND organization_id = $2`,
         [config.template_id, enrollment.organization_id]
       );
 
@@ -399,7 +401,7 @@ class AutomationEngine {
       // If using template, fetch and process it
       if (config.template_id) {
         const templateResult = await client.query(
-          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+          `SELECT ${smsTemplateColumns()} FROM sms_templates WHERE id = $1 AND organization_id = $2`,
           [config.template_id, enrollment.organization_id]
         );
 

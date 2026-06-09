@@ -22,6 +22,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Contact } from '@/types';
 import { updateContact } from '@/services/contactsApi';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 interface EditContactModalProps {
   contact: Contact;
   organizationId: number;
@@ -89,11 +94,11 @@ export function EditContactModal({
         organization_id: organizationId,
       });
       onUpdated(updatedContact);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating contact:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to update contact',
+        description: getApiErrorMessage(error, 'Failed to update contact'),
         variant: 'destructive',
       });
     } finally {

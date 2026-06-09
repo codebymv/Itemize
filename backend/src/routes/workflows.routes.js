@@ -7,7 +7,6 @@
 
 const express = require('express');
 const router = express.Router();
-const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
@@ -16,6 +15,7 @@ const {
     ERROR_CODES,
     PLAN_METADATA 
 } = require('../lib/subscription.constants');
+const { workflowColumns, workflowStepColumns, workflowEnrollmentColumns } = require('./workflow-columns');
 
 /**
  * Create workflows routes with injected dependencies
@@ -62,7 +62,7 @@ module.exports = (pool, authenticateJWT) => {
       const result = await withDbClient(pool, async (client) => {
         let query = `
         SELECT 
-          w.*,
+          ${workflowColumns('w')},
           u.name as created_by_name,
           (SELECT COUNT(*) FROM workflow_steps WHERE workflow_id = w.id) as step_count,
           (SELECT COUNT(*) FROM workflow_enrollments WHERE workflow_id = w.id AND status = 'active') as active_enrollments
@@ -117,7 +117,7 @@ module.exports = (pool, authenticateJWT) => {
       const result = await withDbClient(pool, async (client) => {
         const workflowResult = await client.query(
           `SELECT 
-            w.*,
+            ${workflowColumns('w')},
             u.name as created_by_name
           FROM workflows w
           LEFT JOIN users u ON w.created_by = u.id
@@ -130,7 +130,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const stepsResult = await client.query(
-          `SELECT * FROM workflow_steps 
+          `SELECT ${workflowStepColumns()} FROM workflow_steps
            WHERE workflow_id = $1 
            ORDER BY step_order`,
           [id]
@@ -214,7 +214,7 @@ module.exports = (pool, authenticateJWT) => {
           `INSERT INTO workflows 
             (organization_id, name, description, trigger_type, trigger_config, created_by)
           VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING *`,
+          RETURNING ${workflowColumns()}`,
           [
             req.organizationId,
             name,
@@ -246,7 +246,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const stepsResult = await client.query(
-          'SELECT * FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order',
+          `SELECT ${workflowStepColumns()} FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order`,
           [createdWorkflow.id]
         );
 
@@ -272,7 +272,7 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const result = await withTransaction(pool, async (client) => {
         const existing = await client.query(
-          'SELECT * FROM workflows WHERE id = $1 AND organization_id = $2',
+          `SELECT ${workflowColumns()} FROM workflows WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -286,7 +286,7 @@ module.exports = (pool, authenticateJWT) => {
           `UPDATE workflows 
            SET name = $1, description = $2, trigger_type = $3, trigger_config = $4, updated_at = CURRENT_TIMESTAMP
            WHERE id = $5 AND organization_id = $6
-           RETURNING *`,
+           RETURNING ${workflowColumns()}`,
           [
             name !== undefined ? name : workflow.name,
             description !== undefined ? description : workflow.description,
@@ -318,7 +318,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const stepsResult = await client.query(
-          'SELECT * FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order',
+          `SELECT ${workflowStepColumns()} FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order`,
           [id]
         );
 
@@ -386,7 +386,7 @@ module.exports = (pool, authenticateJWT) => {
           `UPDATE workflows 
            SET is_active = true, updated_at = CURRENT_TIMESTAMP
            WHERE id = $1 AND organization_id = $2
-           RETURNING *`,
+           RETURNING ${workflowColumns()}`,
           [id, req.organizationId]
         );
 
@@ -421,7 +421,7 @@ module.exports = (pool, authenticateJWT) => {
           `UPDATE workflows 
            SET is_active = false, updated_at = CURRENT_TIMESTAMP
            WHERE id = $1 AND organization_id = $2
-           RETURNING *`,
+           RETURNING ${workflowColumns()}`,
           [id, req.organizationId]
         );
       });
@@ -452,7 +452,7 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const result = await withDbClient(pool, async (client) => {
         const workflowCheck = await client.query(
-          'SELECT * FROM workflows WHERE id = $1 AND organization_id = $2',
+          `SELECT ${workflowColumns()} FROM workflows WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -461,7 +461,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const contactCheck = await client.query(
-          'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
+          'SELECT id FROM contacts WHERE id = $1 AND organization_id = $2',
           [contact_id, req.organizationId]
         );
 
@@ -470,7 +470,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const existingEnrollment = await client.query(
-          'SELECT * FROM workflow_enrollments WHERE workflow_id = $1 AND contact_id = $2',
+          `SELECT ${workflowEnrollmentColumns()} FROM workflow_enrollments WHERE workflow_id = $1 AND contact_id = $2`,
           [id, contact_id]
         );
 
@@ -485,7 +485,7 @@ module.exports = (pool, authenticateJWT) => {
              SET status = 'active', current_step = 1, enrolled_at = CURRENT_TIMESTAMP, 
                  trigger_data = $1, context = '{}', error_message = NULL, completed_at = NULL
              WHERE id = $2
-             RETURNING *`,
+             RETURNING ${workflowEnrollmentColumns()}`,
             [JSON.stringify(trigger_data || {}), enrollment.id]
           );
 
@@ -496,7 +496,7 @@ module.exports = (pool, authenticateJWT) => {
           `INSERT INTO workflow_enrollments 
             (workflow_id, contact_id, trigger_data, status, current_step)
           VALUES ($1, $2, $3, 'active', 1)
-          RETURNING *`,
+          RETURNING ${workflowEnrollmentColumns()}`,
           [id, contact_id, JSON.stringify(trigger_data || {})]
         );
 
@@ -541,8 +541,15 @@ module.exports = (pool, authenticateJWT) => {
       const result = await withDbClient(pool, async (client) => {
         let query = `
         SELECT 
-          we.*,
+          ${workflowEnrollmentColumns('we')},
           c.first_name, c.last_name, c.email, c.company
+        FROM workflow_enrollments we
+        JOIN contacts c ON we.contact_id = c.id
+        JOIN workflows w ON we.workflow_id = w.id
+        WHERE we.workflow_id = $1 AND w.organization_id = $2
+      `;
+        let countQuery = `
+        SELECT COUNT(*) as total
         FROM workflow_enrollments we
         JOIN contacts c ON we.contact_id = c.id
         JOIN workflows w ON we.workflow_id = w.id
@@ -553,12 +560,13 @@ module.exports = (pool, authenticateJWT) => {
 
         if (status) {
           query += ` AND we.status = $${paramIndex}`;
+          countQuery += ` AND we.status = $${paramIndex}`;
           params.push(status);
           paramIndex++;
         }
 
         const countResult = await client.query(
-          query.replace('SELECT \n          we.*,\n          c.first_name, c.last_name, c.email, c.company', 'SELECT COUNT(*) as total'),
+          countQuery,
           params
         );
         const total = parseInt(countResult.rows[0].total);
@@ -598,7 +606,7 @@ module.exports = (pool, authenticateJWT) => {
           `UPDATE workflow_enrollments 
            SET status = 'cancelled', completed_at = CURRENT_TIMESTAMP
            WHERE id = $1 AND workflow_id = $2
-           RETURNING *`,
+           RETURNING ${workflowEnrollmentColumns()}`,
           [enrollmentId, id]
         );
       });
@@ -646,7 +654,7 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const result = await withTransaction(pool, async (client) => {
         const originalWorkflow = await client.query(
-          'SELECT * FROM workflows WHERE id = $1 AND organization_id = $2',
+          `SELECT ${workflowColumns()} FROM workflows WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -657,7 +665,7 @@ module.exports = (pool, authenticateJWT) => {
         const workflow = originalWorkflow.rows[0];
 
         const originalSteps = await client.query(
-          'SELECT * FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order',
+          `SELECT ${workflowStepColumns()} FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order`,
           [id]
         );
 
@@ -665,7 +673,7 @@ module.exports = (pool, authenticateJWT) => {
           `INSERT INTO workflows 
             (organization_id, name, description, trigger_type, trigger_config, is_active, created_by)
           VALUES ($1, $2, $3, $4, $5, false, $6)
-          RETURNING *`,
+          RETURNING ${workflowColumns()}`,
           [
             req.organizationId,
             `${workflow.name} (Copy)`,
@@ -694,7 +702,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const stepsResult = await client.query(
-          'SELECT * FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order',
+          `SELECT ${workflowStepColumns()} FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order`,
           [newWorkflowId]
         );
 

@@ -10,6 +10,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 export default function VerifyEmail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -71,8 +76,8 @@ export default function VerifyEmail() {
         // Redirect to dashboard after a moment
         setTimeout(() => navigate('/dashboard'), 2000);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Verification failed. The link may be invalid or expired.');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Verification failed. The link may be invalid or expired.'));
     } finally {
       setVerifying(false);
     }
@@ -90,10 +95,10 @@ export default function VerifyEmail() {
         description: 'Please check your inbox.',
       });
       setResendCooldown(60); // 60 second cooldown
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: 'Failed to resend',
-        description: err.response?.data?.error || 'Please try again later.',
+        description: getApiErrorMessage(err, 'Please try again later.'),
         variant: 'destructive',
       });
     } finally {

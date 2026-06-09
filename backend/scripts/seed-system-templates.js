@@ -116,7 +116,7 @@ async function seedSystemTemplates() {
             let bodyHtml;
             try {
                 bodyHtml = fs.readFileSync(filePath, 'utf-8');
-            } catch (err) {
+            } catch {
                 console.log(`⚠ File not found: ${template.filePath}, skipping...`);
                 skipped++;
                 continue;

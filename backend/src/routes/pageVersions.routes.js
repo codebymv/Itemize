@@ -8,8 +8,14 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { withDbClient, withTransaction } = require('../utils/db');
 const { asyncHandler } = require('../middleware/errorHandler');
+const {
+    pageColumns,
+    pageSectionColumns,
+    pageVersionColumns,
+    PAGE_SECTION_UNNEST_COLUMNS
+} = require('./pages/columns');
 
-module.exports = (pool, authenticateJWT, requireOrganization) => {
+module.exports = (pool, authenticateJWT, _requireOrganization) => {
 
     /**
      * GET /api/pages/:id/versions - List all page versions
@@ -33,7 +39,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 // Get versions ordered by version number desc
                 const versionsResult = await client.query(`
                     SELECT 
-                        pv.*,
+                        ${pageVersionColumns('pv')},
                         u.name as created_by_name
                     FROM page_versions pv
                     LEFT JOIN users u ON pv.created_by = u.id
@@ -80,7 +86,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             const result = await withTransaction(pool, async (client) => {
                 // Verify page ownership
                 const pageResult = await client.query(
-                    'SELECT * FROM pages WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${pageColumns()} FROM pages WHERE id = $1 AND organization_id = $2`,
                     [id, organizationId]
                 );
 
@@ -99,7 +105,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
                 // Get current page content and sections
                 const sectionsResult = await client.query(
-                    'SELECT * FROM page_sections WHERE page_id = $1 ORDER BY section_order ASC',
+                    `SELECT ${pageSectionColumns()} FROM page_sections WHERE page_id = $1 ORDER BY section_order ASC`,
                     [id]
                 );
 
@@ -108,7 +114,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     INSERT INTO page_versions (
                         page_id, version_number, content, description, created_by
                     ) VALUES ($1, $2, $3, $4, $5)
-                    RETURNING *
+                    RETURNING ${pageVersionColumns()}
                 `, [
                     id,
                     versionNumber,
@@ -160,7 +166,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             const result = await withDbClient(pool, async (client) => {
                 const versionResult = await client.query(`
                     SELECT 
-                        pv.*,
+                        ${pageVersionColumns('pv')},
                         u.name as created_by_name
                     FROM page_versions pv
                     LEFT JOIN users u ON pv.created_by = u.id
@@ -221,7 +227,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
                 // Get version
                 const versionResult = await client.query(
-                    'SELECT * FROM page_versions WHERE id = $1 AND page_id = $2',
+                    `SELECT ${pageVersionColumns()} FROM page_versions WHERE id = $1 AND page_id = $2`,
                     [versionId, id]
                 );
 
@@ -252,9 +258,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                         INSERT INTO page_sections (
                             page_id, organization_id, section_type, name, content, settings, section_order
                         )
-                        SELECT * FROM UNNEST (
+                        SELECT ${PAGE_SECTION_UNNEST_COLUMNS} FROM UNNEST (
                             $1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::jsonb[], $6::jsonb[], $7::int[]
-                        )
+                        ) AS u(${PAGE_SECTION_UNNEST_COLUMNS})
                     `, [
                         content.sections.map(() => id),
                         content.sections.map(() => organizationId),
@@ -365,8 +371,6 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     return { status: 'not_found' };
                 }
 
-                const versionNumber = versionResult.rows[0].version_number;
-
                 // Get next version number (for the restored version)
                 const nextVersionResult = await client.query(
                     'SELECT COALESCE(MAX(version_number), 0) + 1 as next_version FROM page_versions WHERE page_id = $1',
@@ -379,7 +383,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     INSERT INTO page_versions (page_id, version_number, content, description, created_by)
                     SELECT $1, $2, content, 'Restored from version ' || $3, (SELECT created_by FROM page_versions WHERE id = $3)
                     FROM page_versions WHERE id = $3
-                    RETURNING *
+                    RETURNING ${pageVersionColumns()}
                 `, [id, nextVersion, versionId]);
 
                 return { status: 'ok', version: cloneResult.rows[0] };

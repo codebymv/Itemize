@@ -15,6 +15,9 @@ const PLAN_ICONS = {
     pro: Building2,
 };
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error ? error.message : fallback;
+
 export function SubscriptionStatus() {
     const { subscription, planName, isLoading } = useSubscriptionState();
     const { openBillingPortal } = useSubscriptionFeatures();
@@ -61,10 +64,10 @@ export function SubscriptionStatus() {
     const handleManageSubscription = async () => {
         try {
             await openBillingPortal();
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to open billing portal',
+                description: getErrorMessage(error, 'Failed to open billing portal'),
                 variant: 'destructive',
             });
         }

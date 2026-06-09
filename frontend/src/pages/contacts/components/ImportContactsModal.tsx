@@ -43,6 +43,14 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const getApiErrorMessage = (err: unknown): string => {
+        if (err && typeof err === 'object') {
+            const maybeApiError = err as { response?: { data?: { error?: string } }; message?: string };
+            return maybeApiError.response?.data?.error || maybeApiError.message || 'Failed to import contacts. Please try again.';
+        }
+        return 'Failed to import contacts. Please try again.';
+    };
+
     // Parse CSV string to array of objects
     const parseCSV = useCallback((csvText: string): ImportContactData[] => {
         const lines = csvText.trim().split('\n');
@@ -114,7 +122,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
             headers.forEach((header, index) => {
                 const mappedField = headerMap[header];
                 if (mappedField && values[index]) {
-                    (row as any)[mappedField] = values[index].replace(/^["']|["']$/g, '');
+                    row[mappedField] = values[index].replace(/^["']|["']$/g, '');
                 }
             });
 
@@ -175,8 +183,8 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
                 });
                 onImported();
             }
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to import contacts. Please try again.');
+        } catch (err: unknown) {
+            setError(getApiErrorMessage(err));
             setStep('preview');
         }
     };
@@ -198,7 +206,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
             dataTransfer.items.add(file);
             if (fileInputRef.current) {
                 fileInputRef.current.files = dataTransfer.files;
-                handleFileSelect({ target: { files: dataTransfer.files } } as any);
+                handleFileSelect({ target: { files: dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
             }
         }
     };

@@ -7,9 +7,6 @@ const Stripe = require('stripe');
 const { logger } = require('../utils/logger');
 const {
     PLANS,
-    PLAN_PRICING,
-    STRIPE_PRICE_TO_PLAN,
-    PLAN_TO_STRIPE_PRICES,
     PLAN_TIER_ORDER,
     EMAIL_LIMITS,
     SMS_LIMITS,

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthActions } from '@/contexts/AuthContext';
+import { AuthError, useAuthActions } from '@/contexts/AuthContext';
 import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -30,7 +30,7 @@ export default function Login() {
     : 'bg-gradient-to-br from-slate-900 to-slate-800';
 
   // Get redirect path from location state
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
 
   // Check if redirected due to session expiration
   const sessionExpired = searchParams.get('session') === 'expired';
@@ -57,9 +57,9 @@ export default function Login() {
         description: 'You have been logged in successfully.',
       });
       navigate(from, { replace: true });
-    } catch (error: any) {
+    } catch (error) {
       // Handle email not verified
-      if (error.code === 'EMAIL_NOT_VERIFIED') {
+      if (error instanceof AuthError && error.code === 'EMAIL_NOT_VERIFIED') {
         toast({
           title: 'Email not verified',
           description: 'Please check your email and verify your account.',
@@ -70,7 +70,7 @@ export default function Login() {
       }
       
       // Handle Google account
-      if (error.code === 'GOOGLE_ACCOUNT') {
+      if (error instanceof AuthError && error.code === 'GOOGLE_ACCOUNT') {
         toast({
           title: 'Google account',
           description: 'This account uses Google sign-in. Please use the Google button below.',
@@ -81,7 +81,7 @@ export default function Login() {
 
       toast({
         title: 'Login failed',
-        description: error.message || 'Invalid email or password.',
+        description: error instanceof Error ? error.message : 'Invalid email or password.',
         variant: 'destructive',
       });
     } finally {

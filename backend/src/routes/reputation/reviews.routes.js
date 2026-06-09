@@ -1,6 +1,7 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
+const { REVIEW_COLUMNS } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization, getSentiment }) => {
     const router = express.Router();
@@ -57,7 +58,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization, getSentiment }) 
                 );
 
                 const result = await client.query(`
-                    SELECT r.*, rp.platform_name,
+                    SELECT ${REVIEW_COLUMNS.split(', ').map(column => `r.${column}`).join(', ')},
+                           rp.platform_name,
                            c.first_name as contact_first_name, c.last_name as contact_last_name
                     FROM reviews r
                     LEFT JOIN review_platforms rp ON r.platform_id = rp.id
@@ -92,7 +94,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization, getSentiment }) 
         try {
             const { id } = req.params;
             const result = await withDbClient(pool, async (client) => client.query(`
-                SELECT r.*, rp.platform_name, rp.review_url,
+                SELECT ${REVIEW_COLUMNS.split(', ').map(column => `r.${column}`).join(', ')},
+                       rp.platform_name, rp.review_url,
                        c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email
                 FROM reviews r
                 LEFT JOIN review_platforms rp ON r.platform_id = rp.id
@@ -138,7 +141,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization, getSentiment }) 
                     reviewer_name, reviewer_email, reviewer_phone, contact_id,
                     sentiment, source, review_date
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', $11)
-                RETURNING *
+                RETURNING ${REVIEW_COLUMNS}
             `, [
                 req.organizationId,
                 platform_id || null,
@@ -204,7 +207,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization, getSentiment }) 
             const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE reviews SET ${updates.join(', ')}
                 WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
-                RETURNING *
+                RETURNING ${REVIEW_COLUMNS}
             `, params));
 
             if (result.rows.length === 0) {

@@ -4,6 +4,7 @@ const { sendError } = require('../../utils/response');
 const crypto = require('crypto');
 const emailService = require('../../services/emailService');
 const smsService = require('../../services/smsService');
+const { REVIEW_REQUEST_COLUMNS } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -36,7 +37,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 );
 
                 const result = await client.query(`
-                    SELECT rr.*, c.first_name, c.last_name, c.email
+                    SELECT ${REVIEW_REQUEST_COLUMNS.split(', ').map(column => `rr.${column}`).join(', ')},
+                           c.first_name, c.last_name, c.email
                     FROM review_requests rr
                     LEFT JOIN contacts c ON rr.contact_id = c.id
                     ${whereClause}
@@ -128,7 +130,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         channel, custom_message, preferred_platform, redirect_url,
                         scheduled_at, unique_token, status
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                    RETURNING *
+                    RETURNING ${REVIEW_REQUEST_COLUMNS}
                 `, [
                     req.organizationId,
                     contact_id || null,
@@ -150,8 +152,6 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 if (!scheduled_at) {
                     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
                     const reviewLink = `${frontendUrl}/review/${uniqueToken}`;
-                    const orgName = req.organization?.name || 'us'; // Fallback if org name not in req, but we should probably fetch it if not present. Let's do a quick query for org name.
-
                     const orgResult = await client.query('SELECT name FROM organizations WHERE id = $1', [req.organizationId]);
                     const organizationName = orgResult.rows[0]?.name || 'our business';
 
@@ -227,15 +227,13 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
             const request = await withDbClient(pool, async (client) => {
                 // Get existing request
                 const result = await client.query(
-                    'SELECT * FROM review_requests WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${REVIEW_REQUEST_COLUMNS} FROM review_requests WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
                 if (result.rows.length === 0) {
                     return null;
                 }
-
-                const existingRequest = result.rows[0];
 
                 // Update request
                 const updatedResult = await client.query(`
@@ -247,7 +245,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         sms_sent_at = CASE WHEN channel IN ('sms', 'both') THEN CURRENT_TIMESTAMP ELSE sms_sent_at END,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $1
-                    RETURNING *
+                    RETURNING ${REVIEW_REQUEST_COLUMNS}
                 `, [id]);
 
                 const requestData = updatedResult.rows[0];

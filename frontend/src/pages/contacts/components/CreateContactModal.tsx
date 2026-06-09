@@ -27,6 +27,11 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { createContactFormSchema, type CreateContactFormValues } from '@/lib/formSchemas';
 import logger from '@/lib/logger';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 interface CreateContactModalProps {
   organizationId: number;
   onClose: () => void;
@@ -69,11 +74,11 @@ export function CreateContactModal({
       const contact = await doCreate(contactData);
       onCreated(contact);
       form.reset();
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error creating contact:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create contact',
+        description: getApiErrorMessage(error, 'Failed to create contact'),
         variant: 'destructive',
       });
     } finally {

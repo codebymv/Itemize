@@ -22,7 +22,7 @@ interface UseVaultCardLogicProps {
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   updateCategory?: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
 }
 
 export const useVaultCardLogic = ({ 

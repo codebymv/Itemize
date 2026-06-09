@@ -137,7 +137,7 @@ export const useBusinessManagement = (): UseBusinessManagementReturn => {
               URL.revokeObjectURL(businessFormData.logo_url);
             }
             toast({ title: 'Created', description: 'Business created with logo successfully' });
-          } catch (logoError: any) {
+          } catch {
             if (businessFormData.logo_url?.startsWith('blob:')) {
               URL.revokeObjectURL(businessFormData.logo_url);
             }

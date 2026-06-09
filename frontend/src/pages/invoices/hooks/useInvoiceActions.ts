@@ -14,6 +14,14 @@ import type { SendOptions } from '../components/SendInvoiceModal';
 import type { RecurringOptions } from '../components/MakeRecurringModal';
 import type { PaymentData } from '../components/RecordPaymentModal';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (error && typeof error === 'object') {
+    const maybeApiError = error as { response?: { data?: { error?: string } }; message?: string };
+    return maybeApiError.response?.data?.error || maybeApiError.message || fallback;
+  }
+  return fallback;
+};
+
 export interface InvoiceActions {
   handleOpenSendModal: (invoice: Invoice, setStates: (invoice: Invoice) => void) => Promise<void>;
   handleSendInvoice: (options: SendOptions, selectedInvoice: Invoice, isResend: boolean, setStates: () => void) => Promise<void>;
@@ -25,7 +33,7 @@ export interface InvoiceActions {
   generatePaymentLink: (invoiceId: number, organizationId: number) => Promise<{ url: string }>;
   handleDeleteClick: (invoice: Invoice, setInvoiceToDelete: (invoice: Invoice) => void, setDeleteDialogOpen: (open: boolean) => void) => void;
   confirmDelete: (invoice: Invoice, organizationId: number, setStates: () => void) => Promise<void>;
-  handleToggleExpand: (invoiceId: number, organizationId: number, setExpandedInvoiceId: (id: number | null) => void, setExpandedInvoiceData: (data: any) => void, setLoadingPreview: (loading: boolean) => void) => Promise<void>;
+  handleToggleExpand: (invoiceId: number, organizationId: number, setExpandedInvoiceId: (id: number | null) => void, setExpandedInvoiceData: (data: Invoice | null) => void, setLoadingPreview: (loading: boolean) => void) => Promise<void>;
 }
 
 export function useInvoiceActions(organizationId: number | null | undefined, fetchInvoices: () => void) {
@@ -64,8 +72,8 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
       }
        
       fetchInvoices();
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || 'Failed to send invoice';
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Failed to send invoice');
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     }
   }, [organizationId, toast, fetchInvoices]);
@@ -101,8 +109,8 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
        
       fetchInvoices();
       navigate('/recurring-invoices');
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || 'Failed to create recurring template';
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Failed to create recurring template');
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     }
   }, [organizationId, toast, fetchInvoices, navigate]);
@@ -136,8 +144,8 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
       setStates();
        
       fetchInvoices();
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || 'Failed to record payment';
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Failed to record payment');
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     }
   }, [organizationId, toast, fetchInvoices]);
@@ -179,7 +187,7 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
     }
   }, [toast, fetchInvoices]);
 
-  const handleToggleExpand = useCallback(async (invoiceId: number, orgId: number, setExpandedInvoiceId: (id: number | null) => void, setExpandedInvoiceData: (data: any) => void, setLoadingPreview: (loading: boolean) => void, currentExpandedId: number | null) => {
+  const handleToggleExpand = useCallback(async (invoiceId: number, orgId: number, setExpandedInvoiceId: (id: number | null) => void, setExpandedInvoiceData: (data: Invoice | null) => void, setLoadingPreview: (loading: boolean) => void, currentExpandedId: number | null) => {
     if (currentExpandedId === invoiceId) {
       setExpandedInvoiceId(null);
       setExpandedInvoiceData(null);

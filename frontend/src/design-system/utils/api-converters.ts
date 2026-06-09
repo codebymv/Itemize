@@ -4,6 +4,77 @@ import type { SignatureDocument as Signature } from '@/services/signaturesApi'
 import type { ClientProfile } from '../types/client.types'
 import type { Activity } from '../types/activity.types'
 
+interface ApiPayment {
+  id: string | number
+  invoice_id?: string | number
+  invoice_number?: string
+  amount?: number
+  date: string
+  method?: string
+}
+
+interface ApiCommunication {
+  id: string | number
+  type: 'email' | 'sms' | 'note' | 'call'
+  direction?: 'inbound' | 'outbound'
+  subject?: string
+  content?: string
+  date: string
+}
+
+interface ApiTask {
+  id: string | number
+  title: string
+  status: 'pending' | 'in_progress' | 'completed'
+  due_date?: string
+}
+
+interface ApiBooking {
+  id: string | number
+  title: string
+  date: string
+  duration?: number
+  status?: 'confirmed' | 'pending' | 'cancelled' | 'completed'
+}
+
+interface ApiNote {
+  id: string | number
+  title?: string
+  content?: string
+  category?: string
+  created_at: string
+}
+
+interface ApiList {
+  id: string | number
+  title?: string
+  category?: string
+}
+
+interface ApiActivity {
+  id?: string | number
+  type?: Activity['type'] | string
+  title?: string
+  description?: string
+  content?: string
+  created_at?: string
+  actor_id?: string
+  actor_name?: string
+  target_id?: string | number
+  target_name?: string
+  target_url?: string
+}
+
+interface ApiSearchResult {
+  id?: string | number
+  type: string
+  title?: string
+  name?: string
+  description?: string
+  subtitle?: string
+  url?: string
+}
+
 /**
  * Transforms API response to design system ClientProfile format
  */
@@ -11,13 +82,13 @@ export function transformApiToClientProfile(apiData: {
   contact: Contact
   invoices?: Invoice[]
   signatures?: Signature[]
-  payments?: any[]
-  communications?: any[]
-  tasks?: any[]
-  bookings?: any[]
-  notes?: any[]
-  lists?: any[]
-  activities?: any[]
+  payments?: ApiPayment[]
+  communications?: ApiCommunication[]
+  tasks?: ApiTask[]
+  bookings?: ApiBooking[]
+  notes?: ApiNote[]
+  lists?: ApiList[]
+  activities?: ApiActivity[]
 }): ClientProfile {
   const { contact, invoices = [], signatures = [], payments = [], communications = [], tasks = [], bookings = [], notes = [], lists = [], activities = [] } = apiData
 
@@ -98,7 +169,7 @@ export function transformApiToClientProfile(apiData: {
 
     timeline: (activities || []).map((activity) => ({
       id: activity.id.toString(),
-      type: activity.type,
+      type: (activity.type as Activity['type']) || 'created',
       itemType: inferItemType(activity),
       title: activity.title,
       description: activity.description,
@@ -115,10 +186,10 @@ export function transformApiToClientProfile(apiData: {
 /**
  * Transforms API activity to design system Activity format
  */
-export function transformApiActivity(apiActivity: any) {
+export function transformApiActivity(apiActivity: ApiActivity) {
   return {
     id: apiActivity.id?.toString() || Math.random().toString(36),
-    type: apiActivity.type || 'created',
+    type: (apiActivity.type as Activity['type']) || 'created',
     itemType: inferItemType(apiActivity),
     title: apiActivity.title || 'Activity',
     description: apiActivity.content,
@@ -141,7 +212,7 @@ export function transformApiActivity(apiActivity: any) {
 /**
  * Transforms API search result to design system SearchResult format
  */
-export function transformApiSearchResult(apiResult: any) {
+export function transformApiSearchResult(apiResult: ApiSearchResult) {
   return {
     id: apiResult.id?.toString() || Math.random().toString(36),
     type: apiResult.type,
@@ -162,7 +233,7 @@ function normalizeSignatureStatus(status: Signature['status'] | undefined) {
   return status || 'draft'
 }
 
-function inferItemType(activity: any): Activity['itemType'] {
+function inferItemType(activity: ApiActivity): Activity['itemType'] {
   const title = activity.title?.toLowerCase() || ''
   const type = activity.type?.toLowerCase() || ''
 

@@ -22,10 +22,11 @@ export function useCanvasPositionSync() {
     try {
       // Cookies are sent automatically by axios
       await apiUpdateCanvasPositions(pendingUpdates);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to update canvas positions:', error);
 
-      if (error?.response?.status === 429) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 429) {
         pendingUpdates.forEach(update => {
           positionUpdateQueueRef.current.set(`${update.type}:${update.id}`, update);
         });

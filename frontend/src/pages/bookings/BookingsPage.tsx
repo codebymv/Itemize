@@ -34,6 +34,17 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
+const BOOKING_STATUSES: Array<NonNullable<BookingsQueryParams['status']>> = [
+    'pending',
+    'confirmed',
+    'cancelled',
+    'completed',
+    'no_show',
+];
+
+const isBookingStatus = (value: string): value is NonNullable<BookingsQueryParams['status']> =>
+    BOOKING_STATUSES.includes(value as NonNullable<BookingsQueryParams['status']>);
+
 export function BookingsPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
@@ -121,8 +132,8 @@ export function BookingsPage() {
                 page: pagination.page,
                 limit: pagination.limit,
             };
-            if (statusFilter && statusFilter !== 'all') {
-                params.status = statusFilter as any;
+            if (statusFilter && statusFilter !== 'all' && isBookingStatus(statusFilter)) {
+                params.status = statusFilter;
             }
             const response = await getBookings(params);
             setBookings(response.bookings);

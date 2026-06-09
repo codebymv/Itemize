@@ -31,6 +31,7 @@ import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import type { ReviewRequest as ApiReviewRequest } from '@/services/reputationApi';
 
 interface ReviewRequest {
     id: number;
@@ -45,6 +46,20 @@ interface ReviewRequest {
     completed_at?: string;
     created_at: string;
 }
+
+const REVIEW_REQUEST_STATUSES: Array<ApiReviewRequest['status'] | 'all'> = [
+    'all',
+    'pending',
+    'sent',
+    'opened',
+    'clicked',
+    'completed',
+    'failed',
+    'unsubscribed',
+];
+
+const isReviewRequestStatus = (value: string): value is ApiReviewRequest['status'] =>
+    REVIEW_REQUEST_STATUSES.includes(value as ApiReviewRequest['status']);
 
 export function ReputationRequestsPage() {
     const { toast } = useToast();
@@ -126,7 +141,7 @@ export function ReputationRequestsPage() {
         setLoading(true);
         try {
             const response = await getReviewRequests(
-                { status: statusFilter !== 'all' ? statusFilter as any : undefined },
+                { status: statusFilter !== 'all' && isReviewRequestStatus(statusFilter) ? statusFilter : undefined },
                 organizationId
             );
             setRequests((response.requests || []).map((request) => ({
@@ -139,7 +154,7 @@ export function ReputationRequestsPage() {
                 status: request.status,
                 sent_at: request.email_sent_at || request.sms_sent_at,
                 clicked_at: request.clicked_at,
-                completed_at: (request as any).completed_at,
+                completed_at: request.review_submitted_at,
                 created_at: request.created_at,
             })));
         } catch (error) {

@@ -224,23 +224,17 @@ router.post('/:workflowId', validate(webhookEvent), async (req, res) => {
 async function executeSendInvoice(action, data) {
   // contract → auto-create invoice
   // data contains: contractId, amount, etc.
-  const { contractId, amount, contactId, email } = data;
+  const { contractId, amount } = data;
   
   logger.info('Executing send_invoice action', { contractId, amount });
-  
-  // Create invoice from contract
-  const invoiceQuery = `
-    INSERT INTO invoices (contact_id, total, amount, due_date, created_at)
-    VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_TIMESTAMP)
-    RETURNING id, invoice_number
-  `;
+
   // This would need the invoices table to have proper columns
   // Execute when ready
 }
 
 async function executeUpdateDeal(action, data) {
   // Auto-update deal to "Won" when invoice paid
-  const { dealId, status = 'Won', stage = 'Won', contactId } = data;
+  const { dealId, status = 'Won' } = data;
   
   logger.info('Executing update_deal action', { dealId, status });
   
@@ -250,7 +244,7 @@ async function executeUpdateDeal(action, data) {
 
 async function executeSendEmail(action, data) {
   // Send email via email service
-  const { templateId, to, variables } = data;
+  const { templateId, to } = data;
   
   logger.info('Executing send_email action', { templateId, to });
   
@@ -279,7 +273,7 @@ async function executeSendReviewRequest(action, data) {
 
 async function executeCreateTask(action, data) {
   // Create task in task management
-  const { taskTitle, assignedTo, dueDate } = data;
+  const { taskTitle, assignedTo } = data;
   
   logger.info('Executing create_task action', { taskTitle, assignedTo });
   

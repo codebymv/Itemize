@@ -15,10 +15,10 @@ import { useTheme } from 'next-themes';
 
 interface WhiteboardCanvasProps {
   whiteboard: Whiteboard;
-  onCanvasChange: (canvasData: any) => void;
-  onSave: (data: { canvas_data: any; updated_at: string }) => void;
+  onCanvasChange: (canvasData: unknown) => void;
+  onSave: (data: { canvas_data: unknown; updated_at: string }) => void;
   whiteboardColor: string;
-  onAutoSave: (canvasData: any) => Promise<void>;
+  onAutoSave: (canvasData: unknown) => Promise<void>;
   isMobile?: boolean;
   onScaledHeightChange?: (height: number) => void;
   updatedAt?: string;
@@ -38,6 +38,19 @@ const COLOR_PALETTE = [
   '#800080', // Purple
   '#A52A2A', // Brown
 ];
+
+type SketchPoint = { x: number; y: number };
+type SketchPathRecord = {
+  drawMode?: unknown;
+  strokeColor?: unknown;
+  strokeWidth?: unknown;
+  paths?: unknown;
+  path?: unknown;
+};
+
+const hasPaths = (value: unknown): value is { paths: unknown } => {
+  return !!value && typeof value === 'object' && 'paths' in value;
+};
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   whiteboard,
@@ -68,7 +81,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [lastSaveTime, setLastSaveTime] = useState<number>(0);
   const [isCanvasLoaded, setIsCanvasLoaded] = useState(false);
-  const [lastLoadedData, setLastLoadedData] = useState<any[]>([]);
+  const [lastLoadedData, setLastLoadedData] = useState<unknown[]>([]);
   const [canvasLoadTime, setCanvasLoadTime] = useState<number>(0);
   const [isIntentionalClear, setIsIntentionalClear] = useState(false);
 
@@ -113,7 +126,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         });
         
         // Validate canvas data format - should be an array of CanvasPath objects
-        let dataToLoad: any = whiteboard.canvas_data;
+        let dataToLoad: unknown = whiteboard.canvas_data;
         
         // Handle different data formats from database
         if (typeof dataToLoad === 'string') {
@@ -121,7 +134,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             const parsed = JSON.parse(dataToLoad);
             if (Array.isArray(parsed)) {
               dataToLoad = parsed;
-            } else if (parsed && typeof parsed === 'object' && parsed.paths) {
+            } else if (hasPaths(parsed)) {
               dataToLoad = parsed.paths;
             } else {
               throw new Error('Invalid parsed format');
@@ -133,7 +146,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             
             
           }
-        } else if (dataToLoad && typeof dataToLoad === 'object' && dataToLoad.paths) {
+        } else if (hasPaths(dataToLoad)) {
           // Object format with paths property from backend
           logger.log('🎨 Data is in object format with paths, extracting array');
           dataToLoad = dataToLoad.paths;
@@ -160,16 +173,20 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         }
         
         // If we have data but it's missing required metadata, reconstruct it
-        if (dataToLoad.length > 0) {
-          const firstPath = dataToLoad[0];
+        if (Array.isArray(dataToLoad) && dataToLoad.length > 0) {
+          const firstPath = dataToLoad[0] as SketchPathRecord;
           if (!firstPath.drawMode || !firstPath.strokeColor || !firstPath.strokeWidth) {
             logger.log('🎨 Reconstructing missing metadata for canvas paths');
-            dataToLoad = dataToLoad.map((pathData: any, index: number) => ({
+            dataToLoad = dataToLoad.map((pathData) => {
+              const path = pathData as SketchPathRecord;
+              const paths = Array.isArray(path.paths) ? path.paths : (Array.isArray(path.path) ? path.path : []);
+              return {
               drawMode: true,
-              strokeColor: pathData.strokeColor || '#2563eb', // Default to theme blue
-              strokeWidth: pathData.strokeWidth || 2,
-              paths: pathData.paths || pathData || []
-            }));
+              strokeColor: typeof path.strokeColor === 'string' ? path.strokeColor : '#2563eb',
+              strokeWidth: typeof path.strokeWidth === 'number' ? path.strokeWidth : 2,
+              paths
+              };
+            });
           }
         }
         
@@ -322,7 +339,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Debounced auto-save function (reduced delay for faster saves)
   const debouncedAutoSave = useCallback(
-    debounce(async (canvasData: any[], whiteboardId: number) => {
+    debounce(async (canvasData: unknown[], whiteboardId: number) => {
       try {
         // Validate canvas data before saving
         if (!Array.isArray(canvasData)) {
@@ -338,20 +355,21 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           // or problematic nested objects that might cause JSON serialization issues
           sanitizedCanvasData = canvasData.map(path => {
             if (typeof path === 'object' && path !== null) {
+              const pathRecord = path as SketchPathRecord;
               // Create a clean object with only the essential properties
               const cleanPath = {
-                drawMode: path.drawMode || true,
-                strokeColor: typeof path.strokeColor === 'string' ? path.strokeColor : '#2563eb',
-                strokeWidth: typeof path.strokeWidth === 'number' ? path.strokeWidth : 2,
-                paths: Array.isArray(path.paths) ? path.paths : (Array.isArray(path.path) ? path.path : [])
+                drawMode: pathRecord.drawMode || true,
+                strokeColor: typeof pathRecord.strokeColor === 'string' ? pathRecord.strokeColor : '#2563eb',
+                strokeWidth: typeof pathRecord.strokeWidth === 'number' ? pathRecord.strokeWidth : 2,
+                paths: Array.isArray(pathRecord.paths) ? pathRecord.paths : (Array.isArray(pathRecord.path) ? pathRecord.path : [])
               };
               
               // Ensure paths array contains only valid coordinate objects
               if (Array.isArray(cleanPath.paths)) {
-                cleanPath.paths = cleanPath.paths.filter(point => 
-                  point && typeof point === 'object' && 
-                  typeof point.x === 'number' && 
-                  typeof point.y === 'number'
+                cleanPath.paths = cleanPath.paths.filter((point): point is SketchPoint =>
+                  point && typeof point === 'object' &&
+                  typeof (point as Partial<SketchPoint>).x === 'number' &&
+                  typeof (point as Partial<SketchPoint>).y === 'number'
                 );
               }
               

@@ -6,7 +6,7 @@ export interface SearchResult {
   url: string
   icon?: string
   metadata?: {
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 

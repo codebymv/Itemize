@@ -24,6 +24,14 @@ import { HeaderContext } from '@/contexts/HeaderContext';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  if (responseData?.error || responseData?.message) {
+    return responseData.error || responseData.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+};
+
 interface ServerMemory {
 // ... preserving types
   used: string;
@@ -89,8 +97,8 @@ const StatusPage: React.FC = () => {
       }
       setStatusData(response.data);
       setLastUpdated(new Date());
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch status');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to fetch status'));
       setStatusData(null);
     } finally {
       setLoading(false);

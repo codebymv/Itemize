@@ -21,7 +21,7 @@ try {
     if (process.env.STRIPE_SECRET_KEY) {
         stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     }
-} catch (e) {
+} catch {
     logger.info('Stripe not configured - payment features limited');
 }
 

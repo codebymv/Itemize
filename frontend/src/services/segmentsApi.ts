@@ -3,8 +3,9 @@
  * Handles segment CRUD and dynamic filtering
  */
 import api from '@/lib/api';
+import type { Contact } from '@/types';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -18,7 +19,7 @@ const unwrapResponse = <T>(payload: any): T => {
 export interface SegmentFilter {
     field: string;
     operator: string;
-    value: any;
+    value: string | number | boolean | number[] | null;
     custom_field_key?: string;
 }
 
@@ -177,12 +178,12 @@ export const getSegmentContacts = async (
     segmentId: number,
     params: { page?: number; limit?: number } = {},
     organizationId?: number
-): Promise<{ contacts: any[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+): Promise<{ contacts: Contact[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
     const response = await api.get(`/api/segments/${segmentId}/contacts`, {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return unwrapResponse<{ contacts: any[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
+    return unwrapResponse<{ contacts: Contact[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
 };
 
 /**

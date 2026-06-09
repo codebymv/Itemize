@@ -206,8 +206,8 @@ export default function SignatureTemplateEditorPage() {
             </CardHeader>
             <CardContent>
               <FieldPlacementCanvas
-                fields={fields as any}
-                onChange={(next) => setFields(next as SignatureTemplateField[])}
+                fields={fields}
+                onChange={setFields}
                 fileUrl={template?.file_url || ''}
                 roles={roleNames}
               />

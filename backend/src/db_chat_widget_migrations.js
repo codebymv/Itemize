@@ -212,7 +212,7 @@ async function addChatChannelToConversations(pool) {
     const client = await pool.connect();
     try {
         // Check if 'chat' is already in the channel constraint
-        const result = await client.query(`
+        await client.query(`
             SELECT constraint_name 
             FROM information_schema.constraint_column_usage 
             WHERE table_name = 'conversations' AND constraint_name LIKE '%channel%'
@@ -231,7 +231,7 @@ async function addChatChannelToConversations(pool) {
                 CHECK (channel IN ('email', 'sms', 'internal', 'chat', 'whatsapp', 'facebook', 'instagram'))
             `);
             console.log('✅ Added chat channel to conversations');
-        } catch (e) {
+        } catch {
             // Constraint might not exist or different structure - that's okay
             console.log('ℹ️ Channel constraint update skipped (may already be flexible)');
         }

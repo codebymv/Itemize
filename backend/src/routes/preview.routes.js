@@ -8,6 +8,7 @@ const router = express.Router();
 const { logger } = require('../utils/logger');
 const { withDbClient } = require('../utils/db');
 const publicRateLimit = require('express-rate-limit');
+const { pageVersionColumns } = require('./pages/columns');
 
 const previewRateLimit = publicRateLimit({
     windowMs: 15 * 60 * 1000,
@@ -26,7 +27,7 @@ module.exports = (pool) => {
         try {
             const result = await withDbClient(pool, async (client) => {
                 const versionResult = await client.query(`
-                    SELECT pv.*, p.organization_id, o.name as organization_name
+                    SELECT ${pageVersionColumns('pv')}, p.organization_id, o.name as organization_name
                     FROM page_versions pv
                     JOIN pages p ON pv.page_id = p.id
                     JOIN organizations o ON p.organization_id = o.id

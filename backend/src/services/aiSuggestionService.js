@@ -146,20 +146,6 @@ class AISuggestionService {
    * Create a prompt for note content suggestions
    */
   createNotePrompt(content) {
-    // Analyze content to determine context
-    const contentLower = content.toLowerCase();
-    const contentLength = content.length;
-    
-    // Determine what type of suggestion would be most helpful
-    let suggestionType = 'continuation';
-    if (contentLength < 100) {
-      suggestionType = 'expansion';
-    } else if (content.includes('?') || contentLower.includes('how') || contentLower.includes('what') || contentLower.includes('why')) {
-      suggestionType = 'answer';
-    } else if (content.includes('TODO') || content.includes('- [ ]') || contentLower.includes('need to') || contentLower.includes('should')) {
-      suggestionType = 'action';
-    }
-
     return `
       Based on this note content, suggest a helpful continuation or addition that would naturally flow from what's already written:
       
@@ -276,7 +262,7 @@ class AISuggestionService {
     const lowerItems = existingItems.map(item => item.toLowerCase());
     
     switch(listType) {
-      case 'grocery shopping':
+      case 'grocery shopping': {
         let groceryContext = 'This is a grocery shopping list. Think about different categories:';
         
         // Check if the list has certain types of items to provide more specific context
@@ -304,6 +290,7 @@ class AISuggestionService {
         groceryContext += '\nAlso consider condiments, spices, and other items that complete meals like salsa, ketchup, olive oil, etc.';
         
         return groceryContext;
+      }
         
 case 'todo':
         return 'This is a task list. Suggest practical tasks that might complement the existing ones. Include both quick tasks and more substantial ones. Consider different categories like household maintenance, personal errands, financial tasks, health-related activities, etc.';

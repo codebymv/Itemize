@@ -9,9 +9,6 @@ const CSRF_TOKEN_LENGTH = 32;
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_COOKIE_NAME = 'csrf-token';
 
-// Token cache per session (alternatively, use Redis for distributed systems)
-const tokenStore = new Map();
-
 /**
  * Generate a cryptographically secure CSRF token
  */

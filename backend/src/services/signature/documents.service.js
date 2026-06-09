@@ -10,6 +10,12 @@ const {
     getS3KeyFromUrl,
     getUploadedFileUrl
 } = require('./storage');
+const {
+    signatureDocumentColumns,
+    signatureRecipientColumns,
+    signatureFieldColumns,
+    signatureAuditLogColumns
+} = require('./columns');
 
 async function createDocument(pool, organizationId, userId, data) {
     return withDbClient(pool, async (client) => {
@@ -31,7 +37,7 @@ async function createDocument(pool, organizationId, userId, data) {
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
             )
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [
             organizationId,
             data.title,
@@ -68,7 +74,7 @@ async function updateDocument(pool, organizationId, documentId, data) {
                 routing_mode = COALESCE($10, routing_mode),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $11 AND organization_id = $12
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [
             data.title || null,
             data.document_number || null,
@@ -109,7 +115,7 @@ async function uploadDocument(pool, organizationId, documentId, file) {
                 original_sha256 = $5,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $6 AND organization_id = $7
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [
             fileUrl,
             file.originalname || file.filename || 'document.pdf',
@@ -184,7 +190,7 @@ async function removeDocumentFile(pool, organizationId, documentId) {
                 signed_sha256 = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $1 AND organization_id = $2
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [documentId, organizationId]);
 
         await client.query(`
@@ -241,7 +247,7 @@ async function deleteDocumentFile(pool, organizationId, documentId) {
                 original_sha256 = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $1 AND organization_id = $2
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [documentId, organizationId]);
 
         return updated.rows[0] || null;
@@ -285,7 +291,7 @@ async function deleteDocument(pool, organizationId, documentId) {
         await client.query('DELETE FROM signature_reminders WHERE document_id = $1', [documentId]);
 
         const deleted = await client.query(
-            'DELETE FROM signature_documents WHERE id = $1 AND organization_id = $2 RETURNING *',
+            `DELETE FROM signature_documents WHERE id = $1 AND organization_id = $2 RETURNING ${signatureDocumentColumns()}`,
             [documentId, organizationId]
         );
 
@@ -314,7 +320,7 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
                     role_name,
                     routing_status
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                RETURNING *
+                RETURNING ${signatureRecipientColumns()}
             `, [
                 documentId,
                 organizationId,
@@ -344,7 +350,7 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
                 UPDATE signature_fields
                 SET recipient_id = update_data.recipient_id
                 FROM (
-                    SELECT unnest($1::text[]) AS role_name, unnest($2::uuid[]) AS recipient_id
+                    SELECT unnest($1::text[]) AS role_name, unnest($2::int[]) AS recipient_id
                 ) AS update_data
                 WHERE signature_fields.document_id = $3
                   AND signature_fields.role_name = update_data.role_name
@@ -406,12 +412,20 @@ async function replaceFields(pool, documentId, fields) {
                     x_position, y_position, width, height, label,
                     is_required, value, font_size, font_family, text_align, locked
                 )
-                SELECT * FROM UNNEST (
-                    $1::uuid[], $2::uuid[], $3::text[], $4::text[], $5::int[],
+                SELECT
+                    u.document_id, u.recipient_id, u.role_name, u.field_type, u.page_number,
+                    u.x_position, u.y_position, u.width, u.height, u.label,
+                    u.is_required, u.value, u.font_size, u.font_family, u.text_align, u.locked
+                FROM UNNEST (
+                    $1::int[], $2::int[], $3::text[], $4::text[], $5::int[],
                     $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::text[],
                     $11::boolean[], $12::text[], $13::int[], $14::text[], $15::text[], $16::boolean[]
+                ) AS u(
+                    document_id, recipient_id, role_name, field_type, page_number,
+                    x_position, y_position, width, height, label,
+                    is_required, value, font_size, font_family, text_align, locked
                 )
-                RETURNING *
+                RETURNING ${signatureFieldColumns()}
             `, [
                 documentIds, recipientIds, roleNames, fieldTypes, pageNumbers,
                 xPositions, yPositions, widths, heights, labels,
@@ -450,7 +464,7 @@ async function listDocuments(pool, organizationId, filters = {}, pagination = {}
 
     const items = await withDbClient(pool, async (client) => {
         const result = await client.query(
-            `SELECT d.*, COALESCE(r.recipient_count, 0) AS recipient_count
+            `SELECT ${signatureDocumentColumns('d')}, COALESCE(r.recipient_count, 0) AS recipient_count
              FROM signature_documents d
              LEFT JOIN (
                  SELECT document_id, COUNT(*)::int AS recipient_count
@@ -481,21 +495,21 @@ async function listDocuments(pool, organizationId, filters = {}, pagination = {}
 async function getDocumentDetails(pool, organizationId, documentId) {
     return withDbClient(pool, async (client) => {
         const docResult = await client.query(
-            'SELECT * FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            `SELECT ${signatureDocumentColumns()} FROM signature_documents WHERE id = $1 AND organization_id = $2`,
             [documentId, organizationId]
         );
         if (docResult.rows.length === 0) return null;
 
         const recipientsResult = await client.query(
-            'SELECT * FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC',
+            `SELECT ${signatureRecipientColumns()} FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC`,
             [documentId]
         );
         const fieldsResult = await client.query(
-            'SELECT * FROM signature_fields WHERE document_id = $1 ORDER BY id ASC',
+            `SELECT ${signatureFieldColumns()} FROM signature_fields WHERE document_id = $1 ORDER BY id ASC`,
             [documentId]
         );
         const auditResult = await client.query(
-            'SELECT * FROM signature_audit_log WHERE document_id = $1 ORDER BY created_at ASC',
+            `SELECT ${signatureAuditLogColumns()} FROM signature_audit_log WHERE document_id = $1 ORDER BY created_at ASC`,
             [documentId]
         );
 

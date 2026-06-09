@@ -13,6 +13,8 @@ import {
   useEdgesState,
   Edge,
   Node,
+  NodeChange,
+  EdgeChange,
   BackgroundVariant,
   useReactFlow,
   ReactFlowProvider,
@@ -66,6 +68,12 @@ const SHAPE_TOOLS = [
   { id: 'arrow', icon: MoveRight, label: 'Arrow' },
 ] as const;
 
+const isPoint = (value: unknown): value is { x: number; y: number } => {
+  return !!value && typeof value === 'object' &&
+    typeof (value as { x?: unknown }).x === 'number' &&
+    typeof (value as { y?: unknown }).y === 'number';
+};
+
 // Inner component that uses React Flow hooks
 const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   flowData,
@@ -107,7 +115,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
 
   // Sync flow data changes back to parent
   const handleNodesChange = useCallback(
-    (changes: any) => {
+    (changes: NodeChange[]) => {
       onNodesChange(changes);
       if (onFlowDataChange) {
         setTimeout(() => {
@@ -123,7 +131,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   );
 
   const handleEdgesChange = useCallback(
-    (changes: any) => {
+    (changes: EdgeChange[]) => {
       onEdgesChange(changes);
       if (onFlowDataChange) {
         setTimeout(() => {
@@ -162,7 +170,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
 
   // Add new node to the canvas
   const addNode = useCallback(
-    (type: string, position?: { x: number; y: number }, extraData?: Record<string, any>) => {
+    (type: string, position?: { x: number; y: number }, extraData?: Record<string, unknown>) => {
       const defaultLabels: Record<string, string> = {
         rectangle: 'Rectangle',
         diamond: 'Diamond',
@@ -177,11 +185,11 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
       const nodePosition = position || { x: 150 + Math.random() * 100, y: 150 + Math.random() * 100 };
       
       // Default data based on node type
-      let nodeData: Record<string, any> = { label: defaultLabels[type] };
+      let nodeData: Record<string, unknown> = { label: defaultLabels[type] };
       
       // Add default endOffset for arrows
       if (type === 'arrow') {
-        const endOffset = extraData?.endOffset || { x: 100, y: 0 };
+        const endOffset = isPoint(extraData?.endOffset) ? extraData.endOffset : { x: 100, y: 0 };
         const minX = Math.min(0, endOffset.x) - 4;
         const minY = Math.min(0, endOffset.y) - 4;
         nodeData = {

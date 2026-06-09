@@ -115,6 +115,24 @@ export type UsageType =
   | 'api_calls_per_day'
   | 'forms';
 
+type SubscriptionStatus = Subscription['status'];
+
+const toSubscriptionStatus = (status: string | undefined): SubscriptionStatus => {
+  const validStatuses: SubscriptionStatus[] = ['none', 'trialing', 'active', 'past_due', 'canceled', 'unpaid'];
+  return status && validStatuses.includes(status as SubscriptionStatus) ? status as SubscriptionStatus : 'none';
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  return error instanceof Error ? error.message : fallback;
+};
+
+const getErrorStatus = (error: unknown): number | undefined => {
+  if (error && typeof error === 'object') {
+    return (error as { response?: { status?: number } }).response?.status;
+  }
+  return undefined;
+};
+
 interface SubscriptionStateContextType {
   subscription: Subscription | null;
   usage: UsageStats | null;
@@ -206,7 +224,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
         const status = response.data;
         const legacySub: Subscription = {
           hasSubscription: !!status.stripe_subscription_id,
-          status: (status.subscription_status as any) || 'none',
+          status: toSubscriptionStatus(status.subscription_status),
           planName: status.plan,
           displayName: PLAN_METADATA[status.plan as Plan]?.displayName,
           tierLevel: getPlanTier(status.plan as Plan),
@@ -237,10 +255,11 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
         setSubscription(legacySub);
       }
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch subscription:', err);
-      if (err.response?.status !== 401 && err.response?.status !== 403) {
-        setError(err.message || 'Failed to load subscription');
+      const status = getErrorStatus(err);
+      if (status !== 401 && status !== 403) {
+        setError(getErrorMessage(err, 'Failed to load subscription'));
       }
     }
   }, [isAuthenticated]);
@@ -337,7 +356,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
 
         setUsage(legacyUsage);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch usage:', err);
     }
   }, [isAuthenticated]);
@@ -361,7 +380,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
         }));
         setPlans(legacyPlans);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch plans:', err);
     }
   }, []);
@@ -446,9 +465,9 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
         planId: planName as Plan,
         billingPeriod
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to start checkout:', err);
-      throw new Error(err.message || 'Failed to start checkout');
+      throw new Error(getErrorMessage(err, 'Failed to start checkout'));
     }
   }, []);
 
@@ -456,9 +475,9 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
   const openBillingPortal = useCallback(async () => {
     try {
       await billingApi.redirectToPortal();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to open billing portal:', err);
-      throw new Error(err.message || 'Failed to open billing portal');
+      throw new Error(getErrorMessage(err, 'Failed to open billing portal'));
     }
   }, []);
 

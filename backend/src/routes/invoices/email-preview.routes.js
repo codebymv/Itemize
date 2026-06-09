@@ -2,7 +2,7 @@ const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { sendSuccess, sendBadRequest } = require('../../utils/response');
 
-module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
+module.exports = ({ pool: _pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
 
     // ======================

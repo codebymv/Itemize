@@ -13,6 +13,21 @@ interface UseInvoiceFormParams {
   defaultTerms?: string;
 }
 
+interface InvoiceFormSource {
+  invoice_number?: string;
+  business_id?: number;
+  issue_date?: string;
+  created_at?: string;
+  due_date?: string;
+  payment_terms?: number | string;
+  currency?: string;
+  notes?: string;
+  terms_and_conditions?: string;
+  discount_type?: 'fixed' | 'percent';
+  discount_value?: number;
+  tax_rate?: number;
+}
+
 interface UseInvoiceFormReturn {
   invoiceNumber: string;
   invoiceSummary: string;
@@ -39,7 +54,7 @@ interface UseInvoiceFormReturn {
   setTaxRate: (value: number) => void;
   setSelectedBusinessId: (value: number | undefined) => void;
   handlePaymentTermsChange: (newTerms: number) => void;
-  loadInvoiceData: (invoice: any) => void;
+  loadInvoiceData: (invoice: InvoiceFormSource) => void;
 }
 
 export function useInvoiceForm({
@@ -83,12 +98,12 @@ export function useInvoiceForm({
   );
 
   // Load existing invoice data
-  const loadInvoiceData = useCallback((invoice: any) => {
+  const loadInvoiceData = useCallback((invoice: InvoiceFormSource) => {
     setInvoiceNumber(invoice.invoice_number || '');
     setSelectedBusinessId(invoice.business_id);
     setIssueDate(invoice.issue_date?.split('T')[0] || invoice.created_at?.split('T')[0] || '');
     setDueDate(invoice.due_date?.split('T')[0] || '');
-    setPaymentTerms(invoice.payment_terms || 30);
+    setPaymentTerms(Number(invoice.payment_terms) || 30);
     setCurrency(invoice.currency || 'USD');
     setNotes(invoice.notes || '');
     setTermsAndConditions(invoice.terms_and_conditions || '');

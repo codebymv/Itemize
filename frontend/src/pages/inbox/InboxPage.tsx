@@ -41,6 +41,11 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
+const CONVERSATION_STATUSES: Array<NonNullable<ConversationsQueryParams['status']>> = ['open', 'closed', 'snoozed', 'all'];
+
+const isConversationStatus = (value: string): value is NonNullable<ConversationsQueryParams['status']> =>
+    CONVERSATION_STATUSES.includes(value as NonNullable<ConversationsQueryParams['status']>);
+
 export function InboxPage() {
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
@@ -110,7 +115,7 @@ export function InboxPage() {
         setLoading(true);
         try {
             const params: ConversationsQueryParams = { organization_id: organizationId };
-            if (statusFilter !== 'all') params.status = statusFilter as any;
+            if (statusFilter !== 'all' && isConversationStatus(statusFilter)) params.status = statusFilter;
             const response = await getConversations(params);
             setConversations(response.conversations);
         } catch (error) {

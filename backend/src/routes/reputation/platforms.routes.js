@@ -1,6 +1,7 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
+const { REVIEW_PLATFORM_COLUMNS } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -14,7 +15,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     router.get('/platforms', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const result = await withDbClient(pool, async (client) => client.query(`
-                SELECT * FROM review_platforms
+                SELECT ${REVIEW_PLATFORM_COLUMNS} FROM review_platforms
                 WHERE organization_id = $1
                 ORDER BY platform ASC
             `, [req.organizationId]));
@@ -49,7 +50,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     review_url = EXCLUDED.review_url,
                     is_connected = TRUE,
                     updated_at = CURRENT_TIMESTAMP
-                RETURNING *
+                RETURNING ${REVIEW_PLATFORM_COLUMNS}
             `, [
                 req.organizationId,
                 platform,

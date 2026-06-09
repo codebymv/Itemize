@@ -26,11 +26,28 @@ import {
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 
+type PositionUpdate = {
+  type: 'note' | 'wireframe' | 'vault' | 'whiteboard' | 'list';
+  id: number | string;
+  position_x: number;
+  position_y: number;
+  width?: number;
+  height?: number;
+};
+
+const getApiStatus = (error: unknown): number | undefined => {
+  if (error && typeof error === 'object') {
+    return (error as { response?: { status?: number }; status?: number }).response?.status ??
+      (error as { status?: number }).status;
+  }
+  return undefined;
+};
+
 export function useCanvasCRUD(
   token: string | null,
   categoriesHook: {
     isCategoryInUse: (name: string) => boolean;
-    addCategory: (data: { name: string; color_value: string }) => Promise<any>;
+    addCategory: (data: { name: string; color_value: string }) => Promise<unknown>;
   },
   updateState: {
     setLists: React.Dispatch<React.SetStateAction<List[]>>;
@@ -39,7 +56,7 @@ export function useCanvasCRUD(
     setWireframes: React.Dispatch<React.SetStateAction<Wireframe[]>>;
     setVaults: React.Dispatch<React.SetStateAction<Vault[]>>;
   },
-  enqueuePositionUpdate: (update: any) => void
+  enqueuePositionUpdate: (update: PositionUpdate) => void
 ) {
   const { toast } = useToast();
   const recentlyCreatedListIds = useRef<Set<string>>(new Set());
@@ -471,10 +488,10 @@ export function useCanvasCRUD(
       setLists(prev =>
         prev.map(list => list.id === updatedList.id ? transformedList : list)
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to update list:', error);
 
-      if (error?.response?.status === 404 || error?.status === 404) {
+      if (getApiStatus(error) === 404) {
         logger.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
         setLists(prev => prev.filter(list => list.id !== updatedList.id));
         toast({

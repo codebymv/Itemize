@@ -29,16 +29,22 @@ import {
   previewSegment, 
   getFilterOptions,
   SegmentFilter,
+  Segment,
   FilterOptions,
   FilterField,
   SegmentPreview
 } from '@/services/segmentsApi';
 import { debounce } from 'lodash';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 interface CreateSegmentModalProps {
   organizationId: number;
   onClose: () => void;
-  onCreated: (segment: any) => void;
+  onCreated: (segment: Segment) => void;
 }
 
 // Operator display names
@@ -102,8 +108,14 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
     onChange(index, { ...filter, operator, value: operator === 'is_empty' || operator === 'is_not_empty' ? true : filter.value });
   };
 
-  const handleValueChange = (value: any) => {
+  const handleValueChange = (value: SegmentFilter['value']) => {
     onChange(index, { ...filter, value });
+  };
+
+  const valueAsString = (): string => {
+    const { value } = filter;
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    return '';
   };
 
   // Render value input based on field type
@@ -118,7 +130,7 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
     switch (field.type) {
       case 'select':
         return (
-          <Select value={filter.value || ''} onValueChange={handleValueChange}>
+          <Select value={valueAsString()} onValueChange={handleValueChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
@@ -168,7 +180,7 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
 
       case 'stage':
         return (
-          <Select value={filter.value || ''} onValueChange={handleValueChange}>
+          <Select value={valueAsString()} onValueChange={handleValueChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select stage..." />
             </SelectTrigger>
@@ -194,7 +206,7 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
         return (
           <Input
             type="number"
-            value={filter.value || ''}
+            value={valueAsString()}
             onChange={(e) => handleValueChange(parseInt(e.target.value) || 0)}
             className="w-[100px]"
             placeholder="0"
@@ -205,7 +217,7 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
         return (
           <Input
             type="date"
-            value={filter.value || ''}
+            value={valueAsString()}
             onChange={(e) => handleValueChange(e.target.value)}
             className="w-[160px]"
           />
@@ -228,7 +240,7 @@ function FilterRow({ filter, index, fields, filterOptions, onChange, onRemove }:
       default:
         return (
           <Input
-            value={filter.value || ''}
+            value={valueAsString()}
             onChange={(e) => handleValueChange(e.target.value)}
             className="w-[160px]"
             placeholder="Enter value..."
@@ -427,11 +439,11 @@ export function CreateSegmentModal({
       
       toast({ title: 'Segment created', description: 'Your segment has been created successfully' });
       onCreated(segment);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating segment:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create segment',
+        description: getApiErrorMessage(error, 'Failed to create segment'),
         variant: 'destructive',
       });
     } finally {

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import type { Edge, Node } from '@xyflow/react';
 import { Wireframe, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
@@ -13,8 +14,14 @@ interface UseWireframeCardLogicProps {
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   updateCategory?: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
 }
+
+type ReactFlowData = {
+  nodes: Node[];
+  edges: Edge[];
+  viewport: { x: number; y: number; zoom: number };
+};
 
 export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseWireframeCardLogicProps) => {
   const { toast } = useToast();
@@ -105,11 +112,11 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
   });
   
   // Flow data operations
-  const handleFlowDataChange = useCallback((flowData: any) => {
+  const handleFlowDataChange = useCallback((flowData: ReactFlowData) => {
     logger.debug('wireframe', 'Flow data changed:', flowData);
   }, []);
   
-  const handleFlowDataSave = useCallback(async (flowData: { nodes: any[]; edges: any[]; viewport: { x: number; y: number; zoom: number } }) => {
+  const handleFlowDataSave = useCallback(async (flowData: ReactFlowData) => {
     try {
       logger.debug('wireframe', 'Saving flow data:', {
         wireframeId: wireframe.id,
@@ -117,7 +124,7 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
         edgeCount: flowData.edges?.length || 0
       });
 
-      await onUpdate(wireframe.id, { flow_data: flowData });
+      await onUpdate(wireframe.id, { flow_data: flowData as Wireframe['flow_data'] });
       
       logger.debug('wireframe', 'Flow data save completed successfully');
     } catch (error) {

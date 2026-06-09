@@ -1,10 +1,22 @@
 import React, { useRef, useEffect } from 'react';
+import type * as Three from 'three';
 
 interface FallingClouds3DProps {
   width?: number;
   height?: number;
   cloudCount?: number;
   isLightTheme?: boolean;
+}
+
+interface CloudState {
+  mesh: Three.Group;
+  speed: number;
+  initialY: number;
+  assignedRow: number;
+  cellHeight: number;
+  zDepth: number;
+  verticalOffset: number;
+  baseOpacity: number;
 }
 
 const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
@@ -16,10 +28,10 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
   const mountRef = useRef<HTMLDivElement>(null);
   const animationIdRef = useRef<number>();
   // Persist Three.js objects across prop changes so we can resize without teardown
-  const sceneRef = useRef<any>(null);
-  const rendererRef = useRef<any>(null);
-  const cameraRef = useRef<any>(null);
-  const cloudsRef = useRef<any[]>([]);
+  const sceneRef = useRef<Three.Scene | null>(null);
+  const rendererRef = useRef<Three.WebGLRenderer | null>(null);
+  const cameraRef = useRef<Three.PerspectiveCamera | null>(null);
+  const cloudsRef = useRef<CloudState[]>([]);
   const viewDimsRef = useRef<{ viewWidth: number; viewHeight: number }>({ viewWidth: 0, viewHeight: 0 });
   const initializedRef = useRef(false);
 
@@ -118,12 +130,12 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
       const cellWidth = viewWidth * 1.4 / gridCols;
       const cellHeight = viewHeight * 1.0 / gridRows;
 
-      const clouds: any[] = [];
+      const clouds: CloudState[] = [];
 
       for (let i = 0; i < cloudCount; i++) {
         const cloudGroup = createCloudShape();
-        cloudGroup.traverse((child: any) => {
-          if (child.isMesh) {
+        cloudGroup.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
             child.material = cloudMaterial.clone();
           }
         });
@@ -181,8 +193,8 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
             targetOpacity = baseOpacity * (1 - Math.max(fadeX, fadeY) * 0.8);
           }
 
-          mesh.traverse((child: any) => {
-            if (child.isMesh && child.material) {
+          mesh.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material) {
               child.material.opacity = targetOpacity;
             }
           });
@@ -214,13 +226,14 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
       renderer?.dispose?.();
 
       // Dispose all scene objects
-      sceneRef.current?.traverse((object: any) => {
-        if (object.isMesh) {
-          object.geometry?.dispose?.();
-          if (Array.isArray(object.material)) {
-            object.material.forEach((m: any) => m?.dispose?.());
+      sceneRef.current?.traverse((object) => {
+        if ('isMesh' in object) {
+          const mesh = object as Three.Mesh;
+          mesh.geometry?.dispose?.();
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((material) => material?.dispose?.());
           } else {
-            object.material?.dispose?.();
+            mesh.material?.dispose?.();
           }
         }
       });

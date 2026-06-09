@@ -17,7 +17,7 @@ import type { PaymentSettings } from '@/services/invoicesApi';
 interface PaymentSettingsFormProps {
   settings: PaymentSettings;
   taxRateInput: string;
-  updateField: (field: keyof PaymentSettings, value: any) => void;
+  updateField: <K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => void;
   setTaxRateInput: (value: string) => void;
   onConnectStripe?: () => void;
 }

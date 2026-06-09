@@ -1,37 +1,38 @@
 import { useState } from 'react';
+import type { Invoice } from '@/services/invoicesApi';
 
 export function useInvoiceModalStates() {
   // Expanded invoice
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(null);
-  const [expandedInvoiceData, setExpandedInvoiceData] = useState<any>(null);
+  const [expandedInvoiceData, setExpandedInvoiceData] = useState<Invoice | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   
   // Send invoice modal
   const [showSendModal, setShowSendModal] = useState(false);
-  const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<any>(null);
-  const [fullInvoiceDataForSend, setFullInvoiceDataForSend] = useState<any>(null);
+  const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<Invoice | null>(null);
+  const [fullInvoiceDataForSend, setFullInvoiceDataForSend] = useState<Invoice | null>(null);
   const [sending, setSending] = useState(false);
   const [isResend, setIsResend] = useState(false);
   
   // Recurring modal
   const [showRecurringModal, setShowRecurringModal] = useState(false);
-  const [selectedInvoiceForRecurring, setSelectedInvoiceForRecurring] = useState<any>(null);
-  const [fullInvoiceDataForRecurring, setFullInvoiceDataForRecurring] = useState<any>(null);
+  const [selectedInvoiceForRecurring, setSelectedInvoiceForRecurring] = useState<Invoice | null>(null);
+  const [fullInvoiceDataForRecurring, setFullInvoiceDataForRecurring] = useState<Invoice | null>(null);
   const [converting, setConverting] = useState(false);
   
   // Payment modal
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
-  const [fullInvoiceDataForPayment, setFullInvoiceDataForPayment] = useState<any>(null);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
+  const [fullInvoiceDataForPayment, setFullInvoiceDataForPayment] = useState<Invoice | null>(null);
   const [recordingPayment, setRecordingPayment] = useState(false);
   
   // Payment link modal
   const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
-  const [selectedInvoiceForPaymentLink, setSelectedInvoiceForPaymentLink] = useState<any>(null);
+  const [selectedInvoiceForPaymentLink, setSelectedInvoiceForPaymentLink] = useState<Invoice | null>(null);
   
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   return {

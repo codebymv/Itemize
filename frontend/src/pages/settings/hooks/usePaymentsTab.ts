@@ -46,7 +46,7 @@ interface UsePaymentsTabReturn {
   // Actions
   refetchData: () => Promise<void>;
   handleSaveSettings: () => Promise<void>;
-  updateField: (field: keyof PaymentSettings, value: any) => void;
+  updateField: <K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => void;
   setTaxRateInput: (value: string) => void;
   openBusinessDialog: (business?: Business) => void;
   closeBusinessDialog: () => void;
@@ -147,7 +147,7 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
     }
   }, [organizationId, settings, toast]);
 
-  const updateField = useCallback((field: keyof PaymentSettings, value: any) => {
+  const updateField = useCallback(<K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => {
     setSettings(prev => prev ? { ...prev, [field]: value } : null);
   }, []);
 
@@ -217,7 +217,7 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
               URL.revokeObjectURL(businessFormData.logo_url);
             }
             toast({ title: 'Created', description: 'Business created with logo successfully' });
-          } catch (logoError: any) {
+          } catch (logoError: unknown) {
             if (businessFormData.logo_url?.startsWith('blob:')) {
               URL.revokeObjectURL(businessFormData.logo_url);
             }

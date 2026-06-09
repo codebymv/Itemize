@@ -22,7 +22,7 @@ export function EmailLogsView() {
             setLogs(response.logs);
             setTotal(response.total);
             setHasMore(response.hasMore);
-        } catch (error: any) {
+        } catch {
             toast({ title: 'Error', description: 'Failed to load email logs', variant: 'destructive' });
         } finally {
             setLoading(false);

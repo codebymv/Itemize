@@ -5,6 +5,10 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendBadRequest, sendError, sendSuccess } = require('../utils/response');
+const { listColumns } = require('./list-columns');
+const { noteColumns, whiteboardColumns } = require('./workspace-object-columns');
+const { wireframeColumns } = require('./wireframe-columns');
+const { vaultColumns } = require('./vaults/columns');
 
 module.exports = (pool, authenticateJWT, broadcast) => {
   router.put('/canvas/positions', authenticateJWT, async (req, res) => {
@@ -25,7 +29,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
       await withDbClient(pool, async (client) => {
         // Group updates by type and filter invalid
         for (const update of updates) {
-          const { type, id, position_x, position_y, width, height } = update || {};
+          const { type, id, position_x, position_y } = update || {};
 
           if (!type || id === undefined || id === null || typeof position_x !== 'number' || typeof position_y !== 'number') {
             failed.push({ type, id, error: 'Invalid update payload' });
@@ -57,7 +61,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[])
               AS u(id, position_x, position_y, width)
             WHERE t.id = u.id AND t.user_id = $5
-            RETURNING t.*
+            RETURNING ${listColumns().split(', ').map(column => `t.${column}`).join(', ')}
           `, [ids, xs, ys, widths, req.user.id]);
 
           const updatedIds = new Set(result.rows.map(r => r.id));
@@ -99,7 +103,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[], $5::float[])
               AS u(id, position_x, position_y, width, height)
             WHERE t.id = u.id AND t.user_id = $6
-            RETURNING t.*
+            RETURNING ${noteColumns('t')}
           `, [ids, xs, ys, widths, heights, req.user.id]);
 
           const updatedIds = new Set(result.rows.map(r => r.id));
@@ -130,7 +134,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             FROM UNNEST($1::int[], $2::float[], $3::float[])
               AS u(id, position_x, position_y)
             WHERE t.id = u.id AND t.user_id = $4
-            RETURNING t.*
+            RETURNING ${whiteboardColumns('t')}
           `, [ids, xs, ys, req.user.id]);
 
           const updatedIds = new Set(result.rows.map(r => r.id));
@@ -169,7 +173,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             FROM UNNEST($1::int[], $2::float[], $3::float[])
               AS u(id, position_x, position_y)
             WHERE t.id = u.id AND t.user_id = $4
-            RETURNING t.*
+            RETURNING ${wireframeColumns('t')}
           `, [ids, xs, ys, req.user.id]);
 
           const updatedIds = new Set(result.rows.map(r => r.id));
@@ -219,7 +223,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             FROM UNNEST($1::int[], $2::float[], $3::float[], $4::float[], $5::float[])
               AS u(id, position_x, position_y, width, height)
             WHERE t.id = u.id AND t.user_id = $6
-            RETURNING t.*
+            RETURNING ${vaultColumns('t')}
           `, [ids, xs, ys, widths, heights, req.user.id]);
 
           const updatedIds = new Set(result.rows.map(r => r.id));

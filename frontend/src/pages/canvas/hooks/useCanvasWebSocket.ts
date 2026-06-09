@@ -4,8 +4,9 @@ import { getApiUrl } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { User } from '@/contexts/AuthContext';
+import type { Wireframe } from '@/types';
 
-export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: (update: any) => void) {
+export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: (update: Partial<Wireframe> & { id: number }) => void) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();

@@ -4,9 +4,9 @@
  */
 import api from '@/lib/api';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
-        return payload.data as T;
+        return (payload as { data: unknown }).data as T;
     }
     return payload as T;
 };

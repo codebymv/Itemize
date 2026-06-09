@@ -5,7 +5,9 @@
 
 import api from '@/lib/api';
 
-const unwrapResponse = <T>(payload: any): T => {
+type WorkflowConfig = Record<string, unknown>;
+
+const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
     return payload.data as T;
   }
@@ -21,8 +23,8 @@ export interface WorkflowStep {
   workflow_id?: number;
   step_order: number;
   step_type: 'send_email' | 'add_tag' | 'remove_tag' | 'wait' | 'create_task' | 'move_deal' | 'webhook' | 'condition' | 'update_contact' | 'send_sms';
-  step_config: Record<string, any>;
-  condition_config?: Record<string, any> | null;
+  step_config: WorkflowConfig;
+  condition_config?: WorkflowConfig | null;
   true_branch_step?: number;
   false_branch_step?: number;
 }
@@ -33,7 +35,7 @@ export interface Workflow {
   name: string;
   description?: string;
   trigger_type: 'contact_added' | 'tag_added' | 'tag_removed' | 'deal_stage_changed' | 'form_submitted' | 'manual' | 'scheduled' | 'contact_updated';
-  trigger_config: Record<string, any>;
+  trigger_config: WorkflowConfig;
   is_active: boolean;
   stats: {
     enrolled: number;
@@ -61,8 +63,8 @@ export interface WorkflowEnrollment {
   contact_id: number;
   current_step: number;
   status: 'active' | 'completed' | 'paused' | 'failed' | 'cancelled';
-  trigger_data: Record<string, any>;
-  context: Record<string, any>;
+  trigger_data: WorkflowConfig;
+  context: WorkflowConfig;
   error_message?: string;
   enrolled_at: string;
   next_action_at?: string;
@@ -117,7 +119,7 @@ export const createWorkflow = async (data: {
   name: string;
   description?: string;
   trigger_type: Workflow['trigger_type'];
-  trigger_config?: Record<string, any>;
+  trigger_config?: WorkflowConfig;
   steps?: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
 }): Promise<Workflow> => {
   const response = await api.post('/api/workflows', data);
@@ -131,7 +133,7 @@ export const updateWorkflow = async (
     name: string;
     description: string;
     trigger_type: Workflow['trigger_type'];
-    trigger_config: Record<string, any>;
+    trigger_config: WorkflowConfig;
     steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
   }>
 ): Promise<Workflow> => {
@@ -163,7 +165,7 @@ export const enrollContact = async (
   workflowId: number,
   contactId: number,
   organizationId: number,
-  triggerData?: Record<string, any>
+  triggerData?: WorkflowConfig
 ): Promise<WorkflowEnrollment> => {
   const response = await api.post(`/api/workflows/${workflowId}/enroll`, {
     organization_id: organizationId,
@@ -273,7 +275,7 @@ export const sendTestEmail = async (
   templateId: number,
   toEmail: string,
   organizationId: number,
-  sampleData?: Record<string, any>
+  sampleData?: WorkflowConfig
 ): Promise<{ success: boolean; message: string; simulated?: boolean }> => {
   const response = await api.post(`/api/email-templates/${templateId}/send-test`, {
     organization_id: organizationId,

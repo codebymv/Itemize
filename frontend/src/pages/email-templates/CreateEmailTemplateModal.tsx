@@ -21,13 +21,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { createEmailTemplate } from '@/services/automationsApi';
+import { createEmailTemplate, type EmailTemplate } from '@/services/automationsApi';
 
 interface CreateEmailTemplateModalProps {
   organizationId: number;
   onClose: () => void;
-  onCreated: (template: any) => void;
+  onCreated: (template: EmailTemplate) => void;
 }
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
 
 const TEMPLATE_CATEGORIES = [
   { value: 'marketing', label: 'Marketing' },
@@ -103,11 +108,11 @@ export function CreateEmailTemplateModal({
       });
       toast({ title: 'Template created', description: 'Email template has been created successfully' });
       onCreated(template);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating template:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create template',
+        description: getApiErrorMessage(error, 'Failed to create template'),
         variant: 'destructive',
       });
     } finally {

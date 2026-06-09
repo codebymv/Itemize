@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, type LucideIcon } from 'lucide-react';
 
 interface FeatureRowProps {
   isLight: boolean;
@@ -8,7 +8,7 @@ interface FeatureRowProps {
   textColor: string;
   secondaryTextColor: string;
   reverse: boolean;
-  badge: { icon: any; label: string; color: string };
+  badge: { icon: LucideIcon; label: string; color: string };
   title: string;
   description: string;
   features: string[];
@@ -16,11 +16,13 @@ interface FeatureRowProps {
 }
 
 function FeatureRow({ isLight, cardBgColor, cardBorderColor, textColor, secondaryTextColor, reverse, badge, title, description, features, visual }: FeatureRowProps) {
+  const BadgeIcon = badge.icon;
+
   return (
     <div className={`grid lg:grid-cols-2 gap-12 items-center ${reverse ? 'lg:flex-row-reverse' : ''}`}>
       <div className={reverse ? 'lg:order-2' : 'lg:order-1'}>
         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 bg-gradient-to-r ${badge.color} text-white`}>
-          <badge.icon className="h-4 w-4" />
+          <BadgeIcon className="h-4 w-4" />
           {badge.label}
         </div>
         <h3 className={`text-2xl md:text-3xl font-bold ${textColor} mb-4`}>{title}</h3>

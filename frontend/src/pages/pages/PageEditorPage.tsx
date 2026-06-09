@@ -88,6 +88,7 @@ import {
     reorderSections,
     Page,
     PageSection,
+    PageContentRecord,
     SectionType,
     SECTION_TEMPLATES,
 } from '@/services/pagesApi';
@@ -124,6 +125,10 @@ const SECTION_ICONS: Record<SectionType, React.ReactNode> = {
     team: <Grid className="h-4 w-4" />,
     contact: <FileText className="h-4 w-4" />,
     map: <Grid className="h-4 w-4" />,
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    return error instanceof Error ? error.message : fallback;
 };
 
 export function PageEditorPage() {
@@ -247,8 +252,8 @@ export function PageEditorPage() {
             }, organizationId);
             toast({ title: 'Saved', description: 'Page updated successfully' });
             loadPage();
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message || 'Failed to save', variant: 'destructive' });
+        } catch (error: unknown) {
+            toast({ title: 'Error', description: getErrorMessage(error, 'Failed to save'), variant: 'destructive' });
         } finally {
             setSaving(false);
         }
@@ -324,7 +329,7 @@ export function PageEditorPage() {
     };
 
     // Update section content
-    const handleUpdateSectionContent = async (sectionId: number, content: Record<string, any>) => {
+    const handleUpdateSectionContent = async (sectionId: number, content: PageContentRecord) => {
         if (!page || !organizationId) return;
         try {
             await updateSection(page.id, sectionId, { content }, organizationId);
@@ -669,8 +674,8 @@ export function PageEditorPage() {
 }
 
 // Section Editor Component
-function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: (content: Record<string, any>) => void }) {
-    const [content, setContent] = useState<Record<string, any>>(section.content || {});
+function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: (content: PageContentRecord) => void }) {
+    const [content, setContent] = useState<PageContentRecord>(section.content || {});
     const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
@@ -678,9 +683,24 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
         setHasChanges(false);
     }, [section.id]);
 
-    const handleChange = (key: string, value: any) => {
+    const handleChange = (key: string, value: unknown) => {
         setContent(prev => ({ ...prev, [key]: value }));
         setHasChanges(true);
+    };
+
+    const getTextValue = (key: string): string => {
+        const value = content[key];
+        return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    };
+
+    const getNumberValue = (key: string, fallback: number): number => {
+        const value = content[key];
+        return typeof value === 'number' ? value : fallback;
+    };
+
+    const getBooleanValue = (key: string, fallback: boolean): boolean => {
+        const value = content[key];
+        return typeof value === 'boolean' ? value : fallback;
     };
 
     const handleSave = () => {
@@ -696,20 +716,20 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                     <>
                         <div className="space-y-2">
                             <Label>Heading</Label>
-                            <Input value={content.heading || ''} onChange={(e) => handleChange('heading', e.target.value)} />
+                            <Input value={getTextValue('heading')} onChange={(e) => handleChange('heading', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label>Subheading</Label>
-                            <Textarea value={content.subheading || ''} onChange={(e) => handleChange('subheading', e.target.value)} rows={2} />
+                            <Textarea value={getTextValue('subheading')} onChange={(e) => handleChange('subheading', e.target.value)} rows={2} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>CTA Text</Label>
-                                <Input value={content.cta_text || ''} onChange={(e) => handleChange('cta_text', e.target.value)} />
+                                <Input value={getTextValue('cta_text')} onChange={(e) => handleChange('cta_text', e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>CTA URL</Label>
-                                <Input value={content.cta_url || ''} onChange={(e) => handleChange('cta_url', e.target.value)} />
+                                <Input value={getTextValue('cta_url')} onChange={(e) => handleChange('cta_url', e.target.value)} />
                             </div>
                         </div>
                     </>
@@ -719,11 +739,11 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                     <>
                         <div className="space-y-2">
                             <Label>Heading</Label>
-                            <Input value={content.heading || ''} onChange={(e) => handleChange('heading', e.target.value)} />
+                            <Input value={getTextValue('heading')} onChange={(e) => handleChange('heading', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label>Body</Label>
-                            <Textarea value={content.body || ''} onChange={(e) => handleChange('body', e.target.value)} rows={5} />
+                            <Textarea value={getTextValue('body')} onChange={(e) => handleChange('body', e.target.value)} rows={5} />
                         </div>
                     </>
                 );
@@ -732,20 +752,20 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                     <>
                         <div className="space-y-2">
                             <Label>Heading</Label>
-                            <Input value={content.heading || ''} onChange={(e) => handleChange('heading', e.target.value)} />
+                            <Input value={getTextValue('heading')} onChange={(e) => handleChange('heading', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label>Description</Label>
-                            <Textarea value={content.description || ''} onChange={(e) => handleChange('description', e.target.value)} rows={2} />
+                            <Textarea value={getTextValue('description')} onChange={(e) => handleChange('description', e.target.value)} rows={2} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Button Text</Label>
-                                <Input value={content.button_text || ''} onChange={(e) => handleChange('button_text', e.target.value)} />
+                                <Input value={getTextValue('button_text')} onChange={(e) => handleChange('button_text', e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Button URL</Label>
-                                <Input value={content.button_url || ''} onChange={(e) => handleChange('button_url', e.target.value)} />
+                                <Input value={getTextValue('button_url')} onChange={(e) => handleChange('button_url', e.target.value)} />
                             </div>
                         </div>
                     </>
@@ -755,15 +775,15 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                     <>
                         <div className="space-y-2">
                             <Label>Image URL</Label>
-                            <Input value={content.image_url || ''} onChange={(e) => handleChange('image_url', e.target.value)} placeholder="https://..." />
+                            <Input value={getTextValue('image_url')} onChange={(e) => handleChange('image_url', e.target.value)} placeholder="https://..." />
                         </div>
                         <div className="space-y-2">
                             <Label>Alt Text</Label>
-                            <Input value={content.alt_text || ''} onChange={(e) => handleChange('alt_text', e.target.value)} />
+                            <Input value={getTextValue('alt_text')} onChange={(e) => handleChange('alt_text', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label>Caption</Label>
-                            <Input value={content.caption || ''} onChange={(e) => handleChange('caption', e.target.value)} />
+                            <Input value={getTextValue('caption')} onChange={(e) => handleChange('caption', e.target.value)} />
                         </div>
                     </>
                 );
@@ -772,19 +792,19 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                     <>
                         <div className="space-y-2">
                             <Label>Video URL</Label>
-                            <Input value={content.video_url || ''} onChange={(e) => handleChange('video_url', e.target.value)} placeholder="https://..." />
+                            <Input value={getTextValue('video_url')} onChange={(e) => handleChange('video_url', e.target.value)} placeholder="https://..." />
                         </div>
                         <div className="flex items-center gap-4">
                             <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={content.autoplay || false} onChange={(e) => handleChange('autoplay', e.target.checked)} />
+                                <input type="checkbox" checked={getBooleanValue('autoplay', false)} onChange={(e) => handleChange('autoplay', e.target.checked)} />
                                 Autoplay
                             </label>
                             <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={content.muted !== false} onChange={(e) => handleChange('muted', e.target.checked)} />
+                                <input type="checkbox" checked={getBooleanValue('muted', true)} onChange={(e) => handleChange('muted', e.target.checked)} />
                                 Muted
                             </label>
                             <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={content.controls !== false} onChange={(e) => handleChange('controls', e.target.checked)} />
+                                <input type="checkbox" checked={getBooleanValue('controls', true)} onChange={(e) => handleChange('controls', e.target.checked)} />
                                 Controls
                             </label>
                         </div>
@@ -795,11 +815,11 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                     <>
                         <div className="space-y-2">
                             <Label>HTML Content</Label>
-                            <Textarea value={content.html_content || ''} onChange={(e) => handleChange('html_content', e.target.value)} rows={10} className="font-mono text-sm" />
+                            <Textarea value={getTextValue('html_content')} onChange={(e) => handleChange('html_content', e.target.value)} rows={10} className="font-mono text-sm" />
                         </div>
                         <div className="space-y-2">
                             <Label>CSS (optional)</Label>
-                            <Textarea value={content.css_content || ''} onChange={(e) => handleChange('css_content', e.target.value)} rows={5} className="font-mono text-sm" />
+                            <Textarea value={getTextValue('css_content')} onChange={(e) => handleChange('css_content', e.target.value)} rows={5} className="font-mono text-sm" />
                         </div>
                     </>
                 );
@@ -807,7 +827,7 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                 return (
                     <div className="space-y-2">
                         <Label>Style</Label>
-                        <Select value={content.style || 'line'} onValueChange={(v) => handleChange('style', v)}>
+                        <Select value={getTextValue('style') || 'line'} onValueChange={(v) => handleChange('style', v)}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
@@ -824,7 +844,7 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                 return (
                     <div className="space-y-2">
                         <Label>Height (px)</Label>
-                        <Input type="number" value={content.height || 50} onChange={(e) => handleChange('height', parseInt(e.target.value))} />
+                        <Input type="number" value={getNumberValue('height', 50)} onChange={(e) => handleChange('height', parseInt(e.target.value))} />
                     </div>
                 );
             default:

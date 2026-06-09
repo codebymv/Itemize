@@ -9,6 +9,7 @@ const smsService = require('../services/smsService');
 const { logger } = require('../utils/logger');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { contactColumns, smsTemplateColumns } = require('./template-columns');
 
 /**
  * Twilio-signed webhooks only in production when auth token is set (unless dev bypass).
@@ -73,7 +74,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       const result = await withDbClient(pool, async (client) => {
         let query = `
         SELECT 
-          st.*,
+          ${smsTemplateColumns('st')},
           u.name as created_by_name
         FROM sms_templates st
         LEFT JOIN users u ON st.created_by = u.id
@@ -149,7 +150,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     try {
       const result = await withDbClient(pool, async (client) => client.query(
         `SELECT 
-          st.*,
+          ${smsTemplateColumns('st')},
           u.name as created_by_name
         FROM sms_templates st
         LEFT JOIN users u ON st.created_by = u.id
@@ -195,7 +196,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         `INSERT INTO sms_templates 
           (organization_id, name, message, variables, category, is_active, created_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *`,
+        RETURNING ${smsTemplateColumns()}`,
         [
           req.organizationId,
           name,
@@ -229,7 +230,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       const data = await withDbClient(pool, async (client) => {
         // Check template exists and belongs to org
         const existing = await client.query(
-          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+          `SELECT ${smsTemplateColumns()} FROM sms_templates WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -253,7 +254,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           `UPDATE sms_templates 
            SET name = $1, message = $2, variables = $3, category = $4, is_active = $5, updated_at = CURRENT_TIMESTAMP
            WHERE id = $6 AND organization_id = $7
-           RETURNING *`,
+           RETURNING ${smsTemplateColumns()}`,
           [
             finalName,
             finalMessage,
@@ -331,7 +332,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     try {
       const result = await withDbClient(pool, async (client) => client.query(
-        'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+        `SELECT ${smsTemplateColumns()} FROM sms_templates WHERE id = $1 AND organization_id = $2`,
         [id, req.organizationId]
       ));
 
@@ -385,7 +386,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       const data = await withDbClient(pool, async (client) => {
         // Get the original template
         const original = await client.query(
-          'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+          `SELECT ${smsTemplateColumns()} FROM sms_templates WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -400,7 +401,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           `INSERT INTO sms_templates 
             (organization_id, name, message, variables, category, is_active, created_by)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
-          RETURNING *`,
+          RETURNING ${smsTemplateColumns()}`,
           [
             req.organizationId,
             `${template.name} (Copy)`,
@@ -453,7 +454,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       const data = await withDbClient(pool, async (client) => {
         // Get contact
         const contactResult = await client.query(
-          'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
+          `SELECT ${contactColumns()} FROM contacts WHERE id = $1 AND organization_id = $2`,
           [contact_id, req.organizationId]
         );
 
@@ -472,7 +473,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (template_id) {
           // Get template
           const templateResult = await client.query(
-            'SELECT * FROM sms_templates WHERE id = $1 AND organization_id = $2',
+            `SELECT ${smsTemplateColumns()} FROM sms_templates WHERE id = $1 AND organization_id = $2`,
             [template_id, req.organizationId]
           );
 
@@ -620,8 +621,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
       const {
         MessageSid,
         MessageStatus,
-        To,
-        From,
         ErrorCode,
         ErrorMessage,
       } = req.body;
@@ -698,7 +697,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         // Try to find the contact by phone number
         // We need to find which organization this belongs to
         const contactResult = await client.query(
-          `SELECT c.*, om.organization_id 
+          `SELECT ${contactColumns('c')}, om.organization_id
            FROM contacts c
            JOIN organization_members om ON c.organization_id = om.organization_id
            WHERE c.phone = $1 OR c.phone = $2

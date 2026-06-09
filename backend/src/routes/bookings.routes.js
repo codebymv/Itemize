@@ -6,10 +6,9 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { bookingColumns } = require('./calendar-columns');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -124,7 +123,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Get bookings
                 const result = await client.query(`
-        SELECT b.*,
+        SELECT ${bookingColumns('b')},
                c.name as calendar_name, c.color as calendar_color,
                ct.first_name as contact_first_name, ct.last_name as contact_last_name, ct.email as contact_email,
                u.name as assigned_to_name
@@ -162,7 +161,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         try {
             const { id } = req.params;
             const result = await withDbClient(pool, async (client) => client.query(`
-        SELECT b.*,
+        SELECT ${bookingColumns('b')},
                c.name as calendar_name, c.slug as calendar_slug,
                ct.first_name as contact_first_name, ct.last_name as contact_last_name, 
                ct.email as contact_email, ct.phone as contact_phone,
@@ -239,7 +238,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           assigned_to, notes, internal_notes, custom_fields,
           cancellation_token, source
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'manual')
-        RETURNING *
+        RETURNING ${bookingColumns()}
       `, [
                 req.organizationId,
                 calendar_id,
@@ -274,7 +273,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         organizationId: req.organizationId,
                         calendar: { id: calendar_id }
                     }).catch(err => console.error('Booking automation trigger error:', err));
-                } catch (triggerError) {
+                } catch {
                     console.log('Automation engine not initialized yet');
                 }
             }
@@ -302,7 +301,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           cancellation_reason = $1,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2 AND organization_id = $3
-        RETURNING *
+        RETURNING ${bookingColumns()}
       `, [reason || null, id, req.organizationId]));
 
             if (result.rows.length === 0) {
@@ -320,7 +319,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         organizationId: req.organizationId,
                         reason: reason || 'No reason provided'
                     }).catch(err => console.error('Booking cancellation trigger error:', err));
-                } catch (triggerError) {
+                } catch {
                     console.log('Automation engine not initialized yet');
                 }
             }
@@ -348,7 +347,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get current booking
                 const currentBooking = await client.query(
-                    'SELECT * FROM bookings WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${bookingColumns()} FROM bookings WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -371,7 +370,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           timezone = COALESCE($3, timezone),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $4 AND organization_id = $5
-        RETURNING *
+        RETURNING ${bookingColumns()}
       `, [start_time, end_time, timezone, id, req.organizationId]);
                 return { error: null, status: 200, result, oldBooking };
             });
@@ -392,7 +391,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         oldTime: { start: data.oldBooking.start_time, end: data.oldBooking.end_time },
                         newTime: { start: start_time, end: end_time }
                     }).catch(err => console.error('Booking reschedule trigger error:', err));
-                } catch (triggerError) {
+                } catch {
                     console.log('Automation engine not initialized yet');
                 }
             }
@@ -661,7 +660,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         organizationId: data.calendar.organization_id,
                         calendar: { id: data.calendar.id }
                     }).catch(err => console.error('Public booking trigger error:', err));
-                } catch (triggerError) {
+                } catch {
                     console.log('Automation engine not initialized yet');
                 }
             }
@@ -697,7 +696,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           AND c.slug = $2
           AND bookings.cancellation_token = $3
           AND bookings.status = 'confirmed'
-        RETURNING bookings.*
+        RETURNING ${bookingColumns().split(', ').map(column => `bookings.${column}`).join(', ')}
       `, [reason || 'Cancelled by attendee', slug, token]));
 
             if (result.rows.length === 0) {

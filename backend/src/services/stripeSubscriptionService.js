@@ -8,8 +8,8 @@
 
 const BaseService = require('./BaseService');
 const Stripe = require('stripe');
-const { PLAN_NAMES, PRICING, getTierLevel } = require('../config/plans');
 const emailService = require('./emailService');
+const { subscriptionColumns, subscriptionPlanColumns } = require('./subscription-columns');
 
 class StripeSubscriptionService extends BaseService {
     constructor(pool) {
@@ -112,7 +112,7 @@ class StripeSubscriptionService extends BaseService {
 
             // Get plan from database
             const planResult = await this.pool.query(
-                `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
+                `SELECT ${subscriptionPlanColumns()} FROM subscription_plans WHERE name = $1 AND is_active = true`,
                 [planName]
             );
             const plan = planResult.rows[0];
@@ -289,7 +289,7 @@ class StripeSubscriptionService extends BaseService {
 
             // Get new plan
             const planResult = await this.pool.query(
-                'SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true',
+                `SELECT ${subscriptionPlanColumns()} FROM subscription_plans WHERE name = $1 AND is_active = true`,
                 [newPlanName]
             );
             const newPlan = planResult.rows[0];
@@ -726,7 +726,7 @@ class StripeSubscriptionService extends BaseService {
     async getSubscriptionStatus(organizationId) {
         const result = await this.pool.query(`
             SELECT 
-                s.*,
+                ${subscriptionColumns('s')},
                 sp.name as plan_name,
                 sp.display_name,
                 sp.tier_level,
@@ -748,7 +748,7 @@ class StripeSubscriptionService extends BaseService {
      */
     async getAvailablePlans() {
         const result = await this.pool.query(`
-            SELECT * FROM subscription_plans 
+            SELECT ${subscriptionPlanColumns()} FROM subscription_plans
             WHERE is_active = true 
             ORDER BY sort_order
         `);

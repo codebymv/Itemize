@@ -1,4 +1,6 @@
-export function debounce<T extends (...args: any[]) => any>(
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
+
+export function debounce<T extends (...args: never[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -18,7 +20,7 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: never[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -37,7 +39,7 @@ export function throttle<T extends (...args: any[]) => any>(
 let debouncedGetTimeout: ReturnType<typeof setTimeout> | null = null;
 let debouncedPostTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export async function debouncedGet(url: string, config?: any): Promise<any> {
+export async function debouncedGet<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
   return new Promise((resolve, reject) => {
     if (debouncedGetTimeout) {
       clearTimeout(debouncedGetTimeout);
@@ -57,7 +59,11 @@ export async function debouncedGet(url: string, config?: any): Promise<any> {
   });
 }
 
-export async function debouncedPost(url: string, data?: any, config?: any): Promise<any> {
+export async function debouncedPost<T = unknown>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<AxiosResponse<T>> {
   return new Promise((resolve, reject) => {
     if (debouncedPostTimeout) {
       clearTimeout(debouncedPostTimeout);

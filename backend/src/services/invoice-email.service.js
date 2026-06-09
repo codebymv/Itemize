@@ -203,25 +203,6 @@ function formatDate(dateStr) {
 }
 
 /**
- * Replace template variables
- */
-function applyTemplate(template, variables) {
-    let result = { ...template };
-    
-    // Replace in subject
-    Object.keys(variables).forEach(key => {
-        result.subject = result.subject.replace(new RegExp(`\\{${key}\\}`, 'g'), variables[key] || '');
-    });
-    
-    // Replace in html
-    Object.keys(variables).forEach(key => {
-        result.html = result.html.replace(new RegExp(`\\{${key}\\}`, 'g'), variables[key] || '');
-    });
-    
-    return result;
-}
-
-/**
  * Send invoice email with optional PDF attachment
  * @param {Object} emailService - The email service instance
  * @param {Object} invoice - The invoice data
@@ -319,7 +300,7 @@ async function sendInvoiceEmail(emailService, invoice, settings, paymentUrl = nu
 /**
  * Send payment received email
  */
-async function sendPaymentReceivedEmail(emailService, invoice, payment, settings) {
+async function sendPaymentReceivedEmail(emailService, invoice, payment, _settings) {
     if (!emailService || !invoice.customer_email) {
         return false;
     }

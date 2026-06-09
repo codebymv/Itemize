@@ -15,7 +15,7 @@ interface UseListCardLogicProps {
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   existingCategories?: Category[];
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
   updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
 }
 

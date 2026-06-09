@@ -33,7 +33,7 @@ function createPool() {
     return {
         client,
         connect: jest.fn(async () => client),
-        query: jest.fn(async (sql, params) => {
+        query: jest.fn(async (sql, _params) => {
             const text = String(sql);
             if (text.includes('UPDATE organizations')) return { rows: [] };
             if (text.includes('FROM organizations')) {

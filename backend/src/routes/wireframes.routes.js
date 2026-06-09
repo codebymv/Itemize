@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
+const { wireframeColumns } = require('./wireframe-columns');
 
 /**
  * Create wireframes routes with injected dependencies
@@ -117,7 +118,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
                     `INSERT INTO wireframes (user_id, title, category, flow_data, position_x, position_y, width, height, z_index, color_value)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING ${wireframeColumns()}`,
                     [
                         req.user.id,
                         title,
@@ -147,7 +148,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => {
                 const currentWireframeResult = await client.query(
-                    'SELECT * FROM wireframes WHERE id = $1 AND user_id = $2',
+                    `SELECT ${wireframeColumns()} FROM wireframes WHERE id = $1 AND user_id = $2`,
                     [wireframeId, req.user.id]
                 );
 
@@ -187,7 +188,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 const updateResult = await client.query(
                     `UPDATE wireframes
                      SET title = $1, category = $2, flow_data = $3, position_x = $4, position_y = $5, width = $6, height = $7, z_index = $8, color_value = $9, updated_at = NOW()
-                     WHERE id = $10 AND user_id = $11 RETURNING *`,
+                     WHERE id = $10 AND user_id = $11 RETURNING ${wireframeColumns()}`,
                     [newTitle, newCategory, newFlowData, newPositionX, newPositionY, newWidth, newHeight, newZIndex, newColorValue, wireframeId, req.user.id]
                 );
 
@@ -250,7 +251,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    'UPDATE wireframes SET position_x = $1, position_y = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING *',
+                    `UPDATE wireframes SET position_x = $1, position_y = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING ${wireframeColumns()}`,
                     [Math.round(x), Math.round(y), id, req.user.id]
                 );
             });

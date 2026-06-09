@@ -57,7 +57,7 @@ module.exports = ({ pool, stripe }) => {
 
                 switch (event.type) {
                     // Checkout Session completed - customer finished the hosted checkout
-                    case 'checkout.session.completed':
+                    case 'checkout.session.completed': {
                         const session = event.data.object;
                         const invoiceId = session.metadata?.invoice_id;
 
@@ -111,9 +111,10 @@ module.exports = ({ pool, stripe }) => {
                             }
                         }
                         break;
+                    }
 
                     // Checkout session expired - customer abandoned checkout (optional handling)
-                    case 'checkout.session.expired':
+                    case 'checkout.session.expired': {
                         const expiredSession = event.data.object;
                         logger.info(`Checkout session expired`, {
                             sessionId: expiredSession.id,
@@ -121,6 +122,7 @@ module.exports = ({ pool, stripe }) => {
                         });
                         // No action needed - invoice remains unpaid
                         break;
+                    }
 
                     default:
                         logger.debug(`Unhandled Stripe event type: ${event.type}`);

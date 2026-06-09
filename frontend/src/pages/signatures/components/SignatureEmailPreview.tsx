@@ -18,6 +18,9 @@ interface SignatureEmailPreviewProps {
 
 type ViewMode = 'desktop' | 'mobile';
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback;
+
 export function SignatureEmailPreview({
   message,
   documentTitle,
@@ -60,9 +63,9 @@ export function SignatureEmailPreview({
       });
 
       setPreviewHtml(response.html || null);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error generating preview:', err);
-      setError(err.message || 'Failed to generate preview');
+      setError(getErrorMessage(err, 'Failed to generate preview'));
     } finally {
       setLoading(false);
     }

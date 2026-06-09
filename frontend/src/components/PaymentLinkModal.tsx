@@ -35,6 +35,11 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
 
+    const getApiErrorMessage = (error: unknown): string => {
+        const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+        return responseData?.error || responseData?.message || 'Failed to generate payment link';
+    };
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -66,8 +71,8 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
         try {
             const result = await onGenerateLink();
             setPaymentUrl(result.url);
-        } catch (err: any) {
-            const errorMessage = err?.response?.data?.error || 'Failed to generate payment link';
+        } catch (err) {
+            const errorMessage = getApiErrorMessage(err);
             setError(errorMessage);
             toast({
                 title: 'Error',

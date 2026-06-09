@@ -1,6 +1,6 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -60,7 +60,7 @@ export function RichTextEditor({
     const editorContainerRef = useRef<HTMLDivElement>(null);
     const isUpdatingFromProps = useRef(false);
 
-    const handleUpdate = useCallback(({ editor }: { editor: any }) => {
+    const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
         if (isUpdatingFromProps.current) {
             isUpdatingFromProps.current = false;
             return;
@@ -582,7 +582,6 @@ export function RichTextEditor({
                 )}
                 style={{ minHeight }}
             >
-                {/* @ts-expect-error - TipTap EditorContent has React 18 type compatibility issues */}
                 <EditorContent editor={editor} />
             </div>
         </div>

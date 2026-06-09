@@ -32,6 +32,16 @@ interface NoteSuggestionResponse {
   error?: string;
 }
 
+const getApiStatus = (error: unknown): number | undefined => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { status?: unknown } }).response;
+    if (typeof response?.status === 'number') {
+      return response.status;
+    }
+  }
+  return undefined;
+};
+
 export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNoteSuggestionsOptions) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [continuations, setContinuations] = useState<string[]>([]);
@@ -264,7 +274,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         // Cache results
         cacheSuggestions(context, suggestions, continuations);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to fetch note AI suggestions:', err);
       
       // Fallback to local suggestions on error
@@ -272,7 +282,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       setSuggestions(localSugs);
       setCurrentSuggestion(localSugs[0] || null);
       
-      if (err?.response?.status === 401) {
+      if (getApiStatus(err) === 401) {
         setError('Session expired. Please log in again.');
       } else {
         setError('AI suggestions temporarily unavailable');

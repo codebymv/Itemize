@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SignatureField } from '@/services/signaturesApi';
+import { SignatureField, SignatureTemplateField } from '@/services/signaturesApi';
 import { getAssetUrl, getApiUrl } from '@/lib/api';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -13,9 +13,11 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-interface FieldPlacementCanvasProps {
-  fields: SignatureField[];
-  onChange: (fields: SignatureField[]) => void;
+type FieldPlacementField = SignatureField | SignatureTemplateField;
+
+interface FieldPlacementCanvasProps<TField extends FieldPlacementField> {
+  fields: TField[];
+  onChange: (fields: TField[]) => void;
   fileUrl: string;
   roles?: string[];
   localFile?: File | null;
@@ -25,7 +27,7 @@ interface FieldPlacementCanvasProps {
 
 const FIELD_TYPES: SignatureField['field_type'][] = ['signature', 'initials', 'text', 'date', 'checkbox'];
 
-export default function FieldPlacementCanvas({
+export default function FieldPlacementCanvas<TField extends FieldPlacementField>({
   fields,
   onChange,
   fileUrl,
@@ -33,7 +35,7 @@ export default function FieldPlacementCanvas({
   localFile = null,
   documentId,
   readOnly = false
-}: FieldPlacementCanvasProps) {
+}: FieldPlacementCanvasProps<TField>) {
   const formatFieldType = (type: SignatureField['field_type']) => type.charAt(0).toUpperCase() + type.slice(1);
   const [fieldType, setFieldType] = useState<SignatureField['field_type']>('signature');
   const [pageNumber, setPageNumber] = useState(1);
@@ -86,11 +88,11 @@ export default function FieldPlacementCanvas({
     setPreviewPageCount((prev) => Math.min(Math.max(prev, 1), numPages || 1));
   }, [numPages, readOnly]);
 
-  const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>, targetPage: number) => {
+  const addFieldAtPosition = (target: HTMLDivElement, targetPage: number, clientX: number, clientY: number) => {
     if (readOnly) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
-    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    const rect = target.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
 
     const newField: SignatureField = {
       id: Date.now(),
@@ -105,7 +107,17 @@ export default function FieldPlacementCanvas({
       role_name: roleName || undefined
     };
 
-    onChange([...fields, newField]);
+    onChange([...fields, newField as TField]);
+  };
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>, targetPage: number) => {
+    addFieldAtPosition(event.currentTarget, targetPage, event.clientX, event.clientY);
+  };
+
+  const handleCanvasKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, targetPage: number) => {
+    if (readOnly || event.key !== 'Enter') return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    addFieldAtPosition(event.currentTarget, targetPage, rect.left + rect.width / 2, rect.top + rect.height / 2);
   };
 
   const removeField = (fieldId: number) => {
@@ -236,7 +248,7 @@ export default function FieldPlacementCanvas({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
-                      if (!readOnly && event.key === 'Enter') handleCanvasClick(event as any, pageIndex);
+                      handleCanvasKeyDown(event, pageIndex);
                     }}
                   >
                     <Page

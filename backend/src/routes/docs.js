@@ -283,15 +283,4 @@ function formatName(name) {
     .replace(/\b\w/g, l => l.toUpperCase());
 }
 
-/**
- * Get fallback content for critical documents when files aren't available
- */
-function getFallbackDocContent(docPath) {
-  const fallbackDocs = {
-    'getting-started': '# Documentation Not Found\n\nWe could not find the requested documentation. Please check the URL or try again later.'
-  };
-
-  return fallbackDocs[docPath] || null;
-}
-
 module.exports = router;

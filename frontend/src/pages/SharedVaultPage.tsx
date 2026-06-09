@@ -7,6 +7,9 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import { getSharedVault } from '../services/api';
 
+const getApiStatus = (error: unknown): number | undefined =>
+  (error as { response?: { status?: number } })?.response?.status;
+
 interface SharedVaultItem {
   id: number;
   item_type: 'key_value' | 'secure_note';
@@ -59,13 +62,14 @@ const SharedVaultPage: React.FC = () => {
             `View this encrypted vault shared from Itemize.cloud. Contains ${response.items.length} secure items.`
           );
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching shared vault:', err);
-        if (err.response?.status === 404) {
+        const status = getApiStatus(err);
+        if (status === 404) {
           setError('This shared vault is no longer available or the link is invalid.');
-        } else if (err.response?.status === 403) {
+        } else if (status === 403) {
           setError('This vault is locked and cannot be viewed publicly.');
-        } else if (err.response?.status === 429) {
+        } else if (status === 429) {
           setError('Too many requests. Please try again later.');
         } else {
           setError('Failed to load shared content. Please try again later.');

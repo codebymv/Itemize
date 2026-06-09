@@ -1,4 +1,8 @@
 // List and item type definitions
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type JsonRecord = Record<string, JsonValue>;
+
 export interface ListItem {
   id: string;
   text: string;
@@ -44,7 +48,7 @@ export interface ListCardProps {
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 
@@ -130,8 +134,8 @@ export interface FlowNode {
   id: string;
   type?: string;
   position: { x: number; y: number };
-  data: { label: string; [key: string]: any };
-  style?: Record<string, any>;
+  data: { label: string; [key: string]: JsonValue };
+  style?: Record<string, JsonValue>;
   width?: number;
   height?: number;
 }
@@ -143,7 +147,7 @@ export interface FlowEdge {
   type?: string;
   label?: string;
   animated?: boolean;
-  style?: Record<string, any>;
+  style?: Record<string, JsonValue>;
 }
 
 export interface FlowViewport {
@@ -257,7 +261,7 @@ export interface Organization {
   id: number;
   name: string;
   slug: string;
-  settings: Record<string, any>;
+  settings: JsonRecord;
   logo_url?: string;
   role?: 'owner' | 'admin' | 'member' | 'viewer';
   created_at: string;
@@ -299,7 +303,7 @@ export interface Contact {
   address: ContactAddress;
   source: 'manual' | 'import' | 'form' | 'integration' | 'api';
   status: 'active' | 'inactive' | 'archived';
-  custom_fields: Record<string, any>;
+  custom_fields: JsonRecord;
   tags: string[];
   assigned_to?: number;
   assigned_to_name?: string;
@@ -318,8 +322,8 @@ export interface ContactActivity {
   user_email?: string;
   type: 'note' | 'email' | 'call' | 'task' | 'meeting' | 'status_change' | 'deal_update' | 'system';
   title?: string;
-  content: Record<string, any>;
-  metadata?: Record<string, any>;
+  content: JsonRecord;
+  metadata?: JsonRecord;
   created_at: string;
 }
 
@@ -371,7 +375,7 @@ export interface Deal {
   won_at?: string;
   lost_at?: string;
   lost_reason?: string;
-  custom_fields: Record<string, any>;
+  custom_fields: JsonRecord;
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -503,7 +507,7 @@ export interface Booking {
   notes?: string;
   internal_notes?: string;
   reminder_sent_at?: string;
-  custom_fields: Record<string, any>;
+  custom_fields: JsonRecord;
   source: 'booking_page' | 'manual' | 'api' | 'import';
   created_at: string;
   updated_at: string;
@@ -585,11 +589,11 @@ export interface FormField {
   placeholder?: string;
   help_text?: string;
   is_required: boolean;
-  validation?: Record<string, any>;
+  validation?: JsonRecord;
   options?: FormFieldOption[];
   field_order: number;
   width: 'full' | 'half';
-  conditions?: any[];
+  conditions?: JsonRecord[];
   map_to_contact_field?: string;
 }
 
@@ -606,7 +610,7 @@ export interface Form {
   redirect_url?: string;
   notify_on_submit: boolean;
   notification_emails: string[];
-  theme: { primaryColor: string;[key: string]: any };
+  theme: { primaryColor: string; [key: string]: JsonValue };
   create_contact: boolean;
   contact_tags: string[];
   created_by?: number;
@@ -622,7 +626,7 @@ export interface FormSubmission {
   form_id: number;
   organization_id: number;
   contact_id?: number;
-  data: Record<string, any>;
+  data: JsonRecord;
   ip_address?: string;
   user_agent?: string;
   referrer?: string;
@@ -687,7 +691,7 @@ export interface Message {
   channel: string;
   content: string;
   content_html?: string;
-  metadata?: Record<string, any>;
+  metadata?: JsonRecord;
   is_read: boolean;
   created_at: string;
 }

@@ -69,6 +69,13 @@ interface ProductFormData {
     is_active: boolean;
 }
 
+type BillingPeriod = NonNullable<ProductFormData['billing_period']>;
+
+const BILLING_PERIODS: BillingPeriod[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
+
+const isBillingPeriod = (value: string): value is BillingPeriod =>
+    BILLING_PERIODS.includes(value as BillingPeriod);
+
 const defaultFormData: ProductFormData = {
     name: '',
     description: '',
@@ -441,7 +448,11 @@ export function ProductsPage() {
                                 <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Billing Period</Label>
                                 <Select
                                     value={formData.billing_period || 'monthly'}
-                                    onValueChange={(v) => setFormData({ ...formData, billing_period: v as any })}
+                                    onValueChange={(v) => {
+                                        if (isBillingPeriod(v)) {
+                                            setFormData({ ...formData, billing_period: v });
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />

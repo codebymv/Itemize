@@ -10,7 +10,7 @@ const { logger } = require('../utils/logger');
 let Twilio = null;
 try {
   Twilio = require('twilio');
-} catch (e) {
+} catch {
   logger.info('Twilio package not installed - SMS sending disabled');
 }
 
@@ -284,7 +284,7 @@ class SmsService extends BaseService {
     if (!message) return { length: 0, segments: 0, encoding: 'GSM' };
     
     // Check if message contains non-GSM characters (requires Unicode)
-    const gsmRegex = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-.\/0-9:;<=>?¡A-ZÄÖÑÜä§¿a-zäöñüà]*$/;
+    const gsmRegex = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-.0-9:;<=>?¡A-ZÄÖÑÜä§¿a-zäöñüà]*$/;
     const isGsm = gsmRegex.test(message);
     
     const charsPerSegment = isGsm ? 160 : 70;

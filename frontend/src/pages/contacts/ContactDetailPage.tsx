@@ -74,9 +74,9 @@ export function ContactDetailPage() {
   const [contact, setContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<ContactActivity[]>([]);
   const [relatedContent, setRelatedContent] = useState<{
-    lists: any[];
-    notes: any[];
-    whiteboards: any[];
+    lists: Array<{ id: number; title: string; category: string; created_at: string }>;
+    notes: Array<{ id: number; title: string; category: string; created_at: string }>;
+    whiteboards: Array<{ id: number; title: string; category: string; created_at: string }>;
   }>({ lists: [], notes: [], whiteboards: [] });
   const [loading, setLoading] = useState(true);
   const { organizationId } = useOrganization();

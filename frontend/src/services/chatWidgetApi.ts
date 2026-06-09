@@ -85,7 +85,7 @@ export interface ChatSession {
     visitor_name?: string;
     visitor_email?: string;
     visitor_phone?: string;
-    custom_data: Record<string, any>;
+    custom_data: Record<string, unknown>;
     
     // Metadata
     ip_address?: string;

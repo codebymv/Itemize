@@ -3,9 +3,9 @@
  * Handles all contact-related API calls
  */
 import api from '@/lib/api';
-import { Contact, ContactActivity, ContactsResponse, Organization, OrganizationMember } from '@/types';
+import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationMember } from '@/types';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
     return payload.data as T;
   }
@@ -26,7 +26,7 @@ export const getOrganization = async (id: number): Promise<Organization> => {
   return unwrapResponse<Organization>(response.data);
 };
 
-export const createOrganization = async (data: { name: string; settings?: Record<string, any> }): Promise<Organization> => {
+export const createOrganization = async (data: { name: string; settings?: JsonRecord }): Promise<Organization> => {
   const response = await api.post('/api/organizations', data);
   return unwrapResponse<Organization>(response.data);
 };
@@ -117,7 +117,7 @@ export interface CreateContactData {
   };
   source?: string;
   status?: string;
-  custom_fields?: Record<string, any>;
+  custom_fields?: JsonRecord;
   tags?: string[];
   assigned_to?: number;
   organization_id?: number;
@@ -188,8 +188,8 @@ export const addContactActivity = async (
   data: {
     type: string;
     title?: string;
-    content?: Record<string, any>;
-    metadata?: Record<string, any>;
+    content?: JsonRecord;
+    metadata?: JsonRecord;
   },
   organizationId?: number
 ): Promise<ContactActivity> => {

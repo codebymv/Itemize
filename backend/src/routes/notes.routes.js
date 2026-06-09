@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { noteColumns } = require('./workspace-object-columns');
 
 /**
  * Create notes routes with injected dependencies
@@ -103,7 +104,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => client.query(
                 `INSERT INTO notes (user_id, title, content, category, color_value, position_x, position_y, width, height, z_index) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING ${noteColumns()}`,
                 [
                     req.user.id,
                     title,
@@ -131,7 +132,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { title, content, category, color_value, position_x, position_y, width, height, z_index } = req.body;
 
             const data = await withDbClient(pool, async (client) => {
-                const currentNoteResult = await client.query('SELECT * FROM notes WHERE id = $1 AND user_id = $2', [noteId, req.user.id]);
+                const currentNoteResult = await client.query(`SELECT ${noteColumns()} FROM notes WHERE id = $1 AND user_id = $2`, [noteId, req.user.id]);
 
                 if (currentNoteResult.rows.length === 0) {
                     return { status: 404, payload: { error: 'Note not found or access denied' } };
@@ -152,7 +153,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 const updateResult = await client.query(
                     `UPDATE notes
              SET title = $1, content = $2, category = $3, color_value = $4, position_x = $5, position_y = $6, width = $7, height = $8, z_index = $9
-             WHERE id = $10 AND user_id = $11 RETURNING *`,
+             WHERE id = $10 AND user_id = $11 RETURNING ${noteColumns()}`,
                     [newTitle, newContent, newCategory, newColorValue, newPositionX, newPositionY, newWidth, newHeight, newZIndex, noteId, req.user.id]
                 );
 
@@ -245,7 +246,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE notes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                `UPDATE notes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${noteColumns()}`,
                 [content, noteId, req.user.id]
             ));
 
@@ -281,7 +282,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE notes SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                `UPDATE notes SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${noteColumns()}`,
                 [title.trim(), noteId, req.user.id]
             ));
 
@@ -317,7 +318,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE notes SET category = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                `UPDATE notes SET category = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${noteColumns()}`,
                 [category.trim(), noteId, req.user.id]
             ));
 

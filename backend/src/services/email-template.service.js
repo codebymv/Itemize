@@ -3,8 +3,6 @@
  * Handles template variable replacement and email branding
  */
 
-const { logger } = require('../utils/logger');
-
 // CSS class to inline style mapping for email compatibility
 const CSS_CLASS_STYLES = {
     // Buttons

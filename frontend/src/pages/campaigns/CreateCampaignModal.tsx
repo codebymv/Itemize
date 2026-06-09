@@ -26,14 +26,48 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { createCampaign, previewCampaign } from '@/services/campaignsApi';
+import type { EmailCampaign } from '@/services/campaignsApi';
 import { getEmailTemplates, EmailTemplate } from '@/services/emailApi';
 import { getSegments, Segment, getFilterOptions, FilterOptions } from '@/services/segmentsApi';
 
 interface CreateCampaignModalProps {
   organizationId: number;
   onClose: () => void;
-  onCreated: (campaign: any) => void;
+  onCreated: (campaign: EmailCampaign) => void;
 }
+
+type CampaignFormData = {
+  name: string;
+  subject: string;
+  from_name: string;
+  from_email: string;
+  reply_to: string;
+  content_source: 'template' | 'custom';
+  template_id: number | null;
+  content_html: string;
+  content_text: string;
+  segment_type: 'all' | 'tag' | 'status' | 'segment';
+  tag_ids: number[];
+  excluded_tag_ids: number[];
+  status_filter: string;
+  segment_id: number | null;
+  send_immediately: boolean;
+  scheduled_at: string;
+  scheduled_time: string;
+  timezone: string;
+};
+
+type CampaignCreatePayload = Partial<EmailCampaign> & {
+  segment_id?: number | null;
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (error && typeof error === 'object') {
+    const maybeApiError = error as { response?: { data?: { error?: string } }; message?: string };
+    return maybeApiError.response?.data?.error || maybeApiError.message || fallback;
+  }
+  return fallback;
+};
 
 const STEPS = [
   { id: 'basic', label: 'Basic Info', icon: Mail },
@@ -74,7 +108,7 @@ export function CreateCampaignModal({
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CampaignFormData>({
     // Basic Info
     name: '',
     subject: '',
@@ -128,7 +162,7 @@ export function CreateCampaignModal({
     loadData();
   }, [organizationId]);
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = <K extends keyof CampaignFormData>(field: K, value: CampaignFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -214,7 +248,7 @@ export function CreateCampaignModal({
         scheduledAt = new Date(dateTime).toISOString();
       }
 
-      const campaignData: any = {
+      const campaignData: CampaignCreatePayload = {
         name: formData.name.trim(),
         subject: formData.subject.trim(),
         from_name: formData.from_name.trim() || undefined,
@@ -254,11 +288,11 @@ export function CreateCampaignModal({
       const campaign = await createCampaign(campaignData, organizationId);
       toast({ title: 'Campaign created', description: 'Your campaign has been created successfully' });
       onCreated(campaign);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating campaign:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create campaign',
+        description: getApiErrorMessage(error, 'Failed to create campaign'),
         variant: 'destructive',
       });
     } finally {
@@ -349,7 +383,7 @@ export function CreateCampaignModal({
               <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Content Source</Label>
               <RadioGroup
                 value={formData.content_source}
-                onValueChange={(v) => handleChange('content_source', v)}
+                onValueChange={(v) => handleChange('content_source', v as CampaignFormData['content_source'])}
                 className="flex gap-4"
               >
                 <div className="flex items-center space-x-2">
@@ -442,7 +476,7 @@ export function CreateCampaignModal({
               <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Target Audience</Label>
               <RadioGroup
                 value={formData.segment_type}
-                onValueChange={(v) => handleChange('segment_type', v)}
+                onValueChange={(v) => handleChange('segment_type', v as CampaignFormData['segment_type'])}
                 className="space-y-2"
               >
                 <div className="flex items-center space-x-2 p-2 rounded border hover:bg-muted">

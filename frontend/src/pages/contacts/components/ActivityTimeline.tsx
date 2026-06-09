@@ -10,13 +10,18 @@ import {
   Settings,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { ContactActivity } from '@/types';
+import { ContactActivity, JsonRecord } from '@/types';
 
 interface ActivityTimelineProps {
   activities: ContactActivity[];
 }
 
 export function ActivityTimeline({ activities }: ActivityTimelineProps) {
+  const asDisplayText = (value: unknown, fallback: string): string => {
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    return fallback;
+  };
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'note':
@@ -84,23 +89,23 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   };
 
   const getActivityContent = (activity: ContactActivity) => {
-    const content = activity.content as Record<string, any>;
+    const content = activity.content as JsonRecord;
 
     switch (activity.type) {
       case 'note':
-        return content.text || 'Added a note';
+        return asDisplayText(content.text, 'Added a note');
       case 'email':
-        return content.subject || 'Sent an email';
+        return asDisplayText(content.subject, 'Sent an email');
       case 'call':
-        return content.summary || `Call ${content.duration ? `(${content.duration} min)` : ''}`;
+        return asDisplayText(content.summary, `Call ${typeof content.duration === 'number' || typeof content.duration === 'string' ? `(${content.duration} min)` : ''}`);
       case 'task':
-        return content.title || 'Created a task';
+        return asDisplayText(content.title, 'Created a task');
       case 'meeting':
-        return content.title || 'Scheduled a meeting';
+        return asDisplayText(content.title, 'Scheduled a meeting');
       case 'status_change':
-        return `Status changed from ${content.from} to ${content.to}`;
+        return `Status changed from ${asDisplayText(content.from, 'unknown')} to ${asDisplayText(content.to, 'unknown')}`;
       case 'deal_update':
-        return content.description || 'Deal updated';
+        return asDisplayText(content.description, 'Deal updated');
       case 'system':
         return activity.title || 'System activity';
       default:

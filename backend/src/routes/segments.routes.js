@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { contactColumns, segmentColumns, segmentHistoryColumns } = require('./segment-columns');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -273,7 +274,7 @@ module.exports = (pool, authenticateJWT) => {
         try {
             const { is_active, search } = req.query;
             let query = `
-                SELECT s.*, u.name as created_by_name
+                SELECT ${segmentColumns('s')}, u.name as created_by_name
                 FROM segments s
                 LEFT JOIN users u ON s.created_by = u.id
                 WHERE s.organization_id = $1
@@ -312,7 +313,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const data = await withDbClient(pool, async (client) => {
                 const result = await client.query(`
-                    SELECT s.*, u.name as created_by_name
+                    SELECT ${segmentColumns('s')}, u.name as created_by_name
                     FROM segments s
                     LEFT JOIN users u ON s.created_by = u.id
                     WHERE s.id = $1 AND s.organization_id = $2
@@ -324,7 +325,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Get recent history
                 const historyResult = await client.query(`
-                    SELECT * FROM segment_history 
+                    SELECT ${segmentHistoryColumns()} FROM segment_history
                     WHERE segment_id = $1 
                     ORDER BY calculated_at DESC 
                     LIMIT 30
@@ -377,7 +378,7 @@ module.exports = (pool, authenticateJWT) => {
                         filter_type, filters, segment_type, static_contact_ids,
                         created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    RETURNING *
+                    RETURNING ${segmentColumns()}
                 `, [
                     req.organizationId,
                     name,
@@ -433,7 +434,7 @@ module.exports = (pool, authenticateJWT) => {
                         is_active = COALESCE($7, is_active),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $8 AND organization_id = $9
-                    RETURNING *
+                    RETURNING ${segmentColumns()}
                 `, [
                     name,
                     description,
@@ -503,7 +504,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const data = await withDbClient(pool, async (client) => {
                 const segmentResult = await client.query(
-                    'SELECT * FROM segments WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -516,7 +517,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Get updated segment
                 const updatedResult = await client.query(
-                    'SELECT * FROM segments WHERE id = $1',
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1`,
                     [id]
                 );
 
@@ -545,7 +546,7 @@ module.exports = (pool, authenticateJWT) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get segment
                 const segmentResult = await client.query(
-                    'SELECT * FROM segments WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -558,8 +559,8 @@ module.exports = (pool, authenticateJWT) => {
                 // Build filter query
                 const { whereClause, params } = buildFilterQuery(segment.filters, segment.filter_type);
 
-                let baseQuery = `
-                    SELECT c.* FROM contacts c
+                let fromWhere = `
+                    FROM contacts c
                     WHERE c.organization_id = $1
                 `;
                 const queryParams = [req.organizationId];
@@ -569,19 +570,19 @@ module.exports = (pool, authenticateJWT) => {
                     const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
                         return `$${parseInt(num) + 1}`;
                     });
-                    baseQuery += ` AND ${adjustedWhereClause}`;
+                    fromWhere += ` AND ${adjustedWhereClause}`;
                     queryParams.push(...params);
                 }
 
                 // Count query
-                const countQuery = baseQuery.replace('SELECT c.*', 'SELECT COUNT(*)');
+                const countQuery = `SELECT COUNT(*) ${fromWhere}`;
                 const countResult = await client.query(countQuery, queryParams);
 
                 // Data query with pagination
-                baseQuery += ` ORDER BY c.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+                const contactsQuery = `SELECT ${contactColumns('c')} ${fromWhere} ORDER BY c.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
                 queryParams.push(parseInt(limit), offset);
 
-                const contactsResult = await client.query(baseQuery, queryParams);
+                const contactsResult = await client.query(contactsQuery, queryParams);
 
                 return { status: 200, contactsResult, countResult };
             });

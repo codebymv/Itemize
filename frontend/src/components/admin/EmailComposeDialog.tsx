@@ -144,7 +144,7 @@ export function EmailComposeDialog({
 
         setSending(true);
         try {
-            const result = await sendEmail({
+            await sendEmail({
                 recipients: allRecipients.map(r => ({
                     id: typeof r.id === 'number' ? r.id : undefined,
                     email: r.email,
@@ -160,8 +160,8 @@ export function EmailComposeDialog({
                 resetForm();
                 onSent?.();
             }, 1500);
-        } catch (error: any) {
-            const message = error.message || 'Failed to send email';
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to send email';
             toast({ title: 'Error', description: message, variant: 'destructive' });
         } finally {
             setSending(false);

@@ -62,7 +62,7 @@ const errors = {
  * Error handler middleware
  * Place at the end of middleware chain to catch all errors
  */
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
     // Determine status code
     let statusCode = err.statusCode || 500;
     let code = err.code || 'INTERNAL_ERROR';

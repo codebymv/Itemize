@@ -52,6 +52,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreatePaymentModal } from './components/CreatePaymentModal';
+import type { PaymentData } from './components/CreatePaymentModal';
 
 interface Payment {
     id: number;
@@ -324,7 +325,7 @@ const filteredPayments = payments.filter(p => {
         );
     });
 
-    const handleCreatePayment = async (paymentData: any) => {
+    const handleCreatePayment = async (paymentData: PaymentData) => {
         if (!organizationId) return;
         
         try {

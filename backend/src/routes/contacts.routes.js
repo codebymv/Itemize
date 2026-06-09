@@ -15,6 +15,7 @@ const {
     ERROR_CODES,
     PLAN_METADATA 
 } = require('../lib/subscription.constants');
+const { contactActivityColumns, contactColumns } = require('./contact-columns');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -128,7 +129,7 @@ module.exports = (pool, authenticateJWT) => {
 
       // Get contacts with pagination
       const contactsResult = await client.query(`
-        SELECT c.*, 
+        SELECT ${contactColumns('c')},
                u_assigned.name as assigned_to_name,
                u_created.name as created_by_name
         FROM contacts c
@@ -159,7 +160,7 @@ module.exports = (pool, authenticateJWT) => {
 
     const result = await withDbClient(pool, async (client) => {
       return client.query(`
-        SELECT c.*, 
+        SELECT ${contactColumns('c')},
                u_assigned.name as assigned_to_name, u_assigned.email as assigned_to_email,
                u_created.name as created_by_name
         FROM contacts c
@@ -219,7 +220,7 @@ module.exports = (pool, authenticateJWT) => {
           company, job_title, address, source, status,
           custom_fields, tags, assigned_to, created_by
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        RETURNING *
+        RETURNING ${contactColumns()}
       `, [
         req.organizationId,
         first_name || null,
@@ -253,7 +254,7 @@ module.exports = (pool, authenticateJWT) => {
           organizationId: req.organizationId,
           source: source || 'manual',
         }).catch(err => logger.error('Automation trigger error', { error: err.message }));
-      } catch (triggerError) {
+      } catch {
         logger.debug('Automation engine not initialized yet');
       }
     }
@@ -282,7 +283,7 @@ module.exports = (pool, authenticateJWT) => {
     const result = await withDbClient(pool, async (client) => {
       // First check the contact exists and belongs to this org
       const existing = await client.query(
-        'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
+        `SELECT ${contactColumns()} FROM contacts WHERE id = $1 AND organization_id = $2`,
         [id, req.organizationId]
       );
 
@@ -306,7 +307,7 @@ module.exports = (pool, authenticateJWT) => {
           assigned_to = $12,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $13 AND organization_id = $14
-        RETURNING *
+        RETURNING ${contactColumns()}
       `, [
         first_name,
         last_name,
@@ -434,7 +435,7 @@ module.exports = (pool, authenticateJWT) => {
         if (failedTriggers.length > 0) {
           logger.error('Automation trigger errors', { count: failedTriggers.length });
         }
-      } catch (triggerError) {
+      } catch {
         logger.debug('Automation engine not initialized yet');
       }
     }
@@ -495,7 +496,7 @@ module.exports = (pool, authenticateJWT) => {
       }
 
       const activities = await client.query(`
-        SELECT ca.*, u.name as user_name, u.email as user_email
+        SELECT ${contactActivityColumns('ca')}, u.name as user_name, u.email as user_email
         FROM contact_activities ca
         LEFT JOIN users u ON ca.user_id = u.id
         ${whereClause}
@@ -541,7 +542,7 @@ module.exports = (pool, authenticateJWT) => {
       const activity = await client.query(`
         INSERT INTO contact_activities (contact_id, user_id, type, title, content, metadata)
         VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
+        RETURNING ${contactActivityColumns()}
       `, [
         id,
         req.user.id,

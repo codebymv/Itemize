@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
+const { whiteboardColumns } = require('./workspace-object-columns');
 
 /**
  * Create whiteboards routes with injected dependencies
@@ -118,7 +119,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
                     `INSERT INTO whiteboards (user_id, title, category, canvas_data, canvas_width, canvas_height, background_color, position_x, position_y, z_index, color_value)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING ${whiteboardColumns()}`,
                     [
                         req.user.id,
                         title,
@@ -149,7 +150,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => {
                 const currentWhiteboardResult = await client.query(
-                    'SELECT * FROM whiteboards WHERE id = $1 AND user_id = $2',
+                    `SELECT ${whiteboardColumns()} FROM whiteboards WHERE id = $1 AND user_id = $2`,
                     [whiteboardId, req.user.id]
                 );
 
@@ -190,7 +191,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 const updateResult = await client.query(
                     `UPDATE whiteboards
          SET title = $1, category = $2, canvas_data = $3, canvas_width = $4, canvas_height = $5, background_color = $6, position_x = $7, position_y = $8, z_index = $9, color_value = $10
-         WHERE id = $11 AND user_id = $12 RETURNING *`,
+         WHERE id = $11 AND user_id = $12 RETURNING ${whiteboardColumns()}`,
                     [newTitle, newCategory, newCanvasData, newCanvasWidth, newCanvasHeight, newBackgroundColor, newPositionX, newPositionY, newZIndex, newColorValue, whiteboardId, req.user.id]
                 );
 
@@ -240,7 +241,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    'UPDATE whiteboards SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+                    `UPDATE whiteboards SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING ${whiteboardColumns()}`,
                     [x, y, id, req.user.id]
                 );
             });

@@ -14,6 +14,8 @@ import { getCampaigns } from '@/services/campaignsApi';
 import { getWorkflows } from '@/services/automationsApi';
 import { getInvoices } from '@/services/invoicesApi';
 import { getSignatures } from '@/services/signaturesApi';
+import type { Invoice } from '@/services/invoicesApi';
+import type { SignatureDocument } from '@/services/signaturesApi';
 
 interface SearchResult {
   id: string;
@@ -304,15 +306,16 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               // Invoices
               if (invoicesData.status === 'fulfilled' && invoicesData.value?.invoices) {
                 const matchedInvoices = invoicesData.value.invoices
-                  .filter((inv: any) =>
-                    inv.number?.toLowerCase().includes(lowerQuery) ||
-                    inv.contact_name?.toLowerCase().includes(lowerQuery)
+                  .filter((inv: Invoice) =>
+                    inv.invoice_number?.toLowerCase().includes(lowerQuery) ||
+                    `${inv.contact_first_name || ''} ${inv.contact_last_name || ''}`.toLowerCase().includes(lowerQuery) ||
+                    inv.customer_name?.toLowerCase().includes(lowerQuery)
                   )
                   .slice(0, 3)
-                  .map((inv: any) => ({
+                  .map((inv: Invoice) => ({
                     id: `invoice-${inv.id}`,
                     type: 'invoice' as const,
-                    title: inv.number || `Invoice #${inv.id}`,
+                    title: inv.invoice_number || `Invoice #${inv.id}`,
                     subtitle: inv.status || 'Invoice',
                     icon: FileText,
                     href: `/invoices/${inv.id}`
@@ -323,11 +326,11 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               // Signatures
               if (signaturesData.status === 'fulfilled' && signaturesData.value?.documents) {
                 const matchedSignatures = signaturesData.value.documents
-                  .filter((sig: any) =>
+                  .filter((sig: SignatureDocument) =>
                     sig.title?.toLowerCase().includes(lowerQuery)
                   )
                   .slice(0, 3)
-                  .map((sig: any) => ({
+                  .map((sig: SignatureDocument) => ({
                     id: `signature-${sig.id}`,
                     type: 'signature' as const,
                     title: sig.title || 'Document',

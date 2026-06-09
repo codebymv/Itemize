@@ -5,10 +5,9 @@
  */
 const express = require('express');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
+const { tagColumns } = require('./tag-columns');
 
 /**
  * Create tags routes with injected dependencies
@@ -24,7 +23,7 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const tagsWithCounts = await withDbClient(pool, async (client) => {
         const result = await client.query(`
-        SELECT t.*, 
+        SELECT ${tagColumns('t')},
                (SELECT COUNT(*) FROM contacts WHERE $1 = ANY(tags)) as contact_count
         FROM tags t
         WHERE t.organization_id = $2
@@ -75,7 +74,7 @@ module.exports = (pool, authenticateJWT) => {
         const result = await client.query(`
         INSERT INTO tags (organization_id, name, color)
         VALUES ($1, $2, $3)
-        RETURNING *
+        RETURNING ${tagColumns()}
       `, [req.organizationId, name.trim(), color || '#3B82F6']);
         return { error: null, status: 201, result };
       });
@@ -100,7 +99,7 @@ module.exports = (pool, authenticateJWT) => {
       const data = await withDbClient(pool, async (client) => {
         // Get current tag
         const currentTag = await client.query(
-          'SELECT * FROM tags WHERE id = $1 AND organization_id = $2',
+          `SELECT ${tagColumns()} FROM tags WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -116,7 +115,7 @@ module.exports = (pool, authenticateJWT) => {
         SET name = COALESCE($1, name),
             color = COALESCE($2, color)
         WHERE id = $3 AND organization_id = $4
-        RETURNING *
+        RETURNING ${tagColumns()}
       `, [name?.trim(), color, id, req.organizationId]);
 
         // If name changed, update all contacts with this tag

@@ -332,7 +332,7 @@ export function ContentsPage() {
         description: 'Failed to update whiteboard',
         variant: 'destructive',
       });
-      return null as any;
+      return null;
     }
   }, [token, toast, fetchAllContent]);
 
@@ -348,7 +348,7 @@ export function ContentsPage() {
         description: 'Failed to update wireframe',
         variant: 'destructive',
       });
-      return null as any;
+      return null;
     }
   }, [token, toast, fetchAllContent]);
 
@@ -364,7 +364,7 @@ export function ContentsPage() {
         description: 'Failed to update vault',
         variant: 'destructive',
       });
-      return null as any;
+      return null;
     }
   }, [token, toast, fetchAllContent]);
 

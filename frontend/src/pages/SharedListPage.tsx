@@ -8,6 +8,9 @@ import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
+const getApiStatus = (error: unknown): number | undefined =>
+  (error as { response?: { status?: number } })?.response?.status;
+
 interface SharedListData {
   id: string;
   title: string;
@@ -129,11 +132,12 @@ const SharedListPage: React.FC = () => {
           console.error('WebSocket error:', error);
         });
 
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching shared list:', err);
-        if (err.response?.status === 404) {
+        const status = getApiStatus(err);
+        if (status === 404) {
           setError('This shared list is no longer available or the link is invalid.');
-        } else if (err.response?.status === 429) {
+        } else if (status === 429) {
           setError('Too many requests. Please try again later.');
         } else {
           setError('Failed to load shared content. Please try again later.');

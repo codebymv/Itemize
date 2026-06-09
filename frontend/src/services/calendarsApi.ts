@@ -3,8 +3,9 @@
  * Handles all calendar and booking-related API calls
  */
 import api from '@/lib/api';
+import type { JsonRecord } from '@/types';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -169,7 +170,7 @@ export interface BookingCreateData {
     assigned_to?: number;
     notes?: string;
     internal_notes?: string;
-    custom_fields?: Record<string, any>;
+    custom_fields?: JsonRecord;
     organization_id?: number;
 }
 
@@ -234,7 +235,7 @@ export interface PublicBookingData {
     attendee_email: string;
     attendee_phone?: string;
     notes?: string;
-    custom_fields?: Record<string, any>;
+    custom_fields?: JsonRecord;
 }
 
 export const submitPublicBooking = async (

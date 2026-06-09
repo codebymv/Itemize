@@ -185,6 +185,16 @@ export function AutomationsPage() {
     fetchWorkflows();
   }, [fetchWorkflows]);
 
+  const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { data?: { error?: unknown } } }).response;
+      if (typeof response?.data?.error === 'string') {
+        return response.data.error;
+      }
+    }
+    return fallback;
+  };
+
   // Handle workflow toggle
   const handleToggleWorkflow = async (workflow: Workflow) => {
     if (!organizationId) return;
@@ -198,10 +208,10 @@ export function AutomationsPage() {
         toast({ title: 'Activated', description: 'Workflow activated successfully' });
       }
       fetchWorkflows();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to update workflow',
+        description: getApiErrorMessage(error, 'Failed to update workflow'),
         variant: 'destructive',
       });
     }

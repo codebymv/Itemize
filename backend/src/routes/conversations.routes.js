@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient, withTransaction } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { conversationColumns, messageColumns } = require('./conversation-columns');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -52,7 +53,7 @@ module.exports = (pool, authenticateJWT) => {
                 );
 
                 const result = await client.query(`
-            SELECT c.*,
+            SELECT ${conversationColumns('c')},
                    ct.first_name as contact_first_name,
                    ct.last_name as contact_last_name,
                    ct.email as contact_email,
@@ -91,7 +92,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const data = await withDbClient(pool, async (client) => {
                 const convResult = await client.query(`
-            SELECT c.*,
+            SELECT ${conversationColumns('c')},
                    ct.first_name as contact_first_name,
                    ct.last_name as contact_last_name,
                    ct.email as contact_email,
@@ -108,7 +109,7 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 const messagesResult = await client.query(`
-            SELECT m.*,
+            SELECT ${messageColumns('m')},
                    u.name as sender_user_name,
                    ct.first_name as sender_contact_first_name,
                    ct.last_name as sender_contact_last_name
@@ -161,7 +162,7 @@ module.exports = (pool, authenticateJWT) => {
                     const convResult = await client.query(`
             INSERT INTO conversations (organization_id, contact_id, assigned_to, channel, subject)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
+            RETURNING ${conversationColumns()}
           `, [
                         req.organizationId,
                         contact_id,
@@ -190,7 +191,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Fetch full conversation
                 const result = await client.query(`
-          SELECT c.*,
+          SELECT ${conversationColumns('c')},
                  ct.first_name as contact_first_name,
                  ct.last_name as contact_last_name,
                  ct.email as contact_email
@@ -223,7 +224,7 @@ module.exports = (pool, authenticateJWT) => {
           snoozed_until = $2,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $3 AND organization_id = $4
-        RETURNING *
+        RETURNING ${conversationColumns()}
       `, [status, snoozed_until || null, id, req.organizationId]));
 
             if (result.rows.length === 0) {
@@ -250,7 +251,7 @@ module.exports = (pool, authenticateJWT) => {
           assigned_to = $1,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2 AND organization_id = $3
-        RETURNING *
+        RETURNING ${conversationColumns()}
       `, [assigned_to || null, id, req.organizationId]));
 
             if (result.rows.length === 0) {
@@ -294,7 +295,7 @@ module.exports = (pool, authenticateJWT) => {
                 const messageResult = await client.query(`
           INSERT INTO messages (conversation_id, organization_id, sender_type, sender_user_id, channel, content, content_html, metadata)
           VALUES ($1, $2, 'user', $3, $4, $5, $6, $7)
-          RETURNING *
+          RETURNING ${messageColumns()}
         `, [
                     id,
                     req.organizationId,
@@ -317,7 +318,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Fetch message with sender info
                 const fullMessage = await client.query(`
-          SELECT m.*, u.name as sender_user_name
+          SELECT ${messageColumns('m')}, u.name as sender_user_name
           FROM messages m
           LEFT JOIN users u ON m.sender_user_id = u.id
           WHERE m.id = $1
@@ -354,7 +355,7 @@ module.exports = (pool, authenticateJWT) => {
                 return client.query(`
         UPDATE conversations SET unread_count = 0, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1 AND organization_id = $2
-        RETURNING *
+        RETURNING ${conversationColumns()}
       `, [id, req.organizationId]);
             });
 

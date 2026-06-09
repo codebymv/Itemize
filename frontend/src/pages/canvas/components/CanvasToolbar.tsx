@@ -14,9 +14,9 @@ interface CanvasToolbarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   typeFilter: 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
-  setTypeFilter: (value: any) => void;
+  setTypeFilter: (value: CanvasToolbarProps['typeFilter']) => void;
   categoryFilter: string;
-  setCategoryFilter: (value: any) => void;
+  setCategoryFilter: (value: string) => void;
   getUniqueCategories: string[];
   getCategoryCounts: Record<string, number>;
   onAddClick?: (e: React.MouseEvent) => void;

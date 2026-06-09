@@ -192,6 +192,20 @@ const { currentUser } = useAuthState();
     return newList;
   };
 
+  const getApiStatus = (error: unknown): number | undefined => {
+    if (error && typeof error === 'object') {
+      if ('response' in error) {
+        const response = (error as { response?: { status?: unknown } }).response;
+        if (typeof response?.status === 'number') return response.status;
+      }
+      if ('status' in error) {
+        const status = (error as { status?: unknown }).status;
+        if (typeof status === 'number') return status;
+      }
+    }
+    return undefined;
+  };
+
   // Create editCategory function for updating existing categories
   const editCategory = async (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => {
     try {
@@ -223,12 +237,12 @@ const { currentUser } = useAuthState();
         for (const list of listsToUpdate) {
           try {
             await updateList({ ...list, color_value: newColor });
-          } catch (error: any) {
+          } catch (error: unknown) {
             logger.error(`Failed to update list ${list.id} color:`, error);
 
             // If it's a 404 error, the list no longer exists in the backend
             // Remove it from the frontend state to prevent future errors
-            if (error?.response?.status === 404 || error?.status === 404) {
+            if (getApiStatus(error) === 404) {
               logger.warn(`List ${list.id} no longer exists in backend, removing from frontend state`);
               failedListIds.push(list.id);
             }

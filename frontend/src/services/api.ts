@@ -1,6 +1,7 @@
 import api, { type RetryConfig } from '../lib/api';
 import { logger } from '../lib/logger';
 import { MIN_LIST_WIDTH } from '../constants/dimensions';
+import type { JsonValue } from '@/types';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -352,8 +353,8 @@ export interface FlowData {
     id: string;
     type?: string;
     position: { x: number; y: number };
-    data: { label: string; [key: string]: any };
-    style?: Record<string, any>;
+    data: { label: string; [key: string]: JsonValue };
+    style?: Record<string, JsonValue>;
   }>;
   edges: Array<{
     id: string;

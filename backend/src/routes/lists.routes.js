@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { listColumns } = require('./list-columns');
 
 /**
  * Create lists routes with injected dependencies
@@ -96,7 +97,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const categoryValue = category || type || 'General';
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y, width, height) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+                `INSERT INTO lists (title, category, items, user_id, color_value, position_x, position_y, width, height) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING ${listColumns()}`,
                 [
                     title,
                     categoryValue,
@@ -133,7 +134,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const categoryValue = category || type || 'General';
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4, width = $5, height = $6 WHERE id = $7 AND user_id = $8 RETURNING *',
+                `UPDATE lists SET title = $1, category = $2, items = $3, color_value = $4, width = $5, height = $6 WHERE id = $7 AND user_id = $8 RETURNING ${listColumns()}`,
                 [title, categoryValue, JSON.stringify(items), color_value, width, height, id, req.user.id]
             ));
 
@@ -201,7 +202,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     router.get('/canvas/lists', authenticateJWT, async (req, res) => {
         try {
             const result = await withDbClient(pool, async (client) => client.query(
-                'SELECT * FROM lists WHERE user_id = $1 ORDER BY created_at DESC',
+                `SELECT ${listColumns()} FROM lists WHERE user_id = $1 ORDER BY created_at DESC`,
                 [req.user.id]
             ));
 
@@ -229,7 +230,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE lists SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+                `UPDATE lists SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING ${listColumns()}`,
                 [x, y, id, req.user.id]
             ));
 
@@ -260,7 +261,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get current list
                 const listResult = await client.query(
-                    'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+                    `SELECT ${listColumns()} FROM lists WHERE id = $1 AND user_id = $2`,
                     [id, req.user.id]
                 );
 
@@ -281,7 +282,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                 // Update the list
                 const updateResult = await client.query(
-                    'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                    `UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${listColumns()}`,
                     [JSON.stringify(items), id, req.user.id]
                 );
 
@@ -333,7 +334,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get current list
                 const listResult = await client.query(
-                    'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+                    `SELECT ${listColumns()} FROM lists WHERE id = $1 AND user_id = $2`,
                     [id, req.user.id]
                 );
 
@@ -355,7 +356,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                 // Update the list
                 const updateResult = await client.query(
-                    'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                    `UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${listColumns()}`,
                     [JSON.stringify(items), id, req.user.id]
                 );
 
@@ -400,7 +401,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get current list
                 const listResult = await client.query(
-                    'SELECT * FROM lists WHERE id = $1 AND user_id = $2',
+                    `SELECT ${listColumns()} FROM lists WHERE id = $1 AND user_id = $2`,
                     [id, req.user.id]
                 );
 
@@ -421,7 +422,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
                 // Update the list
                 const updateResult = await client.query(
-                    'UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                    `UPDATE lists SET items = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${listColumns()}`,
                     [JSON.stringify(items), id, req.user.id]
                 );
 
@@ -464,7 +465,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE lists SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+                `UPDATE lists SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${listColumns()}`,
                 [title.trim(), id, req.user.id]
             ));
 

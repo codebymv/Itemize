@@ -21,14 +21,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { createSmsTemplate, getMessageInfo, MessageInfo } from '@/services/smsApi';
+import { createSmsTemplate, getMessageInfo, MessageInfo, type SmsTemplate } from '@/services/smsApi';
 import { debounce } from 'lodash';
 
 interface CreateSMSTemplateModalProps {
   organizationId: number;
   onClose: () => void;
-  onCreated: (template: any) => void;
+  onCreated: (template: SmsTemplate) => void;
 }
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
 
 const TEMPLATE_CATEGORIES = [
   { value: 'marketing', label: 'Marketing' },
@@ -140,11 +145,11 @@ export function CreateSMSTemplateModal({
       });
       toast({ title: 'Template created', description: 'SMS template has been created successfully' });
       onCreated(template);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating template:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create template',
+        description: getApiErrorMessage(error, 'Failed to create template'),
         variant: 'destructive',
       });
     } finally {

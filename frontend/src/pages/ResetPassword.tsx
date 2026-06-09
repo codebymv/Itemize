@@ -10,6 +10,11 @@ import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -74,8 +79,8 @@ export default function ResetPassword() {
       
       // Redirect to login after a moment
       setTimeout(() => navigate('/login'), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to reset password. The link may be invalid or expired.');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to reset password. The link may be invalid or expired.'));
     } finally {
       setLoading(false);
     }

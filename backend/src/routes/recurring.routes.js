@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { logger } = require('../utils/logger');
 const { withDbClient } = require('../utils/db');
+const { invoiceColumns, recurringTemplateColumns } = require('./recurring-columns');
 
 module.exports = (pool, authenticateJWT) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
@@ -81,7 +82,7 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 return client.query(`
-                    SELECT r.*, 
+                    SELECT ${recurringTemplateColumns('r')},
                         c.first_name as contact_first_name, 
                         c.last_name as contact_last_name,
                         (SELECT COUNT(*) FROM invoices i WHERE i.recurring_template_id = r.id) as invoices_generated,
@@ -109,7 +110,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const result = await withDbClient(pool, async (client) => {
                 return client.query(`
-                    SELECT r.*, 
+                    SELECT ${recurringTemplateColumns('r')},
                         c.first_name as contact_first_name, 
                         c.last_name as contact_last_name,
                         si.invoice_number as source_invoice_number
@@ -189,7 +190,7 @@ module.exports = (pool, authenticateJWT) => {
                         items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
                         notes, payment_terms, created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-                    RETURNING *
+                    RETURNING ${recurringTemplateColumns()}
                 `, [
                     req.organizationId,
                     template_name,
@@ -243,7 +244,7 @@ module.exports = (pool, authenticateJWT) => {
             const result = await withDbClient(pool, async (client) => {
                 // Check if exists
                 const checkResult = await client.query(
-                    'SELECT * FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${recurringTemplateColumns()} FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -338,7 +339,7 @@ module.exports = (pool, authenticateJWT) => {
                     UPDATE recurring_invoice_templates 
                     SET ${updateFields.join(', ')}
                     WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
-                    RETURNING *
+                    RETURNING ${recurringTemplateColumns()}
                 `, updateParams);
 
                 return updated.rows[0] || null;
@@ -390,7 +391,7 @@ module.exports = (pool, authenticateJWT) => {
                     UPDATE recurring_invoice_templates 
                     SET status = 'paused', updated_at = CURRENT_TIMESTAMP
                     WHERE id = $1 AND organization_id = $2 AND status = 'active'
-                    RETURNING *
+                    RETURNING ${recurringTemplateColumns()}
                 `, [id, req.organizationId]);
             });
 
@@ -413,7 +414,7 @@ module.exports = (pool, authenticateJWT) => {
             const { id } = req.params;
             const result = await withDbClient(pool, async (client) => {
                 const template = await client.query(
-                    'SELECT * FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${recurringTemplateColumns()} FROM recurring_invoice_templates WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -437,7 +438,7 @@ module.exports = (pool, authenticateJWT) => {
                     UPDATE recurring_invoice_templates 
                     SET status = 'active', next_run_date = $3, updated_at = CURRENT_TIMESTAMP
                     WHERE id = $1 AND organization_id = $2 AND status = 'paused'
-                    RETURNING *
+                    RETURNING ${recurringTemplateColumns()}
                 `, [id, req.organizationId, nextRunDate]);
 
                 if (updated.rows.length === 0) {
@@ -474,7 +475,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Get the template
                 const templateResult = await client.query(`
-                    SELECT r.*, c.email as contact_email
+                    SELECT ${recurringTemplateColumns('r')}, c.email as contact_email
                     FROM recurring_invoice_templates r
                     LEFT JOIN contacts c ON r.contact_id = c.id
                     WHERE r.id = $1 AND r.organization_id = $2
@@ -534,7 +535,7 @@ module.exports = (pool, authenticateJWT) => {
                         due_date, subtotal, tax_amount, discount_amount, discount_type, discount_value,
                         total, amount_due, notes, recurring_template_id, created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                    RETURNING *
+                    RETURNING ${invoiceColumns()}
                 `, [
                     req.organizationId,
                     invoiceNumber,
@@ -681,7 +682,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Fetch the invoice
                 const invoiceResult = await client.query(`
-                    SELECT i.*, 
+                    SELECT ${invoiceColumns('i')},
                         c.first_name as contact_first_name, 
                         c.last_name as contact_last_name,
                         c.email as contact_email
@@ -758,7 +759,7 @@ module.exports = (pool, authenticateJWT) => {
                         items, subtotal, tax_amount, discount_amount, discount_type, discount_value, total,
                         notes, payment_terms, created_by, status, source_invoice_id
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'active', $20)
-                    RETURNING *
+                    RETURNING ${recurringTemplateColumns()}
                 `, [
                     req.organizationId,
                     template_name,

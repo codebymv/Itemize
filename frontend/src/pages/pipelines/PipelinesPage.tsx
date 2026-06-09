@@ -32,6 +32,9 @@ import { CreateDealModal } from './components/CreateDealModal';
 import { CreatePipelineModal } from './components/CreatePipelineModal';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
+const getApiStatus = (error: unknown): number | undefined =>
+  (error as { response?: { status?: number } })?.response?.status;
+
 export function PipelinesPage() {
   const { toast } = useToast();
   const { setHeaderContent } = useHeader();
@@ -45,8 +48,8 @@ export function PipelinesPage() {
   const [currentPipeline, setCurrentPipeline] = useState<(Pipeline & { deals: Deal[] }) | null>(null);
   const [loading, setLoading] = useState(true);
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
-    onError: (error: any) => {
-      return error?.response?.status === 500
+    onError: (error) => {
+      return getApiStatus(error) === 500
         ? 'CRM database tables are not ready. Please restart your backend server to run migrations.'
         : 'Failed to initialize organization. Please check your connection.';
     }

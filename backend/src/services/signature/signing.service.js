@@ -1,11 +1,16 @@
 const { withTransaction } = require('../../utils/db');
 const { generateToken, hashToken } = require('./tokens');
 const { pdfSignatureService, signatureEmailService } = require('./optional-services');
+const {
+    signatureDocumentColumns,
+    signatureRecipientColumns,
+    signatureFieldColumns
+} = require('./columns');
 
 async function sendForSignature(pool, emailService, documentId, organizationId, signingUrlBase) {
     return withTransaction(pool, async (client) => {
         const docResult = await client.query(
-            'SELECT * FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            `SELECT ${signatureDocumentColumns()} FROM signature_documents WHERE id = $1 AND organization_id = $2`,
             [documentId, organizationId]
         );
         if (docResult.rows.length === 0) {
@@ -14,7 +19,7 @@ async function sendForSignature(pool, emailService, documentId, organizationId, 
         const document = docResult.rows[0];
 
         const recipientsResult = await client.query(
-            'SELECT * FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC',
+            `SELECT ${signatureRecipientColumns()} FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC`,
             [documentId]
         );
         if (recipientsResult.rows.length === 0) {
@@ -93,7 +98,7 @@ async function sendForSignature(pool, emailService, documentId, organizationId, 
                 expires_at = $1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $2
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [expiresAt, documentId]);
 
         return updateDoc.rows[0];
@@ -190,7 +195,7 @@ async function getDocumentForSigning(pool, token, audit = {}) {
         }
 
         const fieldsResult = await client.query(
-            'SELECT * FROM signature_fields WHERE document_id = $1 AND (recipient_id = $2 OR recipient_id IS NULL)',
+            `SELECT ${signatureFieldColumns()} FROM signature_fields WHERE document_id = $1 AND (recipient_id = $2 OR recipient_id IS NULL)`,
             [documentId, recipient.recipient_id]
         );
 
@@ -346,7 +351,7 @@ async function submitSignature(pool, token, payload, audit = {}) {
         // For sequential routing, activate next recipient
         if ((recipient.routing_mode || 'parallel') === 'sequential') {
             const nextRecipientResult = await client.query(`
-                SELECT * FROM signature_recipients
+                SELECT ${signatureRecipientColumns()} FROM signature_recipients
                 WHERE document_id = $1 AND signing_order > $2 AND status = 'pending'
                 ORDER BY signing_order ASC
                 LIMIT 1
@@ -416,7 +421,7 @@ async function submitSignature(pool, token, payload, audit = {}) {
                     signed_sha256 = COALESCE($2, signed_sha256),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $3
-                RETURNING *
+                RETURNING ${signatureDocumentColumns()}
             `, [signedFileUrl, signedSha256, documentId]);
 
             completedDocument = updateDoc.rows[0] || null;

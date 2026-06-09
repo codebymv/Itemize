@@ -29,6 +29,11 @@ import { sendReviewRequest, sendBulkReviewRequests } from '@/services/reputation
 import { getContacts } from '@/services/contactsApi';
 import { debounce } from 'lodash';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 interface SendReviewRequestModalProps {
   organizationId: number;
   onClose: () => void;
@@ -199,11 +204,11 @@ export function SendReviewRequestModal({
         
         toast({ title: 'Request sent', description: 'Review request has been sent successfully' });
         onSent();
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error sending request:', error);
         toast({
           title: 'Error',
-          description: error.response?.data?.error || 'Failed to send request',
+          description: getApiErrorMessage(error, 'Failed to send request'),
           variant: 'destructive',
         });
       } finally {
@@ -234,11 +239,11 @@ export function SendReviewRequestModal({
           description: `Successfully sent ${result.sent} review request${result.sent !== 1 ? 's' : ''}` 
         });
         onSent();
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error sending bulk requests:', error);
         toast({
           title: 'Error',
-          description: error.response?.data?.error || 'Failed to send requests',
+          description: getApiErrorMessage(error, 'Failed to send requests'),
           variant: 'destructive',
         });
       } finally {

@@ -6,6 +6,7 @@
  */
 
 const { logger } = require('../utils/logger');
+const { invoiceColumns, recurringTemplateColumns } = require('../routes/recurring-columns');
 
 /**
  * Mark overdue invoices
@@ -59,7 +60,7 @@ async function runRecurringInvoiceGeneration(pool) {
         
         // Find active recurring templates due for generation
         const templatesResult = await client.query(`
-            SELECT r.*, c.email as contact_email
+            SELECT ${recurringTemplateColumns('r')}, c.email as contact_email
             FROM recurring_invoice_templates r
             LEFT JOIN contacts c ON r.contact_id = c.id
             WHERE r.status = 'active'
@@ -114,7 +115,7 @@ async function runRecurringInvoiceGeneration(pool) {
                         due_date, subtotal, tax_amount, discount_amount, discount_type, discount_value,
                         total, amount_due, notes, recurring_template_id, created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                    RETURNING *
+                    RETURNING ${invoiceColumns()}
                 `, [
                     template.organization_id,
                     invoiceNumber,
@@ -173,9 +174,15 @@ async function runRecurringInvoiceGeneration(pool) {
                             invoice_id, organization_id, product_id, name, description,
                             quantity, unit_price, tax_rate, tax_amount, total, sort_order
                         )
-                        SELECT * FROM UNNEST (
+                        SELECT
+                            u.invoice_id, u.organization_id, u.product_id, u.name, u.description,
+                            u.quantity, u.unit_price, u.tax_rate, u.tax_amount, u.total, u.sort_order
+                        FROM UNNEST (
                             $1::int[], $2::int[], $3::int[], $4::varchar[], $5::text[],
                             $6::numeric[], $7::numeric[], $8::numeric[], $9::numeric[], $10::numeric[], $11::int[]
+                        ) AS u(
+                            invoice_id, organization_id, product_id, name, description,
+                            quantity, unit_price, tax_rate, tax_amount, total, sort_order
                         )
                     `, [
                         invoiceIds,
@@ -279,7 +286,7 @@ async function findInvoicesNeedingReminders(pool) {
 
         // Find invoices due within 3 days or overdue (up to 30 days)
         const result = await client.query(`
-            SELECT i.*, 
+            SELECT ${invoiceColumns('i')},
                 c.email as contact_email,
                 ps.business_name, ps.business_email
             FROM invoices i

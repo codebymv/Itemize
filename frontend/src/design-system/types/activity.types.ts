@@ -16,7 +16,7 @@ export interface Activity {
     url?: string
   }
   metadata?: {
-    [key: string]: any
+    [key: string]: unknown
   }
   icon?: string
 }

@@ -9,6 +9,7 @@ const router = express.Router();
 const emailService = require('../services/emailService');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { contactColumns, emailTemplateColumns } = require('./template-columns');
 
 /**
  * Create email templates routes with injected dependencies
@@ -30,7 +31,7 @@ module.exports = (pool, authenticateJWT) => {
       const result = await withDbClient(pool, async (client) => {
         let query = `
         SELECT 
-          et.*,
+          ${emailTemplateColumns('et')},
           u.name as created_by_name
         FROM email_templates et
         LEFT JOIN users u ON et.created_by = u.id
@@ -106,7 +107,7 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const result = await withDbClient(pool, async (client) => client.query(
         `SELECT 
-          et.*,
+          ${emailTemplateColumns('et')},
           u.name as created_by_name
         FROM email_templates et
         LEFT JOIN users u ON et.created_by = u.id
@@ -153,7 +154,7 @@ module.exports = (pool, authenticateJWT) => {
         `INSERT INTO email_templates 
           (organization_id, name, subject, body_html, body_text, variables, category, is_active, created_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *`,
+        RETURNING ${emailTemplateColumns()}`,
         [
           req.organizationId,
           name,
@@ -186,7 +187,7 @@ module.exports = (pool, authenticateJWT) => {
       const data = await withDbClient(pool, async (client) => {
         // Check template exists and belongs to org
         const existing = await client.query(
-          'SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2',
+          `SELECT ${emailTemplateColumns()} FROM email_templates WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -217,7 +218,7 @@ module.exports = (pool, authenticateJWT) => {
            SET name = $1, subject = $2, body_html = $3, body_text = $4, 
                variables = $5, category = $6, is_active = $7, updated_at = CURRENT_TIMESTAMP
            WHERE id = $8 AND organization_id = $9
-           RETURNING *`,
+           RETURNING ${emailTemplateColumns()}`,
           [
             finalName,
             finalSubject,
@@ -283,7 +284,7 @@ module.exports = (pool, authenticateJWT) => {
 
     try {
       const result = await withDbClient(pool, async (client) => client.query(
-        'SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2',
+        `SELECT ${emailTemplateColumns()} FROM email_templates WHERE id = $1 AND organization_id = $2`,
         [id, req.organizationId]
       ));
 
@@ -336,7 +337,7 @@ module.exports = (pool, authenticateJWT) => {
       const data = await withDbClient(pool, async (client) => {
         // Get the original template
         const original = await client.query(
-          'SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2',
+          `SELECT ${emailTemplateColumns()} FROM email_templates WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -351,7 +352,7 @@ module.exports = (pool, authenticateJWT) => {
           `INSERT INTO email_templates 
             (organization_id, name, subject, body_html, body_text, variables, category, is_active, created_by)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          RETURNING *`,
+          RETURNING ${emailTemplateColumns()}`,
           [
             req.organizationId,
             `${template.name} (Copy)`,
@@ -409,7 +410,7 @@ module.exports = (pool, authenticateJWT) => {
       const data = await withDbClient(pool, async (client) => {
         // Get contact
         const contactResult = await client.query(
-          'SELECT * FROM contacts WHERE id = $1 AND organization_id = $2',
+          `SELECT ${contactColumns()} FROM contacts WHERE id = $1 AND organization_id = $2`,
           [contact_id, req.organizationId]
         );
 
@@ -428,7 +429,7 @@ module.exports = (pool, authenticateJWT) => {
         if (template_id) {
           // Get template
           const templateResult = await client.query(
-            'SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2',
+            `SELECT ${emailTemplateColumns()} FROM email_templates WHERE id = $1 AND organization_id = $2`,
             [template_id, req.organizationId]
           );
 
@@ -514,7 +515,7 @@ module.exports = (pool, authenticateJWT) => {
                 userId,
               ]
             );
-          } catch (logError) {
+          } catch {
             console.log('Email log table may not exist yet, skipping log');
           }
 

@@ -7,8 +7,8 @@
  */
 
 const { logger } = require('../utils/logger');
-const { FEATURES, getFeatureTier, isFeatureAvailable } = require('../config/features');
-const { USAGE_LIMITS, PLAN_NAMES, getTierLevel, getUsageLimit, isUnlimited } = require('../config/plans');
+const { FEATURES } = require('../config/features');
+const { subscriptionColumns } = require('../services/subscription-columns');
 
 /**
  * Cache for subscription data to reduce DB queries
@@ -33,7 +33,7 @@ const getOrgSubscription = async (pool, organizationId) => {
     try {
         const result = await pool.query(`
             SELECT 
-                s.*,
+                ${subscriptionColumns('s')},
                 sp.name as plan_name,
                 sp.tier_level,
                 sp.features as plan_features,

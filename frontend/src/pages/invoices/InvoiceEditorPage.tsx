@@ -39,6 +39,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getContacts } from '@/services/contactsApi';
+import type { JsonRecord } from '@/types';
 import {
     getInvoice,
     getProducts,
@@ -73,7 +74,7 @@ interface Contact {
         state?: string;
         zip?: string;
         country?: string;
-    } | Record<string, any>;
+    } | JsonRecord;
 }
 
 export function InvoiceEditorPage() {
@@ -300,8 +301,8 @@ export function InvoiceEditorPage() {
                     getPaymentSettings(organizationId)
                 ]);
                 setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
-                setProducts(Array.isArray(productsData) ? productsData : (productsData as any)?.products || []);
-                setBusinesses(Array.isArray(businessesData) ? businessesData : (businessesData as any)?.businesses || []);
+                setProducts(productsData);
+                setBusinesses(businessesData);
                 setSettings(settingsData);
 
                 // Load existing invoice if editing
@@ -342,7 +343,7 @@ export function InvoiceEditorPage() {
                         });
                     }
                     // Auto-select last used business for new invoices
-                    const businessesList = Array.isArray(businessesData) ? businessesData : (businessesData as any)?.businesses || [];
+                    const businessesList = businessesData;
                     if (businessesList.length > 0) {
                         const lastUsed = businessesList.find(b => b.last_used_at);
                         if (lastUsed) {

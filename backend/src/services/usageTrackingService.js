@@ -7,7 +7,7 @@
  */
 
 const BaseService = require('./BaseService');
-const { USAGE_TYPES, getUsageLimit, isUnlimited } = require('../config/plans');
+const { USAGE_TYPES } = require('../config/plans');
 
 class UsageTrackingService extends BaseService {
     constructor(pool) {
@@ -375,7 +375,7 @@ class UsageTrackingService extends BaseService {
      * @returns {Object} { approaching, percentage }
      */
     async isApproachingLimit(organizationId, resourceType) {
-        const { withinLimits, current, limit, unlimited } = 
+        const { current, limit, unlimited } =
             await this.isWithinLimits(organizationId, resourceType);
 
         if (unlimited || limit === 0) {

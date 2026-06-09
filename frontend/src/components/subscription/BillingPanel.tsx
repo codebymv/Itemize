@@ -43,6 +43,9 @@ const PLAN_ICONS: Record<Plan, typeof Zap> = {
     pro: Building2,
 };
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error ? error.message : fallback;
+
 export function BillingPanel() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
@@ -85,10 +88,10 @@ export function BillingPanel() {
         setProcessing(true);
         try {
             await billingApi.redirectToPortal();
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to open billing portal',
+                description: getErrorMessage(error, 'Failed to open billing portal'),
                 variant: 'destructive',
             });
             setProcessing(false);
@@ -102,10 +105,10 @@ export function BillingPanel() {
                 planId,
                 billingPeriod,
             });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to start checkout',
+                description: getErrorMessage(error, 'Failed to start checkout'),
                 variant: 'destructive',
             });
             setProcessing(false);

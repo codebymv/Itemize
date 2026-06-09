@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthActions } from '@/contexts/AuthContext';
+import { AuthError, useAuthActions } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
@@ -75,8 +75,8 @@ export default function Register() {
         description: 'Please check your email to verify your account.',
       });
       navigate(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (error: any) {
-      if (error.code === 'GOOGLE_ACCOUNT_EXISTS') {
+    } catch (error) {
+      if (error instanceof AuthError && error.code === 'GOOGLE_ACCOUNT_EXISTS') {
         toast({
           title: 'Google account exists',
           description: 'This email is registered with Google. Please sign in with Google.',
@@ -87,7 +87,7 @@ export default function Register() {
 
       toast({
         title: 'Registration failed',
-        description: error.message || 'An error occurred during registration.',
+        description: error instanceof Error ? error.message : 'An error occurred during registration.',
         variant: 'destructive',
       });
     } finally {

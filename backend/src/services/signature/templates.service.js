@@ -5,6 +5,13 @@ const {
     buildUploadKey,
     getUploadedFileUrl
 } = require('./storage');
+const {
+    signatureDocumentColumns,
+    signatureRecipientColumns,
+    signatureTemplateColumns,
+    signatureTemplateRoleColumns,
+    signatureTemplateFieldColumns
+} = require('./columns');
 
 async function createTemplate(pool, organizationId, userId, data) {
     return withDbClient(pool, async (client) => {
@@ -16,7 +23,7 @@ async function createTemplate(pool, organizationId, userId, data) {
                 message,
                 created_by
             ) VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
+            RETURNING ${signatureTemplateColumns()}
         `, [
             organizationId,
             data.title,
@@ -37,7 +44,7 @@ async function updateTemplate(pool, organizationId, templateId, data) {
                 message = COALESCE($3, message),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $4 AND organization_id = $5
-            RETURNING *
+            RETURNING ${signatureTemplateColumns()}
         `, [
             data.title || null,
             data.description || null,
@@ -52,7 +59,7 @@ async function updateTemplate(pool, organizationId, templateId, data) {
 async function deleteTemplate(pool, organizationId, templateId) {
     return withDbClient(pool, async (client) => {
         const result = await client.query(
-            'DELETE FROM signature_templates WHERE id = $1 AND organization_id = $2 RETURNING *',
+            `DELETE FROM signature_templates WHERE id = $1 AND organization_id = $2 RETURNING ${signatureTemplateColumns()}`,
             [templateId, organizationId]
         );
         return result.rows[0] || null;
@@ -80,7 +87,7 @@ async function uploadTemplateFile(pool, organizationId, templateId, file) {
                 original_sha256 = $5,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $6 AND organization_id = $7
-            RETURNING *
+            RETURNING ${signatureTemplateColumns()}
         `, [
             fileUrl,
             file.originalname || file.filename || 'template.pdf',
@@ -111,8 +118,10 @@ async function replaceTemplateRoles(pool, templateId, roles) {
                     role_name,
                     signing_order
                 )
-                SELECT * FROM UNNEST ($1::int[], $2::varchar[], $3::int[])
-                RETURNING *
+                SELECT u.template_id, u.role_name, u.signing_order
+                FROM UNNEST ($1::int[], $2::varchar[], $3::int[])
+                    AS u(template_id, role_name, signing_order)
+                RETURNING ${signatureTemplateRoleColumns()}
             `, [templateIds, roleNames, signingOrders]);
             inserted = result.rows;
         }
@@ -145,7 +154,7 @@ async function replaceTemplateFields(pool, templateId, fields) {
                     $1, $2, $3, $4, $5, $6, $7, $8,
                     $9, $10, $11, $12, $13, $14
                 )
-                RETURNING *
+                RETURNING ${signatureTemplateFieldColumns()}
             `, [
                 templateId,
                 field.role_name || null,
@@ -171,7 +180,7 @@ async function replaceTemplateFields(pool, templateId, fields) {
 async function listTemplates(pool, organizationId) {
     return withDbClient(pool, async (client) => {
         const result = await client.query(
-            'SELECT * FROM signature_templates WHERE organization_id = $1 ORDER BY created_at DESC',
+            `SELECT ${signatureTemplateColumns()} FROM signature_templates WHERE organization_id = $1 ORDER BY created_at DESC`,
             [organizationId]
         );
         return result.rows;
@@ -181,17 +190,17 @@ async function listTemplates(pool, organizationId) {
 async function getTemplate(pool, organizationId, templateId) {
     return withDbClient(pool, async (client) => {
         const templateResult = await client.query(
-            'SELECT * FROM signature_templates WHERE id = $1 AND organization_id = $2',
+            `SELECT ${signatureTemplateColumns()} FROM signature_templates WHERE id = $1 AND organization_id = $2`,
             [templateId, organizationId]
         );
         if (templateResult.rows.length === 0) return null;
 
         const rolesResult = await client.query(
-            'SELECT * FROM signature_template_roles WHERE template_id = $1 ORDER BY signing_order ASC',
+            `SELECT ${signatureTemplateRoleColumns()} FROM signature_template_roles WHERE template_id = $1 ORDER BY signing_order ASC`,
             [templateId]
         );
         const fieldsResult = await client.query(
-            'SELECT * FROM signature_template_fields WHERE template_id = $1 ORDER BY id ASC',
+            `SELECT ${signatureTemplateFieldColumns()} FROM signature_template_fields WHERE template_id = $1 ORDER BY id ASC`,
             [templateId]
         );
 
@@ -206,14 +215,14 @@ async function getTemplate(pool, organizationId, templateId) {
 async function instantiateTemplate(pool, organizationId, userId, templateId, data) {
     return withTransaction(pool, async (client) => {
         const templateResult = await client.query(
-            'SELECT * FROM signature_templates WHERE id = $1 AND organization_id = $2',
+            `SELECT ${signatureTemplateColumns()} FROM signature_templates WHERE id = $1 AND organization_id = $2`,
             [templateId, organizationId]
         );
         if (templateResult.rows.length === 0) return null;
         const template = templateResult.rows[0];
 
         const rolesResult = await client.query(
-            'SELECT * FROM signature_template_roles WHERE template_id = $1 ORDER BY signing_order ASC',
+            `SELECT ${signatureTemplateRoleColumns()} FROM signature_template_roles WHERE template_id = $1 ORDER BY signing_order ASC`,
             [templateId]
         );
         const roleOrderMap = new Map(rolesResult.rows.map((role) => [role.role_name, role.signing_order]));
@@ -233,7 +242,7 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                 routing_mode,
                 created_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            RETURNING *
+            RETURNING ${signatureDocumentColumns()}
         `, [
             organizationId,
             data.title || template.title,
@@ -266,7 +275,7 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                     identity_method,
                     routing_status
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'locked')
-                RETURNING *
+                RETURNING ${signatureRecipientColumns()}
             `, [
                 document.id,
                 organizationId,
@@ -281,7 +290,7 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
         }
 
         const fieldsResult = await client.query(
-            'SELECT * FROM signature_template_fields WHERE template_id = $1 ORDER BY id ASC',
+            `SELECT ${signatureTemplateFieldColumns()} FROM signature_template_fields WHERE template_id = $1 ORDER BY id ASC`,
             [templateId]
         );
         for (const field of fieldsResult.rows) {

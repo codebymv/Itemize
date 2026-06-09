@@ -9,11 +9,17 @@ const crypto = require('crypto');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const { withDbClient } = require('../utils/db');
 const { logger } = require('../utils/logger');
+const {
+    signatureDocumentColumns,
+    signatureRecipientColumns,
+    signatureFieldColumns,
+    signatureAuditLogColumns
+} = require('./signature/columns');
 
 let s3Service = null;
 try {
     s3Service = require('./s3.service');
-} catch (e) {
+} catch {
     logger.info('S3 service not available - signed PDFs will use local storage');
 }
 
@@ -104,7 +110,7 @@ async function embedFieldOnPage(pdfDoc, page, field, font) {
 
 async function appendCertificatePage(pdfDoc, document, recipients, auditLogs) {
     const page = pdfDoc.addPage();
-    const { width, height } = page.getSize();
+    const { height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -180,7 +186,7 @@ async function writeSignedPdf(bytes, organizationId, documentId) {
 async function generateSignedPdf({ pool, documentId, organizationId }) {
     return withDbClient(pool, async (client) => {
         const documentResult = await client.query(
-            'SELECT * FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            `SELECT ${signatureDocumentColumns()} FROM signature_documents WHERE id = $1 AND organization_id = $2`,
             [documentId, organizationId]
         );
         if (documentResult.rows.length === 0) return null;
@@ -195,7 +201,7 @@ async function generateSignedPdf({ pool, documentId, organizationId }) {
         const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
         const fieldsResult = await client.query(
-            'SELECT * FROM signature_fields WHERE document_id = $1 ORDER BY id ASC',
+            `SELECT ${signatureFieldColumns()} FROM signature_fields WHERE document_id = $1 ORDER BY id ASC`,
             [documentId]
         );
 
@@ -207,11 +213,11 @@ async function generateSignedPdf({ pool, documentId, organizationId }) {
         }
 
         const recipientsResult = await client.query(
-            'SELECT * FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC',
+            `SELECT ${signatureRecipientColumns()} FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC`,
             [documentId]
         );
         const auditResult = await client.query(
-            'SELECT * FROM signature_audit_log WHERE document_id = $1 ORDER BY created_at ASC',
+            `SELECT ${signatureAuditLogColumns()} FROM signature_audit_log WHERE document_id = $1 ORDER BY created_at ASC`,
             [documentId]
         );
 

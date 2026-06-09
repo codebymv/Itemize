@@ -7,16 +7,14 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../utils/db');
 const UsageTrackingService = require('../services/usageTrackingService');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 const { 
     FORM_LIMITS, 
-    ERROR_CODES,
-    PLAN_METADATA 
+    ERROR_CODES
 } = require('../lib/subscription.constants');
+const { formColumns, formFieldColumns, formSubmissionColumns, FORM_FIELD_UNNEST_COLUMNS } = require('./forms.columns');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -80,7 +78,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { status } = req.query;
             const result = await withDbClient(pool, async (client) => {
                 let query = `
-        SELECT f.*,
+        SELECT ${formColumns('f')},
                (SELECT COUNT(*) FROM form_submissions WHERE form_id = f.id) as submission_count,
                (SELECT COUNT(*) FROM form_fields WHERE form_id = f.id) as field_count
         FROM forms f
@@ -113,7 +111,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { id } = req.params;
             const result = await withDbClient(pool, async (client) => {
                 const formResult = await client.query(
-                    'SELECT * FROM forms WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${formColumns()} FROM forms WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -122,7 +120,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
 
                 const fieldsResult = await client.query(
-                    'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1 ORDER BY field_order`,
                     [id]
                 );
 
@@ -193,7 +191,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             notify_on_submit, notification_emails, theme,
             create_contact, contact_tags, created_by
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-          RETURNING *
+          RETURNING ${formColumns()}
         `, [
                     req.organizationId,
                     name.trim(),
@@ -249,10 +247,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
                             conditions, map_to_contact_field
-                        ) SELECT * FROM UNNEST (
+                        ) SELECT ${FORM_FIELD_UNNEST_COLUMNS} FROM UNNEST (
                             $1::int[], $2::text[], $3::text[], $4::text[], $5::text[],
                             $6::boolean[], $7::jsonb[], $8::jsonb[], $9::int[], $10::text[],
                             $11::jsonb[], $12::text[]
+                        ) AS fields(
+                            form_id,
+                            field_type,
+                            label,
+                            placeholder,
+                            help_text,
+                            is_required,
+                            validation,
+                            options,
+                            field_order,
+                            width,
+                            conditions,
+                            map_to_contact_field
                         )
                     `, [
                         u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
@@ -273,7 +284,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Fetch fields
                 const fieldsResult = await client.query(
-                    'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1 ORDER BY field_order`,
                     [createdForm.id]
                 );
                 createdForm.fields = fieldsResult.rows;
@@ -329,7 +340,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           contact_tags = COALESCE($12, contact_tags),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $13 AND organization_id = $14
-        RETURNING *
+        RETURNING ${formColumns()}
       `, [
                 name?.trim(),
                 description,
@@ -421,10 +432,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
                             conditions, map_to_contact_field
-                        ) SELECT * FROM UNNEST (
+                        ) SELECT ${FORM_FIELD_UNNEST_COLUMNS} FROM UNNEST (
                             $1::int[], $2::text[], $3::text[], $4::text[], $5::text[],
                             $6::boolean[], $7::jsonb[], $8::jsonb[], $9::int[], $10::text[],
                             $11::jsonb[], $12::text[]
+                        ) AS fields(
+                            form_id,
+                            field_type,
+                            label,
+                            placeholder,
+                            help_text,
+                            is_required,
+                            validation,
+                            options,
+                            field_order,
+                            width,
+                            conditions,
+                            map_to_contact_field
                         )
                     `, [
                         u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
@@ -435,7 +459,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Fetch updated fields
                 const fieldsResult = await client.query(
-                    'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1 ORDER BY field_order`,
                     [id]
                 );
 
@@ -486,7 +510,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const result = await withTransaction(pool, async (client) => {
                 // Get original form
                 const formResult = await client.query(
-                    'SELECT * FROM forms WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${formColumns()} FROM forms WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
@@ -505,7 +529,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             notify_on_submit, notification_emails, theme,
             create_contact, contact_tags, created_by
           ) VALUES ($1, $2, $3, $4, $5, 'draft', $6, $7, $8, $9, $10, $11, $12, $13, $14)
-          RETURNING *
+          RETURNING ${formColumns()}
         `, [
                     req.organizationId,
                     original.name + ' (Copy)',
@@ -527,7 +551,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Copy fields
                 const fieldsResult = await client.query(
-                    'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1 ORDER BY field_order`,
                     [id]
                 );
 
@@ -565,10 +589,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
                             conditions, map_to_contact_field
-                        ) SELECT * FROM UNNEST (
+                        ) SELECT ${FORM_FIELD_UNNEST_COLUMNS} FROM UNNEST (
                             $1::int[], $2::text[], $3::text[], $4::text[], $5::text[],
                             $6::boolean[], $7::jsonb[], $8::jsonb[], $9::int[], $10::text[],
                             $11::jsonb[], $12::text[]
+                        ) AS fields(
+                            form_id,
+                            field_type,
+                            label,
+                            placeholder,
+                            help_text,
+                            is_required,
+                            validation,
+                            options,
+                            field_order,
+                            width,
+                            conditions,
+                            map_to_contact_field
                         )
                     `, [
                         u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
@@ -579,7 +616,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Fetch new fields
                 const newFieldsResult = await client.query(
-                    'SELECT * FROM form_fields WHERE form_id = $1 ORDER BY field_order',
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1 ORDER BY field_order`,
                     [newForm.id]
                 );
                 newForm.fields = newFieldsResult.rows;
@@ -628,7 +665,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
 
                 const submissionsResult = await client.query(`
-        SELECT fs.*,
+        SELECT ${formSubmissionColumns('fs')},
                c.first_name as contact_first_name,
                c.last_name as contact_last_name,
                c.email as contact_email
@@ -754,7 +791,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const outcome = await withDbClient(pool, async (client) => {
                 // Get form
                 const formResult = await client.query(`
-        SELECT f.*, o.id as org_id
+        SELECT ${formColumns('f')}, o.id as org_id
         FROM forms f
         JOIN organizations o ON f.organization_id = o.id
         WHERE f.slug = $1 AND f.status = 'published'
@@ -768,7 +805,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Get fields for validation and contact mapping
                 const fieldsResult = await client.query(
-                    'SELECT * FROM form_fields WHERE form_id = $1',
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1`,
                     [form.id]
                 );
                 const fields = fieldsResult.rows;
@@ -824,7 +861,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 const submissionResult = await client.query(`
         INSERT INTO form_submissions (form_id, organization_id, contact_id, data, ip_address, user_agent, referrer)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
+        RETURNING ${formSubmissionColumns()}
       `, [
                     form.id,
                     form.organization_id,
@@ -857,7 +894,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         organizationId: outcome.form.organization_id,
                         fields: data
                     }).catch(err => console.error('Form submission trigger error:', err));
-                } catch (triggerError) {
+                } catch {
                     console.log('Automation engine not initialized');
                 }
             }

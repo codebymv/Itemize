@@ -3,8 +3,9 @@
  * Handles invoicing, payments, and Stripe integration
  */
 import api from '@/lib/api';
+import type { JsonRecord } from '@/types';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -87,7 +88,7 @@ export interface Invoice {
     is_recurring: boolean;
     recurring_interval?: string;
     parent_invoice_id?: number;
-    custom_fields: Record<string, any>;
+    custom_fields: JsonRecord;
     created_by?: number;
     created_at: string;
     updated_at: string;

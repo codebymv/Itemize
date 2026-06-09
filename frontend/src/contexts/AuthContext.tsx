@@ -102,14 +102,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // If response.data exists but doesn't have an id, user is not authenticated
           throw new Error('Invalid user data received');
         }
-      } catch (error: any) {
+      } catch (error) {
         // 401 or other errors mean user is not authenticated
         // Clear any stale data
         clearAuthenticatedSession();
         storage.removeItem('itemize_user');
         storage.removeItem('itemize_expiry');
         
-        if (error?.response?.status === 401) {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
           logger.debug('Not authenticated (user not logged in)');
         } else {
           console.error('Auth Error:', error); 
@@ -184,7 +184,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           navigate(redirectTo, { replace: true });
         } catch (backendError) {
           logger.error('Backend auth error:', backendError);
-          throw new Error(`Backend authentication failed: ${backendError.message}`);
+          const message = backendError instanceof Error ? backendError.message : 'Unknown backend error';
+          throw new Error(`Backend authentication failed: ${message}`);
         }
         
       } catch (error) {
@@ -232,10 +233,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       // Handle axios error response
-      if (error.response?.data) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const data = error.response.data as { error?: string; code?: string };
         throw new AuthError(
-          error.response.data.error || 'Login failed',
-          error.response.data.code || 'UNKNOWN'
+          data.error || 'Login failed',
+          data.code || 'UNKNOWN'
         );
       }
       throw error;
@@ -255,10 +257,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Don't auto-login - user needs to verify email first
     } catch (error) {
       // Handle axios error response
-      if (error.response?.data) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const data = error.response.data as { error?: string; code?: string };
         throw new AuthError(
-          error.response.data.error || 'Registration failed',
-          error.response.data.code || 'UNKNOWN'
+          data.error || 'Registration failed',
+          data.code || 'UNKNOWN'
         );
       }
       throw error;

@@ -50,7 +50,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
   const { token } = useAuthState();
 
   // Local state for the content data
-  const [localData, setLocalData] = useState<any>(content.originalData);
+  const [localData, setLocalData] = useState<unknown>(content.originalData);
 
   // Update handlers for each content type
   const handleListUpdate = useCallback(async (updatedList: List) => {
@@ -90,7 +90,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
     if (!token) return;
     try {
       await apiUpdateNote(noteId, updatedData, token);
-      setLocalData(prev => ({ ...prev, ...updatedData }));
+      setLocalData(prev => ({ ...(prev as object), ...updatedData }));
     } catch (error) {
       console.error('Error updating note:', error);
       toast({
@@ -121,7 +121,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
     if (!token) return null;
     try {
       const result = await apiUpdateWhiteboard(whiteboardId, updatedData, token);
-      setLocalData(prev => ({ ...prev, ...updatedData }));
+      setLocalData(prev => ({ ...(prev as object), ...updatedData }));
       return result;
     } catch (error) {
       console.error('Error updating whiteboard:', error);
@@ -156,7 +156,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
     if (!token) return null;
     try {
       const result = await apiUpdateWireframe(wireframeId, updatedData, token);
-      setLocalData(prev => ({ ...prev, ...updatedData }));
+      setLocalData(prev => ({ ...(prev as object), ...updatedData }));
       return result;
     } catch (error) {
       console.error('Error updating wireframe:', error);
@@ -191,7 +191,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
     if (!token) return null;
     try {
       const result = await apiUpdateVault(vaultId, updatedData, token);
-      setLocalData(prev => ({ ...prev, ...updatedData }));
+      setLocalData(prev => ({ ...(prev as object), ...updatedData }));
       return result;
     } catch (error) {
       console.error('Error updating vault:', error);

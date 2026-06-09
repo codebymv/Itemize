@@ -4,6 +4,34 @@ import { WorkflowTemplateCard } from '@/components/workflows/WorkflowTemplateCar
 import { WORKFLOW_TEMPLATES } from '@/components/workflows/workflow-templates'
 import { transformApiToClientProfile } from '@/design-system/utils/api-converters'
 
+interface DashboardInvoice {
+  id: string
+  number: string
+  amount?: number
+  status: string
+}
+
+interface DashboardSignature {
+  id: string
+  title: string
+  status: string
+}
+
+interface DashboardWidgetData {
+  invoiceMetrics?: {
+    pending?: number
+    overdue?: number
+    paidThisMonth?: number
+    recentInvoices?: DashboardInvoice[]
+  }
+  signatureMetrics?: {
+    awaiting?: number
+    signedThisWeek?: number
+    total?: number
+    recentDocuments?: DashboardSignature[]
+  }
+}
+
 export const SMART_ACTIONS = {
   sendInvoice: (contactId: string, email?: string) => {
     // Navigate to invoice editor with client pre-filled
@@ -89,7 +117,7 @@ export const CROSS_LINKS = {
 }
 
 export const DASHBOARD_WIDGETS = {
-  renderInvoicesWidget: (data?: any) => (
+  renderInvoicesWidget: (data?: DashboardWidgetData) => (
     <InvoicesWidget
       primaryStat={data?.invoiceMetrics?.pending || 0}
       primaryStatColor="text-orange-600"
@@ -97,7 +125,7 @@ export const DASHBOARD_WIDGETS = {
         { label: 'Overdue', value: data?.invoiceMetrics?.overdue || 0, color: 'text-red-600' },
         { label: 'Paid This Month', value: `$${(data?.invoiceMetrics?.paidThisMonth || 0).toLocaleString()}`, color: 'text-green-600' },
       ]}
-      recentItems={(data?.invoiceMetrics?.recentInvoices || []).map((inv: any) => ({
+      recentItems={(data?.invoiceMetrics?.recentInvoices || []).map((inv) => ({
         id: inv.id,
         title: inv.number,
         subtitle: `$${inv.amount?.toLocaleString() || 0}`,
@@ -107,7 +135,7 @@ export const DASHBOARD_WIDGETS = {
     />
   ),
 
-  renderSignaturesWidget: (data?: any) => (
+  renderSignaturesWidget: (data?: DashboardWidgetData) => (
     <SignaturesWidget
       primaryStat={data?.signatureMetrics?.awaiting || 0}
       primaryStatColor="text-blue-600"
@@ -115,7 +143,7 @@ export const DASHBOARD_WIDGETS = {
         { label: 'Signed This Week', value: data?.signatureMetrics?.signedThisWeek || 0, color: 'text-green-600' },
         { label: 'Total Documents', value: data?.signatureMetrics?.total || 0, color: 'text-gray-600' },
       ]}
-      recentItems={(data?.signatureMetrics?.recentDocuments || []).map((sig: any) => ({
+      recentItems={(data?.signatureMetrics?.recentDocuments || []).map((sig) => ({
         id: sig.id,
         title: sig.title,
         status: { label: sig.status, color: sig.status === 'signed' ? 'text-green-600' : 'text-blue-600' }
@@ -124,7 +152,7 @@ export const DASHBOARD_WIDGETS = {
     />
   ),
 
-  renderClientProfile: (apiData: any) => {
+  renderClientProfile: (apiData: Parameters<typeof transformApiToClientProfile>[0]) => {
     const clientProfile = transformApiToClientProfile(apiData)
     return {
       profile: clientProfile,

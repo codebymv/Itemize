@@ -16,6 +16,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { bulkUpdateContacts } from '@/services/contactsApi';
 import { useToast } from '@/hooks/use-toast';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+    return responseData?.error || responseData?.message || fallback;
+};
+
 interface BulkTagModalProps {
     selectedContactIds: number[];
     organizationId: number;
@@ -82,10 +87,10 @@ export function BulkTagModal({
 
             onCompleted();
             onClose();
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: 'Error',
-                description: error.response?.data?.error || 'Failed to update tags',
+                description: getApiErrorMessage(error, 'Failed to update tags'),
                 variant: 'destructive',
             });
         } finally {

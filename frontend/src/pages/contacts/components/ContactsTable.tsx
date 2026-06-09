@@ -92,7 +92,7 @@ export function ContactsTable({
               checked={allSelected}
               ref={(el) => {
                 if (el) {
-                  (el as any).indeterminate = someSelected;
+                  (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate = someSelected;
                 }
               }}
               onCheckedChange={onSelectAll}

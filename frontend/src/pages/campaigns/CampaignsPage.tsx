@@ -34,6 +34,7 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Campaign } from '@/types/campaigns';
+import type { EmailCampaign } from '@/services/campaignsApi';
 import { StatCard } from '@/components/StatCard';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
@@ -51,6 +52,20 @@ export function CampaignsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
+
+    const toCampaignListItem = useCallback((campaign: EmailCampaign): Campaign => ({
+        id: campaign.id,
+        name: campaign.name,
+        subject: campaign.subject,
+        status: campaign.status,
+        recipient_count: campaign.total_recipients ?? 0,
+        sent_count: campaign.total_sent ?? 0,
+        open_rate: campaign.open_rate,
+        click_rate: campaign.click_rate,
+        scheduled_at: campaign.scheduled_at,
+        sent_at: campaign.completed_at,
+        created_at: campaign.created_at,
+    }), []);
 
     const stats = useMemo(() => {
         const total = campaigns.length;
@@ -121,7 +136,7 @@ export function CampaignsPage() {
         setLoading(true);
         try {
             const response = await getCampaigns(
-                { status: statusFilter !== 'all' ? statusFilter as any : undefined },
+                { status: statusFilter !== 'all' ? statusFilter as EmailCampaign['status'] : undefined },
                 organizationId
             );
             setCampaigns((response.campaigns || []).map(c => ({
@@ -360,7 +375,7 @@ export function CampaignsPage() {
                     organizationId={organizationId}
                     onClose={() => setShowCreateModal(false)}
                     onCreated={(campaign) => {
-                        setCampaigns(prev => [campaign, ...prev]);
+                        setCampaigns(prev => [toCampaignListItem(campaign), ...prev]);
                         setShowCreateModal(false);
                     }}
                 />

@@ -17,6 +17,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Pipeline } from '@/types';
 import { createPipeline } from '@/services/pipelinesApi';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
+};
+
 interface CreatePipelineModalProps {
   organizationId: number;
   onClose: () => void;
@@ -61,11 +66,11 @@ export function CreatePipelineModal({
         organization_id: organizationId,
       });
       onCreated(pipeline);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating pipeline:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to create pipeline',
+        description: getApiErrorMessage(error, 'Failed to create pipeline'),
         variant: 'destructive',
       });
     } finally {

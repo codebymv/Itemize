@@ -1,6 +1,10 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
+const {
+    REVIEW_REQUEST_COLUMNS,
+    REVIEW_WIDGET_COLUMNS
+} = require('./columns');
 
 module.exports = ({ pool, publicRateLimit, getSentiment }) => {
     const router = express.Router();
@@ -17,7 +21,7 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get widget config
                 const widgetResult = await client.query(`
-                    SELECT * FROM review_widgets
+                    SELECT ${REVIEW_WIDGET_COLUMNS} FROM review_widgets
                     WHERE widget_key = $1 AND is_active = TRUE
                 `, [widgetKey]);
 
@@ -85,7 +89,8 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
             const { token } = req.params;
             const data = await withDbClient(pool, async (client) => {
                 const result = await client.query(`
-                    SELECT rr.*, o.name as organization_name
+                    SELECT ${REVIEW_REQUEST_COLUMNS.split(', ').map(column => `rr.${column}`).join(', ')},
+                           o.name as organization_name
                     FROM review_requests rr
                     JOIN organizations o ON rr.organization_id = o.id
                     WHERE rr.unique_token = $1 AND rr.status NOT IN ('completed', 'unsubscribed')
@@ -139,7 +144,8 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
 
             const data = await withDbClient(pool, async (client) => {
                 const requestResult = await client.query(`
-                    SELECT * FROM review_requests WHERE unique_token = $1 AND status NOT IN ('completed', 'unsubscribed')
+                    SELECT ${REVIEW_REQUEST_COLUMNS} FROM review_requests
+                    WHERE unique_token = $1 AND status NOT IN ('completed', 'unsubscribed')
                 `, [token]);
 
                 if (requestResult.rows.length === 0) {
@@ -155,7 +161,7 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
                         reviewer_name, reviewer_email, reviewer_phone, contact_id,
                         sentiment, source, review_request_id
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'request', $10)
-                    RETURNING *
+                    RETURNING id
                 `, [
                     request.organization_id,
                     platform || request.preferred_platform || 'custom',

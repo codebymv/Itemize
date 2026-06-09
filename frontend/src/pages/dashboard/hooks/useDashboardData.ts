@@ -19,7 +19,7 @@ import {
 
 interface UseDashboardDataParams {
   organizationId?: number;
-  period?: string;
+  period?: '7days' | '30days' | '90days' | '6months' | '12months';
 }
 
 interface UseDashboardDataReturn {
@@ -52,6 +52,10 @@ export function useDashboardData({
   organizationId,
   period = '30days',
 }: UseDashboardDataParams): UseDashboardDataReturn {
+  const conversionPeriod = period === '6months' ? '30days' : period;
+  const communicationPeriod = period === '6months' || period === '12months' ? '30days' : period;
+  const revenuePeriod = period === '7days' || period === '90days' ? '30days' : period;
+
   // Main analytics query
   const {
     data: analytics,
@@ -75,7 +79,7 @@ export function useDashboardData({
   } = useQuery({
     queryKey: ['conversion-rates', period, organizationId],
     queryFn: () =>
-      getConversionRates(period as any, organizationId),
+      getConversionRates(conversionPeriod, organizationId),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
   });
@@ -89,7 +93,7 @@ export function useDashboardData({
   } = useQuery({
     queryKey: ['communication-stats', period, organizationId],
     queryFn: () =>
-      getCommunicationStats(period as any, organizationId),
+      getCommunicationStats(communicationPeriod, organizationId),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
   });
@@ -117,7 +121,7 @@ export function useDashboardData({
   } = useQuery({
     queryKey: ['revenue-trends', period, organizationId],
     queryFn: () =>
-      getRevenueTrends(period as any, organizationId),
+      getRevenueTrends(revenuePeriod, organizationId),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
   });

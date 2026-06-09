@@ -15,6 +15,9 @@ const PLAN_ICONS = {
     pro: Building2,
 };
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error ? error.message : fallback;
+
 function ChangeTierSection() {
     const { subscription } = useSubscriptionState();
     const { refreshSubscription } = useSubscriptionFeatures();
@@ -43,10 +46,10 @@ function ChangeTierSection() {
                 description: `Your plan has been changed to ${planDisplayName}`,
             });
             setLoadingPlan(null);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to update plan',
+                description: getErrorMessage(error, 'Failed to update plan'),
                 variant: 'destructive'
             });
             setLoadingPlan(null);

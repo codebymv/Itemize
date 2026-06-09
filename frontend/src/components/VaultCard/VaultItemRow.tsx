@@ -21,7 +21,7 @@ interface VaultItemRowProps {
   onEditingLabelChange: (value: string) => void;
   onEditingValueChange: (value: string) => void;
   isDragging?: boolean;
-  dragHandleProps?: any;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   vaultColor?: string;
 }
 

@@ -4,6 +4,11 @@ import { getApiUrl } from '@/lib/api';
 import { storage } from '@/lib/storage';
 import { Spinner } from '@/components/ui/Spinner';
 
+type GoogleLoginResponse = {
+  user?: { email?: string };
+  accessToken?: string;
+};
+
 const AuthCallback = () => {
   const navigate = useNavigate();
 
@@ -71,7 +76,7 @@ const AuthCallback = () => {
           throw new Error('Failed to authenticate with backend');
         }
 
-        const data = await response.json();
+        const data = await response.json() as GoogleLoginResponse;
         
         console.log('User authenticated successfully:', data.user?.email || 'unknown');
 
@@ -98,9 +103,10 @@ const AuthCallback = () => {
           navigate('/dashboard', { replace: true });
         }
       } catch (error) {
+        const response = (error as { response?: { data?: unknown; status?: number } }).response;
         console.error('Error during auth callback:', error);
-        console.error('Response data:', (error as any).response?.data);
-        console.error('Response status:', (error as any).response?.status);
+        console.error('Response data:', response?.data);
+        console.error('Response status:', response?.status);
         
         // Send error to opener window if it exists
         if (window.opener) {

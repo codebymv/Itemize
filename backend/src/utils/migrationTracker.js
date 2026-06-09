@@ -42,7 +42,7 @@ const hasMigrationRun = async (pool, migrationName) => {
       [migrationName]
     );
     return result.rows.length > 0;
-  } catch (error) {
+  } catch {
     // Table might not exist yet, return false to run migration
     return false;
   }
@@ -143,7 +143,7 @@ const getExecutedMigrations = async (pool) => {
       'SELECT name, executed_at FROM _migrations ORDER BY executed_at'
     );
     return result.rows;
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -156,7 +156,7 @@ const resetMigration = async (pool, migrationName) => {
     await pool.query('DELETE FROM _migrations WHERE name = $1', [migrationName]);
     logger.info(`Reset migration: ${migrationName}`);
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 };

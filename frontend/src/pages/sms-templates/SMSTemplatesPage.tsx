@@ -282,7 +282,17 @@ export function SMSTemplatesPage() {
                     organizationId={organizationId}
                     onClose={() => setShowCreateModal(false)}
                     onCreated={(template) => {
-                        setTemplates(prev => [template, ...prev]);
+                        setTemplates(prev => [{
+                            id: template.id,
+                            name: template.name,
+                            content: template.message,
+                            category: template.category,
+                            is_active: template.is_active,
+                            variables: template.variables,
+                            character_count: template.message.length,
+                            segment_count: 1,
+                            created_at: template.created_at,
+                        }, ...prev]);
                         setShowCreateModal(false);
                     }}
                 />

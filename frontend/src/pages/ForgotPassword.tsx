@@ -34,7 +34,7 @@ export default function ForgotPassword() {
         title: 'Reset link sent',
         description: 'If an account exists with this email, you will receive a password reset link.',
       });
-    } catch (error: any) {
+    } catch {
       // Always show success to prevent email enumeration
       setSent(true);
     } finally {

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
+import type { CanvasPath } from 'react-sketch-canvas/dist/types';
 import { Palette } from 'lucide-react';
 
 const NEUTRAL_GRAY = '#808080';
@@ -9,7 +10,7 @@ interface SharedWhiteboardData {
   id: number;
   title: string;
   category: string;
-  canvas_data: any;
+  canvas_data: unknown;
   canvas_width: number;
   canvas_height: number;
   background_color: string;
@@ -24,6 +25,38 @@ interface SharedWhiteboardCardProps {
   whiteboardData: SharedWhiteboardData;
   isLive?: boolean;
 }
+
+const hasPaths = (value: unknown): value is { paths: unknown } =>
+  Boolean(value && typeof value === 'object' && 'paths' in value);
+
+const toCanvasPaths = (value: unknown): CanvasPath[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((pathData) => {
+    if (pathData && typeof pathData === 'object') {
+      const pathRecord = pathData as {
+        drawMode?: boolean;
+        strokeColor?: string;
+        strokeWidth?: number;
+        paths?: CanvasPath['paths'];
+      };
+
+      return {
+        drawMode: pathRecord.drawMode ?? true,
+        strokeColor: pathRecord.strokeColor || '#2563eb',
+        strokeWidth: pathRecord.strokeWidth || 2,
+        paths: Array.isArray(pathRecord.paths) ? pathRecord.paths : [],
+      };
+    }
+
+    return {
+      drawMode: true,
+      strokeColor: '#2563eb',
+      strokeWidth: 2,
+      paths: [],
+    };
+  });
+};
 
 export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whiteboardData, isLive = false }) => {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
@@ -73,7 +106,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         });
 
         // Validate canvas data format - should be an array of CanvasPath objects
-        let dataToLoad = whiteboardData.canvas_data;
+        let dataToLoad: unknown = whiteboardData.canvas_data;
 
         // Handle different data formats from database
         if (typeof dataToLoad === 'string') {
@@ -81,7 +114,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
             const parsed = JSON.parse(dataToLoad);
             if (Array.isArray(parsed)) {
               dataToLoad = parsed;
-            } else if (parsed && typeof parsed === 'object' && parsed.paths) {
+            } else if (hasPaths(parsed)) {
               dataToLoad = parsed.paths;
             } else {
               throw new Error('Invalid parsed format');
@@ -90,7 +123,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
             console.warn('🎨 SharedWhiteboard: Failed to parse string canvas data:', e);
             dataToLoad = [];
           }
-        } else if (dataToLoad && typeof dataToLoad === 'object' && dataToLoad.paths) {
+        } else if (hasPaths(dataToLoad)) {
           // Object format with paths property from backend
           console.log('🎨 SharedWhiteboard: Data is in object format with paths, extracting array');
           dataToLoad = dataToLoad.paths;
@@ -106,16 +139,11 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         }
 
         // If we have data but it's missing required metadata, reconstruct it
-        if (dataToLoad.length > 0) {
+        if (Array.isArray(dataToLoad) && dataToLoad.length > 0) {
           const firstPath = dataToLoad[0];
-          if (!firstPath.drawMode || !firstPath.strokeColor || !firstPath.strokeWidth) {
+          if (!firstPath || typeof firstPath !== 'object' || !('drawMode' in firstPath) || !('strokeColor' in firstPath) || !('strokeWidth' in firstPath)) {
             console.log('🎨 SharedWhiteboard: Reconstructing missing metadata for canvas paths');
-            dataToLoad = dataToLoad.map((pathData: any, index: number) => ({
-              drawMode: true,
-              strokeColor: pathData.strokeColor || '#2563eb', // Default to theme blue
-              strokeWidth: pathData.strokeWidth || 2,
-              paths: pathData.paths || pathData || []
-            }));
+            dataToLoad = toCanvasPaths(dataToLoad);
           }
         }
 
@@ -151,7 +179,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
             }, 50);
           } else {
             console.log(`🎨 SharedWhiteboard: Loading ${dataToLoad.length} paths`);
-            canvasRef.current.loadPaths(dataToLoad);
+            canvasRef.current.loadPaths(toCanvasPaths(dataToLoad));
             setIsCanvasLoaded(true);
           }
 
@@ -196,12 +224,12 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         });
 
         // Parse and load the updated canvas data
-        let dataToLoad = whiteboardData.canvas_data;
+        let dataToLoad: unknown = whiteboardData.canvas_data;
 
         if (typeof dataToLoad === 'string') {
           const parsed = JSON.parse(dataToLoad);
-          dataToLoad = Array.isArray(parsed) ? parsed : (parsed.paths || []);
-        } else if (dataToLoad && typeof dataToLoad === 'object' && dataToLoad.paths) {
+          dataToLoad = Array.isArray(parsed) ? parsed : (hasPaths(parsed) ? parsed.paths : []);
+        } else if (hasPaths(dataToLoad)) {
           dataToLoad = dataToLoad.paths;
         } else if (!Array.isArray(dataToLoad)) {
           dataToLoad = [];
@@ -220,7 +248,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
               canvasRef.current.loadPaths([]);
             }, 50);
           } else {
-            canvasRef.current.loadPaths(dataToLoad);
+            canvasRef.current.loadPaths(toCanvasPaths(dataToLoad));
           }
 
           console.log('🎨 SharedWhiteboard: Real-time update applied successfully');

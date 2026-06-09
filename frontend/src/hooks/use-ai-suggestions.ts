@@ -25,6 +25,16 @@ interface SuggestionResponse {
   error?: string;
 }
 
+const getApiStatus = (error: unknown): number | undefined => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { status?: unknown } }).response;
+    if (typeof response?.status === 'number') {
+      return response.status;
+    }
+  }
+  return undefined;
+};
+
 /**
  * Custom hook for AI-powered list item suggestions
  */
@@ -179,11 +189,11 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         setSuggestions([]);
         setCurrentSuggestion(null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to fetch AI suggestions:', err);
       
       // Handle auth errors gracefully
-      if (err?.response?.status === 401) {
+      if (getApiStatus(err) === 401) {
         setError('Session expired. Please log in again to use AI suggestions.');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to get suggestions');

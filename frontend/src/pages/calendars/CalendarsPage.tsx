@@ -28,6 +28,11 @@ import { CreateCalendarModal } from './components/CreateCalendarModal';
 import { CalendarIntegrations } from './components/CalendarIntegrations';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+    return responseData?.error || responseData?.message || fallback;
+};
+
 export function CalendarsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -156,11 +161,11 @@ export function CalendarsPage() {
                 title: 'Deleted',
                 description: 'Calendar deleted successfully',
             });
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error deleting calendar:', error);
             toast({
                 title: 'Error',
-                description: error.response?.data?.error || 'Failed to delete calendar',
+                description: getApiErrorMessage(error, 'Failed to delete calendar'),
                 variant: 'destructive',
             });
         }

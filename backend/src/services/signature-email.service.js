@@ -16,7 +16,7 @@ function formatDate(date) {
     });
 }
 
-function buildSignatureRequestEmail({ recipientName, documentTitle, senderName, senderEmail, message, signingUrl, expiresAt, isPreview, baseUrl }) {
+function buildSignatureRequestEmail({ recipientName: _recipientName, documentTitle, senderName, senderEmail, message, signingUrl, expiresAt, isPreview, baseUrl }) {
     const senderLabel = senderEmail || senderName || 'Itemize';
     const subject = `${senderLabel} wants your signature`;
     const safeMessage = (message || '').trim();

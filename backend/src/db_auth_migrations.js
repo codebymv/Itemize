@@ -3,8 +3,6 @@
 // Run with: node backend/scripts/execute-migration.js runEmailPasswordAuthMigration
 // ============================================
 
-const { Pool } = require('pg');
-
 /**
  * Main migration to add email/password authentication support
  * Adds all necessary columns and constraints for:

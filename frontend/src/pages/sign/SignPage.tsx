@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { getPublicSigningData, submitPublicSignature, declinePublicSignature } from '@/services/signaturesApi';
+import type { PublicSigningData } from '@/services/signaturesApi';
 import { getAssetUrl, getApiUrl } from '@/lib/api';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -111,7 +112,7 @@ export default function SignPage() {
   const { token } = useParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<PublicSigningData | null>(null);
   const [fieldValues, setFieldValues] = useState<FieldValueMap>({});
   const [consent, setConsent] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
@@ -227,14 +228,14 @@ export default function SignPage() {
   const handleSubmit = async () => {
     if (!token) return;
     try {
-      const requiredFields = fields.filter((field: any) => field.is_required);
-      const missing = requiredFields.filter((field: any) => !fieldValues[field.id]);
+      const requiredFields = fields.filter((field) => field.is_required);
+      const missing = requiredFields.filter((field) => !fieldValues[field.id]);
       if (missing.length > 0) {
         toast({ title: 'Please complete all required fields', variant: 'destructive' });
         return;
       }
       await submitPublicSignature(token, {
-        fields: fields.map((field: any) => ({
+        fields: fields.map((field) => ({
           id: field.id,
           value: fieldValues[field.id] || ''
         }))
@@ -326,8 +327,8 @@ export default function SignPage() {
                           renderTextLayer={false}
                         />
                         {fields
-                          .filter((field: any) => field.page_number === pageIndex)
-                          .map((field: any) => (
+                          .filter((field) => field.page_number === pageIndex)
+                          .map((field) => (
                             <button
                               key={field.id}
                               type="button"
@@ -364,9 +365,9 @@ export default function SignPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            {fields.filter((field: any) => fieldValues[field.id]).length} / {fields.length} fields completed
+            {fields.filter((field) => fieldValues[field.id]).length} / {fields.length} fields completed
           </div>
-          {fields.map((field: any) => (
+          {fields.map((field) => (
             <div key={field.id} className="space-y-2">
               <div className="text-sm font-medium">
                 {field.label || field.field_type}
@@ -379,7 +380,7 @@ export default function SignPage() {
                   ) : (
                     <div className="text-xs text-muted-foreground">No signature captured yet.</div>
                   )}
-                  <Button type="button" variant="outline" size="sm" onClick={() => openCapture(field.id, field.field_type)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openCapture(field.id, field.field_type as 'signature' | 'initials')}>
                     Add {field.field_type === 'initials' ? 'Initials' : 'Signature'}
                   </Button>
                   {(field.field_type === 'signature' ? signatureValue : initialsValue) && !fieldValues[field.id] && (

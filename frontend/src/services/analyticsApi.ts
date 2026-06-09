@@ -4,12 +4,24 @@
  */
 import api from '@/lib/api';
 
-const unwrapResponse = <T>(payload: any): T => {
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
     return payload as T;
 };
+
+export interface ConversionPipelineStage {
+    stageId?: string;
+    stageName?: string;
+    count?: number;
+    value?: number;
+    [key: string]: unknown;
+}
+
+export interface WorkflowStats {
+    [key: string]: unknown;
+}
 
 // ======================
 // Types
@@ -170,7 +182,7 @@ export interface ConversionRates {
         };
         pipelines: Array<{
             pipelineName: string;
-            stages: any[];
+            stages: ConversionPipelineStage[];
             stageCounts: Record<string, number>;
         }>;
     };
@@ -265,7 +277,7 @@ export interface WorkflowPerformance {
             failed: number;
         };
         completionRate: number;
-        stats: any;
+        stats: WorkflowStats;
     }>;
     summary: {
         totalWorkflows: number;

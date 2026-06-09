@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Users, BarChart3, Loader2 } from 'lucide-react';
+import { Users, BarChart3, Loader2, type LucideIcon } from 'lucide-react';
 import * as adminApi from '@/services/adminApi';
 
 function StatisticsSection() {
@@ -28,7 +28,7 @@ function StatisticsSection() {
         fetchStats();
     }, [toast]);
 
-    const StatCard = ({ title, value, icon: Icon }: { title: string; value: number; icon: any }) => (
+    const StatCard = ({ title, value, icon: Icon }: { title: string; value: number; icon: LucideIcon }) => (
         <Card>
             <CardContent className="pt-6">
                 <div className="flex items-center justify-between">

@@ -4,7 +4,9 @@
  */
 import api from '@/lib/api';
 
-const unwrapResponse = <T>(payload: any): T => {
+type CampaignJson = Record<string, unknown>;
+
+const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
         return payload.data as T;
     }
@@ -33,7 +35,7 @@ export interface EmailCampaign {
     
     // Targeting
     segment_type: 'all' | 'tag' | 'status' | 'custom' | 'segment';
-    segment_filter: Record<string, any>;
+    segment_filter: CampaignJson;
     tag_ids: number[];
     excluded_tag_ids: number[];
     
@@ -47,7 +49,7 @@ export interface EmailCampaign {
     
     // A/B Testing
     is_ab_test: boolean;
-    ab_variants?: any;
+    ab_variants?: unknown;
     ab_winner_criteria?: string;
     ab_test_duration_hours?: number;
     
@@ -117,7 +119,7 @@ export interface CampaignRecipient {
     
     open_count: number;
     click_count: number;
-    clicked_links?: any[];
+    clicked_links?: unknown[];
     
     error_message?: string;
     bounce_type?: string;

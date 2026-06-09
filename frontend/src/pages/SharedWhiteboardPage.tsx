@@ -8,11 +8,14 @@ import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
 
+const getApiStatus = (error: unknown): number | undefined =>
+  (error as { response?: { status?: number } })?.response?.status;
+
 interface SharedWhiteboardData {
   id: number;
   title: string;
   category: string;
-  canvas_data: any;
+  canvas_data: unknown;
   canvas_width: number;
   canvas_height: number;
   background_color: string;
@@ -59,11 +62,12 @@ const SharedWhiteboardPage: React.FC = () => {
             `View this whiteboard shared from Itemize.cloud. Created by ${response.data.creator_name} on ${new Date(response.data.created_at).toLocaleDateString()}.`
           );
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching shared whiteboard:', err);
-        if (err.response?.status === 404) {
+        const status = getApiStatus(err);
+        if (status === 404) {
           setError('This shared whiteboard is no longer available or the link is invalid.');
-        } else if (err.response?.status === 429) {
+        } else if (status === 429) {
           setError('Too many requests. Please try again later.');
         } else {
           setError('Failed to load shared content. Please try again later.');

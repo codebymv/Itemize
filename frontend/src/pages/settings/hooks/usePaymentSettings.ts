@@ -14,7 +14,7 @@ interface UsePaymentSettingsReturn {
   taxRateInput: string;
   setLoading: (loading: boolean) => void;
   handleSaveSettings: () => Promise<void>;
-  updateField: (field: keyof PaymentSettings, value: any) => void;
+  updateField: <K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => void;
   setTaxRateInput: (value: string) => void;
 }
 
@@ -70,7 +70,7 @@ export const usePaymentSettings = (): UsePaymentSettingsReturn => {
     }
   }, [organizationId, settings, toast]);
 
-  const updateField = useCallback((field: keyof PaymentSettings, value: any) => {
+  const updateField = useCallback(<K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => {
     setSettings(prev => ({ ...prev, [field]: value }));
   }, []);
 

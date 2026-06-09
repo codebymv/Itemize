@@ -7,8 +7,8 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
-const { withDbClient, withTransaction } = require('../utils/db');
+const { withDbClient } = require('../utils/db');
+const { dealColumns, pipelineColumns } = require('./pipeline-columns');
 
 // Import automation engine for triggers
 let automationEngine = null;
@@ -37,7 +37,7 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const result = await withDbClient(pool, async (client) => {
         return client.query(`
-        SELECT p.*, 
+        SELECT ${pipelineColumns('p')},
                (SELECT COUNT(*) FROM deals WHERE pipeline_id = p.id) as deal_count,
                (SELECT COALESCE(SUM(value), 0) FROM deals WHERE pipeline_id = p.id AND won_at IS NULL AND lost_at IS NULL) as total_value
         FROM pipelines p
@@ -60,7 +60,7 @@ module.exports = (pool, authenticateJWT) => {
 
       const result = await withDbClient(pool, async (client) => {
         const pipelineResult = await client.query(
-          'SELECT * FROM pipelines WHERE id = $1 AND organization_id = $2',
+          `SELECT ${pipelineColumns()} FROM pipelines WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -69,7 +69,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const dealsResult = await client.query(`
-          SELECT d.*, 
+          SELECT ${dealColumns('d')},
                  c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
                  u.name as assigned_to_name
           FROM deals d
@@ -126,7 +126,7 @@ module.exports = (pool, authenticateJWT) => {
         return client.query(`
           INSERT INTO pipelines (organization_id, name, description, stages, is_default, created_by)
           VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING *
+          RETURNING ${pipelineColumns()}
         `, [
           req.organizationId,
           name.trim(),
@@ -166,7 +166,7 @@ module.exports = (pool, authenticateJWT) => {
             is_default = COALESCE($4, is_default),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $5 AND organization_id = $6
-          RETURNING *
+          RETURNING ${pipelineColumns()}
         `, [
           name?.trim(),
           description,
@@ -296,7 +296,7 @@ module.exports = (pool, authenticateJWT) => {
         const totalCount = parseInt(countResult.rows[0].count);
 
         const dealsResult = await client.query(`
-          SELECT d.*, 
+          SELECT ${dealColumns('d')},
                  c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.company as contact_company,
                  u.name as assigned_to_name,
                  p.name as pipeline_name
@@ -334,7 +334,7 @@ module.exports = (pool, authenticateJWT) => {
 
       const result = await withDbClient(pool, async (client) => {
         return client.query(`
-          SELECT d.*, 
+          SELECT ${dealColumns('d')},
                  c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.company as contact_company,
                  u.name as assigned_to_name,
                  p.name as pipeline_name, p.stages as pipeline_stages
@@ -401,7 +401,7 @@ module.exports = (pool, authenticateJWT) => {
             value, currency, probability, expected_close_date,
             assigned_to, created_by, custom_fields, tags
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          RETURNING *
+          RETURNING ${dealColumns()}
         `, [
           req.organizationId,
           pipeline_id,
@@ -466,7 +466,7 @@ module.exports = (pool, authenticateJWT) => {
             tags = COALESCE($11, tags),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $12 AND organization_id = $13
-          RETURNING *
+          RETURNING ${dealColumns()}
         `, [
           pipeline_id,
           contact_id,
@@ -507,7 +507,7 @@ module.exports = (pool, authenticateJWT) => {
 
       const result = await withDbClient(pool, async (client) => {
         const currentDeal = await client.query(
-          'SELECT * FROM deals WHERE id = $1 AND organization_id = $2',
+          `SELECT ${dealColumns()} FROM deals WHERE id = $1 AND organization_id = $2`,
           [id, req.organizationId]
         );
 
@@ -518,7 +518,7 @@ module.exports = (pool, authenticateJWT) => {
             stage_id = $1,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $2 AND organization_id = $3
-          RETURNING *
+          RETURNING ${dealColumns()}
         `, [stage_id, id, req.organizationId]);
 
         return { rows: updateResult.rows, oldStageId };
@@ -542,7 +542,7 @@ module.exports = (pool, authenticateJWT) => {
             newStageId: stage_id,
             pipelineId: deal.pipeline_id,
           }).catch(err => console.error('Automation trigger error:', err));
-        } catch (triggerError) {
+        } catch {
           console.log('Automation engine not initialized yet');
         }
       }
@@ -566,7 +566,7 @@ module.exports = (pool, authenticateJWT) => {
             lost_reason = NULL,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $1 AND organization_id = $2
-          RETURNING *
+          RETURNING ${dealColumns()}
         `, [id, req.organizationId]);
       });
 
@@ -594,7 +594,7 @@ module.exports = (pool, authenticateJWT) => {
             won_at = NULL,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $2 AND organization_id = $3
-          RETURNING *
+          RETURNING ${dealColumns()}
         `, [reason || null, id, req.organizationId]);
       });
 
@@ -621,7 +621,7 @@ module.exports = (pool, authenticateJWT) => {
             lost_reason = NULL,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $1 AND organization_id = $2
-          RETURNING *
+          RETURNING ${dealColumns()}
         `, [id, req.organizationId]);
       });
 

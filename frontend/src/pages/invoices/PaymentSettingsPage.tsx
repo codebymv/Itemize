@@ -75,6 +75,14 @@ const settingsNav = [
     { id: 'payments', title: 'Online Payments', icon: CreditCard },
 ];
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object') {
+        const maybeApiError = error as { response?: { data?: { error?: string } }; message?: string };
+        return maybeApiError.response?.data?.error || maybeApiError.message || fallback;
+    }
+    return fallback;
+};
+
 // Sidebar navigation component
 function SettingsNav({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) {
     return (
@@ -225,7 +233,7 @@ export function PaymentSettingsPage() {
         }
     };
 
-    const updateField = (field: keyof PaymentSettings, value: any) => {
+    const updateField = <K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
 
@@ -291,7 +299,7 @@ export function PaymentSettingsPage() {
                             URL.revokeObjectURL(businessFormData.logo_url);
                         }
                         toast({ title: 'Created', description: 'Business created with logo successfully' });
-                    } catch (logoError: any) {
+                    } catch (logoError: unknown) {
                         // Clean up blob URL even on error
                         if (businessFormData.logo_url?.startsWith('blob:')) {
                             URL.revokeObjectURL(businessFormData.logo_url);
@@ -357,10 +365,10 @@ export function PaymentSettingsPage() {
                     b.id === editingBusiness.id ? { ...b, logo_url: result.logo_url } : b
                 ));
                 toast({ title: 'Logo uploaded', description: 'Business logo has been updated.' });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 toast({ 
                     title: 'Upload failed', 
-                    description: error.response?.data?.error || 'Failed to upload logo.', 
+                    description: getApiErrorMessage(error, 'Failed to upload logo.'),
                     variant: 'destructive' 
                 });
             } finally {

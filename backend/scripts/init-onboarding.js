@@ -79,8 +79,6 @@ async function resetOnboarding(pool, email, feature = null) {
         return false;
     }
     
-    const user = findResult.rows[0];
-    
     if (feature) {
         // Reset specific feature
         console.log(`Resetting onboarding for feature: ${feature}`);

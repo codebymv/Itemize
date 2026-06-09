@@ -4,6 +4,7 @@
 
 import { useState, useCallback } from 'react';
 import { formatAddress } from '../utils/invoiceFormatters';
+import type { JsonRecord } from '@/types';
 
 export interface Contact {
   id: number;
@@ -17,7 +18,7 @@ export interface Contact {
     state?: string;
     zip?: string;
     country?: string;
-  } | Record<string, any>;
+  } | JsonRecord;
 }
 
 interface UseContactSelectionReturn {
@@ -37,7 +38,7 @@ interface UseContactSelectionReturn {
     name?: string;
     email?: string;
     phone?: string;
-    address?: any;
+    address?: Contact['address'];
   }) => void;
 }
 
@@ -76,7 +77,7 @@ export function useContactSelection(): UseContactSelectionReturn {
       name?: string;
       email?: string;
       phone?: string;
-      address?: any;
+      address?: Contact['address'];
     }) => {
       if (contact.id) setContactId(contact.id);
       if (contact.name) setCustomerName(contact.name);

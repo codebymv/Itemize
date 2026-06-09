@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
+const { categoryColumns } = require('./category-columns');
 
 /**
  * Create categories routes with injected dependencies
@@ -61,7 +62,7 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'INSERT INTO categories (user_id, name, color_value) VALUES ($1, $2, $3) RETURNING *',
+                `INSERT INTO categories (user_id, name, color_value) VALUES ($1, $2, $3) RETURNING ${categoryColumns()}`,
                 [req.user.id, name.trim(), color_value]
             ));
 
@@ -86,7 +87,7 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE categories SET name = $1, color_value = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+                `UPDATE categories SET name = $1, color_value = $2 WHERE id = $3 AND user_id = $4 RETURNING ${categoryColumns()}`,
                 [name.trim(), color_value, id, req.user.id]
             ));
 

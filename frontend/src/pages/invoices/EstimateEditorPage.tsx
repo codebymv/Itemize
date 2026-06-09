@@ -35,6 +35,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getProducts, Product } from '@/services/invoicesApi';
 import api from '@/lib/api';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import type { JsonRecord } from '@/types';
 
 interface LineItem {
     id: string;
@@ -44,6 +45,15 @@ interface LineItem {
     quantity: number;
     unit_price: number;
     tax_rate: number;
+}
+
+interface EstimateLineItem {
+    product_id?: number;
+    name: string;
+    description?: string;
+    quantity: number;
+    unit_price: number;
+    tax_rate?: number;
 }
 
 interface Contact {
@@ -58,7 +68,7 @@ interface Contact {
         state?: string;
         zip?: string;
         country?: string;
-    } | Record<string, any>;
+    } | JsonRecord;
 }
 
 export function EstimateEditorPage() {
@@ -185,7 +195,7 @@ export function EstimateEditorPage() {
                     setStatus(estimate.status || 'draft');
                     
                     if (estimate.items && estimate.items.length > 0) {
-                        setLineItems(estimate.items.map((item: any) => ({
+                        setLineItems((estimate.items as EstimateLineItem[]).map((item) => ({
                             id: crypto.randomUUID(),
                             product_id: item.product_id,
                             name: item.name,

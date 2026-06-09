@@ -178,7 +178,7 @@ async function getItemizeLogoAsync() {
             cachedLogoDataUrl = `data:image/png;base64,${base64}`;
             logger.info('Itemize logo loaded from local file');
             return cachedLogoDataUrl;
-        } catch (e) { /* file does not exist, continue to fallback */ }
+        } catch { /* file does not exist, continue to fallback */ }
         
         // Fallback: try relative to backend
         const altPath = path.join(serviceDir, '../public/cover.png');
@@ -188,7 +188,7 @@ async function getItemizeLogoAsync() {
             cachedLogoDataUrl = `data:image/png;base64,${base64}`;
             logger.info('Itemize logo loaded from backend public directory');
             return cachedLogoDataUrl;
-        } catch (e) { /* file does not exist, continue to fallback */ }
+        } catch { /* file does not exist, continue to fallback */ }
         
         // In production (Railway), we might need to fetch from URL
         // For now, return null and use text fallback
@@ -276,7 +276,7 @@ async function getItemizeTextWhiteAsync() {
             const base64 = textBuffer.toString('base64');
             cachedTextWhiteDataUrl = `data:image/png;base64,${base64}`;
             return cachedTextWhiteDataUrl;
-        } catch (e) { /* file does not exist, continue to fallback */ }
+        } catch { /* file does not exist, continue to fallback */ }
         
         // Fallback: try relative to backend
         const altPath = path.join(serviceDir, '../public/textwhite.png');
@@ -285,7 +285,7 @@ async function getItemizeTextWhiteAsync() {
             const base64 = textBuffer.toString('base64');
             cachedTextWhiteDataUrl = `data:image/png;base64,${base64}`;
             return cachedTextWhiteDataUrl;
-        } catch (e) { /* file does not exist, continue to fallback */ }
+        } catch { /* file does not exist, continue to fallback */ }
         
         cachedTextWhiteDataUrl = false;
         return null;

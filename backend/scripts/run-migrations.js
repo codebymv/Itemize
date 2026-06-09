@@ -222,7 +222,7 @@ async function main() {
                 break;
 
             case '--rollback':
-            case 'rollback':
+            case 'rollback': {
                 const migrationName = args[1];
                 if (!migrationName) {
                     console.error('Usage: node run-migrations.js --rollback <migration-name>');
@@ -230,6 +230,7 @@ async function main() {
                 }
                 await runner.rollbackMigration(migrationName);
                 break;
+            }
 
             case '--index':
             case 'index':
@@ -239,7 +240,7 @@ async function main() {
             case '--verify':
             case 'verify':
                 await runner.ensureMigrationsTable();
-                await verifyMigrations(pool);
+                await runner.getStatus();
                 break;
 
             case 'run':

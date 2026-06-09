@@ -50,7 +50,7 @@ interface CanvasContainerProps {
   onVaultDelete?: (vaultId: number) => Promise<boolean>;
   onVaultShare?: (vaultId: number) => void;
   onOpenNewVaultModal?: (position: { x: number; y: number }) => void;
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<any>;
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<Category>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
 }
 

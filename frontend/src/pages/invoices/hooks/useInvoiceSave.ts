@@ -58,6 +58,16 @@ interface UseInvoiceSaveReturn {
   handleSendInvoice: (options: SendOptions) => Promise<void>;
 }
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: unknown } } }).response;
+    if (typeof response?.data?.error === 'string') {
+      return response.data.error;
+    }
+  }
+  return fallback;
+};
+
 export function useInvoiceSave({
   organizationId,
   isNew,
@@ -150,9 +160,8 @@ export function useInvoiceSave({
       }
 
       navigate('/invoices');
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.error || toastMessages.failedToSend('invoice');
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, toastMessages.failedToSend('invoice'));
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     } finally {
       setSaving(false);

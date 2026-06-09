@@ -14,7 +14,7 @@ module.exports = (databaseUrl) => {
     connectionTimeoutMillis: 2000,
     statement_timeout: 30000,
     
-    idle: (error, client) => {
+    idle: (error, _client) => {
       logger.warn('Idle client error', { error });
     },
   };

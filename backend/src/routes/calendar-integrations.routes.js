@@ -5,10 +5,9 @@
 const express = require('express');
 const router = express.Router();
 const googleCalendarService = require('../services/googleCalendarService');
-const { logger } = require('../utils/logger');
-const { asyncHandler } = require('../middleware/errorHandler');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
+const { bookingColumns, calendarConnectionColumns } = require('./calendar-columns');
 
 /**
  * Create calendar integrations routes with injected dependencies
@@ -227,7 +226,7 @@ module.exports = (pool, authenticateJWT) => {
     router.get('/google/calendars/:connectionId', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const connectionResult = await withDbClient(pool, async (client) => client.query(
-                `SELECT * FROM calendar_connections 
+                `SELECT ${calendarConnectionColumns()} FROM calendar_connections
                  WHERE id = $1 AND user_id = $2 AND organization_id = $3`,
                 [req.params.connectionId, req.user.id, req.organizationId]
             ));
@@ -275,7 +274,7 @@ module.exports = (pool, authenticateJWT) => {
         try {
             const data = await withDbClient(pool, async (client) => {
                 const connectionResult = await client.query(
-                    `SELECT * FROM calendar_connections 
+                    `SELECT ${calendarConnectionColumns()} FROM calendar_connections
                  WHERE id = $1 AND user_id = $2 AND organization_id = $3 AND is_active = TRUE`,
                     [req.params.connectionId, req.user.id, req.organizationId]
                 );
@@ -300,7 +299,7 @@ module.exports = (pool, authenticateJWT) => {
 
                 // Get upcoming bookings that need syncing
                 const bookingsResult = await client.query(`
-                SELECT b.* FROM bookings b
+                SELECT ${bookingColumns('b')} FROM bookings b
                 LEFT JOIN calendar_sync_events cse ON cse.booking_id = b.id AND cse.connection_id = $1
                 WHERE b.organization_id = $2
                   AND b.status IN ('confirmed', 'pending')

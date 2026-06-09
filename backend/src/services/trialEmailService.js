@@ -15,7 +15,7 @@ const path = require('path');
 let Resend = null;
 try {
   Resend = require('resend').Resend;
-} catch (e) {
+} catch {
   logger.info('Resend package not installed - trial email sending disabled');
 }
 
