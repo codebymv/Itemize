@@ -3,6 +3,7 @@ const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
 const { fs, logger, multer, path, s3Service, upload } = require('./logo-upload');
+const { BUSINESS_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -18,7 +19,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
         try {
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    `SELECT * FROM businesses 
+                    `SELECT ${selectColumns(BUSINESS_COLUMNS)} FROM businesses
                      WHERE organization_id = $1 AND is_active = true
                      ORDER BY last_used_at DESC NULLS LAST, created_at DESC`,
                     [req.organizationId]
@@ -46,7 +47,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
 
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    'SELECT * FROM businesses WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${selectColumns(BUSINESS_COLUMNS)} FROM businesses WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
             });
@@ -77,7 +78,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 return client.query(`
                     INSERT INTO businesses (organization_id, name, email, phone, address, tax_id, logo_url)
                     VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    RETURNING *
+                    RETURNING ${selectColumns(BUSINESS_COLUMNS)}
                 `, [
                     req.organizationId,
                     name.trim(),
@@ -136,7 +137,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         is_active = COALESCE($7, is_active),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $8 AND organization_id = $9
-                    RETURNING *
+                    RETURNING ${selectColumns(BUSINESS_COLUMNS)}
                 `, [
                     name?.trim(),
                     email,

@@ -2,6 +2,7 @@ const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound } = require('../../utils/response');
+const { PRODUCT_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -17,7 +18,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
             const { is_active, search } = req.query;
 
             let query = `
-                SELECT * FROM products WHERE organization_id = $1
+                SELECT ${selectColumns(PRODUCT_COLUMNS)} FROM products WHERE organization_id = $1
             `;
             const params = [req.organizationId];
             let paramIndex = 2;
@@ -58,7 +59,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     organization_id, name, description, sku, price, currency,
                     product_type, billing_period, tax_rate, taxable, created_by
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                RETURNING *
+                RETURNING ${selectColumns(PRODUCT_COLUMNS)}
             `, [
                 req.organizationId,
                 name,
@@ -99,7 +100,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     is_active = COALESCE($10, is_active),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $11 AND organization_id = $12
-                RETURNING *
+                RETURNING ${selectColumns(PRODUCT_COLUMNS)}
             `, [name, description, sku, price, currency, product_type, billing_period, tax_rate, taxable, is_active, id, req.organizationId]);
             });
 

@@ -3,6 +3,7 @@ const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendBadRequest, sendError } = require('../../utils/response');
 const { fs, logger, multer, path, s3Service, upload } = require('./logo-upload');
+const { PAYMENT_SETTINGS_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -18,7 +19,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
         try {
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    'SELECT * FROM payment_settings WHERE organization_id = $1',
+                    `SELECT ${selectColumns(PAYMENT_SETTINGS_COLUMNS)} FROM payment_settings WHERE organization_id = $1`,
                     [req.organizationId]
                 );
             });
@@ -82,7 +83,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         logo_url = EXCLUDED.logo_url,
                         default_currency = COALESCE(EXCLUDED.default_currency, payment_settings.default_currency),
                         updated_at = CURRENT_TIMESTAMP
-                    RETURNING *
+                    RETURNING ${selectColumns(PAYMENT_SETTINGS_COLUMNS)}
                 `, [
                     req.organizationId,
                     invoice_prefix || 'INV-',

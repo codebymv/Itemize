@@ -2,6 +2,7 @@ const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendError } = require('../../utils/response');
+const { PAYMENT_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
@@ -41,7 +42,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 );
 
                 const result = await client.query(`
-                    SELECT p.*, 
+                    SELECT ${selectColumns(PAYMENT_COLUMNS, 'p')},
                         i.invoice_number,
                         c.first_name as contact_first_name, 
                         c.last_name as contact_last_name,
