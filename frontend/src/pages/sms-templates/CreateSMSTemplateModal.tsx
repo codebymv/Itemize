@@ -83,7 +83,7 @@ export function CreateSMSTemplateModal({
       } catch (error) {
         // Calculate locally if API fails
         const length = message.length;
-        const isUnicode = /[^\x00-\x7F]/.test(message);
+        const isUnicode = Array.from(message).some((char) => char.charCodeAt(0) > 127);
         const singleLimit = isUnicode ? UNICODE_SINGLE_SEGMENT : GSM_SINGLE_SEGMENT;
         const multiLimit = isUnicode ? UNICODE_MULTI_SEGMENT : GSM_MULTI_SEGMENT;
         const segments = length <= singleLimit ? 1 : Math.ceil(length / multiLimit);

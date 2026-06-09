@@ -838,7 +838,9 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
                                     const parsed = JSON.parse(e.target.value);
                                     setContent(parsed);
                                     setHasChanges(true);
-                                } catch { }
+                                } catch {
+                                    return;
+                                }
                             }}
                             rows={10}
                             className="font-mono text-sm"

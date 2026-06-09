@@ -34,11 +34,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
   editor,
   className
 }) => {
-  if (!editor) return null;
-
   // Get theme for styling
   const { theme } = useTheme();
   const isLight = theme === 'light';
+
+  if (!editor) return null;
 
   // Helper function to get current heading level
   const getCurrentHeading = () => {

@@ -582,7 +582,7 @@ export function RichTextEditor({
                 )}
                 style={{ minHeight }}
             >
-                {/* @ts-ignore - TipTap EditorContent has React 18 type compatibility issues */}
+                {/* @ts-expect-error - TipTap EditorContent has React 18 type compatibility issues */}
                 <EditorContent editor={editor} />
             </div>
         </div>

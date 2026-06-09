@@ -208,7 +208,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Handler for when 'Add Note' is clicked in the context menu
   const handleRequestAddNote = () => {
     setShowContextMenu(false); 
-    onOpenNewNoteModal && onOpenNewNoteModal(menuPosition); 
+    if (onOpenNewNoteModal) {
+      onOpenNewNoteModal(menuPosition);
+    }
   };
 
   // Handler for when 'Add Whiteboard' is clicked in the context menu

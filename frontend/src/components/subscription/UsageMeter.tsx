@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useSubscriptionFeatures, UsageType } from '../../contexts/SubscriptionContext';
-import { AlertTriangle, CheckCircle, Infinity, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Infinity as InfinityIcon, TrendingUp } from 'lucide-react';
 
 interface UsageMeterProps {
   /**
@@ -90,7 +90,7 @@ export function UsageMeter({
           />
         </div>
         {unlimited ? (
-          <Infinity className="w-4 h-4 text-green-600" />
+          <InfinityIcon className="w-4 h-4 text-green-600" />
         ) : (
           <span className={`text-xs ${getTextColorClass()}`}>
             {current}/{limit}
@@ -108,7 +108,7 @@ export function UsageMeter({
         <div className="flex items-center gap-2">
           {unlimited ? (
             <span className="flex items-center gap-1 text-sm text-green-600">
-              <Infinity className="w-4 h-4" />
+              <InfinityIcon className="w-4 h-4" />
               Unlimited
             </span>
           ) : isExceeded ? (
