@@ -238,13 +238,15 @@ async function getItemizeIconAsync() {
         ];
         
         for (const iconPath of possiblePaths) {
-            if (await fileExistsAsync(iconPath)) {
-                const iconBuffer = await fs.promises.readFile(iconPath);
-                const base64 = iconBuffer.toString('base64');
-                cachedIconDataUrl = `data:image/png;base64,${base64}`;
-                logger.info(`Itemize icon loaded from filesystem: ${iconPath}`);
-                return cachedIconDataUrl;
-            } catch (e) { /* continue loop */ }
+            try {
+                if (await fileExistsAsync(iconPath)) {
+                    const iconBuffer = await fs.promises.readFile(iconPath);
+                    const base64 = iconBuffer.toString('base64');
+                    cachedIconDataUrl = `data:image/png;base64,${base64}`;
+                    logger.info(`Itemize icon loaded from filesystem: ${iconPath}`);
+                    return cachedIconDataUrl;
+                }
+            } catch (_e) { /* continue loop */ }
         }
         
         // Fallback: try to fetch via HTTP (for production environments)
@@ -330,13 +332,15 @@ async function getItemizeTextBlackAsync() {
         ];
         
         for (const textPath of possiblePaths) {
-            if (await fileExistsAsync(textPath)) {
-                const textBuffer = await fs.promises.readFile(textPath);
-                const base64 = textBuffer.toString('base64');
-                cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
-                logger.info(`Itemize text black loaded from filesystem: ${textPath}`);
-                return cachedTextBlackDataUrl;
-            } catch (e) { /* continue loop */ }
+            try {
+                if (await fileExistsAsync(textPath)) {
+                    const textBuffer = await fs.promises.readFile(textPath);
+                    const base64 = textBuffer.toString('base64');
+                    cachedTextBlackDataUrl = `data:image/png;base64,${base64}`;
+                    logger.info(`Itemize text black loaded from filesystem: ${textPath}`);
+                    return cachedTextBlackDataUrl;
+                }
+            } catch (_e) { /* continue loop */ }
         }
         
         // Fallback: try to fetch via HTTP (for production environments)
