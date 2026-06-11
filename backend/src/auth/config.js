@@ -33,17 +33,9 @@ const strictRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-const FRONTEND_URL = process.env.FRONTEND_URL;
 let COOKIE_DOMAIN;
 if (process.env.COOKIE_DOMAIN) {
   COOKIE_DOMAIN = process.env.COOKIE_DOMAIN;
-} else if (process.env.NODE_ENV === 'production' && FRONTEND_URL) {
-  try {
-    const hostname = new URL(FRONTEND_URL).hostname.replace(/^www\./, '');
-    COOKIE_DOMAIN = `.${hostname}`;
-  } catch {
-    logger.warn('Invalid FRONTEND_URL; skipping cookie domain', { FRONTEND_URL });
-  }
 }
 
 const ACCESS_COOKIE_OPTIONS = {

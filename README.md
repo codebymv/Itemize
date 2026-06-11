@@ -95,6 +95,7 @@ Itemize/
 5. Set environment variables:
    - `DATABASE_URL` (auto-provided by Railway)
    - `FRONTEND_URL` (your frontend URL)
+   - Leave `COOKIE_DOMAIN` unset when the backend runs on `*.railway.app`; set it to `.itemize.cloud` only if the backend is served from an `itemize.cloud` subdomain such as `api.itemize.cloud`.
 6. Run `schema.sql` in Railway's PostgreSQL console
 
 ### Frontend Deployment
@@ -110,6 +111,8 @@ DATABASE_URL=postgresql://username:password@localhost:5432/itemize
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+# Optional. Do not set this for a Railway backend URL like *.railway.app.
+# COOKIE_DOMAIN=.itemize.cloud
 GEMINI_API_KEY=your-gemini-api-key
 MARKETING_CHAT_AI_ENABLED=true
 ```
