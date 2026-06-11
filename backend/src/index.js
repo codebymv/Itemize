@@ -547,8 +547,22 @@ app.use(dbMonitor(pool));
         logger.info('Error handling middleware initialized');
 
     } catch (dbError) {
-        logger.error('Database connection error', { error: dbError.message });
+        const startupErrorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+        logger.error(`Database-dependent API initialization failed: ${startupErrorMessage}`, {
+            error: startupErrorMessage,
+            stack: dbError instanceof Error ? dbError.stack : undefined
+        });
         logger.info('Server will continue running for health checks');
+
+        app.use('/api/*', (req, res) => {
+            res.status(503).json({
+                success: false,
+                error: {
+                    code: 'API_INITIALIZATION_FAILED',
+                    message: 'API routes are unavailable because backend initialization failed. Check server startup logs.'
+                }
+            });
+        });
     }
 
     // Static files and catch-all route
