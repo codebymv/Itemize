@@ -110,11 +110,15 @@ DATABASE_URL=postgresql://username:password@localhost:5432/itemize
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+GEMINI_API_KEY=your-gemini-api-key
+MARKETING_CHAT_AI_ENABLED=true
 ```
 
 ### Frontend (.env)
 ```env
 VITE_API_URL=http://localhost:3001
+# Optional. Defaults enabled unless set to false.
+VITE_MARKETING_CHAT_ENABLED=true
 ```
 
 ## 📋 Features

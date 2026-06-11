@@ -441,7 +441,7 @@ export const LandingNav: React.FC = () => {
                   >
                     Sign In
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       handleGetStarted();

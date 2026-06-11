@@ -73,6 +73,19 @@ const mockCategories = [
   { id: 3, user_id: 1, name: 'Personal', color_value: '#F59E0B' },
 ];
 
+const mockChatMessages = [
+  {
+    id: 1,
+    session_id: 123,
+    organization_id: 1,
+    sender_type: 'visitor',
+    content: 'Talk to Sales',
+    content_type: 'text',
+    is_read: false,
+    created_at: '2024-01-01T00:00:00Z',
+  },
+];
+
 export const handlers = [
   // Lists
   http.get(`${API_BASE}/lists`, () => {
@@ -193,6 +206,70 @@ export const handlers = [
       id: Number(params.id),
     };
     return HttpResponse.json(updated);
+  }),
+
+  // Public chat widget
+  http.get(`${API_BASE}/chat-widget/public/config/:widgetKey`, ({ params }) => {
+    return HttpResponse.json({
+      widget_key: params.widgetKey,
+      name: 'Itemize',
+      primary_color: '#2563eb',
+      text_color: '#ffffff',
+      position: 'bottom-right',
+      icon_style: 'chat',
+      welcome_title: 'Hi there.',
+      welcome_message: "Tell us what you're trying to organize or automate. We'll route this to the right person.",
+      placeholder_text: 'Type your message...',
+      require_email: true,
+      require_name: true,
+      require_phone: false,
+      custom_fields: [],
+      is_active: true,
+      is_online: true,
+      auto_open_delay: 0,
+      show_branding: false,
+      offline_message: 'We are currently offline.',
+    });
+  }),
+
+  http.post(`${API_BASE}/chat-widget/public/session`, async () => {
+    return HttpResponse.json({
+      session_token: 'test-session-token',
+      session_id: 123,
+      resumed: false,
+    }, { status: 201 });
+  }),
+
+  http.get(`${API_BASE}/chat-widget/public/messages/:sessionToken`, () => {
+    return HttpResponse.json(mockChatMessages);
+  }),
+
+  http.post(`${API_BASE}/chat-widget/public/messages`, async ({ request }) => {
+    const body = (await request.json()) as { content?: string };
+    return HttpResponse.json({
+      ...mockChatMessages[0],
+      id: Date.now(),
+      content: body.content || '',
+      created_at: new Date().toISOString(),
+    }, { status: 201 });
+  }),
+
+  http.post(`${API_BASE}/chat-widget/public/end-session`, () => {
+    return HttpResponse.json({ success: true });
+  }),
+
+  // Public marketing assistant
+  http.get(`${API_BASE}/marketing-chat/token`, () => {
+    return HttpResponse.json({ success: true, data: { token: 'test-ask-token' } });
+  }),
+
+  http.post(`${API_BASE}/marketing-chat/ask`, async () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        reply: 'Itemize helps teams organize CRM, bookings, automations, and workspace notes.',
+      },
+    });
   }),
 
   // Auth

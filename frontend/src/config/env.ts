@@ -16,6 +16,7 @@ const envSchema = z.object({
   VITE_PRODUCTION_API_URL: z.string().url().optional(),
   VITE_PRODUCTION_DOMAIN: z.string().optional(),
   VITE_AUTH_CALLBACK_URL: z.string().optional(),
+  VITE_MARKETING_CHAT_ENABLED: z.string().optional(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;
@@ -35,6 +36,7 @@ if (import.meta.env.DEV) {
     apiUrl: env.VITE_API_URL,
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,
+    marketingChatEnabled: env.VITE_MARKETING_CHAT_ENABLED !== 'false',
   });
   
   if (!env.VITE_GOOGLE_CLIENT_ID) {

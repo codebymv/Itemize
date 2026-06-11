@@ -96,6 +96,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSessionExpiration } from "@/hooks/useSessionExpiration";
 import { CookieConsent } from "@/components/CookieConsent";
+import MarketingChatLauncher from "@/components/marketing/MarketingChatLauncher";
 
 const isProduction = import.meta.env.PROD;
 
@@ -218,8 +219,13 @@ const AppContent = () => {
   const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/');
+  const showMarketingChat =
+    location.pathname === '/home' ||
+    location.pathname === '/status' ||
+    location.pathname.startsWith('/help');
 
   return (
+    <>
     <Routes>
       {/* Root path redirects based on authentication */}
       <Route path="/" element={<RootRedirect />} />
@@ -318,6 +324,8 @@ const AppContent = () => {
       {/* Catch-all route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    {showMarketingChat && <MarketingChatLauncher />}
+    </>
   );
 };
 

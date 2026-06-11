@@ -178,6 +178,10 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 # Backend API URL
 VITE_API_URL=http://localhost:3000
+
+# Optional first-party marketing chat launcher.
+# Defaults enabled unless set to false.
+VITE_MARKETING_CHAT_ENABLED=true
 ```
 
 ## Package.json Scripts

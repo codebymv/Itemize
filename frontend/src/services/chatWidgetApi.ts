@@ -140,6 +140,52 @@ export interface EmbedCode {
     embed_code: string;
 }
 
+export interface PublicChatWidgetConfig {
+    widget_key: string;
+    name: string;
+    primary_color: string;
+    text_color: string;
+    position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+    icon_style: string;
+    custom_icon_url?: string;
+    welcome_title: string;
+    welcome_message: string;
+    placeholder_text: string;
+    require_email: boolean;
+    require_name: boolean;
+    require_phone: boolean;
+    custom_fields: CustomField[];
+    is_active: boolean;
+    is_online: boolean;
+    auto_open_delay: number;
+    show_branding: boolean;
+    business_hours?: BusinessHours;
+    offline_message: string;
+}
+
+export interface CreatePublicChatSessionPayload {
+    widget_key: string;
+    visitor_name?: string;
+    visitor_email?: string;
+    visitor_phone?: string;
+    custom_data?: Record<string, unknown>;
+    current_page_url?: string;
+    referrer_url?: string;
+}
+
+export interface PublicChatSessionResponse {
+    session_token: string;
+    session_id: number;
+    resumed: boolean;
+}
+
+export type PublicChatMessage = ChatMessage;
+
+export interface SendPublicChatMessagePayload {
+    session_token: string;
+    content: string;
+}
+
 // ======================
 // API Functions
 // ======================
@@ -187,6 +233,50 @@ export const getEmbedCode = async (organizationId?: number): Promise<EmbedCode> 
     const response = await api.get('/api/chat-widget/embed-code', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
+    return response.data;
+};
+
+/**
+ * Get public widget configuration for first-party marketing pages or external embeds.
+ */
+export const getPublicChatWidgetConfig = async (widgetKey: string): Promise<PublicChatWidgetConfig> => {
+    const response = await api.get(`/api/chat-widget/public/config/${widgetKey}`);
+    return response.data;
+};
+
+/**
+ * Create or resume a public visitor chat session.
+ */
+export const createPublicChatSession = async (
+    payload: CreatePublicChatSessionPayload
+): Promise<PublicChatSessionResponse> => {
+    const response = await api.post('/api/chat-widget/public/session', payload);
+    return response.data;
+};
+
+/**
+ * Load public visitor messages for a chat session.
+ */
+export const getPublicChatMessages = async (sessionToken: string): Promise<PublicChatMessage[]> => {
+    const response = await api.get(`/api/chat-widget/public/messages/${sessionToken}`);
+    return response.data;
+};
+
+/**
+ * Send a message as a public visitor.
+ */
+export const sendPublicChatMessage = async (
+    payload: SendPublicChatMessagePayload
+): Promise<PublicChatMessage> => {
+    const response = await api.post('/api/chat-widget/public/messages', payload);
+    return response.data;
+};
+
+/**
+ * End a public visitor chat session.
+ */
+export const endPublicChatSession = async (sessionToken: string): Promise<{ success: boolean }> => {
+    const response = await api.post('/api/chat-widget/public/end-session', { session_token: sessionToken });
     return response.data;
 };
 

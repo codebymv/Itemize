@@ -102,6 +102,9 @@ JWT_SECRET=your-jwt-secret
 
 # The API key for the Gemini API
 GEMINI_API_KEY=your-gemini-api-key
+
+# Optional: set to false to disable Gemini-powered replies in marketing chat
+MARKETING_CHAT_AI_ENABLED=true
 ```
 
 ## Package.json Scripts

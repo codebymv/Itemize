@@ -13,6 +13,7 @@ const emailTemplatesRoutes = require('../routes/email-templates.routes');
 const workflowsRoutes = require('../routes/workflows.routes');
 const smsTemplatesRoutes = require('../routes/sms-templates.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
+const marketingChatRoutes = require('../routes/marketing-chat.routes');
 const campaignsRoutes = require('../routes/campaigns.routes');
 const segmentsRoutes = require('../routes/segments.routes');
 const estimatesRoutes = require('../routes/estimates.routes');
@@ -219,6 +220,8 @@ function registerApiRoutes({
     logger.info('SMS Templates routes initialized');
     app.use('/api/chat-widget', chatWidgetRoutes(pool, authenticateJWT, publicRateLimit, io));
     logger.info('Chat Widget routes initialized');
+    app.use('/api/marketing-chat', marketingChatRoutes(publicRateLimit));
+    logger.info('Marketing Chat routes initialized');
     app.use('/api/campaigns', campaignsRoutes(pool, authenticateJWT));
     logger.info('Email Campaigns routes initialized');
     app.use('/api/segments', segmentsRoutes(pool, authenticateJWT));

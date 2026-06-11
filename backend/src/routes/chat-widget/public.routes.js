@@ -271,7 +271,7 @@ module.exports = (pool, publicRateLimit, io) => {
             const data = await withDbClient(pool, async (client) => {
                 // Get session
                 const sessionResult = await client.query(`
-                SELECT cs.id, cs.organization_id, cs.widget_id
+                SELECT cs.id, cs.organization_id, cs.widget_id, cs.visitor_name, cs.custom_data
                 FROM chat_sessions cs
                 WHERE cs.session_token = $1 AND cs.status = 'active'
             `, [session_token]);
@@ -319,6 +319,7 @@ module.exports = (pool, publicRateLimit, io) => {
                     message: data.message,
                     timestamp: new Date().toISOString()
                 });
+
             }
 
             res.status(201).json(data.message);
