@@ -219,9 +219,9 @@ const AppContent = () => {
   const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/');
+  const marketingChatRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const showMarketingChat =
-    location.pathname === '/home' ||
-    location.pathname === '/status' ||
+    marketingChatRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/help');
 
   return (
