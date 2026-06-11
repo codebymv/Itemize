@@ -3,9 +3,14 @@
 
 DO $$
 BEGIN
+  IF to_regclass('public.signatures') IS NULL THEN
+    RAISE NOTICE 'Legacy signatures table does not exist; skipping signature contact_id migration';
+    RETURN;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'signatures' AND column_name = 'contact_id'
+    WHERE table_schema = 'public' AND table_name = 'signatures' AND column_name = 'contact_id'
   ) THEN
     ALTER TABLE signatures ADD COLUMN contact_id INTEGER;
     

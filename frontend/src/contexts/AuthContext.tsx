@@ -41,6 +41,47 @@ export class AuthError extends Error {
   }
 }
 
+interface ApiErrorPayload {
+  error?: string | {
+    message?: string;
+    code?: string;
+  };
+  message?: string;
+  code?: string;
+}
+
+const getAuthErrorDetails = (payload: unknown, fallbackMessage: string): { message: string; code: string } => {
+  if (payload && typeof payload === 'object') {
+    const data = payload as ApiErrorPayload;
+
+    if (typeof data.error === 'string') {
+      return {
+        message: data.error,
+        code: data.code || 'UNKNOWN',
+      };
+    }
+
+    if (data.error && typeof data.error === 'object') {
+      return {
+        message: data.error.message || fallbackMessage,
+        code: data.error.code || data.code || 'UNKNOWN',
+      };
+    }
+
+    if (typeof data.message === 'string') {
+      return {
+        message: data.message,
+        code: data.code || 'UNKNOWN',
+      };
+    }
+  }
+
+  return {
+    message: fallbackMessage,
+    code: 'UNKNOWN',
+  };
+};
+
 const AuthStateContext = createContext<AuthStateContextType | undefined>(undefined);
 const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined);
 
@@ -229,16 +270,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = response.data.user;
         saveAuthState(userData);
       } else {
-        throw new AuthError(response.data.error || 'Login failed', response.data.code || 'UNKNOWN');
+        const { message, code } = getAuthErrorDetails(response.data, 'Login failed');
+        throw new AuthError(message, code);
       }
     } catch (error) {
       // Handle axios error response
       if (axios.isAxiosError(error) && error.response?.data) {
-        const data = error.response.data as { error?: string; code?: string };
-        throw new AuthError(
-          data.error || 'Login failed',
-          data.code || 'UNKNOWN'
-        );
+        const { message, code } = getAuthErrorDetails(error.response.data, 'Login failed');
+        throw new AuthError(message, code);
       }
       throw error;
     }
@@ -252,17 +291,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/api/auth/register', { email, password, name });
       
       if (!response.data.success) {
-        throw new AuthError(response.data.error || 'Registration failed', response.data.code || 'UNKNOWN');
+        const { message, code } = getAuthErrorDetails(response.data, 'Registration failed');
+        throw new AuthError(message, code);
       }
       // Don't auto-login - user needs to verify email first
     } catch (error) {
       // Handle axios error response
       if (axios.isAxiosError(error) && error.response?.data) {
-        const data = error.response.data as { error?: string; code?: string };
-        throw new AuthError(
-          data.error || 'Registration failed',
-          data.code || 'UNKNOWN'
-        );
+        const { message, code } = getAuthErrorDetails(error.response.data, 'Registration failed');
+        throw new AuthError(message, code);
       }
       throw error;
     }
