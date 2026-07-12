@@ -155,7 +155,7 @@ export function CookieConsent() {
                 <Cookie className="h-3.5 sm:h-4 w-3.5 sm:w-4 inline mr-1 sm:mr-1.5 text-white" />
                 We use cookies to enhance your experience.{' '}
                 <a href="/legal/privacy" className="text-white underline hover:text-white/80 whitespace-nowrap">
-                  Learn more
+                  Read our privacy policy
                 </a>
               </p>
 

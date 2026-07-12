@@ -97,7 +97,7 @@ const Home: React.FC = () => {
   return (
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
       {/* Background effects */}
-      <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={10} isLight={isLight} />
+      <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
 
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">

@@ -141,6 +141,7 @@ export const LandingNav: React.FC = () => {
             <button 
               onClick={() => handleNavClick('hero')}
               className="flex items-center"
+              aria-label="Itemize home"
             >
               <img 
                 src={isLight ? "/cover.png" : "/cover_whitetext.png"}
@@ -305,7 +306,7 @@ export const LandingNav: React.FC = () => {
                           isLight ? 'border-gray-200 text-indigo-600 hover:text-indigo-700' : 'border-slate-700 text-indigo-400 hover:text-indigo-300'
                         )}
                       >
-                        Learn more
+                        Explore workspaces
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
