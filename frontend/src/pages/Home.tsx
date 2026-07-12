@@ -22,11 +22,11 @@ import {
   Palette,
   Map,
 } from 'lucide-react';
-import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import Footer from '@/components/Footer';
 import AppScreenshot from './home/components/AppScreenshot';
 import { useRevealClass } from '@/hooks/useScrollReveal';
 
+const BackgroundClouds = lazy(() => import('@/components/ui/BackgroundClouds'));
 const FeatureShowcase = lazy(() => import('./home/components/FeatureShowcase'));
 const IntegrationGrid = lazy(() =>
   import('./home/components/IntegrationLogos').then(m => ({ default: m.IntegrationGrid }))
@@ -69,8 +69,8 @@ const Home: React.FC = () => {
     return {
       isLight,
       textColor: isLight ? 'text-gray-900' : 'text-slate-100',
-      secondaryTextColor: isLight ? 'text-gray-600' : 'text-slate-400',
-      mutedTextColor: isLight ? 'text-gray-400' : 'text-slate-500',
+      secondaryTextColor: isLight ? 'text-gray-700' : 'text-slate-300',
+      mutedTextColor: isLight ? 'text-gray-600' : 'text-slate-400',
       cardBgColor: isLight ? 'bg-white' : 'bg-slate-800',
       cardBorderColor: isLight ? 'border-gray-200' : 'border-slate-700',
       accentGradient: 'bg-gradient-to-r from-blue-600 to-indigo-600',
@@ -96,8 +96,10 @@ const Home: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
-      {/* Background effects */}
-      <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
+      {/* Background effects — deferred so hero LCP isn't blocked */}
+      <Suspense fallback={null}>
+        <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
+      </Suspense>
 
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -165,7 +167,7 @@ const Home: React.FC = () => {
                 showChrome={true}
                 aspectRatio="aspect-[16/10]"
                 className="screenshot-tilt"
-                src="/screenshots/dashboard.png"
+                src="/screenshots/dashboard.webp"
                 priority={true}
                 alt="Itemize Dashboard Screenshot"
               />
@@ -518,11 +520,13 @@ const Home: React.FC = () => {
 
             <RevealSection variant="fade-up" delay={100}>
               <div className={`${cardBgColor} rounded-2xl p-6 md:p-10 border ${cardBorderColor}`}>
-                <PricingCards
-                  variant="landing"
-                  showYearlyToggle={false}
-                  onUpgrade={() => handleGetStarted()}
-                />
+                <Suspense fallback={<div className="h-64 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
+                  <PricingCards
+                    variant="landing"
+                    showYearlyToggle={false}
+                    onUpgrade={() => handleGetStarted()}
+                  />
+                </Suspense>
               </div>
             </RevealSection>
           </div>

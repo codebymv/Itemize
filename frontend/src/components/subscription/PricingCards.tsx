@@ -174,8 +174,8 @@ export function PricingCards({
     const cardBg = isLight ? 'bg-white' : 'bg-slate-800';
     const cardBorder = isLight ? 'border-gray-200' : 'border-slate-700';
     const textPrimary = isLight ? 'text-gray-900' : 'text-slate-100';
-    const textSecondary = isLight ? 'text-gray-600' : 'text-slate-400';
-    const textMuted = isLight ? 'text-gray-500' : 'text-slate-500';
+    const textSecondary = isLight ? 'text-gray-700' : 'text-slate-300';
+    const textMuted = isLight ? 'text-gray-600' : 'text-slate-400';
     
     // Highlighted card uses blue/indigo gradient
     const highlightedBg = 'bg-gradient-to-b from-blue-600 to-indigo-700';

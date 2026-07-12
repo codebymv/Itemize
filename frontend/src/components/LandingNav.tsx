@@ -212,7 +212,7 @@ export const LandingNav: React.FC = () => {
                               </div>
                               <div className={cn(
                                 'text-xs mt-0.5',
-                                isLight ? 'text-gray-500' : 'text-slate-400'
+                                isLight ? 'text-gray-600' : 'text-slate-400'
                               )}>
                                 {item.description}
                               </div>
@@ -291,7 +291,7 @@ export const LandingNav: React.FC = () => {
                               </div>
                               <div className={cn(
                                 'text-xs mt-0.5',
-                                isLight ? 'text-gray-500' : 'text-slate-400'
+                                isLight ? 'text-gray-600' : 'text-slate-400'
                               )}>
                                 {item.description}
                               </div>
