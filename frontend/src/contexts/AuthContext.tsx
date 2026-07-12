@@ -1,10 +1,9 @@
-import React, { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useGoogleLogin, googleLogout, CredentialResponse } from '@react-oauth/google';
-import api, { getApiUrl, markAuthenticatedSession, clearAuthenticatedSession, isLoggedOut, setLoggedOut } from '@/lib/api';
+import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
+import api, { markAuthenticatedSession, clearAuthenticatedSession, isLoggedOut, setLoggedOut, hasSessionHint } from '@/lib/api';
 import { storage } from '@/lib/storage';
-import axios from 'axios'; // Keep axios for Google API calls
-import { toast } from '@/components/ui/use-toast'; // Import toast
+import axios from 'axios';
+import { toast } from '@/components/ui/use-toast';
 import logger from '@/lib/logger';
 
 export interface User {
@@ -23,11 +22,12 @@ interface AuthStateContextType {
 }
 
 interface AuthActionsContextType {
+  /** @deprecated Prefer useGoogleSignIn on login/register — kept for API compatibility */
   login: (redirectTo?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
-  handleGoogleSuccess: (credentialResponse: CredentialResponse) => void;
+  establishSession: (userData: User) => void;
   setCurrentUser: (user: User | null) => void;
 }
 
@@ -82,6 +82,37 @@ const getAuthErrorDetails = (payload: unknown, fallbackMessage: string): { messa
   };
 };
 
+/** Public/marketing paths where guests must not trigger /api/auth/me or refresh. */
+export const isPublicAuthSkipPath = (pathname: string): boolean => {
+  const exact = [
+    '/home',
+    '/status',
+    '/login',
+    '/register',
+    '/verify-email',
+    '/forgot-password',
+    '/reset-password',
+    '/auth/callback',
+  ];
+  if (exact.includes(pathname)) return true;
+  if (pathname.startsWith('/help')) return true;
+  if (pathname.startsWith('/shared/')) return true;
+  if (pathname.startsWith('/legal/')) return true;
+  return false;
+};
+
+const normalizeUser = (data: Record<string, unknown>): User | null => {
+  const uid = (data.id || data.uid) as string | undefined;
+  if (!uid) return null;
+  return {
+    uid,
+    name: (data.name as string) || '',
+    email: (data.email as string) || '',
+    photoURL: data.photoURL as string | undefined,
+    role: data.role as User['role'],
+  };
+};
+
 const AuthStateContext = createContext<AuthStateContextType | undefined>(undefined);
 const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined);
 
@@ -108,15 +139,27 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
-  
-  // Store redirect path for post-auth navigation
-  const pendingRedirectRef = useRef<string | null>(null);
 
-  // Initialize authentication state using cookie-based auth
+  // Helper to save user data after successful auth (cookies handle the token)
+  const establishSession = useCallback((userData: User) => {
+    const normalized =
+      normalizeUser(userData as unknown as Record<string, unknown>) || userData;
+    const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
+
+    storage.setJson('itemize_user', normalized as unknown as Record<string, unknown>);
+    storage.setItem('itemize_expiry', expiryTime.toString());
+    markAuthenticatedSession();
+    setLoggedOut(false);
+
+    setToken(null);
+    setCurrentUser(normalized);
+  }, []);
+
+  // Initialize authentication — skip network probes for guests / public marketing
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -126,177 +169,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
           return;
         }
-        // Fetch user from backend using httpOnly cookies
+
+        const sessionHint = hasSessionHint();
+        const onPublic = isPublicAuthSkipPath(location.pathname);
+
+        // Guests: never call /api/auth/me (avoids 401 → /refresh Best Practices noise)
+        if (!sessionHint) {
+          setToken(null);
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // Returning visitors on marketing/public: hydrate from cache, skip probe
+        if (onPublic) {
+          const cached = storage.getJson<Record<string, unknown>>('itemize_user');
+          if (cached) {
+            const user = normalizeUser(cached);
+            if (user) {
+              setCurrentUser(user);
+              setToken(null);
+            }
+          }
+          setLoading(false);
+          return;
+        }
+
         const response = await api.get('/api/auth/me');
 
-        // After api.ts transformation, response.data is directly the user object
         if (response.data && (response.data.id || response.data.uid)) {
-          setCurrentUser({
-            uid: response.data.id || response.data.uid,
-            name: response.data.name,
-            email: response.data.email,
-            role: response.data.role,
-          });
-          markAuthenticatedSession();
-          setToken(null);
+          const user = normalizeUser(response.data as Record<string, unknown>);
+          if (user) {
+            setCurrentUser(user);
+            markAuthenticatedSession();
+            setToken(null);
+          } else {
+            throw new Error('Invalid user data received');
+          }
         } else {
-          // If response.data exists but doesn't have an id, user is not authenticated
           throw new Error('Invalid user data received');
         }
       } catch (error) {
-        // 401 or other errors mean user is not authenticated
-        // Clear any stale data
         clearAuthenticatedSession();
         storage.removeItem('itemize_user');
         storage.removeItem('itemize_expiry');
-        
+        setCurrentUser(null);
+        setToken(null);
+
         if (axios.isAxiosError(error) && error.response?.status === 401) {
           logger.debug('Not authenticated (user not logged in)');
         } else {
-          console.error('Auth Error:', error); 
+          console.error('Auth Error:', error);
           logger.debug('Not authenticated (user not logged in)');
         }
       } finally {
         setLoading(false);
       }
     };
-    
+
     initializeAuth();
-  }, []);
-
-  // Helper to save user data after successful auth (cookies handle the token)
-  const saveAuthState = useCallback((userData: User) => {
-    // Set expiry to match refresh token duration (30 days)
-    const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
-    
-    // Store non-sensitive user data; auth tokens remain in httpOnly cookies.
-    storage.setJson('itemize_user', userData as unknown as Record<string, unknown>);
-    storage.setItem('itemize_expiry', expiryTime.toString());
-    markAuthenticatedSession();
-    setLoggedOut(false);
-    
-    setToken(null);
-    setCurrentUser(userData);
-  }, []);
-
-  // Use Google Login hook
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      try {
-        logger.debug('auth', 'Google login successful, getting user info');
-        
-        // Get user info from Google using the access token
-        const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-        });
-        
-        const googleUser = userResponse.data;
-        logger.debug('auth', 'Received user info from Google:', googleUser);
-        
-        // Now authenticate with your backend using the Google user info
-        const apiUrl = getApiUrl();
-        logger.debug('auth', 'Sending user info to backend:', `${apiUrl}/api/auth/google-login`);
-        
-        // Make API request with proper data
-        try {
-          const response = await axios.post(`${apiUrl}/api/auth/google-login`, {
-            googleId: googleUser.sub,
-            email: googleUser.email,
-            name: googleUser.name,
-            picture: googleUser.picture
-          }, { withCredentials: true });
-
-          logger.debug('auth', 'Backend auth response:', response.data);
-          
-          const { user: userData } = response.data;
-          saveAuthState(userData);
-          
-          toast({
-            title: 'Welcome!',
-            description: 'Successfully signed in with Google.',
-          });
-
-          // Navigate to the pending redirect path after successful auth
-          const redirectTo = pendingRedirectRef.current || '/dashboard';
-          pendingRedirectRef.current = null;
-          logger.debug('auth', 'Google auth complete, redirecting to:', redirectTo);
-          
-          navigate(redirectTo, { replace: true });
-        } catch (backendError) {
-          logger.error('Backend auth error:', backendError);
-          const message = backendError instanceof Error ? backendError.message : 'Unknown backend error';
-          throw new Error(`Backend authentication failed: ${message}`);
-        }
-        
-      } catch (error) {
-        logger.error('Google login failed:', error);
-        toast({
-          title: 'Login failed',
-          description: 'Failed to sign in with Google. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: () => {
-      logger.error('Google login failed');
-      setLoading(false);
-      toast({
-        title: 'Login failed',
-        description: 'Google sign-in was cancelled or failed. Please try again.',
-        variant: 'destructive',
-      });
-    },
-    scope: 'email profile'
-  });
-
-  const login = useCallback((redirectTo?: string) => {
-    // Store the redirect path for use after successful auth
-    pendingRedirectRef.current = redirectTo || '/dashboard';
-    logger.debug('auth', 'Starting Google login, will redirect to:', pendingRedirectRef.current);
-    googleLogin();
-  }, [googleLogin]);
+  }, [location.pathname]);
 
   /**
-   * Login with email and password (Gleam-style)
+   * Deprecated stub — Google sign-in lives in useGoogleSignIn (login/register only).
    */
+  const login = useCallback((redirectTo?: string) => {
+    logger.warn('login() via AuthContext is deprecated; use useGoogleSignIn on /login or /register', redirectTo);
+    window.location.assign(redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login');
+  }, []);
+
   const loginWithEmail = useCallback(async (email: string, password: string): Promise<void> => {
     try {
       const response = await api.post('/api/auth/login', { email, password });
-      
+
       if (response.data.success || response.data.user) {
         const userData = response.data.user;
-        saveAuthState(userData);
+        establishSession(userData);
       } else {
         const { message, code } = getAuthErrorDetails(response.data, 'Login failed');
         throw new AuthError(message, code);
       }
     } catch (error) {
-      // Handle axios error response
       if (axios.isAxiosError(error) && error.response?.data) {
         const { message, code } = getAuthErrorDetails(error.response.data, 'Login failed');
         throw new AuthError(message, code);
       }
       throw error;
     }
-  }, [saveAuthState]);
+  }, [establishSession]);
 
-  /**
-   * Register a new account with email and password
-   */
   const register = useCallback(async (email: string, password: string, name?: string): Promise<void> => {
     try {
       const response = await api.post('/api/auth/register', { email, password, name });
-      
+
       if (!response.data.success) {
         const { message, code } = getAuthErrorDetails(response.data, 'Registration failed');
         throw new AuthError(message, code);
       }
-      // Don't auto-login - user needs to verify email first
     } catch (error) {
-      // Handle axios error response
       if (axios.isAxiosError(error) && error.response?.data) {
         const { message, code } = getAuthErrorDetails(error.response.data, 'Registration failed');
         throw new AuthError(message, code);
@@ -306,23 +276,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(() => {
-    // Clear state
     setToken(null);
     setCurrentUser(null);
-    
+
     clearAuthenticatedSession();
     storage.removeItem('itemize_user');
     storage.removeItem('itemize_expiry');
     setLoggedOut(true);
-    
-    // Sign out from Google
-    try {
-      googleLogout();
-    } catch (googleError) {
-      logger.error('Error signing out from Google:', googleError);
-    }
-    
-    // Backend logout (optional - mainly for clearing any server-side sessions)
+
+    // Best-effort Google sign-out without requiring GSI on this route
+    void import('@react-oauth/google')
+      .then(({ googleLogout }) => {
+        try {
+          googleLogout();
+        } catch (googleError) {
+          logger.error('Error signing out from Google:', googleError);
+        }
+      })
+      .catch(() => {
+        /* GSI not loaded — fine on marketing routes */
+      });
+
     try {
       api.post('/api/auth/logout').catch((error) => {
         logger.error('Backend logout failed:', error);
@@ -331,32 +305,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logger.error('Backend logout failed:', error);
     }
   }, []);
-
-  // For handling credential response from Google One Tap
-  const handleGoogleSuccess = useCallback(async (credentialResponse: CredentialResponse) => {
-    setLoading(true);
-    try {
-      logger.debug('auth', 'Google One Tap login successful');
-      
-      // Send the credential to your backend
-      const apiUrl = getApiUrl();
-      const response = await axios.post(`${apiUrl}/api/auth/google-credential`, {
-        credential: credentialResponse.credential
-      }, { withCredentials: true });
-
-      const { user: userData } = response.data;
-      saveAuthState(userData);
-      
-      toast({
-        title: 'Welcome!',
-        description: 'Successfully signed in with Google.',
-      });
-    } catch (error) {
-      logger.error('Google credential login failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [saveAuthState]);
 
   const stateValue = useMemo<AuthStateContextType>(() => ({
     currentUser,
@@ -370,9 +318,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginWithEmail,
     register,
     logout,
-    handleGoogleSuccess,
+    establishSession,
     setCurrentUser,
-  }), [login, loginWithEmail, register, logout, handleGoogleSuccess, setCurrentUser]);
+  }), [login, loginWithEmail, register, logout, establishSession, setCurrentUser]);
 
   return (
     <AuthStateContext.Provider value={stateValue}>

@@ -122,6 +122,21 @@ export const isLoggedOut = (): boolean => {
   return window.localStorage.getItem(LOGGED_OUT_KEY) === '1';
 };
 
+/** True when local/session storage suggests a prior authenticated session. */
+export const hasSessionHint = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !!(
+      window.localStorage.getItem('itemize_user') ||
+      window.localStorage.getItem('itemize_expiry') ||
+      window.sessionStorage?.getItem('itemize_user') ||
+      window.sessionStorage?.getItem('itemize_expiry')
+    );
+  } catch {
+    return false;
+  }
+};
+
 export const setLoggedOut = (loggedOut: boolean): void => {
   if (typeof window === 'undefined') return;
   if (loggedOut) {
@@ -285,7 +300,8 @@ api.interceptors.response.use(
     
     // Handle 401 unauthorized - attempt token refresh
     if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh') && !config.url?.includes('/auth/login')) {
-      if (isLoggedOut()) {
+      // Guests / marketing: never hit /api/auth/refresh (Best Practices + third-party cookie noise)
+      if (isLoggedOut() || !hasSessionHint()) {
         return Promise.reject(error);
       }
       // Prevent infinite refresh loops

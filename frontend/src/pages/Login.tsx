@@ -7,17 +7,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { AuthError, useAuthActions } from '@/contexts/AuthContext';
+import { GoogleOAuthGate } from '@/components/auth/GoogleOAuthGate';
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function Login() {
+function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { theme } = useTheme();
-  const { login, loginWithEmail } = useAuthActions();
+  const { loginWithEmail } = useAuthActions();
+  const googleSignIn = useGoogleSignIn();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,9 +94,7 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     setGoogleLoading(true);
-    // Note: login() triggers the OAuth flow but doesn't return a promise
-    // Navigation happens in AuthContext after successful auth via onAuthSuccess callback
-    login(from);
+    googleSignIn(from);
     // Reset loading state after a short delay if popup was closed without completing
     setTimeout(() => setGoogleLoading(false), 1000);
   };
@@ -156,7 +157,7 @@ export default function Login() {
                 </Label>
                 <Link 
                   to="/forgot-password" 
-                  className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                  className="text-sm text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   Forgot password?
                 </Link>
@@ -237,7 +238,7 @@ export default function Login() {
 
             <p className={`text-sm text-center ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
               Don't have an account?{' '}
-              <Link to="/register" className="text-blue-600 hover:underline dark:text-blue-400">
+              <Link to="/register" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                 Sign up
               </Link>
             </p>
@@ -245,5 +246,13 @@ export default function Login() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <GoogleOAuthGate>
+      <LoginForm />
+    </GoogleOAuthGate>
   );
 }

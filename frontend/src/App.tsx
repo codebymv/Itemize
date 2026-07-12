@@ -10,14 +10,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
-
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "dummy-client-id.apps.googleusercontent.com";
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -31,12 +28,12 @@ import AuthCallback from "./pages/AuthCallback";
 // Landing page - lazy loaded to keep Three.js/PricingCards out of main bundle
 const Home = React.lazy(() => import("./pages/Home"));
 
-// Auth pages - Static imports for fast loading
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import VerifyEmail from "./pages/VerifyEmail";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+// Auth pages — lazy so Google GSI (@react-oauth/google) stays off marketing Home
+const Login = React.lazy(() => import("./pages/Login"));
+const Register = React.lazy(() => import("./pages/Register"));
+const VerifyEmail = React.lazy(() => import("./pages/VerifyEmail"));
+const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 
 // Pages - Lazy loaded for code splitting (reduces initial bundle size)
 const UserHome = React.lazy(() => import("./pages/UserHome"));
@@ -347,7 +344,6 @@ const App = () => {
           enableSystem={false}
           themes={['light', 'dark']}
         >
-          <GoogleOAuthProvider clientId={googleClientId}>
           <BrowserRouter
             future={{
               v7_startTransition: true,
@@ -369,8 +365,7 @@ const App = () => {
                 </SubscriptionProviderWrapper>
               </OnboardingProvider>
             </AuthProvider>
-</BrowserRouter>
-          </GoogleOAuthProvider>
+          </BrowserRouter>
         </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>

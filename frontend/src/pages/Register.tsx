@@ -8,14 +8,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { AuthError, useAuthActions } from '@/contexts/AuthContext';
+import { GoogleOAuthGate } from '@/components/auth/GoogleOAuthGate';
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
-export default function Register() {
+function RegisterForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme } = useTheme();
-  const { register, login } = useAuthActions();
+  const { register } = useAuthActions();
+  const googleSignIn = useGoogleSignIn();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -97,10 +100,7 @@ export default function Register() {
 
   const handleGoogleLogin = () => {
     setGoogleLoading(true);
-    // Note: login() triggers the OAuth flow but doesn't return a promise
-    // Navigation happens in AuthContext after successful auth
-    login('/dashboard');
-    // Reset loading state after a short delay if popup was closed without completing
+    googleSignIn('/dashboard');
     setTimeout(() => setGoogleLoading(false), 1000);
   };
 
@@ -222,11 +222,11 @@ export default function Register() {
                 className={`text-sm leading-relaxed cursor-pointer ${isLight ? 'text-gray-600' : 'text-slate-400'}`}
               >
                 I agree to the{' '}
-                <Link to="/legal/terms" className="text-blue-600 hover:underline dark:text-blue-400" target="_blank">
+                <Link to="/legal/terms" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" target="_blank">
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link to="/legal/privacy" className="text-blue-600 hover:underline dark:text-blue-400" target="_blank">
+                <Link to="/legal/privacy" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" target="_blank">
                   Privacy Policy
                 </Link>
               </label>
@@ -294,7 +294,7 @@ export default function Register() {
 
             <p className={`text-sm text-center ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline dark:text-blue-400">
+              <Link to="/login" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                 Sign in
               </Link>
             </p>
@@ -302,5 +302,13 @@ export default function Register() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function Register() {
+  return (
+    <GoogleOAuthGate>
+      <RegisterForm />
+    </GoogleOAuthGate>
   );
 }

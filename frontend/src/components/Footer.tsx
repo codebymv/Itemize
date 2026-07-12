@@ -131,7 +131,7 @@ const Footer: React.FC = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+              className="text-foreground underline underline-offset-2 hover:text-foreground/80"
               onClick={() => handleNavigate('/help/terms-of-service')}
             >
               Terms of Service
