@@ -144,9 +144,13 @@ export const LandingNav: React.FC = () => {
               aria-label="Itemize home"
             >
               <img 
-                src={isLight ? "/cover.png" : "/cover_whitetext.png"}
+                src={isLight ? "/cover.webp" : "/cover_whitetext.webp"}
                 alt="Itemize" 
                 className="h-10 md:h-12 w-auto"
+                width={200}
+                height={48}
+                decoding="async"
+                fetchPriority="high"
               />
             </button>
           </div>
@@ -391,9 +395,13 @@ export const LandingNav: React.FC = () => {
                 <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-slate-700">
                   <div className="flex items-center">
                     <img 
-                      src={isLight ? "/cover.png" : "/cover_whitetext.png"}
+                      src={isLight ? "/cover.webp" : "/cover_whitetext.webp"}
                       alt="Itemize" 
                       className="h-8 w-auto"
+                      width={160}
+                      height={32}
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                 </div>

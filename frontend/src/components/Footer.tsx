@@ -42,9 +42,13 @@ const Footer: React.FC = () => {
           <div className="md:col-span-2">
             <div className="flex items-center mb-4">
               <img 
-                src={theme === 'dark' ? '/cover_whitetext.png' : '/cover.png'} 
+                src={theme === 'dark' ? '/cover_whitetext.webp' : '/cover.webp'} 
                 alt="Itemize" 
-                className="h-10 w-auto cursor-pointer" 
+                className="h-10 w-auto cursor-pointer"
+                width={200}
+                height={40}
+                loading="lazy"
+                decoding="async"
                 onClick={() => handleNavigate('/')}
               />
             </div>
@@ -106,16 +110,16 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-sm font-medium mb-4">Connect</h3>
             <div className="flex space-x-4 mb-4">
-              <Button variant="outline" size="icon" onClick={() => window.open('https://twitter.com/codebymv', '_blank')}>
+              <Button variant="outline" size="icon" aria-label="Itemize on X" onClick={() => window.open('https://twitter.com/codebymv', '_blank')}>
                 <Twitter className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => window.open('https://github.com/codebymv/itemize', '_blank')}>
+              <Button variant="outline" size="icon" aria-label="Itemize on GitHub" onClick={() => window.open('https://github.com/codebymv/itemize', '_blank')}>
                 <Github className="h-4 w-4" />
               </Button>
               {/* <Button variant="outline" size="icon" onClick={handleContact}>
                 <Mail className="h-4 w-4" />
               </Button> */}
-              <Button variant="outline" size="icon" onClick={() => window.open('https://codebymv.com', '_blank')}>
+              <Button variant="outline" size="icon" aria-label="codebymv portfolio" onClick={() => window.open('https://codebymv.com', '_blank')}>
                 <Globe className="h-4 w-4" />
               </Button>
             </div>

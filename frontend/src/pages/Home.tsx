@@ -272,10 +272,16 @@ const Home: React.FC = () => {
                       const el = document.getElementById('pain-carousel');
                       if (el) el.scrollTo({ left: i * el.offsetWidth * 0.82, behavior: 'smooth' });
                     }}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      isLight ? 'bg-gray-300 hover:bg-blue-500' : 'bg-slate-600 hover:bg-blue-400'
+                    className={`min-h-6 min-w-6 p-2 flex items-center justify-center rounded-full transition-all duration-300 ${
+                      isLight ? 'hover:bg-blue-500/10' : 'hover:bg-blue-400/10'
                     }`}
-                  />
+                  >
+                    <span
+                      className={`block w-2 h-2 rounded-full ${
+                        isLight ? 'bg-gray-300 hover:bg-blue-500' : 'bg-slate-600 hover:bg-blue-400'
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
             </div>
