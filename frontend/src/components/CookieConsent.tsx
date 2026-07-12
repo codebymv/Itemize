@@ -87,11 +87,29 @@ export function CookieConsent() {
 
   useEffect(() => {
     const stored = getCookiePreferences();
-    if (!stored.consentGiven) {
-      const timer = setTimeout(() => setIsVisible(true), 800);
-      return () => clearTimeout(timer);
+    if (stored.consentGiven) {
+      setPreferences(stored);
+      return;
     }
-    setPreferences(stored);
+
+    let cancelled = false;
+    const show = () => {
+      if (!cancelled) setIsVisible(true);
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(show, { timeout: 6000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(id);
+      };
+    }
+
+    const timer = window.setTimeout(show, 4000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, []);
 
   const savePreferences = (prefs: CookiePreferences) => {
@@ -151,7 +169,7 @@ export function CookieConsent() {
           <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
               {/* Text */}
-              <p className="text-xs sm:text-sm text-white/90 flex-1">
+              <p className="text-xs sm:text-sm text-white flex-1">
                 <Cookie className="h-3.5 sm:h-4 w-3.5 sm:w-4 inline mr-1 sm:mr-1.5 text-white" />
                 We use cookies to enhance your experience.{' '}
                 <a href="/legal/privacy" className="font-semibold text-white underline underline-offset-2 hover:text-white whitespace-nowrap">
@@ -162,8 +180,10 @@ export function CookieConsent() {
               {/* Buttons */}
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <button
+                  type="button"
                   onClick={() => setShowSettings(true)}
-                  className="text-xs sm:text-sm text-white/80 hover:text-white px-2 py-1 whitespace-nowrap"
+                  aria-label="Open cookie settings"
+                  className="text-xs sm:text-sm text-white/90 hover:text-white px-2 py-1 whitespace-nowrap"
                 >
                   Settings
                 </button>
