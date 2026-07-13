@@ -94,6 +94,18 @@ const Home: React.FC = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Defer heavy dashboard screenshot so brand mark / headline can own early LCP.
+  const [shotReady, setShotReady] = React.useState(false);
+  React.useEffect(() => {
+    const run = () => setShotReady(true);
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(run, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(run, 1200);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
       {/* Background effects — deferred so hero LCP isn't blocked */}
@@ -123,7 +135,10 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-              <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
+              <h1
+                className={`text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}
+                style={{ fontFamily: 'system-ui, sans-serif' }}
+              >
                 The CRM that works{' '}
                 <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
                 <br />
@@ -158,19 +173,23 @@ const Home: React.FC = () => {
 
             {/* Full-width hero screenshot with perspective */}
             <div className="animate-scale-in animation-delay-400 screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
-              <AppScreenshot
-                label="Dashboard"
-                sublabel="Dashboard view"
-                accentFrom="from-blue-500"
-                accentTo="to-indigo-600"
-                isLight={isLight}
-                showChrome={true}
-                aspectRatio="aspect-[16/10]"
-                className="screenshot-tilt"
-                src="/screenshots/dashboard.webp"
-                priority={true}
-                alt="Itemize Dashboard Screenshot"
-              />
+              {shotReady ? (
+                <AppScreenshot
+                  label="Dashboard"
+                  sublabel="Dashboard view"
+                  accentFrom="from-blue-500"
+                  accentTo="to-indigo-600"
+                  isLight={isLight}
+                  showChrome={true}
+                  aspectRatio="aspect-[16/10]"
+                  className="screenshot-tilt"
+                  src="/screenshots/dashboard.webp"
+                  priority={false}
+                  alt="Itemize Dashboard Screenshot"
+                />
+              ) : (
+                <div className="aspect-[16/10] w-full rounded-xl bg-slate-200/60 dark:bg-slate-800/60" aria-hidden="true" />
+              )}
             </div>
           </div>
         </section>
