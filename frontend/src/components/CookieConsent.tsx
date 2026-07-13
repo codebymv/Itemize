@@ -97,18 +97,15 @@ export function CookieConsent() {
       if (!cancelled) setIsVisible(true);
     };
 
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(show, { timeout: 6000 });
-      return () => {
-        cancelled = true;
-        window.cancelIdleCallback(id);
-      };
-    }
+    window.addEventListener("scroll", show, { once: true, passive: true });
+    window.addEventListener("pointerdown", show, { once: true, passive: true });
+    window.addEventListener("keydown", show, { once: true });
 
-    const timer = window.setTimeout(show, 4000);
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      window.removeEventListener("scroll", show);
+      window.removeEventListener("pointerdown", show);
+      window.removeEventListener("keydown", show);
     };
   }, []);
 
@@ -183,7 +180,7 @@ export function CookieConsent() {
                   type="button"
                   onClick={() => setShowSettings(true)}
                   aria-label="Open cookie settings"
-                  className="text-xs sm:text-sm text-white/90 hover:text-white px-2 py-1 whitespace-nowrap"
+                  className="text-xs sm:text-sm text-white hover:text-white px-2 py-1 whitespace-nowrap"
                 >
                   Settings
                 </button>
