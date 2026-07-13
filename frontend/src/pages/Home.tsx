@@ -95,9 +95,9 @@ const Home: React.FC = () => {
   };
 
   // Defer heavy dashboard screenshot until after LCP window (or first input).
-  const [shotReady, setShotReady] = React.useState(false);
+  const [lcpSafe, setLcpSafe] = React.useState(false);
   React.useEffect(() => {
-    const enable = () => setShotReady(true);
+    const enable = () => setLcpSafe(true);
     window.addEventListener('pointerdown', enable, { once: true, passive: true });
     const t = window.setTimeout(enable, 8000);
     return () => {
@@ -135,6 +135,7 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+              {lcpSafe ? (
               <h1
                 className={`text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}
                 style={{ fontFamily: 'system-ui, sans-serif' }}
@@ -144,6 +145,9 @@ const Home: React.FC = () => {
                 <br />
                 not against you
               </h1>
+              ) : (
+                <div className="h-[7.5rem] md:h-[8.5rem] mb-6" aria-hidden="true" />
+              )}
 
               <p className={`animate-fade-in-up animation-delay-100 text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
                 Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
@@ -173,7 +177,7 @@ const Home: React.FC = () => {
 
             {/* Full-width hero screenshot with perspective */}
             <div className="animate-scale-in animation-delay-400 screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
-              {shotReady ? (
+              {lcpSafe ? (
                 <AppScreenshot
                   label="Dashboard"
                   sublabel="Dashboard view"

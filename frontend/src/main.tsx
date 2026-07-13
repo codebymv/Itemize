@@ -10,4 +10,4 @@ createRoot(document.getElementById("root")!).render(<App />);
  */
 window.setTimeout(() => {
   document.getElementById('lh-hero-shell')?.remove();
-}, 2000);
+}, 2500);
