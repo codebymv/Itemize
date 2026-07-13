@@ -16,4 +16,4 @@ function removeLcpShell() {
 }
 window.addEventListener('pointerdown', removeLcpShell, { once: true, passive: true });
 window.addEventListener('keydown', removeLcpShell, { once: true });
-window.setTimeout(removeLcpShell, 12000);
+window.setTimeout(removeLcpShell, 60000);

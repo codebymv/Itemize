@@ -94,6 +94,20 @@ const Home: React.FC = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Avoid painting a competing LCP h1 under the static HTML shell.
+  const [shellGone, setShellGone] = React.useState(
+    () => typeof document === 'undefined' || !document.getElementById('lh-hero-shell'),
+  );
+  React.useEffect(() => {
+    if (shellGone) return;
+    const tick = () => {
+      if (!document.getElementById('lh-hero-shell')) setShellGone(true);
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [shellGone]);
+
   return (
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
       {/* Background effects — deferred so hero LCP isn't blocked */}
@@ -123,12 +137,16 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-              <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
-                The CRM that works{' '}
-                <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
-                <br />
-                not against you
-              </h1>
+              {shellGone ? (
+                <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
+                  The CRM that works{' '}
+                  <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
+                  <br />
+                  not against you
+                </h1>
+              ) : (
+                <div className="h-[7.5rem] md:h-[8.5rem] mb-6" aria-hidden="true" />
+              )}
 
               <p className={`animate-fade-in-up animation-delay-100 text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
                 Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
