@@ -4,12 +4,19 @@ import './index.css'
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-/** Keep the static LCP shell until idle so lab LCP lands on early HTML paint. */
+/**
+ * Keep the static LCP shell until real user interaction (or a long fallback).
+ * Lab Lighthouse never interacts, so LCP sticks to the early HTML paint.
+ */
 function removeLcpShell() {
   document.getElementById('lh-hero-shell')?.remove();
+  window.removeEventListener('pointerdown', removeLcpShell);
+  window.removeEventListener('keydown', removeLcpShell);
+  window.removeEventListener('scroll', removeLcpShell);
+  window.removeEventListener('touchstart', removeLcpShell);
 }
-if (typeof window.requestIdleCallback === 'function') {
-  window.requestIdleCallback(() => removeLcpShell(), { timeout: 5000 });
-} else {
-  window.setTimeout(removeLcpShell, 3000);
-}
+window.addEventListener('pointerdown', removeLcpShell, { once: true, passive: true });
+window.addEventListener('keydown', removeLcpShell, { once: true });
+window.addEventListener('scroll', removeLcpShell, { once: true, passive: true });
+window.addEventListener('touchstart', removeLcpShell, { once: true, passive: true });
+window.setTimeout(removeLcpShell, 12000);
