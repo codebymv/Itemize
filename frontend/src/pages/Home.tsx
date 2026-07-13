@@ -123,7 +123,7 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-              <h1 className={`animate-fade-in-up landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
+              <h1 className={`landing-heading text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}>
                 The CRM that works{' '}
                 <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
                 <br />
