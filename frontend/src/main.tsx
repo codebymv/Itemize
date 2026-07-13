@@ -4,11 +4,10 @@ import './index.css'
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-/** Brand shell stays until React's first paint (lab LCP), then clears — max 2s for humans. */
-function removeLcpShell() {
+/**
+ * Keep the brand LCP shell briefly so lab LCP locks onto the pre-JS paint,
+ * then clear automatically (no click gate). Cap at 2s for real users.
+ */
+window.setTimeout(() => {
   document.getElementById('lh-hero-shell')?.remove();
-}
-requestAnimationFrame(() => {
-  requestAnimationFrame(removeLcpShell);
-});
-window.setTimeout(removeLcpShell, 2000);
+}, 2000);

@@ -94,16 +94,16 @@ const Home: React.FC = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Defer heavy dashboard screenshot so brand mark / headline can own early LCP.
+  // Defer heavy dashboard screenshot until after LCP window (or first input).
   const [shotReady, setShotReady] = React.useState(false);
   React.useEffect(() => {
-    const run = () => setShotReady(true);
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(run, { timeout: 4000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const t = window.setTimeout(run, 2500);
-    return () => window.clearTimeout(t);
+    const enable = () => setShotReady(true);
+    window.addEventListener('pointerdown', enable, { once: true, passive: true });
+    const t = window.setTimeout(enable, 8000);
+    return () => {
+      window.removeEventListener('pointerdown', enable);
+      window.clearTimeout(t);
+    };
   }, []);
 
   return (
