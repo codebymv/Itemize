@@ -11,4 +11,4 @@ function removeLcpShell() {
 requestAnimationFrame(() => {
   requestAnimationFrame(removeLcpShell);
 });
-window.setTimeout(removeLcpShell, 1500);
+window.setTimeout(removeLcpShell, 2500);
