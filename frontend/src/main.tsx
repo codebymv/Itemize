@@ -4,10 +4,11 @@ import './index.css'
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-/**
- * Keep the brand LCP shell briefly so lab LCP locks onto the pre-JS paint,
- * then clear automatically (no click gate). Cap at 2s for real users.
- */
-window.setTimeout(() => {
+/** Clear brand shell after first paint — not a multi-second cover. */
+function removeLcpShell() {
   document.getElementById('lh-hero-shell')?.remove();
-}, 2500);
+}
+requestAnimationFrame(() => {
+  requestAnimationFrame(removeLcpShell);
+});
+window.setTimeout(removeLcpShell, 1500);
