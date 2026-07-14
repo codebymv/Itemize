@@ -136,11 +136,11 @@ const Home: React.FC = () => {
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
               <h1
-                className={`font-extrabold tracking-tight ${textColor} mb-6`}
+                className={`font-bold tracking-tight ${textColor} mb-6`}
                 style={{
                   fontFamily: 'system-ui, sans-serif',
                   // Match #lh-hero-shell h1 so React cannot inflate LCP size after handoff.
-                  fontSize: 'clamp(2rem, 7vw, 3.25rem)',
+                  fontSize: 'clamp(2rem, 7vw, 3.1rem)',
                   lineHeight: 1.1,
                   maxWidth: '40rem',
                   marginLeft: 'auto',
