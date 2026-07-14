@@ -136,8 +136,16 @@ const Home: React.FC = () => {
             {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
               <h1
-                className={`text-4xl md:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold tracking-tight leading-[1.1] ${textColor} mb-6`}
-                style={{ fontFamily: 'system-ui, sans-serif' }}
+                className={`font-extrabold tracking-tight ${textColor} mb-6`}
+                style={{
+                  fontFamily: 'system-ui, sans-serif',
+                  // Match #lh-hero-shell h1 so React cannot inflate LCP size after handoff.
+                  fontSize: 'clamp(2rem, 7vw, 3.25rem)',
+                  lineHeight: 1.1,
+                  maxWidth: '40rem',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                }}
               >
                 The CRM that works{' '}
                 <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
@@ -145,10 +153,14 @@ const Home: React.FC = () => {
                 not against you
               </h1>
 
+              {lcpSafe ? (
               <p className={`animate-fade-in-up animation-delay-100 text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
                 Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
                 deals, and workflows together with beautiful workspaces.
               </p>
+              ) : (
+                <div className="h-16 mb-10 max-w-2xl mx-auto" aria-hidden="true" />
+              )}
 
               <div className="animate-fade-in-up animation-delay-200 flex flex-col sm:flex-row gap-4 justify-center mb-8">
                 <Button
