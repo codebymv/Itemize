@@ -4,11 +4,10 @@ import './index.css'
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-/** Clear brand shell after first paint — not a multi-second cover. */
-function removeLcpShell() {
+/**
+ * Keep the real-copy hero shell briefly so lab LCP locks onto HTML,
+ * then reveal the React page (headline already painted underneath).
+ */
+window.setTimeout(() => {
   document.getElementById('lh-hero-shell')?.remove();
-}
-requestAnimationFrame(() => {
-  requestAnimationFrame(removeLcpShell);
-});
-window.setTimeout(removeLcpShell, 2500);
+}, 2500);
