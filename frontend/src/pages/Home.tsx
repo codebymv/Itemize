@@ -94,21 +94,9 @@ const Home: React.FC = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Defer heavy dashboard screenshot until after LCP window (or first input).
-  const [lcpSafe, setLcpSafe] = React.useState(false);
-  React.useEffect(() => {
-    const enable = () => setLcpSafe(true);
-    window.addEventListener('pointerdown', enable, { once: true, passive: true });
-    const t = window.setTimeout(enable, 8000);
-    return () => {
-      window.removeEventListener('pointerdown', enable);
-      window.clearTimeout(t);
-    };
-  }, []);
-
   return (
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
-      {/* Background effects — deferred so hero LCP isn't blocked */}
+      {/* Background effects - deferred so hero LCP isn't blocked */}
       <Suspense fallback={null}>
         <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
       </Suspense>
@@ -127,20 +115,16 @@ const Home: React.FC = () => {
 
       <div className="relative z-10">
 
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 1: HERO                                                */}
-        {/* Centered headline with full-width screenshot below             */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* SECTION 1: HERO - always-on copy + dashboard shot (no shell / no defer gate) */}
         <section id="hero" className="pt-28 md:pt-40 pb-4 md:pb-8 contain-layout" style={{ contain: 'layout' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Centered text block */}
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
               <h1
+                id="lh-lcp-h1"
                 className={`font-bold tracking-tight ${textColor} mb-6`}
                 style={{
-                  fontFamily: 'system-ui, sans-serif',
-                  // Match #lh-hero-shell h1 so React cannot inflate LCP size after handoff.
-                  fontSize: 'clamp(2rem, 7vw, 3.1rem)',
+                  fontFamily: 'system-ui, -apple-system, Segoe UI, sans-serif',
+                  fontSize: 'clamp(2.15rem, 7.5vw, 3.4rem)',
                   lineHeight: 1.1,
                   maxWidth: '40rem',
                   marginLeft: 'auto',
@@ -153,14 +137,10 @@ const Home: React.FC = () => {
                 not against you
               </h1>
 
-              {lcpSafe ? (
               <p className={`animate-fade-in-up animation-delay-100 text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
                 Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
                 deals, and workflows together with beautiful workspaces.
               </p>
-              ) : (
-                <div className="h-16 mb-10 max-w-2xl mx-auto" aria-hidden="true" />
-              )}
 
               <div className="animate-fade-in-up animation-delay-200 flex flex-col sm:flex-row gap-4 justify-center mb-8">
                 <Button
@@ -183,34 +163,30 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* Full-width hero screenshot with perspective */}
             <div className="animate-scale-in animation-delay-400 screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
-              {lcpSafe ? (
-                <AppScreenshot
-                  label="Dashboard"
-                  sublabel="Dashboard view"
-                  accentFrom="from-blue-500"
-                  accentTo="to-indigo-600"
-                  isLight={isLight}
-                  showChrome={true}
-                  aspectRatio="aspect-[16/10]"
-                  className="screenshot-tilt"
-                  src="/screenshots/dashboard.webp"
-                  priority={false}
-                  alt="Itemize Dashboard Screenshot"
-                />
-              ) : (
-                <div className="aspect-[16/10] w-full rounded-xl bg-slate-200/60 dark:bg-slate-800/60" aria-hidden="true" />
-              )}
+              <AppScreenshot
+                label="Dashboard"
+                sublabel="Dashboard view"
+                accentFrom="from-blue-500"
+                accentTo="to-indigo-600"
+                isLight={isLight}
+                showChrome={true}
+                aspectRatio="aspect-[16/10]"
+                className="screenshot-tilt"
+                src="/screenshots/dashboard.webp"
+                priority
+                alt="Itemize Dashboard Screenshot"
+              />
             </div>
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 2: PROBLEM STATEMENT                                   */}
-        {/* Asymmetric cards with stronger visual hierarchy                */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="problem" className="py-20 md:py-32" style={{ contain: 'layout style' }}>
+        {/* SECTION 2: PROBLEM STATEMENT */}
+        <section
+          id="problem"
+          className="py-20 md:py-32"
+          style={{ contain: 'layout style', contentVisibility: 'auto', containIntrinsicSize: 'auto 900px' }}
+        >
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-16">

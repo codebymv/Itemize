@@ -1,11 +1,7 @@
 // Import API interceptor first to ensure it's initialized before any API calls
 import "@/lib/api";
-import { initSentry } from "@/lib/sentry";
 
-// Initialize Sentry error tracking
-initSentry();
-
-import { Toaster } from "@/components/ui/toaster";
+import { DeferredToaster } from "@/components/DeferredToaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React, { useEffect, Suspense } from 'react';
@@ -354,7 +350,7 @@ const App = () => {
               <OnboardingProvider>
                 <SubscriptionProviderWrapper>
                   <AISuggestProvider>
-                    <Toaster />
+                    <DeferredToaster />
                     <CookieConsent />
                     <ErrorBoundary>
                       <Suspense fallback={<PageLoading />}>
