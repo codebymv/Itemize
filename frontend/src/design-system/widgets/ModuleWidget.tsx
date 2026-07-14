@@ -93,7 +93,7 @@ const hasRecentItems = recentItems !== undefined;
       <Collapsible open={isOpen} onOpenChange={() => setIsOpen(!isOpen)}>
         <Card className={cn('bg-muted/10', className)}>
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-muted">
                   <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
@@ -193,7 +193,7 @@ const hasRecentItems = recentItems !== undefined;
   return (
     <Card className={cn('bg-muted/10', className)}>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-muted">
               <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />

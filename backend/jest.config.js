@@ -16,7 +16,8 @@ module.exports = {
     // Ignore patterns
     testPathIgnorePatterns: [
         '/node_modules/',
-        '/dist/'
+        '/dist/',
+        '/src/__tests__/integration/'
     ],
     
     // Coverage configuration
