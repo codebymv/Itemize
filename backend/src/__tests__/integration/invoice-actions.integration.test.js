@@ -106,6 +106,11 @@ describe('Invoice Actions Integration Tests', () => {
                 .set('x-organization-id', String(userA.org.id))
                 .send({ amount: 500, payment_method: 'credit_card' });
 
+            if (res.status !== 200) {
+                // Surface the real server error for diagnosis
+                console.log('DEBUG record-payment 500 body:', JSON.stringify(res.body));
+            }
+
             expect(res.status).toBe(200);
             expect(res.body.data.invoice.status).toBe('paid');
             expect(Number(res.body.data.invoice.amount_due)).toBe(0);

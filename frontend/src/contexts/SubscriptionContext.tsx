@@ -7,6 +7,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   billingApi,
   BillingStatus,
@@ -20,6 +21,7 @@ import {
   Plan,
   getPlanTier
 } from '../lib/subscription';
+import { isPublicAuthSkipPath } from './AuthContext';
 
 // Legacy Types (re-defined here to remove dependency on subscriptionsApi.ts)
 export interface Subscription {
@@ -201,6 +203,8 @@ interface SubscriptionProviderProps {
 }
 
 export function SubscriptionProvider({ children, isAuthenticated = false }: SubscriptionProviderProps) {
+  const { pathname } = useLocation();
+  const skipFetch = isPublicAuthSkipPath(pathname);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<UsageStats | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -385,8 +389,16 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     }
   }, []);
 
-  // Initial load
+  // Initial load — no-op on public/marketing paths (/home, /login, /register, …)
   useEffect(() => {
+    if (skipFetch || !isAuthenticated) {
+      setIsLoading(false);
+      setSubscription(null);
+      setUsage(null);
+      subscriptionLimitsRef.current = undefined;
+      return;
+    }
+
     const loadData = async () => {
       setIsLoading(true);
       await fetchPlans();
@@ -395,15 +407,8 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
       setIsLoading(false);
     };
 
-    if (isAuthenticated) {
-      loadData();
-    } else {
-      setIsLoading(false);
-      setSubscription(null);
-      setUsage(null);
-      subscriptionLimitsRef.current = undefined;
-    }
-  }, [isAuthenticated, fetchPlans, refreshSubscription, refreshUsage]);
+    loadData();
+  }, [skipFetch, isAuthenticated, fetchPlans, refreshSubscription, refreshUsage]);
 
   // Computed values
   const isSubscribed = subscription?.status === 'active' || subscription?.status === 'trialing';

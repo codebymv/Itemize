@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { onboardingService, OnboardingProgress } from '@/services/onboardingService';
-import { useAuthState } from './AuthContext';
+import { useAuthState, isPublicAuthSkipPath } from './AuthContext';
 import logger from '@/lib/logger';
 
 interface OnboardingContextType {
@@ -26,12 +27,14 @@ export const useOnboarding = () => {
 
 export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, currentUser } = useAuthState();
+  const { pathname } = useLocation();
+  const skipFetch = isPublicAuthSkipPath(pathname);
   const [progress, setProgress] = useState<OnboardingProgress>({});
   const [loading, setLoading] = useState(true);
 
-  // Load progress when user authenticates
+  // Load progress when user authenticates (skip on public/marketing routes)
   const loadProgress = useCallback(async () => {
-    if (!isAuthenticated || !currentUser) {
+    if (skipFetch || !isAuthenticated || !currentUser) {
       setProgress({});
       setLoading(false);
       return;
@@ -47,7 +50,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, currentUser]);
+  }, [skipFetch, isAuthenticated, currentUser]);
 
   useEffect(() => {
     loadProgress();

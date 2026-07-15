@@ -86,7 +86,7 @@ import { PageLoading } from '@/components/ui/page-loading';
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSessionExpiration } from "@/hooks/useSessionExpiration";
-import { CookieConsent } from "@/components/CookieConsent";
+import { DeferredCookieConsent } from "@/components/DeferredCookieConsent";
 
 const MarketingChatLauncher = React.lazy(() => import("@/components/marketing/MarketingChatLauncher"));
 
@@ -190,6 +190,22 @@ const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
 
 const AppContent = () => {
   const location = useLocation();
+
+  // Keep rel=canonical aligned with the active route (SEO on /home).
+  useEffect(() => {
+    const origin = "https://itemize.cloud";
+    const path =
+      location.pathname === "/" || location.pathname === ""
+        ? "/home"
+        : location.pathname;
+    let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
+    link.href = `${origin}${path}`;
+  }, [location.pathname]);
 
   const SignatureDocumentRedirect = () => {
     const { id } = useParams();
@@ -365,7 +381,7 @@ const App = () => {
                 <SubscriptionProviderWrapper>
                   <AISuggestProvider>
                     <DeferredToaster />
-                    <CookieConsent />
+                    <DeferredCookieConsent />
                     <ErrorBoundary>
                       <Suspense fallback={<PageLoading />}>
                         <AppContent />
