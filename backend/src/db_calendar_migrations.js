@@ -350,6 +350,7 @@ const runCalendarSyncEventsMigration = async (pool) => {
  */
 const runAllCalendarMigrations = async (pool) => {
   console.log('=== Starting Calendar Migrations ===');
+  let failed = 0;
 
   const migrations = [
     { name: 'Calendars', fn: runCalendarsMigration },
@@ -364,12 +365,13 @@ const runAllCalendarMigrations = async (pool) => {
     console.log(`\n--- Running ${migration.name} Migration ---`);
     const success = await migration.fn(pool);
     if (!success) {
+      failed++;
       console.error(`⚠️ ${migration.name} migration failed, continuing with next...`);
     }
   }
 
   console.log('\n=== Calendar Migrations Complete ===');
-  return true;
+  return { failed };
 };
 
 module.exports = {

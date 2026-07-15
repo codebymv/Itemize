@@ -35,6 +35,7 @@ const { runAllSegmentMigrations } = require('./db_segments_migrations');
 
 // Import Invoicing migrations
 const { runAllInvoicingMigrations } = require('./db_invoicing_migrations');
+const { runStripeWebhookIdempotencyMigration } = require('./db_stripe_webhook_migrations');
 
 // Import Estimates and Recurring migrations
 const { runEstimatesRecurringMigrations } = require('./db_estimates_recurring_migrations');
@@ -390,6 +391,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
     await runMigrationOnce(pool, 'module_segments', runAllSegmentMigrations);
     await runMigrationOnce(pool, 'module_invoicing', runAllInvoicingMigrations);
+    await runMigrationOnce(pool, 'stripe_webhook_idempotency', runStripeWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)

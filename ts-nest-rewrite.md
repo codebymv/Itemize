@@ -132,11 +132,12 @@ Once the frontend no longer uses a REST endpoint, deprecate it. Eventually the o
 
 ## Why GraphQL Now vs. Later
 
-GraphQL is a good fit for this app because the domain is relationship-heavy and multi-tenant. However, designing a good schema requires a stable understanding of the domain. Therefore:
+GraphQL is a good fit for this app because the domain is relationship-heavy and multi-tenant. The target public API is now GraphQL on NestJS:
 
-- **Do not lead with GraphQL.** Build the domain model and REST API in NestJS first.
-- **Plan for GraphQL from the start:** design services so they can be consumed by both REST controllers and GraphQL resolvers. Avoid putting business logic in controllers.
-- **Add GraphQL in Phase 4**, once the core modules exist and the Prisma schema is stable.
+- Lead with transport-neutral domain services and GraphQL schema design; do not rebuild the entire REST surface in NestJS first.
+- Keep business logic out of controllers and resolvers so protocol endpoints can share the same services.
+- Add a temporary NestJS REST adapter only for a consumer that cannot migrate with its GraphQL operation.
+- Use the evidence-backed gates in [GraphQL + NestJS cutover readiness](!docs/API/graphql-nestjs-cutover-readiness.md).
 
 ## Key Decisions for the Next Agent
 
@@ -148,24 +149,23 @@ GraphQL is a good fit for this app because the domain is relationship-heavy and 
 4. **Multi-Tenancy Isolation**: Implement `AsyncLocalStorage` to store organization IDs dynamically per request, enabling database clients to scope queries without forcing NestJS service/controller classes into high-overhead request-scoping.
 5. **Auth Provider**: Keep the custom JWT cookie (`itemize_auth`) and Google OAuth routes to ensure the existing React frontend is unaffected during early phases.
 6. **Frontend data client**: Continue with TanStack Query hitting REST, and introduce Apollo Client or similar tools incrementally when GraphQL queries are added.
-7. Testing Strategy: Establish service unit tests and controller integration tests early to address the current codebase's test gap.
+7. **Testing Strategy**: Use the generated REST inventory and semantic parity gates in [GraphQL + NestJS cutover readiness](!docs/API/graphql-nestjs-cutover-readiness.md). Establish service, PostgreSQL integration, GraphQL operation, protocol-contract, and consumer tests early.
 
 ## Testing & Pre-Cutover Verification Plan
 
 ### Existing Test Coverage Analysis
-The codebase currently has 8 test suites containing 73 tests, all passing. However, there is a **significant gap in domain coverage**:
-- **What is tested**: Global middleware (error handler, CSRF, response formatting), token validation/login, Stripe event handler stubs, and webhook signature verification.
-- **What is NOT tested**: All ~40 routes representing hundreds of business endpoints (Contacts, Lists, Canvas, Pipelines, Notes, Invoices, Workflows, SMS/Email Campaigns, Calendars/Bookings) have zero test coverage.
-- **Testing Style Warning**: Existing tests rely on manual in-memory stubbing of the `pg` pool object. While fast, this mocks away actual SQL logic. A syntax error in SQL or a violated database constraint will not trigger a failure in the current tests.
+The earlier 8-suite/73-test analysis is stale. The 2026-07-15 baseline has 412 static route declarations (407 unique resolved method/path operations), 31 backend test files, 16 real-PostgreSQL integration suites, and 6 frontend test files. Existing integration coverage includes several core domains and cross-organization denial cases, but it remains much smaller than the API surface.
+
+The authoritative counts, known gaps, and gates are maintained in [GraphQL + NestJS cutover readiness](!docs/API/graphql-nestjs-cutover-readiness.md) and the generated [REST surface baseline](!docs/API/generated/rest-surface.md).
 
 ### Pre-Cutover Testing Requirements
 To safely transition traffic from the Express backend to the new NestJS backend (NestJS REST API), we must establish a verification harness. Before cutting over any path, we should implement:
 
 #### 1. Black-Box Contract Parity Tests
-Write integration tests using `supertest` that hit the key REST routes. 
+Write scenario tests that characterize key legacy REST behavior and exercise the corresponding GraphQL operation.
 - These tests should execute against a **real PostgreSQL test database instance** (rather than mocking the pool client) to validate actual SQL logic.
 - Run this test suite against the legacy Express server to establish a baseline.
-- Run the *exact same* test suite against the new NestJS REST controllers to guarantee that response structures, status codes, and database mutations are identical.
+- Run the same semantic scenario against NestJS GraphQL and compare authorization, normalized database state, and side effects. REST status/envelope equality is not a GraphQL cutover requirement.
 
 #### 2. Key Security & Functional Test Targets
 Focus on writing parity tests for these high-risk areas before beginning the cutover:
@@ -194,4 +194,4 @@ Focus on writing parity tests for these high-risk areas before beginning the cut
 
 ## Summary Recommendation
 
-**Proceed with a TypeScript + NestJS rewrite, using Prisma and a REST-first approach. Add GraphQL once the domain model and core services are stable.** This gives itemize.cloud a robust, modular, testable backend without the risk of a simultaneous GraphQL big-bang rewrite.
+**Proceed with a TypeScript + NestJS rewrite using transport-neutral domain services and GraphQL as the target public API.** Migrate vertical slices behind evidence-backed gates, retaining legacy REST until each consumer moves; do not attempt a simultaneous big-bang cutover.

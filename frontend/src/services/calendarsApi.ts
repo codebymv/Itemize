@@ -212,7 +212,7 @@ export const rescheduleBooking = async (
 // ======================
 
 export const getPublicCalendar = async (slug: string): Promise<PublicCalendarInfo> => {
-    const response = await api.get(`/api/public/book/${slug}`);
+    const response = await api.get(`/api/bookings/public/book/${slug}`);
     return unwrapResponse<PublicCalendarInfo>(response.data);
 };
 
@@ -221,7 +221,7 @@ export const getAvailableSlots = async (
     startDate: string,
     endDate?: string
 ): Promise<AvailableSlotsResponse> => {
-    const response = await api.get(`/api/public/book/${slug}/slots`, {
+    const response = await api.get(`/api/bookings/public/book/${slug}/slots`, {
         params: { start_date: startDate, end_date: endDate },
     });
     return unwrapResponse<AvailableSlotsResponse>(response.data);
@@ -242,7 +242,7 @@ export const submitPublicBooking = async (
     slug: string,
     data: PublicBookingData
 ): Promise<{ success: boolean; booking: Booking; message: string }> => {
-    const response = await api.post(`/api/public/book/${slug}`, data);
+    const response = await api.post(`/api/bookings/public/book/${slug}`, data);
     return unwrapResponse<{ success: boolean; booking: Booking; message: string }>(response.data);
 };
 
@@ -251,7 +251,7 @@ export const cancelPublicBooking = async (
     token: string,
     reason?: string
 ): Promise<{ success: boolean; message: string }> => {
-    const response = await api.post(`/api/public/book/${slug}/cancel/${token}`, { reason });
+    const response = await api.post(`/api/bookings/public/book/${slug}/cancel/${token}`, { reason });
     return unwrapResponse<{ success: boolean; message: string }>(response.data);
 };
 

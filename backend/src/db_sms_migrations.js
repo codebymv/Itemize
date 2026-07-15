@@ -146,6 +146,7 @@ const runContactsPhoneIndexMigration = async (pool) => {
  */
 const runAllSmsMigrations = async (pool) => {
   console.log('=== Starting SMS Migrations ===');
+  let failed = 0;
   
   const migrations = [
     { name: 'SMS Templates', fn: runSmsTemplatesMigration },
@@ -157,12 +158,13 @@ const runAllSmsMigrations = async (pool) => {
     console.log(`\n--- Running ${migration.name} Migration ---`);
     const success = await migration.fn(pool);
     if (!success) {
+      failed++;
       console.error(`⚠️ ${migration.name} migration failed, continuing with next...`);
     }
   }
 
   console.log('\n=== SMS Migrations Complete ===');
-  return true;
+  return { failed };
 };
 
 module.exports = {

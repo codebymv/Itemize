@@ -1,0 +1,4140 @@
+{
+  "schemaVersion": 1,
+  "generator": "scripts/generate-api-surface.js",
+  "scope": "Static Express route declarations under backend/src, excluding __tests__.",
+  "summary": {
+    "declarationCount": 412,
+    "resolvedDeclarationCount": 412,
+    "unresolvedDeclarationCount": 0,
+    "uniqueResolvedOperationCount": 407,
+    "sourceFileCount": 81
+  },
+  "caveats": [
+    "This is static source analysis; it does not execute application modules.",
+    "Middleware, authorization, request/response schemas, and runtime-conditional registration require separate contract inventory.",
+    "A declaration can have multiple public paths when a router is mounted more than once.",
+    "Dynamic template-literal paths and routers not reachable from known application entrypoints remain unresolved."
+  ],
+  "entries": [
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/*"
+      ],
+      "declaredPath": "*",
+      "source": "backend/src/index.js",
+      "line": 571,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/email/logs"
+      ],
+      "declaredPath": "/logs",
+      "source": "backend/src/routes/admin-email.routes.js",
+      "line": 233,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/email/logs/:id"
+      ],
+      "declaredPath": "/logs/:id",
+      "source": "backend/src/routes/admin-email.routes.js",
+      "line": 312,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/admin/email/preview"
+      ],
+      "declaredPath": "/preview",
+      "source": "backend/src/routes/admin-email.routes.js",
+      "line": 168,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/admin/email/send"
+      ],
+      "declaredPath": "/send",
+      "source": "backend/src/routes/admin-email.routes.js",
+      "line": 28,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/email/templates"
+      ],
+      "declaredPath": "/templates",
+      "source": "backend/src/routes/admin-email.routes.js",
+      "line": 378,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/admin/me/plan"
+      ],
+      "declaredPath": "/me/plan",
+      "source": "backend/src/routes/admin.routes.js",
+      "line": 26,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/stats"
+      ],
+      "declaredPath": "/stats",
+      "source": "backend/src/routes/admin.routes.js",
+      "line": 245,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/users/by-ids"
+      ],
+      "declaredPath": "/users/by-ids",
+      "source": "backend/src/routes/admin.routes.js",
+      "line": 213,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/users/count"
+      ],
+      "declaredPath": "/users/count",
+      "source": "backend/src/routes/admin.routes.js",
+      "line": 98,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/users/ids"
+      ],
+      "declaredPath": "/users/ids",
+      "source": "backend/src/routes/admin.routes.js",
+      "line": 188,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/admin/users/search"
+      ],
+      "declaredPath": "/users/search",
+      "source": "backend/src/routes/admin.routes.js",
+      "line": 109,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/bookings/summary"
+      ],
+      "declaredPath": "/bookings/summary",
+      "source": "backend/src/routes/analytics/business.routes.js",
+      "line": 75,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/communication-stats"
+      ],
+      "declaredPath": "/communication-stats",
+      "source": "backend/src/routes/analytics/operations.routes.js",
+      "line": 12,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/contacts/trends"
+      ],
+      "declaredPath": "/contacts/trends",
+      "source": "backend/src/routes/analytics/contacts.routes.js",
+      "line": 12,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/conversion-rates"
+      ],
+      "declaredPath": "/conversion-rates",
+      "source": "backend/src/routes/analytics/advanced.routes.js",
+      "line": 12,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/dashboard"
+      ],
+      "declaredPath": "/dashboard",
+      "source": "backend/src/routes/analytics/dashboard.routes.js",
+      "line": 12,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/deals/performance"
+      ],
+      "declaredPath": "/deals/performance",
+      "source": "backend/src/routes/analytics/business.routes.js",
+      "line": 12,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/pipeline-velocity"
+      ],
+      "declaredPath": "/pipeline-velocity",
+      "source": "backend/src/routes/analytics/advanced.routes.js",
+      "line": 296,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/revenue-trends"
+      ],
+      "declaredPath": "/revenue-trends",
+      "source": "backend/src/routes/analytics/advanced.routes.js",
+      "line": 159,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/analytics/workflow-performance"
+      ],
+      "declaredPath": "/workflow-performance",
+      "source": "backend/src/routes/analytics/operations.routes.js",
+      "line": 118,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/change-password"
+      ],
+      "declaredPath": "/change-password",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 462,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/auth/csrf"
+      ],
+      "declaredPath": "/api/auth/csrf",
+      "source": "backend/src/index.js",
+      "line": 183,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/forgot-password"
+      ],
+      "declaredPath": "/forgot-password",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 338,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/google-credential"
+      ],
+      "declaredPath": "/google-credential",
+      "source": "backend/src/auth/google.routes.js",
+      "line": 138,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/google-login"
+      ],
+      "declaredPath": "/google-login",
+      "source": "backend/src/auth/google.routes.js",
+      "line": 20,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/login"
+      ],
+      "declaredPath": "/login",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 119,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/logout"
+      ],
+      "declaredPath": "/logout",
+      "source": "backend/src/auth/session.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/auth/me"
+      ],
+      "declaredPath": "/me",
+      "source": "backend/src/auth/profile.routes.js",
+      "line": 16,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/auth/me"
+      ],
+      "declaredPath": "/me",
+      "source": "backend/src/auth/profile.routes.js",
+      "line": 73,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/refresh"
+      ],
+      "declaredPath": "/refresh",
+      "source": "backend/src/auth/session.routes.js",
+      "line": 33,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/register"
+      ],
+      "declaredPath": "/register",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 36,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/resend-verification"
+      ],
+      "declaredPath": "/resend-verification",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 272,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/reset-password"
+      ],
+      "declaredPath": "/reset-password",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 403,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/auth/verify-email"
+      ],
+      "declaredPath": "/verify-email",
+      "source": "backend/src/auth/credentials.routes.js",
+      "line": 194,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/billing"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 51,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/billing/acknowledge-trial-end"
+      ],
+      "declaredPath": "/acknowledge-trial-end",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 119,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/billing/checkout"
+      ],
+      "declaredPath": "/checkout",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 69,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/billing/plans"
+      ],
+      "declaredPath": "/plans",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 63,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/billing/portal"
+      ],
+      "declaredPath": "/portal",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 102,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/billing/usage"
+      ],
+      "declaredPath": "/usage",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 130,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/billing/webhook"
+      ],
+      "declaredPath": "/webhook",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 26,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 62,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 191,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 160,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/bookings/:id/cancel"
+      ],
+      "declaredPath": "/:id/cancel",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 292,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/bookings/:id/reschedule"
+      ],
+      "declaredPath": "/:id/reschedule",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 338,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug"
+      ],
+      "declaredPath": "/public/book/:slug",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 414,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug"
+      ],
+      "declaredPath": "/public/book/:slug",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 544,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug/cancel/:token"
+      ],
+      "declaredPath": "/public/book/:slug/cancel/:token",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 683,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug/slots"
+      ],
+      "declaredPath": "/public/book/:slug/slots",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 461,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/connections"
+      ],
+      "declaredPath": "/connections",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 28,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/calendar-integrations/connections/:id"
+      ],
+      "declaredPath": "/connections/:id",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 51,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/calendar-integrations/connections/:id"
+      ],
+      "declaredPath": "/connections/:id",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 74,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/auth"
+      ],
+      "declaredPath": "/google/auth",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 115,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/calendars/:connectionId"
+      ],
+      "declaredPath": "/google/calendars/:connectionId",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 226,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/callback"
+      ],
+      "declaredPath": "/google/callback",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 135,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/sync-status/:connectionId"
+      ],
+      "declaredPath": "/sync-status/:connectionId",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 349,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/calendar-integrations/sync/:connectionId"
+      ],
+      "declaredPath": "/sync/:connectionId",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 273,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendars"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 42,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/calendars"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 121,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/calendars/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 303,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendars/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 64,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/calendars/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 227,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/calendars/:id/availability"
+      ],
+      "declaredPath": "/:id/availability",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 349,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/calendars/:id/date-override"
+      ],
+      "declaredPath": "/:id/date-override",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 418,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/calendars/:id/date-override/:overrideId"
+      ],
+      "declaredPath": "/:id/date-override/:overrideId",
+      "source": "backend/src/routes/calendars.routes.js",
+      "line": 465,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/campaigns"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/campaigns/crud.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/campaigns/crud.routes.js",
+      "line": 107,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/campaigns/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/campaigns/crud.routes.js",
+      "line": 251,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/campaigns/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/campaigns/crud.routes.js",
+      "line": 68,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/campaigns/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/campaigns/crud.routes.js",
+      "line": 165,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/duplicate"
+      ],
+      "declaredPath": "/:id/duplicate",
+      "source": "backend/src/routes/campaigns/crud.routes.js",
+      "line": 293,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/pause"
+      ],
+      "declaredPath": "/:id/pause",
+      "source": "backend/src/routes/campaigns/actions.routes.js",
+      "line": 269,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/campaigns/:id/preview"
+      ],
+      "declaredPath": "/:id/preview",
+      "source": "backend/src/routes/campaigns/insights.routes.js",
+      "line": 85,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/campaigns/:id/recipients"
+      ],
+      "declaredPath": "/:id/recipients",
+      "source": "backend/src/routes/campaigns/insights.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/resume"
+      ],
+      "declaredPath": "/:id/resume",
+      "source": "backend/src/routes/campaigns/actions.routes.js",
+      "line": 296,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/schedule"
+      ],
+      "declaredPath": "/:id/schedule",
+      "source": "backend/src/routes/campaigns/actions.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/send"
+      ],
+      "declaredPath": "/:id/send",
+      "source": "backend/src/routes/campaigns/actions.routes.js",
+      "line": 105,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/send-test"
+      ],
+      "declaredPath": "/:id/send-test",
+      "source": "backend/src/routes/campaigns/insights.routes.js",
+      "line": 157,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/campaigns/:id/unschedule"
+      ],
+      "declaredPath": "/:id/unschedule",
+      "source": "backend/src/routes/campaigns/actions.routes.js",
+      "line": 77,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/canvas/lists"
+      ],
+      "declaredPath": "/canvas/lists",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 202,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/canvas/positions"
+      ],
+      "declaredPath": "/api/canvas/positions",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 48,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/canvas/positions"
+      ],
+      "declaredPath": "/canvas/positions",
+      "source": "backend/src/routes/canvas.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/categories"
+      ],
+      "declaredPath": "/categories",
+      "source": "backend/src/routes/categories.routes.js",
+      "line": 19,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/categories"
+      ],
+      "declaredPath": "/categories",
+      "source": "backend/src/routes/categories.routes.js",
+      "line": 56,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/categories/:id"
+      ],
+      "declaredPath": "/categories/:id",
+      "source": "backend/src/routes/categories.routes.js",
+      "line": 109,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/categories/:id"
+      ],
+      "declaredPath": "/categories/:id",
+      "source": "backend/src/routes/categories.routes.js",
+      "line": 80,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/chat-widget/management.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/chat-widget/management.routes.js",
+      "line": 32,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/chat-widget"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/chat-widget/management.routes.js",
+      "line": 113,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/embed-code"
+      ],
+      "declaredPath": "/embed-code",
+      "source": "backend/src/routes/chat-widget/management.routes.js",
+      "line": 201,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/public/config/:widgetKey"
+      ],
+      "declaredPath": "/public/config/:widgetKey",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/end-session"
+      ],
+      "declaredPath": "/public/end-session",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 335,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/messages"
+      ],
+      "declaredPath": "/public/messages",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 263,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/public/messages/:sessionToken"
+      ],
+      "declaredPath": "/public/messages/:sessionToken",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 208,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/session"
+      ],
+      "declaredPath": "/public/session",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 78,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/typing"
+      ],
+      "declaredPath": "/public/typing",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 375,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/sessions"
+      ],
+      "declaredPath": "/sessions",
+      "source": "backend/src/routes/chat-widget/sessions.routes.js",
+      "line": 12,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/sessions/:id"
+      ],
+      "declaredPath": "/sessions/:id",
+      "source": "backend/src/routes/chat-widget/sessions.routes.js",
+      "line": 64,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/sessions/:id/convert"
+      ],
+      "declaredPath": "/sessions/:id/convert",
+      "source": "backend/src/routes/chat-widget/sessions.routes.js",
+      "line": 176,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/sessions/:id/messages"
+      ],
+      "declaredPath": "/sessions/:id/messages",
+      "source": "backend/src/routes/chat-widget/sessions.routes.js",
+      "line": 103,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 64,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 182,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/contacts/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 347,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 158,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/contacts/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 266,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/:id/activities"
+      ],
+      "declaredPath": "/:id/activities",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 473,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts/:id/activities"
+      ],
+      "declaredPath": "/:id/activities",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 518,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/:id/content"
+      ],
+      "declaredPath": "/:id/content",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 566,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/:id/profile"
+      ],
+      "declaredPath": "/:id/profile",
+      "source": "backend/src/routes/contact-profile.routes.js",
+      "line": 11,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts/bulk-delete"
+      ],
+      "declaredPath": "/bulk-delete",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 451,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts/bulk-update"
+      ],
+      "declaredPath": "/bulk-update",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 365,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/export/csv"
+      ],
+      "declaredPath": "/export/csv",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 610,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts/import/csv"
+      ],
+      "declaredPath": "/import/csv",
+      "source": "backend/src/routes/contacts.routes.js",
+      "line": 683,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/conversations"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 22,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/conversations"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 141,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/conversations/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 90,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/conversations/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 216,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/conversations/:id/assign"
+      ],
+      "declaredPath": "/:id/assign",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 244,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/conversations/:id/messages"
+      ],
+      "declaredPath": "/:id/messages",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 275,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/conversations/:id/read"
+      ],
+      "declaredPath": "/:id/read",
+      "source": "backend/src/routes/conversations.routes.js",
+      "line": 344,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/email-templates"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 27,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email-templates"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 133,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/email-templates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 253,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/email-templates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 104,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/email-templates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 182,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email-templates/:id/duplicate"
+      ],
+      "declaredPath": "/:id/duplicate",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 332,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email-templates/:id/send-test"
+      ],
+      "declaredPath": "/:id/send-test",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 277,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/email-templates/categories/list"
+      ],
+      "declaredPath": "/categories/list",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 80,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email-templates/send-to-contact"
+      ],
+      "declaredPath": "/send-to-contact",
+      "source": "backend/src/routes/email-templates.routes.js",
+      "line": 387,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/forms"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 76,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/forms"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 147,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/forms/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 483,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/forms/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 109,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/forms/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 308,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/forms/:id/duplicate"
+      ],
+      "declaredPath": "/:id/duplicate",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 507,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/forms/:id/fields"
+      ],
+      "declaredPath": "/:id/fields",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 376,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/forms/:id/submissions"
+      ],
+      "declaredPath": "/:id/submissions",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 645,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/forms/:id/submissions/:subId"
+      ],
+      "declaredPath": "/:id/submissions/:subId",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 708,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/forms/public/form/:slug"
+      ],
+      "declaredPath": "/public/form/:slug",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 737,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/forms/public/form/:slug"
+      ],
+      "declaredPath": "/public/form/:slug",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 782,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/health"
+      ],
+      "declaredPath": "/api/health",
+      "source": "backend/src/index.js",
+      "line": 250,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/invoices/crud.routes.js",
+      "line": 49,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/invoices/crud.routes.js",
+      "line": 176,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/invoices/crud.routes.js",
+      "line": 568,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/invoices/crud.routes.js",
+      "line": 103,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/invoices/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/invoices/crud.routes.js",
+      "line": 350,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/:id/create-payment-link"
+      ],
+      "declaredPath": "/:id/create-payment-link",
+      "source": "backend/src/routes/invoices/actions.routes.js",
+      "line": 419,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/:id/pdf"
+      ],
+      "declaredPath": "/:id/pdf",
+      "source": "backend/src/routes/invoices/actions.routes.js",
+      "line": 257,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/:id/record-payment"
+      ],
+      "declaredPath": "/:id/record-payment",
+      "source": "backend/src/routes/invoices/actions.routes.js",
+      "line": 325,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/:id/send"
+      ],
+      "declaredPath": "/:id/send",
+      "source": "backend/src/routes/invoices/actions.routes.js",
+      "line": 22,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/businesses"
+      ],
+      "declaredPath": "/businesses",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/businesses"
+      ],
+      "declaredPath": "/businesses",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 69,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/businesses/:id"
+      ],
+      "declaredPath": "/businesses/:id",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 170,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/businesses/:id"
+      ],
+      "declaredPath": "/businesses/:id",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 39,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/invoices/businesses/:id"
+      ],
+      "declaredPath": "/businesses/:id",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 103,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/businesses/:id/logo"
+      ],
+      "declaredPath": "/businesses/:id/logo",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 312,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/businesses/:id/logo"
+      ],
+      "declaredPath": "/businesses/:id/logo",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 213,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/email/preview"
+      ],
+      "declaredPath": "/email/preview",
+      "source": "backend/src/routes/invoices/email-preview.routes.js",
+      "line": 16,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/estimates"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 45,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/estimates"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 146,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/estimates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 513,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/estimates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 108,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/invoices/estimates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 312,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/estimates/:id/convert-to-invoice"
+      ],
+      "declaredPath": "/:id/convert-to-invoice",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 695,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/estimates/:id/send"
+      ],
+      "declaredPath": "/:id/send",
+      "source": "backend/src/routes/estimates.routes.js",
+      "line": 537,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/payments"
+      ],
+      "declaredPath": "/payments",
+      "source": "backend/src/routes/invoices/payments.routes.js",
+      "line": 122,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/payments"
+      ],
+      "declaredPath": "/payments",
+      "source": "backend/src/routes/invoices/payments.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/products"
+      ],
+      "declaredPath": "/products",
+      "source": "backend/src/routes/invoices/products.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/products"
+      ],
+      "declaredPath": "/products",
+      "source": "backend/src/routes/invoices/products.routes.js",
+      "line": 49,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/products/:id"
+      ],
+      "declaredPath": "/products/:id",
+      "source": "backend/src/routes/invoices/products.routes.js",
+      "line": 117,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/invoices/products/:id"
+      ],
+      "declaredPath": "/products/:id",
+      "source": "backend/src/routes/invoices/products.routes.js",
+      "line": 84,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/recurring"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 72,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/recurring"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 138,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/recurring/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 362,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/recurring/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 108,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/invoices/recurring/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 227,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/recurring/:id/generate-now"
+      ],
+      "declaredPath": "/:id/generate-now",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 469,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/recurring/:id/history"
+      ],
+      "declaredPath": "/:id/history",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 637,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/recurring/:id/pause"
+      ],
+      "declaredPath": "/:id/pause",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 386,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/recurring/:id/resume"
+      ],
+      "declaredPath": "/:id/resume",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 412,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/recurring/from-invoice/:invoiceId"
+      ],
+      "declaredPath": "/from-invoice/:invoiceId",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 660,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/recurring/preview-invoice-number"
+      ],
+      "declaredPath": "/preview-invoice-number",
+      "source": "backend/src/routes/recurring.routes.js",
+      "line": 43,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/settings"
+      ],
+      "declaredPath": "/settings",
+      "source": "backend/src/routes/invoices/settings.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/invoices/settings"
+      ],
+      "declaredPath": "/settings",
+      "source": "backend/src/routes/invoices/settings.routes.js",
+      "line": 48,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/invoices/settings/logo"
+      ],
+      "declaredPath": "/settings/logo",
+      "source": "backend/src/routes/invoices/settings.routes.js",
+      "line": 209,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/settings/logo"
+      ],
+      "declaredPath": "/settings/logo",
+      "source": "backend/src/routes/invoices/settings.routes.js",
+      "line": 114,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/webhook/stripe"
+      ],
+      "declaredPath": "/webhook/stripe",
+      "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/lists"
+      ],
+      "declaredPath": "/lists",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 21,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/lists"
+      ],
+      "declaredPath": "/lists",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 89,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/lists/:id"
+      ],
+      "declaredPath": "/lists/:id",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 176,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/lists/:id"
+      ],
+      "declaredPath": "/lists/:id",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 128,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/lists/:id/items"
+      ],
+      "declaredPath": "/lists/:id/items",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 325,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/lists/:id/items/:itemId"
+      ],
+      "declaredPath": "/lists/:id/items/:itemId",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 398,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/lists/:id/items/:itemId/toggle"
+      ],
+      "declaredPath": "/lists/:id/items/:itemId/toggle",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 258,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/lists/:id/position"
+      ],
+      "declaredPath": "/api/lists/:id/position",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 44,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/lists/:id/position"
+      ],
+      "declaredPath": "/lists/:id/position",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 223,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/lists/:id/title"
+      ],
+      "declaredPath": "/lists/:id/title",
+      "source": "backend/src/routes/lists.routes.js",
+      "line": 458,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/lists/:listId/share"
+      ],
+      "declaredPath": "/lists/:listId/share",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 98,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/lists/:listId/share"
+      ],
+      "declaredPath": "/lists/:listId/share",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 47,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/marketing-chat/ask"
+      ],
+      "declaredPath": "/ask",
+      "source": "backend/src/routes/marketing-chat.routes.js",
+      "line": 84,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/marketing-chat/token"
+      ],
+      "declaredPath": "/token",
+      "source": "backend/src/routes/marketing-chat.routes.js",
+      "line": 80,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/note-suggestions"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/noteSuggestions.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/notes"
+      ],
+      "declaredPath": "/notes",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 20,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/notes"
+      ],
+      "declaredPath": "/notes",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 88,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/notes/:noteId"
+      ],
+      "declaredPath": "/notes/:noteId",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 189,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/notes/:noteId"
+      ],
+      "declaredPath": "/notes/:noteId",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 129,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/notes/:noteId/category"
+      ],
+      "declaredPath": "/notes/:noteId/category",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 311,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/notes/:noteId/content"
+      ],
+      "declaredPath": "/notes/:noteId/content",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 239,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/notes/:noteId/share"
+      ],
+      "declaredPath": "/notes/:noteId/share",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 169,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/notes/:noteId/share"
+      ],
+      "declaredPath": "/notes/:noteId/share",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 118,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/notes/:noteId/title"
+      ],
+      "declaredPath": "/notes/:noteId/title",
+      "source": "backend/src/routes/notes.routes.js",
+      "line": 275,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/onboarding/complete-step"
+      ],
+      "declaredPath": "/complete-step",
+      "source": "backend/src/routes/onboarding.routes.js",
+      "line": 170,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/onboarding/dismiss"
+      ],
+      "declaredPath": "/dismiss",
+      "source": "backend/src/routes/onboarding.routes.js",
+      "line": 123,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/onboarding/mark-seen"
+      ],
+      "declaredPath": "/mark-seen",
+      "source": "backend/src/routes/onboarding.routes.js",
+      "line": 71,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/onboarding/progress"
+      ],
+      "declaredPath": "/progress",
+      "source": "backend/src/routes/onboarding.routes.js",
+      "line": 23,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/onboarding/progress/:featureKey"
+      ],
+      "declaredPath": "/progress/:featureKey",
+      "source": "backend/src/routes/onboarding.routes.js",
+      "line": 45,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/onboarding/reset"
+      ],
+      "declaredPath": "/reset",
+      "source": "backend/src/routes/onboarding.routes.js",
+      "line": 221,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/organizations"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 76,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/organizations"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 106,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/organizations/:organizationId"
+      ],
+      "declaredPath": "/:organizationId",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 165,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/organizations/:organizationId"
+      ],
+      "declaredPath": "/:organizationId",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 90,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/organizations/:organizationId"
+      ],
+      "declaredPath": "/:organizationId",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 142,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/organizations/:organizationId/leave"
+      ],
+      "declaredPath": "/:organizationId/leave",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 311,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/organizations/:organizationId/members"
+      ],
+      "declaredPath": "/:organizationId/members",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 174,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/organizations/:organizationId/members"
+      ],
+      "declaredPath": "/:organizationId/members",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 189,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/organizations/:organizationId/members/:memberId"
+      ],
+      "declaredPath": "/:organizationId/members/:memberId",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 277,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/organizations/:organizationId/members/:memberId"
+      ],
+      "declaredPath": "/:organizationId/members/:memberId",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 235,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/organizations/ensure-default"
+      ],
+      "declaredPath": "/ensure-default",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 327,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/pages/crud.routes.js",
+      "line": 19,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/pages/crud.routes.js",
+      "line": 119,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/pages/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/pages/crud.routes.js",
+      "line": 361,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/pages/crud.routes.js",
+      "line": 78,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/pages/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/pages/crud.routes.js",
+      "line": 227,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/:id/analytics"
+      ],
+      "declaredPath": "/:id/analytics",
+      "source": "backend/src/routes/pages/analytics.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/duplicate"
+      ],
+      "declaredPath": "/:id/duplicate",
+      "source": "backend/src/routes/pages/crud.routes.js",
+      "line": 385,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/pages/:id/password"
+      ],
+      "declaredPath": "/:id/password",
+      "source": "backend/src/routes/pages/password.routes.js",
+      "line": 58,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/password"
+      ],
+      "declaredPath": "/:id/password",
+      "source": "backend/src/routes/pages/password.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/sections"
+      ],
+      "declaredPath": "/:id/sections",
+      "source": "backend/src/routes/pages/sections.routes.js",
+      "line": 87,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/pages/:id/sections"
+      ],
+      "declaredPath": "/:id/sections",
+      "source": "backend/src/routes/pages/sections.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/pages/:id/sections/:sectionId"
+      ],
+      "declaredPath": "/:id/sections/:sectionId",
+      "source": "backend/src/routes/pages/sections.routes.js",
+      "line": 224,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/pages/:id/sections/:sectionId"
+      ],
+      "declaredPath": "/:id/sections/:sectionId",
+      "source": "backend/src/routes/pages/sections.routes.js",
+      "line": 162,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/sections/reorder"
+      ],
+      "declaredPath": "/:id/sections/reorder",
+      "source": "backend/src/routes/pages/sections.routes.js",
+      "line": 266,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/verify-password"
+      ],
+      "declaredPath": "/:id/verify-password",
+      "source": "backend/src/routes/pages/password.routes.js",
+      "line": 92,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/:id/versions"
+      ],
+      "declaredPath": "/:id/versions",
+      "source": "backend/src/routes/pageVersions.routes.js",
+      "line": 23,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/versions"
+      ],
+      "declaredPath": "/:id/versions",
+      "source": "backend/src/routes/pageVersions.routes.js",
+      "line": 80,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/pages/:id/versions/:versionId"
+      ],
+      "declaredPath": "/:id/versions/:versionId",
+      "source": "backend/src/routes/pageVersions.routes.js",
+      "line": 298,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/:id/versions/:versionId"
+      ],
+      "declaredPath": "/:id/versions/:versionId",
+      "source": "backend/src/routes/pageVersions.routes.js",
+      "line": 161,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/versions/:versionId/publish"
+      ],
+      "declaredPath": "/:id/versions/:versionId/publish",
+      "source": "backend/src/routes/pageVersions.routes.js",
+      "line": 212,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/:id/versions/:versionId/restore"
+      ],
+      "declaredPath": "/:id/versions/:versionId/restore",
+      "source": "backend/src/routes/pageVersions.routes.js",
+      "line": 348,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/public/page/:slug"
+      ],
+      "declaredPath": "/public/page/:slug",
+      "source": "backend/src/routes/pages/public.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/public/page/:slug/analytics"
+      ],
+      "declaredPath": "/public/page/:slug/analytics",
+      "source": "backend/src/routes/pages/public.routes.js",
+      "line": 141,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pipelines"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 36,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pipelines"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 100,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/pipelines/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 192,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pipelines/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 57,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/pipelines/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 148,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pipelines/deals"
+      ],
+      "declaredPath": "/deals",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 361,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/pipelines/deals/:id"
+      ],
+      "declaredPath": "/deals/:id",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 640,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pipelines/deals/:id"
+      ],
+      "declaredPath": "/deals/:id",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 331,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/pipelines/deals/:id"
+      ],
+      "declaredPath": "/deals/:id",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 436,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pipelines/deals/:id/lost"
+      ],
+      "declaredPath": "/deals/:id/lost",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 585,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pipelines/deals/:id/reopen"
+      ],
+      "declaredPath": "/deals/:id/reopen",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 613,
+      "dynamic": false
+    },
+    {
+      "method": "PATCH",
+      "publicPaths": [
+        "/api/pipelines/deals/:id/stage"
+      ],
+      "declaredPath": "/deals/:id/stage",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 499,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pipelines/deals/:id/won"
+      ],
+      "declaredPath": "/deals/:id/won",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 558,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pipelines/deals/all"
+      ],
+      "declaredPath": "/deals/all",
+      "source": "backend/src/routes/pipelines.routes.js",
+      "line": 236,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/preview/version/:versionId"
+      ],
+      "declaredPath": "/version/:versionId",
+      "source": "backend/src/routes/preview.routes.js",
+      "line": 24,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/sign/:token"
+      ],
+      "declaredPath": "/public/sign/:token",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 411,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/sign/:token"
+      ],
+      "declaredPath": "/public/sign/:token",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 438,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/sign/:token/decline"
+      ],
+      "declaredPath": "/public/sign/:token/decline",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 466,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/sign/:token/download"
+      ],
+      "declaredPath": "/public/sign/:token/download",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 477,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/sign/:token/file"
+      ],
+      "declaredPath": "/public/sign/:token/file",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 488,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/sign/:token/verify"
+      ],
+      "declaredPath": "/public/sign/:token/verify",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 434,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/analytics"
+      ],
+      "declaredPath": "/analytics",
+      "source": "backend/src/routes/reputation/analytics.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/platforms"
+      ],
+      "declaredPath": "/platforms",
+      "source": "backend/src/routes/reputation/platforms.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/platforms"
+      ],
+      "declaredPath": "/platforms",
+      "source": "backend/src/routes/reputation/platforms.routes.js",
+      "line": 33,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/reputation/platforms/:id"
+      ],
+      "declaredPath": "/platforms/:id",
+      "source": "backend/src/routes/reputation/platforms.routes.js",
+      "line": 73,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/public/review/:token"
+      ],
+      "declaredPath": "/public/review/:token",
+      "source": "backend/src/routes/reputation/public.routes.js",
+      "line": 87,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/public/review/:token"
+      ],
+      "declaredPath": "/public/review/:token",
+      "source": "backend/src/routes/reputation/public.routes.js",
+      "line": 136,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/public/widget/:widgetKey"
+      ],
+      "declaredPath": "/public/widget/:widgetKey",
+      "source": "backend/src/routes/reputation/public.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/requests"
+      ],
+      "declaredPath": "/requests",
+      "source": "backend/src/routes/reputation/requests.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/requests"
+      ],
+      "declaredPath": "/requests",
+      "source": "backend/src/routes/reputation/requests.routes.js",
+      "line": 89,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/reputation/requests/:id"
+      ],
+      "declaredPath": "/requests/:id",
+      "source": "backend/src/routes/reputation/requests.routes.js",
+      "line": 70,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/requests/:id/resend"
+      ],
+      "declaredPath": "/requests/:id/resend",
+      "source": "backend/src/routes/reputation/requests.routes.js",
+      "line": 242,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/requests/bulk"
+      ],
+      "declaredPath": "/requests/bulk",
+      "source": "backend/src/routes/reputation/requests.routes.js",
+      "line": 321,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/reviews"
+      ],
+      "declaredPath": "/reviews",
+      "source": "backend/src/routes/reputation/reviews.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/reviews"
+      ],
+      "declaredPath": "/reviews",
+      "source": "backend/src/routes/reputation/reviews.routes.js",
+      "line": 120,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/reputation/reviews/:id"
+      ],
+      "declaredPath": "/reviews/:id",
+      "source": "backend/src/routes/reputation/reviews.routes.js",
+      "line": 227,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/reviews/:id"
+      ],
+      "declaredPath": "/reviews/:id",
+      "source": "backend/src/routes/reputation/reviews.routes.js",
+      "line": 93,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/reputation/reviews/:id"
+      ],
+      "declaredPath": "/reviews/:id",
+      "source": "backend/src/routes/reputation/reviews.routes.js",
+      "line": 168,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/settings"
+      ],
+      "declaredPath": "/settings",
+      "source": "backend/src/routes/reputation/settings.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/reputation/settings"
+      ],
+      "declaredPath": "/settings",
+      "source": "backend/src/routes/reputation/settings.routes.js",
+      "line": 43,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/widgets"
+      ],
+      "declaredPath": "/widgets",
+      "source": "backend/src/routes/reputation/widgets.routes.js",
+      "line": 16,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/widgets"
+      ],
+      "declaredPath": "/widgets",
+      "source": "backend/src/routes/reputation/widgets.routes.js",
+      "line": 32,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/reputation/widgets/:id"
+      ],
+      "declaredPath": "/widgets/:id",
+      "source": "backend/src/routes/reputation/widgets.routes.js",
+      "line": 141,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/reputation/widgets/:id"
+      ],
+      "declaredPath": "/widgets/:id",
+      "source": "backend/src/routes/reputation/widgets.routes.js",
+      "line": 95,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/widgets/:id/embed-code"
+      ],
+      "declaredPath": "/widgets/:id/embed-code",
+      "source": "backend/src/routes/reputation/widgets.routes.js",
+      "line": 163,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/search"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/search.routes.js",
+      "line": 9,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/segments"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 273,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/segments"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 353,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/segments/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 476,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/segments/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 311,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/segments/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 412,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/segments/:id/calculate"
+      ],
+      "declaredPath": "/:id/calculate",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 502,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/segments/:id/contacts"
+      ],
+      "declaredPath": "/:id/contacts",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 541,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/segments/filter-options"
+      ],
+      "declaredPath": "/filter-options",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 672,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/segments/preview"
+      ],
+      "declaredPath": "/preview",
+      "source": "backend/src/routes/segments.routes.js",
+      "line": 612,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/list/:token"
+      ],
+      "declaredPath": "/shared/list/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 262,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/note/:token"
+      ],
+      "declaredPath": "/shared/note/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 303,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/vault/:token"
+      ],
+      "declaredPath": "/shared/vault/:token",
+      "source": "backend/src/routes/vaults/sharing.routes.js",
+      "line": 87,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/whiteboard/:token"
+      ],
+      "declaredPath": "/shared/whiteboard/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 340,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents"
+      ],
+      "declaredPath": "/signatures/documents",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 296,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents"
+      ],
+      "declaredPath": "/signatures/documents",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 186,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/signatures/documents/:id"
+      ],
+      "declaredPath": "/signatures/documents/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 282,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents/:id"
+      ],
+      "declaredPath": "/signatures/documents/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 302,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/signatures/documents/:id"
+      ],
+      "declaredPath": "/signatures/documents/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 196,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents/:id/audit"
+      ],
+      "declaredPath": "/signatures/documents/:id/audit",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 400,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents/:id/cancel"
+      ],
+      "declaredPath": "/signatures/documents/:id/cancel",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 326,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents/:id/download"
+      ],
+      "declaredPath": "/signatures/documents/:id/download",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 355,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/signatures/documents/:id/file"
+      ],
+      "declaredPath": "/signatures/documents/:id/file",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 272,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents/:id/file"
+      ],
+      "declaredPath": "/signatures/documents/:id/file",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 367,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents/:id/remind"
+      ],
+      "declaredPath": "/signatures/documents/:id/remind",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 333,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents/:id/reminders"
+      ],
+      "declaredPath": "/signatures/documents/:id/reminders",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 348,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents/:id/send"
+      ],
+      "declaredPath": "/signatures/documents/:id/send",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 309,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents/upload"
+      ],
+      "declaredPath": "/signatures/documents/upload",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 226,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/email/preview"
+      ],
+      "declaredPath": "/signatures/email/preview",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 249,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/templates"
+      ],
+      "declaredPath": "/signatures/templates",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 167,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/templates"
+      ],
+      "declaredPath": "/signatures/templates",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 107,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/signatures/templates/:id"
+      ],
+      "declaredPath": "/signatures/templates/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 138,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/templates/:id"
+      ],
+      "declaredPath": "/signatures/templates/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 172,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/signatures/templates/:id"
+      ],
+      "declaredPath": "/signatures/templates/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 116,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/templates/:id/instantiate"
+      ],
+      "declaredPath": "/signatures/templates/:id/instantiate",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 179,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/templates/upload"
+      ],
+      "declaredPath": "/signatures/templates/upload",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 150,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/sms-templates"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 70,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 176,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/sms-templates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 293,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/sms-templates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 147,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/sms-templates/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 225,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/:id/duplicate"
+      ],
+      "declaredPath": "/:id/duplicate",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 381,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/:id/send-test"
+      ],
+      "declaredPath": "/:id/send-test",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 325,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/sms-templates/categories/list"
+      ],
+      "declaredPath": "/categories/list",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 123,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/message-info"
+      ],
+      "declaredPath": "/message-info",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 599,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/send-to-contact"
+      ],
+      "declaredPath": "/send-to-contact",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 434,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/webhook/inbound"
+      ],
+      "declaredPath": "/webhook/inbound",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 675,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/webhook/status"
+      ],
+      "declaredPath": "/webhook/status",
+      "source": "backend/src/routes/sms-templates.routes.js",
+      "line": 615,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/analytics"
+      ],
+      "declaredPath": "/analytics",
+      "source": "backend/src/routes/social/analytics.routes.js",
+      "line": 11,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/callback/facebook"
+      ],
+      "declaredPath": "/callback/facebook",
+      "source": "backend/src/routes/social/oauth.routes.js",
+      "line": 61,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/channels"
+      ],
+      "declaredPath": "/channels",
+      "source": "backend/src/routes/social/channels.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/social/channels/:id"
+      ],
+      "declaredPath": "/channels/:id",
+      "source": "backend/src/routes/social/channels.routes.js",
+      "line": 45,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/connect/facebook"
+      ],
+      "declaredPath": "/connect/facebook",
+      "source": "backend/src/routes/social/oauth.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/conversations"
+      ],
+      "declaredPath": "/conversations",
+      "source": "backend/src/routes/social/conversations.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/conversations/:id"
+      ],
+      "declaredPath": "/conversations/:id",
+      "source": "backend/src/routes/social/conversations.routes.js",
+      "line": 92,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/social/conversations/:id"
+      ],
+      "declaredPath": "/conversations/:id",
+      "source": "backend/src/routes/social/conversations.routes.js",
+      "line": 148,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/social/conversations/:id/messages"
+      ],
+      "declaredPath": "/conversations/:id/messages",
+      "source": "backend/src/routes/social/conversations.routes.js",
+      "line": 204,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/webhook",
+      "source": "backend/src/routes/social/webhook.routes.js",
+      "line": 16,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/webhook",
+      "source": "backend/src/routes/social/webhook.routes.js",
+      "line": 38,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/status"
+      ],
+      "declaredPath": "/api/status",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 112,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/suggestions"
+      ],
+      "declaredPath": "/api/suggestions",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 56,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/tags"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/tags.routes.js",
+      "line": 22,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/tags"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/tags.routes.js",
+      "line": 55,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/tags/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/tags.routes.js",
+      "line": 148,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/tags/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/tags.routes.js",
+      "line": 94,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/tags/suggestions"
+      ],
+      "declaredPath": "/suggestions",
+      "source": "backend/src/routes/tags.routes.js",
+      "line": 199,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/vaults"
+      ],
+      "declaredPath": "/vaults",
+      "source": "backend/src/routes/vaults/crud.routes.js",
+      "line": 16,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/vaults"
+      ],
+      "declaredPath": "/vaults",
+      "source": "backend/src/routes/vaults/crud.routes.js",
+      "line": 160,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/vaults/:vaultId"
+      ],
+      "declaredPath": "/vaults/:vaultId",
+      "source": "backend/src/routes/vaults/crud.routes.js",
+      "line": 302,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/vaults/:vaultId"
+      ],
+      "declaredPath": "/vaults/:vaultId",
+      "source": "backend/src/routes/vaults/crud.routes.js",
+      "line": 68,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/vaults/:vaultId"
+      ],
+      "declaredPath": "/vaults/:vaultId",
+      "source": "backend/src/routes/vaults/crud.routes.js",
+      "line": 219,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/vaults/:vaultId/items"
+      ],
+      "declaredPath": "/vaults/:vaultId/items",
+      "source": "backend/src/routes/vaults/items.routes.js",
+      "line": 59,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/vaults/:vaultId/items/:itemId"
+      ],
+      "declaredPath": "/vaults/:vaultId/items/:itemId",
+      "source": "backend/src/routes/vaults/items.routes.js",
+      "line": 304,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/vaults/:vaultId/items/:itemId"
+      ],
+      "declaredPath": "/vaults/:vaultId/items/:itemId",
+      "source": "backend/src/routes/vaults/items.routes.js",
+      "line": 226,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/vaults/:vaultId/items/bulk"
+      ],
+      "declaredPath": "/vaults/:vaultId/items/bulk",
+      "source": "backend/src/routes/vaults/items.routes.js",
+      "line": 129,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/vaults/:vaultId/items/reorder"
+      ],
+      "declaredPath": "/vaults/:vaultId/items/reorder",
+      "source": "backend/src/routes/vaults/items.routes.js",
+      "line": 13,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/vaults/:vaultId/lock"
+      ],
+      "declaredPath": "/vaults/:vaultId/lock",
+      "source": "backend/src/routes/vaults/password.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/vaults/:vaultId/position"
+      ],
+      "declaredPath": "/api/vaults/:vaultId/position",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 47,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/vaults/:vaultId/position"
+      ],
+      "declaredPath": "/vaults/:vaultId/position",
+      "source": "backend/src/routes/vaults/crud.routes.js",
+      "line": 270,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/vaults/:vaultId/share"
+      ],
+      "declaredPath": "/vaults/:vaultId/share",
+      "source": "backend/src/routes/vaults/sharing.routes.js",
+      "line": 64,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/vaults/:vaultId/share"
+      ],
+      "declaredPath": "/vaults/:vaultId/share",
+      "source": "backend/src/routes/vaults/sharing.routes.js",
+      "line": 16,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/vaults/:vaultId/unlock"
+      ],
+      "declaredPath": "/vaults/:vaultId/unlock",
+      "source": "backend/src/routes/vaults/password.routes.js",
+      "line": 78,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/webhooks/:workflowId"
+      ],
+      "declaredPath": "/:workflowId",
+      "source": "backend/src/routes/webhooks.routes.js",
+      "line": 45,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/whiteboards"
+      ],
+      "declaredPath": "/whiteboards",
+      "source": "backend/src/routes/whiteboards.routes.js",
+      "line": 20,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/whiteboards"
+      ],
+      "declaredPath": "/whiteboards",
+      "source": "backend/src/routes/whiteboards.routes.js",
+      "line": 85,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/whiteboards/:id/position"
+      ],
+      "declaredPath": "/api/whiteboards/:id/position",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 45,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/whiteboards/:id/position"
+      ],
+      "declaredPath": "/whiteboards/:id/position",
+      "source": "backend/src/routes/whiteboards.routes.js",
+      "line": 233,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/whiteboards/:whiteboardId"
+      ],
+      "declaredPath": "/whiteboards/:whiteboardId",
+      "source": "backend/src/routes/whiteboards.routes.js",
+      "line": 270,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/whiteboards/:whiteboardId"
+      ],
+      "declaredPath": "/whiteboards/:whiteboardId",
+      "source": "backend/src/routes/whiteboards.routes.js",
+      "line": 146,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/whiteboards/:whiteboardId/share"
+      ],
+      "declaredPath": "/whiteboards/:whiteboardId/share",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 240,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/whiteboards/:whiteboardId/share"
+      ],
+      "declaredPath": "/whiteboards/:whiteboardId/share",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 189,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/wireframes"
+      ],
+      "declaredPath": "/wireframes",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 20,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/wireframes"
+      ],
+      "declaredPath": "/wireframes",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 85,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/wireframes/:id/position"
+      ],
+      "declaredPath": "/api/wireframes/:id/position",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 46,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/wireframes/:id/position"
+      ],
+      "declaredPath": "/wireframes/:id/position",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 243,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/wireframes/:wireframeId"
+      ],
+      "declaredPath": "/wireframes/:wireframeId",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 289,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/wireframes/:wireframeId"
+      ],
+      "declaredPath": "/wireframes/:wireframeId",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 144,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/wireframes/:wireframeId/share"
+      ],
+      "declaredPath": "/wireframes/:wireframeId/share",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 390,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/wireframes/:wireframeId/share"
+      ],
+      "declaredPath": "/wireframes/:wireframeId/share",
+      "source": "backend/src/routes/wireframes.routes.js",
+      "line": 337,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/workflows"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 58,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows"
+      ],
+      "declaredPath": "/",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 173,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/workflows/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 345,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/workflows/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 113,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
+      "publicPaths": [
+        "/api/workflows/:id"
+      ],
+      "declaredPath": "/:id",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 268,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/activate"
+      ],
+      "declaredPath": "/:id/activate",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 371,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/deactivate"
+      ],
+      "declaredPath": "/:id/deactivate",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 415,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/duplicate"
+      ],
+      "declaredPath": "/:id/duplicate",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 630,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/enroll"
+      ],
+      "declaredPath": "/:id/enroll",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 444,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/workflows/:id/enrollments"
+      ],
+      "declaredPath": "/:id/enrollments",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 534,
+      "dynamic": false
+    },
+    {
+      "method": "DELETE",
+      "publicPaths": [
+        "/api/workflows/:id/enrollments/:enrollmentId"
+      ],
+      "declaredPath": "/:id/enrollments/:enrollmentId",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 600,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/docs/content"
+      ],
+      "declaredPath": "/content",
+      "source": "backend/src/routes/docs.js",
+      "line": 48,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/docs/search"
+      ],
+      "declaredPath": "/search",
+      "source": "backend/src/routes/docs.js",
+      "line": 138,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/docs/structure"
+      ],
+      "declaredPath": "/structure",
+      "source": "backend/src/routes/docs.js",
+      "line": 121,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/health"
+      ],
+      "declaredPath": "/health",
+      "source": "backend/src/index.js",
+      "line": 370,
+      "dynamic": false
+    }
+  ]
+}

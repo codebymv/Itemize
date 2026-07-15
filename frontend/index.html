@@ -49,7 +49,15 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- In-flow H1 for early FCP/LCP on /home; React replaces #root on mount (no covering shell). -->
+      <div style="padding:7rem 1rem 2rem;text-align:center;box-sizing:border-box">
+        <h1 id="lh-lcp-h1">
+          The CRM that works <span class="lh-accent">for you</span><br />
+          not against you
+        </h1>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

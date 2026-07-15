@@ -1,20 +1,20 @@
 const { Pool } = require('pg');
-const path = require('path');
 const jwt = require('jsonwebtoken');
+const {
+    getTestDatabasePoolConfig,
+    loadIntegrationTestEnvironment,
+} = require('./test-database-config');
 
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+loadIntegrationTestEnvironment();
 
 /**
  * Integration test database helper.
  *
- * Uses the real DATABASE_URL (no schema isolation), tracking every row created
- * so afterAll can delete them cleanly.  No migration run needed — the schema
- * already exists in the shared dev/test DB.
+ * Uses a dedicated TEST_DATABASE_URL and refuses to fall back to DATABASE_URL.
+ * The database must be disposable and have the current schema applied before
+ * the suite starts. Rows created through this helper are tracked for teardown.
  *
- * Safe because:
- *  - itemize.cloud has no active users (greenfield)
- *  - All seeded rows use obviously-fake test emails
- *  - teardown() always deletes created rows in FK-safe order
+ * See backend/.env.test.example for configuration.
  */
 class TestDbHelper {
     constructor() {
@@ -24,14 +24,7 @@ class TestDbHelper {
     }
 
     async setup() {
-        const dbUrl = process.env.DATABASE_URL;
-        if (!dbUrl) throw new Error('DATABASE_URL not set. Check backend/.env');
-
-        this.pool = new Pool({
-            connectionString: dbUrl,
-            ssl: { rejectUnauthorized: false },
-            max: 5,
-        });
+        this.pool = new Pool(getTestDatabasePoolConfig());
 
         // Smoke-test the connection
         await this.pool.query('SELECT 1');

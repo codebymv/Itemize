@@ -1,6 +1,6 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
-const { sendError } = require('../../utils/response');
+const { sendSuccess, sendNotFound, sendError } = require('../../utils/response');
 const crypto = require('crypto');
 const emailService = require('../../services/emailService');
 const smsService = require('../../services/smsService');
@@ -61,6 +61,25 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
         } catch (error) {
             console.error('Error fetching review requests:', error);
             return sendError(res, 'Failed to fetch review requests');
+        }
+    });
+
+    /**
+     * DELETE /api/reputation/requests/:id - Delete a review request
+     */
+    router.delete('/requests/:id', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const result = await withDbClient(pool, client => client.query(
+                `DELETE FROM review_requests
+                 WHERE id = $1 AND organization_id = $2
+                 RETURNING id`,
+                [req.params.id, req.organizationId]
+            ));
+            if (result.rows.length === 0) return sendNotFound(res, 'Review request');
+            return sendSuccess(res, { id: result.rows[0].id, deleted: true });
+        } catch (error) {
+            console.error('Error deleting review request:', error);
+            return sendError(res, 'Failed to delete review request');
         }
     });
 

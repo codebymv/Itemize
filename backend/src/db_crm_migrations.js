@@ -423,6 +423,7 @@ const runLinkExistingContentMigration = async (pool) => {
  */
 const runAllCRMMigrations = async (pool) => {
   console.log('=== Starting CRM Migrations ===');
+  let failed = 0;
   
   const migrations = [
     { name: 'Organizations', fn: runOrganizationsMigration },
@@ -439,12 +440,13 @@ const runAllCRMMigrations = async (pool) => {
     console.log(`\n--- Running ${migration.name} Migration ---`);
     const success = await migration.fn(pool);
     if (!success) {
+      failed++;
       console.error(`⚠️ ${migration.name} migration failed, continuing with next...`);
     }
   }
 
   console.log('\n=== CRM Migrations Complete ===');
-  return true;
+  return { failed };
 };
 
 module.exports = {

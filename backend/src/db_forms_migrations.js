@@ -159,6 +159,7 @@ const runFormSubmissionsMigration = async (pool) => {
  */
 const runAllFormsMigrations = async (pool) => {
     console.log('=== Starting Forms Migrations ===');
+    let failed = 0;
 
     const migrations = [
         { name: 'Forms', fn: runFormsMigration },
@@ -170,12 +171,13 @@ const runAllFormsMigrations = async (pool) => {
         console.log(`\n--- Running ${migration.name} Migration ---`);
         const success = await migration.fn(pool);
         if (!success) {
+            failed++;
             console.error(`⚠️ ${migration.name} migration failed, continuing...`);
         }
     }
 
     console.log('\n=== Forms Migrations Complete ===');
-    return true;
+    return { failed };
 };
 
 module.exports = {

@@ -300,6 +300,7 @@ const runWorkflowExecutionLogsMigration = async (pool) => {
  */
 const runAllAutomationMigrations = async (pool) => {
   console.log('=== Starting Automation Migrations ===');
+  let failed = 0;
   
   const migrations = [
     { name: 'Email Templates', fn: runEmailTemplatesMigration },
@@ -314,12 +315,13 @@ const runAllAutomationMigrations = async (pool) => {
     console.log(`\n--- Running ${migration.name} Migration ---`);
     const success = await migration.fn(pool);
     if (!success) {
+      failed++;
       console.error(`⚠️ ${migration.name} migration failed, continuing with next...`);
     }
   }
 
   console.log('\n=== Automation Migrations Complete ===');
-  return true;
+  return { failed };
 };
 
 module.exports = {

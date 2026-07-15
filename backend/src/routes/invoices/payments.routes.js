@@ -1,7 +1,7 @@
 const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
-const { withDbClient } = require('../../utils/db');
-const { sendSuccess, sendError } = require('../../utils/response');
+const { withDbClient, withTransaction } = require('../../utils/db');
+const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
 const { PAYMENT_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
@@ -10,6 +10,111 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     // ======================
     // Payments History
     // ======================
+
+    /**
+     * POST /api/invoices/payments - Record a manual organization payment
+     */
+    router.post('/payments', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
+        try {
+            const {
+                invoice_id,
+                contact_id,
+                amount,
+                currency = 'USD',
+                payment_method = 'other',
+                status = 'succeeded',
+                payment_date,
+                notes,
+            } = req.body || {};
+            const parsedAmount = Number(amount);
+            const allowedMethods = ['card', 'bank_transfer', 'cash', 'check', 'other'];
+            const allowedStatuses = ['pending', 'processing', 'succeeded', 'failed'];
+
+            if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                return sendBadRequest(res, 'Valid amount is required', 'amount');
+            }
+            if (!allowedMethods.includes(payment_method)) {
+                return sendBadRequest(res, 'Invalid payment method', 'payment_method');
+            }
+            if (!allowedStatuses.includes(status)) {
+                return sendBadRequest(res, 'Invalid payment status', 'status');
+            }
+            if (!/^[A-Za-z]{3}$/.test(currency)) {
+                return sendBadRequest(res, 'Currency must be a three-letter code', 'currency');
+            }
+
+            const paymentResult = await withTransaction(pool, async (client) => {
+                let invoice = null;
+                if (invoice_id != null) {
+                    const invoiceResult = await client.query(
+                        `SELECT id, contact_id, total, amount_paid
+                         FROM invoices
+                         WHERE id = $1 AND organization_id = $2
+                         FOR UPDATE`,
+                        [invoice_id, req.organizationId]
+                    );
+                    if (invoiceResult.rows.length === 0) return { notFound: 'Invoice' };
+                    invoice = invoiceResult.rows[0];
+                }
+
+                const effectiveContactId = contact_id ?? invoice?.contact_id ?? null;
+                if (effectiveContactId != null) {
+                    const contactResult = await client.query(
+                        'SELECT id FROM contacts WHERE id = $1 AND organization_id = $2',
+                        [effectiveContactId, req.organizationId]
+                    );
+                    if (contactResult.rows.length === 0) return { notFound: 'Contact' };
+                }
+
+                const paymentInsert = await client.query(`
+                    INSERT INTO payments (
+                        organization_id, invoice_id, contact_id, amount, currency,
+                        payment_method, status, paid_at, notes
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6, $7,
+                        CASE WHEN $7 = 'succeeded' THEN COALESCE($8::timestamptz, CURRENT_TIMESTAMP) ELSE NULL END,
+                        $9
+                    )
+                    RETURNING ${selectColumns(PAYMENT_COLUMNS)}
+                `, [
+                    req.organizationId,
+                    invoice?.id || null,
+                    effectiveContactId,
+                    parsedAmount,
+                    currency.toUpperCase(),
+                    payment_method,
+                    status,
+                    payment_date || null,
+                    notes || null,
+                ]);
+
+                let invoiceUpdate = null;
+                if (invoice && status === 'succeeded') {
+                    const newAmountPaid = Number(invoice.amount_paid || 0) + parsedAmount;
+                    const newAmountDue = Math.max(0, Number(invoice.total) - newAmountPaid);
+                    const newStatus = newAmountDue <= 0 ? 'paid' : 'partial';
+                    await client.query(`
+                        UPDATE invoices SET
+                            amount_paid = $1,
+                            amount_due = $2,
+                            status = $3::VARCHAR(20),
+                            paid_at = CASE WHEN $3::VARCHAR(20) = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = $4
+                    `, [newAmountPaid, newAmountDue, newStatus, invoice.id]);
+                    invoiceUpdate = { amount_paid: newAmountPaid, amount_due: newAmountDue, status: newStatus };
+                }
+
+                return { payment: paymentInsert.rows[0], invoice: invoiceUpdate };
+            });
+
+            if (paymentResult.notFound) return sendNotFound(res, paymentResult.notFound);
+            return sendCreated(res, paymentResult);
+        } catch (error) {
+            console.error('Error recording payment:', error);
+            return sendError(res, 'Failed to record payment');
+        }
+    }));
 
     /**
      * GET /api/invoices/payments - List all payments

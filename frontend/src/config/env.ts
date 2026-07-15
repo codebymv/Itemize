@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   // Mode
-  MODE: z.enum(['development', 'production']).default('development'),
+  MODE: z.enum(['development', 'test', 'production']).default('development'),
   PROD: z.boolean().default(false),
   DEV: z.boolean().default(true),
 

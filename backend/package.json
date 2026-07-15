@@ -15,7 +15,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:integration": "jest --testPathIgnorePatterns=\"/node_modules/|/dist/\" --testMatch=\"**/src/__tests__/integration/**/*.test.js\" --runInBand --testTimeout=60000 --globalSetup=./src/__tests__/integration/global-setup.js --globalTeardown=./src/__tests__/integration/global-teardown.js"
+    "test:integration:config": "jest src/__tests__/utils/test-database-config.test.js --runInBand",
+    "test:integration": "jest --testPathIgnorePatterns=\"/node_modules/|/dist/\" --testMatch=\"**/src/__tests__/integration/**/*.test.js\" --runInBand --testTimeout=60000 --globalSetup=./src/__tests__/integration/global-setup.js --globalTeardown=./src/__tests__/integration/global-teardown.js",
+    "test:integration:fresh": "node scripts/run-integration-tests-fresh.js",
+    "db:test:reset": "node scripts/initialize-test-database.js --reset --confirm-reset",
+    "db:test:verify": "node scripts/initialize-test-database.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.975.0",

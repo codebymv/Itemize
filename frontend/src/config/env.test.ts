@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { env } from './env';
 
-describe.skip('Environment Validation', () => {
-  it('is tested in application initialization', () => {
+describe('Environment Validation', () => {
+  it('accepts the Vitest runtime mode during application initialization', () => {
     expect(env).toBeDefined();
+    expect(env.MODE).toBe('test');
   });
 });

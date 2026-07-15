@@ -20,7 +20,11 @@
     "lint:frontend": "cd frontend && node ../node_modules/eslint/bin/eslint.js .",
     "docs:sync": "node sync-docs.js sync",
     "docs:watch": "node sync-docs.js watch",
-    "docs:check": "node sync-docs.js check"
+    "docs:check": "node sync-docs.js check",
+    "api:surface": "node scripts/generate-api-surface.js",
+    "api:surface:check": "node scripts/generate-api-surface.js --check",
+    "api:ledger": "npm run api:surface && node scripts/generate-cutover-ledger.js",
+    "api:ledger:check": "npm run api:surface:check && node scripts/generate-cutover-ledger.js --check"
   },
   "devDependencies": {
     "chokidar": "^3.5.3",

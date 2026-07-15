@@ -261,7 +261,7 @@ function registerApiRoutes({
     logger.info('Analytics routes initialized');
     app.use('/api/contacts', contactProfileRoutes);
     logger.info('Contact Profile routes initialized');
-    app.use('/api', searchRoutes);
+    app.use('/api/search', searchRoutes);
     logger.info('Search routes initialized');
     app.use('/api/webhooks', webhooksRoutes);
     logger.info('Webhooks routes initialized');

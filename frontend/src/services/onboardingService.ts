@@ -60,8 +60,9 @@ export const onboardingService = {
    * Reset onboarding progress
    */
   async reset(feature?: string): Promise<OnboardingProgress> {
-    const url = feature ? `/api/onboarding/reset?feature=${feature}` : '/api/onboarding/reset';
-    const response = await api.delete(url);
+    const response = await api.delete('/api/onboarding/reset', {
+      params: feature ? { feature } : undefined,
+    });
     return response.data || {};
   },
 };

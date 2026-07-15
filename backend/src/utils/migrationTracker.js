@@ -88,15 +88,21 @@ const runMigrationOnce = async (pool, migrationName, migrationFn) => {
   
   try {
     const result = await migrationFn(pool);
+    const reportedFailures = result && typeof result === 'object' && Number(result.failed) > 0;
+    const succeeded = result !== false && !reportedFailures;
     
-    if (result !== false) {
+    if (succeeded) {
       // Record successful migration
       await recordMigration(pool, migrationName);
       logger.info(`✅ Migration completed: ${migrationName}`);
       console.log(`✅ Migration completed: ${migrationName}`);
+    } else if (reportedFailures) {
+      logger.error(`Migration group reported failures: ${migrationName}`, {
+        failed: Number(result.failed),
+      });
     }
     
-    return result !== false;
+    return succeeded;
   } catch (error) {
     logger.error(`❌ Migration failed: ${migrationName}`, { error: error.message });
     console.error(`❌ Migration failed: ${migrationName}:`, error.message);

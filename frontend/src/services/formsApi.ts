@@ -140,7 +140,7 @@ export interface PublicFormData {
 }
 
 export const getPublicForm = async (slug: string): Promise<PublicFormData> => {
-    const response = await api.get(`/api/public/form/${slug}`);
+    const response = await api.get(`/api/forms/public/form/${slug}`);
     return unwrapResponse<PublicFormData>(response.data);
 };
 
@@ -148,7 +148,7 @@ export const submitPublicForm = async (
     slug: string,
     data: JsonRecord
 ): Promise<{ success: boolean; message: string; redirect_url?: string }> => {
-    const response = await api.post(`/api/public/form/${slug}`, { data });
+    const response = await api.post(`/api/forms/public/form/${slug}`, { data });
     return unwrapResponse<{ success: boolean; message: string; redirect_url?: string }>(response.data);
 };
 
