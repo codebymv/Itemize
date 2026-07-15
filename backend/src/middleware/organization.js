@@ -10,6 +10,18 @@
  * @returns {Object} Middleware functions
  */
 module.exports = (pool) => {
+    const requestedOrganizationId = (req) =>
+        req.query?.organization_id ??
+        req.body?.organization_id ??
+        req.headers['x-organization-id'];
+
+    const parseOrganizationId = (value) => {
+        if (value === undefined || value === null || value === '') return null;
+        const normalized = String(value).trim();
+        if (!/^[1-9]\d*$/.test(normalized)) return NaN;
+        const parsed = Number(normalized);
+        return Number.isSafeInteger(parsed) ? parsed : NaN;
+    };
     
     /**
      * Middleware to require organization context
@@ -20,10 +32,20 @@ module.exports = (pool) => {
      */
     const requireOrganization = async (req, res, next) => {
         try {
-            // Get organization ID from multiple sources
-            const organizationId = req.query.organization_id || 
-                                   req.body.organization_id || 
-                                   req.headers['x-organization-id'];
+            if (!req.user?.id) {
+                return res.status(401).json({
+                    error: 'Authentication required',
+                    code: 'AUTH_REQUIRED'
+                });
+            }
+
+            const organizationId = parseOrganizationId(requestedOrganizationId(req));
+            if (Number.isNaN(organizationId)) {
+                return res.status(400).json({
+                    error: 'Organization ID must be a positive integer',
+                    code: 'INVALID_ORGANIZATION_ID'
+                });
+            }
 
             const client = await pool.connect();
             
@@ -31,8 +53,8 @@ module.exports = (pool) => {
                 let orgId;
                 let role;
 
-                if (organizationId) {
-                    orgId = parseInt(organizationId);
+                if (organizationId !== null) {
+                    orgId = organizationId;
                     
                     // Verify membership
                     const memberResult = await client.query(
@@ -110,24 +132,21 @@ module.exports = (pool) => {
      */
     const optionalOrganization = async (req, res, next) => {
         try {
-            const organizationId = req.query.organization_id || 
-                                   req.body.organization_id || 
-                                   req.headers['x-organization-id'];
+            if (!req.user?.id) return next();
 
-            if (!organizationId) {
-                return next();
-            }
+            const organizationId = parseOrganizationId(requestedOrganizationId(req));
+            if (organizationId === null || Number.isNaN(organizationId)) return next();
 
             const client = await pool.connect();
             
             try {
                 const memberResult = await client.query(
                     'SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2',
-                    [parseInt(organizationId), req.user.id]
+                    [organizationId, req.user.id]
                 );
 
                 if (memberResult.rows.length > 0) {
-                    req.organizationId = parseInt(organizationId);
+                    req.organizationId = organizationId;
                     req.orgRole = memberResult.rows[0].role;
                 }
             } finally {

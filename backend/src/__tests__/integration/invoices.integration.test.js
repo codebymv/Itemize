@@ -74,7 +74,6 @@ describe('Invoices Integration Tests', () => {
 
     describe('CRUD & multi-tenant isolation', () => {
         let invoiceId;
-        let invoiceNumber;
 
         it('creates an invoice for User A org', async () => {
             const res = await request(app)
@@ -101,7 +100,6 @@ describe('Invoices Integration Tests', () => {
             expect(Number(inv.total)).toBe(200);
 
             invoiceId = inv.id;
-            invoiceNumber = inv.invoice_number;
         });
 
         it('rejects invoice creation without line items', async () => {
@@ -341,6 +339,27 @@ describe('Invoices Integration Tests', () => {
             expect(num2).toBe(num1 + 1);
 
             // Cleanup
+            await Promise.all([r1.body.data.id, r2.body.data.id].map(id =>
+                request(app)
+                    .delete(`/api/invoices/${id}`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .set('x-organization-id', String(userA.org.id))
+            ));
+        });
+
+        it('allocates distinct invoice numbers for concurrent creates', async () => {
+            const createInvoice = () => request(app)
+                .post('/api/invoices')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send(invoicePayload());
+
+            const [r1, r2] = await Promise.all([createInvoice(), createInvoice()]);
+
+            expect(r1.status).toBe(201);
+            expect(r2.status).toBe(201);
+            expect(r1.body.data.invoice_number).not.toBe(r2.body.data.invoice_number);
+
             await Promise.all([r1.body.data.id, r2.body.data.id].map(id =>
                 request(app)
                     .delete(`/api/invoices/${id}`)

@@ -294,6 +294,40 @@ describe('Estimates Integration Tests', () => {
         });
     });
 
+    describe('Estimate conversion concurrency', () => {
+        it('creates exactly one invoice when conversion requests race', async () => {
+            const createRes = await request(app)
+                .post('/api/invoices/estimates')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send(estimatePayload());
+            const estimateId = createRes.body.data.id;
+
+            const convert = () => request(app)
+                .post(`/api/invoices/estimates/${estimateId}/convert-to-invoice`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({});
+
+            const responses = await Promise.all([convert(), convert()]);
+            expect(responses.map(response => response.status).sort()).toEqual([200, 400]);
+
+            const source = await dbHelper.pool.query(
+                'SELECT converted_invoice_id FROM estimates WHERE id = $1 AND organization_id = $2',
+                [estimateId, userA.org.id]
+            );
+            const invoiceId = source.rows[0].converted_invoice_id;
+            const invoiceCount = await dbHelper.pool.query(
+                'SELECT COUNT(*)::int AS count FROM invoices WHERE id = $1 AND organization_id = $2',
+                [invoiceId, userA.org.id]
+            );
+            expect(invoiceCount.rows[0].count).toBe(1);
+
+            await dbHelper.pool.query('DELETE FROM estimates WHERE id = $1', [estimateId]);
+            await dbHelper.pool.query('DELETE FROM invoices WHERE id = $1', [invoiceId]);
+        });
+    });
+
     // ── Update blocked on non-editable status ─────────────────────────────────
 
     describe('Edit restriction on accepted/declined estimates', () => {

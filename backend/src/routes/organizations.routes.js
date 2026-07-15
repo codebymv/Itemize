@@ -24,6 +24,13 @@ const { organizationColumns, organizationMemberColumns } = require('./organizati
  */
 module.exports = (pool, authenticateJWT) => {
 
+  const parsePositiveInteger = (value) => {
+    const normalized = String(value ?? '').trim();
+    if (!/^[1-9]\d*$/.test(normalized)) return null;
+    const parsed = Number(normalized);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  };
+
   /**
    * Helper to generate URL-friendly slug from name
    */
@@ -41,9 +48,9 @@ module.exports = (pool, authenticateJWT) => {
   const requireOrgAccess = (requiredRoles = ['owner', 'admin', 'member', 'viewer']) => {
     return async (req, res, next) => {
       try {
-        const organizationId = req.params.organizationId || req.body.organization_id;
-        if (!organizationId) {
-          return sendBadRequest(res, 'Organization ID required');
+        const organizationId = parsePositiveInteger(req.params.organizationId ?? req.body?.organization_id);
+        if (organizationId === null) {
+          return sendBadRequest(res, 'Organization ID must be a positive integer');
         }
 
         const result = await withDbClient(pool, async (client) => {
@@ -63,7 +70,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         req.orgRole = userRole;
-        req.organizationId = parseInt(organizationId);
+        req.organizationId = organizationId;
         next();
       } catch (error) {
         console.error('Error checking org access:', error);
@@ -233,8 +240,12 @@ module.exports = (pool, authenticateJWT) => {
 
   // Update member role
   router.put('/:organizationId/members/:memberId', authenticateJWT, requireOrgAccess(['owner', 'admin']), asyncHandler(async (req, res) => {
-      const { memberId } = req.params;
+      const memberId = parsePositiveInteger(req.params.memberId);
       const { role } = req.body;
+
+      if (memberId === null) {
+        return sendBadRequest(res, 'Member ID must be a positive integer');
+      }
 
       const validRoles = ['admin', 'member', 'viewer'];
       if (!validRoles.includes(role)) {
@@ -275,7 +286,11 @@ module.exports = (pool, authenticateJWT) => {
 
   // Remove a member from the organization
   router.delete('/:organizationId/members/:memberId', authenticateJWT, requireOrgAccess(['owner', 'admin']), asyncHandler(async (req, res) => {
-      const { memberId } = req.params;
+      const memberId = parsePositiveInteger(req.params.memberId);
+
+      if (memberId === null) {
+        return sendBadRequest(res, 'Member ID must be a positive integer');
+      }
 
       const memberCheck = await withDbClient(pool, async (client) => {
         return client.query(

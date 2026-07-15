@@ -19,22 +19,13 @@ export function useGoogleSignIn() {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        logger.debug('auth', 'Google login successful, getting user info');
-
-        const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-
-        const googleUser = userResponse.data;
+        logger.debug('auth', 'Google login successful, establishing server session');
         const apiUrl = getApiUrl();
 
         const response = await axios.post(
           `${apiUrl}/api/auth/google-login`,
           {
-            googleId: googleUser.sub,
-            email: googleUser.email,
-            name: googleUser.name,
-            picture: googleUser.picture,
+            accessToken: tokenResponse.access_token,
           },
           { withCredentials: true }
         );

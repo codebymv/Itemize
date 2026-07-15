@@ -179,4 +179,99 @@ describe('auth cookies and csrf integration', () => {
         expect(res.body.token).toBeUndefined();
         expect(res.headers['set-cookie'].join(';')).toContain('itemize_auth=');
     });
+
+    it('rejects session refresh without a refresh cookie', async () => {
+        const pool = createPool(async () => ({ rows: [] }));
+
+        const res = await request(createApp(pool))
+            .post('/api/auth/refresh')
+            .send({});
+
+        expect(res.status).toBe(401);
+        expect(res.body.error).toBe('No refresh token provided');
+        expect(pool.connect).not.toHaveBeenCalled();
+    });
+
+    it('clears both session cookies on a csrf-protected logout', async () => {
+        const passwordHash = await bcrypt.hash('correct-password', 4);
+        const pool = createPool(async () => ({
+            rows: [{
+                id: 7,
+                email: 'user@example.com',
+                name: 'Test User',
+                password_hash: passwordHash,
+                provider: 'email',
+                email_verified: true,
+                role: 'USER',
+            }],
+        }));
+        const agent = request.agent(createApp(pool));
+
+        await agent
+            .post('/api/auth/login')
+            .send({ email: 'user@example.com', password: 'correct-password' })
+            .expect(200);
+        const csrf = await agent.get('/api/auth/csrf').expect(200);
+        const res = await agent
+            .post('/api/auth/logout')
+            .set('x-csrf-token', csrf.body.csrfToken)
+            .send({});
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        const cookies = res.headers['set-cookie'].join(';').toLowerCase();
+        expect(cookies).toContain('itemize_auth=');
+        expect(cookies).toContain('itemize_refresh=');
+        expect(cookies).toContain('max-age=0');
+    });
+
+    it('rejects current-user lookup without an authentication cookie', async () => {
+        const pool = createPool(async () => ({ rows: [] }));
+
+        const res = await request(createApp(pool)).get('/api/auth/me');
+
+        expect(res.status).toBe(401);
+        expect(res.body.error).toBe('Authentication required');
+        expect(res.headers['cache-control']).toContain('no-store');
+        expect(pool.connect).not.toHaveBeenCalled();
+    });
+
+    it('updates the authenticated profile with a trimmed name', async () => {
+        const passwordHash = await bcrypt.hash('correct-password', 4);
+        const pool = createPool(async sql => {
+            if (String(sql).includes('password_hash')) {
+                return {
+                    rows: [{
+                        id: 7,
+                        email: 'user@example.com',
+                        name: 'Test User',
+                        password_hash: passwordHash,
+                        provider: 'email',
+                        email_verified: true,
+                        role: 'USER',
+                    }],
+                };
+            }
+            if (String(sql).includes('UPDATE users SET name')) {
+                return { rows: [{ id: 7, email: 'user@example.com', name: 'Updated User' }] };
+            }
+            return { rows: [] };
+        });
+        const agent = request.agent(createApp(pool));
+
+        await agent
+            .post('/api/auth/login')
+            .send({ email: 'user@example.com', password: 'correct-password' })
+            .expect(200);
+        const csrf = await agent.get('/api/auth/csrf').expect(200);
+        const res = await agent
+            .put('/api/auth/me')
+            .set('x-csrf-token', csrf.body.csrfToken)
+            .send({ name: '  Updated User  ' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.name).toBe('Updated User');
+        const update = pool.client.query.mock.calls.find(([sql]) => String(sql).includes('UPDATE users SET name'));
+        expect(update[1]).toEqual(['Updated User', 7]);
+    });
 });

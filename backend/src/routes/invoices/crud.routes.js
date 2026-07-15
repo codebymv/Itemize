@@ -3,41 +3,10 @@ const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError, sendPaginated, getPaginationParams, buildPagination } = require('../../utils/response');
 const { INVOICE_COLUMNS, INVOICE_ITEM_COLUMNS, PAYMENT_COLUMNS, selectColumns } = require('./columns');
+const { allocateInvoiceNumber } = require('../../services/invoice-number.service');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
     const router = express.Router();
-
-    /**
-     * Generate next invoice number
-     */
-    async function getNextInvoiceNumber(client, organizationId) {
-        const settingsResult = await client.query(
-            'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
-            [organizationId]
-        );
-
-        let prefix = 'INV-';
-        let nextNumber = 1;
-
-        if (settingsResult.rows.length > 0) {
-            prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
-            nextNumber = settingsResult.rows[0].next_invoice_number || 1;
-
-            // Increment for next time
-            await client.query(
-                'UPDATE payment_settings SET next_invoice_number = $1, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $2',
-                [nextNumber + 1, organizationId]
-            );
-        } else {
-            // Create settings if not exists
-            await client.query(`
-                INSERT INTO payment_settings (organization_id, next_invoice_number)
-                VALUES ($1, 2)
-            `, [organizationId]);
-        }
-
-        return `${prefix}${String(nextNumber).padStart(5, '0')}`;
-    }
 
     // ======================
     // Invoice CRUD
@@ -199,7 +168,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
 
             const invoice = await withTransaction(pool, async (client) => {
                 // Get next invoice number
-                const invoiceNumber = await getNextInvoiceNumber(client, req.organizationId);
+                const invoiceNumber = await allocateInvoiceNumber(client, req.organizationId);
 
                 // Calculate totals
                 let subtotal = 0;

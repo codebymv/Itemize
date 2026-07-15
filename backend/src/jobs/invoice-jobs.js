@@ -7,6 +7,7 @@
 
 const { logger } = require('../utils/logger');
 const { invoiceColumns, recurringTemplateColumns } = require('../routes/recurring-columns');
+const { allocateInvoiceNumber } = require('../services/invoice-number.service');
 
 /**
  * Mark overdue invoices
@@ -60,9 +61,8 @@ async function runRecurringInvoiceGeneration(pool) {
         
         // Find active recurring templates due for generation
         const templatesResult = await client.query(`
-            SELECT ${recurringTemplateColumns('r')}, c.email as contact_email
+            SELECT r.id
             FROM recurring_invoice_templates r
-            LEFT JOIN contacts c ON r.contact_id = c.id
             WHERE r.status = 'active'
             AND r.next_run_date <= CURRENT_DATE
             AND (r.end_date IS NULL OR r.end_date >= CURRENT_DATE)
@@ -70,35 +70,31 @@ async function runRecurringInvoiceGeneration(pool) {
 
         const generated = [];
 
-        for (const template of templatesResult.rows) {
+        for (const candidate of templatesResult.rows) {
             try {
                 await client.query('BEGIN');
 
-                // Get next invoice number
-                const settingsResult = await client.query(
-                    'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
-                    [template.organization_id]
-                );
+                // Claim and re-read the due template in this transaction. A second
+                // job runner skips a locked row, and a later runner no longer
+                // matches after next_run_date advances.
+                const claimedResult = await client.query(`
+                    SELECT ${recurringTemplateColumns('r')}, c.email as contact_email
+                    FROM recurring_invoice_templates r
+                    LEFT JOIN contacts c ON r.contact_id = c.id
+                    WHERE r.id = $1
+                    AND r.status = 'active'
+                    AND r.next_run_date <= CURRENT_DATE
+                    AND (r.end_date IS NULL OR r.end_date >= CURRENT_DATE)
+                    FOR UPDATE OF r SKIP LOCKED
+                `, [candidate.id]);
 
-                let prefix = 'INV-';
-                let nextNumber = 1;
-
-                if (settingsResult.rows.length > 0) {
-                    prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
-                    nextNumber = settingsResult.rows[0].next_invoice_number || 1;
-
-                    await client.query(
-                        'UPDATE payment_settings SET next_invoice_number = $1, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $2',
-                        [nextNumber + 1, template.organization_id]
-                    );
-                } else {
-                    await client.query(`
-                        INSERT INTO payment_settings (organization_id, next_invoice_number)
-                        VALUES ($1, 2)
-                    `, [template.organization_id]);
+                if (claimedResult.rows.length === 0) {
+                    await client.query('ROLLBACK');
+                    continue;
                 }
 
-                const invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+                const template = claimedResult.rows[0];
+                const invoiceNumber = await allocateInvoiceNumber(client, template.organization_id);
 
                 // Calculate due date based on payment terms (default 30 days)
                 const dueDate = new Date();
@@ -213,11 +209,12 @@ async function runRecurringInvoiceGeneration(pool) {
                         last_generated_at = CURRENT_TIMESTAMP,
                         status = $2,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $3
+                    WHERE id = $3 AND organization_id = $4
                 `, [
                     isCompleted ? template.end_date : nextRunDate,
                     isCompleted ? 'completed' : 'active',
-                    template.id
+                    template.id,
+                    template.organization_id
                 ]);
 
                 await client.query('COMMIT');
@@ -232,7 +229,7 @@ async function runRecurringInvoiceGeneration(pool) {
                 logger.info(`Generated invoice ${invoiceNumber} from recurring template ${template.template_name}`);
             } catch (templateError) {
                 await client.query('ROLLBACK');
-                logger.error(`Error generating invoice from template ${template.id}:`, templateError);
+                logger.error(`Error generating invoice from template ${candidate.id}:`, templateError);
             }
         }
 

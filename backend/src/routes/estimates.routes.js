@@ -4,12 +4,12 @@
  */
 
 const express = require('express');
-const router = express.Router();
 const { logger } = require('../utils/logger');
 const { withDbClient, withTransaction } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 const emailService = require('../services/emailService');
 const { sendEstimateEmail } = require('../services/invoice-email.service');
+const { allocateEstimateNumber, allocateInvoiceNumber } = require('../services/invoice-number.service');
 const {
     ESTIMATE_ITEM_UNNEST_COLUMNS,
     INVOICE_ITEM_UNNEST_COLUMNS,
@@ -20,24 +20,8 @@ const {
 } = require('./estimates.columns');
 
 module.exports = (pool, authenticateJWT) => {
+    const router = express.Router();
     const { requireOrganization } = require('../middleware/organization')(pool);
-
-    /**
-     * Generate next estimate number
-     */
-    async function getNextEstimateNumber(client, organizationId) {
-        // Check if we have a sequence for estimates
-        const result = await client.query(`
-            SELECT COALESCE(MAX(
-                CAST(REGEXP_REPLACE(estimate_number, '[^0-9]', '', 'g') AS INTEGER)
-            ), 0) + 1 as next_num
-            FROM estimates 
-            WHERE organization_id = $1
-        `, [organizationId]);
-        
-        const nextNum = result.rows[0]?.next_num || 1;
-        return `EST-${String(nextNum).padStart(5, '0')}`;
-    }
 
     /**
      * GET /api/invoices/estimates - List estimates
@@ -164,7 +148,7 @@ module.exports = (pool, authenticateJWT) => {
             }
 
             const estimate = await withTransaction(pool, async (client) => {
-                const estimateNumber = await getNextEstimateNumber(client, req.organizationId);
+                const estimateNumber = await allocateEstimateNumber(client, req.organizationId);
 
                 // Calculate totals
                 let subtotal = 0;
@@ -698,6 +682,7 @@ module.exports = (pool, authenticateJWT) => {
             const result = await withTransaction(pool, async (client) => {
                 const estimateResult = await client.query(`
                     SELECT ${estimateColumns()} FROM estimates WHERE id = $1 AND organization_id = $2
+                    FOR UPDATE
                 `, [id, req.organizationId]);
 
                 if (estimateResult.rows.length === 0) {
@@ -711,33 +696,12 @@ module.exports = (pool, authenticateJWT) => {
                 }
 
                 const itemsResult = await client.query(`
-                    SELECT ${estimateItemColumns()} FROM estimate_items WHERE estimate_id = $1 ORDER BY sort_order
-                `, [id]);
+                    SELECT ${estimateItemColumns()} FROM estimate_items
+                    WHERE estimate_id = $1 AND organization_id = $2
+                    ORDER BY sort_order
+                `, [id, req.organizationId]);
 
-                const settingsResult = await client.query(
-                    'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
-                    [req.organizationId]
-                );
-
-                let prefix = 'INV-';
-                let nextNumber = 1;
-
-                if (settingsResult.rows.length > 0) {
-                    prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
-                    nextNumber = settingsResult.rows[0].next_invoice_number || 1;
-
-                    await client.query(
-                        'UPDATE payment_settings SET next_invoice_number = $1, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $2',
-                        [nextNumber + 1, req.organizationId]
-                    );
-                } else {
-                    await client.query(`
-                        INSERT INTO payment_settings (organization_id, next_invoice_number)
-                        VALUES ($1, 2)
-                    `, [req.organizationId]);
-                }
-
-                const invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+                const invoiceNumber = await allocateInvoiceNumber(client, req.organizationId);
 
                 const dueDate = new Date();
                 dueDate.setDate(dueDate.getDate() + 30);
@@ -832,8 +796,8 @@ module.exports = (pool, authenticateJWT) => {
                         converted_invoice_id = $1,
                         status = 'accepted',
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $2
-                `, [invoiceId, id]);
+                    WHERE id = $2 AND organization_id = $3
+                `, [invoiceId, id, req.organizationId]);
 
                 return { status: 'ok', invoiceId, invoiceNumber };
             });

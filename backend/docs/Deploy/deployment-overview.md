@@ -78,6 +78,20 @@ Environment variables are managed through Railway's dashboard. Key variables inc
 
 Deployment to Railway is typically automated upon pushing changes to the main branch. Manual deployments can be triggered via the Railway CLI or dashboard.
 
+### Production Migration Order
+
+Production schema changes must be applied explicitly before the backend starts:
+
+```bash
+cd backend
+npm install
+node scripts/run-migrations.js
+npm test
+npm start
+```
+
+The backend no longer runs schema-changing startup migrations in production unless `RUN_STARTUP_MIGRATIONS=true` is set for an emergency/manual recovery window. Normal production deploys should leave that flag unset so failed or missing migrations block startup instead of being hidden during boot.
+
 ### Automated Deployment (Recommended)
 
 1.  **Connect to GitHub**: Link your GitHub repository to a Railway project.

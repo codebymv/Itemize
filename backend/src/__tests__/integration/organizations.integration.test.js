@@ -125,6 +125,14 @@ describe('Organizations Integration Tests', () => {
             expect(res.status).toBe(403);
         });
 
+        it('rejects a malformed organization ID as bad input', async () => {
+            const res = await request(app)
+                .get('/api/organizations/not-an-id')
+                .set('Cookie', [`itemize_auth=${owner.token}`]);
+
+            expect(res.status).toBe(400);
+        });
+
         it('owner can update the org name', async () => {
             const res = await request(app)
                 .put(`/api/organizations/${createdOrgId}`)
@@ -242,6 +250,15 @@ describe('Organizations Integration Tests', () => {
             expect(res.status).toBe(400);
         });
 
+        it('rejects a malformed member ID as bad input', async () => {
+            const res = await request(app)
+                .put(`/api/organizations/${sharedOrgId}/members/not-an-id`)
+                .set('Cookie', [`itemize_auth=${owner.token}`])
+                .send({ role: 'viewer' });
+
+            expect(res.status).toBe(400);
+        });
+
         it('cannot change the owner role via member update', async () => {
             // Get the owner's membership record
             const membersRes = await request(app)
@@ -308,7 +325,6 @@ describe('Organizations Integration Tests', () => {
 
     describe('Leave organization', () => {
         let leaveOrgId;
-        let leaveMemberId;
 
         beforeAll(async () => {
             // Create a fresh org and add a member who will leave
@@ -322,7 +338,7 @@ describe('Organizations Integration Tests', () => {
                 .post(`/api/organizations/${leaveOrgId}/members`)
                 .set('Cookie', [`itemize_auth=${owner.token}`])
                 .send({ email: member.user.email, role: 'member' });
-            leaveMemberId = inviteRes.body.data.id;
+            expect(inviteRes.status).toBe(201);
         });
 
         afterAll(async () => {

@@ -154,7 +154,7 @@ GraphQL is a good fit for this app because the domain is relationship-heavy and 
 ## Testing & Pre-Cutover Verification Plan
 
 ### Existing Test Coverage Analysis
-The earlier 8-suite/73-test analysis is stale. The 2026-07-15 baseline has 412 static route declarations (407 unique resolved method/path operations), 31 backend test files, 16 real-PostgreSQL integration suites, and 6 frontend test files. Existing integration coverage includes several core domains and cross-organization denial cases, but it remains much smaller than the API surface.
+The earlier 8-suite/73-test analysis is stale. The 2026-07-15 baseline has 412 static route declarations (407 unique resolved method/path operations), 38 backend test files, 16 real-PostgreSQL integration suites, and 6 frontend test files. Existing integration coverage includes several core domains and cross-organization denial cases, but it remains much smaller than the API surface.
 
 The authoritative counts, known gaps, and gates are maintained in [GraphQL + NestJS cutover readiness](!docs/API/graphql-nestjs-cutover-readiness.md) and the generated [REST surface baseline](!docs/API/generated/rest-surface.md).
 

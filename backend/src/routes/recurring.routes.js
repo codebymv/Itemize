@@ -4,12 +4,13 @@
  */
 
 const express = require('express');
-const router = express.Router();
 const { logger } = require('../utils/logger');
 const { withDbClient } = require('../utils/db');
 const { invoiceColumns, recurringTemplateColumns } = require('./recurring-columns');
+const { allocateInvoiceNumber } = require('../services/invoice-number.service');
 
 module.exports = (pool, authenticateJWT) => {
+    const router = express.Router();
     const { requireOrganization } = require('../middleware/organization')(pool);
 
     /**
@@ -479,6 +480,7 @@ module.exports = (pool, authenticateJWT) => {
                     FROM recurring_invoice_templates r
                     LEFT JOIN contacts c ON r.contact_id = c.id
                     WHERE r.id = $1 AND r.organization_id = $2
+                    FOR UPDATE OF r
                 `, [id, req.organizationId]);
 
                 if (templateResult.rows.length === 0) {
@@ -494,31 +496,7 @@ module.exports = (pool, authenticateJWT) => {
                     return res.status(400).json({ error: 'Cannot generate invoice from completed template' });
                 }
 
-                // Get next invoice number
-                const settingsResult = await client.query(
-                    'SELECT invoice_prefix, next_invoice_number FROM payment_settings WHERE organization_id = $1',
-                    [req.organizationId]
-                );
-
-                let prefix = 'INV-';
-                let nextNumber = 1;
-
-                if (settingsResult.rows.length > 0) {
-                    prefix = settingsResult.rows[0].invoice_prefix || 'INV-';
-                    nextNumber = settingsResult.rows[0].next_invoice_number || 1;
-
-                    await client.query(
-                        'UPDATE payment_settings SET next_invoice_number = $1, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $2',
-                        [nextNumber + 1, req.organizationId]
-                    );
-                } else {
-                    await client.query(`
-                        INSERT INTO payment_settings (organization_id, next_invoice_number)
-                        VALUES ($1, 2)
-                    `, [req.organizationId]);
-                }
-
-                const invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+                const invoiceNumber = await allocateInvoiceNumber(client, req.organizationId);
 
                 // Calculate due date based on payment terms (default 30 days)
                 const dueDate = new Date();
@@ -597,11 +575,12 @@ module.exports = (pool, authenticateJWT) => {
                         last_generated_at = CURRENT_TIMESTAMP,
                         status = $2,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $3
+                    WHERE id = $3 AND organization_id = $4
                 `, [
                     isCompleted ? template.end_date : nextRunDate,
                     isCompleted ? 'completed' : template.status,
-                    template.id
+                    template.id,
+                    req.organizationId
                 ]);
 
                 await client.query('COMMIT');
@@ -708,9 +687,9 @@ module.exports = (pool, authenticateJWT) => {
                 const itemsResult = await client.query(`
                     SELECT name, description, quantity, unit_price, tax_rate, product_id
                     FROM invoice_items
-                    WHERE invoice_id = $1
+                    WHERE invoice_id = $1 AND organization_id = $2
                     ORDER BY id
-                `, [invoiceId]);
+                `, [invoiceId, req.organizationId]);
 
                 const items = itemsResult.rows.map(item => ({
                     name: item.name,
