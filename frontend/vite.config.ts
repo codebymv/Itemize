@@ -46,16 +46,19 @@ export default defineConfig(({ mode }) => ({
     // Don't generate source maps in production
     sourcemap: mode === 'development',
 
-    // Manual code splitting
+    // Manual code splitting — only when imported (object form eager-preloaded unused vendors).
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-popover', '@radix-ui/react-select'],
-          'query-vendor': ['@tanstack/react-query'],
-          'utils-vendor': ['clsx', 'tailwind-merge', 'class-variance-authority']
-        }
-      }
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("react-dom") || id.includes("react-router")) return "react-vendor";
+          if (id.includes("node_modules/react/") || id.includes("node_modules\\react\\"))
+            return "react-vendor";
+          if (id.includes("@tanstack/react-query")) return "query-vendor";
+          if (id.includes("lucide-react")) return "icons";
+          // Do not force a sentry chunk from ErrorBoundary; only main.tsx idle-loads it.
+        },
+      },
     },
 
     // Chunk size warning limit

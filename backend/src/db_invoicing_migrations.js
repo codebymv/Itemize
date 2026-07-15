@@ -467,6 +467,33 @@ async function addInvoiceTaxRateColumn(pool) {
     }
 }
 
+/**
+ * Add business_id column to estimates table
+ * Fixes missing column that was added to invoices but not estimates
+ */
+async function addBusinessIdToEstimates(pool) {
+    const client = await pool.connect();
+    try {
+        const checkResult = await client.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'estimates' AND column_name = 'business_id'
+        `);
+
+        if (checkResult.rows.length === 0) {
+            await client.query(`
+                ALTER TABLE estimates 
+                ADD COLUMN business_id INTEGER REFERENCES businesses(id) ON DELETE SET NULL
+            `);
+            await client.query(`
+                CREATE INDEX IF NOT EXISTS idx_estimates_business ON estimates(business_id)
+            `);
+            console.log('✅ Added business_id column to estimates table');
+        }
+    } finally {
+        client.release();
+    }
+}
+
 async function runAllInvoicingMigrations(pool) {
     console.log('Running invoicing migrations...');
     
@@ -478,6 +505,7 @@ async function runAllInvoicingMigrations(pool) {
     await addInvoiceTaxRateColumn(pool);
     await createBusinessesTable(pool);
     await addBusinessIdToInvoices(pool);
+    await addBusinessIdToEstimates(pool);
     await migratePaymentSettingsToBusinesses(pool);
     
     console.log('✅ All invoicing migrations completed');
@@ -491,5 +519,6 @@ module.exports = {
     createPaymentsTable,
     createPaymentSettingsTable,
     createBusinessesTable,
-    addBusinessIdToInvoices
+    addBusinessIdToInvoices,
+    addBusinessIdToEstimates
 };

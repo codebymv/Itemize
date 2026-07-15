@@ -150,7 +150,7 @@ export const LandingNav: React.FC = () => {
                 width={200}
                 height={48}
                 decoding="async"
-                fetchPriority="high"
+                fetchPriority="low"
               />
             </button>
           </div>

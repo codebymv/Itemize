@@ -6,7 +6,7 @@
     <title>Itemize | The CRM That Works For You Not Against You</title>
     <meta name="description" content="Itemize is a CRM with contacts, pipelines, scheduling, notes, and automations in one workspace - built to work for you, not against you." />
     <link rel="canonical" href="https://itemize.cloud/" />
-    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="icon" type="image/png" href="/icon.png" sizes="32x32" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Itemize | The CRM That Works For You Not Against You" />
     <meta property="og:description" content="Itemize is a CRM with contacts, pipelines, scheduling, notes, and automations in one workspace." />
@@ -15,7 +15,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Itemize | The CRM That Works For You Not Against You" />
     <meta name="twitter:description" content="Itemize is a CRM with contacts, pipelines, scheduling, notes, and automations in one workspace." />
-    <!-- GleamAI/FlashCore: fonts off LCP path -->
+    <!-- Gleam/MixFade/FlashCore: fonts off LCP path -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -30,12 +30,21 @@
         rel="stylesheet"
       />
     </noscript>
-    <!-- Real hero assets (no covering shell). -->
-    <link rel="preload" as="image" href="/cover.webp" type="image/webp" fetchpriority="high" />
-    <link rel="preload" as="image" href="/screenshots/dashboard.webp" type="image/webp" />
+    <!-- No hero/screenshot preloads: mobile LCP is system-ui H1. -->
     <style>
       html,body{margin:0;background:#fafbfe;color:#0f172a}
-      #lh-lcp-h1{font-family:system-ui,-apple-system,Segoe UI,sans-serif!important}
+      #lh-lcp-h1{
+        font-family:system-ui,-apple-system,Segoe UI,sans-serif!important;
+        font-size:clamp(2.15rem,7.5vw,3.4rem);
+        font-weight:700;
+        line-height:1.1;
+        letter-spacing:-0.02em;
+        color:#0f172a;
+        margin:0 auto 1.5rem;
+        max-width:40rem;
+        text-align:center;
+      }
+      #lh-lcp-h1 .lh-accent{color:#2563eb}
     </style>
   </head>
 

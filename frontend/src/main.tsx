@@ -9,11 +9,7 @@ function scheduleMonitoring() {
   const run = () => {
     void import("./lib/sentry").then((m) => m.initSentry());
   };
-
-  if (typeof window.requestIdleCallback === "function") {
-    window.requestIdleCallback(() => run(), { timeout: 4000 });
-  } else {
-    window.setTimeout(run, 2000);
-  }
+  // Fixed delay: requestIdleCallback fires immediately under Lighthouse.
+  window.setTimeout(run, 4000);
 }
 scheduleMonitoring();

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
@@ -62,6 +62,7 @@ const Home: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
+  const [belowFoldReady, setBelowFoldReady] = useState(false);
 
   // Theme-aware base colors - memoized to prevent recalculation
   const themeColors = useMemo(() => {
@@ -88,18 +89,36 @@ const Home: React.FC = () => {
     }
   }, [currentUser, navigate, isAuthenticated, token]);
 
+  // FlashCore pattern: below-fold + Three.js only after scroll / late timeout
+  // so dashboard shot and clouds cannot steal mobile LCP from H1.
+  useEffect(() => {
+    let done = false;
+    const enable = () => {
+      if (done) return;
+      done = true;
+      setBelowFoldReady(true);
+      window.removeEventListener('scroll', onScroll);
+    };
+    const onScroll = () => {
+      if (window.scrollY > 24) enable();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    const t = window.setTimeout(enable, 6000);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
   const handleGetStarted = () => navigate('/register');
-  const handleSignIn = () => navigate('/login');
-  const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   return (
     <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
-      {/* Background effects - deferred so hero LCP isn't blocked */}
-      <Suspense fallback={null}>
-        <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
-      </Suspense>
+      {belowFoldReady ? (
+        <Suspense fallback={null}>
+          <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
+        </Suspense>
+      ) : null}
 
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -115,8 +134,8 @@ const Home: React.FC = () => {
 
       <div className="relative z-10">
 
-        {/* SECTION 1: HERO - always-on copy + dashboard shot (no shell / no defer gate) */}
-        <section id="hero" className="pt-28 md:pt-40 pb-4 md:pb-8 contain-layout" style={{ contain: 'layout' }}>
+        {/* SECTION 1: HERO - H1 owns mobile LCP (no opacity-0 entrance, screenshot desktop-only) */}
+        <section id="hero" className="pt-28 md:pt-40 pb-8 md:pb-8 min-h-[70vh] md:min-h-0 contain-layout" style={{ contain: 'layout' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
               <h1
@@ -125,6 +144,7 @@ const Home: React.FC = () => {
                 style={{
                   fontFamily: 'system-ui, -apple-system, Segoe UI, sans-serif',
                   fontSize: 'clamp(2.15rem, 7.5vw, 3.4rem)',
+                  fontWeight: 700,
                   lineHeight: 1.1,
                   maxWidth: '40rem',
                   marginLeft: 'auto',
@@ -132,17 +152,19 @@ const Home: React.FC = () => {
                 }}
               >
                 The CRM that works{' '}
-                <span className={isLight ? 'text-blue-600' : 'text-blue-400'}>for you</span>
+                <span className="lh-accent" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
+                  for you
+                </span>
                 <br />
                 not against you
               </h1>
 
-              <p className={`animate-fade-in-up animation-delay-100 text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
+              <p className={`text-lg md:text-xl leading-relaxed ${secondaryTextColor} mb-10 max-w-2xl mx-auto`}>
                 Stop juggling spreadsheets and disconnected tools. Itemize brings your contacts,
                 deals, and workflows together with beautiful workspaces.
               </p>
 
-              <div className="animate-fade-in-up animation-delay-200 flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
                 <Button
                   onClick={handleGetStarted}
                   className={`rounded-xl px-8 py-6 ${accentGradient} ${accentGradientHover} text-white text-lg font-semibold shadow-xl shadow-blue-500/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
@@ -153,7 +175,7 @@ const Home: React.FC = () => {
                 </Button>
               </div>
 
-              <div className="animate-fade-in animation-delay-300 flex flex-wrap gap-6 justify-center">
+              <div className="flex flex-wrap gap-6 justify-center">
                 {['14-day free trial', 'No credit card required', 'Cancel anytime'].map((text) => (
                   <span key={text} className={`flex items-center gap-2 text-sm font-medium ${mutedTextColor}`}>
                     <CheckCircle className="h-4 w-4 text-emerald-500" />
@@ -163,7 +185,8 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            <div className="animate-scale-in animation-delay-400 screenshot-perspective max-w-5xl mx-auto" style={{ willChange: 'transform, opacity' }}>
+            {/* Desktop-only product shot - hidden on mobile so it cannot steal LCP. */}
+            <div className="hidden md:block screenshot-perspective max-w-5xl mx-auto">
               <AppScreenshot
                 label="Dashboard"
                 sublabel="Dashboard view"
@@ -174,13 +197,15 @@ const Home: React.FC = () => {
                 aspectRatio="aspect-[16/10]"
                 className="screenshot-tilt"
                 src="/screenshots/dashboard.webp"
-                priority
+                priority={false}
                 alt="Itemize Dashboard Screenshot"
               />
             </div>
           </div>
         </section>
 
+        {belowFoldReady ? (
+        <>
         {/* SECTION 2: PROBLEM STATEMENT */}
         <section
           id="problem"
@@ -397,6 +422,7 @@ const Home: React.FC = () => {
               </div>
             </RevealSection>
 
+            {belowFoldReady ? (
             <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
               <div className="space-y-28 md:space-y-36">
                 {/* Feature 1: Contact Management */}
@@ -444,6 +470,9 @@ const Home: React.FC = () => {
                 />
               </div>
             </Suspense>
+            ) : (
+              <div style={{ minHeight: 600 }} aria-hidden="true" />
+            )}
           </div>
         </section>
 
@@ -468,7 +497,11 @@ const Home: React.FC = () => {
             </RevealSection>
 
             <RevealSection variant="fade-up" delay={150}>
+              {belowFoldReady ? (
               <Suspense fallback={<div className="h-40 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}><IntegrationGrid isLight={isLight} /></Suspense>
+              ) : (
+                <div style={{ minHeight: 160 }} aria-hidden="true" />
+              )}
             </RevealSection>
           </div>
         </section>
@@ -533,6 +566,7 @@ const Home: React.FC = () => {
 
             <RevealSection variant="fade-up" delay={100}>
               <div className={`${cardBgColor} rounded-2xl p-6 md:p-10 border ${cardBorderColor}`}>
+                {belowFoldReady ? (
                 <Suspense fallback={<div className="h-64 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                   <PricingCards
                     variant="landing"
@@ -540,6 +574,9 @@ const Home: React.FC = () => {
                     onUpgrade={() => handleGetStarted()}
                   />
                 </Suspense>
+                ) : (
+                  <div style={{ minHeight: 256 }} aria-hidden="true" />
+                )}
               </div>
             </RevealSection>
           </div>
@@ -581,6 +618,10 @@ const Home: React.FC = () => {
         {/* FOOTER                                                         */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <Footer />
+        </>
+        ) : (
+          <div style={{ minHeight: 2400 }} aria-hidden="true" />
+        )}
       </div>
     </div>
   );

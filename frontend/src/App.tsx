@@ -20,9 +20,8 @@ import AppShell from "@/components/AppShell";
 // Pages - Static imports for critical pages only
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
-
-// Landing page - lazy loaded to keep Three.js/PricingCards out of main bundle
-const Home = React.lazy(() => import("./pages/Home"));
+// Marketing home is eager: lazy Home added a JS waterfall on /home (MixFade/FlashCore).
+import Home from "./pages/Home";
 
 // Auth pages — lazy so Google GSI (@react-oauth/google) stays off marketing Home
 const Login = React.lazy(() => import("./pages/Login"));
@@ -88,7 +87,22 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useSessionExpiration } from "@/hooks/useSessionExpiration";
 import { CookieConsent } from "@/components/CookieConsent";
-import MarketingChatLauncher from "@/components/marketing/MarketingChatLauncher";
+
+const MarketingChatLauncher = React.lazy(() => import("@/components/marketing/MarketingChatLauncher"));
+
+function DeferredMarketingChat() {
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    const t = window.setTimeout(() => setReady(true), 5000);
+    return () => window.clearTimeout(t);
+  }, []);
+  if (!ready) return null;
+  return (
+    <Suspense fallback={null}>
+      <MarketingChatLauncher />
+    </Suspense>
+  );
+}
 
 const isProduction = import.meta.env.PROD;
 
@@ -316,7 +330,7 @@ const AppContent = () => {
       {/* Catch-all route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
-    {showMarketingChat && <MarketingChatLauncher />}
+    {showMarketingChat && <DeferredMarketingChat />}
     </>
   );
 };

@@ -192,7 +192,8 @@ describe('Pipelines Integration Tests', () => {
 
             expect(res.status).toBe(201);
             expect(res.body.title).toBe('Big Client Deal');
-            expect(res.body.value).toBe('5000');
+            // Postgres NUMERIC returns as string; value may include decimal places
+            expect(Number(res.body.value)).toBe(5000);
             expect(res.body.organization_id).toBe(userA.org.id);
             dealId = res.body.id;
         });
