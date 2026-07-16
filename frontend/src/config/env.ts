@@ -10,6 +10,7 @@ const envSchema = z.object({
   VITE_API_URL: z.string().url().optional().default('http://localhost:3001'),
   VITE_GRAPHQL_URL: z.string().url().optional(),
   VITE_CONTACT_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
   VITE_GOOGLE_CLIENT_ID: z.string().min(1),
@@ -38,6 +39,7 @@ if (import.meta.env.DEV) {
     apiUrl: env.VITE_API_URL,
     graphqlUrl: env.VITE_GRAPHQL_URL || undefined,
     contactReadsGraphql: env.VITE_CONTACT_READS_GRAPHQL === 'true',
+    devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,
     marketingChatEnabled: env.VITE_MARKETING_CHAT_ENABLED !== 'false',

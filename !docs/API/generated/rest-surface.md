@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 421
-- Resolved declarations: 421
+- Route declarations: 423
+- Resolved declarations: 423
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 416
+- Unique resolved method/path operations: 418
 - Files containing declarations: 82
 
 ## Interpretation limits
@@ -23,7 +23,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 | Method | Public path candidate | Declared path | Source |
 | --- | --- | --- | --- |
-| GET | `/*` | `*` | `backend/src/index.js:569` |
+| GET | `/*` | `*` | `backend/src/index.js:585` |
 | GET | `/api/admin/email/logs` | `/logs` | `backend/src/routes/admin-email.routes.js:233` |
 | GET | `/api/admin/email/logs/:id` | `/logs/:id` | `backend/src/routes/admin-email.routes.js:312` |
 | POST | `/api/admin/email/preview` | `/preview` | `backend/src/routes/admin-email.routes.js:168` |
@@ -166,7 +166,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/forms/:id/submissions/:subId` | `/:id/submissions/:subId` | `backend/src/routes/forms.routes.js:711` |
 | GET | `/api/forms/public/form/:slug` | `/public/form/:slug` | `backend/src/routes/forms.routes.js:740` |
 | POST | `/api/forms/public/form/:slug` | `/public/form/:slug` | `backend/src/routes/forms.routes.js:785` |
-| GET | `/api/health` | `/api/health` | `backend/src/index.js:247` |
+| GET | `/api/health` | `/api/health` | `backend/src/index.js:263` |
 | GET | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:18` |
 | POST | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:145` |
 | DELETE | `/api/invoices/:id` | `/:id` | `backend/src/routes/invoices/crud.routes.js:537` |
@@ -443,4 +443,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/docs/content` | `/content` | `backend/src/routes/docs.js:48` |
 | GET | `/docs/search` | `/search` | `backend/src/routes/docs.js:138` |
 | GET | `/docs/structure` | `/structure` | `backend/src/routes/docs.js:121` |
-| GET | `/health` | `/health` | `backend/src/index.js:367` |
+| ALL | `/graphql` | `/graphql` | `backend/src/index.js:251` |
+| POST | `/graphql` | `/graphql` | `backend/src/index.js:250` |
+| GET | `/health` | `/health` | `backend/src/index.js:383` |

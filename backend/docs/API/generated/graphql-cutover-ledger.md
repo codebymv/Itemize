@@ -4,9 +4,9 @@
 
 ## Summary
 
-- Registered method/path operations: 416
+- Registered method/path operations: 418
 - API operations under `/api`: 411
-- Non-API registered operations: 5
+- Non-API registered operations: 7
 - Static frontend callsites: 386
 - Operations with frontend consumers: 364
 - Operations referenced by backend tests: 178
@@ -445,6 +445,8 @@
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/structure` | 1 | 0 | non-api | low | _unassigned_ |
+| ALL | `/graphql` | 0 | 0 | non-api | low | _unassigned_ |
+| POST | `/graphql` | 0 | 0 | non-api | low | _unassigned_ |
 | GET | `/health` | 0 | 0 | non-api | low | _unassigned_ |
 
 ## Review queues

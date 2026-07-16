@@ -11,7 +11,9 @@ The legacy and NestJS APIs allow the canonical `FRONTEND_URL`, fixed Itemize pro
 *   `https://itemize.cloud`
 *   `http://localhost:5173` in development
 
-The NestJS GraphQL service uses exact origin equality. It does not use a wildcard because browser requests include the authentication cookie. Set the frontend's full endpoint with `VITE_GRAPHQL_URL` when GraphQL is hosted separately.
+The NestJS GraphQL service uses exact origin equality. It does not use a wildcard because browser requests include the authentication cookie.
+
+During side-by-side migration, the preferred browser topology is the established legacy API origin: the browser posts to its `/graphql` endpoint, and the legacy service forwards the request to NestJS over the private service network. This preserves the host-bound authentication cookie without widening its domain. Configure `GRAPHQL_UPSTREAM_URL` and `GRAPHQL_UPSTREAM_TIMEOUT_MS` on the legacy service; point `VITE_GRAPHQL_URL` at the same public API origin. A separate public GraphQL hostname requires an explicit cookie-domain and CSRF design before browser use.
 
 ## Allowed Methods
 

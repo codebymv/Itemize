@@ -174,8 +174,8 @@ app.use(cors({
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Organization-Id', 'X-CSRF-Token'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-CSRF-Token']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Organization-Id', 'X-Request-Id', 'X-CSRF-Token'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Request-Id', 'X-CSRF-Token']
 }));
 
 // CSRF token endpoint and protection for cookie-authenticated writes
@@ -242,6 +242,22 @@ const publicRateLimit = rateLimit({
 
 // Apply global rate limit to all API routes
 app.use('/api', globalLimiter);
+
+// Keep browser authentication on the established API origin while the NestJS
+// GraphQL service runs side-by-side on Railway's private network.
+const { createGraphqlProxy } = require('./graphql-proxy');
+app.use('/graphql', globalLimiter);
+app.post('/graphql', createGraphqlProxy({ logger }));
+app.all('/graphql', (req, res) => {
+    res.set('Allow', 'POST, OPTIONS');
+    res.status(405).json({
+        errors: [{
+            message: 'Method not allowed',
+            extensions: { code: 'METHOD_NOT_ALLOWED' },
+        }],
+        data: null,
+    });
+});
 
 // Enhanced health check endpoint
 app.get('/api/health', async (req, res) => {

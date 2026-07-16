@@ -18,6 +18,8 @@ function asyncCssPlugin(): Plugin {
   };
 }
 
+const devProxyTarget = process.env.DEV_API_PROXY_TARGET?.trim();
+
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
@@ -69,6 +71,16 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     hmr: {
       overlay: true
-    }
+    },
+    proxy: devProxyTarget ? {
+      '/api': {
+        target: devProxyTarget,
+        changeOrigin: true,
+      },
+      '/graphql': {
+        target: devProxyTarget,
+        changeOrigin: true,
+      },
+    } : undefined,
   }
 }))

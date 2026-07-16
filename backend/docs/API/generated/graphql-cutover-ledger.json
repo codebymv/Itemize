@@ -6,9 +6,9 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 416,
+    "operationCount": 418,
     "apiOperationCount": 411,
-    "nonApiOperationCount": 5,
+    "nonApiOperationCount": 7,
     "frontendCallsiteCount": 386,
     "operationsWithFrontendConsumers": 364,
     "operationsWithBackendTests": 178,
@@ -37,7 +37,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 569
+          "line": 585
         }
       ],
       "consumerCallsites": [],
@@ -955,7 +955,7 @@
           "path": "/api/auth/login",
           "rawPath": "/api/auth/login",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 243,
+          "line": 246,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1026,7 +1026,7 @@
           "path": "/api/auth/logout",
           "rawPath": "/api/auth/logout",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 301,
+          "line": 304,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1067,7 +1067,7 @@
           "path": "/api/auth/me",
           "rawPath": "/api/auth/me",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 198,
+          "line": 201,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1192,7 +1192,7 @@
           "path": "/api/auth/register",
           "rawPath": "/api/auth/register",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 263,
+          "line": 266,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6070,7 +6070,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 247
+          "line": 263
         }
       ],
       "consumerCallsites": [],
@@ -17404,6 +17404,54 @@
       "risk": "low"
     },
     {
+      "id": "ALL /graphql",
+      "key": "ALL /graphql",
+      "method": "ALL",
+      "path": "/graphql",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 251
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "POST /graphql",
+      "key": "POST /graphql",
+      "method": "POST",
+      "path": "/graphql",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 250
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
       "id": "GET /health",
       "key": "GET /health",
       "method": "GET",
@@ -17411,7 +17459,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 367
+          "line": 383
         }
       ],
       "consumerCallsites": [],

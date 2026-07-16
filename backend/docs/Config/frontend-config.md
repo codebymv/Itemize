@@ -186,10 +186,22 @@ VITE_GRAPHQL_URL=http://localhost:3100/graphql
 # setting this back to false is the consumer rollback.
 VITE_CONTACT_READS_GRAPHQL=false
 
+# Development-only authenticated staging harness. Authentication is still required.
+VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
+
 # Optional first-party marketing chat launcher.
 # Defaults enabled unless set to false.
 VITE_MARKETING_CHAT_ENABLED=true
 ```
+
+For local side-by-side or staging rehearsals, set the shell-only `DEV_API_PROXY_TARGET` before starting Vite to proxy `/api` and `/graphql` through one backend origin. It is disabled when unset and is never embedded in a production bundle:
+
+```powershell
+$env:DEV_API_PROXY_TARGET = 'http://127.0.0.1:3001'
+npm run dev
+```
+
+`VITE_DEV_AUTH_PROBE_WITHOUT_HINT=true` is also development-only. It permits the frontend to call `/api/auth/me` before its browser-storage session hint exists, but does not bypass cookie authentication or authorize a user.
 
 ## Package.json Scripts
 

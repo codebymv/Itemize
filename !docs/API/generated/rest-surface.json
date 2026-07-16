@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 421,
-    "resolvedDeclarationCount": 421,
+    "declarationCount": 423,
+    "resolvedDeclarationCount": 423,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 416,
+    "uniqueResolvedOperationCount": 418,
     "sourceFileCount": 82
   },
   "caveats": [
@@ -23,7 +23,7 @@
       ],
       "declaredPath": "*",
       "source": "backend/src/index.js",
-      "line": 569,
+      "line": 585,
       "dynamic": false
     },
     {
@@ -1453,7 +1453,7 @@
       ],
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
-      "line": 247,
+      "line": 263,
       "dynamic": false
     },
     {
@@ -4217,13 +4217,33 @@
       "dynamic": false
     },
     {
+      "method": "ALL",
+      "publicPaths": [
+        "/graphql"
+      ],
+      "declaredPath": "/graphql",
+      "source": "backend/src/index.js",
+      "line": 251,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/graphql"
+      ],
+      "declaredPath": "/graphql",
+      "source": "backend/src/index.js",
+      "line": 250,
+      "dynamic": false
+    },
+    {
       "method": "GET",
       "publicPaths": [
         "/health"
       ],
       "declaredPath": "/health",
       "source": "backend/src/index.js",
-      "line": 367,
+      "line": 383,
       "dynamic": false
     }
   ]

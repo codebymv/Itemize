@@ -172,9 +172,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const sessionHint = hasSessionHint();
         const onPublic = isPublicAuthSkipPath(location.pathname);
+        const allowHintlessDevProbe =
+          import.meta.env.DEV &&
+          import.meta.env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true';
 
         // Guests: never call /api/auth/me (avoids 401 → /refresh Best Practices noise)
-        if (!sessionHint) {
+        if (!sessionHint && !allowHintlessDevProbe) {
           setToken(null);
           setCurrentUser(null);
           setLoading(false);
