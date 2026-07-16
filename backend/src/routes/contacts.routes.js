@@ -10,10 +10,10 @@ const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validators } = require('../validators');
 const { withDbClient, withTransaction } = require('../utils/db');
-const { 
-    CONTACTS_LIMITS, 
+const {
+    CONTACTS_LIMITS,
     ERROR_CODES,
-    PLAN_METADATA 
+    PLAN_METADATA
 } = require('../lib/subscription.constants');
 const { contactActivityColumns, contactColumns } = require('./contact-columns');
 const { MAX_EXPORT_ROWS, csvCell, validateImportEnvelope } = require('../services/contactTransferPolicy');
@@ -119,16 +119,16 @@ module.exports = (pool, authenticateJWT) => {
     const params = [req.organizationId];
     let paramIndex = 2;
 
-    let whereClause = 'WHERE organization_id = $1';
+    let whereClause = 'WHERE c.organization_id = $1';
     
     // Search filter (full-text search on name, email, company)
     if (search && search.trim()) {
       whereClause += ` AND (
-        first_name ILIKE $${paramIndex} OR
-        last_name ILIKE $${paramIndex} OR
-        email ILIKE $${paramIndex} OR
-        company ILIKE $${paramIndex} OR
-        phone ILIKE $${paramIndex}
+        c.first_name ILIKE $${paramIndex} OR
+        c.last_name ILIKE $${paramIndex} OR
+        c.email ILIKE $${paramIndex} OR
+        c.company ILIKE $${paramIndex} OR
+        c.phone ILIKE $${paramIndex}
       )`;
       params.push(`%${search.trim()}%`);
       paramIndex++;
@@ -136,7 +136,7 @@ module.exports = (pool, authenticateJWT) => {
 
     // Status filter
     if (status && ['active', 'inactive', 'archived'].includes(status)) {
-      whereClause += ` AND status = $${paramIndex}`;
+      whereClause += ` AND c.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
@@ -144,14 +144,14 @@ module.exports = (pool, authenticateJWT) => {
     // Tags filter (contacts that have ANY of the specified tags)
     if (tags) {
       const tagArray = Array.isArray(tags) ? tags : tags.split(',');
-      whereClause += ` AND tags && $${paramIndex}::text[]`;
+      whereClause += ` AND c.tags && $${paramIndex}::text[]`;
       params.push(tagArray);
       paramIndex++;
     }
 
     // Assigned to filter
     if (assigned_to) {
-      whereClause += ` AND assigned_to = $${paramIndex}`;
+      whereClause += ` AND c.assigned_to = $${paramIndex}`;
       params.push(parseInt(assigned_to));
       paramIndex++;
     }
@@ -164,7 +164,7 @@ module.exports = (pool, authenticateJWT) => {
     const result = await withDbClient(pool, async (client) => {
       // Get total count
       const countResult = await client.query(
-        `SELECT COUNT(*) FROM contacts ${whereClause}`,
+        `SELECT COUNT(*) FROM contacts c ${whereClause}`,
         params
       );
       const totalCount = parseInt(countResult.rows[0].count);
@@ -178,7 +178,7 @@ module.exports = (pool, authenticateJWT) => {
         LEFT JOIN users u_assigned ON c.assigned_to = u_assigned.id
         LEFT JOIN users u_created ON c.created_by = u_created.id
         ${whereClause}
-        ORDER BY ${sortColumn} ${sortDirection}
+        ORDER BY c.${sortColumn} ${sortDirection}, c.id ${sortDirection}
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `, [...params, parseInt(limit), offset]);
 
@@ -521,7 +521,7 @@ module.exports = (pool, authenticateJWT) => {
       setClause.push('updated_at = CURRENT_TIMESTAMP');
 
       const updateResult = await client.query(`
-        UPDATE contacts 
+        UPDATE contacts
         SET ${setClause.join(', ')}
         WHERE id = ANY($${paramIndex}::int[]) AND organization_id = $${paramIndex + 1}
         RETURNING id, status, assigned_to, tags
@@ -977,10 +977,10 @@ module.exports = (pool, authenticateJWT) => {
       });
     }
 
-    logger.info('Contact import completed', { 
-      organizationId: req.organizationId, 
-      imported: results.imported, 
-      skipped: results.skipped 
+    logger.info('Contact import completed', {
+      organizationId: req.organizationId,
+      imported: results.imported,
+      skipped: results.skipped
     });
 
     res.json({

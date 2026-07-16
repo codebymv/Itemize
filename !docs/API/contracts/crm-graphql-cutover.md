@@ -144,6 +144,8 @@ Contact reuse/creation and submission now share one transaction. Concurrent subm
 
 Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, tag propagation/removal and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits.
 
+The NestJS `ContactsModule` now implements the read-only `contacts` and `contact` operations. PostgreSQL tests prove dual REST/GraphQL list membership, deterministic ordering, pagination totals, search/status/tag/assignee filters, detail projection, tenant-private missing-resource behavior, invalid-ID rejection, and suppression of user projections from corrupt cross-tenant references. No frontend consumer or production traffic uses these operations yet.
+
 The CRM slice is not ready for traffic until:
 
 1. contact/deal tag arrays, tag rows, and junction tables are reconciled behind one canonical model;
@@ -152,4 +154,4 @@ The CRM slice is not ready for traffic until:
 4. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
 5. form notifications and CRM workflow events use the durable outbox/worker;
 6. activities, related content, bulk success paths, CSV boundaries, and profile partial failures have complete tests;
-7. GraphQL operations and critical contact/pipeline/form browser journeys pass semantic parity and rollback tests.
+7. remaining GraphQL mutations and critical contact/pipeline/form browser journeys pass semantic parity and rollback tests.

@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { AuthModule } from './auth/auth.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { formatItemizeGraphqlError } from './common/graphql-error';
+import { ContactsModule } from './contacts/contacts.module';
 import { DatabaseModule } from './database/database.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
@@ -19,6 +20,7 @@ import { RequestContextModule } from './request-context/request-context.module';
     DatabaseModule,
     AuthModule,
     OrganizationsModule,
+    ContactsModule,
     FoundationModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,

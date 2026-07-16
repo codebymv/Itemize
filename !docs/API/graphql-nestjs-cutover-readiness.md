@@ -1,6 +1,6 @@
 # GraphQL + NestJS cutover readiness
 
-**Status:** Phase 0 baseline validated; Phase 1 foundation started
+**Status:** Phase 0 baseline validated; Phase 1 foundation and first read slice implemented
 
 **Evidence date:** 2026-07-16
 **Authority:** This document supersedes the testing counts and cutover-testing guidance in `ts-nest-rewrite.md`.
@@ -33,9 +33,11 @@ The former claim of 8 suites and 73 tests was stale. The current baseline was ex
 
 The isolated `backend-v2/` workspace now boots NestJS 11 with code-first GraphQL and Apollo Server 5. It is not part of the legacy Railway build/start commands and receives no production traffic.
 
-The first vertical foundation implements the existing access-cookie contract, verifies `itemize_auth` with the shared JWT secret, selects organization context only from `x-organization-id` or the user's database default, re-reads current membership and role from PostgreSQL, and propagates the verified identity through `AsyncLocalStorage`. A public `readiness` query and protected `viewerContext` query prove the middleware and guard chain without introducing a domain cutover.
+The first vertical foundation implements the existing access-cookie contract, verifies `itemize_auth` with the shared JWT secret, selects organization context only from `x-organization-id` or the user's database default, re-reads current membership and role from PostgreSQL, and propagates the verified identity through `AsyncLocalStorage`. A public `readiness` query and protected `viewerContext` query prove the middleware and guard chain.
 
-`npm run build:graphql` passes. `npm run test:graphql` covers 9 focused cases across public readiness, missing-cookie denial, signed-cookie identity, explicit and default membership, outsider privacy, malformed organization IDs before SQL, stable request correlation, and database-failure mapping. The disposable runner also executes 4 GraphQL operations against freshly initialized PostgreSQL, proving default membership, current-role re-read, outsider denial, and immediate denial after membership deletion. Domain resolvers, CSRF enforcement for mutations, dual semantic parity, and consumer tests remain required before traffic cutover.
+The first domain read slice exposes tenant-scoped `contacts` and `contact` queries through a transport-neutral service and parameterized repository. It preserves legacy search, status, tag, assignee, sorting, and page semantics while adding strict inputs and deterministic ID tie-breaking. Cross-tenant detail reads return tenant-private `NOT_FOUND`. The comparison suite also found and repaired ambiguous unqualified columns in the legacy contact search query.
+
+`npm run build:graphql` passes. `npm run test:graphql` covers 19 focused cases across the foundation, organization context, contact service validation/error mapping, and repository SQL/connection behavior. The disposable runner executes 10 NestJS GraphQL cases against freshly initialized PostgreSQL: 4 context cases plus 6 contact cases covering dual REST/GraphQL list membership/order/page counts, filters, detail projection, cross-tenant privacy, invalid identifiers, and denial of user projections through corrupt cross-tenant references. Contact mutations, CSRF enforcement, consumer migration, and browser tests remain required before traffic cutover.
 
 ## Phase 0 work now in place
 

@@ -4,6 +4,7 @@ export type ItemizeGraphqlErrorCode =
   | 'BAD_USER_INPUT'
   | 'FORBIDDEN'
   | 'INTERNAL_SERVER_ERROR'
+  | 'NOT_FOUND'
   | 'ORGANIZATION_REQUIRED'
   | 'SERVICE_UNAVAILABLE'
   | 'UNAUTHENTICATED';
