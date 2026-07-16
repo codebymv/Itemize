@@ -103,7 +103,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // NOTE: Exclude webhook path from sanitization (raw body needed for signature verification)
 const sanitizeMiddleware = require('./middleware/sanitize');
 app.use('/api', (req, res, next) => {
-    if (req.path === '/billing/webhook') {
+    if (req.path === '/billing/webhook' || req.path === '/social/webhook') {
         return next();
     }
     sanitizeMiddleware(req, res, next);
@@ -183,13 +183,10 @@ const { csrfProtection, issueCsrfToken } = require('./middleware/csrf');
 app.get('/api/auth/csrf', issueCsrfToken);
 app.use('/api', csrfProtection);
 
-// Serve uploaded files (logos, etc.) - registered early so it's available immediately
-// Add CORS headers for cross-origin image loading (needed for localhost dev with separate ports)
-app.use('/uploads', (req, res, next) => {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    next();
-}, express.static(path.join(__dirname, '../uploads')));
+// Only validated public logo assets are served statically. Signature documents
+// must pass through organization- or capability-authorized file routes.
+const { createPublicUploadsRouter } = require('./lib/publicUploads');
+app.use('/uploads', createPublicUploadsRouter(path.join(__dirname, '../uploads')));
 
 // ===========================
 // Rate Limiting (Phase 7)
@@ -387,7 +384,8 @@ const io = new Server(server, {
             'https://itemize.cloud',
             'https://itemize.up.railway.app'
         ],
-        methods: ['GET', 'POST']
+        methods: ['GET', 'POST'],
+        credentials: true
     }
 });
 
@@ -536,7 +534,7 @@ app.use(dbMonitor(pool));
         });
 
         // Initialize background job scheduler
-        initScheduler(pool);
+        initScheduler(pool, io);
         logger.info('Background job scheduler initialized');
 
         // 404 handler for undefined API routes

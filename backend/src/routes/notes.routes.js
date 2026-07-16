@@ -200,7 +200,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 }
 
                 const noteInfo = checkResult.rows[0];
-                console.log(`🗑️ Deleting note ${noteId} (${noteInfo.title}). Was shared: ${noteInfo.is_public}, Token: ${noteInfo.share_token}`);
+                console.log(`🗑️ Deleting note ${noteId} (${noteInfo.title}). Was shared: ${noteInfo.is_public}`);
 
                 const result = await client.query(
                     'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING id',

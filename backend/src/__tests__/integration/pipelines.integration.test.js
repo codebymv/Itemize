@@ -229,6 +229,31 @@ describe('Pipelines Integration Tests', () => {
             expect(res.status).toBe(404);
         });
 
+        it('rejects cross-tenant contacts, assignees, and unknown stages', async () => {
+            const foreignContact = await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, created_by)
+                 VALUES ($1, 'Foreign Contact', $2)
+                 RETURNING id`,
+                [userB.org.id, userB.user.id]
+            );
+
+            const baseRequest = body => request(app)
+                .post('/api/pipelines/deals')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ pipeline_id: pipelineId, title: 'Invalid Reference', ...body });
+
+            const [contactResult, assigneeResult, stageResult] = await Promise.all([
+                baseRequest({ contact_id: foreignContact.rows[0].id }),
+                baseRequest({ assigned_to: userB.user.id }),
+                baseRequest({ stage_id: 'not-a-real-stage' }),
+            ]);
+
+            expect(contactResult.status).toBe(400);
+            expect(assigneeResult.status).toBe(400);
+            expect(stageResult.status).toBe(400);
+        });
+
         it('fetches a single deal by ID', async () => {
             const res = await request(app)
                 .get(`/api/pipelines/deals/${dealId}`)
@@ -288,6 +313,29 @@ describe('Pipelines Integration Tests', () => {
                 .send({ title: 'Hijacked' });
 
             expect(res.status).toBe(404);
+        });
+
+        it('rejects cross-tenant references and invalid stages when updating or moving a deal', async () => {
+            const foreignContact = await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, created_by)
+                 VALUES ($1, 'Update Foreign Contact', $2)
+                 RETURNING id`,
+                [userB.org.id, userB.user.id]
+            );
+
+            const update = await request(app)
+                .put(`/api/pipelines/deals/${dealId}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ contact_id: foreignContact.rows[0].id });
+            expect(update.status).toBe(400);
+
+            const move = await request(app)
+                .patch(`/api/pipelines/deals/${dealId}/stage`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ stage_id: 'not-a-real-stage' });
+            expect(move.status).toBe(400);
         });
     });
 
@@ -402,6 +450,46 @@ describe('Pipelines Integration Tests', () => {
 
             expect(delRes.status).toBe(400);
             expect(JSON.stringify(delRes.body)).toMatch(/deals/i);
+
+            const outsiderDelete = await request(app)
+                .delete(`/api/pipelines/${protectedPipelineId}`)
+                .set('Cookie', [`itemize_auth=${userB.token}`])
+                .set('x-organization-id', String(userB.org.id));
+            expect(outsiderDelete.status).toBe(404);
+
+            const pipeline = await dbHelper.pool.query(
+                'SELECT stages FROM pipelines WHERE id = $1',
+                [protectedPipelineId]
+            );
+            const stagesWithoutCurrent = pipeline.rows[0].stages.slice(1);
+            const removeUsedStage = await request(app)
+                .put(`/api/pipelines/${protectedPipelineId}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ stages: stagesWithoutCurrent });
+            expect(removeUsedStage.status).toBe(409);
+        });
+    });
+
+    describe('Default pipeline concurrency', () => {
+        it('leaves exactly one default when concurrent creates request default status', async () => {
+            const create = name => request(app)
+                .post('/api/pipelines')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ name, is_default: true });
+
+            const responses = await Promise.all([
+                create(`Default A ${Date.now()}`),
+                create(`Default B ${Date.now()}`),
+            ]);
+            expect(responses.every(response => response.status === 201)).toBe(true);
+
+            const defaults = await dbHelper.pool.query(
+                'SELECT COUNT(*)::int AS count FROM pipelines WHERE organization_id = $1 AND is_default = TRUE',
+                [userA.org.id]
+            );
+            expect(defaults.rows[0].count).toBe(1);
         });
     });
 

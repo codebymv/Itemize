@@ -6,18 +6,14 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const { sendError } = require('../utils/response');
 const { bookingColumns } = require('./calendar-columns');
-
-// Import automation engine for triggers
-let automationEngine = null;
-try {
-    const { getAutomationEngine } = require('../services/automationEngine');
-    automationEngine = { getEngine: getAutomationEngine };
-} catch (e) {
-    console.log('Automation engine not available for bookings:', e.message);
-}
+const { WORKFLOW_TRIGGERS } = require('../domain/workflowRegistry');
+const {
+    enqueueWorkflowTrigger,
+    workflowTriggerEventKey,
+} = require('../services/workflowTriggerQueue');
 
 /**
  * Create bookings routes with injected dependencies
@@ -36,20 +32,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * Check if a time slot is available
      */
-    const isSlotAvailable = async (client, calendarId, startTime, endTime) => {
+    const isSlotAvailable = async (client, calendarId, startTime, endTime, excludeBookingId = null) => {
         const result = await client.query(`
       SELECT COUNT(*) FROM bookings
       WHERE calendar_id = $1
         AND status IN ('pending', 'confirmed')
-        AND (
-          (start_time <= $2 AND end_time > $2)
-          OR (start_time < $3 AND end_time >= $3)
-          OR (start_time >= $2 AND end_time <= $3)
-        )
-    `, [calendarId, startTime, endTime]);
+        AND start_time < $3
+        AND end_time > $2
+        AND ($4::integer IS NULL OR id <> $4)
+    `, [calendarId, startTime, endTime, excludeBookingId]);
 
         return parseInt(result.rows[0].count) === 0;
     };
+
+    const validateTimeRange = (startTime, endTime) => {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start;
+    };
+
+    const lockCalendarBookings = (client, calendarId) => client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('calendar_booking'), $1::integer)",
+        [calendarId]
+    );
 
     // ======================
     // Authenticated Booking Routes
@@ -209,8 +214,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (!calendar_id || !start_time || !end_time) {
                 return res.status(400).json({ error: 'calendar_id, start_time, and end_time are required' });
             }
+            if (!validateTimeRange(start_time, end_time)) {
+                return res.status(400).json({ error: 'start_time and end_time must form a valid time range' });
+            }
 
-            const data = await withDbClient(pool, async (client) => {
+            const data = await withTransaction(pool, async (client) => {
                 // Verify calendar exists
                 const calendarCheck = await client.query(
                     'SELECT id, assigned_to FROM calendars WHERE id = $1 AND organization_id = $2',
@@ -220,6 +228,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 if (calendarCheck.rows.length === 0) {
                     return { error: 'Calendar not found', status: 404, result: null };
                 }
+
+                await lockCalendarBookings(client, calendar_id);
 
                 // Check slot availability
                 const available = await isSlotAvailable(client, calendar_id, start_time, end_time);
@@ -256,26 +266,24 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 JSON.stringify(custom_fields || {}),
                 cancellationToken
                 ]);
+                const booking = result.rows[0];
+                await enqueueWorkflowTrigger(client, {
+                    contactId: booking.contact_id,
+                    entityId: booking.id,
+                    entityType: 'booking',
+                    eventKey: workflowTriggerEventKey('domain', `booking_created:${booking.id}`),
+                    organizationId: req.organizationId,
+                    payload: {
+                        booking_id: booking.id,
+                        calendar_id,
+                    },
+                    triggerType: WORKFLOW_TRIGGERS.BOOKING_CREATED,
+                });
                 return { error: null, status: 201, result };
             });
 
             if (data.error) {
                 return res.status(data.status).json({ error: data.error });
-            }
-
-            // Fire automation trigger
-            if (automationEngine) {
-                try {
-                    const engine = automationEngine.getEngine();
-                    engine.handleTrigger('booking_created', {
-                        booking: data.result.rows[0],
-                        contact: contact_id ? { id: contact_id } : null,
-                        organizationId: req.organizationId,
-                        calendar: { id: calendar_id }
-                    }).catch(err => console.error('Booking automation trigger error:', err));
-                } catch {
-                    console.log('Automation engine not initialized yet');
-                }
             }
 
             res.status(201).json(data.result.rows[0]);
@@ -294,34 +302,36 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { id } = req.params;
             const { reason } = req.body;
 
-            const result = await withDbClient(pool, async (client) => client.query(`
-        UPDATE bookings SET
-          status = 'cancelled',
-          cancelled_at = CURRENT_TIMESTAMP,
-          cancellation_reason = $1,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2 AND organization_id = $3
-        RETURNING ${bookingColumns()}
-      `, [reason || null, id, req.organizationId]));
+            const result = await withTransaction(pool, async (client) => {
+                const updateResult = await client.query(`
+          UPDATE bookings SET
+            status = 'cancelled',
+            cancelled_at = CURRENT_TIMESTAMP,
+            cancellation_reason = $1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2 AND organization_id = $3
+          RETURNING ${bookingColumns()}
+        `, [reason || null, id, req.organizationId]);
+                if (updateResult.rows.length > 0) {
+                    const booking = updateResult.rows[0];
+                    await enqueueWorkflowTrigger(client, {
+                        contactId: booking.contact_id,
+                        entityId: booking.id,
+                        entityType: 'booking',
+                        eventKey: workflowTriggerEventKey('domain', `booking_cancelled:${booking.id}`),
+                        organizationId: req.organizationId,
+                        payload: {
+                            booking_id: booking.id,
+                            reason: reason || 'No reason provided',
+                        },
+                        triggerType: WORKFLOW_TRIGGERS.BOOKING_CANCELLED,
+                    });
+                }
+                return updateResult;
+            });
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Booking not found' });
-            }
-
-            // Fire automation trigger
-            if (automationEngine) {
-                try {
-                    const engine = automationEngine.getEngine();
-                    const booking = result.rows[0];
-                    engine.handleTrigger('booking_cancelled', {
-                        booking,
-                        contact: booking.contact_id ? { id: booking.contact_id } : null,
-                        organizationId: req.organizationId,
-                        reason: reason || 'No reason provided'
-                    }).catch(err => console.error('Booking cancellation trigger error:', err));
-                } catch {
-                    console.log('Automation engine not initialized yet');
-                }
             }
 
             res.json(result.rows[0]);
@@ -343,11 +353,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (!start_time || !end_time) {
                 return res.status(400).json({ error: 'start_time and end_time are required' });
             }
+            if (!validateTimeRange(start_time, end_time)) {
+                return res.status(400).json({ error: 'start_time and end_time must form a valid time range' });
+            }
 
-            const data = await withDbClient(pool, async (client) => {
+            const data = await withTransaction(pool, async (client) => {
                 // Get current booking
                 const currentBooking = await client.query(
-                    `SELECT ${bookingColumns()} FROM bookings WHERE id = $1 AND organization_id = $2`,
+                    `SELECT ${bookingColumns()} FROM bookings WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
                     [id, req.organizationId]
                 );
 
@@ -357,8 +370,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 const oldBooking = currentBooking.rows[0];
 
+                if (!['pending', 'confirmed'].includes(oldBooking.status)) {
+                    return { error: 'Only active bookings can be rescheduled', status: 409, result: null, oldBooking: null };
+                }
+
+                await lockCalendarBookings(client, oldBooking.calendar_id);
+
                 // Check new slot availability
-                const available = await isSlotAvailable(client, oldBooking.calendar_id, start_time, end_time);
+                const available = await isSlotAvailable(client, oldBooking.calendar_id, start_time, end_time, oldBooking.id);
                 if (!available) {
                     return { error: 'New time slot is not available', status: 409, result: null, oldBooking: null };
                 }
@@ -372,28 +391,27 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         WHERE id = $4 AND organization_id = $5
         RETURNING ${bookingColumns()}
       `, [start_time, end_time, timezone, id, req.organizationId]);
+                const booking = result.rows[0];
+                await enqueueWorkflowTrigger(client, {
+                    contactId: booking.contact_id,
+                    entityId: booking.id,
+                    entityType: 'booking',
+                    organizationId: req.organizationId,
+                    payload: {
+                        booking_id: booking.id,
+                        newTime: { end: end_time, start: start_time },
+                        oldTime: {
+                            end: oldBooking.end_time,
+                            start: oldBooking.start_time,
+                        },
+                    },
+                    triggerType: WORKFLOW_TRIGGERS.BOOKING_RESCHEDULED,
+                });
                 return { error: null, status: 200, result, oldBooking };
             });
 
             if (data.error) {
                 return res.status(data.status).json({ error: data.error });
-            }
-
-            // Fire automation trigger
-            if (automationEngine) {
-                try {
-                    const engine = automationEngine.getEngine();
-                    const booking = data.result.rows[0];
-                    engine.handleTrigger('booking_rescheduled', {
-                        booking,
-                        contact: booking.contact_id ? { id: booking.contact_id } : null,
-                        organizationId: req.organizationId,
-                        oldTime: { start: data.oldBooking.start_time, end: data.oldBooking.end_time },
-                        newTime: { start: start_time, end: end_time }
-                    }).catch(err => console.error('Booking reschedule trigger error:', err));
-                } catch {
-                    console.log('Automation engine not initialized yet');
-                }
             }
 
             res.json(data.result.rows[0]);
@@ -561,11 +579,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     error: 'start_time, attendee_name, and attendee_email are required'
                 });
             }
+            if (Number.isNaN(new Date(start_time).getTime())) {
+                return res.status(400).json({ error: 'start_time must be a valid timestamp' });
+            }
 
-            const data = await withDbClient(pool, async (client) => {
+            const data = await withTransaction(pool, async (client) => {
                 // Get calendar
                 const calendarResult = await client.query(`
-        SELECT id, organization_id, duration_minutes, assigned_to, min_notice_hours
+        SELECT id, organization_id, duration_minutes, assigned_to, min_notice_hours, timezone
         FROM calendars
         WHERE slug = $1 AND is_active = TRUE
       `, [slug]);
@@ -581,6 +602,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     new Date(start_time).getTime() + calendar.duration_minutes * 60000
                 ).toISOString();
 
+                if (!validateTimeRange(start_time, bookingEndTime)) {
+                    return { error: 'start_time and end_time must form a valid time range', status: 400, booking: null, calendar: null, contactId: null };
+                }
+
+                await lockCalendarBookings(client, calendar.id);
+
                 // Check slot availability
                 const available = await isSlotAvailable(client, calendar.id, start_time, bookingEndTime);
                 if (!available) {
@@ -592,8 +619,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 // Try to find or create contact
                 let contactId = null;
                 try {
+                    await client.query(
+                        'SELECT pg_advisory_xact_lock($1, hashtext(LOWER($2)))',
+                        [calendar.organization_id, String(attendee_email)]
+                    );
                     const existingContact = await client.query(
-                        'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
+                        'SELECT id FROM contacts WHERE organization_id = $1 AND LOWER(email) = LOWER($2)',
                         [calendar.organization_id, attendee_email]
                     );
 
@@ -633,7 +664,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     contactId,
                     start_time,
                     bookingEndTime,
-                    timezone || 'America/New_York',
+                    timezone || calendar.timezone || 'America/New_York',
                     attendee_name,
                     attendee_email,
                     attendee_phone || null,
@@ -643,26 +674,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     cancellationToken
                 ]);
 
-                return { error: null, status: 201, booking: result.rows[0], calendar, contactId };
+                const booking = result.rows[0];
+                await enqueueWorkflowTrigger(client, {
+                    contactId,
+                    entityId: booking.id,
+                    entityType: 'booking',
+                    eventKey: workflowTriggerEventKey('domain', `booking_created:${booking.id}`),
+                    organizationId: calendar.organization_id,
+                    payload: {
+                        booking_id: booking.id,
+                        calendar_id: calendar.id,
+                    },
+                    triggerType: WORKFLOW_TRIGGERS.BOOKING_CREATED,
+                });
+
+                return { error: null, status: 201, booking, calendar, contactId };
             });
 
             if (data.error) {
                 return res.status(data.status).json({ error: data.error });
-            }
-
-            // Fire automation trigger
-            if (automationEngine) {
-                try {
-                    const engine = automationEngine.getEngine();
-                    engine.handleTrigger('booking_created', {
-                        booking: data.booking,
-                        contact: data.contactId ? { id: data.contactId } : null,
-                        organizationId: data.calendar.organization_id,
-                        calendar: { id: data.calendar.id }
-                    }).catch(err => console.error('Public booking trigger error:', err));
-                } catch {
-                    console.log('Automation engine not initialized yet');
-                }
             }
 
             res.status(201).json({
@@ -685,19 +715,37 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { slug, token } = req.params;
             const { reason } = req.body;
 
-            const result = await withDbClient(pool, async (client) => client.query(`
-        UPDATE bookings SET
-          status = 'cancelled',
-          cancelled_at = CURRENT_TIMESTAMP,
-          cancellation_reason = $1,
-          updated_at = CURRENT_TIMESTAMP
-        FROM calendars c
-        WHERE bookings.calendar_id = c.id
-          AND c.slug = $2
-          AND bookings.cancellation_token = $3
-          AND bookings.status = 'confirmed'
-        RETURNING ${bookingColumns().split(', ').map(column => `bookings.${column}`).join(', ')}
-      `, [reason || 'Cancelled by attendee', slug, token]));
+            const result = await withTransaction(pool, async (client) => {
+                const updateResult = await client.query(`
+          UPDATE bookings SET
+            status = 'cancelled',
+            cancelled_at = CURRENT_TIMESTAMP,
+            cancellation_reason = $1,
+            updated_at = CURRENT_TIMESTAMP
+          FROM calendars c
+          WHERE bookings.calendar_id = c.id
+            AND c.slug = $2
+            AND bookings.cancellation_token = $3
+            AND bookings.status = 'confirmed'
+          RETURNING ${bookingColumns().split(', ').map(column => `bookings.${column}`).join(', ')}
+        `, [reason || 'Cancelled by attendee', slug, token]);
+                if (updateResult.rows.length > 0) {
+                    const booking = updateResult.rows[0];
+                    await enqueueWorkflowTrigger(client, {
+                        contactId: booking.contact_id,
+                        entityId: booking.id,
+                        entityType: 'booking',
+                        eventKey: workflowTriggerEventKey('domain', `booking_cancelled:${booking.id}`),
+                        organizationId: booking.organization_id,
+                        payload: {
+                            booking_id: booking.id,
+                            reason: reason || 'Cancelled by attendee',
+                        },
+                        triggerType: WORKFLOW_TRIGGERS.BOOKING_CANCELLED,
+                    });
+                }
+                return updateResult;
+            });
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Booking not found or already cancelled' });

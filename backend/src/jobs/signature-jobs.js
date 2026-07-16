@@ -44,9 +44,7 @@ async function runSignatureReminderJobs(pool) {
             await client.query(`
                 UPDATE signature_recipients SET
                     signing_token_hash = $1,
-                    token_expires_at = $2,
-                    status = 'sent',
-                    sent_at = CURRENT_TIMESTAMP
+                    token_expires_at = $2
                 WHERE id = $3
             `, [tokenHash, reminder.expires_at || null, reminder.recipient_id]);
 

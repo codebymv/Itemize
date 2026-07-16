@@ -104,16 +104,29 @@ describe('Invoice Actions Integration Tests', () => {
                 .post(`/api/invoices/${inv.id}/record-payment`)
                 .set('Cookie', [`itemize_auth=${userA.token}`])
                 .set('x-organization-id', String(userA.org.id))
-                .send({ amount: 500, payment_method: 'credit_card' });
-
-            if (res.status !== 200) {
-                // Surface the real server error for diagnosis
-                console.log('DEBUG record-payment 500 body:', JSON.stringify(res.body));
-            }
+                .send({ amount: 500, payment_method: 'card' });
 
             expect(res.status).toBe(200);
             expect(res.body.data.invoice.status).toBe('paid');
             expect(Number(res.body.data.invoice.amount_due)).toBe(0);
+
+            const triggers = await dbHelper.pool.query(`
+                SELECT trigger_type, entity_type, entity_id, payload
+                FROM workflow_triggers
+                WHERE organization_id = $1
+                  AND trigger_type = 'invoice_paid'
+                  AND entity_type = 'invoice'
+                  AND entity_id = $2
+            `, [userA.org.id, inv.id]);
+            expect(triggers.rows).toHaveLength(1);
+            expect(triggers.rows[0]).toMatchObject({
+                trigger_type: 'invoice_paid',
+                entity_type: 'invoice',
+                payload: expect.objectContaining({
+                    invoice_id: inv.id,
+                    payment_method: 'card',
+                }),
+            });
 
             await cleanupInvoice(dbHelper, inv.id);
         });
@@ -142,6 +155,21 @@ describe('Invoice Actions Integration Tests', () => {
                 .send({ payment_method: 'cash' });
 
             expect(res.status).toBe(400);
+
+            await cleanupInvoice(dbHelper, inv.id);
+        });
+
+        it('rejects an unsupported payment method as a client error', async () => {
+            const inv = await createInvoice(app, userA);
+
+            const res = await request(app)
+                .post(`/api/invoices/${inv.id}/record-payment`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ amount: 500, payment_method: 'credit_card' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error.message).toBe('Invalid payment method');
 
             await cleanupInvoice(dbHelper, inv.id);
         });
@@ -180,6 +208,34 @@ describe('Invoice Actions Integration Tests', () => {
             expect(res2.status).toBe(200);
             expect(Number(res2.body.data.invoice.amount_paid)).toBe(1000);
             expect(res2.body.data.invoice.status).toBe('paid');
+
+            await cleanupInvoice(dbHelper, inv.id);
+        });
+
+        it('accumulates simultaneous payments without losing an update', async () => {
+            const inv = await createInvoice(app, userA, {
+                items: [{ name: 'Project', quantity: 1, unit_price: 1000 }],
+            });
+
+            const payment = amount => request(app)
+                .post(`/api/invoices/${inv.id}/record-payment`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ amount, payment_method: 'card' });
+
+            const [first, second] = await Promise.all([payment(400), payment(600)]);
+            expect(first.status).toBe(200);
+            expect(second.status).toBe(200);
+
+            const fetchRes = await request(app)
+                .get(`/api/invoices/${inv.id}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id));
+
+            expect(fetchRes.status).toBe(200);
+            expect(Number(fetchRes.body.data.amount_paid)).toBe(1000);
+            expect(Number(fetchRes.body.data.amount_due)).toBe(0);
+            expect(fetchRes.body.data.status).toBe('paid');
 
             await cleanupInvoice(dbHelper, inv.id);
         });

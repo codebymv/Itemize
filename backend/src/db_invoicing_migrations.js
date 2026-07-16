@@ -505,7 +505,6 @@ async function runAllInvoicingMigrations(pool) {
     await addInvoiceTaxRateColumn(pool);
     await createBusinessesTable(pool);
     await addBusinessIdToInvoices(pool);
-    await addBusinessIdToEstimates(pool);
     await migratePaymentSettingsToBusinesses(pool);
     
     console.log('✅ All invoicing migrations completed');

@@ -337,48 +337,32 @@ module.exports = (pool, authenticateJWT, broadcast) => {
     router.post('/wireframes/:wireframeId/share', authenticateJWT, async (req, res) => {
         try {
             const { wireframeId } = req.params;
-            const result = await withDbClient(pool, async (client) => {
-                const checkResult = await client.query(
-                    'SELECT id, share_token, is_public FROM wireframes WHERE id = $1 AND user_id = $2',
-                    [wireframeId, req.user.id]
-                );
+            const result = await withDbClient(pool, async (client) => client.query(
+                `UPDATE wireframes
+                 SET share_token = CASE
+                       WHEN is_public = TRUE AND share_token IS NOT NULL THEN share_token
+                       ELSE gen_random_uuid()
+                     END,
+                     is_public = TRUE,
+                     shared_at = CASE
+                       WHEN is_public = TRUE AND share_token IS NOT NULL THEN shared_at
+                       ELSE NOW()
+                     END,
+                     updated_at = NOW()
+                 WHERE id = $1 AND user_id = $2
+                 RETURNING share_token`,
+                [wireframeId, req.user.id]
+            ));
 
-                if (checkResult.rows.length === 0) {
-                    return { status: 'not_found' };
-                }
-
-                const existingWireframe = checkResult.rows[0];
-
-                if (existingWireframe.is_public && existingWireframe.share_token) {
-                    return { status: 'already_shared', token: existingWireframe.share_token };
-                }
-
-                const updateResult = await client.query(
-                    `UPDATE wireframes 
-                     SET share_token = gen_random_uuid(), is_public = TRUE, shared_at = NOW(), updated_at = NOW()
-                     WHERE id = $1 AND user_id = $2 
-                     RETURNING share_token`,
-                    [wireframeId, req.user.id]
-                );
-
-                return { status: 'ok', token: updateResult.rows[0].share_token };
-            });
-
-            if (result.status === 'not_found') {
+            if (result.rows.length === 0) {
                 return sendNotFound(res, 'Wireframe');
             }
 
-            if (result.status === 'already_shared') {
-                return sendSuccess(res, {
-                    shareToken: result.token,
-                    shareUrl: `${req.protocol}://${req.get('host')}/shared/wireframe/${result.token}`
-                });
-            }
-
-            const shareToken = result.token;
+            const shareToken = result.rows[0].share_token;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
             sendSuccess(res, {
                 shareToken,
-                shareUrl: `${req.protocol}://${req.get('host')}/shared/wireframe/${shareToken}`
+                shareUrl: `${frontendUrl}/shared/wireframe/${shareToken}`
             });
         } catch (error) {
             console.error('Error sharing wireframe:', error);
@@ -393,7 +377,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
                     `UPDATE wireframes 
-                     SET is_public = FALSE, updated_at = NOW()
+                     SET is_public = FALSE, share_token = NULL, shared_at = NULL, updated_at = NOW()
                      WHERE id = $1 AND user_id = $2 
                      RETURNING id`,
                     [wireframeId, req.user.id]

@@ -68,6 +68,14 @@ async function deleteTemplate(pool, organizationId, templateId) {
 
 async function uploadTemplateFile(pool, organizationId, templateId, file) {
     return withTransaction(pool, async (client) => {
+        const authorized = await client.query(
+            `SELECT id FROM signature_templates
+             WHERE id = $1 AND organization_id = $2
+             FOR UPDATE`,
+            [templateId, organizationId]
+        );
+        if (authorized.rows.length === 0) return null;
+
         const sha256 = await computeSha256FromFile(file);
         let fileUrl = null;
 
@@ -92,7 +100,7 @@ async function uploadTemplateFile(pool, organizationId, templateId, file) {
             fileUrl,
             file.originalname || file.filename || 'template.pdf',
             file.size || null,
-            file.mimetype || 'application/pdf',
+            'application/pdf',
             sha256,
             templateId,
             organizationId
@@ -260,6 +268,16 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
         const document = documentResult.rows[0];
 
         const recipients = data.recipients || [];
+        const contactIds = [...new Set(recipients.map(recipient => recipient.contact_id).filter(Boolean).map(Number))];
+        if (contactIds.length > 0) {
+            const contacts = await client.query(
+                'SELECT id FROM contacts WHERE organization_id = $1 AND id = ANY($2::int[])',
+                [organizationId, contactIds]
+            );
+            if (contacts.rows.length !== contactIds.length) {
+                throw new Error('Recipient contact must belong to the active organization');
+            }
+        }
         const recipientMap = new Map();
         for (const recipient of recipients) {
             const signingOrder = roleOrderMap.get(recipient.role_name) || recipient.signing_order || 1;
@@ -281,7 +299,7 @@ async function instantiateTemplate(pool, organizationId, userId, templateId, dat
                 organizationId,
                 recipient.contact_id || null,
                 recipient.name || null,
-                recipient.email,
+                recipient.email.trim().toLowerCase(),
                 signingOrder,
                 recipient.role_name || null,
                 recipient.identity_method || 'none'

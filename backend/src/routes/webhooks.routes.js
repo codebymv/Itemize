@@ -3,13 +3,19 @@ const crypto = require('crypto');
 const router = express.Router();
 const { logger } = require('../utils/logger');
 const { validate, webhookEvent } = require('../validators/schemas');
+const { normalizeWorkflowTriggerType } = require('../domain/workflowRegistry');
+const {
+  enqueueWorkflowTrigger,
+  workflowTriggerEventKey,
+} = require('../services/workflowTriggerQueue');
 
 const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
 
 function safeEqualHex(expected, actual) {
   const expectedBuffer = Buffer.from(expected, 'hex');
   const actualBuffer = Buffer.from(String(actual || ''), 'hex');
-  return expectedBuffer.length === actualBuffer.length && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+  return expectedBuffer.length === actualBuffer.length
+    && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
 function verifyWorkflowWebhook(req, secret) {
@@ -21,7 +27,8 @@ function verifyWorkflowWebhook(req, secret) {
   }
 
   const timestampMs = Number(timestamp);
-  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > WEBHOOK_TIMESTAMP_TOLERANCE_MS) {
+  if (!Number.isFinite(timestampMs)
+    || Math.abs(Date.now() - timestampMs) > WEBHOOK_TIMESTAMP_TOLERANCE_MS) {
     return { ok: false, status: 401, message: 'Webhook timestamp is invalid or expired' };
   }
 
@@ -40,32 +47,34 @@ function verifyWorkflowWebhook(req, secret) {
 
 /**
  * POST /api/webhooks/:workflowId
- * Process workflow trigger events
+ *
+ * Retained compatibility ingress. It verifies and durably records a matching
+ * event, but intentionally does not claim that workflow steps were executed.
  */
 router.post('/:workflowId', validate(webhookEvent), async (req, res) => {
   const { workflowId } = req.params;
-  const { eventType, entityData = {} } = req.body;
-  const data = entityData || {};
+  const { contactId, eventType, entityId, entityData = {} } = req.body;
+  const normalizedEventType = normalizeWorkflowTriggerType(eventType);
+  const resolvedEntityId = entityId ?? entityData?.entityId ?? null;
+  const resolvedContactId = contactId ?? entityData?.contactId ?? null;
 
   try {
     const pool = req.dbPool;
-    
+
     if (!pool) {
       return res.status(503).json({ error: 'Database connection not available' });
     }
 
-    // Validate workflow exists and is active
-    const workflowQuery = `
-      SELECT id, organization_id, name, is_active, webhook_secret
+    const workflowRes = await pool.query(`
+      SELECT id, organization_id, name, trigger_type, is_active, webhook_secret
       FROM workflows
       WHERE id = $1
-    `;
-    const workflowRes = await pool.query(workflowQuery, [workflowId]);
-    
+    `, [workflowId]);
+
     if (workflowRes.rows.length === 0) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
     const workflow = workflowRes.rows[0];
     const signatureCheck = verifyWorkflowWebhook(req, workflow.webhook_secret);
     if (!signatureCheck.ok) {
@@ -73,211 +82,73 @@ router.post('/:workflowId', validate(webhookEvent), async (req, res) => {
     }
 
     if (!workflow.is_active) {
-      return res.status(200).json({ 
-        success: false, 
+      return res.status(200).json({
+        success: false,
         message: 'Workflow is not active',
         workflowId,
       });
     }
 
-    logger.info('Workflow trigger received', { workflowId, eventType, data });
-
-    // Create trigger record (if table exists)
-    let triggerId = null;
-    try {
-      const triggerQuery = `
-        INSERT INTO workflow_triggers (workflow_id, trigger_type, entity_id, status)
-        VALUES ($1, $2, $3, 'pending')
-        RETURNING id
-      `;
-      const triggerRes = await pool.query(triggerQuery, [
-        workflowId, eventType, data.entityId,
-      ]);
-      triggerId = triggerRes.rows[0]?.id;
-    } catch (err) {
-      logger.warn('Failed to create trigger record', { error: err.message });
-    }
-
-    // Process actions
-    const errors = [];
-    const successes = [];
-
-    try {
-      const stepsResult = await pool.query(
-        'SELECT step_type, step_config FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order ASC, id ASC',
-        [workflowId]
-      );
-      const actions = stepsResult.rows.map((step) => ({
-        type: step.step_type,
-        ...(step.step_config || {})
-      }));
-      
-      if (!actions || !Array.isArray(actions)) {
-        logger.warn('No actions defined for workflow', { workflowId });
-        return res.status(200).json({ 
-          success: true, 
-          message: 'Workflow triggered but has no actions',
-          workflowId,
-          triggerId,
-        });
-      }
-
-      for (const action of actions) {
-        try {
-          logger.info('Executing workflow action', { actionType: action.type, workflowId });
-          
-          switch (action.type) {
-            case 'send_invoice':
-              await executeSendInvoice(action, data);
-              successes.push(`send_invoice: ${action.invoiceAmount || 'auto'} for ${data.contactName || 'contact'}`);
-              break;
-            
-            case 'update_deal':
-              await executeUpdateDeal(action, data);
-              successes.push(`update_deal: to ${action.status || 'Won'}`);
-              break;
-            
-            case 'send_email':
-              await executeSendEmail(action, data);
-              successes.push(`send_email: to ${data.email || 'contact'}`);
-              break;
-            
-            case 'update_contact_status':
-              await executeUpdateContactStatus(action, data);
-              successes.push(`update_contact_status: to ${action.status || 'customer'}`);
-              break;
-            
-            case 'send_review_request':
-              await executeSendReviewRequest(action, data);
-              successes.push(`send_review_request: for deal ${data.dealId || 'unknown'}`);
-              break;
-            
-            case 'create_task':
-              await executeCreateTask(action, data);
-              successes.push(`create_task: ${action.taskTitle || 'New task'}`);
-              break;
-            
-            default:
-              throw new Error(`Unknown action type: ${action.type}`);
-          }
-        } catch (actionError) {
-          logger.error('Action execution failed', { 
-            action, 
-            error: actionError.message, 
-            stack: actionError.stack 
-          });
-          errors.push(`${action.type}: ${actionError.message}`);
-        }
-      }
-
-      // Update trigger status
-      if (triggerId) {
-        const status = errors.length > 0 ? 'failed' : 'completed';
-        const errorMessage = errors.length > 0 ? errors[0] : null;
-        await pool.query(
-          'UPDATE workflow_triggers SET status = $1, error_message = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3',
-          [status, errorMessage, triggerId]
-        );
-      }
-
-      const result = {
-        success: errors.length === 0,
-        triggerId,
-        successes,
-        errors,
-        message: `Processed ${successes.length} actions, ${errors.length} failed`,
-      };
-
-      if (errors.length > 0) {
-        logger.warn('Workflow completed with errors', result);
-        return res.status(207).json(result);
-      }
-
-      return res.status(200).json(result);
-    } catch (actionError) {
-      logger.error('Workflow actions error', { error: actionError.message });
-      
-      // Update trigger with error
-      if (triggerId) {
-        await pool.query(
-          'UPDATE workflow_triggers SET status = $1, error_message = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3',
-          ['failed', actionError.message || 'Action execution error', triggerId]
-        );
-      }
-
-      return res.status(500).json({ 
+    if (normalizedEventType !== workflow.trigger_type) {
+      return res.status(409).json({
         success: false,
-        message: 'Failed to execute workflow actions',
+        error: 'Webhook event does not match the workflow trigger',
+        expectedEventType: workflow.trigger_type,
+        receivedEventType: normalizedEventType,
       });
     }
+
+    const deliveryId = String(req.headers['x-itemize-delivery-id'] || '').trim();
+    if (deliveryId.length > 200) {
+      return res.status(400).json({ error: 'Webhook delivery ID is too long' });
+    }
+    const deliveryKey = deliveryId || `signature:${req.headers['x-itemize-signature']}`;
+
+    logger.info('Workflow trigger received', {
+      workflowId,
+      eventType: normalizedEventType,
+      entityId: resolvedEntityId,
+    });
+
+    const trigger = await enqueueWorkflowTrigger(pool, {
+      contactId: resolvedContactId,
+      deliveryKey,
+      entityId: resolvedEntityId,
+      entityType: entityData?.entityType || null,
+      eventKey: workflowTriggerEventKey('webhook', `${workflowId}:${deliveryKey}`),
+      organizationId: workflow.organization_id,
+      payload: entityData,
+      source: 'webhook',
+      triggerType: normalizedEventType,
+      workflowId: workflow.id,
+    });
+
+    if (!trigger.inserted) {
+      return res.status(200).json({
+        success: true,
+        duplicate: true,
+        message: 'Webhook delivery already recorded',
+        workflowId,
+      });
+    }
+
+    return res.status(202).json({
+      success: true,
+      accepted: true,
+      triggerId: trigger.id,
+      workflowId,
+      eventType: normalizedEventType,
+      execution: 'durably_queued',
+      message: 'Trigger recorded for asynchronous workflow enrollment',
+    });
   } catch (error) {
     logger.error('Webhook processing error', { error: error.message, stack: error.stack });
-    res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: 'Processing failed',
       error: error.message,
     });
   }
 });
-
-// Action implementations
-async function executeSendInvoice(action, data) {
-  // contract → auto-create invoice
-  // data contains: contractId, amount, etc.
-  const { contractId, amount } = data;
-  
-  logger.info('Executing send_invoice action', { contractId, amount });
-
-  // This would need the invoices table to have proper columns
-  // Execute when ready
-}
-
-async function executeUpdateDeal(action, data) {
-  // Auto-update deal to "Won" when invoice paid
-  const { dealId, status = 'Won' } = data;
-  
-  logger.info('Executing update_deal action', { dealId, status });
-  
-  // Update deal in CRM
-  // This would need dea ls table integration
-}
-
-async function executeSendEmail(action, data) {
-  // Send email via email service
-  const { templateId, to } = data;
-  
-  logger.info('Executing send_email action', { templateId, to });
-  
-  // Call email service
-  // import { sendEmail } from '../services/email.service';
-  // await sendEmail(templateId, to, variables);
-}
-
-async function executeUpdateContactStatus(action, data) {
-  // Update contact status (e.g., 'lead' → 'customer')
-  const { contactId, status = 'customer' } = data;
-  
-  logger.info('Executing update_contact_status action', { contactId, status });
-  
-  // Update contact status
-}
-
-async function executeSendReviewRequest(action, data) {
-  // Schedule/send review request after deal won
-  const { dealId, delayDays = 7 } = data;
-  
-  logger.info('Executing send_review_request action', { dealId, delayDays });
-  
-  // Create review request record or send email
-}
-
-async function executeCreateTask(action, data) {
-  // Create task in task management
-  const { taskTitle, assignedTo } = data;
-  
-  logger.info('Executing create_task action', { taskTitle, assignedTo });
-  
-  // Create task in tasks table (if exists)
-}
 
 module.exports = router;

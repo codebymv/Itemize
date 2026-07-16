@@ -12,6 +12,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 const signatureService = require('../services/signature.service');
 const signatureEmailService = require('../services/signature-email.service');
+const { assertPdfUpload, cleanupUploadedFile } = require('../services/signature/storage');
+const { sendSignatureFile } = require('../services/signature/file-delivery');
 const { canAccessFeature, ERROR_CODES } = require('../lib/subscription.constants');
 
 const router = express.Router();
@@ -37,8 +39,7 @@ try {
             destination: (req, file, cb) => cb(null, uploadsDir),
             filename: (req, file, cb) => {
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                const ext = path.extname(file.originalname) || '.pdf';
-                cb(null, `signature-${req.organizationId}-${uniqueSuffix}${ext}`);
+                cb(null, `signature-${req.organizationId}-${uniqueSuffix}.pdf`);
             }
         });
 
@@ -75,16 +76,39 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     }
 
     function validateRecipients(recipients = []) {
+        if (!Array.isArray(recipients) || recipients.length > 50) {
+            return 'Recipients must be an array with at most 50 entries';
+        }
+        const emails = new Set();
         for (const recipient of recipients) {
-            if (!recipient.email) {
+            if (typeof recipient.email !== 'string' || !recipient.email.trim()) {
                 return 'Recipient email is required';
+            }
+            const normalizedEmail = recipient.email.trim().toLowerCase();
+            if (emails.has(normalizedEmail)) {
+                return 'Recipient emails must be unique';
+            }
+            emails.add(normalizedEmail);
+            if (recipient.identity_method && recipient.identity_method !== 'none') {
+                return 'Additional signer verification is not enabled';
+            }
+            if (recipient.signing_order !== undefined
+                && (!Number.isInteger(Number(recipient.signing_order)) || Number(recipient.signing_order) < 1)) {
+                return 'Signing order must be a positive integer';
             }
         }
         return null;
     }
 
     function validateFields(fields = []) {
+        const allowedTypes = new Set(['signature', 'initials', 'text', 'date', 'checkbox']);
+        if (!Array.isArray(fields) || fields.length > 500) {
+            return 'Fields must be an array with at most 500 entries';
+        }
         for (const field of fields) {
+            if (!allowedTypes.has(field.field_type)) {
+                return 'Invalid signature field type';
+            }
             const coords = [field.x_position, field.y_position, field.width, field.height];
             if (coords.some((value) => value === undefined || Number.isNaN(Number(value)))) {
                 return 'Invalid field coordinates';
@@ -92,9 +116,41 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (coords.some((value) => Number(value) < 0 || Number(value) > 100)) {
                 return 'Field coordinates must be between 0 and 100';
             }
-            if (field.page_number && Number(field.page_number) < 1) {
+            if (Number(field.width) <= 0 || Number(field.height) <= 0
+                || Number(field.x_position) + Number(field.width) > 100
+                || Number(field.y_position) + Number(field.height) > 100) {
+                return 'Field bounds must fit within the page';
+            }
+            if (!Number.isInteger(Number(field.page_number || 1)) || Number(field.page_number || 1) < 1) {
                 return 'Page number must be >= 1';
             }
+        }
+        return null;
+    }
+
+    function validateRoles(roles = []) {
+        if (!Array.isArray(roles) || roles.length > 50) return 'Roles must be an array with at most 50 entries';
+        const names = new Set();
+        for (const role of roles) {
+            if (typeof role.role_name !== 'string' || !role.role_name.trim()) return 'Role name is required';
+            const name = role.role_name.trim().toLowerCase();
+            if (names.has(name)) return 'Role names must be unique';
+            names.add(name);
+            if (role.signing_order !== undefined
+                && (!Number.isInteger(Number(role.signing_order)) || Number(role.signing_order) < 1)) {
+                return 'Role signing order must be a positive integer';
+            }
+        }
+        return null;
+    }
+
+    function validateDocumentSettings(data = {}) {
+        if (data.expiration_days !== undefined
+            && (!Number.isInteger(Number(data.expiration_days)) || Number(data.expiration_days) < 1 || Number(data.expiration_days) > 3650)) {
+            return 'Expiration days must be an integer between 1 and 3650';
+        }
+        if (data.routing_mode !== undefined && !['parallel', 'sequential'].includes(data.routing_mode)) {
+            return 'Invalid routing mode';
         }
         return null;
     }
@@ -118,18 +174,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (!templateId) {
             return sendBadRequest(res, 'Invalid template id');
         }
-        const updated = await signatureService.updateTemplate(pool, req.organizationId, templateId, req.body || {});
-        if (!updated) {
-            return sendNotFound(res, 'Template not found');
+        if (Array.isArray(req.body?.roles)) {
+            const error = validateRoles(req.body.roles);
+            if (error) return sendBadRequest(res, error);
         }
+        if (Array.isArray(req.body?.fields)) {
+            const error = validateFields(req.body.fields);
+            if (error) return sendBadRequest(res, error);
+        }
+
+        const updated = await signatureService.updateTemplate(pool, req.organizationId, templateId, req.body || {});
+        if (!updated) return sendNotFound(res, 'Template not found');
+
         if (Array.isArray(req.body?.roles)) {
             await signatureService.replaceTemplateRoles(pool, templateId, req.body.roles);
         }
         if (Array.isArray(req.body?.fields)) {
-            const error = validateFields(req.body.fields);
-            if (error) {
-                return sendBadRequest(res, error);
-            }
             await signatureService.replaceTemplateFields(pool, templateId, req.body.fields);
         }
         return sendSuccess(res, updated);
@@ -157,10 +217,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
             const templateId = parseInt(req.body.template_id, 10);
             if (!templateId || !req.file) {
+                await cleanupUploadedFile(req.file);
                 return sendBadRequest(res, 'Template ID and file are required');
             }
-            const updated = await signatureService.uploadTemplateFile(pool, req.organizationId, templateId, req.file);
-            return sendSuccess(res, updated);
+            try {
+                await assertPdfUpload(req.file);
+                const updated = await signatureService.uploadTemplateFile(pool, req.organizationId, templateId, req.file);
+                if (!updated) {
+                    await cleanupUploadedFile(req.file);
+                    return sendNotFound(res, 'Template not found');
+                }
+                return sendSuccess(res, updated);
+            } catch (error) {
+                await cleanupUploadedFile(req.file);
+                if (error.code === 'INVALID_FILE_CONTENT') {
+                    return sendError(res, error.message, 400, 'UPLOAD_ERROR');
+                }
+                console.error('Signature template upload failed:', error);
+                return sendError(res, 'Failed to upload template file');
+            }
         });
     }));
 
@@ -176,9 +251,34 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         return sendSuccess(res, data);
     }));
 
+    router.get('/signatures/templates/:id/file', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
+        const templateId = parseInt(req.params.id, 10);
+        if (!templateId) return sendBadRequest(res, 'Invalid template id');
+        const data = await signatureService.getTemplate(pool, req.organizationId, templateId);
+        const template = data?.template || data;
+        if (!template?.file_url) return sendNotFound(res, 'File not found');
+        const sent = await sendSignatureFile(res, template.file_url, {
+            filename: template.file_name || 'template.pdf',
+        });
+        if (!sent) return sendNotFound(res, 'File not found');
+        return undefined;
+    }));
+
     router.post('/signatures/templates/:id/instantiate', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
         const templateId = parseInt(req.params.id, 10);
-        const document = await signatureService.instantiateTemplate(pool, req.organizationId, req.user.id, templateId, req.body || {});
+        const settingsError = validateDocumentSettings(req.body || {});
+        if (settingsError) return sendBadRequest(res, settingsError);
+        if (Array.isArray(req.body?.recipients)) {
+            const error = validateRecipients(req.body.recipients);
+            if (error) return sendBadRequest(res, error);
+        }
+        let document;
+        try {
+            document = await signatureService.instantiateTemplate(pool, req.organizationId, req.user.id, templateId, req.body || {});
+        } catch (error) {
+            if (error.message.includes('active organization')) return sendBadRequest(res, error.message);
+            throw error;
+        }
         if (!document) return sendNotFound(res, 'Template not found');
         return sendCreated(res, document);
     }));
@@ -189,7 +289,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             return sendBadRequest(res, 'Title is required', 'title');
         }
 
-        const document = await signatureService.createDocument(pool, req.organizationId, req.user.id, req.body || {});
+        const settingsError = validateDocumentSettings(req.body || {});
+        if (settingsError) return sendBadRequest(res, settingsError);
+
+        let document;
+        try {
+            document = await signatureService.createDocument(pool, req.organizationId, req.user.id, req.body || {});
+        } catch (error) {
+            if (error.message.includes('Template')) return sendBadRequest(res, error.message);
+            throw error;
+        }
         return sendCreated(res, document);
     }));
 
@@ -199,17 +308,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             return sendBadRequest(res, 'Invalid document id');
         }
 
-        const updated = await signatureService.updateDocument(pool, req.organizationId, documentId, req.body || {});
-        if (!updated) {
-            return sendNotFound(res, 'Document not found');
-        }
-
         if (Array.isArray(req.body?.recipients)) {
             const error = validateRecipients(req.body.recipients);
             if (error) {
                 return sendBadRequest(res, error);
             }
-            await signatureService.replaceRecipients(pool, req.organizationId, documentId, req.body.recipients);
         }
 
         if (Array.isArray(req.body?.fields)) {
@@ -217,7 +320,26 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (error) {
                 return sendBadRequest(res, error);
             }
-            await signatureService.replaceFields(pool, documentId, req.body.fields);
+        }
+
+        const updated = await signatureService.updateDocument(pool, req.organizationId, documentId, req.body || {});
+        if (!updated) {
+            return sendNotFound(res, 'Draft document not found');
+        }
+
+        try {
+            if (Array.isArray(req.body?.recipients)) {
+                await signatureService.replaceRecipients(pool, req.organizationId, documentId, req.body.recipients);
+            }
+
+            if (Array.isArray(req.body?.fields)) {
+                await signatureService.replaceFields(pool, req.organizationId, documentId, req.body.fields);
+            }
+        } catch (error) {
+            if (error.message.includes('active organization') || error.message.includes('belong to the document')) {
+                return sendBadRequest(res, error.message);
+            }
+            throw error;
         }
 
         return sendSuccess(res, updated);
@@ -235,11 +357,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             const documentId = parseInt(req.body.document_id, 10);
             if (!documentId || !req.file) {
+                await cleanupUploadedFile(req.file);
                 return sendBadRequest(res, 'Document ID and file are required');
             }
-
-            const updated = await signatureService.uploadDocument(pool, req.organizationId, documentId, req.file);
-            return sendSuccess(res, updated);
+            try {
+                await assertPdfUpload(req.file);
+                const updated = await signatureService.uploadDocument(pool, req.organizationId, documentId, req.file);
+                if (!updated) {
+                    await cleanupUploadedFile(req.file);
+                    return sendNotFound(res, 'Draft document not found');
+                }
+                return sendSuccess(res, updated);
+            } catch (error) {
+                await cleanupUploadedFile(req.file);
+                if (error.code === 'INVALID_FILE_CONTENT') {
+                    return sendError(res, error.message, 400, 'UPLOAD_ERROR');
+                }
+                console.error('Signature document upload failed:', error);
+                return sendError(res, 'Failed to upload document file');
+            }
         });
     }));
 
@@ -274,6 +410,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (!documentId) {
             return sendBadRequest(res, 'Invalid document id');
         }
+
+        const settingsError = validateDocumentSettings(req.body || {});
+        if (settingsError) return sendBadRequest(res, settingsError);
         const updated = await signatureService.removeDocumentFile(pool, req.organizationId, documentId);
         if (!updated) return sendNotFound(res, 'Document not found');
         return sendSuccess(res, updated);
@@ -311,13 +450,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const signingUrlBase = `${frontendUrl}/sign`;
 
-        const updated = await signatureService.sendForSignature(
-            pool,
-            signatureEmailService,
-            documentId,
-            req.organizationId,
-            signingUrlBase
-        );
+        let updated;
+        try {
+            updated = await signatureService.sendForSignature(
+                pool,
+                signatureEmailService,
+                documentId,
+                req.organizationId,
+                signingUrlBase
+            );
+        } catch (error) {
+            return sendError(res, error.message, 409, 'CONFLICT');
+        }
 
         if (!updated) return sendNotFound(res, 'Document not found');
         return sendSuccess(res, updated);
@@ -325,7 +469,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
     router.post('/signatures/documents/:id/cancel', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
         const documentId = parseInt(req.params.id, 10);
-        const result = await signatureService.updateDocument(pool, req.organizationId, documentId, { status: 'cancelled' });
+        let result;
+        try {
+            result = await signatureService.cancelDocument(pool, documentId, req.organizationId);
+        } catch (error) {
+            return sendError(res, error.message, 409, 'CONFLICT');
+        }
         if (!result) return sendNotFound(res, 'Document not found');
         return sendSuccess(res, result);
     }));
@@ -334,21 +483,35 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const documentId = parseInt(req.params.id, 10);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const signingUrlBase = `${frontendUrl}/sign`;
-        const updated = await signatureService.sendForSignature(
-            pool,
-            signatureEmailService,
-            documentId,
-            req.organizationId,
-            signingUrlBase
-        );
+        let updated;
+        try {
+            updated = await signatureService.remindForSignature(
+                pool,
+                signatureEmailService,
+                documentId,
+                req.organizationId,
+                signingUrlBase
+            );
+        } catch (error) {
+            return sendError(res, error.message, 409, 'CONFLICT');
+        }
         if (!updated) return sendNotFound(res, 'Document not found');
         return sendSuccess(res, updated);
     }));
 
     router.post('/signatures/documents/:id/reminders', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
         const documentId = parseInt(req.params.id, 10);
-        const days = Number(req.body?.days || 2);
-        const result = await signatureService.scheduleReminders(pool, documentId, days);
+        const days = Number(req.body?.days ?? 2);
+        if (!Number.isInteger(days) || days < 1 || days > 365) {
+            return sendBadRequest(res, 'Reminder days must be an integer between 1 and 365');
+        }
+        let result;
+        try {
+            result = await signatureService.scheduleReminders(pool, documentId, req.organizationId, days);
+        } catch (error) {
+            return sendError(res, error.message, 409, 'CONFLICT');
+        }
+        if (!result) return sendNotFound(res, 'Active document not found');
         return sendSuccess(res, result);
     }));
 
@@ -361,7 +524,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             return sendError(res, 'Signed document not available', 404, 'NOT_READY');
         }
 
-        return sendSuccess(res, { url: data.document.signed_file_url });
+        const sent = await sendSignatureFile(res, data.document.signed_file_url, {
+            filename: data.document.file_name || 'signed-document.pdf',
+            disposition: 'attachment',
+        });
+        if (!sent) return sendNotFound(res, 'Signed file not found');
+        return undefined;
     }));
 
     router.get('/signatures/documents/:id/file', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
@@ -370,31 +538,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (!data) return sendNotFound(res, 'Document not found');
         if (!data.document.file_url) return sendNotFound(res, 'File not found');
 
-        const fileUrl = data.document.file_url;
-        if (fileUrl.startsWith('/uploads/')) {
-            const relativePath = fileUrl.replace('/uploads/', '');
-            const fullPath = path.join(__dirname, '../uploads', relativePath);
-            return res.sendFile(fullPath);
-        }
-
-        if (fileUrl.includes('.s3.') && signatureService && signatureService?.constructor) {
-            // Use S3 SDK if available
-            const s3Service = require('../services/s3.service');
-            const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
-            const key = parsed.pathname.replace(/^\//, '');
-            const s3Response = await s3Service.getFile(key);
-            if (s3Response?.Body) {
-                res.setHeader('Content-Type', s3Response.ContentType || 'application/pdf');
-                return s3Response.Body.pipe(res);
-            }
-        }
-
-        const axios = require('axios');
-        const response = await axios.get(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`,
-            { responseType: 'arraybuffer' }
-        );
-        res.setHeader('Content-Type', response.headers['content-type'] || 'application/pdf');
-        return res.status(200).send(Buffer.from(response.data));
+        const sent = await sendSignatureFile(res, data.document.file_url, {
+            filename: data.document.file_name || 'document.pdf',
+        });
+        if (!sent) return sendNotFound(res, 'File not found');
+        return undefined;
     }));
 
     router.get('/signatures/documents/:id/audit', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
@@ -459,12 +607,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (message.includes('signature data')) {
                 return sendBadRequest(res, message);
             }
+            if (message.includes('signature field')) {
+                return sendBadRequest(res, message);
+            }
             throw error;
         }
     }));
 
     router.post('/public/sign/:token/decline', publicRateLimit, asyncHandler(async (req, res) => {
         const token = req.params.token;
+        if (req.body?.reason && String(req.body.reason).length > 2000) {
+            return sendBadRequest(res, 'Decline reason is too long');
+        }
         const audit = {
             ip_address: req.ip,
             user_agent: req.headers['user-agent']
@@ -482,7 +636,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         };
         const data = await signatureService.getDocumentForSigning(pool, token, audit);
         if (!data) return sendNotFound(res, 'Signing link is invalid or expired');
-        return sendSuccess(res, { url: data.document.file_url });
+        if (!data.document.file_url) return sendNotFound(res, 'File not found');
+        const sent = await sendSignatureFile(res, data.document.file_url, {
+            filename: data.document.file_name || 'document.pdf',
+            disposition: 'attachment',
+        });
+        if (!sent) return sendNotFound(res, 'File not found');
+        return undefined;
     }));
 
     router.get('/public/sign/:token/file', publicRateLimit, asyncHandler(async (req, res) => {
@@ -493,32 +653,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         };
         const data = await signatureService.getDocumentForSigning(pool, token, audit);
         if (!data) return sendNotFound(res, 'Signing link is invalid or expired');
-        const fileUrl = data.document.file_url;
-        if (!fileUrl) return sendNotFound(res, 'File not found');
-
-        if (fileUrl.startsWith('/uploads/')) {
-            const relativePath = fileUrl.replace('/uploads/', '');
-            const fullPath = path.join(__dirname, '../uploads', relativePath);
-            return res.sendFile(fullPath);
-        }
-
-        if (fileUrl.includes('.s3.') && signatureService && signatureService?.constructor) {
-            const s3Service = require('../services/s3.service');
-            const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
-            const key = parsed.pathname.replace(/^\//, '');
-            const s3Response = await s3Service.getFile(key);
-            if (s3Response?.Body) {
-                res.setHeader('Content-Type', s3Response.ContentType || 'application/pdf');
-                return s3Response.Body.pipe(res);
-            }
-        }
-
-        const axios = require('axios');
-        const response = await axios.get(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`,
-            { responseType: 'arraybuffer' }
-        );
-        res.setHeader('Content-Type', response.headers['content-type'] || 'application/pdf');
-        return res.status(200).send(Buffer.from(response.data));
+        if (!data.document.file_url) return sendNotFound(res, 'File not found');
+        const sent = await sendSignatureFile(res, data.document.file_url, {
+            filename: data.document.file_name || 'document.pdf',
+        });
+        if (!sent) return sendNotFound(res, 'File not found');
+        return undefined;
     }));
 
     return router;

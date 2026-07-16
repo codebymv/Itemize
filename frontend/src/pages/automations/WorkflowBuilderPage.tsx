@@ -69,6 +69,10 @@ import {
   EmailTemplate,
 } from '@/services/automationsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
+import {
+  WORKFLOW_STEP_LABELS,
+  WORKFLOW_TRIGGER_OPTIONS,
+} from '@/domain/workflowRegistry';
 
 // Custom node component for workflow steps
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,24 +138,20 @@ const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
 };
 
-const TRIGGER_TYPES = [
-  { value: 'contact_added', label: 'Contact Added' },
-  { value: 'tag_added', label: 'Tag Added' },
-  { value: 'tag_removed', label: 'Tag Removed' },
-  { value: 'deal_stage_changed', label: 'Deal Stage Changed' },
-  { value: 'manual', label: 'Manual Trigger' },
-  { value: 'scheduled', label: 'Scheduled' },
-];
+const TRIGGER_TYPES = WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => ({
+  value: type,
+  label,
+}));
 
 const STEP_TYPES = [
-  { value: 'send_email', label: 'Send Email', icon: Mail },
-  { value: 'add_tag', label: 'Add Tag', icon: Tag },
-  { value: 'remove_tag', label: 'Remove Tag', icon: Tag },
-  { value: 'wait', label: 'Wait / Delay', icon: Clock },
-  { value: 'create_task', label: 'Create Task', icon: CheckSquare },
-  { value: 'condition', label: 'Condition', icon: GitBranch },
-  { value: 'webhook', label: 'Webhook', icon: Webhook },
-  { value: 'update_contact', label: 'Update Contact', icon: Users },
+  { value: 'send_email', label: WORKFLOW_STEP_LABELS.send_email, icon: Mail },
+  { value: 'add_tag', label: WORKFLOW_STEP_LABELS.add_tag, icon: Tag },
+  { value: 'remove_tag', label: WORKFLOW_STEP_LABELS.remove_tag, icon: Tag },
+  { value: 'wait', label: WORKFLOW_STEP_LABELS.wait, icon: Clock },
+  { value: 'create_task', label: WORKFLOW_STEP_LABELS.create_task, icon: CheckSquare },
+  { value: 'condition', label: WORKFLOW_STEP_LABELS.condition, icon: GitBranch },
+  { value: 'webhook', label: WORKFLOW_STEP_LABELS.webhook, icon: Webhook },
+  { value: 'update_contact', label: WORKFLOW_STEP_LABELS.update_contact, icon: Users },
 ];
 
 export function WorkflowBuilderPage() {
@@ -607,6 +607,44 @@ export function WorkflowBuilderPage() {
                 </SelectContent>
               </Select>
             </div>
+            {triggerType === 'scheduled' && (
+              <>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Contact ID</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={String(triggerConfig.contact_id || '')}
+                    onChange={(event) => setTriggerConfig(current => ({
+                      ...current,
+                      contact_id: event.target.value ? Number(event.target.value) : undefined,
+                    }))}
+                    className="h-8 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Run at</Label>
+                  <Input
+                    type="datetime-local"
+                    value={
+                      triggerConfig.scheduled_at
+                        ? new Date(String(triggerConfig.scheduled_at))
+                          .toLocaleString('sv-SE')
+                          .replace(' ', 'T')
+                          .slice(0, 16)
+                        : ''
+                    }
+                    onChange={(event) => setTriggerConfig(current => ({
+                      ...current,
+                      scheduled_at: event.target.value
+                        ? new Date(event.target.value).toISOString()
+                        : undefined,
+                    }))}
+                    className="h-8 bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

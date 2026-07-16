@@ -5,6 +5,11 @@ const { withDbClient, withTransaction } = require('../../utils/db');
 const { sendSuccess, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
 const emailService = require('../../services/emailService');
 const { sendInvoiceEmail } = require('../../services/invoice-email.service');
+const { WORKFLOW_TRIGGERS } = require('../../domain/workflowRegistry');
+const {
+    enqueueWorkflowTrigger,
+    workflowTriggerEventKey,
+} = require('../../services/workflowTriggerQueue');
 const { INVOICE_COLUMNS, INVOICE_ITEM_COLUMNS, PAYMENT_COLUMNS, PAYMENT_SETTINGS_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization, stripe }) => {
@@ -332,15 +337,22 @@ module.exports = ({ pool, authenticateJWT, requireOrganization, stripe }) => {
             }
 
             const { amount, payment_method, notes } = req.body;
+            const allowedPaymentMethods = ['card', 'bank_transfer', 'cash', 'check', 'other', 'stripe'];
 
             if (!amount || amount <= 0) {
                 return sendBadRequest(res, 'Valid amount is required');
             }
+            if (payment_method && !allowedPaymentMethods.includes(payment_method)) {
+                return sendBadRequest(res, 'Invalid payment method', 'payment_method');
+            }
 
             const paymentResult = await withTransaction(pool, async (client) => {
-                // Get invoice
+                // Serialize payment updates so simultaneous payments accumulate.
                 const invoiceResult = await client.query(
-                    `SELECT ${selectColumns(INVOICE_COLUMNS)} FROM invoices WHERE id = $1 AND organization_id = $2`,
+                    `SELECT ${selectColumns(INVOICE_COLUMNS)}
+                     FROM invoices
+                     WHERE id = $1 AND organization_id = $2
+                     FOR UPDATE`,
                     [id, req.organizationId]
                 );
 
@@ -390,6 +402,24 @@ module.exports = ({ pool, authenticateJWT, requireOrganization, stripe }) => {
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $4
                 `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, id]);
+
+                if (newStatus === 'paid' && invoice.status !== 'paid') {
+                    await enqueueWorkflowTrigger(client, {
+                        contactId: contId,
+                        entityId: invId,
+                        entityType: 'invoice',
+                        eventKey: workflowTriggerEventKey('domain', `invoice_paid:${invId}`),
+                        organizationId: orgId,
+                        payload: {
+                            amount_paid: newAmountPaid,
+                            invoice_id: invId,
+                            payment_id: paymentInsert.rows[0].id,
+                            payment_method: payMethod,
+                            total: Number(invoice.total),
+                        },
+                        triggerType: WORKFLOW_TRIGGERS.INVOICE_PAID,
+                    });
+                }
 
                 return {
                     payment: paymentInsert.rows[0],

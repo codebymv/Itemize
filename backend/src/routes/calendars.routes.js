@@ -303,16 +303,30 @@ module.exports = (pool, authenticateJWT) => {
     router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { id } = req.params;
-            const data = await withDbClient(pool, async (client) => {
-                // Check for upcoming bookings
-                const bookingsCheck = await client.query(
-                    `SELECT COUNT(*) FROM bookings 
-         WHERE calendar_id = $1 AND status = 'confirmed' AND start_time > NOW()`,
+            const data = await withTransaction(pool, async (client) => {
+                const calendar = await client.query(
+                    'SELECT id FROM calendars WHERE id = $1 AND organization_id = $2 FOR UPDATE',
+                    [id, req.organizationId]
+                );
+                if (calendar.rows.length === 0) {
+                    return { found: false, error: null, result: null };
+                }
+
+                await client.query(
+                    "SELECT pg_advisory_xact_lock(hashtext('calendar_booking'), $1::integer)",
                     [id]
                 );
 
+                // Check for upcoming bookings while creation for this calendar is locked.
+                const bookingsCheck = await client.query(
+                    `SELECT COUNT(*) FROM bookings 
+         WHERE calendar_id = $1 AND organization_id = $2
+           AND status IN ('pending', 'confirmed') AND start_time > NOW()`,
+                    [id, req.organizationId]
+                );
+
                 if (parseInt(bookingsCheck.rows[0].count) > 0) {
-                    return { error: 'Cannot delete calendar with upcoming bookings. Cancel bookings first.', result: null };
+                    return { found: true, error: 'Cannot delete calendar with upcoming bookings. Cancel bookings first.', result: null };
                 }
 
                 const deleteResult = await client.query(
@@ -320,15 +334,15 @@ module.exports = (pool, authenticateJWT) => {
                     [id, req.organizationId]
                 );
 
-                return { error: null, result: deleteResult };
+                return { found: true, error: null, result: deleteResult };
             });
+
+            if (!data.found) {
+                return res.status(404).json({ error: 'Calendar not found' });
+            }
 
             if (data.error) {
                 return res.status(400).json({ error: data.error });
-            }
-
-            if (data.result.rows.length === 0) {
-                return res.status(404).json({ error: 'Calendar not found' });
             }
 
             res.json({ message: 'Calendar deleted successfully' });

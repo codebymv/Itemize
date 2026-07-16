@@ -97,6 +97,7 @@ export interface DashboardAnalytics {
         pending: number;
         overdue: number;
         paidThisMonth: number;
+        countThisMonth: number;
         recentInvoices: Array<{
             id: string;
             number: string;
@@ -112,6 +113,7 @@ export interface DashboardAnalytics {
             id: string;
             title: string;
             status: string;
+            date: string;
         }>;
     };
     workspaceMetrics?: {
@@ -119,8 +121,9 @@ export interface DashboardAnalytics {
         lists: number;
         notes: number;
         recentItems: Array<{
-            id: string;
+            type: 'list' | 'note';
             title: string;
+            date: string;
         }>;
     };
 }
@@ -132,8 +135,8 @@ export interface DealPerformance {
         wonCount: number;
         lostCount: number;
         winRate: number;
-        avgDealValue: string;
-        totalRevenue: string;
+        avgDealValue: number;
+        totalRevenue: number;
         avgDaysToClose: number;
     };
 }
@@ -201,6 +204,7 @@ export interface RevenueTrends {
     summary: {
         totalRevenue: number;
         totalDeals: number;
+        totalPayments: number;
         avgDealValue: number;
         growthRate: number;
     };

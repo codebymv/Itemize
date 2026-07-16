@@ -121,7 +121,7 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
                         logger.warn('Failed to log email', { error: logError.message });
                     }
 
-                    if (sendResult.success || sendResult.simulated) {
+                    if (sendResult.success) {
                         results.sent++;
                     } else {
                         results.failed++;

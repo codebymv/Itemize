@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 412,
-    "resolvedDeclarationCount": 412,
+    "declarationCount": 421,
+    "resolvedDeclarationCount": 421,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 407,
-    "sourceFileCount": 81
+    "uniqueResolvedOperationCount": 416,
+    "sourceFileCount": 82
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -23,7 +23,7 @@
       ],
       "declaredPath": "*",
       "source": "backend/src/index.js",
-      "line": 571,
+      "line": 569,
       "dynamic": false
     },
     {
@@ -143,7 +143,7 @@
       ],
       "declaredPath": "/bookings/summary",
       "source": "backend/src/routes/analytics/business.routes.js",
-      "line": 75,
+      "line": 67,
       "dynamic": false
     },
     {
@@ -153,7 +153,7 @@
       ],
       "declaredPath": "/communication-stats",
       "source": "backend/src/routes/analytics/operations.routes.js",
-      "line": 12,
+      "line": 18,
       "dynamic": false
     },
     {
@@ -163,7 +163,7 @@
       ],
       "declaredPath": "/contacts/trends",
       "source": "backend/src/routes/analytics/contacts.routes.js",
-      "line": 12,
+      "line": 13,
       "dynamic": false
     },
     {
@@ -173,7 +173,7 @@
       ],
       "declaredPath": "/conversion-rates",
       "source": "backend/src/routes/analytics/advanced.routes.js",
-      "line": 12,
+      "line": 20,
       "dynamic": false
     },
     {
@@ -183,7 +183,7 @@
       ],
       "declaredPath": "/dashboard",
       "source": "backend/src/routes/analytics/dashboard.routes.js",
-      "line": 12,
+      "line": 13,
       "dynamic": false
     },
     {
@@ -193,7 +193,7 @@
       ],
       "declaredPath": "/deals/performance",
       "source": "backend/src/routes/analytics/business.routes.js",
-      "line": 12,
+      "line": 13,
       "dynamic": false
     },
     {
@@ -203,7 +203,7 @@
       ],
       "declaredPath": "/pipeline-velocity",
       "source": "backend/src/routes/analytics/advanced.routes.js",
-      "line": 296,
+      "line": 281,
       "dynamic": false
     },
     {
@@ -213,7 +213,7 @@
       ],
       "declaredPath": "/revenue-trends",
       "source": "backend/src/routes/analytics/advanced.routes.js",
-      "line": 159,
+      "line": 156,
       "dynamic": false
     },
     {
@@ -223,7 +223,7 @@
       ],
       "declaredPath": "/workflow-performance",
       "source": "backend/src/routes/analytics/operations.routes.js",
-      "line": 118,
+      "line": 117,
       "dynamic": false
     },
     {
@@ -373,7 +373,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 51,
+      "line": 81,
       "dynamic": false
     },
     {
@@ -383,7 +383,7 @@
       ],
       "declaredPath": "/acknowledge-trial-end",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 119,
+      "line": 149,
       "dynamic": false
     },
     {
@@ -393,7 +393,7 @@
       ],
       "declaredPath": "/checkout",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 69,
+      "line": 99,
       "dynamic": false
     },
     {
@@ -403,7 +403,7 @@
       ],
       "declaredPath": "/plans",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 63,
+      "line": 93,
       "dynamic": false
     },
     {
@@ -413,7 +413,7 @@
       ],
       "declaredPath": "/portal",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 102,
+      "line": 132,
       "dynamic": false
     },
     {
@@ -423,7 +423,7 @@
       ],
       "declaredPath": "/usage",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 130,
+      "line": 160,
       "dynamic": false
     },
     {
@@ -433,7 +433,7 @@
       ],
       "declaredPath": "/webhook",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 26,
+      "line": 33,
       "dynamic": false
     },
     {
@@ -443,7 +443,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 62,
+      "line": 67,
       "dynamic": false
     },
     {
@@ -453,7 +453,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 191,
+      "line": 196,
       "dynamic": false
     },
     {
@@ -463,7 +463,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 160,
+      "line": 165,
       "dynamic": false
     },
     {
@@ -473,7 +473,7 @@
       ],
       "declaredPath": "/:id/cancel",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 292,
+      "line": 300,
       "dynamic": false
     },
     {
@@ -483,7 +483,7 @@
       ],
       "declaredPath": "/:id/reschedule",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 338,
+      "line": 348,
       "dynamic": false
     },
     {
@@ -493,7 +493,7 @@
       ],
       "declaredPath": "/public/book/:slug",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 414,
+      "line": 432,
       "dynamic": false
     },
     {
@@ -503,7 +503,7 @@
       ],
       "declaredPath": "/public/book/:slug",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 544,
+      "line": 562,
       "dynamic": false
     },
     {
@@ -513,7 +513,7 @@
       ],
       "declaredPath": "/public/book/:slug/cancel/:token",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 683,
+      "line": 713,
       "dynamic": false
     },
     {
@@ -523,7 +523,7 @@
       ],
       "declaredPath": "/public/book/:slug/slots",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 461,
+      "line": 479,
       "dynamic": false
     },
     {
@@ -533,7 +533,7 @@
       ],
       "declaredPath": "/connections",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 28,
+      "line": 29,
       "dynamic": false
     },
     {
@@ -543,7 +543,7 @@
       ],
       "declaredPath": "/connections/:id",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 51,
+      "line": 52,
       "dynamic": false
     },
     {
@@ -553,7 +553,7 @@
       ],
       "declaredPath": "/connections/:id",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 74,
+      "line": 75,
       "dynamic": false
     },
     {
@@ -563,7 +563,7 @@
       ],
       "declaredPath": "/google/auth",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 115,
+      "line": 116,
       "dynamic": false
     },
     {
@@ -573,7 +573,7 @@
       ],
       "declaredPath": "/google/calendars/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 226,
+      "line": 236,
       "dynamic": false
     },
     {
@@ -583,7 +583,7 @@
       ],
       "declaredPath": "/google/callback",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 135,
+      "line": 136,
       "dynamic": false
     },
     {
@@ -593,7 +593,7 @@
       ],
       "declaredPath": "/sync-status/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 349,
+      "line": 359,
       "dynamic": false
     },
     {
@@ -603,7 +603,7 @@
       ],
       "declaredPath": "/sync/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 273,
+      "line": 283,
       "dynamic": false
     },
     {
@@ -663,7 +663,7 @@
       ],
       "declaredPath": "/:id/availability",
       "source": "backend/src/routes/calendars.routes.js",
-      "line": 349,
+      "line": 363,
       "dynamic": false
     },
     {
@@ -673,7 +673,7 @@
       ],
       "declaredPath": "/:id/date-override",
       "source": "backend/src/routes/calendars.routes.js",
-      "line": 418,
+      "line": 432,
       "dynamic": false
     },
     {
@@ -683,7 +683,7 @@
       ],
       "declaredPath": "/:id/date-override/:overrideId",
       "source": "backend/src/routes/calendars.routes.js",
-      "line": 465,
+      "line": 479,
       "dynamic": false
     },
     {
@@ -693,7 +693,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/campaigns/crud.routes.js",
-      "line": 17,
+      "line": 19,
       "dynamic": false
     },
     {
@@ -703,7 +703,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/campaigns/crud.routes.js",
-      "line": 107,
+      "line": 109,
       "dynamic": false
     },
     {
@@ -713,7 +713,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/campaigns/crud.routes.js",
-      "line": 251,
+      "line": 279,
       "dynamic": false
     },
     {
@@ -723,7 +723,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/campaigns/crud.routes.js",
-      "line": 68,
+      "line": 70,
       "dynamic": false
     },
     {
@@ -733,7 +733,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/campaigns/crud.routes.js",
-      "line": 165,
+      "line": 179,
       "dynamic": false
     },
     {
@@ -743,7 +743,7 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/campaigns/crud.routes.js",
-      "line": 293,
+      "line": 321,
       "dynamic": false
     },
     {
@@ -753,7 +753,7 @@
       ],
       "declaredPath": "/:id/pause",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 269,
+      "line": 267,
       "dynamic": false
     },
     {
@@ -763,7 +763,7 @@
       ],
       "declaredPath": "/:id/preview",
       "source": "backend/src/routes/campaigns/insights.routes.js",
-      "line": 85,
+      "line": 87,
       "dynamic": false
     },
     {
@@ -773,7 +773,7 @@
       ],
       "declaredPath": "/:id/recipients",
       "source": "backend/src/routes/campaigns/insights.routes.js",
-      "line": 14,
+      "line": 16,
       "dynamic": false
     },
     {
@@ -783,7 +783,7 @@
       ],
       "declaredPath": "/:id/resume",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 296,
+      "line": 294,
       "dynamic": false
     },
     {
@@ -793,7 +793,7 @@
       ],
       "declaredPath": "/:id/schedule",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 18,
+      "line": 20,
       "dynamic": false
     },
     {
@@ -803,7 +803,7 @@
       ],
       "declaredPath": "/:id/send",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 105,
+      "line": 107,
       "dynamic": false
     },
     {
@@ -813,7 +813,7 @@
       ],
       "declaredPath": "/:id/send-test",
       "source": "backend/src/routes/campaigns/insights.routes.js",
-      "line": 157,
+      "line": 150,
       "dynamic": false
     },
     {
@@ -823,7 +823,7 @@
       ],
       "declaredPath": "/:id/unschedule",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 77,
+      "line": 79,
       "dynamic": false
     },
     {
@@ -843,7 +843,7 @@
       ],
       "declaredPath": "/api/canvas/positions",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 48,
+      "line": 49,
       "dynamic": false
     },
     {
@@ -1043,7 +1043,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 64,
+      "line": 106,
       "dynamic": false
     },
     {
@@ -1053,7 +1053,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 182,
+      "line": 224,
       "dynamic": false
     },
     {
@@ -1063,7 +1063,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 347,
+      "line": 438,
       "dynamic": false
     },
     {
@@ -1073,7 +1073,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 158,
+      "line": 200,
       "dynamic": false
     },
     {
@@ -1083,7 +1083,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 266,
+      "line": 321,
       "dynamic": false
     },
     {
@@ -1093,7 +1093,7 @@
       ],
       "declaredPath": "/:id/activities",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 473,
+      "line": 611,
       "dynamic": false
     },
     {
@@ -1103,7 +1103,7 @@
       ],
       "declaredPath": "/:id/activities",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 518,
+      "line": 656,
       "dynamic": false
     },
     {
@@ -1113,7 +1113,7 @@
       ],
       "declaredPath": "/:id/content",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 566,
+      "line": 704,
       "dynamic": false
     },
     {
@@ -1123,7 +1123,7 @@
       ],
       "declaredPath": "/:id/profile",
       "source": "backend/src/routes/contact-profile.routes.js",
-      "line": 11,
+      "line": 14,
       "dynamic": false
     },
     {
@@ -1133,7 +1133,7 @@
       ],
       "declaredPath": "/bulk-delete",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 451,
+      "line": 589,
       "dynamic": false
     },
     {
@@ -1143,7 +1143,7 @@
       ],
       "declaredPath": "/bulk-update",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 365,
+      "line": 456,
       "dynamic": false
     },
     {
@@ -1153,7 +1153,7 @@
       ],
       "declaredPath": "/export/csv",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 610,
+      "line": 748,
       "dynamic": false
     },
     {
@@ -1163,7 +1163,7 @@
       ],
       "declaredPath": "/import/csv",
       "source": "backend/src/routes/contacts.routes.js",
-      "line": 683,
+      "line": 831,
       "dynamic": false
     },
     {
@@ -1327,13 +1327,23 @@
       "dynamic": false
     },
     {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email/webhook/resend"
+      ],
+      "declaredPath": "/webhook/resend",
+      "source": "backend/src/routes/email-webhooks.routes.js",
+      "line": 35,
+      "dynamic": false
+    },
+    {
       "method": "GET",
       "publicPaths": [
         "/api/forms"
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 76,
+      "line": 72,
       "dynamic": false
     },
     {
@@ -1343,7 +1353,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 147,
+      "line": 143,
       "dynamic": false
     },
     {
@@ -1353,7 +1363,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 483,
+      "line": 486,
       "dynamic": false
     },
     {
@@ -1363,7 +1373,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 109,
+      "line": 105,
       "dynamic": false
     },
     {
@@ -1373,7 +1383,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 308,
+      "line": 311,
       "dynamic": false
     },
     {
@@ -1383,7 +1393,7 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 507,
+      "line": 510,
       "dynamic": false
     },
     {
@@ -1393,7 +1403,7 @@
       ],
       "declaredPath": "/:id/fields",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 376,
+      "line": 379,
       "dynamic": false
     },
     {
@@ -1403,7 +1413,7 @@
       ],
       "declaredPath": "/:id/submissions",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 645,
+      "line": 648,
       "dynamic": false
     },
     {
@@ -1413,7 +1423,7 @@
       ],
       "declaredPath": "/:id/submissions/:subId",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 708,
+      "line": 711,
       "dynamic": false
     },
     {
@@ -1423,7 +1433,7 @@
       ],
       "declaredPath": "/public/form/:slug",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 737,
+      "line": 740,
       "dynamic": false
     },
     {
@@ -1433,7 +1443,7 @@
       ],
       "declaredPath": "/public/form/:slug",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 782,
+      "line": 785,
       "dynamic": false
     },
     {
@@ -1443,7 +1453,7 @@
       ],
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
-      "line": 250,
+      "line": 247,
       "dynamic": false
     },
     {
@@ -1503,7 +1513,7 @@
       ],
       "declaredPath": "/:id/create-payment-link",
       "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 419,
+      "line": 449,
       "dynamic": false
     },
     {
@@ -1513,7 +1523,7 @@
       ],
       "declaredPath": "/:id/pdf",
       "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 257,
+      "line": 262,
       "dynamic": false
     },
     {
@@ -1523,7 +1533,7 @@
       ],
       "declaredPath": "/:id/record-payment",
       "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 325,
+      "line": 330,
       "dynamic": false
     },
     {
@@ -1533,7 +1543,7 @@
       ],
       "declaredPath": "/:id/send",
       "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 22,
+      "line": 27,
       "dynamic": false
     },
     {
@@ -1543,7 +1553,7 @@
       ],
       "declaredPath": "/businesses",
       "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 18,
+      "line": 21,
       "dynamic": false
     },
     {
@@ -1553,7 +1563,7 @@
       ],
       "declaredPath": "/businesses",
       "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 69,
+      "line": 72,
       "dynamic": false
     },
     {
@@ -1573,7 +1583,7 @@
       ],
       "declaredPath": "/businesses/:id",
       "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 39,
+      "line": 42,
       "dynamic": false
     },
     {
@@ -1583,7 +1593,7 @@
       ],
       "declaredPath": "/businesses/:id",
       "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 103,
+      "line": 105,
       "dynamic": false
     },
     {
@@ -1593,7 +1603,7 @@
       ],
       "declaredPath": "/businesses/:id/logo",
       "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 312,
+      "line": 318,
       "dynamic": false
     },
     {
@@ -1693,7 +1703,7 @@
       ],
       "declaredPath": "/payments",
       "source": "backend/src/routes/invoices/payments.routes.js",
-      "line": 122,
+      "line": 148,
       "dynamic": false
     },
     {
@@ -1703,7 +1713,7 @@
       ],
       "declaredPath": "/payments",
       "source": "backend/src/routes/invoices/payments.routes.js",
-      "line": 17,
+      "line": 22,
       "dynamic": false
     },
     {
@@ -1863,7 +1873,7 @@
       ],
       "declaredPath": "/settings",
       "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 18,
+      "line": 21,
       "dynamic": false
     },
     {
@@ -1873,7 +1883,7 @@
       ],
       "declaredPath": "/settings",
       "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 48,
+      "line": 51,
       "dynamic": false
     },
     {
@@ -1883,7 +1893,7 @@
       ],
       "declaredPath": "/settings/logo",
       "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 209,
+      "line": 210,
       "dynamic": false
     },
     {
@@ -1983,7 +1993,7 @@
       ],
       "declaredPath": "/api/lists/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 44,
+      "line": 45,
       "dynamic": false
     },
     {
@@ -2013,7 +2023,7 @@
       ],
       "declaredPath": "/lists/:listId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 98,
+      "line": 113,
       "dynamic": false
     },
     {
@@ -2023,7 +2033,7 @@
       ],
       "declaredPath": "/lists/:listId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 47,
+      "line": 90,
       "dynamic": false
     },
     {
@@ -2123,7 +2133,7 @@
       ],
       "declaredPath": "/notes/:noteId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 169,
+      "line": 153,
       "dynamic": false
     },
     {
@@ -2133,7 +2143,7 @@
       ],
       "declaredPath": "/notes/:noteId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 118,
+      "line": 130,
       "dynamic": false
     },
     {
@@ -2553,7 +2563,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 36,
+      "line": 95,
       "dynamic": false
     },
     {
@@ -2563,7 +2573,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 100,
+      "line": 159,
       "dynamic": false
     },
     {
@@ -2573,7 +2583,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 192,
+      "line": 296,
       "dynamic": false
     },
     {
@@ -2583,7 +2593,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 57,
+      "line": 116,
       "dynamic": false
     },
     {
@@ -2593,7 +2603,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 148,
+      "line": 216,
       "dynamic": false
     },
     {
@@ -2603,7 +2613,7 @@
       ],
       "declaredPath": "/deals",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 361,
+      "line": 473,
       "dynamic": false
     },
     {
@@ -2613,7 +2623,7 @@
       ],
       "declaredPath": "/deals/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 640,
+      "line": 798,
       "dynamic": false
     },
     {
@@ -2623,7 +2633,7 @@
       ],
       "declaredPath": "/deals/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 331,
+      "line": 443,
       "dynamic": false
     },
     {
@@ -2633,7 +2643,7 @@
       ],
       "declaredPath": "/deals/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 436,
+      "line": 549,
       "dynamic": false
     },
     {
@@ -2643,7 +2653,7 @@
       ],
       "declaredPath": "/deals/:id/lost",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 585,
+      "line": 743,
       "dynamic": false
     },
     {
@@ -2653,7 +2663,7 @@
       ],
       "declaredPath": "/deals/:id/reopen",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 613,
+      "line": 771,
       "dynamic": false
     },
     {
@@ -2663,7 +2673,7 @@
       ],
       "declaredPath": "/deals/:id/stage",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 499,
+      "line": 640,
       "dynamic": false
     },
     {
@@ -2673,7 +2683,7 @@
       ],
       "declaredPath": "/deals/:id/won",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 558,
+      "line": 716,
       "dynamic": false
     },
     {
@@ -2683,7 +2693,7 @@
       ],
       "declaredPath": "/deals/all",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 236,
+      "line": 348,
       "dynamic": false
     },
     {
@@ -2703,7 +2713,7 @@
       ],
       "declaredPath": "/public/sign/:token",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 411,
+      "line": 559,
       "dynamic": false
     },
     {
@@ -2713,7 +2723,7 @@
       ],
       "declaredPath": "/public/sign/:token",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 438,
+      "line": 586,
       "dynamic": false
     },
     {
@@ -2723,7 +2733,7 @@
       ],
       "declaredPath": "/public/sign/:token/decline",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 466,
+      "line": 617,
       "dynamic": false
     },
     {
@@ -2733,7 +2743,7 @@
       ],
       "declaredPath": "/public/sign/:token/download",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 477,
+      "line": 631,
       "dynamic": false
     },
     {
@@ -2743,7 +2753,7 @@
       ],
       "declaredPath": "/public/sign/:token/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 488,
+      "line": 648,
       "dynamic": false
     },
     {
@@ -2753,7 +2763,7 @@
       ],
       "declaredPath": "/public/sign/:token/verify",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 434,
+      "line": 582,
       "dynamic": false
     },
     {
@@ -3013,7 +3023,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 273,
+      "line": 180,
       "dynamic": false
     },
     {
@@ -3023,7 +3033,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 353,
+      "line": 210,
       "dynamic": false
     },
     {
@@ -3033,7 +3043,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 476,
+      "line": 315,
       "dynamic": false
     },
     {
@@ -3043,7 +3053,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 311,
+      "line": 240,
       "dynamic": false
     },
     {
@@ -3053,7 +3063,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 412,
+      "line": 267,
       "dynamic": false
     },
     {
@@ -3063,7 +3073,7 @@
       ],
       "declaredPath": "/:id/calculate",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 502,
+      "line": 342,
       "dynamic": false
     },
     {
@@ -3073,7 +3083,7 @@
       ],
       "declaredPath": "/:id/contacts",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 541,
+      "line": 368,
       "dynamic": false
     },
     {
@@ -3083,7 +3093,7 @@
       ],
       "declaredPath": "/filter-options",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 672,
+      "line": 99,
       "dynamic": false
     },
     {
@@ -3093,7 +3103,7 @@
       ],
       "declaredPath": "/preview",
       "source": "backend/src/routes/segments.routes.js",
-      "line": 612,
+      "line": 149,
       "dynamic": false
     },
     {
@@ -3103,7 +3113,7 @@
       ],
       "declaredPath": "/shared/list/:token",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 262,
+      "line": 212,
       "dynamic": false
     },
     {
@@ -3113,7 +3123,7 @@
       ],
       "declaredPath": "/shared/note/:token",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 303,
+      "line": 257,
       "dynamic": false
     },
     {
@@ -3123,7 +3133,7 @@
       ],
       "declaredPath": "/shared/vault/:token",
       "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 87,
+      "line": 84,
       "dynamic": false
     },
     {
@@ -3133,7 +3143,7 @@
       ],
       "declaredPath": "/shared/whiteboard/:token",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 340,
+      "line": 298,
       "dynamic": false
     },
     {
@@ -3143,7 +3153,7 @@
       ],
       "declaredPath": "/signatures/documents",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 296,
+      "line": 435,
       "dynamic": false
     },
     {
@@ -3153,7 +3163,7 @@
       ],
       "declaredPath": "/signatures/documents",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 186,
+      "line": 286,
       "dynamic": false
     },
     {
@@ -3163,7 +3173,7 @@
       ],
       "declaredPath": "/signatures/documents/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 282,
+      "line": 421,
       "dynamic": false
     },
     {
@@ -3173,7 +3183,7 @@
       ],
       "declaredPath": "/signatures/documents/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 302,
+      "line": 441,
       "dynamic": false
     },
     {
@@ -3183,7 +3193,7 @@
       ],
       "declaredPath": "/signatures/documents/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 196,
+      "line": 305,
       "dynamic": false
     },
     {
@@ -3193,7 +3203,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/audit",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 400,
+      "line": 548,
       "dynamic": false
     },
     {
@@ -3203,7 +3213,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/cancel",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 326,
+      "line": 470,
       "dynamic": false
     },
     {
@@ -3213,7 +3223,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/download",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 355,
+      "line": 518,
       "dynamic": false
     },
     {
@@ -3223,7 +3233,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 272,
+      "line": 408,
       "dynamic": false
     },
     {
@@ -3233,7 +3243,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 367,
+      "line": 535,
       "dynamic": false
     },
     {
@@ -3243,7 +3253,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/remind",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 333,
+      "line": 482,
       "dynamic": false
     },
     {
@@ -3253,7 +3263,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/reminders",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 348,
+      "line": 502,
       "dynamic": false
     },
     {
@@ -3263,7 +3273,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/send",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 309,
+      "line": 448,
       "dynamic": false
     },
     {
@@ -3273,7 +3283,7 @@
       ],
       "declaredPath": "/signatures/documents/upload",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 226,
+      "line": 348,
       "dynamic": false
     },
     {
@@ -3283,7 +3293,7 @@
       ],
       "declaredPath": "/signatures/email/preview",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 249,
+      "line": 385,
       "dynamic": false
     },
     {
@@ -3293,7 +3303,7 @@
       ],
       "declaredPath": "/signatures/templates",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 167,
+      "line": 242,
       "dynamic": false
     },
     {
@@ -3303,7 +3313,7 @@
       ],
       "declaredPath": "/signatures/templates",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 107,
+      "line": 163,
       "dynamic": false
     },
     {
@@ -3313,11 +3323,21 @@
       ],
       "declaredPath": "/signatures/templates/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 138,
+      "line": 198,
       "dynamic": false
     },
     {
       "method": "GET",
+      "publicPaths": [
+        "/api/signatures/templates/:id"
+      ],
+      "declaredPath": "/signatures/templates/:id",
+      "source": "backend/src/routes/signatures.routes.js",
+      "line": 247,
+      "dynamic": false
+    },
+    {
+      "method": "PUT",
       "publicPaths": [
         "/api/signatures/templates/:id"
       ],
@@ -3327,13 +3347,13 @@
       "dynamic": false
     },
     {
-      "method": "PUT",
+      "method": "GET",
       "publicPaths": [
-        "/api/signatures/templates/:id"
+        "/api/signatures/templates/:id/file"
       ],
-      "declaredPath": "/signatures/templates/:id",
+      "declaredPath": "/signatures/templates/:id/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 116,
+      "line": 254,
       "dynamic": false
     },
     {
@@ -3343,7 +3363,7 @@
       ],
       "declaredPath": "/signatures/templates/:id/instantiate",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 179,
+      "line": 267,
       "dynamic": false
     },
     {
@@ -3353,7 +3373,7 @@
       ],
       "declaredPath": "/signatures/templates/upload",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 150,
+      "line": 210,
       "dynamic": false
     },
     {
@@ -3363,7 +3383,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 70,
+      "line": 75,
       "dynamic": false
     },
     {
@@ -3373,7 +3393,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 176,
+      "line": 181,
       "dynamic": false
     },
     {
@@ -3383,7 +3403,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 293,
+      "line": 298,
       "dynamic": false
     },
     {
@@ -3393,7 +3413,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 147,
+      "line": 152,
       "dynamic": false
     },
     {
@@ -3403,7 +3423,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 225,
+      "line": 230,
       "dynamic": false
     },
     {
@@ -3413,7 +3433,7 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 381,
+      "line": 386,
       "dynamic": false
     },
     {
@@ -3423,7 +3443,7 @@
       ],
       "declaredPath": "/:id/send-test",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 325,
+      "line": 330,
       "dynamic": false
     },
     {
@@ -3433,7 +3453,7 @@
       ],
       "declaredPath": "/categories/list",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 123,
+      "line": 128,
       "dynamic": false
     },
     {
@@ -3443,7 +3463,7 @@
       ],
       "declaredPath": "/message-info",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 599,
+      "line": 606,
       "dynamic": false
     },
     {
@@ -3453,7 +3473,7 @@
       ],
       "declaredPath": "/send-to-contact",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 434,
+      "line": 439,
       "dynamic": false
     },
     {
@@ -3463,7 +3483,7 @@
       ],
       "declaredPath": "/webhook/inbound",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 675,
+      "line": 704,
       "dynamic": false
     },
     {
@@ -3473,7 +3493,7 @@
       ],
       "declaredPath": "/webhook/status",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 615,
+      "line": 622,
       "dynamic": false
     },
     {
@@ -3573,7 +3593,7 @@
       ],
       "declaredPath": "/webhook",
       "source": "backend/src/routes/social/webhook.routes.js",
-      "line": 16,
+      "line": 43,
       "dynamic": false
     },
     {
@@ -3583,7 +3603,7 @@
       ],
       "declaredPath": "/webhook",
       "source": "backend/src/routes/social/webhook.routes.js",
-      "line": 38,
+      "line": 66,
       "dynamic": false
     },
     {
@@ -3593,7 +3613,7 @@
       ],
       "declaredPath": "/api/status",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 112,
+      "line": 113,
       "dynamic": false
     },
     {
@@ -3603,7 +3623,7 @@
       ],
       "declaredPath": "/api/suggestions",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 56,
+      "line": 57,
       "dynamic": false
     },
     {
@@ -3633,7 +3653,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 148,
+      "line": 163,
       "dynamic": false
     },
     {
@@ -3643,7 +3663,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 94,
+      "line": 96,
       "dynamic": false
     },
     {
@@ -3653,7 +3673,7 @@
       ],
       "declaredPath": "/suggestions",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 199,
+      "line": 214,
       "dynamic": false
     },
     {
@@ -3773,7 +3793,7 @@
       ],
       "declaredPath": "/api/vaults/:vaultId/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 47,
+      "line": 48,
       "dynamic": false
     },
     {
@@ -3793,7 +3813,7 @@
       ],
       "declaredPath": "/vaults/:vaultId/share",
       "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 64,
+      "line": 58,
       "dynamic": false
     },
     {
@@ -3803,7 +3823,7 @@
       ],
       "declaredPath": "/vaults/:vaultId/share",
       "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 16,
+      "line": 17,
       "dynamic": false
     },
     {
@@ -3823,7 +3843,7 @@
       ],
       "declaredPath": "/:workflowId",
       "source": "backend/src/routes/webhooks.routes.js",
-      "line": 45,
+      "line": 54,
       "dynamic": false
     },
     {
@@ -3853,7 +3873,7 @@
       ],
       "declaredPath": "/api/whiteboards/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 45,
+      "line": 46,
       "dynamic": false
     },
     {
@@ -3893,7 +3913,7 @@
       ],
       "declaredPath": "/whiteboards/:whiteboardId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 240,
+      "line": 193,
       "dynamic": false
     },
     {
@@ -3903,7 +3923,7 @@
       ],
       "declaredPath": "/whiteboards/:whiteboardId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 189,
+      "line": 170,
       "dynamic": false
     },
     {
@@ -3933,7 +3953,7 @@
       ],
       "declaredPath": "/api/wireframes/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 46,
+      "line": 47,
       "dynamic": false
     },
     {
@@ -3973,7 +3993,7 @@
       ],
       "declaredPath": "/wireframes/:wireframeId/share",
       "source": "backend/src/routes/wireframes.routes.js",
-      "line": 390,
+      "line": 374,
       "dynamic": false
     },
     {
@@ -3993,7 +4013,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 58,
+      "line": 201,
       "dynamic": false
     },
     {
@@ -4003,7 +4023,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 173,
+      "line": 326,
       "dynamic": false
     },
     {
@@ -4013,7 +4033,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 345,
+      "line": 591,
       "dynamic": false
     },
     {
@@ -4023,7 +4043,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 113,
+      "line": 266,
       "dynamic": false
     },
     {
@@ -4033,7 +4053,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 268,
+      "line": 440,
       "dynamic": false
     },
     {
@@ -4043,7 +4063,7 @@
       ],
       "declaredPath": "/:id/activate",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 371,
+      "line": 617,
       "dynamic": false
     },
     {
@@ -4053,7 +4073,7 @@
       ],
       "declaredPath": "/:id/deactivate",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 415,
+      "line": 712,
       "dynamic": false
     },
     {
@@ -4063,7 +4083,7 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 630,
+      "line": 1543,
       "dynamic": false
     },
     {
@@ -4073,7 +4093,7 @@
       ],
       "declaredPath": "/:id/enroll",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 444,
+      "line": 762,
       "dynamic": false
     },
     {
@@ -4083,7 +4103,7 @@
       ],
       "declaredPath": "/:id/enrollments",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 534,
+      "line": 857,
       "dynamic": false
     },
     {
@@ -4093,7 +4113,77 @@
       ],
       "declaredPath": "/:id/enrollments/:enrollmentId",
       "source": "backend/src/routes/workflows.routes.js",
-      "line": 600,
+      "line": 1471,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/enrollments/:enrollmentId/pause"
+      ],
+      "declaredPath": "/:id/enrollments/:enrollmentId/pause",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 1182,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/enrollments/:enrollmentId/resume"
+      ],
+      "declaredPath": "/:id/enrollments/:enrollmentId/resume",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 1216,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/enrollments/:enrollmentId/retry"
+      ],
+      "declaredPath": "/:id/enrollments/:enrollmentId/retry",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 1259,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/workflows/:id/execution-summary"
+      ],
+      "declaredPath": "/:id/execution-summary",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 923,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/workflows/:id/side-effects"
+      ],
+      "declaredPath": "/:id/side-effects",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 1054,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/side-effects/:sideEffectId/reconcile"
+      ],
+      "declaredPath": "/:id/side-effects/:sideEffectId/reconcile",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 1344,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/workflows/:id/side-effects/:sideEffectId/retry"
+      ],
+      "declaredPath": "/:id/side-effects/:sideEffectId/retry",
+      "source": "backend/src/routes/workflows.routes.js",
+      "line": 1301,
       "dynamic": false
     },
     {
@@ -4133,7 +4223,7 @@
       ],
       "declaredPath": "/health",
       "source": "backend/src/index.js",
-      "line": 370,
+      "line": 367,
       "dynamic": false
     }
   ]

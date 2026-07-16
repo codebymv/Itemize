@@ -4,6 +4,10 @@
  */
 
 import api from '@/lib/api';
+import type {
+  WorkflowStepType,
+  WorkflowTriggerType,
+} from '@/domain/workflowRegistry';
 
 type WorkflowConfig = Record<string, unknown>;
 
@@ -22,7 +26,7 @@ export interface WorkflowStep {
   id?: number;
   workflow_id?: number;
   step_order: number;
-  step_type: 'send_email' | 'add_tag' | 'remove_tag' | 'wait' | 'create_task' | 'move_deal' | 'webhook' | 'condition' | 'update_contact' | 'send_sms';
+  step_type: WorkflowStepType;
   step_config: WorkflowConfig;
   condition_config?: WorkflowConfig | null;
   true_branch_step?: number;
@@ -34,8 +38,11 @@ export interface Workflow {
   organization_id: number;
   name: string;
   description?: string;
-  trigger_type: 'contact_added' | 'tag_added' | 'tag_removed' | 'deal_stage_changed' | 'form_submitted' | 'manual' | 'scheduled' | 'contact_updated';
+  trigger_type: WorkflowTriggerType;
   trigger_config: WorkflowConfig;
+  scheduled_contact_id?: number | null;
+  next_trigger_at?: string | null;
+  last_triggered_at?: string | null;
   is_active: boolean;
   stats: {
     enrolled: number;
@@ -97,7 +104,7 @@ export interface EmailTemplate {
 // ===================
 
 export const getWorkflows = async (organizationId: number, params?: {
-  trigger_type?: string;
+  trigger_type?: WorkflowTriggerType;
   is_active?: boolean;
   search?: string;
 }): Promise<{ workflows: Workflow[]; total: number }> => {

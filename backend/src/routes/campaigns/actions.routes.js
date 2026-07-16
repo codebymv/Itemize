@@ -5,6 +5,8 @@ const { sendSuccess, sendBadRequest, sendNotFound, sendError } = require('../../
 const UsageTrackingService = require('../../services/usageTrackingService');
 const { sendCampaignEmails } = require('./delivery');
 const { campaignColumns, campaignRecipientColumns } = require('./columns');
+const { normalizeCampaignAudience, compileCampaignAudience } = require('../../services/campaignAudience');
+const { SegmentValidationError } = require('../../services/segmentFilter');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -111,6 +113,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     FROM email_campaigns c
                     LEFT JOIN email_templates et ON c.template_id = et.id
                     WHERE c.id = $1 AND c.organization_id = $2
+                    FOR UPDATE OF c
                 `, [id, req.organizationId]);
 
                 if (campaignResult.rows.length === 0) {
@@ -133,25 +136,17 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                         AND (c.email_bounced IS NULL OR c.email_bounced = FALSE)
                 `;
                 const recipientParams = [req.organizationId];
-
-                if (campaign.segment_type === 'tag' && campaign.tag_ids?.length > 0) {
-                    recipientQuery += ` AND c.id IN (
-                        SELECT ct.contact_id FROM contact_tags ct WHERE ct.tag_id = ANY($2)
-                    )`;
-                    recipientParams.push(campaign.tag_ids);
-                }
-
-                if (campaign.segment_type === 'status' && campaign.segment_filter?.status) {
-                    recipientQuery += ` AND c.status = $${recipientParams.length + 1}`;
-                    recipientParams.push(campaign.segment_filter.status);
-                }
-
-                if (campaign.excluded_tag_ids?.length > 0) {
-                    recipientQuery += ` AND c.id NOT IN (
-                        SELECT ct.contact_id FROM contact_tags ct WHERE ct.tag_id = ANY($${recipientParams.length + 1})
-                    )`;
-                    recipientParams.push(campaign.excluded_tag_ids);
-                }
+                const audience = await normalizeCampaignAudience(
+                    client,
+                    req.organizationId,
+                    campaign
+                );
+                const compiledAudience = compileCampaignAudience(audience, {
+                    alias: 'c',
+                    startIndex: recipientParams.length + 1,
+                });
+                recipientQuery += ` AND ${compiledAudience.condition}`;
+                recipientParams.push(...compiledAudience.params);
 
                 const recipientsResult = await client.query(recipientQuery, recipientParams);
                 const recipients = recipientsResult.rows;
@@ -258,6 +253,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 message: 'Campaign is now sending'
             });
         } catch (error) {
+            if (error instanceof SegmentValidationError) {
+                return sendBadRequest(res, error.message, error.field);
+            }
             console.error('Error sending campaign:', error);
             return sendError(res, 'Failed to send campaign');
         }
@@ -315,6 +313,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     FROM campaign_recipients cr
                     JOIN contacts c ON cr.contact_id = c.id
                     WHERE cr.campaign_id = $1 AND cr.status = 'pending'
+                      AND COALESCE(c.email_unsubscribed, FALSE) = FALSE
+                      AND COALESCE(c.email_bounced, FALSE) = FALSE
                 `, [id]);
 
                 const recipients = recipientsResult.rows;

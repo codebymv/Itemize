@@ -591,7 +591,7 @@ export const shareVault = async (vaultId: number, token?: string) => {
   const response = await api.post(`/api/vaults/${vaultId}/share`, {}, {
     headers: getAuthHeaders(token)
   });
-  return response.data;
+  return response.data.data;
 };
 
 // Disable vault sharing
@@ -599,13 +599,13 @@ export const unshareVault = async (vaultId: number, token?: string) => {
   const response = await api.delete(`/api/vaults/${vaultId}/share`, {
     headers: getAuthHeaders(token)
   });
-  return response.data;
+  return response.data.data;
 };
 
 // Get shared vault (public)
 export const getSharedVault = async (shareToken: string) => {
   const response = await api.get(`/api/shared/vault/${shareToken}`);
-  return response.data;
+  return response.data.data;
 };
 
 // Lock vault with master password

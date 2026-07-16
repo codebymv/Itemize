@@ -58,12 +58,14 @@ export default function FieldPlacementCanvas<TField extends FieldPlacementField>
   const pdfFile = useMemo(() => {
     if (localFile) return localFile;
     if (!resolvedUrl) return '';
-    if (resolvedUrl.startsWith(getApiUrl()) && resolvedUrl.includes('/uploads/')) return resolvedUrl;
     if (documentId) {
       return {
         url: `${getApiUrl()}/api/signatures/documents/${documentId}/file`,
         withCredentials: true
       };
+    }
+    if (resolvedUrl.startsWith(getApiUrl())) {
+      return { url: resolvedUrl, withCredentials: true };
     }
     return resolvedUrl;
   }, [localFile, resolvedUrl, documentId]);

@@ -2,7 +2,10 @@ const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendBadRequest, sendError } = require('../../utils/response');
-const { fs, logger, multer, path, s3Service, upload } = require('./logo-upload');
+const {
+    assertLogoUpload, cleanupUploadedFile, fs, logger, multer,
+    resolveLocalLogoPath, s3Service, upload,
+} = require('./logo-upload');
 const { PAYMENT_SETTINGS_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
@@ -58,7 +61,6 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 business_address,
                 business_phone,
                 business_email,
-                logo_url,
                 default_currency
             } = req.body;
 
@@ -67,8 +69,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     INSERT INTO payment_settings (
                         organization_id, invoice_prefix, default_payment_terms, default_notes, default_terms,
                         default_tax_rate, tax_id, business_name, business_address, business_phone,
-                        business_email, logo_url, default_currency
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                        business_email, default_currency
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                     ON CONFLICT (organization_id) DO UPDATE SET
                         invoice_prefix = COALESCE(EXCLUDED.invoice_prefix, payment_settings.invoice_prefix),
                         default_payment_terms = COALESCE(EXCLUDED.default_payment_terms, payment_settings.default_payment_terms),
@@ -80,7 +82,6 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         business_address = EXCLUDED.business_address,
                         business_phone = EXCLUDED.business_phone,
                         business_email = EXCLUDED.business_email,
-                        logo_url = EXCLUDED.logo_url,
                         default_currency = COALESCE(EXCLUDED.default_currency, payment_settings.default_currency),
                         updated_at = CURRENT_TIMESTAMP
                     RETURNING ${selectColumns(PAYMENT_SETTINGS_COLUMNS)}
@@ -96,7 +97,6 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     business_address || null,
                     business_phone || null,
                     business_email || null,
-                    logo_url || null,
                     default_currency || 'USD'
                 ]);
             });
@@ -132,6 +132,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
             }
 
             try {
+                await assertLogoUpload(req.file);
                 const uploadResult = await withDbClient(pool, async (client) => {
                     // Delete old logo file if exists
                     const oldSettings = await client.query(
@@ -154,9 +155,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         }
                         // Delete local file if it exists
                         if (oldUrl.includes('/uploads/logos/')) {
-                            const filename = oldUrl.split('/uploads/logos/')[1];
-                            const oldFilePath = path.join(__dirname, '../../../uploads/logos', filename);
-                            if (fs.existsSync(oldFilePath)) {
+                            const oldFilePath = resolveLocalLogoPath(oldUrl);
+                            if (oldFilePath && fs.existsSync(oldFilePath)) {
                                 fs.unlinkSync(oldFilePath);
                             }
                         }
@@ -166,7 +166,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     let logoUrl;
                     if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
                         // Upload to S3
-                        const key = `logos/logo-${req.organizationId}-settings-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+                        const extension = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' }[req.file.mimetype];
+                        const key = `logos/logo-${req.organizationId}-settings-${Date.now()}-${Math.round(Math.random() * 1E9)}${extension}`;
                         logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
                         // Delete local file after S3 upload
                         if (req.file.path && fs.existsSync(req.file.path)) {
@@ -193,9 +194,9 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     logo_url: uploadResult.logoUrl
                 });
             } catch (error) {
-                // Clean up uploaded file on error
-                if (req.file?.path) {
-                    fs.unlinkSync(req.file.path);
+                await cleanupUploadedFile(req.file);
+                if (error.code === 'INVALID_FILE_CONTENT') {
+                    return sendBadRequest(res, error.message);
                 }
                 console.error('Error uploading logo:', error);
                 return sendError(res, 'Failed to upload logo');
@@ -230,9 +231,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     }
                     // Delete local file if it exists
                     if (oldUrl.includes('/uploads/logos/')) {
-                        const filename = oldUrl.split('/uploads/logos/')[1];
-                        const filePath = path.join(__dirname, '../../../uploads/logos', filename);
-                        if (fs.existsSync(filePath)) {
+                        const filePath = resolveLocalLogoPath(oldUrl);
+                        if (filePath && fs.existsSync(filePath)) {
                             fs.unlinkSync(filePath);
                         }
                     }

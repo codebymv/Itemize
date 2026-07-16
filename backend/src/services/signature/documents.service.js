@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const { logger } = require('../../utils/logger');
 const { withDbClient, withTransaction } = require('../../utils/db');
 const {
@@ -18,7 +17,16 @@ const {
 } = require('./columns');
 
 async function createDocument(pool, organizationId, userId, data) {
-    return withDbClient(pool, async (client) => {
+    return withTransaction(pool, async (client) => {
+        if (data.template_id) {
+            const template = await client.query(
+                'SELECT id FROM signature_templates WHERE id = $1 AND organization_id = $2',
+                [data.template_id, organizationId]
+            );
+            if (template.rows.length === 0) {
+                throw new Error('Template must belong to the active organization');
+            }
+        }
         const result = await client.query(`
             INSERT INTO signature_documents (
                 organization_id,
@@ -73,7 +81,7 @@ async function updateDocument(pool, organizationId, documentId, data) {
                 locale = COALESCE($9, locale),
                 routing_mode = COALESCE($10, routing_mode),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $11 AND organization_id = $12
+            WHERE id = $11 AND organization_id = $12 AND status = 'draft'
             RETURNING ${signatureDocumentColumns()}
         `, [
             data.title || null,
@@ -96,6 +104,14 @@ async function updateDocument(pool, organizationId, documentId, data) {
 
 async function uploadDocument(pool, organizationId, documentId, file) {
     return withTransaction(pool, async (client) => {
+        const authorized = await client.query(
+            `SELECT id FROM signature_documents
+             WHERE id = $1 AND organization_id = $2 AND status = 'draft'
+             FOR UPDATE`,
+            [documentId, organizationId]
+        );
+        if (authorized.rows.length === 0) return null;
+
         const sha256 = await computeSha256FromFile(file);
         let fileUrl = null;
 
@@ -114,13 +130,13 @@ async function uploadDocument(pool, organizationId, documentId, file) {
                 file_type = $4,
                 original_sha256 = $5,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6 AND organization_id = $7
+            WHERE id = $6 AND organization_id = $7 AND status = 'draft'
             RETURNING ${signatureDocumentColumns()}
         `, [
             fileUrl,
             file.originalname || file.filename || 'document.pdf',
             file.size || null,
-            file.mimetype || 'application/pdf',
+            'application/pdf',
             sha256,
             documentId,
             organizationId
@@ -144,7 +160,7 @@ async function uploadDocument(pool, organizationId, documentId, file) {
                 fileUrl,
                 file.originalname || file.filename || 'document.pdf',
                 file.size || null,
-                file.mimetype || 'application/pdf',
+                'application/pdf',
                 sha256
             ]);
         }
@@ -156,7 +172,7 @@ async function uploadDocument(pool, organizationId, documentId, file) {
 async function removeDocumentFile(pool, organizationId, documentId) {
     return withTransaction(pool, async (client) => {
         const docResult = await client.query(
-            'SELECT file_url FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            "SELECT file_url FROM signature_documents WHERE id = $1 AND organization_id = $2 AND status = 'draft'",
             [documentId, organizationId]
         );
         if (docResult.rows.length === 0) return null;
@@ -166,8 +182,8 @@ async function removeDocumentFile(pool, organizationId, documentId) {
         if (fileUrl) {
             try {
                 if (fileUrl.startsWith('/uploads/')) {
-                    const relativePath = fileUrl.replace('/uploads/', '');
-                    const fullPath = path.join(__dirname, '../uploads', relativePath);
+                    const fullPath = getLocalFilePath(fileUrl);
+                    if (!fullPath) throw new Error('Invalid local signature file path');
                     await fs.promises.unlink(fullPath).catch(() => null);
                 } else if (fileUrl.includes('.s3.') && s3Service) {
                     const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
@@ -271,8 +287,8 @@ async function deleteDocument(pool, organizationId, documentId) {
         if (fileUrl) {
             try {
                 if (fileUrl.startsWith('/uploads/')) {
-                    const relativePath = fileUrl.replace('/uploads/', '');
-                    const fullPath = path.join(__dirname, '../uploads', relativePath);
+                    const fullPath = getLocalFilePath(fileUrl);
+                    if (!fullPath) throw new Error('Invalid local signature file path');
                     await fs.promises.unlink(fullPath).catch(() => null);
                 } else if (fileUrl.includes('.s3.') && s3Service) {
                     const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
@@ -301,6 +317,23 @@ async function deleteDocument(pool, organizationId, documentId) {
 
 async function replaceRecipients(pool, organizationId, documentId, recipients) {
     return withTransaction(pool, async (client) => {
+        const document = await client.query(
+            "SELECT id FROM signature_documents WHERE id = $1 AND organization_id = $2 AND status = 'draft' FOR UPDATE",
+            [documentId, organizationId]
+        );
+        if (document.rows.length === 0) throw new Error('Draft document not found');
+
+        const contactIds = [...new Set(recipients.map(recipient => recipient.contact_id).filter(Boolean).map(Number))];
+        if (contactIds.length > 0) {
+            const contacts = await client.query(
+                'SELECT id FROM contacts WHERE organization_id = $1 AND id = ANY($2::int[])',
+                [organizationId, contactIds]
+            );
+            if (contacts.rows.length !== contactIds.length) {
+                throw new Error('Recipient contact must belong to the active organization');
+            }
+        }
+
         await client.query(
             'DELETE FROM signature_recipients WHERE document_id = $1 AND organization_id = $2',
             [documentId, organizationId]
@@ -326,7 +359,7 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
                 organizationId,
                 recipient.contact_id || null,
                 recipient.name || null,
-                recipient.email,
+                recipient.email.trim().toLowerCase(),
                 recipient.signing_order || 1,
                 recipient.identity_method || 'none',
                 recipient.role_name || null,
@@ -361,8 +394,25 @@ async function replaceRecipients(pool, organizationId, documentId, recipients) {
     });
 }
 
-async function replaceFields(pool, documentId, fields) {
+async function replaceFields(pool, organizationId, documentId, fields) {
     return withTransaction(pool, async (client) => {
+        const document = await client.query(
+            "SELECT id FROM signature_documents WHERE id = $1 AND organization_id = $2 AND status = 'draft' FOR UPDATE",
+            [documentId, organizationId]
+        );
+        if (document.rows.length === 0) throw new Error('Draft document not found');
+
+        const recipientIds = [...new Set(fields.map(field => field.recipient_id).filter(Boolean).map(Number))];
+        if (recipientIds.length > 0) {
+            const recipients = await client.query(
+                'SELECT id FROM signature_recipients WHERE document_id = $1 AND organization_id = $2 AND id = ANY($3::int[])',
+                [documentId, organizationId, recipientIds]
+            );
+            if (recipients.rows.length !== recipientIds.length) {
+                throw new Error('Signature field recipient must belong to the document');
+            }
+        }
+
         await client.query(
             'DELETE FROM signature_fields WHERE document_id = $1',
             [documentId]
@@ -371,7 +421,7 @@ async function replaceFields(pool, documentId, fields) {
         let inserted = [];
         if (fields && fields.length > 0) {
             const documentIds = [];
-            const recipientIds = [];
+            const fieldRecipientIds = [];
             const roleNames = [];
             const fieldTypes = [];
             const pageNumbers = [];
@@ -389,7 +439,7 @@ async function replaceFields(pool, documentId, fields) {
 
             for (const field of fields) {
                 documentIds.push(documentId);
-                recipientIds.push(field.recipient_id || null);
+                fieldRecipientIds.push(field.recipient_id || null);
                 roleNames.push(field.role_name || null);
                 fieldTypes.push(field.field_type);
                 pageNumbers.push(field.page_number || 1);
@@ -427,7 +477,7 @@ async function replaceFields(pool, documentId, fields) {
                 )
                 RETURNING ${signatureFieldColumns()}
             `, [
-                documentIds, recipientIds, roleNames, fieldTypes, pageNumbers,
+                documentIds, fieldRecipientIds, roleNames, fieldTypes, pageNumbers,
                 xPositions, yPositions, widths, heights, labels,
                 isRequireds, fieldValues, fontSizes, fontFamilies, textAligns, lockeds
             ]);

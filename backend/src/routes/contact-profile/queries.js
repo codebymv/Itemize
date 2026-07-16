@@ -1,6 +1,11 @@
 const CONTACT_COLUMNS = `
     id, first_name, last_name, email, phone, company,
-    title, city, state, country, status, notes
+    job_title AS title,
+    address->>'city' AS city,
+    address->>'state' AS state,
+    address->>'country' AS country,
+    status,
+    NULL::text AS notes
 `;
 
 const INVOICE_COLUMNS = `
@@ -92,40 +97,41 @@ async function fetchPayments(pool, invoiceIds, organizationId) {
     return result.rows;
 }
 
-async function fetchActivities(pool, contactId) {
+async function fetchActivities(pool, contactId, organizationId) {
     const result = await pool.query(`
-        SELECT ${ACTIVITY_COLUMNS}
-        FROM contact_activities
-        WHERE contact_id = $1
-        ORDER BY created_at DESC
+        SELECT ${ACTIVITY_COLUMNS.replaceAll(/\b(id|type|title|content|created_at)\b/g, 'ca.$1')}
+        FROM contact_activities ca
+        JOIN contacts c ON c.id = ca.contact_id
+        WHERE ca.contact_id = $1 AND c.organization_id = $2
+        ORDER BY ca.created_at DESC
         LIMIT 50
-    `, [contactId]);
+    `, [contactId, organizationId]);
 
     return result.rows;
 }
 
-async function fetchNotes(pool, contactId) {
+async function fetchNotes(pool, contactId, organizationId) {
     const result = await pool.query(`
         SELECT ${NOTE_COLUMNS}
         FROM notes
-        WHERE contact_id = $1
+        WHERE contact_id = $1 AND organization_id = $2
         ORDER BY created_at DESC
         LIMIT 20
-    `, [contactId]);
+    `, [contactId, organizationId]);
 
     return result.rows;
 }
 
-async function fetchLists(pool, contactId) {
+async function fetchLists(pool, contactId, organizationId) {
     const result = await pool.query(`
         SELECT ${LIST_COLUMNS}
         FROM lists l
         LEFT JOIN list_contacts lc ON l.id = lc.list_id
-        WHERE lc.contact_id = $1 OR l.id IN (
+        WHERE l.organization_id = $2 AND (lc.contact_id = $1 OR l.id IN (
             SELECT list_id FROM list_items WHERE contact_id = $1
-        )
+        ))
         LIMIT 20
-    `, [contactId]);
+    `, [contactId, organizationId]);
 
     return result.rows;
 }
@@ -195,9 +201,9 @@ async function fetchProfileData({ pool, contactId, organizationId, logger }) {
     ] = await Promise.all([
         safeFetch(() => fetchInvoices(pool, contactId, organizationId), logger, 'Failed to fetch invoices'),
         safeFetch(() => fetchSignatures(pool, contactId, organizationId), logger, 'Failed to fetch signatures'),
-        safeFetch(() => fetchActivities(pool, contactId), logger, 'Failed to fetch activities'),
-        safeFetch(() => fetchNotes(pool, contactId), logger, 'Failed to fetch notes'),
-        safeFetch(() => fetchLists(pool, contactId), logger, 'Failed to fetch lists'),
+        safeFetch(() => fetchActivities(pool, contactId, organizationId), logger, 'Failed to fetch activities'),
+        safeFetch(() => fetchNotes(pool, contactId, organizationId), logger, 'Failed to fetch notes'),
+        safeFetch(() => fetchLists(pool, contactId, organizationId), logger, 'Failed to fetch lists'),
         safeFetch(() => fetchCommunications(pool, contactId, organizationId), logger, 'Failed to fetch communications'),
         safeFetch(() => fetchTasks(pool, contactId, organizationId), logger, 'Failed to fetch tasks'),
         safeFetch(() => fetchBookings(pool, contactId, organizationId), logger, 'Failed to fetch bookings')

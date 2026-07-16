@@ -7,6 +7,8 @@ const { generateToken, hashToken } = require('./signature/tokens');
 const { logAuditEvent } = require('./signature/audit');
 const {
     sendForSignature,
+    remindForSignature,
+    cancelDocument,
     scheduleReminders,
     getDocumentForSigning,
     submitSignature,
@@ -48,6 +50,8 @@ module.exports = {
     getDocumentDetails,
     logAuditEvent,
     sendForSignature,
+    remindForSignature,
+    cancelDocument,
     scheduleReminders,
     getDocumentForSigning,
     submitSignature,

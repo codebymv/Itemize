@@ -2,6 +2,11 @@ const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient, withTransaction } = require('../../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
+const { WORKFLOW_TRIGGERS } = require('../../domain/workflowRegistry');
+const {
+    enqueueWorkflowTrigger,
+    workflowTriggerEventKey,
+} = require('../../services/workflowTriggerQueue');
 const { PAYMENT_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
@@ -47,7 +52,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 let invoice = null;
                 if (invoice_id != null) {
                     const invoiceResult = await client.query(
-                        `SELECT id, contact_id, total, amount_paid
+                        `SELECT id, contact_id, total, amount_paid, status
                          FROM invoices
                          WHERE id = $1 AND organization_id = $2
                          FOR UPDATE`,
@@ -103,6 +108,27 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         WHERE id = $4
                     `, [newAmountPaid, newAmountDue, newStatus, invoice.id]);
                     invoiceUpdate = { amount_paid: newAmountPaid, amount_due: newAmountDue, status: newStatus };
+
+                    if (newStatus === 'paid' && invoice.status !== 'paid') {
+                        await enqueueWorkflowTrigger(client, {
+                            contactId: effectiveContactId,
+                            entityId: invoice.id,
+                            entityType: 'invoice',
+                            eventKey: workflowTriggerEventKey(
+                                'domain',
+                                `invoice_paid:${invoice.id}`
+                            ),
+                            organizationId: req.organizationId,
+                            payload: {
+                                amount_paid: newAmountPaid,
+                                invoice_id: invoice.id,
+                                payment_id: paymentInsert.rows[0].id,
+                                payment_method,
+                                total: Number(invoice.total),
+                            },
+                            triggerType: WORKFLOW_TRIGGERS.INVOICE_PAID,
+                        });
+                    }
                 }
 
                 return { payment: paymentInsert.rows[0], invoice: invoiceUpdate };

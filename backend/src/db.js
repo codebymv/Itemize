@@ -1,16 +1,43 @@
 const { Pool } = require('pg');
 
 // Import migration tracker for fast startup (skips already-run migrations)
-const { runMigrationOnce } = require('./utils/migrationTracker');
+const { runMigrationOnce: runTrackedMigrationOnce } = require('./utils/migrationTracker');
+
+// Database initialization is an all-required sequence. The shared tracker
+// intentionally returns false so batch callers can count and continue, but
+// application startup must stop at the first unrecorded migration.
+const runMigrationOnce = async (pool, migrationName, migrationFn) => {
+  const succeeded = await runTrackedMigrationOnce(pool, migrationName, migrationFn);
+  if (!succeeded) {
+    throw new Error(`Required migration failed: ${migrationName}`);
+  }
+  return true;
+};
 
 // Import database migrations
-const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runWireframesMigration, runWireframesDimensionsMigration } = require('./db_migrations');
+const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runEmailPasswordAuthMigration, runWireframesMigration, runWireframesDimensionsMigration, runOnboardingMigration } = require('./db_migrations');
 
 // Import CRM migrations
 const { runAllCRMMigrations } = require('./db_crm_migrations');
 
 // Import Automation migrations
 const { runAllAutomationMigrations } = require('./db_automation_migrations');
+const { runWorkflowRegistryMigration } = require('./db_workflow_registry_migrations');
+const { runWorkflowWebhookIdempotencyMigration } = require('./db_workflow_webhook_migrations');
+const { runWorkflowTriggerQueueMigration } = require('./db_workflow_trigger_queue_migrations');
+const { runWorkflowScheduleMigration } = require('./db_workflow_schedule_migrations');
+const {
+    runWorkflowExecutionClaimMigration,
+} = require('./db_workflow_execution_claim_migrations');
+const {
+    runWorkflowLifecycleMigration,
+} = require('./db_workflow_lifecycle_migrations');
+const {
+    runWorkflowSmsReconciliationMigration,
+} = require('./db_workflow_sms_reconciliation_migrations');
+const {
+    runWorkflowSideEffectOutboxMigration,
+} = require('./db_workflow_side_effect_migrations');
 
 // Import Calendar migrations
 const { runAllCalendarMigrations } = require('./db_calendar_migrations');
@@ -23,18 +50,27 @@ const { runAllInboxMigrations } = require('./db_inbox_migrations');
 
 // Import SMS migrations
 const { runAllSmsMigrations } = require('./db_sms_migrations');
+const {
+    runSmsReceivingNumberRegistryMigration,
+    runSmsWebhookIdempotencyMigration,
+} = require('./db_sms_webhook_migrations');
 
 // Import Chat Widget migrations
 const { runAllChatWidgetMigrations } = require('./db_chat_widget_migrations');
 
 // Import Email Campaign migrations
 const { runAllCampaignMigrations } = require('./db_campaign_migrations');
+const {
+    runEmailWebhookMigration,
+    runEmailWebhookReconciliationMigration,
+} = require('./db_email_webhook_migrations');
 
 // Import Segments migrations
 const { runAllSegmentMigrations } = require('./db_segments_migrations');
+const { runCampaignSegmentTargetMigration } = require('./db_campaign_segment_migrations');
 
 // Import Invoicing migrations
-const { runAllInvoicingMigrations } = require('./db_invoicing_migrations');
+const { runAllInvoicingMigrations, addBusinessIdToEstimates } = require('./db_invoicing_migrations');
 const { runStripeWebhookIdempotencyMigration } = require('./db_stripe_webhook_migrations');
 
 // Import Estimates and Recurring migrations
@@ -45,6 +81,10 @@ const { runAllReputationMigrations } = require('./db_reputation_migrations');
 
 // Import Social migrations
 const { runAllSocialMigrations } = require('./db_social_migrations');
+const {
+    runSocialWebhookMigration,
+    runSocialWebhookReconciliationMigration,
+} = require('./db_social_webhook_migrations');
 
 // Import Pages migrations
 const { runAllPagesMigrations } = require('./db_pages_migrations');
@@ -57,6 +97,11 @@ const { runAllNormalizationMigrations } = require('./db_normalization_migrations
 
 // Import Subscription migrations (feature gating and billing)
 const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
+const {
+    runSubscriptionWebhookMigration,
+    runSubscriptionWebhookNotificationOutboxMigration,
+    runSubscriptionWebhookReconciliationMigration,
+} = require('./db_subscription_webhook_migrations');
 
 // Import E-Signature migrations
 const { runAllESignatureMigrations, runESignatureMvpPlusMigrations } = require('./db_esignature_migrations');
@@ -348,6 +393,8 @@ const initializeDatabase = async (pool) => {
       return true;
     });
 
+    await runMigrationOnce(pool, 'users_email_password_auth', runEmailPasswordAuthMigration);
+
     // Feature migrations (tracked individually)
     await runMigrationOnce(pool, 'feature_canvas', runCanvasMigration);
     await runMigrationOnce(pool, 'feature_list_resize', runListResizeMigration);
@@ -359,10 +406,12 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_sharing', runSharingMigration);
     await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
     await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);
+    await runMigrationOnce(pool, 'feature_onboarding', runOnboardingMigration);
 
     // Module migrations (each module handles its own tables)
     await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
     await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
+    await runMigrationOnce(pool, 'workflow_registry', runWorkflowRegistryMigration);
     await runMigrationOnce(pool, 'workflow_webhook_secrets', async (p) => {
       await p.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
       await p.query(`
@@ -383,16 +432,29 @@ const initializeDatabase = async (pool) => {
       `);
       return true;
     });
+    await runMigrationOnce(pool, 'workflow_webhook_idempotency', runWorkflowWebhookIdempotencyMigration);
+    await runMigrationOnce(pool, 'workflow_trigger_queue', runWorkflowTriggerQueueMigration);
+    await runMigrationOnce(pool, 'workflow_schedules', runWorkflowScheduleMigration);
+    await runMigrationOnce(pool, 'workflow_execution_claims', runWorkflowExecutionClaimMigration);
     await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);
+    await runMigrationOnce(pool, 'workflow_side_effect_outbox', runWorkflowSideEffectOutboxMigration);
+    await runMigrationOnce(pool, 'workflow_lifecycle', runWorkflowLifecycleMigration);
+    await runMigrationOnce(pool, 'workflow_sms_reconciliation', runWorkflowSmsReconciliationMigration);
+    await runMigrationOnce(pool, 'sms_webhook_idempotency', runSmsWebhookIdempotencyMigration);
+    await runMigrationOnce(pool, 'sms_receiving_number_registry', runSmsReceivingNumberRegistryMigration);
     await runMigrationOnce(pool, 'module_chat_widget', runAllChatWidgetMigrations);
     await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
+    await runMigrationOnce(pool, 'email_webhook_events', runEmailWebhookMigration);
+    await runMigrationOnce(pool, 'email_webhook_reconciliation', runEmailWebhookReconciliationMigration);
     await runMigrationOnce(pool, 'module_segments', runAllSegmentMigrations);
+    await runMigrationOnce(pool, 'campaign_segment_targeting', runCampaignSegmentTargetMigration);
     await runMigrationOnce(pool, 'module_invoicing', runAllInvoicingMigrations);
     await runMigrationOnce(pool, 'stripe_webhook_idempotency', runStripeWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
+    await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
     await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {
@@ -445,6 +507,8 @@ const initializeDatabase = async (pool) => {
       `);
       return true;
     });
+    await runMigrationOnce(pool, 'social_webhook_idempotency', runSocialWebhookMigration);
+    await runMigrationOnce(pool, 'social_webhook_reconciliation', runSocialWebhookReconciliationMigration);
     
     await runMigrationOnce(pool, 'module_pages', runAllPagesMigrations);
     
@@ -455,6 +519,9 @@ const initializeDatabase = async (pool) => {
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);
     await runMigrationOnce(pool, 'organization_billing_columns_v2', ensureOrganizationBillingColumns);
+    await runMigrationOnce(pool, 'subscription_webhook_idempotency', runSubscriptionWebhookMigration);
+    await runMigrationOnce(pool, 'subscription_webhook_notification_outbox', runSubscriptionWebhookNotificationOutboxMigration);
+    await runMigrationOnce(pool, 'subscription_webhook_reconciliation', runSubscriptionWebhookReconciliationMigration);
     await runMigrationOnce(pool, 'module_esignatures', runAllESignatureMigrations);
     await runMigrationOnce(pool, 'module_esignatures_mvp_plus', runESignatureMvpPlusMigrations);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);

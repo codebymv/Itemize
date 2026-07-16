@@ -57,6 +57,7 @@ jspm_packages/
 # Build output
 frontend/dist/
 backend/dist/
+backend/.workflow-rollout-results/
 
 # OS
 .DS_Store

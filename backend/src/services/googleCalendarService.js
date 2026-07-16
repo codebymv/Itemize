@@ -77,7 +77,7 @@ const getAuthUrl = (state = {}) => {
         access_type: 'offline',
         scope: scopes,
         prompt: 'consent', // Force refresh token generation
-        state: JSON.stringify(state),
+        state: typeof state === 'string' ? state : JSON.stringify(state),
     });
 };
 

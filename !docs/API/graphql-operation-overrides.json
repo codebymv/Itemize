@@ -15,7 +15,7 @@
       "owner": "platform-security",
       "targetModule": "AuthModule",
       "targetOperation": "issueCsrfToken",
-      "parityStatus": "characterizing",
+      "parityStatus": "characterized",
       "risk": "medium",
       "notes": "Retain as the browser double-submit token bootstrap while cookie-authenticated GraphQL mutations are introduced."
     },
@@ -358,9 +358,9 @@
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "uploadInvoiceBusinessLogo",
-      "parityStatus": "not-started",
+      "parityStatus": "characterized",
       "risk": "high",
-      "notes": "Retain multipart binary upload over HTTP with the same organization and file constraints."
+      "notes": "Retain tenant-authorized multipart HTTP. Enforce a 2 MiB limit, PNG/JPEG/GIF/WebP magic bytes, server-owned storage URLs, safe replacement/deletion, and a separately public logo namespace."
     },
     "POST /api/invoices/email/preview": {
       "disposition": "graphql-mutation",
@@ -597,9 +597,9 @@
       "owner": "billing",
       "targetModule": "InvoiceSettingsModule",
       "targetOperation": "uploadInvoiceSettingsLogo",
-      "parityStatus": "not-started",
+      "parityStatus": "characterized",
       "risk": "high",
-      "notes": "Retain multipart upload over HTTP with organization, content-type, size, storage, and replacement constraints."
+      "notes": "Retain tenant-authorized multipart HTTP. Enforce a 2 MiB limit, PNG/JPEG/GIF/WebP magic bytes, server-owned storage URLs, safe replacement/deletion, and a separately public logo namespace."
     },
     "POST /api/invoices/webhook/stripe": {
       "disposition": "retain-http",
@@ -609,6 +609,1089 @@
       "parityStatus": "characterizing",
       "risk": "medium",
       "notes": "Retain signed Stripe webhook over HTTP and preserve transactional event/payment idempotency."
+    },
+    "POST /api/billing/webhook": {
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetModule": "SubscriptionWebhooksModule",
+      "targetOperation": "processStripeSubscriptionEvent",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work."
+    },
+    "GET /api/campaigns": {
+      "disposition": "graphql-query",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "campaigns",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Use the shared page contract and preserve organization scope, status/search filtering, and created-at descending order."
+    },
+    "POST /api/campaigns": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "createCampaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Create only in the active organization and validate content, sender, template, and targeting references before persistence."
+    },
+    "DELETE /api/campaigns/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "deleteCampaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Scope by organization and reject deletion while status is sending."
+    },
+    "GET /api/campaigns/:id": {
+      "disposition": "graphql-query",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "campaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Return the organization-owned campaign with template metadata and ordered tracked links."
+    },
+    "PUT /api/campaigns/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "updateCampaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Only draft or scheduled campaigns are editable; preserve partial-field and explicit-null behavior."
+    },
+    "POST /api/campaigns/:id/duplicate": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "duplicateCampaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Copy organization-owned configuration into a new draft without copying delivery history."
+    },
+    "POST /api/campaigns/:id/pause": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignDeliveryModule",
+      "targetOperation": "pauseCampaign",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Allow only sending to paused and ensure an in-flight worker cannot overwrite paused as sent."
+    },
+    "GET /api/campaigns/:id/preview": {
+      "disposition": "graphql-query",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "campaignAudiencePreview",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Count only organization-owned deliverable contacts after include/exclude, unsubscribe, and bounce filters."
+    },
+    "GET /api/campaigns/:id/recipients": {
+      "disposition": "graphql-query",
+      "owner": "growth",
+      "targetModule": "CampaignDeliveryModule",
+      "targetOperation": "campaignRecipients",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Use the shared page contract and return only recipient snapshots belonging to an organization-owned campaign."
+    },
+    "POST /api/campaigns/:id/resume": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignDeliveryModule",
+      "targetOperation": "resumeCampaign",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Resume only pending recipients from a paused campaign; completion and retry semantics require durable worker parity."
+    },
+    "POST /api/campaigns/:id/schedule": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "scheduleCampaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Accept a future absolute timestamp plus timezone metadata and allow only draft or scheduled sources."
+    },
+    "POST /api/campaigns/:id/send": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignDeliveryModule",
+      "targetOperation": "sendCampaign",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Lock the campaign, snapshot recipients, reserve usage, and enqueue one durable idempotent delivery job; do not send email inside a resolver."
+    },
+    "POST /api/campaigns/:id/send-test": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignDeliveryModule",
+      "targetOperation": "sendCampaignTest",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Organization-scope the campaign, validate the destination, mark the subject as test, and expose provider failure without mutating campaign delivery state."
+    },
+    "POST /api/campaigns/:id/unschedule": {
+      "disposition": "graphql-mutation",
+      "owner": "growth",
+      "targetModule": "CampaignsModule",
+      "targetOperation": "unscheduleCampaign",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Allow only scheduled to draft and clear the scheduled timestamp."
+    },
+    "GET /api/workflows": {
+      "disposition": "graphql-query",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "workflows",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Preserve organization scope, trigger/active/search filters, updated-at ordering, step counts, and active enrollment counts."
+    },
+    "POST /api/workflows": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "createWorkflow",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Validate trigger and step enums, enforce plan limits, and create workflow plus ordered steps atomically."
+    },
+    "DELETE /api/workflows/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "deleteWorkflow",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Delete only an organization-owned workflow and characterize cascade/audit behavior for enrollments and execution logs."
+    },
+    "GET /api/workflows/:id": {
+      "disposition": "graphql-query",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "workflow",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Return the organization-owned workflow, ordered steps, and enrollment statistics without existence leakage."
+    },
+    "PUT /api/workflows/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "updateWorkflow",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Validate enums and atomically replace steps when supplied; omitted steps leave the current sequence intact."
+    },
+    "POST /api/workflows/:id/activate": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "activateWorkflow",
+      "parityStatus": "characterized",
+      "risk": "medium",
+      "notes": "Require organization ownership and at least one step. Reactivation resumes only enrollments paused by workflow deactivation; explicit manual pauses remain paused."
+    },
+    "POST /api/workflows/:id/deactivate": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "deactivateWorkflow",
+      "parityStatus": "characterized",
+      "risk": "medium",
+      "notes": "Organization-scoped deactivation atomically pauses active enrollments with a distinct reason and clears their live execution claims."
+    },
+    "POST /api/workflows/:id/duplicate": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowsModule",
+      "targetOperation": "duplicateWorkflow",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Enforce plan limits and atomically copy an organization-owned definition and ordered steps into an inactive workflow."
+    },
+    "POST /api/workflows/:id/enroll": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowEnrollmentsModule",
+      "targetOperation": "enrollContactInWorkflow",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Lock the organization-owned workflow, require a same-organization contact, and serialize the unique workflow/contact enrollment transition."
+    },
+    "GET /api/workflows/:id/enrollments": {
+      "disposition": "graphql-query",
+      "owner": "automation",
+      "targetModule": "WorkflowEnrollmentsModule",
+      "targetOperation": "workflowEnrollments",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Use the shared page contract, organization-scope through the workflow, and support explicit status filtering."
+    },
+    "GET /api/workflows/:id/execution-summary": {
+      "disposition": "graphql-query",
+      "owner": "automation",
+      "targetModule": "WorkflowExecutionModule",
+      "targetOperation": "workflowExecutionSummary",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Return tenant-scoped enrollment and provider-outbox status/type counts, queue age, due/expired work, attempts, cancellations, dead letters, and operator retry totals without payloads, destinations, headers, or idempotency keys."
+    },
+    "GET /api/workflows/:id/side-effects": {
+      "disposition": "graphql-query",
+      "owner": "automation",
+      "targetModule": "WorkflowExecutionModule",
+      "targetOperation": "workflowSideEffects",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Strictly paginate and filter the tenant-owned provider queue. Expose safe status/timing/attempt/error fields and provider correlation IDs while omitting serialized payloads and delivery secrets."
+    },
+    "DELETE /api/workflows/:id/enrollments/:enrollmentId": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowEnrollmentsModule",
+      "targetOperation": "cancelWorkflowEnrollment",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Scope through an organization-owned workflow, clear execution claims and future scheduling, and cancel queued/retrying/dead-letter provider work. An accepted in-flight call may finish sent; failed or expired cancelled work must not retry."
+    },
+    "POST /api/workflows/:id/enrollments/:enrollmentId/pause": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowEnrollmentsModule",
+      "targetOperation": "pauseWorkflowEnrollment",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Pause only an active tenant-scoped enrollment, record the manual reason, and clear its live execution claim. Workflow activation must not resume this pause."
+    },
+    "POST /api/workflows/:id/enrollments/:enrollmentId/resume": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowEnrollmentsModule",
+      "targetOperation": "resumeWorkflowEnrollment",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Resume only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead."
+    },
+    "POST /api/workflows/:id/enrollments/:enrollmentId/retry": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowEnrollmentsModule",
+      "targetOperation": "retryWorkflowEnrollment",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retry only a failed enrollment under an active tenant-owned workflow, preserving current_step so completed steps are not replayed."
+    },
+    "POST /api/workflows/:id/side-effects/:sideEffectId/retry": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowExecutionModule",
+      "targetOperation": "retryWorkflowSideEffect",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retry only a tenant/workflow-owned non-cancelled dead letter whose enrollment is not cancelled. Reset the delivery attempt cycle while retaining operator retry count and timestamp."
+    },
+    "POST /api/workflows/:id/side-effects/:sideEffectId/reconcile": {
+      "disposition": "graphql-mutation",
+      "owner": "automation",
+      "targetModule": "WorkflowExecutionModule",
+      "targetOperation": "reconcileWorkflowSmsSideEffect",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Resolve only a tenant/workflow-owned SMS attempt in reconciliation_required. A valid Twilio message SID records provider acceptance and a correlated SMS log; resend is an explicit operator authorization that retains reconciliation and retry history."
+    },
+    "POST /api/webhooks/:workflowId": {
+      "disposition": "retain-http",
+      "owner": "automation",
+      "targetModule": "WorkflowWebhooksModule",
+      "targetOperation": "processWorkflowWebhook",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Retain raw-body HMAC HTTP delivery with timestamp tolerance, canonical trigger matching, and durable replay claims. The adapter returns execution=durably_queued and feeds the same leased trigger matcher as first-party producers."
+    },
+    "GET /api/admin/email/logs": {
+      "disposition": "graphql-query",
+      "owner": "platform-operations",
+      "targetModule": "AdminMessagingModule",
+      "targetOperation": "adminEmailLogs",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Administrator-only global audit page with validated status filters and bounded cursor pagination."
+    },
+    "GET /api/admin/email/logs/:id": {
+      "disposition": "graphql-query",
+      "owner": "platform-operations",
+      "targetModule": "AdminMessagingModule",
+      "targetOperation": "adminEmailLog",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Administrator-only global log detail; preserve stored rendered content while applying audit-data retention rules."
+    },
+    "POST /api/admin/email/preview": {
+      "disposition": "graphql-mutation",
+      "owner": "platform-operations",
+      "targetModule": "AdminMessagingModule",
+      "targetOperation": "previewAdminEmail",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Pure rendering operation with bounded input; never fetch arbitrary URLs or perform provider delivery."
+    },
+    "POST /api/admin/email/send": {
+      "disposition": "graphql-mutation",
+      "owner": "platform-operations",
+      "targetModule": "MessagingDeliveryModule",
+      "targetOperation": "enqueueAdminEmailBatch",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Validate and cap recipients, persist one durable batch plus recipient jobs, and never perform a synchronous provider loop in the resolver."
+    },
+    "GET /api/admin/email/templates": {
+      "disposition": "graphql-query",
+      "owner": "platform-operations",
+      "targetModule": "AdminMessagingModule",
+      "targetOperation": "adminEmailTemplates",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Administrator-only cross-organization template search with cursor pagination and explicit system-template handling."
+    },
+    "GET /api/email-templates": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "emailTemplates",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Organization-scoped template connection preserving category, active, and search filters."
+    },
+    "POST /api/email-templates": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "createEmailTemplate",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Validate content limits and extract a deterministic unique variable set."
+    },
+    "DELETE /api/email-templates/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "deleteEmailTemplate",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Delete only an organization-owned template and preserve nullable historical log references."
+    },
+    "GET /api/email-templates/:id": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "emailTemplate",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Return an organization-owned template without cross-tenant existence leakage."
+    },
+    "PUT /api/email-templates/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "updateEmailTemplate",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Organization-scoped partial update that re-extracts variables from the complete resulting content."
+    },
+    "POST /api/email-templates/:id/duplicate": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "duplicateEmailTemplate",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Copy only an organization-owned template and always create the copy inactive."
+    },
+    "POST /api/email-templates/:id/send-test": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "MessagingDeliveryModule",
+      "targetOperation": "sendEmailTemplateTest",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Organization-scope the template, label test content, validate the destination, and distinguish simulation from provider acceptance."
+    },
+    "GET /api/email-templates/categories/list": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "EmailTemplatesModule",
+      "targetOperation": "emailTemplateCategories",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Organization-scoped category aggregates with stable count scalar semantics."
+    },
+    "POST /api/email-templates/send-to-contact": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "MessagingDeliveryModule",
+      "targetOperation": "enqueueContactEmail",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Require same-organization contact/template, persist an idempotent delivery job, and write provider log plus contact activity from worker outcomes."
+    },
+    "POST /api/email/webhook/resend": {
+      "disposition": "retain-http",
+      "owner": "messaging",
+      "targetModule": "EmailWebhooksModule",
+      "targetOperation": "processResendEmailEvent",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retain raw-body Svix verification and fail closed without the signing secret. Durable svix-id claims deduplicate delivery, provider occurrence timestamps prevent status regression, and matched logs/campaign recipients update engagement and contact suppression. Unmatched or cross-tenant ambiguous events are leased and retried from bounded claim fields until exactly one organization mapping exists; exhausted attempts become redacted dead letters."
+    },
+    "GET /api/sms-templates": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "smsTemplates",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Organization-scoped template connection preserving category, active, and search filters."
+    },
+    "POST /api/sms-templates": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "createSmsTemplate",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Validate message limits, extract variables, and return deterministic encoding and segment information."
+    },
+    "DELETE /api/sms-templates/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "deleteSmsTemplate",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Delete only an organization-owned template while retaining nullable historical log references."
+    },
+    "GET /api/sms-templates/:id": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "smsTemplate",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Return an organization-owned SMS template without existence leakage."
+    },
+    "PUT /api/sms-templates/:id": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "updateSmsTemplate",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Organization-scoped partial update that recomputes variables, encoding, and segment count."
+    },
+    "POST /api/sms-templates/:id/duplicate": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "duplicateSmsTemplate",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Copy only an organization-owned template and create the copy inactive."
+    },
+    "POST /api/sms-templates/:id/send-test": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "MessagingDeliveryModule",
+      "targetOperation": "sendSmsTemplateTest",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Validate and normalize the destination, label test content, and distinguish simulation from provider acceptance."
+    },
+    "GET /api/sms-templates/categories/list": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "smsTemplateCategories",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Organization-scoped category aggregates with stable count scalar semantics."
+    },
+    "POST /api/sms-templates/message-info": {
+      "disposition": "graphql-query",
+      "owner": "messaging",
+      "targetModule": "SmsTemplatesModule",
+      "targetOperation": "smsMessageInfo",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Pure authenticated calculation returning encoding, length, segment count, and remaining characters."
+    },
+    "POST /api/sms-templates/send-to-contact": {
+      "disposition": "graphql-mutation",
+      "owner": "messaging",
+      "targetModule": "MessagingDeliveryModule",
+      "targetOperation": "enqueueContactSms",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Require same-organization contact/template, normalize E.164, enqueue idempotently, and write logs/activity from worker outcomes."
+    },
+    "POST /api/sms-templates/webhook/inbound": {
+      "disposition": "retain-http",
+      "owner": "messaging",
+      "targetModule": "SmsWebhooksModule",
+      "targetOperation": "processInboundSmsWebhook",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retain Twilio-signed form HTTP, fail closed in production, and claim MessageSid durably. The globally unique normalized To number selects one owning organization before From is matched only among that tenant's contacts; unmatched receivers and ambiguous or missing tenant-local senders are quarantined without attribution."
+    },
+    "POST /api/sms-templates/webhook/status": {
+      "disposition": "retain-http",
+      "owner": "messaging",
+      "targetModule": "SmsWebhooksModule",
+      "targetOperation": "processSmsStatusWebhook",
+      "parityStatus": "characterizing",
+      "risk": "high",
+      "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map."
+    },
+    "GET /api/contacts": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contacts", "parityStatus": "characterized", "risk": "high",
+      "notes": "Preserve organization scope, search/filter semantics, deterministic ordering, strict pagination, and safe assignee projection."
+    },
+    "POST /api/contacts": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "createContact", "parityStatus": "characterized", "risk": "high",
+      "notes": "Plan limit is serialized per organization; assignee must be an active-organization member and automation intent must use the durable event boundary."
+    },
+    "GET /api/contacts/:id": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contact", "parityStatus": "characterized", "risk": "high",
+      "notes": "Outside-organization IDs are not found and related user projections must not expose invalid legacy references."
+    },
+    "PUT /api/contacts/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "updateContact", "parityStatus": "characterized", "risk": "high",
+      "notes": "Preserve omitted-versus-null behavior explicitly, validate assignee membership, and emit status changes transactionally through the event boundary."
+    },
+    "DELETE /api/contacts/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "deleteContact", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content."
+    },
+    "GET /api/contacts/:id/profile": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactProfile", "parityStatus": "characterized", "risk": "high",
+      "notes": "Aggregate PII query now requires verified authentication and organization context; every child collection remains tenant-scoped."
+    },
+    "GET /api/contacts/:id/activities": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactActivitiesModule", "targetOperation": "contactActivities", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Define a connection with stable ordering, type filtering, and the parent contact organization boundary."
+    },
+    "POST /api/contacts/:id/activities": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactActivitiesModule", "targetOperation": "addContactActivity", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Validate the activity enum and structured content while scoping through an organization-owned contact."
+    },
+    "GET /api/contacts/:id/content": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Related lists, notes, and whiteboards require explicit tenant scope, stable ordering, and pagination rather than unbounded arrays."
+    },
+    "POST /api/contacts/bulk-update": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Validate IDs, status, tag mode, and assignee membership; return matched and changed IDs without leaking other-tenant rows."
+    },
+    "POST /api/contacts/bulk-delete": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkDeleteContacts", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Organization-scoped bulk deletion needs limits, partial-result semantics, and dependent-row policy."
+    },
+    "GET /api/contacts/export/csv": {
+      "disposition": "retain-http", "owner": "crm", "targetModule": "ContactTransfersModule", "targetOperation": "exportContactsCsv", "parityStatus": "characterized", "risk": "high",
+      "notes": "Retain authenticated CSV HTTP with organization filters, private/no-store delivery, RFC-style quoting, spreadsheet-formula neutralization, and a 50,000-row rejection boundary."
+    },
+    "POST /api/contacts/import/csv": {
+      "disposition": "retain-http", "owner": "crm", "targetModule": "ContactTransfersModule", "targetOperation": "importContactsCsv", "parityStatus": "characterized", "risk": "high",
+      "notes": "Despite the legacy path, this accepts JSON contact rows rather than multipart CSV. Retain HTTP during cutover with an exact object envelope, strict boolean duplicate policy, a 10,000-row limit, bounded 500-row inserts, and serialized plan-limit enforcement."
+    },
+    "GET /api/forms": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "forms", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped form list with explicit status enum, deterministic ordering, counts, and pagination."
+    },
+    "POST /api/forms": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "createForm", "parityStatus": "characterized", "risk": "high",
+      "notes": "Form plus ordered fields commit atomically and the per-organization form limit is concurrency-safe."
+    },
+    "GET /api/forms/:id": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "form", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned definition with ordered fields and explicit null/default semantics."
+    },
+    "PUT /api/forms/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "updateForm", "parityStatus": "characterized", "risk": "high",
+      "notes": "Validate lifecycle enums, redirect URL, notification recipients, contact mappings, and omitted-versus-null settings."
+    },
+    "DELETE /api/forms/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "deleteForm", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped deletion with explicit submission retention/export policy."
+    },
+    "POST /api/forms/:id/duplicate": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "duplicateForm", "parityStatus": "characterized", "risk": "high",
+      "notes": "Atomically copy definition and ordered fields as a draft while enforcing the form plan limit."
+    },
+    "PUT /api/forms/:id/fields": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "replaceFormFields", "parityStatus": "characterized", "risk": "high",
+      "notes": "Atomic ordered replacement with field-type, option, validation, condition, width, and contact-mapping validation."
+    },
+    "GET /api/forms/:id/submissions": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "formSubmissions", "parityStatus": "characterized", "risk": "high",
+      "notes": "Scope through the organization-owned form and return a deterministic paginated connection."
+    },
+    "DELETE /api/forms/:id/submissions/:subId": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "deleteFormSubmission", "parityStatus": "characterized", "risk": "high",
+      "notes": "Both form and submission organization boundaries must match; define audit and retention behavior."
+    },
+    "GET /api/forms/public/form/:slug": {
+      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "getPublicForm", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Retain anonymous rate-limited HTTP for embedded forms; public identity must become globally unambiguous rather than relying on an organization-local slug."
+    },
+    "POST /api/forms/public/form/:slug": {
+      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "submitPublicForm", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Retain anonymous rate-limited HTTP; contact reuse and submission now commit transactionally with same-email race serialization. Add durable notification/event delivery and complete field validation."
+    },
+    "GET /api/pipelines": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipelines", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped pipelines with deal aggregates and deterministic default/name ordering."
+    },
+    "POST /api/pipelines": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "createPipeline", "parityStatus": "characterized", "risk": "high",
+      "notes": "Validate non-empty unique stage IDs/names; concurrent default requests leave exactly one default."
+    },
+    "GET /api/pipelines/:id": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipeline", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned pipeline with paginated deals and safe related-contact/assignee projection."
+    },
+    "PUT /api/pipelines/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "updatePipeline", "parityStatus": "characterized", "risk": "high",
+      "notes": "Default changes serialize and stage replacement cannot remove a stage referenced by a deal."
+    },
+    "DELETE /api/pipelines/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "deletePipeline", "parityStatus": "characterized", "risk": "high",
+      "notes": "Lock and verify organization ownership before checking dependent deals so outsiders receive not found without an existence leak."
+    },
+    "GET /api/pipelines/deals/all": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deals", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped filters, strict pagination, Decimal value transport, and stable tie-breaker ordering."
+    },
+    "POST /api/pipelines/deals": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "createDeal", "parityStatus": "characterized", "risk": "high",
+      "notes": "Pipeline, stage, contact, and assignee references must all belong to the active organization."
+    },
+    "GET /api/pipelines/deals/:id": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deal", "parityStatus": "characterized", "risk": "high",
+      "notes": "Outside-organization IDs are not found and relation projections must preserve tenant scope."
+    },
+    "PUT /api/pipelines/deals/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "updateDeal", "parityStatus": "characterized", "risk": "high",
+      "notes": "Lock the deal and validate the effective pipeline/stage/contact/assignee tuple before update."
+    },
+    "DELETE /api/pipelines/deals/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deleteDeal", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped deletion with explicit activity/event semantics."
+    },
+    "PATCH /api/pipelines/deals/:id/stage": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "moveDeal", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Lock the deal, validate the destination against its pipeline, and publish the durable deal-stage-changed event only after commit."
+    },
+    "POST /api/pipelines/deals/:id/won": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealWon", "parityStatus": "characterized", "risk": "high",
+      "notes": "Atomically set won state, clear lost state, and emit lifecycle activity/event."
+    },
+    "POST /api/pipelines/deals/:id/lost": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealLost", "parityStatus": "characterized", "risk": "high",
+      "notes": "Atomically set lost state/reason, clear won state, and emit lifecycle activity/event."
+    },
+    "POST /api/pipelines/deals/:id/reopen": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "reopenDeal", "parityStatus": "characterized", "risk": "high",
+      "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event."
+    },
+    "GET /api/tags": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "tags", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped canonical tags with usage counts and stable case-insensitive ordering."
+    },
+    "POST /api/tags": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "createTag", "parityStatus": "characterized", "risk": "high",
+      "notes": "Case-insensitive uniqueness is serialized per organization."
+    },
+    "PUT /api/tags/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "updateTag", "parityStatus": "characterized", "risk": "high",
+      "notes": "Rename and denormalized contact-tag propagation commit atomically and reject case-insensitive duplicates."
+    },
+    "DELETE /api/tags/:id": {
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "deleteTag", "parityStatus": "characterized", "risk": "high",
+      "notes": "Delete and optional removal from contact arrays commit atomically; target schema should eliminate dual canonical/freeform ambiguity."
+    },
+    "GET /api/tags/suggestions": {
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "contactTagSuggestions", "parityStatus": "characterized", "risk": "medium",
+      "notes": "Organization-scoped distinct freeform contact tag strings; decide whether this survives canonical tag normalization."
+    },
+    "GET /api/calendars": {
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendars", "parityStatus": "characterized", "risk": "medium",
+      "notes": "Organization-scoped calendar list with deterministic ordering and bounded booking aggregates."
+    },
+    "POST /api/calendars": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "createCalendar", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Validate timezone, duration, buffers, assignment membership, and availability windows in one transaction."
+    },
+    "GET /api/calendars/:id": {
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendar", "parityStatus": "characterized", "risk": "medium",
+      "notes": "Organization-owned calendar with recurring availability and future overrides."
+    },
+    "PUT /api/calendars/:id": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "updateCalendar", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated."
+    },
+    "DELETE /api/calendars/:id": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendar", "parityStatus": "characterized", "risk": "high",
+      "notes": "Locks the owned calendar and booking namespace; rejects deletion while pending or confirmed future bookings exist."
+    },
+    "PUT /api/calendars/:id/availability": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "replaceCalendarAvailability", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Atomic full replacement with validated weekdays, non-overlapping windows, and start-before-end semantics."
+    },
+    "POST /api/calendars/:id/date-override": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "upsertCalendarDateOverride", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned upsert; available overrides require a valid local-time window."
+    },
+    "DELETE /api/calendars/:id/date-override/:overrideId": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendarDateOverride", "parityStatus": "characterized", "risk": "medium",
+      "notes": "Scopes the child override through its organization-owned calendar."
+    },
+    "GET /api/bookings": {
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "bookings", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Strict organization-scoped filters, bounded pagination, timestamp validation, and stable ordering."
+    },
+    "POST /api/bookings": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "createBooking", "parityStatus": "characterized", "risk": "high",
+      "notes": "Calendar-scoped transaction lock makes overlap check plus insert atomic; validate all tenant references and availability policy."
+    },
+    "GET /api/bookings/:id": {
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "booking", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned detail with tenant-safe contact, calendar, and assignee projections."
+    },
+    "PATCH /api/bookings/:id/cancel": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "cancelBooking", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Explicit active-to-cancelled transition with one durable booking-cancelled event committed transactionally."
+    },
+    "PATCH /api/bookings/:id/reschedule": {
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "rescheduleBooking", "parityStatus": "characterized", "risk": "high",
+      "notes": "Locks the booking and calendar namespace; atomically checks collision excluding itself before update."
+    },
+    "GET /api/bookings/public/book/:slug": {
+      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingPage", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Anonymous rate-limited embed protocol; target needs globally unambiguous public identity and bounded response data."
+    },
+    "GET /api/bookings/public/book/:slug/slots": {
+      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingSlots", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Server must return authoritative timezone-aware slots; legacy endpoint exposes raw inputs for browser-side calculation."
+    },
+    "POST /api/bookings/public/book/:slug": {
+      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "createPublicBooking", "parityStatus": "characterized", "risk": "high",
+      "notes": "Anonymous rate-limited booking; collision check and insert now serialize per calendar, with case-insensitive contact reuse."
+    },
+    "POST /api/bookings/public/book/:slug/cancel/:token": {
+      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "cancelPublicBooking", "parityStatus": "characterized", "risk": "high",
+      "notes": "High-entropy capability token bound to the calendar identity; replay is rejected and raw tokens must never be logged."
+    },
+    "GET /api/calendar-integrations/connections": {
+      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarConnections", "parityStatus": "characterized", "risk": "high",
+      "notes": "Returns only the active user's connections in the verified organization and never exposes provider tokens."
+    },
+    "DELETE /api/calendar-integrations/connections/:id": {
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "disconnectCalendar", "parityStatus": "characterized", "risk": "high",
+      "notes": "User-and-organization scoped disconnect with provider cleanup policy made explicit."
+    },
+    "PATCH /api/calendar-integrations/connections/:id": {
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "updateCalendarConnection", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Validate sync direction and provider calendar selections before updating the scoped connection."
+    },
+    "GET /api/calendar-integrations/google/auth": {
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "beginGoogleCalendarConnection", "parityStatus": "characterized", "risk": "high",
+      "notes": "Returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state."
+    },
+    "GET /api/calendar-integrations/google/callback": {
+      "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "googleCalendarCallback", "parityStatus": "characterized", "risk": "high",
+      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange/storage."
+    },
+    "GET /api/calendar-integrations/google/calendars/:connectionId": {
+      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "providerCalendars", "parityStatus": "characterizing", "risk": "high",
+      "notes": "User-and-organization scoped provider read with serialized token refresh and redacted provider errors."
+    },
+    "POST /api/calendar-integrations/sync/:connectionId": {
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "requestCalendarSync", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Target queues an idempotent durable sync job rather than performing provider calls inside the resolver."
+    },
+    "GET /api/calendar-integrations/sync-status/:connectionId": {
+      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarSyncStatus", "parityStatus": "characterized", "risk": "high",
+      "notes": "User-and-organization scoped connection status and bounded sync aggregates."
+    },
+    "GET /api/signatures/documents": {
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocuments", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Organization-scoped strict status filter and bounded stable pagination."
+    },
+    "POST /api/signatures/documents": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "createSignatureDocument", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Creates a draft only; validates template ownership, plan quota, routing, expiry, and sender metadata."
+    },
+    "GET /api/signatures/documents/:id": {
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocument", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-owned document definition, recipients, fields, and append-only audit projection with secret fields redacted."
+    },
+    "PUT /api/signatures/documents/:id": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "updateSignatureDraft", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Draft-only atomic definition replacement; recipient contacts and field recipient IDs must belong to the document tenant."
+    },
+    "DELETE /api/signatures/documents/:id": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "deleteSignatureDraft", "parityStatus": "characterized", "risk": "high",
+      "notes": "Only drafts can be deleted; sent/completed documents and their legal audit evidence are immutable."
+    },
+    "POST /api/signatures/documents/:id/send": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureDocument", "parityStatus": "characterized", "risk": "high",
+      "notes": "Locks a draft so concurrent initial sends issue one token/email intent and one sent audit event."
+    },
+    "POST /api/signatures/documents/:id/cancel": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "cancelSignatureDocument", "parityStatus": "characterized", "risk": "high",
+      "notes": "Idempotently cancels non-completed documents, revokes active capability tokens, cancels reminders, and writes one audit event."
+    },
+    "POST /api/signatures/documents/:id/remind": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureReminder", "parityStatus": "characterized", "risk": "high",
+      "notes": "Rotates links only for active unsigned recipients without reopening signed/declined recipients or changing document lifecycle."
+    },
+    "POST /api/signatures/documents/:id/reminders": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "scheduleSignatureReminders", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned active document, bounded delay, active recipients, durable idempotent reminder work."
+    },
+    "GET /api/signatures/documents/:id/audit": {
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureAuditTrail", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-owned append-only ordered evidence; redact sensitive metadata according to operator role."
+    },
+    "POST /api/signatures/documents/upload": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Authenticated tenant/draft-owned multipart PDF protocol with a 5 MiB limit, PDF magic validation, forced .pdf storage keys, private delivery, and SHA-256 metadata. Malware scanning and structural/page validation remain cutover blockers."
+    },
+    "GET /api/signatures/documents/:id/file": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-authorized binary stream; never proxy an arbitrary stored URL and never expose a permanent public object URL."
+    },
+    "DELETE /api/signatures/documents/:id/file": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Draft-only storage deletion; sent/completed source and signed artifacts are immutable."
+    },
+    "GET /api/signatures/documents/:id/download": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadCompletedSignaturePdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-authorized completed-PDF attachment with private no-store/nosniff/sandbox headers, a safe filename, and no permanent storage URL or arbitrary remote proxy."
+    },
+    "POST /api/signatures/email/preview": {
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "previewSignatureEmail", "parityStatus": "characterized", "risk": "high",
+      "notes": "Pure sanitized preview; server controls links/assets and output is not a delivery receipt."
+    },
+    "GET /api/signatures/templates": {
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplates", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-scoped reusable definitions with deterministic ordering."
+    },
+    "POST /api/signatures/templates": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "createSignatureTemplate", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Creates an organization-owned template definition under plan and size limits."
+    },
+    "GET /api/signatures/templates/:id": {
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplate", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-owned template with ordered roles and fields."
+    },
+    "GET /api/signatures/templates/:id/file": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureTemplatePdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-authorized private PDF stream with hardened headers, a safe filename, and exact local/S3 signature storage allowlists."
+    },
+    "PUT /api/signatures/templates/:id": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "updateSignatureTemplate", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Atomically replaces metadata, unique roles, and valid bounded fields; invalid input changes nothing."
+    },
+    "DELETE /api/signatures/templates/:id": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "deleteSignatureTemplate", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Tenant-owned delete with explicit behavior for documents instantiated from the template."
+    },
+    "POST /api/signatures/templates/:id/instantiate": {
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "instantiateSignatureTemplate", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Atomic tenant-owned template snapshot, role-recipient binding, contact validation, and field creation."
+    },
+    "POST /api/signatures/templates/upload": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureTemplatePdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Authenticated tenant-owned multipart PDF protocol with a 5 MiB limit, PDF magic validation, forced .pdf storage keys, private delivery, and SHA-256 metadata. Malware scanning and structural/page validation remain cutover blockers."
+    },
+    "GET /api/public/sign/:token": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "getSigningSession", "parityStatus": "characterized", "risk": "high",
+      "notes": "Rate-limited hashed capability protocol; active unexpired recipient/document only, with minimal sanitized public data."
+    },
+    "POST /api/public/sign/:token": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "submitSignature", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Atomic one-time capability claim, exact field allowlist and validation, immutable audit event, and durable completion work."
+    },
+    "POST /api/public/sign/:token/decline": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "declineSignature", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Atomic active-recipient decline, bounded reason, token revocation, lifecycle transition, and durable notification intent."
+    },
+    "POST /api/public/sign/:token/verify": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "verifySigner", "parityStatus": "blocked", "risk": "high",
+      "notes": "Currently returns 410. Legacy draft configuration now rejects email/SMS verification so unsupported assurance cannot be advertised."
+    },
+    "GET /api/public/sign/:token/file": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSigningPdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Capability-authorized private PDF stream with no arbitrary URL proxying and no view-state mutation."
+    },
+    "GET /api/public/sign/:token/download": {
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadSigningPdf", "parityStatus": "characterized", "risk": "high",
+      "notes": "Active signing capabilities receive the source PDF as a private attachment; completed-artifact delivery remains a separate product/lifecycle decision."
+    },
+    "POST /api/lists/:listId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableListSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token."
+    },
+    "DELETE /api/lists/:listId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableListSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only idempotent revocation clears the stored capability and public cacheability."
+    },
+    "GET /api/shared/list/:token": {
+      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedList", "parityStatus": "characterized", "risk": "high",
+      "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers."
+    },
+    "POST /api/notes/:noteId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableNoteSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token."
+    },
+    "DELETE /api/notes/:noteId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableNoteSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only idempotent revocation clears the stored capability."
+    },
+    "GET /api/shared/note/:token": {
+      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedNote", "parityStatus": "characterized", "risk": "high",
+      "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed."
+    },
+    "POST /api/whiteboards/:whiteboardId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only atomic capability issuance with stable concurrent results and rotate-after-revoke semantics."
+    },
+    "DELETE /api/whiteboards/:whiteboardId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableWhiteboardSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only idempotent revocation clears the stored capability."
+    },
+    "GET /api/shared/whiteboard/:token": {
+      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedWhiteboard", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Rate-limited capability read with recursive sanitization; canvas node and external-resource schemas still need an exact allowlist."
+    },
+    "POST /api/vaults/:vaultId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "enableVaultSharing", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Owner-only atomic issuance; must explicitly confirm that sharing decrypts every item to any bearer and prohibit sharing while locked."
+    },
+    "DELETE /api/vaults/:vaultId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "disableVaultSharing", "parityStatus": "characterized", "risk": "high",
+      "notes": "Owner-only revocation clears the capability; existing and future caches must not retain decrypted content."
+    },
+    "GET /api/shared/vault/:token": {
+      "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "getSharedVault", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Rate-limited no-store bearer capability that returns decrypted secrets; hashed tokens, explicit consent, logging redaction, and browser coverage are required."
+    },
+    "POST /api/wireframes/:wireframeId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableWireframeSharing", "parityStatus": "blocked", "risk": "high",
+      "notes": "Issuance is concurrency-safe, but the product has no public wireframe API operation or frontend route; do not cut over a link that cannot resolve."
+    },
+    "DELETE /api/wireframes/:wireframeId/share": {
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableWireframeSharing", "parityStatus": "blocked", "risk": "high",
+      "notes": "Revocation clears the token, but the wireframe sharing feature remains blocked until a public-view or removal decision is implemented."
+    },
+    "GET /api/social/webhook": {
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetModule": "SocialWebhooksModule",
+      "targetOperation": "verifyMetaWebhook",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retain the Meta challenge protocol, compare the verify token in constant time, use dedicated configuration, and fail closed when it is absent."
+    },
+    "POST /api/social/webhook": {
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetModule": "SocialWebhooksModule",
+      "targetOperation": "processMetaMessagingWebhook",
+      "parityStatus": "characterized",
+      "risk": "high",
+      "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit."
+    },
+    "GET /api/analytics/dashboard": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dashboardAnalytics", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Organization snapshot with normalized numeric scalars; funnel is the default/earliest pipeline only and terminal bookings are excluded from upcoming counts."
+    },
+    "GET /api/analytics/contacts/trends": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "contactTrends", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Strict typed period, organization scope, sparse UTC/session-timezone buckets, and integer counts."
+    },
+    "GET /api/analytics/deals/performance": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dealPerformance", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Closed-deal metrics use won/lost timestamps inside the selected rolling window and numeric, zero-safe outputs."
+    },
+    "GET /api/analytics/bookings/summary": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "bookingAnalytics", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Organization-scoped booking status totals; upcoming includes only pending/confirmed future bookings."
+    },
+    "GET /api/analytics/conversion-rates": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "conversionRates", "parityStatus": "blocked", "risk": "high",
+      "notes": "Deal and form conversions are characterized; lead-to-customer is blocked because persisted contact statuses do not contain lead/customer."
+    },
+    "GET /api/analytics/revenue-trends": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "revenueTrends", "parityStatus": "blocked", "risk": "high",
+      "notes": "Bucket merging and tenant scope are fixed; business definition is blocked because won deals plus payments can double-count one sale and avgDealValue divides mixed event types."
+    },
+    "GET /api/analytics/pipeline-velocity": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "pipelineVelocity", "parityStatus": "blocked", "risk": "high",
+      "notes": "Tenant-scoped pipeline lookup and current deal ages are characterized; true time-in-stage is blocked until stage-transition history exists."
+    },
+    "GET /api/analytics/communication-stats": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "communicationStats", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Cumulative email/SMS lifecycle milestones, strict rolling periods, organization scope, and zero-safe rates."
+    },
+    "GET /api/analytics/workflow-performance": {
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "workflowPerformance", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Organization-owned workflows with enrollment status totals and zero-safe completion rates."
+    },
+    "GET /api/segments": {
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Organization-scoped active/search filters with deterministic name and ID ordering."
+    },
+    "POST /api/segments": {
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "createSegment", "parityStatus": "characterized", "risk": "high",
+      "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history."
+    },
+    "GET /api/segments/:id": {
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segment", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned definition with a bounded, newest-first calculation history projection."
+    },
+    "PUT /api/segments/:id": {
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "updateSegment", "parityStatus": "characterized", "risk": "high",
+      "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction."
+    },
+    "DELETE /api/segments/:id": {
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "deleteSegment", "parityStatus": "characterized", "risk": "high",
+      "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned."
+    },
+    "POST /api/segments/:id/calculate": {
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "recalculateSegment", "parityStatus": "characterized", "risk": "high",
+      "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta."
+    },
+    "GET /api/segments/:id/contacts": {
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentContacts", "parityStatus": "characterized", "risk": "high",
+      "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering."
+    },
+    "POST /api/segments/preview": {
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "previewSegment", "parityStatus": "characterized", "risk": "high",
+      "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition."
+    },
+    "GET /api/segments/filter-options": {
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "characterized", "risk": "high",
+      "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
     }
   },
   "runtimeExpressions": [

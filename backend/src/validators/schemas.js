@@ -1,4 +1,18 @@
 const { z } = require('zod');
+const {
+  WORKFLOW_TRIGGER_ALIASES,
+  WORKFLOW_TRIGGER_TYPES,
+  normalizeWorkflowTriggerType,
+} = require('../domain/workflowRegistry');
+
+const acceptedWorkflowTriggerTypes = [
+  ...WORKFLOW_TRIGGER_TYPES,
+  ...Object.keys(WORKFLOW_TRIGGER_ALIASES),
+];
+const workflowTriggerType = z.string().refine(
+  value => normalizeWorkflowTriggerType(value) !== null,
+  { message: `Must be one of: ${acceptedWorkflowTriggerTypes.join(', ')}` }
+);
 
 module.exports = {
   // Search query validation
@@ -127,7 +141,7 @@ module.exports = {
   workflowCreate: z.object({
     name: z.string().min(3).max(255),
     description: z.string().max(2000).optional(),
-    trigger_type: z.enum(['manual', 'contact_created', 'contract_signed', 'invoice_paid', 'form_submitted']),
+    trigger_type: workflowTriggerType,
     is_active: z.boolean().optional(),
   }),
 
@@ -149,9 +163,14 @@ module.exports = {
 
   // Webhook validation
   webhookEvent: z.object({
-    eventType: z.enum(['contract_signed', 'invoice_paid', 'form_submitted', 'contact_created']),
-    entityId: z.number().optional(),
-    entityData: z.object({}).optional(),
+    eventType: workflowTriggerType,
+    contactId: z.number().int().positive().optional(),
+    entityId: z.number().int().positive().optional(),
+    entityData: z.object({
+      contactId: z.number().int().positive().optional(),
+      entityId: z.number().int().positive().optional(),
+      entityType: z.string().min(1).max(50).optional(),
+    }).passthrough().optional(),
   }),
 };
 

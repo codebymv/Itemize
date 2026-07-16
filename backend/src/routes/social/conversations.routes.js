@@ -304,7 +304,7 @@ module.exports = (pool, authenticateJWT, requireOrganization, io) => {
 
             // Emit via WebSocket
             if (io) {
-                io.to(`org_${req.organizationId}`).emit('social_message', {
+                io.to(`org-social-${req.organizationId}`).emit('social_message', {
                     conversation_id: parseInt(id),
                     message: data.message
                 });

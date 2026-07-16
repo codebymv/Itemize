@@ -5,7 +5,7 @@
  */
 const express = require('express');
 const router = express.Router();
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
 const { tagColumns } = require('./tag-columns');
 
@@ -60,7 +60,9 @@ module.exports = (pool, authenticateJWT) => {
         return sendBadRequest(res, 'Tag name is required', 'name');
       }
 
-      const data = await withDbClient(pool, async (client) => {
+      const data = await withTransaction(pool, async (client) => {
+        await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
+
         // Check if tag already exists
         const existingTag = await client.query(
           'SELECT id FROM tags WHERE organization_id = $1 AND LOWER(name) = LOWER($2)',
@@ -96,7 +98,9 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { name, color } = req.body;
 
-      const data = await withDbClient(pool, async (client) => {
+      const data = await withTransaction(pool, async (client) => {
+        await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
+
         // Get current tag
         const currentTag = await client.query(
           `SELECT ${tagColumns()} FROM tags WHERE id = $1 AND organization_id = $2`,
@@ -108,6 +112,17 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         const oldName = currentTag.rows[0].name;
+
+        if (name && name.trim().toLowerCase() !== oldName.toLowerCase()) {
+          const duplicate = await client.query(
+            `SELECT 1 FROM tags
+             WHERE organization_id = $1 AND LOWER(name) = LOWER($2) AND id != $3`,
+            [req.organizationId, name.trim(), id]
+          );
+          if (duplicate.rows.length > 0) {
+            return { error: 'Tag with this name already exists', status: 400, result: null };
+          }
+        }
 
         // Update tag
         const result = await client.query(`
@@ -150,7 +165,7 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { removeFromContacts } = req.query;
 
-      const data = await withDbClient(pool, async (client) => {
+      const data = await withTransaction(pool, async (client) => {
         // Get tag to delete
         const tagResult = await client.query(
           'SELECT name FROM tags WHERE id = $1 AND organization_id = $2',

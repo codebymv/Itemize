@@ -7,6 +7,9 @@ const WORKFLOW_COLUMNS = [
   'description',
   'trigger_type',
   'trigger_config',
+  'scheduled_contact_id',
+  'next_trigger_at',
+  'last_triggered_at',
   'is_active',
   'stats',
   'created_by',
@@ -38,7 +41,12 @@ const WORKFLOW_ENROLLMENT_COLUMNS = [
   'error_message',
   'enrolled_at',
   'next_action_at',
-  'completed_at'
+  'completed_at',
+  'execution_attempt_count',
+  'execution_claim_token',
+  'execution_lease_expires_at',
+  'pause_reason',
+  'paused_at'
 ];
 
 const workflowColumns = (alias) => alias ? qualify(WORKFLOW_COLUMNS, alias) : WORKFLOW_COLUMNS.join(', ');

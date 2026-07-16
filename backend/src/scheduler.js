@@ -6,6 +6,20 @@
 const cron = require('node-cron');
 const { runAllInvoiceJobs } = require('./jobs/invoice-jobs');
 const { runSignatureReminderJobs } = require('./jobs/signature-jobs');
+const {
+    runSubscriptionWebhookNotificationJobs,
+    runSubscriptionWebhookReconciliationJobs,
+} = require('./jobs/subscription-webhook-jobs');
+const { runEmailWebhookReconciliationJobs } = require('./jobs/email-webhook-jobs');
+const {
+    runSocialWebhookProcessingJobs,
+    runSocialWebhookReconciliationJobs,
+} = require('./jobs/social-webhook-jobs');
+const {
+    hasEnabledWorkflowJobs,
+    runWorkflowJobCycle,
+    workflowJobFlags,
+} = require('./jobs/workflow-rollout-jobs');
 const { scheduleTrialReminderCron } = require('./jobs/trialReminderCron');
 const { logger } = require('./utils/logger');
 
@@ -14,8 +28,9 @@ let schedulerInitialized = false;
 /**
  * Initialize all scheduled jobs
  * @param {Object} pool - PostgreSQL connection pool
+ * @param {Object} io - Socket.IO server
  */
-function initScheduler(pool) {
+function initScheduler(pool, io) {
     if (schedulerInitialized) {
         logger.warn('Scheduler already initialized, skipping...');
         return;
@@ -50,6 +65,96 @@ function initScheduler(pool) {
 
     // Schedule trial reminder cron job (daily at 9:00 AM)
     scheduleTrialReminderCron();
+
+    if (process.env.SUBSCRIPTION_WEBHOOK_JOBS_ENABLED !== 'false') {
+        cron.schedule('* * * * *', async () => {
+            try {
+                const [notificationSummary, reconciliationSummary] = await Promise.all([
+                    runSubscriptionWebhookNotificationJobs(pool),
+                    runSubscriptionWebhookReconciliationJobs(pool),
+                ]);
+                if (notificationSummary.claimed > 0) {
+                    logger.info('Subscription webhook notification jobs completed', notificationSummary);
+                }
+                if (reconciliationSummary.claimed > 0) {
+                    logger.info('Subscription webhook reconciliation jobs completed', reconciliationSummary);
+                }
+            } catch (error) {
+                logger.error('Error in subscription webhook notification jobs', { error: error.message });
+            }
+        }, {
+            timezone: process.env.TZ || 'America/New_York'
+        });
+    }
+
+    if (process.env.EMAIL_WEBHOOK_JOBS_ENABLED !== 'false') {
+        cron.schedule('* * * * *', async () => {
+            try {
+                const summary = await runEmailWebhookReconciliationJobs(pool);
+                if (summary.claimed > 0) {
+                    logger.info('Email webhook reconciliation jobs completed', summary);
+                }
+            } catch (error) {
+                logger.error('Error in email webhook reconciliation jobs', { error: error.message });
+            }
+        }, {
+            timezone: process.env.TZ || 'America/New_York'
+        });
+    }
+
+    if (process.env.SOCIAL_WEBHOOK_JOBS_ENABLED !== 'false') {
+        cron.schedule('* * * * *', async () => {
+            const onProcessed = io ? async result => {
+                io.to(`org-social-${result.channel.organization_id}`).emit('social_message', {
+                    conversation_id: result.conversationId,
+                    message: result.message,
+                    is_new_conversation: result.isNewConversation,
+                });
+            } : null;
+            try {
+                const [processingSummary, reconciliationSummary] = await Promise.all([
+                    runSocialWebhookProcessingJobs(pool, { onProcessed }),
+                    runSocialWebhookReconciliationJobs(pool, { onProcessed }),
+                ]);
+                if (processingSummary.claimed > 0) {
+                    logger.info('Social webhook processing jobs completed', processingSummary);
+                }
+                if (reconciliationSummary.claimed > 0) {
+                    logger.info('Social webhook reconciliation jobs completed', reconciliationSummary);
+                }
+            } catch (error) {
+                logger.error('Error in social webhook jobs', { error: error.message });
+            }
+        }, {
+            timezone: process.env.TZ || 'America/New_York'
+        });
+    }
+
+    const workflowFlags = workflowJobFlags();
+    if (hasEnabledWorkflowJobs(workflowFlags)) {
+        cron.schedule('* * * * *', async () => {
+            try {
+                const summary = await runWorkflowJobCycle(pool, { flags: workflowFlags });
+                if (summary.scheduled?.queued > 0) {
+                    logger.info('Scheduled workflow jobs completed', summary.scheduled);
+                }
+                if (summary.trigger?.claimed > 0) {
+                    logger.info('Workflow trigger jobs completed', summary.trigger);
+                }
+                if (summary.enrollment?.claimed > 0) {
+                    logger.info('Workflow enrollment jobs completed', summary.enrollment);
+                }
+                if (summary.sideEffect?.claimed > 0
+                    || summary.sideEffect?.reconciliationRequired > 0) {
+                    logger.info('Workflow side-effect jobs completed', summary.sideEffect);
+                }
+            } catch (error) {
+                logger.error('Error in workflow job cycle', { error: error.message });
+            }
+        }, {
+            timezone: process.env.TZ || 'America/New_York'
+        });
+    }
 
     // Also run immediately on startup in development to catch any missed jobs
     if (process.env.NODE_ENV === 'development') {

@@ -1,6 +1,14 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
-const { sendSuccess, sendError } = require('../../utils/response');
+const { sendSuccess, sendError, sendBadRequest } = require('../../utils/response');
+const {
+    createSerializedQueryClient,
+    parseOptionalPositiveInteger,
+    percentage,
+    resolvePeriod,
+    toInteger,
+    toNumber,
+} = require('../../services/analyticsParameters');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -11,26 +19,15 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
      */
     router.get('/conversion-rates', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const { period = '30days' } = req.query;
+            const periodConfig = resolvePeriod('conversions', req.query.period, '30days');
+            if (!periodConfig) return sendBadRequest(res, 'Unsupported analytics period', 'period');
+
+            const { period, interval } = periodConfig;
             const orgId = req.organizationId;
 
-            let interval;
-            switch (period) {
-                case '7days':
-                    interval = '7 days';
-                    break;
-                case '90days':
-                    interval = '90 days';
-                    break;
-                case '12months':
-                    interval = '12 months';
-                    break;
-                default:
-                    interval = '30 days';
-            }
-
             // Run all queries in parallel
-            const conversions = await withDbClient(pool, async (client) => {
+            const conversions = await withDbClient(pool, async (rawClient) => {
+                const client = createSerializedQueryClient(rawClient);
                 const [
                     leadToCustomerResult,
                     dealConversionResult,
@@ -45,8 +42,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                         COUNT(*) FILTER (WHERE status = 'lead') as leads
                     FROM contacts
                     WHERE organization_id = $1
-                        AND created_at >= NOW() - INTERVAL '${interval}'
-                `, [orgId]),
+                        AND created_at >= NOW() - $2::interval
+                `, [orgId, interval]),
 
                 // Deal conversion (won vs total closed)
                 client.query(`
@@ -59,8 +56,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     FROM deals
                     WHERE organization_id = $1
                         AND (won_at IS NOT NULL OR lost_at IS NOT NULL)
-                        AND (won_at >= NOW() - INTERVAL '${interval}' OR lost_at >= NOW() - INTERVAL '${interval}')
-                `, [orgId]),
+                        AND (won_at >= NOW() - $2::interval OR lost_at >= NOW() - $2::interval)
+                `, [orgId, interval]),
 
                 // Form submission to contact conversion
                 client.query(`
@@ -69,8 +66,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                         COUNT(*) FILTER (WHERE contact_id IS NOT NULL) as with_contact
                     FROM form_submissions
                     WHERE organization_id = $1
-                        AND created_at >= NOW() - INTERVAL '${interval}'
-                `, [orgId]),
+                        AND created_at >= NOW() - $2::interval
+                `, [orgId, interval]),
 
                 // Stage-to-stage conversion (pipeline velocity)
                 client.query(`
@@ -84,27 +81,27 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                         FROM deals d
                         JOIN pipelines p ON d.pipeline_id = p.id
                         WHERE d.organization_id = $1
-                            AND d.created_at >= NOW() - INTERVAL '${interval}'
+                            AND d.created_at >= NOW() - $2::interval
                         GROUP BY p.id, p.name, p.stages, d.stage_id
                     )
                     SELECT * FROM stage_counts
-                `, [orgId])
+                `, [orgId, interval])
                 ]);
 
                 // Calculate lead to customer conversion rate
                 const leadData = leadToCustomerResult.rows[0];
-                const totalLeadsAndCustomers = parseInt(leadData.total_leads_customers) || 1;
-                const leadToCustomerRate = Math.round((parseInt(leadData.customers) / totalLeadsAndCustomers) * 100);
+                const totalLeadsAndCustomers = toInteger(leadData.total_leads_customers);
+                const leadToCustomerRate = percentage(toInteger(leadData.customers), totalLeadsAndCustomers);
 
                 // Calculate deal win rate
                 const dealData = dealConversionResult.rows[0];
-                const totalClosed = parseInt(dealData.total_closed) || 1;
-                const dealWinRate = Math.round((parseInt(dealData.won) / totalClosed) * 100);
+                const totalClosed = toInteger(dealData.total_closed);
+                const dealWinRate = percentage(toInteger(dealData.won), totalClosed);
 
                 // Calculate form conversion rate
                 const formData = formConversionResult.rows[0];
-                const totalSubmissions = parseInt(formData.total_submissions) || 1;
-                const formConversionRate = Math.round((parseInt(formData.with_contact) / totalSubmissions) * 100);
+                const totalSubmissions = toInteger(formData.total_submissions);
+                const formConversionRate = percentage(toInteger(formData.with_contact), totalSubmissions);
 
                 // Process pipeline stage conversions
                 const pipelineConversions = {};
@@ -116,7 +113,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                             stageCounts: {}
                         };
                     }
-                    pipelineConversions[row.pipeline_id].stageCounts[row.stage_id] = parseInt(row.deal_count);
+                    pipelineConversions[row.pipeline_id].stageCounts[row.stage_id] = toInteger(row.deal_count);
                 });
 
                 return {
@@ -124,22 +121,22 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     conversions: {
                         leadToCustomer: {
                             rate: leadToCustomerRate,
-                            leads: parseInt(leadData.leads),
-                            customers: parseInt(leadData.customers),
-                            total: parseInt(leadData.total_leads_customers)
+                            leads: toInteger(leadData.leads),
+                            customers: toInteger(leadData.customers),
+                            total: totalLeadsAndCustomers
                         },
                         dealWinRate: {
                             rate: dealWinRate,
-                            won: parseInt(dealData.won),
-                            lost: parseInt(dealData.lost),
-                            totalClosed: parseInt(dealData.total_closed),
-                            wonValue: parseFloat(dealData.won_value),
-                            lostValue: parseFloat(dealData.lost_value)
+                            won: toInteger(dealData.won),
+                            lost: toInteger(dealData.lost),
+                            totalClosed,
+                            wonValue: toNumber(dealData.won_value),
+                            lostValue: toNumber(dealData.lost_value)
                         },
                         formToContact: {
                             rate: formConversionRate,
-                            submissions: parseInt(formData.total_submissions),
-                            converted: parseInt(formData.with_contact)
+                            submissions: totalSubmissions,
+                            converted: toInteger(formData.with_contact)
                         },
                         pipelines: Object.values(pipelineConversions)
                     }
@@ -158,27 +155,15 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
      */
     router.get('/revenue-trends', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const { period = '6months' } = req.query;
+            const periodConfig = resolvePeriod('revenue', req.query.period, '6months');
+            if (!periodConfig) return sendBadRequest(res, 'Unsupported analytics period', 'period');
+
+            const { period, interval, groupBy } = periodConfig;
             const orgId = req.organizationId;
 
-            let interval;
-            let groupBy;
-            switch (period) {
-                case '30days':
-                    interval = '30 days';
-                    groupBy = 'day';
-                    break;
-                case '12months':
-                    interval = '12 months';
-                    groupBy = 'month';
-                    break;
-                default:
-                    interval = '6 months';
-                    groupBy = 'month';
-            }
-
             // Get revenue from both deals and invoice payments
-            const revenue = await withDbClient(pool, async (client) => {
+            const revenue = await withDbClient(pool, async (rawClient) => {
+                const client = createSerializedQueryClient(rawClient);
                 const [dealsResult, paymentsResult] = await Promise.all([
                     // Deals revenue
                     client.query(`
@@ -189,10 +174,10 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     FROM deals
                     WHERE organization_id = $2
                         AND won_at IS NOT NULL
-                        AND won_at >= NOW() - INTERVAL '${interval}'
+                        AND won_at >= NOW() - $3::interval
                     GROUP BY DATE_TRUNC($1, won_at)
                     ORDER BY period ASC
-                `, [groupBy, orgId]),
+                `, [groupBy, orgId, interval]),
 
                 // Invoice payments revenue
                     client.query(`
@@ -203,10 +188,10 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     FROM payments
                     WHERE organization_id = $2
                         AND status = 'succeeded'
-                        AND COALESCE(paid_at, created_at) >= NOW() - INTERVAL '${interval}'
+                        AND COALESCE(paid_at, created_at) >= NOW() - $3::interval
                     GROUP BY DATE_TRUNC($1, COALESCE(paid_at, created_at))
                     ORDER BY period ASC
-                `, [groupBy, orgId])
+                `, [groupBy, orgId, interval])
                 ]);
 
                 // Combine deals and payments data by period
@@ -214,28 +199,28 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
                 // Add deals revenue
                 dealsResult.rows.forEach(row => {
-                    const period = row.period;
-                    if (!revenueMap.has(period)) {
-                        revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                    const periodKey = row.period.toISOString();
+                    if (!revenueMap.has(periodKey)) {
+                        revenueMap.set(periodKey, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
                     }
-                    const dataPoint = revenueMap.get(period);
-                    dataPoint.dealsWon = parseInt(row.deals_won);
-                    dataPoint.revenue += parseFloat(row.revenue);
+                    const dataPoint = revenueMap.get(periodKey);
+                    dataPoint.dealsWon = toInteger(row.deals_won);
+                    dataPoint.revenue += toNumber(row.revenue);
                 });
 
                 // Add payments revenue
                 paymentsResult.rows.forEach(row => {
-                    const period = row.period;
-                    if (!revenueMap.has(period)) {
-                        revenueMap.set(period, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
+                    const periodKey = row.period.toISOString();
+                    if (!revenueMap.has(periodKey)) {
+                        revenueMap.set(periodKey, { dealsWon: 0, paymentsCount: 0, revenue: 0 });
                     }
-                    const dataPoint = revenueMap.get(period);
-                    dataPoint.paymentsCount = parseInt(row.payments_count);
-                    dataPoint.revenue += parseFloat(row.revenue);
+                    const dataPoint = revenueMap.get(periodKey);
+                    dataPoint.paymentsCount = toInteger(row.payments_count);
+                    dataPoint.revenue += toNumber(row.revenue);
                 });
 
                 // Convert map to sorted array
-                const sortedPeriods = Array.from(revenueMap.keys()).sort((a, b) => a - b);
+                const sortedPeriods = Array.from(revenueMap.keys()).sort();
 
                 // Calculate totals from map before creating data array
                 let totalDeals = 0;
@@ -251,7 +236,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     const periodData = revenueMap.get(period);
                     cumulativeRevenue += periodData.revenue;
                     return {
-                        period: period,
+                        period,
                         dealsWon: periodData.dealsWon,
                         revenue: periodData.revenue,
                         cumulativeRevenue: cumulativeRevenue
@@ -295,7 +280,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
      */
     router.get('/pipeline-velocity', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const { pipeline_id } = req.query;
+            const pipelineId = parseOptionalPositiveInteger(req.query.pipeline_id);
+            if (pipelineId.error) return sendBadRequest(res, pipelineId.error, 'pipeline_id');
+
             const orgId = req.organizationId;
             const velocity = await withDbClient(pool, async (client) => {
 
@@ -306,9 +293,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             `;
             const pipelineParams = [orgId];
 
-            if (pipeline_id) {
+            if (pipelineId.value !== undefined) {
                 pipelineQuery += ' AND id = $2';
-                pipelineParams.push(pipeline_id);
+                pipelineParams.push(pipelineId.value);
             }
 
             pipelineQuery += ' ORDER BY is_default DESC, created_at ASC LIMIT 1';
@@ -358,9 +345,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             const stageMap = new Map();
             stageDealsResult.rows.forEach(row => {
                 stageMap.set(row.stage_id, {
-                    count: parseInt(row.count),
-                    totalValue: parseFloat(row.total_value),
-                    avgAgeDays: Math.round(parseFloat(row.avg_age_days))
+                    count: toInteger(row.count),
+                    totalValue: toNumber(row.total_value),
+                    avgAgeDays: Math.round(toNumber(row.avg_age_days))
                 });
             });
 
@@ -387,15 +374,16 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 },
                 velocity,
                 summary: {
-                    avgDaysToWin: Math.round(parseFloat(metrics.avg_days_to_win)),
-                    avgDaysToLose: Math.round(parseFloat(metrics.avg_days_to_lose)),
-                    avgWonValue: parseFloat(metrics.avg_won_value),
-                    openDeals: parseInt(metrics.open_count),
-                    wonDeals: parseInt(metrics.won_count),
-                    lostDeals: parseInt(metrics.lost_count),
-                    winRate: parseInt(metrics.won_count) + parseInt(metrics.lost_count) > 0
-                        ? Math.round((parseInt(metrics.won_count) / (parseInt(metrics.won_count) + parseInt(metrics.lost_count))) * 100)
-                        : 0
+                    avgDaysToWin: Math.round(toNumber(metrics.avg_days_to_win)),
+                    avgDaysToLose: Math.round(toNumber(metrics.avg_days_to_lose)),
+                    avgWonValue: toNumber(metrics.avg_won_value),
+                    openDeals: toInteger(metrics.open_count),
+                    wonDeals: toInteger(metrics.won_count),
+                    lostDeals: toInteger(metrics.lost_count),
+                    winRate: percentage(
+                        toInteger(metrics.won_count),
+                        toInteger(metrics.won_count) + toInteger(metrics.lost_count)
+                    )
                 }
             };
             });

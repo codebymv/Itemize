@@ -51,8 +51,8 @@ export function SegmentsPage() {
 
     const stats = useMemo(() => {
         const total = segments.length;
-        const dynamic = segments.filter(s => s.type === 'dynamic').length;
-        const staticCount = segments.filter(s => s.type === 'static').length;
+        const dynamic = segments.filter(s => (s.segment_type ?? s.type) === 'dynamic').length;
+        const staticCount = segments.filter(s => (s.segment_type ?? s.type) === 'static').length;
         const contacts = segments.reduce((sum, s) => sum + (s.contact_count || 0), 0);
         return { total, dynamic, staticCount, contacts };
     }, [segments]);
@@ -261,8 +261,8 @@ export function SegmentsPage() {
                                         </CardHeader>
                                         <CardContent className="pt-0">
                                             <div className="flex items-center gap-2 mb-3">
-                                                <Badge variant={segment.type === 'dynamic' ? 'default' : 'secondary'}>
-                                                    {segment.type}
+                                                <Badge variant={(segment.segment_type ?? segment.type) === 'dynamic' ? 'default' : 'secondary'}>
+                                                    {segment.segment_type ?? segment.type}
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground">

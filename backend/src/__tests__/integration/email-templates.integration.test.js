@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
+const emailService = require('../../services/emailService');
 
 function createApp(pool) {
     const app = express();
@@ -395,6 +396,66 @@ describe('Email Templates Integration Tests', () => {
     });
 
     // ── Auth guard ───────────────────────────────────────────────────────────
+
+    describe('Contact delivery', () => {
+        afterEach(() => jest.restoreAllMocks());
+
+        it('writes a provider log and activity after a successful send', async () => {
+            const contact = (await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, email, created_by)
+                 VALUES ($1, 'Katherine', 'katherine@example.test', $2) RETURNING id`,
+                [userA.org.id, userA.user.id]
+            )).rows[0];
+            jest.spyOn(emailService, 'sendEmail').mockResolvedValue({
+                success: true,
+                id: `email-${Date.now()}`,
+            });
+
+            const res = await request(app)
+                .post('/api/email-templates/send-to-contact')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    contact_id: contact.id,
+                    subject: 'Hello {{first_name}}',
+                    body_html: '<p>Welcome {{first_name}}</p>',
+                });
+
+            expect(res.status).toBe(200);
+            const [logs, activities] = await Promise.all([
+                dbHelper.pool.query('SELECT * FROM email_logs WHERE contact_id = $1', [contact.id]),
+                dbHelper.pool.query('SELECT * FROM contact_activities WHERE contact_id = $1 AND type = $2', [contact.id, 'email']),
+            ]);
+            expect(logs.rows).toHaveLength(1);
+            expect(logs.rows[0].sent_by).toBe(userA.user.id);
+            expect(activities.rows).toHaveLength(1);
+        });
+
+        it('does not report an unavailable provider as a successful send', async () => {
+            const contact = (await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, email, created_by)
+                 VALUES ($1, 'Dorothy', 'dorothy@example.test', $2) RETURNING id`,
+                [userA.org.id, userA.user.id]
+            )).rows[0];
+            jest.spyOn(emailService, 'sendEmail').mockResolvedValue({
+                success: false,
+                simulated: true,
+                error: 'Email service not configured',
+            });
+
+            const res = await request(app)
+                .post('/api/email-templates/send-to-contact')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ contact_id: contact.id, subject: 'Hello', body_html: '<p>Hello</p>' });
+
+            expect(res.status).toBe(503);
+            expect(res.body).toMatchObject({
+                success: false,
+                code: 'EMAIL_PROVIDER_NOT_CONFIGURED',
+            });
+        });
+    });
 
     describe('Authentication guard', () => {
         it('returns 401 on unauthenticated list request', async () => {

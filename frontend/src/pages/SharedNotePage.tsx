@@ -35,6 +35,7 @@ const SharedNotePage: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
+  const sharedNoteId = noteData?.id;
 
   // Store original title for cleanup
   const [originalTitle] = useState(document.title);
@@ -83,7 +84,7 @@ const SharedNotePage: React.FC = () => {
 
   // WebSocket connection effect
   useEffect(() => {
-    if (!token || !noteData) return;
+    if (!token || !sharedNoteId) return;
 
     const BACKEND_URL = getApiUrl();
     console.log('Connecting to WebSocket at:', BACKEND_URL);
@@ -91,10 +92,11 @@ const SharedNotePage: React.FC = () => {
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
+      withCredentials: true,
     });
 
     newSocket.on('connect', () => {
-      console.log('WebSocket connected, joining shared note:', token);
+      console.log('WebSocket connected, joining shared note');
       setIsConnected(true);
       newSocket.emit('joinSharedNote', token);
     });
@@ -168,7 +170,7 @@ const SharedNotePage: React.FC = () => {
       }
     });
 
-    newSocket.on('error', (error) => {
+    newSocket.on('realtimeError', (error) => {
       console.error('WebSocket error:', error);
       toast({
         title: "Connection Error",
@@ -183,7 +185,7 @@ const SharedNotePage: React.FC = () => {
       console.log('Cleaning up WebSocket connection');
       newSocket.disconnect();
     };
-  }, [token, noteData?.id, toast]);
+  }, [token, sharedNoteId, toast]);
 
   // Cleanup title on unmount
   useEffect(() => {

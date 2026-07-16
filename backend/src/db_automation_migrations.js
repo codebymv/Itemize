@@ -2,6 +2,7 @@
  * Marketing Automation Database Migrations
  * Schema for workflows, email templates, and automation tracking
  */
+const { workflowTriggerSqlList } = require('./domain/workflowRegistry');
 
 /**
  * Create email_templates table for reusable email templates
@@ -61,10 +62,7 @@ const runWorkflowsMigration = async (pool) => {
         organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         description TEXT,
-        trigger_type VARCHAR(50) NOT NULL CHECK (trigger_type IN (
-          'contact_added', 'tag_added', 'tag_removed', 'deal_stage_changed',
-          'form_submitted', 'manual', 'scheduled', 'contact_updated'
-        )),
+        trigger_type VARCHAR(50) NOT NULL CHECK (trigger_type IN (${workflowTriggerSqlList})),
         trigger_config JSONB DEFAULT '{}'::jsonb,
         is_active BOOLEAN DEFAULT FALSE,
         stats JSONB DEFAULT '{"enrolled": 0, "completed": 0, "failed": 0}'::jsonb,
@@ -161,6 +159,11 @@ const runWorkflowEnrollmentsMigration = async (pool) => {
         enrolled_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         next_action_at TIMESTAMP WITH TIME ZONE,
         completed_at TIMESTAMP WITH TIME ZONE,
+        execution_attempt_count INTEGER NOT NULL DEFAULT 0,
+        execution_claim_token UUID,
+        execution_lease_expires_at TIMESTAMP WITH TIME ZONE,
+        pause_reason VARCHAR(50),
+        paused_at TIMESTAMP WITH TIME ZONE,
         UNIQUE(workflow_id, contact_id)
       );
     `);

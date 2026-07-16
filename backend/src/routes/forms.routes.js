@@ -15,15 +15,11 @@ const {
     ERROR_CODES
 } = require('../lib/subscription.constants');
 const { formColumns, formFieldColumns, formSubmissionColumns, FORM_FIELD_UNNEST_COLUMNS } = require('./forms.columns');
-
-// Import automation engine for triggers
-let automationEngine = null;
-try {
-    const { getAutomationEngine } = require('../services/automationEngine');
-    automationEngine = { getEngine: getAutomationEngine };
-} catch (e) {
-    console.log('Automation engine not available for forms:', e.message);
-}
+const { WORKFLOW_TRIGGERS } = require('../domain/workflowRegistry');
+const {
+    enqueueWorkflowTrigger,
+    workflowTriggerEventKey,
+} = require('../services/workflowTriggerQueue');
 
 /**
  * Create forms routes
@@ -37,8 +33,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     /**
      * Helper: Check form limit for organization
      */
-    async function checkFormLimit(organizationId) {
-        const orgResult = await pool.query(
+    async function checkFormLimit(client, organizationId) {
+        const orgResult = await client.query(
             'SELECT plan, forms_limit FROM organizations WHERE id = $1',
             [organizationId]
         );
@@ -46,7 +42,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const plan = org?.plan || 'starter';
         const limit = org?.forms_limit ?? FORM_LIMITS[plan] ?? 10;
         
-        const countResult = await pool.query(
+        const countResult = await client.query(
             'SELECT COUNT(*) FROM forms WHERE organization_id = $1',
             [organizationId]
         );
@@ -146,23 +142,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            // Check form limit
-            const limitCheck = await checkFormLimit(req.organizationId);
-            if (!limitCheck.allowed) {
-                return sendError(
-                    res,
-                    `You've reached your form limit (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.`,
-                    403,
-                    ERROR_CODES.PLAN_LIMIT_REACHED,
-                    {
-                        resourceType: 'forms',
-                        current: limitCheck.current,
-                        limit: limitCheck.limit,
-                        plan: limitCheck.plan
-                    }
-                );
-            }
-
             const {
                 name,
                 description,
@@ -183,7 +162,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             const slug = generateSlug(name);
-            const form = await withTransaction(pool, async (client) => {
+            const outcome = await withTransaction(pool, async (client) => {
+                await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
+                const limitCheck = await checkFormLimit(client, req.organizationId);
+                if (!limitCheck.allowed) {
+                    return { status: 'limit', limitCheck };
+                }
+
                 const formResult = await client.query(`
           INSERT INTO forms (
             organization_id, name, description, slug, type,
@@ -289,13 +274,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 );
                 createdForm.fields = fieldsResult.rows;
 
-                return createdForm;
+                return { status: 'ok', form: createdForm };
             });
 
-            // Track usage
-            await usageService.incrementUsage(req.organizationId, 'forms');
+            if (outcome.status === 'limit') {
+                const { limitCheck } = outcome;
+                return sendError(
+                    res,
+                    `You've reached your form limit (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.`,
+                    403,
+                    ERROR_CODES.PLAN_LIMIT_REACHED,
+                    {
+                        resourceType: 'forms',
+                        current: limitCheck.current,
+                        limit: limitCheck.limit,
+                        plan: limitCheck.plan
+                    }
+                );
+            }
 
-            sendCreated(res, form);
+            // Track usage
+            await usageService.incrementUsage(req.organizationId, 'forms').catch(error => {
+                console.error('Failed to record deprecated form usage counter:', error.message);
+            });
+
+            sendCreated(res, outcome.form);
         } catch (error) {
             console.error('Error creating form:', error);
             sendError(res, 'Failed to create form');
@@ -788,7 +791,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return sendBadRequest(res, 'Form data is required');
             }
 
-            const outcome = await withDbClient(pool, async (client) => {
+            const outcome = await withTransaction(pool, async (client) => {
                 // Get form
                 const formResult = await client.query(`
         SELECT ${formColumns('f')}, o.id as org_id
@@ -831,8 +834,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                     // Check for existing contact by email
                     if (contactData.email) {
+                        await client.query(
+                            'SELECT pg_advisory_xact_lock($1, hashtext(LOWER($2)))',
+                            [form.organization_id, String(contactData.email)]
+                        );
                         const existingContact = await client.query(
-                            'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
+                            'SELECT id FROM contacts WHERE organization_id = $1 AND LOWER(email) = LOWER($2)',
                             [form.organization_id, contactData.email]
                         );
 
@@ -872,7 +879,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     req.get('referrer')
                 ]);
 
-                return { status: 'ok', form, submission: submissionResult.rows[0], contactId };
+                const submission = submissionResult.rows[0];
+                await enqueueWorkflowTrigger(client, {
+                    contactId,
+                    entityId: submission.id,
+                    entityType: 'form_submission',
+                    eventKey: workflowTriggerEventKey('domain', `form_submitted:${submission.id}`),
+                    organizationId: form.organization_id,
+                    payload: {
+                        form_id: form.id,
+                        form_name: form.name,
+                        form_slug: form.slug,
+                        submission_id: submission.id,
+                    },
+                    triggerType: WORKFLOW_TRIGGERS.FORM_SUBMITTED,
+                });
+
+                return { status: 'ok', form, submission, contactId };
             });
 
             if (outcome.status === 'not_found') {
@@ -881,22 +904,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             if (outcome.status === 'missing_field') {
                 return sendBadRequest(res, `${outcome.label} is required`);
-            }
-
-            // Fire automation trigger
-            if (automationEngine) {
-                try {
-                    const engine = automationEngine.getEngine();
-                    engine.handleTrigger('form_submitted', {
-                        form: { id: outcome.form.id, name: outcome.form.name, slug: outcome.form.slug },
-                        submission: outcome.submission,
-                        contact: outcome.contactId ? { id: outcome.contactId } : null,
-                        organizationId: outcome.form.organization_id,
-                        fields: data
-                    }).catch(err => console.error('Form submission trigger error:', err));
-                } catch {
-                    console.log('Automation engine not initialized');
-                }
             }
 
             sendCreated(res, {

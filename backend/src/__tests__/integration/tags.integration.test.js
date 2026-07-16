@@ -140,6 +140,27 @@ describe('Tags Integration Tests', () => {
             expect(res.body.data.color).toBe('#10B981');
         });
 
+        it('rejects renaming a tag to another case-insensitive organization name', async () => {
+            const other = await request(app)
+                .post('/api/tags')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ name: `Existing-${Date.now()}` });
+
+            const res = await request(app)
+                .put(`/api/tags/${tagId}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ name: other.body.data.name.toLowerCase() });
+
+            expect(res.status).toBe(400);
+
+            await request(app)
+                .delete(`/api/tags/${other.body.data.id}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id));
+        });
+
         it('User B cannot update User A tag', async () => {
             const res = await request(app)
                 .put(`/api/tags/${tagId}`)
@@ -187,6 +208,26 @@ describe('Tags Integration Tests', () => {
                 .delete(`/api/tags/${freshId}`)
                 .set('Cookie', [`itemize_auth=${userA.token}`])
                 .set('x-organization-id', String(userA.org.id));
+        });
+    });
+
+    describe('Tag creation concurrency', () => {
+        it('creates only one case-insensitive tag when requests race', async () => {
+            const name = `RaceTag-${Date.now()}`;
+            const create = value => request(app)
+                .post('/api/tags')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ name: value });
+
+            const responses = await Promise.all([create(name), create(name.toLowerCase())]);
+            expect(responses.map(response => response.status).sort()).toEqual([201, 400]);
+
+            const count = await dbHelper.pool.query(
+                'SELECT COUNT(*)::int AS count FROM tags WHERE organization_id = $1 AND LOWER(name) = LOWER($2)',
+                [userA.org.id, name]
+            );
+            expect(count.rows[0].count).toBe(1);
         });
     });
 

@@ -148,11 +148,14 @@ async function sendCampaignEmails(pool, campaignId, campaign, recipients) {
         await client.query(`
             UPDATE email_campaigns SET
                 status = 'sent',
-                total_sent = $1,
+                total_sent = (
+                    SELECT COUNT(*) FROM campaign_recipients
+                    WHERE campaign_id = $1 AND status = 'sent'
+                ),
                 completed_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2
-        `, [sentCount, campaignId]);
+            WHERE id = $1 AND status = 'sending'
+        `, [campaignId]);
 
         console.log(`Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed`);
     });

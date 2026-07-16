@@ -34,12 +34,31 @@ function createClient({ failPayment = false } = {}) {
                 return { rows: paymentRecorded ? [{ id: 1 }] : [] };
             }
             if (sql.includes('SELECT organization_id')) {
-                return { rows: [{ organization_id: 7, total: '25.00', amount_paid: '0.00' }] };
+                return {
+                    rows: [{
+                        organization_id: 7,
+                        contact_id: 9,
+                        total: '25.00',
+                        amount_paid: '0.00',
+                        status: 'sent',
+                    }],
+                };
             }
             if (sql.includes('INSERT INTO payments')) {
                 if (failPayment) throw new Error('simulated payment write failure');
                 paymentRecorded = true;
                 return { rowCount: 1, rows: [] };
+            }
+            if (sql.includes('WITH inserted AS')) {
+                return {
+                    rowCount: 1,
+                    rows: [{
+                        id: 31,
+                        status: 'queued',
+                        event_key: 'domain:invoice_paid:42',
+                        inserted: true,
+                    }],
+                };
             }
             return { rowCount: 1, rows: [] };
         }),

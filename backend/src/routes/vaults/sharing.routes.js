@@ -5,9 +5,10 @@ const { logger } = require('../../utils/logger');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendNotFound, sendError } = require('../../utils/response');
-const { vaultColumns } = require('./columns');
 
-module.exports = (pool, authenticateJWT) => {
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const router = express.Router();
 
     // =====================
@@ -17,40 +18,33 @@ module.exports = (pool, authenticateJWT) => {
         try {
             const { vaultId } = req.params;
 
-            const result = await withDbClient(pool, async (client) => {
-                const vaultResult = await client.query(
-                    `SELECT ${vaultColumns()} FROM vaults WHERE id = $1 AND user_id = $2`,
-                    [vaultId, req.user.id]
-                );
+            const newToken = crypto.randomUUID();
+            const result = await withDbClient(pool, async (client) => client.query(
+                `UPDATE vaults
+                 SET share_token = CASE
+                       WHEN is_public = TRUE AND share_token IS NOT NULL THEN share_token
+                       ELSE $1
+                     END,
+                     is_public = TRUE,
+                     shared_at = CASE
+                       WHEN is_public = TRUE AND share_token IS NOT NULL THEN shared_at
+                       ELSE CURRENT_TIMESTAMP
+                     END
+                 WHERE id = $2 AND user_id = $3
+                 RETURNING share_token`,
+                [newToken, vaultId, req.user.id]
+            ));
 
-                if (vaultResult.rows.length === 0) {
-                    return { status: 'not_found' };
-                }
-
-                const vault = vaultResult.rows[0];
-
-                let shareToken = vault.share_token;
-                if (!shareToken) {
-                    shareToken = crypto.randomUUID();
-                }
-
-                await client.query(
-                    `UPDATE vaults SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP
-                     WHERE id = $2 AND user_id = $3`,
-                    [shareToken, vaultId, req.user.id]
-                );
-
-                return { status: 'ok', shareToken };
-            });
-
-            if (result.status === 'not_found') {
+            if (result.rows.length === 0) {
                 return sendNotFound(res, 'Vault');
             }
 
-            const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared/vault/${result.shareToken}`;
+            const shareToken = result.rows[0].share_token;
+
+            const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared/vault/${shareToken}`;
 
             sendSuccess(res, {
-                shareToken: result.shareToken,
+                shareToken,
                 shareUrl,
                 message: 'Vault sharing enabled'
             });
@@ -67,7 +61,10 @@ module.exports = (pool, authenticateJWT) => {
 
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    `UPDATE vaults SET is_public = FALSE WHERE id = $1 AND user_id = $2 RETURNING id`,
+                    `UPDATE vaults
+                     SET is_public = FALSE, share_token = NULL, shared_at = NULL
+                     WHERE id = $1 AND user_id = $2
+                     RETURNING id`,
                     [vaultId, req.user.id]
                 );
             });
@@ -84,9 +81,15 @@ module.exports = (pool, authenticateJWT) => {
     }));
 
     // Get shared vault (public endpoint)
-    router.get('/shared/vault/:token', asyncHandler(async (req, res) => {
+    router.get('/shared/vault/:token', publicRateLimit, asyncHandler(async (req, res) => {
         try {
             const { token } = req.params;
+            res.set('Cache-Control', 'private, no-store');
+            res.set('Referrer-Policy', 'no-referrer');
+            res.set('X-Robots-Tag', 'noindex, nofollow');
+            if (!UUID_PATTERN.test(token)) {
+                return sendNotFound(res, 'Shared vault');
+            }
 
             const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(

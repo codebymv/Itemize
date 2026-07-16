@@ -64,13 +64,14 @@ class TrialEmailService extends BaseService {
   /**
    * Log sent email to prevent duplicates
    */
-  async logEmail(organizationId, emailType) {
+  async logEmail(organizationId, emailType, { toEmail = 'system@itemize.cloud', externalId = null } = {}) {
     try {
       // Check if email_type column exists, if not use metadata
       await pool.query(
-        `INSERT INTO email_logs (organization_id, to_email, subject, body_html, status, metadata, sent_at, queued_at)
-         VALUES ($1, 'system@itemize.cloud', $2, '', 'sent', $3, NOW(), NOW())`,
-        [organizationId, `Trial Email: ${emailType}`, JSON.stringify({ email_type: emailType })]
+        `INSERT INTO email_logs
+          (organization_id, to_email, subject, body_html, status, external_id, metadata, sent_at, queued_at)
+         VALUES ($1, $2, $3, '', 'sent', $4, $5, NOW(), NOW())`,
+        [organizationId, toEmail, `Trial Email: ${emailType}`, externalId, JSON.stringify({ email_type: emailType })]
       );
     } catch (error) {
       this.logError('Failed to log email:', error);
@@ -155,7 +156,10 @@ class TrialEmailService extends BaseService {
       });
 
       // Log sent email
-      await this.logEmail(data.organizationId, 'trial_welcome');
+      await this.logEmail(data.organizationId, 'trial_welcome', {
+        toEmail: data.userEmail,
+        externalId: result.data?.id || null,
+      });
 
       this.logInfo(`Welcome email sent to ${data.userEmail} (org: ${data.organizationId})`);
       return { success: true, result };
@@ -228,7 +232,10 @@ class TrialEmailService extends BaseService {
       });
 
       // Log sent email
-      await this.logEmail(data.organizationId, 'trial_reminder');
+      await this.logEmail(data.organizationId, 'trial_reminder', {
+        toEmail: data.userEmail,
+        externalId: result.data?.id || null,
+      });
 
       this.logInfo(`Reminder email sent to ${data.userEmail} (org: ${data.organizationId})`);
       return { success: true, result };

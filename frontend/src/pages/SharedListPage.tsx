@@ -71,13 +71,14 @@ const SharedListPage: React.FC = () => {
         const socket = io(backendUrl, {
           transports: ['websocket', 'polling'], // Allow fallback to polling
           timeout: 5000,
-          forceNew: true
+          forceNew: true,
+          withCredentials: true
         });
         socketRef.current = socket;
 
         // Join the shared list room after connection is established
         socket.on('connect', () => {
-          console.log('WebSocket connected, joining shared list:', token);
+          console.log('WebSocket connected, joining shared list');
           socket.emit('joinSharedList', token);
         });
 
@@ -128,7 +129,7 @@ const SharedListPage: React.FC = () => {
         });
 
         // Handle general errors
-        socket.on('error', (error) => {
+        socket.on('realtimeError', (error) => {
           console.error('WebSocket error:', error);
         });
 

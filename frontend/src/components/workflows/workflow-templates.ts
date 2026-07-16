@@ -1,37 +1,38 @@
+import type {
+  WorkflowStepType,
+  WorkflowTriggerType,
+} from '@/domain/workflowRegistry';
+
 export interface WorkflowAction {
-  id: string
-  type: 'send_invoice' | 'update_deal' | 'send_email' | 'create_task' | 'send_review_request' | 'add_segment' | 'update_contact_status'
-  config: {
-    [key: string]: unknown
-  }
+  id: string;
+  type: WorkflowStepType;
+  config: Record<string, unknown>;
 }
 
 export interface WorkflowTrigger {
-  id: string
-  type: 'contract_signed' | 'invoice_paid' | 'deal_status_changed' | 'form_submitted' | 'contact_created'
-  config?: {
-    [key: string]: unknown
-  }
+  id: string;
+  type: WorkflowTriggerType;
+  config?: Record<string, unknown>;
 }
 
 export interface WorkflowTemplate {
-  id: string
-  name: string
-  description: string
-  category: 'onboarding' | 'sales' | 'billing' | 'engagement'
-  icon: string
-  color: string
-  triggers: WorkflowTrigger[]
-  actions: WorkflowAction[]
-  enabled?: boolean
-  isActive?: boolean
+  id: string;
+  name: string;
+  description: string;
+  category: 'onboarding' | 'sales' | 'billing' | 'engagement';
+  icon: string;
+  color: string;
+  triggers: WorkflowTrigger[];
+  actions: WorkflowAction[];
+  enabled?: boolean;
+  isActive?: boolean;
 }
 
 export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
-    id: 'onboarding-client',
-    name: 'Client Onboarding',
-    description: 'Form submission creates contact, adds to segment, sends welcome email, and creates follow-up task',
+    id: 'form-follow-up',
+    name: 'Form Follow-up',
+    description: 'Tag a form contact, send a configured email, and create a follow-up task.',
     category: 'onboarding',
     icon: 'Users',
     color: 'bg-green-100 text-green-600',
@@ -39,81 +40,102 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       {
         id: 'form-submitted',
         type: 'form_submitted',
-        config: { formId: 'contact-form' }
-      }
+      },
     ],
     actions: [
       {
-        id: 'create-contact',
-        type: 'create_task',
-        config: { title: 'Send welcome email to {contact.email}' }
+        id: 'tag-contact',
+        type: 'add_tag',
+        config: { tag_name: 'form-submission' },
       },
       {
         id: 'welcome-email',
         type: 'send_email',
-        config: { templateId: 'welcome-email', to: '{contact.email}' }
-      }
-    ]
+        config: { template_id: null },
+      },
+      {
+        id: 'follow-up-task',
+        type: 'create_task',
+        config: { title: 'Follow up on form submission' },
+      },
+    ],
   },
   {
-    id: 'deal-lifecycle',
-    name: 'Deal Lifecycle',
-    description: 'Contract signed creates invoice; Invoice paid marks deal won and sends review request',
+    id: 'contract-handoff',
+    name: 'Contract Handoff',
+    description: 'Tag the contact and create an internal handoff task after signature.',
     category: 'sales',
     icon: 'TrendingUp',
     color: 'bg-blue-100 text-blue-600',
     triggers: [
       {
         id: 'contract-signed',
-        type: 'contract_signed'
+        type: 'contract_signed',
       },
-      {
-        id: 'invoice-paid',
-        type: 'invoice_paid'
-      }
     ],
     actions: [
       {
-        id: 'create-invoice',
-        type: 'send_invoice',
-        config: { amount: '{contract.amount}', contactId: '{contract.contact_id}' }
+        id: 'tag-signed',
+        type: 'add_tag',
+        config: { tag_name: 'contract-signed' },
       },
       {
-        id: 'update-deal',
-        type: 'update_deal',
-        config: { status: 'won', stage: 'Won' }
+        id: 'handoff-task',
+        type: 'create_task',
+        config: { title: 'Complete signed-contract handoff' },
       },
-      {
-        id: 'send-review',
-        type: 'send_review_request',
-        config: { delayDays: 7, contactId: '{contact.id}' }
-      },
-      {
-        id: 'update-contact',
-        type: 'update_contact_status',
-        config: { status: 'customer' }
-      }
-    ]
+    ],
   },
   {
-    id: 'review-request',
-    name: 'Review Request',
-    description: 'After payment, send automatic review request 7 days later',
-    category: 'engagement',
+    id: 'invoice-paid-follow-up',
+    name: 'Payment Follow-up',
+    description: 'Wait seven days, then send a configured follow-up email after payment.',
+    category: 'billing',
     icon: 'Star',
     color: 'bg-yellow-100 text-yellow-600',
     triggers: [
       {
         id: 'invoice-paid',
-        type: 'invoice_paid'
-      }
+        type: 'invoice_paid',
+      },
     ],
     actions: [
       {
-        id: 'schedule-review',
-        type: 'send_review_request',
-        config: { delayDays: 7, templateId: 'review-request' }
-      }
-    ]
-  }
-]
+        id: 'wait-seven-days',
+        type: 'wait',
+        config: { delay_days: 7 },
+      },
+      {
+        id: 'follow-up-email',
+        type: 'send_email',
+        config: { template_id: null },
+      },
+    ],
+  },
+  {
+    id: 'booking-confirmation',
+    name: 'Booking Confirmation',
+    description: 'Send a configured confirmation and create an internal preparation task.',
+    category: 'engagement',
+    icon: 'Clock',
+    color: 'bg-purple-100 text-purple-600',
+    triggers: [
+      {
+        id: 'booking-created',
+        type: 'booking_created',
+      },
+    ],
+    actions: [
+      {
+        id: 'confirmation-email',
+        type: 'send_email',
+        config: { template_id: null },
+      },
+      {
+        id: 'preparation-task',
+        type: 'create_task',
+        config: { title: 'Prepare for new booking' },
+      },
+    ],
+  },
+];

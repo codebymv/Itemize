@@ -188,7 +188,7 @@ module.exports = (pool, publicRateLimit, io) => {
 
             // Notify agents via WebSocket
             if (io) {
-                io.to(`org-${data.widget.organization_id}`).emit('newChatSession', {
+                io.to(`org-chat-${data.widget.organization_id}`).emit('newChatSession', {
                     session_id: data.data.session_id,
                     visitor_name,
                     visitor_email,
@@ -314,7 +314,7 @@ module.exports = (pool, publicRateLimit, io) => {
 
             // Notify agents via WebSocket
             if (io) {
-                io.to(`org-${data.session.organization_id}`).emit('newChatMessage', {
+                io.to(`org-chat-${data.session.organization_id}`).emit('newChatMessage', {
                     session_id: data.session.id,
                     message: data.message,
                     timestamp: new Date().toISOString()
@@ -356,7 +356,7 @@ module.exports = (pool, publicRateLimit, io) => {
 
             // Notify agents
             if (io) {
-                io.to(`org-${result.rows[0].organization_id}`).emit('chatSessionEnded', {
+                io.to(`org-chat-${result.rows[0].organization_id}`).emit('chatSessionEnded', {
                     session_id: result.rows[0].id,
                     timestamp: new Date().toISOString()
                 });
@@ -391,7 +391,7 @@ module.exports = (pool, publicRateLimit, io) => {
 
             // Broadcast typing indicator to agents
             if (io) {
-                io.to(`org-${sessionResult.rows[0].organization_id}`).emit('visitorTyping', {
+                io.to(`org-chat-${sessionResult.rows[0].organization_id}`).emit('visitorTyping', {
                     session_id: sessionResult.rows[0].id,
                     is_typing: is_typing !== false,
                     timestamp: new Date().toISOString()

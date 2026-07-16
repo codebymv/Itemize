@@ -8,6 +8,7 @@ const googleCalendarService = require('../services/googleCalendarService');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
 const { bookingColumns, calendarConnectionColumns } = require('./calendar-columns');
+const { createCalendarOAuthState, verifyCalendarOAuthState } = require('../services/calendarOAuthState');
 
 /**
  * Create calendar integrations routes with injected dependencies
@@ -114,11 +115,11 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/google/auth', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const state = {
+            const state = createCalendarOAuthState({
                 userId: req.user.id,
                 organizationId: req.organizationId,
                 returnUrl: req.query.return_url || '/calendars',
-            };
+            });
 
             const authUrl = googleCalendarService.getAuthUrl(state);
             res.json({ authUrl });
@@ -142,12 +143,20 @@ module.exports = (pool, authenticateJWT) => {
 
             let stateData;
             try {
-                stateData = JSON.parse(state);
+                stateData = verifyCalendarOAuthState(state);
             } catch {
                 return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/calendars?error=invalid_state`);
             }
 
-            const { userId, organizationId, returnUrl } = stateData;
+            const { userId, organizationId, returnPath } = stateData;
+
+            const membership = await withDbClient(pool, async (client) => client.query(`
+                SELECT 1 FROM organization_members
+                WHERE user_id = $1 AND organization_id = $2
+            `, [userId, organizationId]));
+            if (membership.rows.length === 0) {
+                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/calendars?error=invalid_state`);
+            }
 
             // Exchange code for tokens
             const tokens = await googleCalendarService.exchangeCodeForTokens(code);
@@ -211,7 +220,8 @@ module.exports = (pool, authenticateJWT) => {
 
             // Redirect to frontend
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            res.redirect(`${frontendUrl}${returnUrl || '/calendars'}?google_connected=true`);
+            const separator = returnPath.includes('?') ? '&' : '?';
+            res.redirect(`${frontendUrl}${returnPath}${separator}google_connected=true`);
         } catch (error) {
             console.error('Error in Google OAuth callback:', error);
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

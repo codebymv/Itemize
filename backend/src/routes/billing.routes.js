@@ -8,14 +8,21 @@ const { logger } = require('../utils/logger');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { sendSuccess, sendBadRequest, sendNotFound } = require('../utils/response');
 const StripeService = require('../services/stripe.service');
+const { withTransaction } = require('../utils/db');
+const {
+    processStripeSubscriptionEvent,
+    verifyStripeSubscriptionWebhook,
+} = require('../services/subscriptionWebhookService');
 const {
     getAllPlans,
     PLAN_TO_STRIPE_PRICES
 } = require('../lib/subscription.constants');
 
-module.exports = (pool, authenticateJWT) => {
+module.exports = (pool, authenticateJWT, options = {}) => {
     const router = express.Router();
     const stripeService = new StripeService(pool);
+    const processWebhookEvent = options.processWebhookEvent || processStripeSubscriptionEvent;
+    const verifyWebhook = options.verifyWebhook || verifyStripeSubscriptionWebhook;
     const { requireOrganization } = require('../middleware/organization')(pool);
 
     // ============================================
@@ -32,14 +39,37 @@ module.exports = (pool, authenticateJWT) => {
                 return res.status(400).send('Webhook Error: Missing signature');
             }
 
+            let event;
             try {
-                await stripeService.handleWebhook(sig, req.body);
-                res.json({ received: true });
-            } catch (err) {
-                const message = err instanceof Error ? err.message : 'Unknown error';
-                logger.error(`[Billing] Webhook Error: ${message}`);
-                res.status(400).send(`Webhook Error: ${message}`);
+                event = verifyWebhook({
+                    payload: req.body,
+                    signature: sig,
+                    stripe: stripeService.stripe,
+                });
+            } catch (error) {
+                if (error.code === 'WEBHOOK_NOT_CONFIGURED') {
+                    logger.error('[Billing] Stripe webhook secret is not configured');
+                    return res.status(503).json({ error: 'Webhook verification unavailable' });
+                }
+                logger.warn('[Billing] Stripe webhook verification failed', { reason: error.message });
+                return res.status(400).json({ error: 'Invalid webhook' });
             }
+
+            let result;
+            try {
+                result = await withTransaction(
+                    pool,
+                    client => processWebhookEvent(client, event)
+                );
+            } catch (error) {
+                if (error.message.startsWith('Invalid Stripe ')) {
+                    return res.status(400).json({ error: 'Invalid webhook event' });
+                }
+                logger.error('[Billing] Stripe webhook processing failed', { error: error.message });
+                return res.status(500).json({ error: 'Webhook processing failed' });
+            }
+
+            return res.json({ received: true, ...result });
         })
     );
 

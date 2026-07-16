@@ -14,12 +14,12 @@ const passwordRoutes = require('./vaults/password.routes');
  * @param {Function} authenticateJWT - JWT authentication middleware
  * @param {Object} broadcast - Broadcast functions for WebSocket updates
  */
-module.exports = (pool, authenticateJWT, _broadcast) => {
+module.exports = (pool, authenticateJWT, _broadcast, publicRateLimit) => {
     const router = express.Router();
 
     router.use(crudRoutes(pool, authenticateJWT));
     router.use(itemsRoutes(pool, authenticateJWT));
-    router.use(sharingRoutes(pool, authenticateJWT));
+    router.use(sharingRoutes(pool, authenticateJWT, publicRateLimit));
     router.use(passwordRoutes(pool, authenticateJWT));
 
     return router;

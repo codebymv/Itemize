@@ -12,6 +12,7 @@ const CAMPAIGN_COLUMNS = [
     'content_html',
     'content_text',
     'segment_type',
+    'segment_id',
     'segment_filter',
     'tag_ids',
     'excluded_tag_ids',

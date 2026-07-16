@@ -108,8 +108,9 @@ class EmailService extends BaseService {
    * @param {string|string[]} [options.bcc] - BCC recipient(s)
    * @param {Array} [options.tags] - Email tags for tracking
    * @param {Array} [options.attachments] - File attachments [{filename, content}]
+   * @param {string} [options.idempotencyKey] - Stable provider deduplication key
    */
-  async sendEmail({ to, subject, html, text, from, replyTo, cc, bcc, tags, attachments }) {
+  async sendEmail({ to, subject, html, text, from, replyTo, cc, bcc, tags, attachments, idempotencyKey }) {
     if (!this.isConfigured) {
       this.logWarn('Email not sent - service not configured');
       return {
@@ -175,13 +176,16 @@ class EmailService extends BaseService {
 
     try {
       const response = await this.withRetry(
-        async () => this.resend.emails.send(emailOptions),
-        { to: emailOptions.to, subject }
+        async () => this.resend.emails.send(
+          emailOptions,
+          idempotencyKey ? { idempotencyKey } : undefined
+        ),
+        { recipientCount: emailOptions.to.length, subject }
       );
 
       this.logInfo('Email sent successfully', { 
-        to: emailOptions.to, 
-        cc: emailOptions.cc, 
+        recipientCount: emailOptions.to.length,
+        ccCount: emailOptions.cc?.length || 0,
         subject,
         hasAttachments: !!(attachments && attachments.length > 0)
       });

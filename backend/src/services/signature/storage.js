@@ -22,16 +22,19 @@ async function computeSha256FromFile(file) {
 }
 
 function buildUploadKey(organizationId, documentId, originalname) {
-    const ext = path.extname(originalname || '');
-    const base = path.basename(originalname || 'document', ext).replace(/[^a-zA-Z0-9-_]/g, '');
+    const originalExtension = path.extname(originalname || '');
+    const ext = '.pdf';
+    const base = path.basename(originalname || 'document', originalExtension).replace(/[^a-zA-Z0-9-_]/g, '');
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     return `signatures/${organizationId}/${documentId}/${base || 'document'}-${uniqueSuffix}${ext || '.pdf'}`;
 }
 
 function getLocalFilePath(fileUrl) {
-    if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
-    const relativePath = fileUrl.replace('/uploads/', '');
-    return path.join(__dirname, '../../uploads', relativePath);
+    if (!fileUrl || !fileUrl.startsWith('/uploads/signatures/')) return null;
+    const signaturesRoot = path.resolve(__dirname, '../../../uploads/signatures');
+    const resolved = path.resolve(signaturesRoot, fileUrl.slice('/uploads/signatures/'.length));
+    if (!resolved.startsWith(`${signaturesRoot}${path.sep}`)) return null;
+    return resolved;
 }
 
 function getS3KeyFromUrl(fileUrl) {
@@ -39,10 +42,43 @@ function getS3KeyFromUrl(fileUrl) {
     try {
         const url = new URL(fileUrl);
         const bucket = process.env.AWS_S3_BUCKET || 'itemize-uploads';
-        if (!url.hostname.startsWith(`${bucket}.s3.`)) return null;
-        return url.pathname.replace(/^\//, '');
+        const escapedBucket = bucket.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const hostnamePattern = new RegExp(`^${escapedBucket}\\.s3(?:\\.[a-z0-9-]+)?\\.amazonaws\\.com$`, 'i');
+        if (!hostnamePattern.test(url.hostname)) return null;
+        const key = url.pathname.replace(/^\//, '');
+        return key.startsWith('signatures/') ? key : null;
     } catch {
         return null;
+    }
+}
+
+async function assertPdfUpload(file) {
+    let header;
+    if (file?.buffer) {
+        header = file.buffer.subarray(0, 5);
+    } else if (file?.path) {
+        const handle = await fs.promises.open(file.path, 'r');
+        try {
+            header = Buffer.alloc(5);
+            const { bytesRead } = await handle.read(header, 0, 5, 0);
+            header = header.subarray(0, bytesRead);
+        } finally {
+            await handle.close();
+        }
+    }
+
+    if (!header || header.toString('ascii') !== '%PDF-') {
+        const error = new Error('Invalid PDF file content');
+        error.code = 'INVALID_FILE_CONTENT';
+        throw error;
+    }
+    file.mimetype = 'application/pdf';
+    return file;
+}
+
+async function cleanupUploadedFile(file) {
+    if (file?.path) {
+        await fs.promises.unlink(file.path).catch(() => null);
     }
 }
 
@@ -58,9 +94,11 @@ function getUploadedFileUrl(file) {
 
 module.exports = {
     s3Service,
+    assertPdfUpload,
     computeSha256FromFile,
     buildUploadKey,
+    cleanupUploadedFile,
     getLocalFilePath,
     getS3KeyFromUrl,
-    getUploadedFileUrl
+    getUploadedFileUrl,
 };

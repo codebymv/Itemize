@@ -19,6 +19,7 @@ import {
   uploadSignatureTemplate
 } from '@/services/signaturesApi';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
+import { getApiUrl } from '@/lib/api';
 
 export default function SignatureTemplateEditorPage() {
   const navigate = useNavigate();
@@ -208,7 +209,7 @@ export default function SignatureTemplateEditorPage() {
               <FieldPlacementCanvas
                 fields={fields}
                 onChange={setFields}
-                fileUrl={template?.file_url || ''}
+                fileUrl={template?.file_url ? `${getApiUrl()}/api/signatures/templates/${template.id}/file` : ''}
                 roles={roleNames}
               />
             </CardContent>

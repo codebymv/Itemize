@@ -1,0 +1,29 @@
+{
+  "triggers": [
+    { "type": "contact_added", "label": "Contact Added", "aliases": ["contact_created"] },
+    { "type": "contact_updated", "label": "Contact Updated", "aliases": [] },
+    { "type": "tag_added", "label": "Tag Added", "aliases": [] },
+    { "type": "tag_removed", "label": "Tag Removed", "aliases": [] },
+    { "type": "deal_stage_changed", "label": "Deal Stage Changed", "aliases": ["deal_status_changed"] },
+    { "type": "form_submitted", "label": "Form Submitted", "aliases": [] },
+    { "type": "booking_created", "label": "Booking Created", "aliases": [] },
+    { "type": "booking_cancelled", "label": "Booking Cancelled", "aliases": [] },
+    { "type": "booking_rescheduled", "label": "Booking Rescheduled", "aliases": [] },
+    { "type": "invoice_paid", "label": "Invoice Paid", "aliases": [] },
+    { "type": "contract_signed", "label": "Contract Signed", "aliases": [] },
+    { "type": "manual", "label": "Manual", "aliases": [] },
+    { "type": "scheduled", "label": "Scheduled", "aliases": [] }
+  ],
+  "steps": [
+    { "type": "send_email", "label": "Send Email" },
+    { "type": "send_sms", "label": "Send SMS" },
+    { "type": "add_tag", "label": "Add Tag" },
+    { "type": "remove_tag", "label": "Remove Tag" },
+    { "type": "wait", "label": "Wait / Delay" },
+    { "type": "create_task", "label": "Create Task" },
+    { "type": "move_deal", "label": "Move Deal" },
+    { "type": "webhook", "label": "Webhook" },
+    { "type": "condition", "label": "Condition" },
+    { "type": "update_contact", "label": "Update Contact" }
+  ]
+}

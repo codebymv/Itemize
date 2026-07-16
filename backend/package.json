@@ -18,6 +18,10 @@
     "test:integration:config": "jest src/__tests__/utils/test-database-config.test.js --runInBand",
     "test:integration": "jest --testPathIgnorePatterns=\"/node_modules/|/dist/\" --testMatch=\"**/src/__tests__/integration/**/*.test.js\" --runInBand --testTimeout=60000 --globalSetup=./src/__tests__/integration/global-setup.js --globalTeardown=./src/__tests__/integration/global-teardown.js",
     "test:integration:fresh": "node scripts/run-integration-tests-fresh.js",
+    "workflow:rollout:identity": "node scripts/workflow-rollout.js identity",
+    "workflow:rollout:preflight": "node scripts/workflow-rollout.js preflight",
+    "workflow:rollout:canary": "node scripts/workflow-rollout.js canary",
+    "workflow:rollout:drain": "node scripts/workflow-rollout.js drain",
     "db:test:reset": "node scripts/initialize-test-database.js --reset --confirm-reset",
     "db:test:verify": "node scripts/initialize-test-database.js"
   },
@@ -37,6 +41,7 @@
     "express-validator": "^7.3.1",
     "googleapis": "^170.1.0",
     "helmet": "^7.1.0",
+    "ipaddr.js": "^1.9.1",
     "jsdom": "^25.0.1",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",

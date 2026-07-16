@@ -175,7 +175,7 @@ const runContactActivitiesMigration = async (pool) => {
         id SERIAL PRIMARY KEY,
         contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        type VARCHAR(50) NOT NULL CHECK (type IN ('note', 'email', 'call', 'task', 'meeting', 'status_change', 'deal_update', 'system')),
+        type VARCHAR(50) NOT NULL CHECK (type IN ('note', 'email', 'sms', 'call', 'task', 'meeting', 'status_change', 'deal_update', 'system')),
         title VARCHAR(255),
         content JSONB DEFAULT '{}'::jsonb,
         metadata JSONB DEFAULT '{}'::jsonb,

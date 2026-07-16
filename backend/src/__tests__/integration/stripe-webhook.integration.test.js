@@ -84,5 +84,21 @@ describe('Stripe webhook PostgreSQL idempotency', () => {
         expect(Number(invoice.rows[0].amount_paid)).toBe(100);
         expect(Number(invoice.rows[0].amount_due)).toBe(0);
         expect(invoice.rows[0].status).toBe('paid');
+
+        const triggers = await dbHelper.pool.query(`
+            SELECT event_key, payload
+            FROM workflow_triggers
+            WHERE organization_id = $1
+              AND trigger_type = 'invoice_paid'
+              AND entity_id = $2
+        `, [user.org.id, invoiceId]);
+        expect(triggers.rows).toHaveLength(1);
+        expect(triggers.rows[0]).toMatchObject({
+            event_key: `domain:invoice_paid:${invoiceId}`,
+            payload: expect.objectContaining({
+                payment_method: 'stripe',
+                payment_reference: `pi_${eventId}`,
+            }),
+        });
     });
 });

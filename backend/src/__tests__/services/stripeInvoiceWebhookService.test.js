@@ -45,7 +45,25 @@ describe('Stripe invoice webhook service', () => {
                 if (sql.includes('INSERT INTO stripe_webhook_events')) return { rowCount: 1, rows: [{ event_id: 'evt_checkout_1' }] };
                 if (sql.includes('SELECT id FROM payments')) return { rows: [] };
                 if (sql.includes('SELECT organization_id')) {
-                    return { rows: [{ organization_id: 7, total: '50.00', amount_paid: '0.00' }] };
+                    return {
+                        rows: [{
+                            organization_id: 7,
+                            contact_id: 11,
+                            total: '50.00',
+                            amount_paid: '0.00',
+                            status: 'sent',
+                        }],
+                    };
+                }
+                if (sql.includes('WITH inserted AS')) {
+                    return {
+                        rows: [{
+                            id: 91,
+                            status: 'queued',
+                            event_key: 'domain:invoice_paid:42',
+                            inserted: true,
+                        }],
+                    };
                 }
                 return { rows: [], rowCount: 1 };
             }),
@@ -63,6 +81,13 @@ describe('Stripe invoice webhook service', () => {
         expect(paymentCall[1]).toEqual([7, '42', 50, 'USD', 'pi_1']);
         const invoiceUpdate = client.query.mock.calls.find(([sql]) => sql.includes('UPDATE invoices SET'));
         expect(invoiceUpdate[1]).toEqual([50, 0, 'paid', '42']);
+        const workflowTrigger = client.query.mock.calls.find(([sql]) => sql.includes('WITH inserted AS'));
+        expect(workflowTrigger[1]).toEqual(expect.arrayContaining([
+            null,
+            7,
+            11,
+            'invoice_paid',
+        ]));
     });
 
     test('does not apply a second event for an existing payment reference', async () => {

@@ -386,6 +386,59 @@ describe('Forms Integration Tests', () => {
         });
     });
 
+    describe('Public form submission transaction', () => {
+        let form;
+        const email = `public-race-${Date.now()}@example.com`;
+
+        beforeAll(async () => {
+            const create = await request(app)
+                .post('/api/forms')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ name: 'Public Concurrent Form' });
+            form = create.body.data;
+
+            await request(app)
+                .put(`/api/forms/${form.id}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ status: 'published' });
+        });
+
+        afterAll(async () => {
+            await dbHelper.pool.query('DELETE FROM contacts WHERE organization_id = $1 AND LOWER(email) = LOWER($2)', [userA.org.id, email]);
+            await dbHelper.pool.query('DELETE FROM forms WHERE id = $1', [form.id]);
+        });
+
+        it('serializes same-email contact creation while preserving both submissions', async () => {
+            const nameField = form.fields.find(field => field.map_to_contact_field === 'first_name');
+            const emailField = form.fields.find(field => field.map_to_contact_field === 'email');
+            const submit = () => request(app)
+                .post(`/api/forms/public/form/${form.slug}`)
+                .send({
+                    data: {
+                        [nameField.id]: 'Public Lead',
+                        [emailField.id]: email,
+                    },
+                });
+
+            const responses = await Promise.all([submit(), submit()]);
+            expect(responses.every(response => response.status === 201)).toBe(true);
+
+            const contacts = await dbHelper.pool.query(
+                'SELECT COUNT(*)::int AS count FROM contacts WHERE organization_id = $1 AND LOWER(email) = LOWER($2)',
+                [userA.org.id, email]
+            );
+            expect(contacts.rows[0].count).toBe(1);
+
+            const submissions = await dbHelper.pool.query(
+                'SELECT COUNT(*)::int AS count FROM form_submissions WHERE form_id = $1',
+                [form.id]
+            );
+            expect(submissions.rows[0].count).toBe(2);
+        });
+    });
+
     // ── Plan limit ───────────────────────────────────────────────────────────
 
     describe('Form plan limit enforcement', () => {
@@ -413,6 +466,35 @@ describe('Forms Integration Tests', () => {
                 .send({ name: 'Second Form (over limit)' });
             expect(r2.status).toBe(403);
             expect(JSON.stringify(r2.body)).toMatch(/limit/i);
+        });
+
+        it('serializes concurrent form creation at the plan limit', async () => {
+            const limitUser = await dbHelper.seedUser(
+                `form-race-${Date.now()}@test.itemize`, 'Form Race User'
+            );
+
+            await dbHelper.pool.query(
+                'UPDATE organizations SET forms_limit = 1 WHERE id = $1',
+                [limitUser.org.id]
+            );
+
+            const create = name => request(app)
+                .post('/api/forms')
+                .set('Cookie', [`itemize_auth=${limitUser.token}`])
+                .set('x-organization-id', String(limitUser.org.id))
+                .send({ name });
+
+            const responses = await Promise.all([
+                create(`Race Form A ${Date.now()}`),
+                create(`Race Form B ${Date.now()}`),
+            ]);
+            expect(responses.map(response => response.status).sort()).toEqual([201, 403]);
+
+            const count = await dbHelper.pool.query(
+                'SELECT COUNT(*)::int AS count FROM forms WHERE organization_id = $1',
+                [limitUser.org.id]
+            );
+            expect(count.rows[0].count).toBe(1);
         });
     });
 

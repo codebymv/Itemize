@@ -1,6 +1,7 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
-const { sendSuccess, sendError } = require('../../utils/response');
+const { sendSuccess, sendError, sendBadRequest } = require('../../utils/response');
+const { percentage, resolvePeriod, toInteger, toNumber } = require('../../services/analyticsParameters');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -11,20 +12,11 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
      */
     router.get('/deals/performance', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const { period = '6months' } = req.query;
-            const orgId = req.organizationId;
+            const periodConfig = resolvePeriod('deals', req.query.period, '6months');
+            if (!periodConfig) return sendBadRequest(res, 'Unsupported analytics period', 'period');
 
-            let interval;
-            switch (period) {
-                case '30days':
-                    interval = '30 days';
-                    break;
-                case '12months':
-                    interval = '12 months';
-                    break;
-                default:
-                    interval = '6 months';
-            }
+            const { period, interval } = periodConfig;
+            const orgId = req.organizationId;
 
             const data = await withDbClient(pool, async (client) => {
                 const result = await client.query(`
@@ -41,23 +33,23 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
           ) as avg_days_to_close
         FROM deals
         WHERE organization_id = $1
-          AND (won_at >= NOW() - INTERVAL '${interval}' OR lost_at >= NOW() - INTERVAL '${interval}')
-      `, [orgId]);
+          AND (won_at >= NOW() - $2::interval OR lost_at >= NOW() - $2::interval)
+      `, [orgId, interval]);
 
                 const metricsRow = result.rows[0];
-                const closedTotal = parseInt(metricsRow.closed_total) || 1; // Prevent division by zero
-                const wonCount = parseInt(metricsRow.won_count);
+                const closedTotal = toInteger(metricsRow.closed_total);
+                const wonCount = toInteger(metricsRow.won_count);
 
                 return {
                     period,
                     metrics: {
-                        closedTotal: parseInt(metricsRow.closed_total),
+                        closedTotal,
                         wonCount: wonCount,
-                        lostCount: parseInt(metricsRow.lost_count),
-                        winRate: Math.round((wonCount / closedTotal) * 100),
-                        avgDealValue: parseFloat(metricsRow.avg_deal_value).toFixed(2),
-                        totalRevenue: parseFloat(metricsRow.total_revenue).toFixed(2),
-                        avgDaysToClose: Math.round(parseFloat(metricsRow.avg_days_to_close))
+                        lostCount: toInteger(metricsRow.lost_count),
+                        winRate: percentage(wonCount, closedTotal),
+                        avgDealValue: toNumber(metricsRow.avg_deal_value),
+                        totalRevenue: toNumber(metricsRow.total_revenue),
+                        avgDaysToClose: Math.round(toNumber(metricsRow.avg_days_to_close))
                     }
                 };
             });
@@ -85,25 +77,26 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
           COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
           COUNT(*) FILTER (WHERE status = 'no_show') as no_show,
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as created_this_month,
-          COUNT(*) FILTER (WHERE start_time >= NOW()) as upcoming
+          COUNT(*) FILTER (
+            WHERE start_time >= NOW() AND status IN ('pending', 'confirmed')
+          ) as upcoming
         FROM bookings
         WHERE organization_id = $1
       `, [orgId]);
 
                 const data = result.rows[0];
-                const totalCompleted = parseInt(data.completed) + parseInt(data.no_show);
-                const completionRate = totalCompleted > 0
-                    ? Math.round((parseInt(data.completed) / totalCompleted) * 100)
-                    : 0;
+                const completed = toInteger(data.completed);
+                const noShow = toInteger(data.no_show);
+                const completionRate = percentage(completed, completed + noShow);
 
                 return {
-                    total: parseInt(data.total),
-                    confirmed: parseInt(data.confirmed),
-                    completed: parseInt(data.completed),
-                    cancelled: parseInt(data.cancelled),
-                    noShow: parseInt(data.no_show),
-                    createdThisMonth: parseInt(data.created_this_month),
-                    upcoming: parseInt(data.upcoming),
+                    total: toInteger(data.total),
+                    confirmed: toInteger(data.confirmed),
+                    completed,
+                    cancelled: toInteger(data.cancelled),
+                    noShow,
+                    createdThisMonth: toInteger(data.created_this_month),
+                    upcoming: toInteger(data.upcoming),
                     completionRate
                 };
             });

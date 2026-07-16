@@ -1,3 +1,9 @@
+const { WORKFLOW_TRIGGERS } = require('../domain/workflowRegistry');
+const {
+    enqueueWorkflowTrigger,
+    workflowTriggerEventKey,
+} = require('./workflowTriggerQueue');
+
 async function claimEvent(client, event) {
     if (!event?.id || !event?.type) {
         throw new Error('Stripe webhook event must include id and type');
@@ -40,7 +46,10 @@ async function processCompletedCheckout(client, session, logger) {
     }
 
     const invoiceResult = await client.query(
-        'SELECT organization_id, total, amount_paid FROM invoices WHERE id = $1 FOR UPDATE',
+        `SELECT organization_id, contact_id, total, amount_paid, status
+         FROM invoices
+         WHERE id = $1
+         FOR UPDATE`,
         [invoiceId]
     );
     if (invoiceResult.rows.length === 0) {
@@ -89,6 +98,25 @@ async function processCompletedCheckout(client, session, logger) {
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $4
     `, [newAmountPaid, Math.max(0, newAmountDue), newStatus, invoiceId]);
+
+    if (newStatus === 'paid' && invoice.status !== 'paid') {
+        await enqueueWorkflowTrigger(client, {
+            contactId: invoice.contact_id,
+            entityId: invoiceId,
+            entityType: 'invoice',
+            eventKey: workflowTriggerEventKey('domain', `invoice_paid:${invoiceId}`),
+            organizationId: invoice.organization_id,
+            payload: {
+                amount_paid: newAmountPaid,
+                invoice_id: Number(invoiceId),
+                payment_method: 'stripe',
+                payment_reference: String(paymentReference),
+                stripe_event_id: session.id,
+                total: Number(invoice.total),
+            },
+            triggerType: WORKFLOW_TRIGGERS.INVOICE_PAID,
+        });
+    }
 
     return { handled: true, duplicatePayment: false };
 }

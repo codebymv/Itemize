@@ -2,7 +2,10 @@ const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
-const { fs, logger, multer, path, s3Service, upload } = require('./logo-upload');
+const {
+    assertLogoUpload, cleanupUploadedFile, fs, logger, multer,
+    resolveLocalLogoPath, s3Service, upload,
+} = require('./logo-upload');
 const { BUSINESS_COLUMNS, selectColumns } = require('./columns');
 
 module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
@@ -68,7 +71,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
      */
     router.post('/businesses', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
         try {
-            const { name, email, phone, address, tax_id, logo_url } = req.body;
+            const { name, email, phone, address, tax_id } = req.body;
 
             if (!name || !name.trim()) {
                 return sendBadRequest(res, 'Business name is required');
@@ -76,8 +79,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
 
             const result = await withDbClient(pool, async (client) => {
                 return client.query(`
-                    INSERT INTO businesses (organization_id, name, email, phone, address, tax_id, logo_url)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    INSERT INTO businesses (organization_id, name, email, phone, address, tax_id)
+                    VALUES ($1, $2, $3, $4, $5, $6)
                     RETURNING ${selectColumns(BUSINESS_COLUMNS)}
                 `, [
                     req.organizationId,
@@ -85,8 +88,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     email || null,
                     phone || null,
                     address || null,
-                    tax_id || null,
-                    logo_url || null
+                    tax_id || null
                 ]);
             });
 
@@ -109,7 +111,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 return next();
             }
 
-            const { name, email, phone, address, tax_id, logo_url, is_active } = req.body;
+            const { name, email, phone, address, tax_id, is_active } = req.body;
 
             if (name !== undefined && (!name || !name.trim())) {
                 return sendBadRequest(res, 'Business name cannot be empty');
@@ -133,10 +135,9 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         phone = COALESCE($3, phone),
                         address = COALESCE($4, address),
                         tax_id = COALESCE($5, tax_id),
-                        logo_url = COALESCE($6, logo_url),
-                        is_active = COALESCE($7, is_active),
+                        is_active = COALESCE($6, is_active),
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $8 AND organization_id = $9
+                    WHERE id = $7 AND organization_id = $8
                     RETURNING ${selectColumns(BUSINESS_COLUMNS)}
                 `, [
                     name?.trim(),
@@ -144,7 +145,6 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     phone,
                     address,
                     tax_id,
-                    logo_url,
                     is_active,
                     id,
                     req.organizationId
@@ -235,6 +235,7 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
             }
 
             try {
+                await assertLogoUpload(req.file);
                 const uploadResult = await withDbClient(pool, async (client) => {
                     // Check if business exists
                     const checkResult = await client.query(
@@ -262,9 +263,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                         }
                         // Delete local file if it exists
                         if (oldUrl.includes('/uploads/logos/')) {
-                            const oldFilename = oldUrl.split('/uploads/logos/')[1];
-                            const oldFilePath = path.join(__dirname, '../../../uploads/logos', oldFilename);
-                            if (fs.existsSync(oldFilePath)) {
+                            const oldFilePath = resolveLocalLogoPath(oldUrl);
+                            if (oldFilePath && fs.existsSync(oldFilePath)) {
                                 fs.unlinkSync(oldFilePath);
                             }
                         }
@@ -274,7 +274,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     let logoUrl;
                     if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
                         // Upload to S3
-                        const key = `logos/logo-${req.organizationId}-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+                        const extension = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' }[req.file.mimetype];
+                        const key = `logos/logo-${req.organizationId}-${id}-${Date.now()}-${Math.round(Math.random() * 1E9)}${extension}`;
                         logoUrl = await s3Service.uploadFile(req.file.buffer, key, req.file.mimetype);
                         // Delete local file after S3 upload
                         if (req.file.path && fs.existsSync(req.file.path)) {
@@ -295,11 +296,16 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                 });
 
                 if (uploadResult.notFound) {
+                    await cleanupUploadedFile(req.file);
                     return sendNotFound(res, 'Business');
                 }
 
                 sendSuccess(res, { logo_url: uploadResult.logoUrl });
             } catch (error) {
+                await cleanupUploadedFile(req.file);
+                if (error.code === 'INVALID_FILE_CONTENT') {
+                    return sendBadRequest(res, error.message);
+                }
                 console.error('Error uploading business logo:', error);
                 return sendError(res, 'Failed to upload logo');
             }
@@ -342,9 +348,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     }
                     // Delete local file if it exists
                     if (oldUrl.includes('/uploads/logos/')) {
-                        const oldFilename = oldUrl.split('/uploads/logos/')[1];
-                        const oldFilePath = path.join(__dirname, '../../../uploads/logos', oldFilename);
-                        if (fs.existsSync(oldFilePath)) {
+                        const oldFilePath = resolveLocalLogoPath(oldUrl);
+                        if (oldFilePath && fs.existsSync(oldFilePath)) {
                             fs.unlinkSync(oldFilePath);
                         }
                     }

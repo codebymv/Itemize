@@ -16,15 +16,43 @@ const {
     PLAN_METADATA 
 } = require('../lib/subscription.constants');
 const { contactActivityColumns, contactColumns } = require('./contact-columns');
+const { MAX_EXPORT_ROWS, csvCell, validateImportEnvelope } = require('../services/contactTransferPolicy');
+const { WORKFLOW_TRIGGERS } = require('../domain/workflowRegistry');
+const {
+  enqueueWorkflowTrigger,
+  workflowTriggerEventKey,
+} = require('../services/workflowTriggerQueue');
 
-// Import automation engine for triggers
-let automationEngine = null;
-try {
-  const { getAutomationEngine } = require('../services/automationEngine');
-  // Will be initialized after first use when pool is available
-  automationEngine = { getEngine: getAutomationEngine };
-} catch (e) {
-  logger.warn('Automation engine not available', { error: e.message });
+const CONTACT_UPDATE_FIELDS = [
+  'first_name',
+  'last_name',
+  'email',
+  'phone',
+  'company',
+  'job_title',
+  'address',
+  'source',
+  'status',
+  'custom_fields',
+  'tags',
+  'assigned_to',
+];
+
+function comparableContactValue(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function changedContactFields(existing, updated, fields = CONTACT_UPDATE_FIELDS) {
+  return fields.filter(
+    field => comparableContactValue(existing?.[field]) !== comparableContactValue(updated?.[field])
+  );
+}
+
+function tagDifference(left = [], right = []) {
+  const rightTags = new Set(right || []);
+  return [...new Set(left || [])].filter(tag => !rightTags.has(tag));
 }
 
 /**
@@ -39,8 +67,8 @@ module.exports = (pool, authenticateJWT) => {
   /**
    * Helper: Check contact limit for organization
    */
-  async function checkContactLimit(organizationId) {
-    const orgResult = await pool.query(
+  async function checkContactLimit(client, organizationId) {
+    const orgResult = await client.query(
       'SELECT plan, contacts_limit FROM organizations WHERE id = $1',
       [organizationId]
     );
@@ -48,7 +76,7 @@ module.exports = (pool, authenticateJWT) => {
     const plan = org?.plan || 'starter';
     const limit = org?.contacts_limit ?? CONTACTS_LIMITS[plan] ?? 5000;
     
-    const countResult = await pool.query(
+    const countResult = await client.query(
       'SELECT COUNT(*) FROM contacts WHERE organization_id = $1',
       [organizationId]
     );
@@ -58,6 +86,20 @@ module.exports = (pool, authenticateJWT) => {
     const allowed = limit === -1 || current < limit;
     
     return { allowed, limit, current, plan };
+  }
+
+  async function isOrganizationMember(client, organizationId, userId) {
+    if (userId === null || userId === undefined) {
+      return true;
+    }
+
+    const result = await client.query(
+      `SELECT 1
+       FROM organization_members
+       WHERE organization_id = $1 AND user_id = $2`,
+      [organizationId, userId]
+    );
+    return result.rows.length > 0;
   }
 
   // Get all contacts with search, filtering, and pagination
@@ -195,26 +237,24 @@ module.exports = (pool, authenticateJWT) => {
       assigned_to
     } = req.body;
 
-    // Check contact limit (inline check - gleamai pattern)
-    const limitCheck = await checkContactLimit(req.organizationId);
-    if (!limitCheck.allowed) {
-      const planName = PLAN_METADATA[limitCheck.plan]?.displayName || limitCheck.plan;
-      return res.status(403).json({
-        error: `Contact limit reached. Your ${planName} plan allows ${limitCheck.limit} contact(s). Please upgrade to add more.`,
-        code: ERROR_CODES.PLAN_LIMIT_REACHED,
-        current: limitCheck.current,
-        limit: limitCheck.limit,
-        plan: limitCheck.plan
-      });
-    }
-
     // Validate at least one identifier
     if (!first_name && !last_name && !email && !company) {
       return res.status(400).json({ error: 'At least one of first_name, last_name, email, or company is required' });
     }
 
-    const result = await withDbClient(pool, async (client) => {
-      return client.query(`
+    const outcome = await withTransaction(pool, async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
+
+      const limitCheck = await checkContactLimit(client, req.organizationId);
+      if (!limitCheck.allowed) {
+        return { status: 'limit', limitCheck };
+      }
+
+      if (!await isOrganizationMember(client, req.organizationId, assigned_to)) {
+        return { status: 'invalid_assignee' };
+      }
+
+      const result = await client.query(`
         INSERT INTO contacts (
           organization_id, first_name, last_name, email, phone,
           company, job_title, address, source, status,
@@ -237,29 +277,44 @@ module.exports = (pool, authenticateJWT) => {
         assigned_to || null,
         req.user.id
       ]);
+
+      const contact = result.rows[0];
+      await enqueueWorkflowTrigger(client, {
+        contactId: contact.id,
+        entityId: contact.id,
+        entityType: 'contact',
+        eventKey: workflowTriggerEventKey('domain', `contact_added:${contact.id}`),
+        organizationId: req.organizationId,
+        payload: { source: source || 'manual' },
+        triggerType: WORKFLOW_TRIGGERS.CONTACT_ADDED,
+      });
+
+      return { status: 'ok', contact };
     });
 
+    if (outcome.status === 'limit') {
+      const { limitCheck } = outcome;
+      const planName = PLAN_METADATA[limitCheck.plan]?.displayName || limitCheck.plan;
+      return res.status(403).json({
+        error: `Contact limit reached. Your ${planName} plan allows ${limitCheck.limit} contact(s). Please upgrade to add more.`,
+        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+        current: limitCheck.current,
+        limit: limitCheck.limit,
+        plan: limitCheck.plan
+      });
+    }
+
+    if (outcome.status === 'invalid_assignee') {
+      return res.status(400).json({ error: 'assigned_to must be a member of the active organization' });
+    }
+
     // Log activity
-    await logActivity(pool, result.rows[0].id, req.user.id, 'system', 'Contact Created', {
+    await logActivity(pool, outcome.contact.id, req.user.id, 'system', 'Contact Created', {
       action: 'created',
       by: req.user.name || req.user.email
     });
 
-    // Trigger automation for contact_added
-    if (automationEngine) {
-      try {
-        const engine = automationEngine.getEngine();
-        engine.handleTrigger('contact_added', {
-          contact: result.rows[0],
-          organizationId: req.organizationId,
-          source: source || 'manual',
-        }).catch(err => logger.error('Automation trigger error', { error: err.message }));
-      } catch {
-        logger.debug('Automation engine not initialized yet');
-      }
-    }
-
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(outcome.contact);
   }));
 
   // Update a contact
@@ -280,15 +335,22 @@ module.exports = (pool, authenticateJWT) => {
       assigned_to
     } = req.body;
 
-    const result = await withDbClient(pool, async (client) => {
+    const result = await withTransaction(pool, async (client) => {
       // First check the contact exists and belongs to this org
       const existing = await client.query(
-        `SELECT ${contactColumns()} FROM contacts WHERE id = $1 AND organization_id = $2`,
+        `SELECT ${contactColumns()}
+         FROM contacts
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
         [id, req.organizationId]
       );
 
       if (existing.rows.length === 0) {
         return { notFound: true };
+      }
+
+      if (!await isOrganizationMember(client, req.organizationId, assigned_to)) {
+        return { invalidAssignee: true };
       }
 
       const updateResult = await client.query(`
@@ -325,11 +387,40 @@ module.exports = (pool, authenticateJWT) => {
         req.organizationId
       ]);
 
-      return { existing: existing.rows[0], updated: updateResult.rows[0] };
+      const previousContact = existing.rows[0];
+      const updatedContact = updateResult.rows[0];
+      const changedFields = changedContactFields(previousContact, updatedContact);
+
+      if (changedFields.length > 0) {
+        await enqueueWorkflowTrigger(client, {
+          contactId: updatedContact.id,
+          entityId: updatedContact.id,
+          entityType: 'contact',
+          organizationId: req.organizationId,
+          payload: {
+            changed_fields: changedFields,
+            previous_source: previousContact.source,
+            previous_status: previousContact.status,
+            source: updatedContact.source,
+            status: updatedContact.status,
+          },
+          triggerType: WORKFLOW_TRIGGERS.CONTACT_UPDATED,
+        });
+      }
+
+      return {
+        changedFields,
+        existing: previousContact,
+        updated: updatedContact,
+      };
     });
 
     if (result.notFound) {
       return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    if (result.invalidAssignee) {
+      return res.status(400).json({ error: 'assigned_to must be a member of the active organization' });
     }
 
     // Log status change if status was updated
@@ -347,7 +438,7 @@ module.exports = (pool, authenticateJWT) => {
   router.delete('/:id', authenticateJWT, requireOrganization, validators.idParam, asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const result = await withDbClient(pool, async (client) => {
+    const result = await withTransaction(pool, async (client) => {
       return client.query(
         'DELETE FROM contacts WHERE id = $1 AND organization_id = $2 RETURNING id',
         [id, req.organizationId]
@@ -376,7 +467,21 @@ module.exports = (pool, authenticateJWT) => {
       return res.status(400).json({ error: 'No valid updates provided. Allowed: status, assigned_to, tags' });
     }
 
-    const result = await withDbClient(pool, async (client) => {
+    const result = await withTransaction(pool, async (client) => {
+      if (!await isOrganizationMember(client, req.organizationId, updates.assigned_to)) {
+        return { invalidAssignee: true, rows: [] };
+      }
+
+      const existingResult = await client.query(`
+        SELECT id, status, assigned_to, tags
+        FROM contacts
+        WHERE id = ANY($1::int[]) AND organization_id = $2
+        FOR UPDATE
+      `, [contact_ids, req.organizationId]);
+      const existingById = new Map(
+        existingResult.rows.map(contact => [String(contact.id), contact])
+      );
+
       // Build dynamic update query
       let setClause = [];
       let params = [];
@@ -396,9 +501,16 @@ module.exports = (pool, authenticateJWT) => {
 
       if (updates.tags) {
         if (updates.tags_mode === 'add') {
-          setClause.push(`tags = array_cat(tags, $${paramIndex}::text[])`);
+          setClause.push(`tags = ARRAY(
+            SELECT DISTINCT tag
+            FROM unnest(contacts.tags || $${paramIndex}::text[]) AS tag
+          )`);
         } else if (updates.tags_mode === 'remove') {
-          setClause.push(`tags = array_remove_all(tags, $${paramIndex}::text[])`);
+          setClause.push(`tags = ARRAY(
+            SELECT tag
+            FROM unnest(contacts.tags) AS tag
+            WHERE NOT (tag = ANY($${paramIndex}::text[]))
+          )`);
         } else {
           setClause.push(`tags = $${paramIndex}`);
         }
@@ -408,36 +520,62 @@ module.exports = (pool, authenticateJWT) => {
 
       setClause.push('updated_at = CURRENT_TIMESTAMP');
 
-      return client.query(`
+      const updateResult = await client.query(`
         UPDATE contacts 
         SET ${setClause.join(', ')}
         WHERE id = ANY($${paramIndex}::int[]) AND organization_id = $${paramIndex + 1}
-        RETURNING id
+        RETURNING id, status, assigned_to, tags
       `, [...params, contact_ids, req.organizationId]);
+
+      for (const row of updateResult.rows) {
+        const existing = existingById.get(String(row.id));
+        const changedFields = changedContactFields(
+          existing,
+          row,
+          ['status', 'assigned_to', 'tags']
+        );
+        if (changedFields.length > 0) {
+          await enqueueWorkflowTrigger(client, {
+            contactId: row.id,
+            entityId: row.id,
+            entityType: 'contact',
+            organizationId: req.organizationId,
+            payload: {
+              changed_fields: changedFields,
+              previous_status: existing?.status || null,
+              status: row.status,
+            },
+            triggerType: WORKFLOW_TRIGGERS.CONTACT_UPDATED,
+          });
+        }
+
+        for (const tag of tagDifference(row.tags, existing?.tags)) {
+          await enqueueWorkflowTrigger(client, {
+            contactId: row.id,
+            entityId: row.id,
+            entityType: 'contact',
+            organizationId: req.organizationId,
+            payload: { tag },
+            triggerType: WORKFLOW_TRIGGERS.TAG_ADDED,
+          });
+        }
+
+        for (const tag of tagDifference(existing?.tags, row.tags)) {
+          await enqueueWorkflowTrigger(client, {
+            contactId: row.id,
+            entityId: row.id,
+            entityType: 'contact',
+            organizationId: req.organizationId,
+            payload: { tag },
+            triggerType: WORKFLOW_TRIGGERS.TAG_REMOVED,
+          });
+        }
+      }
+      return updateResult;
     });
 
-    // Fire tag_added trigger if tags were added
-    if (updates.tags && updates.tags_mode === 'add' && automationEngine) {
-      try {
-        const engine = automationEngine.getEngine();
-        const triggerPromises = result.rows.flatMap((row) =>
-          updates.tags.map((tag) =>
-            engine.handleTrigger('tag_added', {
-              contact: { id: row.id },
-              organizationId: req.organizationId,
-              tag: tag,
-            })
-          )
-        );
-
-        const triggerResults = await Promise.allSettled(triggerPromises);
-        const failedTriggers = triggerResults.filter(resultItem => resultItem.status === 'rejected');
-        if (failedTriggers.length > 0) {
-          logger.error('Automation trigger errors', { count: failedTriggers.length });
-        }
-      } catch {
-        logger.debug('Automation engine not initialized yet');
-      }
+    if (result.invalidAssignee) {
+      return res.status(400).json({ error: 'assigned_to must be a member of the active organization' });
     }
 
     res.json({
@@ -642,8 +780,16 @@ module.exports = (pool, authenticateJWT) => {
         FROM contacts
         ${whereClause}
         ORDER BY created_at DESC
-      `, params);
+        LIMIT $${paramIndex}
+      `, [...params, MAX_EXPORT_ROWS + 1]);
     });
+
+    if (result.rows.length > MAX_EXPORT_ROWS) {
+      return res.status(413).json({
+        error: `Contact exports are limited to ${MAX_EXPORT_ROWS} rows`,
+        code: 'EXPORT_TOO_LARGE'
+      });
+    }
 
     // Generate CSV
     const headers = [
@@ -671,23 +817,26 @@ module.exports = (pool, authenticateJWT) => {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ...rows.map(row => row.map(csvCell).join(','))
     ].join('\n');
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=contacts-export.csv');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(csvContent);
   }));
 
   // Import contacts from CSV - Optimized bulk import
   router.post('/import/csv', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
-    const { contacts: importData, skipDuplicates = true } = req.body;
+    const { contacts: importData, skipDuplicates = true } = req.body || {};
 
-    if (!Array.isArray(importData) || importData.length === 0) {
-      return res.status(400).json({ error: 'No contacts data provided' });
-    }
+    const envelopeError = validateImportEnvelope(importData, skipDuplicates);
+    if (envelopeError) return res.status(400).json({ error: envelopeError, code: 'INVALID_IMPORT' });
 
     const results = await withTransaction(pool, async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
+
       const outcome = {
         imported: 0,
         skipped: 0,
@@ -754,12 +903,26 @@ module.exports = (pool, authenticateJWT) => {
             tags: tags,
             rowIndex: i
           });
+
+          if (skipDuplicates && row.email) {
+            existingEmails.add(row.email.toLowerCase());
+          }
         } catch (rowError) {
           outcome.errors.push({
             row: i + 1,
             error: rowError.message
           });
         }
+      }
+
+      const limitCheck = await checkContactLimit(client, req.organizationId);
+      if (limitCheck.limit !== -1 && limitCheck.current + contactsToInsert.length > limitCheck.limit) {
+        return {
+          ...outcome,
+          limitExceeded: true,
+          limitCheck,
+          attempted: contactsToInsert.length,
+        };
       }
 
       // Step 3: Bulk insert in batches
@@ -803,6 +966,16 @@ module.exports = (pool, authenticateJWT) => {
 
       return outcome;
     });
+
+    if (results.limitExceeded) {
+      return res.status(403).json({
+        error: 'Contact import would exceed the active organization limit',
+        code: ERROR_CODES.PLAN_LIMIT_REACHED,
+        current: results.limitCheck.current,
+        limit: results.limitCheck.limit,
+        attempted: results.attempted,
+      });
+    }
 
     logger.info('Contact import completed', { 
       organizationId: req.organizationId, 

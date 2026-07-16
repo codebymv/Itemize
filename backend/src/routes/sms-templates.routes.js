@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const smsService = require('../services/smsService');
 const { logger } = require('../utils/logger');
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const { sendError } = require('../utils/response');
 const { contactColumns, smsTemplateColumns } = require('./template-columns');
 
@@ -23,6 +23,11 @@ function verifyTwilioWebhookOrRespond(req, res) {
 
     const token = process.env.TWILIO_AUTH_TOKEN;
     if (!token) {
+        if (process.env.NODE_ENV === 'production') {
+            logger.error('[Twilio webhook] TWILIO_AUTH_TOKEN is required in production');
+            res.status(503).send('Webhook verification unavailable');
+            return false;
+        }
         return true;
     }
 
@@ -512,7 +517,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           message,
         });
 
-        if (sendResult.success || sendResult.simulated) {
+        if (sendResult.success) {
           // Log to sms_logs
           await client.query(
             `INSERT INTO sms_logs 
@@ -533,15 +538,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
           // Log activity
           await client.query(
-            `INSERT INTO contact_activities (organization_id, contact_id, type, description, created_by)
-             VALUES ($1, $2, 'sms', $3, $4)`,
+            `INSERT INTO contact_activities (contact_id, user_id, type, title, content, metadata)
+             VALUES ($1, $2, 'sms', $3, $4::jsonb, $5::jsonb)`,
             [
-              req.organizationId,
               contact.id,
-              templateName
-                ? `Sent SMS using template "${templateName}"`
-                : `Sent SMS message`,
               userId,
+              'SMS sent',
+              JSON.stringify({
+                description: templateName
+                  ? `Sent SMS using template "${templateName}"`
+                  : 'Sent SMS message',
+              }),
+              JSON.stringify({ template_id: templateId, provider_id: sendResult.id || null }),
             ]
           );
 
@@ -549,10 +557,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             status: 200,
             payload: {
               success: true,
-              simulated: sendResult.simulated || false,
-              message: sendResult.simulated
-                ? 'SMS service not configured - SMS would have been sent'
-                : 'SMS sent successfully',
+              simulated: false,
+              message: 'SMS sent successfully',
               sms_id: sendResult.id,
               status: sendResult.status,
               segments: messageInfo.segments,
@@ -577,10 +583,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         );
 
         return {
-          status: 500,
+          status: sendResult.simulated ? 503 : 500,
           payload: {
             success: false,
             error: sendResult.error,
+            code: sendResult.simulated ? 'SMS_PROVIDER_NOT_CONFIGURED' : 'SMS_SEND_FAILED',
           },
         };
       });
@@ -629,27 +636,42 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         return res.status(400).send('MessageSid required');
       }
 
-      await withDbClient(pool, async (client) => {
-        // Update SMS log status
-        const statusMap = {
-          'queued': 'queued',
-          'sending': 'sending',
-          'sent': 'sent',
-          'delivered': 'delivered',
-          'undelivered': 'undelivered',
-          'failed': 'failed',
-        };
+      const statusMap = {
+        accepted: 'queued',
+        scheduled: 'queued',
+        queued: 'queued',
+        receiving: 'sending',
+        sending: 'sending',
+        sent: 'sent',
+        delivered: 'delivered',
+        read: 'delivered',
+        undelivered: 'undelivered',
+        canceled: 'failed',
+        failed: 'failed',
+      };
+      const dbStatus = statusMap[MessageStatus];
+      if (!dbStatus) {
+        return res.status(400).send('Unsupported MessageStatus');
+      }
 
-        const dbStatus = statusMap[MessageStatus] || MessageStatus;
+      const duplicate = await withTransaction(pool, async (client) => {
+        const claim = await client.query(
+          `INSERT INTO sms_webhook_events (event_key, event_type, external_id)
+           VALUES ($1, 'status', $2)
+           ON CONFLICT (event_key) DO NOTHING
+           RETURNING event_key`,
+          [`status:${MessageSid}:${MessageStatus}`, MessageSid]
+        );
+        if (claim.rows.length === 0) return true;
 
         const updateQuery = `
           UPDATE sms_logs 
           SET status = $1, 
-              ${MessageStatus === 'delivered' ? 'delivered_at = CURRENT_TIMESTAMP,' : ''}
-              ${MessageStatus === 'sent' ? 'sent_at = CURRENT_TIMESTAMP,' : ''}
+              ${dbStatus === 'delivered' ? 'delivered_at = CURRENT_TIMESTAMP,' : ''}
+              ${dbStatus === 'sent' ? 'sent_at = CURRENT_TIMESTAMP,' : ''}
               error_code = $2,
               error_message = $3
-          WHERE external_id = $4
+          WHERE external_id = $4 AND direction = 'outbound'
         `;
 
         await client.query(updateQuery, [
@@ -658,10 +680,17 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           ErrorMessage || null,
           MessageSid,
         ]);
+        await client.query(
+          `UPDATE sms_webhook_events
+           SET processing_status = 'processed'
+           WHERE event_key = $1`,
+          [`status:${MessageSid}:${MessageStatus}`]
+        );
+        return false;
       });
 
       // Respond to Twilio
-      res.status(200).send('OK');
+      res.status(200).send(duplicate ? 'Duplicate' : 'OK');
     } catch (error) {
       console.error('Error processing SMS status webhook:', error);
       res.status(500).send('Error');
@@ -685,77 +714,122 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         Body: messageBody,
       } = req.body;
 
-      if (!MessageSid || !fromPhone || !messageBody) {
+      if (!MessageSid || !fromPhone || !toPhone || !messageBody) {
         return res.status(400).send('Missing required fields');
       }
 
-      await withDbClient(pool, async (client) => {
+      const outcome = await withTransaction(pool, async (client) => {
         // Normalize phone numbers
         const normalizedFrom = smsService.normalizePhoneNumber(fromPhone);
         const normalizedTo = smsService.normalizePhoneNumber(toPhone);
 
-        // Try to find the contact by phone number
-        // We need to find which organization this belongs to
-        const contactResult = await client.query(
-          `SELECT ${contactColumns('c')}, om.organization_id
-           FROM contacts c
-           JOIN organization_members om ON c.organization_id = om.organization_id
-           WHERE c.phone = $1 OR c.phone = $2
-           LIMIT 1`,
-          [normalizedFrom, fromPhone]
+        const claim = await client.query(
+          `INSERT INTO sms_webhook_events (
+             event_key, event_type, external_id, to_phone, from_phone, processing_status
+           )
+           VALUES ($1, 'inbound', $2, $3, $4, 'pending')
+           ON CONFLICT (event_key) DO NOTHING
+           RETURNING event_key`,
+          [`inbound:${MessageSid}`, MessageSid, normalizedTo, normalizedFrom]
+        );
+        if (claim.rows.length === 0) return { duplicate: true, routed: false };
+
+        const receiverResult = await client.query(
+          `SELECT id, organization_id
+           FROM sms_receiving_numbers
+           WHERE phone_number = $1
+             AND provider = 'twilio'
+             AND is_active = TRUE
+           LIMIT 1
+           FOR SHARE`,
+          [normalizedTo]
         );
 
-        let contactId = null;
-        let organizationId = null;
+        if (receiverResult.rows.length === 0) {
+          await client.query(
+            `UPDATE sms_webhook_events
+             SET processing_status = 'unmatched_receiver'
+             WHERE event_key = $1`,
+            [`inbound:${MessageSid}`]
+          );
+          return {
+            duplicate: false,
+            routed: false,
+            reason: 'unmatched_receiver',
+          };
+        }
+
+        const organizationId = receiverResult.rows[0].organization_id;
+        const contactResult = await client.query(
+          `SELECT ${contactColumns('c')}
+           FROM contacts c
+           WHERE c.organization_id = $1
+             AND (c.phone = $2 OR c.phone = $3)
+           ORDER BY c.id
+           LIMIT 2`,
+          [organizationId, normalizedFrom, fromPhone]
+        );
+
+        if (contactResult.rows.length !== 1) {
+          const reason = contactResult.rows.length === 0
+            ? 'unmatched_sender'
+            : 'ambiguous_sender';
+          await client.query(
+            `UPDATE sms_webhook_events
+             SET organization_id = $2,
+                 processing_status = $3
+             WHERE event_key = $1`,
+            [`inbound:${MessageSid}`, organizationId, reason]
+          );
+          return {
+            duplicate: false,
+            routed: false,
+            reason,
+          };
+        }
+
+        const contact = contactResult.rows[0];
+        const contactId = contact.id;
         let conversationId = null;
 
-        if (contactResult.rows.length > 0) {
-          const contact = contactResult.rows[0];
-          contactId = contact.id;
-          organizationId = contact.organization_id;
+        // Find or create conversation
+        const convResult = await client.query(
+          `SELECT id FROM conversations
+           WHERE contact_id = $1 AND organization_id = $2 AND channel = 'sms'
+           ORDER BY last_message_at DESC
+           LIMIT 1`,
+          [contactId, organizationId]
+        );
 
-          // Find or create conversation
-          const convResult = await client.query(
-            `SELECT id FROM conversations 
-             WHERE contact_id = $1 AND organization_id = $2 AND channel = 'sms'
-             ORDER BY last_message_at DESC
-             LIMIT 1`,
-            [contactId, organizationId]
-          );
+        if (convResult.rows.length > 0) {
+          conversationId = convResult.rows[0].id;
 
-          if (convResult.rows.length > 0) {
-            conversationId = convResult.rows[0].id;
-
-            // Update conversation
-            await client.query(
-              `UPDATE conversations 
-               SET last_message_at = CURRENT_TIMESTAMP, 
-                   last_message_preview = $1,
-                   unread_count = unread_count + 1,
-                   status = 'open'
-               WHERE id = $2`,
-              [messageBody.substring(0, 100), conversationId]
-            );
-          } else {
-            // Create new conversation
-            const newConv = await client.query(
-              `INSERT INTO conversations 
-                (organization_id, contact_id, channel, status, last_message_at, last_message_preview, unread_count)
-               VALUES ($1, $2, 'sms', 'open', CURRENT_TIMESTAMP, $3, 1)
-               RETURNING id`,
-              [organizationId, contactId, messageBody.substring(0, 100)]
-            );
-            conversationId = newConv.rows[0].id;
-          }
-
-          // Create message in conversation
           await client.query(
-            `INSERT INTO messages 
-              (conversation_id, organization_id, sender_type, sender_contact_id, channel, content)
-             VALUES ($1, $2, 'contact', $3, 'sms', $4)`,
-            [conversationId, organizationId, contactId, messageBody]
+            `UPDATE conversations
+             SET last_message_at = CURRENT_TIMESTAMP,
+                 last_message_preview = $1,
+                 unread_count = unread_count + 1,
+                 status = 'open'
+             WHERE id = $2`,
+            [messageBody.substring(0, 100), conversationId]
           );
+        } else {
+          const newConv = await client.query(
+            `INSERT INTO conversations
+              (organization_id, contact_id, channel, status, last_message_at, last_message_preview, unread_count)
+             VALUES ($1, $2, 'sms', 'open', CURRENT_TIMESTAMP, $3, 1)
+             RETURNING id`,
+            [organizationId, contactId, messageBody.substring(0, 100)]
+          );
+          conversationId = newConv.rows[0].id;
         }
+
+        await client.query(
+          `INSERT INTO messages
+            (conversation_id, organization_id, sender_type, sender_contact_id, channel, content)
+           VALUES ($1, $2, 'contact', $3, 'sms', $4)`,
+          [conversationId, organizationId, contactId, messageBody]
+        );
 
         // Log the incoming SMS
         await client.query(
@@ -772,7 +846,25 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             MessageSid,
           ]
         );
+
+        await client.query(
+          `UPDATE sms_webhook_events
+           SET organization_id = $2,
+               contact_id = $3,
+               processing_status = 'processed'
+           WHERE event_key = $1`,
+          [`inbound:${MessageSid}`, organizationId, contactId]
+        );
+
+        return { duplicate: false, routed: true };
       });
+
+      if (!outcome.routed && !outcome.duplicate) {
+        logger.warn('[Twilio webhook] Inbound SMS was not tenant-routable', {
+          messageSid: MessageSid,
+          reason: outcome.reason,
+        });
+      }
 
       // Respond to Twilio with empty TwiML (no auto-response)
       res.type('text/xml');

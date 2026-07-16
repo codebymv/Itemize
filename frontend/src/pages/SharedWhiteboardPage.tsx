@@ -36,6 +36,7 @@ const SharedWhiteboardPage: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
+  const sharedWhiteboardId = whiteboardData?.id;
 
   // Store original title for cleanup
   const [originalTitle] = useState(document.title);
@@ -84,7 +85,7 @@ const SharedWhiteboardPage: React.FC = () => {
 
   // WebSocket connection effect
   useEffect(() => {
-    if (!token || !whiteboardData) return;
+    if (!token || !sharedWhiteboardId) return;
 
     const BACKEND_URL = getApiUrl();
     console.log('Connecting to WebSocket at:', BACKEND_URL);
@@ -92,10 +93,11 @@ const SharedWhiteboardPage: React.FC = () => {
     const newSocket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
+      withCredentials: true,
     });
 
     newSocket.on('connect', () => {
-      console.log('WebSocket connected, joining shared whiteboard:', token);
+      console.log('WebSocket connected, joining shared whiteboard');
       setIsConnected(true);
       newSocket.emit('joinSharedWhiteboard', token);
     });
@@ -141,7 +143,7 @@ const SharedWhiteboardPage: React.FC = () => {
       }
     });
 
-    newSocket.on('error', (error) => {
+    newSocket.on('realtimeError', (error) => {
       console.error('WebSocket error:', error);
       toast({
         title: "Connection Error",
@@ -156,7 +158,7 @@ const SharedWhiteboardPage: React.FC = () => {
       console.log('Cleaning up WebSocket connection');
       newSocket.disconnect();
     };
-  }, [token, whiteboardData?.id, toast]);
+  }, [token, sharedWhiteboardId, toast]);
 
   // Cleanup title on unmount
   useEffect(() => {

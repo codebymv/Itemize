@@ -56,9 +56,6 @@ async function createPagesTable(pool) {
                     "expiresAt": null
                 }'::jsonb,
 
-                -- Versioning
-                current_version_id INTEGER REFERENCES page_versions(id) ON DELETE SET NULL,
-
                 -- Stats (cached for performance)
                 view_count INTEGER DEFAULT 0,
                 unique_visitors INTEGER DEFAULT 0,
@@ -86,10 +83,6 @@ async function createPagesTable(pool) {
         await client.query(`
             CREATE INDEX IF NOT EXISTS idx_pages_org_slug ON pages(organization_id, slug)
         `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_pages_version ON pages(current_version_id) WHERE current_version_id IS NOT NULL
-        `);
-
         console.log('✅ pages table created/verified');
     } finally {
         client.release();

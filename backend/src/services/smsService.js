@@ -155,9 +155,11 @@ class SmsService extends BaseService {
     }
 
     try {
-      const response = await this.withRetry(
-        async () => this.client.messages.create(messageOptions),
-        { to: normalizedTo }
+      // Twilio message creation has no request idempotency key. Retrying a timed-out
+      // create can duplicate a message that the provider accepted before the local
+      // timeout, so callers reconcile ambiguous outcomes instead.
+      const response = await this.withTimeout(
+        () => this.client.messages.create(messageOptions)
       );
 
       this.logInfo('SMS sent successfully', { to: normalizedTo, sid: response.sid });
@@ -179,6 +181,7 @@ class SmsService extends BaseService {
         success: false,
         error: error.message,
         code: error.code,
+        outcomeUnknown: !Number.isInteger(error.status),
       };
     }
   }

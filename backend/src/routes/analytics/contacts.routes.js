@@ -1,6 +1,7 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
-const { sendSuccess, sendError } = require('../../utils/response');
+const { sendSuccess, sendError, sendBadRequest } = require('../../utils/response');
+const { resolvePeriod, toInteger } = require('../../services/analyticsParameters');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -11,28 +12,11 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
      */
     router.get('/contacts/trends', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const { period = '6months' } = req.query;
-            const orgId = req.organizationId;
+            const periodConfig = resolvePeriod('contacts', req.query.period, '6months');
+            if (!periodConfig) return sendBadRequest(res, 'Unsupported analytics period', 'period');
 
-            let interval;
-            let groupBy;
-            switch (period) {
-                case '7days':
-                    interval = '7 days';
-                    groupBy = 'day';
-                    break;
-                case '30days':
-                    interval = '30 days';
-                    groupBy = 'day';
-                    break;
-                case '12months':
-                    interval = '12 months';
-                    groupBy = 'month';
-                    break;
-                default:
-                    interval = '6 months';
-                    groupBy = 'month';
-            }
+            const { period, interval, groupBy } = periodConfig;
+            const orgId = req.organizationId;
 
             const data = await withDbClient(pool, async (client) => {
                 const result = await client.query(`
@@ -42,17 +26,17 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
           COUNT(*) FILTER (WHERE source IS NOT NULL) as with_source
         FROM contacts
         WHERE organization_id = $2
-          AND created_at >= NOW() - INTERVAL '${interval}'
+          AND created_at >= NOW() - $3::interval
         GROUP BY DATE_TRUNC($1, created_at)
         ORDER BY period ASC
-      `, [groupBy, orgId]);
+      `, [groupBy, orgId, interval]);
 
                 return {
                     period,
                     data: result.rows.map(row => ({
                         period: row.period,
-                        newContacts: parseInt(row.new_contacts),
-                        withSource: parseInt(row.with_source)
+                        newContacts: toInteger(row.new_contacts),
+                        withSource: toInteger(row.with_source)
                     }))
                 };
             });

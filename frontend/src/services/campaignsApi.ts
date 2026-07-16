@@ -35,6 +35,7 @@ export interface EmailCampaign {
     
     // Targeting
     segment_type: 'all' | 'tag' | 'status' | 'custom' | 'segment';
+    segment_id?: number | null;
     segment_filter: CampaignJson;
     tag_ids: number[];
     excluded_tag_ids: number[];
@@ -137,6 +138,7 @@ export interface CampaignRecipient {
 export interface CampaignPreview {
     recipientCount: number;
     segmentType: string;
+    segmentId?: number | null;
     tagIds: number[];
     excludedTagIds: number[];
 }
@@ -161,7 +163,14 @@ export const getCampaigns = async (
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return unwrapResponse<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
+    const payload = response.data as {
+        data?: EmailCampaign[];
+        pagination?: { page: number; limit: number; total: number; totalPages: number };
+    };
+    return {
+        campaigns: Array.isArray(payload?.data) ? payload.data : [],
+        pagination: payload?.pagination || { page: 1, limit: 50, total: 0, totalPages: 0 },
+    };
 };
 
 /**

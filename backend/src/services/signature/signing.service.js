@@ -1,4 +1,9 @@
 const { withTransaction } = require('../../utils/db');
+const { WORKFLOW_TRIGGERS } = require('../../domain/workflowRegistry');
+const {
+    enqueueWorkflowTrigger,
+    workflowTriggerEventKey,
+} = require('../workflowTriggerQueue');
 const { generateToken, hashToken } = require('./tokens');
 const { pdfSignatureService, signatureEmailService } = require('./optional-services');
 const {
@@ -10,13 +15,16 @@ const {
 async function sendForSignature(pool, emailService, documentId, organizationId, signingUrlBase) {
     return withTransaction(pool, async (client) => {
         const docResult = await client.query(
-            `SELECT ${signatureDocumentColumns()} FROM signature_documents WHERE id = $1 AND organization_id = $2`,
+            `SELECT ${signatureDocumentColumns()} FROM signature_documents WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
             [documentId, organizationId]
         );
         if (docResult.rows.length === 0) {
             return null;
         }
         const document = docResult.rows[0];
+        if (document.status !== 'draft') {
+            throw new Error('Only draft documents can be sent');
+        }
 
         const recipientsResult = await client.query(
             `SELECT ${signatureRecipientColumns()} FROM signature_recipients WHERE document_id = $1 ORDER BY signing_order ASC`,
@@ -105,23 +113,141 @@ async function sendForSignature(pool, emailService, documentId, organizationId, 
     });
 }
 
-async function scheduleReminders(pool, documentId, daysFromNow = 2) {
+async function remindForSignature(pool, emailService, documentId, organizationId, signingUrlBase) {
+    return withTransaction(pool, async (client) => {
+        const docResult = await client.query(
+            `SELECT ${signatureDocumentColumns()} FROM signature_documents
+             WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+            [documentId, organizationId]
+        );
+        if (docResult.rows.length === 0) return null;
+
+        const document = docResult.rows[0];
+        if (!['sent', 'in_progress'].includes(document.status)) {
+            throw new Error('Only active signature documents can be reminded');
+        }
+
+        const recipientsResult = await client.query(`
+            SELECT ${signatureRecipientColumns()}
+            FROM signature_recipients
+            WHERE document_id = $1
+              AND organization_id = $2
+              AND status IN ('sent', 'viewed')
+              AND (COALESCE($3, 'parallel') = 'parallel' OR routing_status = 'active')
+            ORDER BY signing_order ASC
+            FOR UPDATE
+        `, [documentId, organizationId, document.routing_mode]);
+
+        if (recipientsResult.rows.length === 0) {
+            throw new Error('No active recipients to remind');
+        }
+
+        for (const recipient of recipientsResult.rows) {
+            const token = generateToken();
+            const tokenHash = hashToken(token);
+            await client.query(`
+                UPDATE signature_recipients SET
+                    signing_token_hash = $1,
+                    token_expires_at = $2
+                WHERE id = $3
+            `, [tokenHash, document.expires_at, recipient.id]);
+
+            if (emailService) {
+                await emailService.sendSignatureReminder({
+                    to: recipient.email,
+                    recipientName: recipient.name,
+                    documentTitle: document.title,
+                    senderName: document.sender_name || 'Itemize',
+                    message: document.message,
+                    signingUrl: `${signingUrlBase}/${token}`,
+                    expiresAt: document.expires_at
+                });
+            }
+
+            await client.query(`
+                INSERT INTO signature_audit_log (document_id, recipient_id, event_type, description, created_at)
+                VALUES ($1, $2, 'reminder_sent', 'Signature reminder sent', CURRENT_TIMESTAMP)
+            `, [documentId, recipient.id]);
+        }
+
+        return document;
+    });
+}
+
+async function cancelDocument(pool, documentId, organizationId) {
+    return withTransaction(pool, async (client) => {
+        const docResult = await client.query(
+            `SELECT ${signatureDocumentColumns()} FROM signature_documents
+             WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+            [documentId, organizationId]
+        );
+        if (docResult.rows.length === 0) return null;
+
+        const document = docResult.rows[0];
+        if (document.status === 'completed') {
+            throw new Error('Completed documents cannot be cancelled');
+        }
+        if (document.status === 'cancelled') {
+            return document;
+        }
+
+        await client.query(`
+            UPDATE signature_recipients SET
+                signing_token_hash = NULL,
+                token_expires_at = NULL,
+                routing_status = 'locked'
+            WHERE document_id = $1 AND organization_id = $2
+              AND status IN ('pending', 'sent', 'viewed')
+        `, [documentId, organizationId]);
+        await client.query(`
+            UPDATE signature_reminders SET status = 'cancelled'
+            WHERE document_id = $1 AND status = 'pending'
+        `, [documentId]);
+        await client.query(`
+            INSERT INTO signature_audit_log (document_id, event_type, description, created_at)
+            VALUES ($1, 'cancelled', 'Signature document cancelled', CURRENT_TIMESTAMP)
+        `, [documentId]);
+
+        const updated = await client.query(`
+            UPDATE signature_documents SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND organization_id = $2
+            RETURNING ${signatureDocumentColumns()}
+        `, [documentId, organizationId]);
+        return updated.rows[0] || null;
+    });
+}
+
+async function scheduleReminders(pool, documentId, organizationId, daysFromNow = 2) {
     return withTransaction(pool, async (client) => {
         const scheduledAt = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000);
 
-        await client.query(`
+        const document = await client.query(`
+            SELECT id FROM signature_documents
+            WHERE id = $1 AND organization_id = $2
+              AND status IN ('sent', 'in_progress')
+            FOR UPDATE
+        `, [documentId, organizationId]);
+        if (document.rows.length === 0) return null;
+
+        const inserted = await client.query(`
             INSERT INTO signature_reminders (document_id, recipient_id, scheduled_at, status)
             SELECT document_id, id, $1, 'pending'
             FROM signature_recipients
-            WHERE document_id = $2 AND status IN ('pending', 'sent', 'viewed')
-        `, [scheduledAt, documentId]);
+            WHERE document_id = $2 AND organization_id = $3
+              AND status IN ('pending', 'sent', 'viewed')
+            RETURNING id
+        `, [scheduledAt, documentId, organizationId]);
+
+        if (inserted.rows.length === 0) {
+            throw new Error('No active recipients to remind');
+        }
 
         await client.query(`
             INSERT INTO signature_audit_log (document_id, event_type, description, created_at)
             VALUES ($1, 'reminder_scheduled', 'Signature reminders scheduled', CURRENT_TIMESTAMP)
         `, [documentId]);
 
-        return { scheduledAt };
+        return { scheduledAt, reminderCount: inserted.rows.length };
     });
 }
 
@@ -165,6 +291,9 @@ async function getDocumentForSigning(pool, token, audit = {}) {
         const documentId = recipient.document_id;
         const now = new Date();
 
+        if (!['sent', 'in_progress'].includes(recipient.document_status)) {
+            return null;
+        }
         if (recipient.recipient_token_expires_at && new Date(recipient.recipient_token_expires_at) < now) {
             return null;
         }
@@ -268,6 +397,9 @@ async function submitSignature(pool, token, payload, audit = {}) {
         const documentId = recipient.document_id;
         const now = new Date();
 
+        if (!['sent', 'in_progress'].includes(recipient.document_status)) {
+            return null;
+        }
         if (recipient.recipient_token_expires_at && new Date(recipient.recipient_token_expires_at) < now) {
             return null;
         }
@@ -304,7 +436,7 @@ async function submitSignature(pool, token, payload, audit = {}) {
         if (payload?.fields?.length > 0) {
             for (const field of payload.fields) {
                 if (!allowedFields.has(field.id)) {
-                    continue;
+                    throw new Error('Unknown signature field');
                 }
 
                 const fieldType = allowedFields.get(field.id);
@@ -426,6 +558,34 @@ async function submitSignature(pool, token, payload, audit = {}) {
 
             completedDocument = updateDoc.rows[0] || null;
 
+            if (completedDocument) {
+                const contactResult = await client.query(`
+                    SELECT DISTINCT contact_id
+                    FROM signature_recipients
+                    WHERE document_id = $1 AND contact_id IS NOT NULL
+                    ORDER BY contact_id
+                `, [documentId]);
+
+                for (const row of contactResult.rows) {
+                    await enqueueWorkflowTrigger(client, {
+                        contactId: row.contact_id,
+                        entityId: documentId,
+                        entityType: 'signature_document',
+                        eventKey: workflowTriggerEventKey(
+                            'domain',
+                            `contract_signed:${documentId}:contact:${row.contact_id}`
+                        ),
+                        organizationId: recipient.recipient_org_id,
+                        payload: {
+                            completed_at: completedDocument.completed_at,
+                            document_id: documentId,
+                            document_title: completedDocument.title,
+                        },
+                        triggerType: WORKFLOW_TRIGGERS.CONTRACT_SIGNED,
+                    });
+                }
+            }
+
             if (signatureEmailService && completedDocument) {
                 const recipientsResult = await client.query(
                     'SELECT email FROM signature_recipients WHERE document_id = $1',
@@ -504,6 +664,9 @@ async function declineSignature(pool, token, reason, audit = {}) {
         const documentId = recipient.document_id;
         const now = new Date();
 
+        if (!['sent', 'in_progress'].includes(recipient.document_status)) {
+            return null;
+        }
         if (recipient.recipient_token_expires_at && new Date(recipient.recipient_token_expires_at) < now) {
             return null;
         }
@@ -553,6 +716,8 @@ async function declineSignature(pool, token, reason, audit = {}) {
 
 module.exports = {
     sendForSignature,
+    remindForSignature,
+    cancelDocument,
     scheduleReminders,
     getDocumentForSigning,
     submitSignature,

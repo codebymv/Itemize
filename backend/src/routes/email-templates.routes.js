@@ -410,7 +410,8 @@ module.exports = (pool, authenticateJWT) => {
       const data = await withDbClient(pool, async (client) => {
         // Get contact
         const contactResult = await client.query(
-          `SELECT ${contactColumns()} FROM contacts WHERE id = $1 AND organization_id = $2`,
+          `SELECT ${contactColumns()}, email_unsubscribed, email_bounced
+           FROM contacts WHERE id = $1 AND organization_id = $2`,
           [contact_id, req.organizationId]
         );
 
@@ -423,8 +424,11 @@ module.exports = (pool, authenticateJWT) => {
         if (!contact.email) {
           return { status: 400, payload: { error: 'Contact does not have an email address' } };
         }
+        if (contact.email_unsubscribed || contact.email_bounced) {
+          return { status: 409, payload: { error: 'Contact email is suppressed' } };
+        }
 
-        let subject, bodyHtml, bodyText, templateName;
+        let subject, bodyHtml, bodyText;
 
         if (template_id) {
           // Get template
@@ -438,8 +442,6 @@ module.exports = (pool, authenticateJWT) => {
           }
 
           const template = templateResult.rows[0];
-          templateName = template.name;
-
           // Prepare email content with variable substitution
           const content = emailService.prepareEmailContent(template, contact);
           subject = content.subject;
@@ -485,58 +487,52 @@ module.exports = (pool, authenticateJWT) => {
           ],
         });
 
-        if (sendResult.success || sendResult.simulated) {
+        if (sendResult.success) {
           // Log activity
           await client.query(
-            `INSERT INTO contact_activities (organization_id, contact_id, type, description, created_by)
-             VALUES ($1, $2, 'email', $3, $4)`,
+            `INSERT INTO contact_activities (contact_id, user_id, type, title, content, metadata)
+             VALUES ($1, $2, 'email', $3, $4::jsonb, $5::jsonb)`,
             [
-              req.organizationId,
               contact.id,
-              templateName
-                ? `Sent email "${subject}" using template "${templateName}"`
-                : `Sent email "${subject}"`,
               userId,
+              'Email sent',
+              JSON.stringify({ subject }),
+              JSON.stringify({ template_id: template_id || null, provider_id: sendResult.id || null }),
             ]
           );
 
-          // Log to email_logs if table exists
-          try {
-            await client.query(
-              `INSERT INTO email_logs 
-                (organization_id, contact_id, template_id, subject, to_email, status, sent_at, created_by)
-               VALUES ($1, $2, $3, $4, $5, 'sent', NOW(), $6)`,
-              [
-                req.organizationId,
-                contact.id,
-                template_id || null,
-                subject,
-                contact.email,
-                userId,
-              ]
-            );
-          } catch {
-            console.log('Email log table may not exist yet, skipping log');
-          }
+          await client.query(
+            `INSERT INTO email_logs
+              (organization_id, contact_id, template_id, subject, to_email, status, external_id, sent_at, sent_by)
+             VALUES ($1, $2, $3, $4, $5, 'sent', $6, NOW(), $7)`,
+            [
+              req.organizationId,
+              contact.id,
+              template_id || null,
+              subject,
+              contact.email,
+              sendResult.id || null,
+              userId,
+            ]
+          );
 
           return {
             status: 200,
             payload: {
               success: true,
-              simulated: sendResult.simulated || false,
-              message: sendResult.simulated
-                ? 'Email service not configured - email would have been sent'
-                : 'Email sent successfully',
+              simulated: false,
+              message: 'Email sent successfully',
               email_id: sendResult.id,
             },
           };
         }
 
         return {
-          status: 500,
+          status: sendResult.simulated ? 503 : 500,
           payload: {
             success: false,
             error: sendResult.error,
+            code: sendResult.simulated ? 'EMAIL_PROVIDER_NOT_CONFIGURED' : 'EMAIL_SEND_FAILED',
           },
         };
       });

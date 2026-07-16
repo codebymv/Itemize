@@ -440,6 +440,80 @@ describe('Bookings Integration Tests', () => {
 
     // ── Auth guard ────────────────────────────────────────────────────────────
 
+    describe('Booking collision and cancellation invariants', () => {
+        let calendarId;
+        let calendarSlug;
+
+        beforeAll(async () => {
+            const calendar = await request(app)
+                .post('/api/calendars')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ name: `Booking Invariants ${Date.now()}`, duration_minutes: 60 });
+            calendarId = calendar.body.id;
+            calendarSlug = calendar.body.slug;
+        });
+
+        afterAll(async () => {
+            await dbHelper.pool.query('DELETE FROM bookings WHERE calendar_id = $1', [calendarId]);
+            await dbHelper.pool.query('DELETE FROM availability_windows WHERE calendar_id = $1', [calendarId]);
+            await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
+        });
+
+        it('commits exactly one of two simultaneous reservations for the same slot', async () => {
+            const slot = futureSlot(288);
+            const makeRequest = (email) => request(app)
+                .post('/api/bookings')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ calendar_id: calendarId, attendee_name: 'Concurrent Booker', attendee_email: email, ...slot });
+
+            const responses = await Promise.all([
+                makeRequest('concurrent-one@test.com'),
+                makeRequest('concurrent-two@test.com'),
+            ]);
+
+            expect(responses.map(response => response.status).sort()).toEqual([201, 409]);
+            const count = await dbHelper.pool.query(
+                'SELECT COUNT(*) FROM bookings WHERE calendar_id = $1 AND start_time = $2 AND end_time = $3',
+                [calendarId, slot.start_time, slot.end_time]
+            );
+            expect(Number(count.rows[0].count)).toBe(1);
+        });
+
+        it('rejects inverted time ranges before writing', async () => {
+            const slot = futureSlot(312);
+            const response = await request(app)
+                .post('/api/bookings')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ calendar_id: calendarId, start_time: slot.end_time, end_time: slot.start_time });
+            expect(response.status).toBe(400);
+        });
+
+        it('binds a public cancellation token to its calendar and rejects replay', async () => {
+            const createRes = await request(app)
+                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .send({ attendee_name: 'Cancellation Test', attendee_email: 'cancel-public@test.com', ...futureSlot(336) });
+            const token = createRes.body.booking.cancellation_token;
+
+            const wrongSlug = await request(app)
+                .post(`/api/bookings/public/book/not-${calendarSlug}/cancel/${token}`)
+                .send({});
+            expect(wrongSlug.status).toBe(404);
+
+            const cancelled = await request(app)
+                .post(`/api/bookings/public/book/${calendarSlug}/cancel/${token}`)
+                .send({ reason: 'Cannot attend' });
+            expect(cancelled.status).toBe(200);
+
+            const replay = await request(app)
+                .post(`/api/bookings/public/book/${calendarSlug}/cancel/${token}`)
+                .send({});
+            expect(replay.status).toBe(404);
+        });
+    });
+
     describe('Authentication guard', () => {
         it('returns 401 on unauthenticated booking list', async () => {
             const res = await request(app).get('/api/bookings');

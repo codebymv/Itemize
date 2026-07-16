@@ -5,6 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, Clock, Play, Pause, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WorkflowTemplate } from './workflow-templates'
+import {
+  WORKFLOW_STEP_LABELS,
+  WORKFLOW_TRIGGER_LABELS,
+} from '@/domain/workflowRegistry'
 
 interface WorkflowTemplateCardProps {
   template: WorkflowTemplate
@@ -19,23 +23,7 @@ export function WorkflowTemplateCard({
   onDeactivate,
   onConfigure,
 }: WorkflowTemplateCardProps) {
-  const triggerIcons: Record<string, string> = {
-    contract_signed: 'Contract Signed',
-    invoice_paid: 'Invoice Paid',
-    deal_status_changed: 'Deal Updated',
-    form_submitted: 'Form Submitted',
-    contact_created: 'Contact Created',
-  }
-
-  const actionLabels: Record<string, string> = {
-    send_invoice: 'Create Invoice',
-    update_deal: 'Update Deal',
-    send_email: 'Send Email',
-    create_task: 'Create Task',
-    send_review_request: 'Send Review',
-    add_segment: 'Add to Segment',
-    update_contact_status: 'Update Contact',
-  }
+  const hasActions = Boolean(onActivate || onDeactivate || onConfigure)
 
   return (
     <Card className="bg-muted/10 hover:shadow-md transition-shadow">
@@ -72,7 +60,7 @@ export function WorkflowTemplateCard({
             {template.triggers.map((trigger) => (
               <div key={trigger.id} className="flex items-center gap-2 text-sm">
                 <Badge variant="secondary" className="text-xs">
-                  {triggerIcons[trigger.type] || trigger.type}
+                  {WORKFLOW_TRIGGER_LABELS[trigger.type]}
                 </Badge>
               </div>
             ))}
@@ -85,36 +73,40 @@ export function WorkflowTemplateCard({
           <div className="flex flex-wrap gap-2">
             {template.actions.map((action) => (
               <Badge key={action.id} variant="outline" className="text-xs">
-                {actionLabels[action.type] || action.type}
+                {WORKFLOW_STEP_LABELS[action.type]}
               </Badge>
             ))}
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2 border-t">
+        {hasActions && <div className="flex gap-2 pt-2 border-t">
           {template.isActive ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={onDeactivate}
-            >
-              <Pause className="h-4 w-4 mr-1" />
-              Pause
-            </Button>
+            onDeactivate && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={onDeactivate}
+              >
+                <Pause className="h-4 w-4 mr-1" />
+                Pause
+              </Button>
+            )
           ) : (
-            <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={onActivate}>
-              <Play className="h-4 w-4 mr-1" />
-              Activate
-            </Button>
+            onActivate && (
+              <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={onActivate}>
+                <Play className="h-4 w-4 mr-1" />
+                Activate
+              </Button>
+            )
           )}
           {onConfigure && (
             <Button variant="outline" size="sm" onClick={onConfigure}>
               <Settings className="h-4 w-4" />
             </Button>
           )}
-        </div>
+        </div>}
       </CardContent>
     </Card>
   )

@@ -5,8 +5,106 @@
 
 const emailService = require('./emailService');
 const smsService = require('./smsService');
+const { randomUUID } = require('node:crypto');
 const { workflowColumns, workflowStepColumns, workflowEnrollmentColumns } = require('../routes/workflow-columns');
 const { emailTemplateColumns, smsTemplateColumns } = require('../routes/template-columns');
+const { normalizeWorkflowTriggerType } = require('../domain/workflowRegistry');
+const {
+  DEFAULT_WEBHOOK_MAX_REQUEST_BYTES,
+  normalizeWorkflowWebhookHeaders,
+  parseWorkflowWebhookUrl,
+} = require('./workflowWebhookEgress');
+
+const WORKFLOW_WEBHOOK_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const DEFAULT_ENROLLMENT_LEASE_SECONDS = 300;
+
+const workflowSideEffectKey = (enrollment, step) => {
+  const runAt = new Date(enrollment.enrolled_at);
+  if (!enrollment?.id || !enrollment.organization_id || !step?.id || Number.isNaN(runAt.getTime())) {
+    throw new Error('Workflow side-effect identity is unavailable');
+  }
+  return `workflow-${enrollment.id}-${step.id}-${runAt.getTime()}`;
+};
+
+const workflowStepLogInput = (step) => ({
+  step_type: step.step_type,
+  config_keys: Object.keys(step.step_config || {}).sort(),
+});
+
+async function enqueueWorkflowSideEffect(client, {
+  effectType,
+  enrollment,
+  payload,
+  step,
+}) {
+  const idempotencyKey = workflowSideEffectKey(enrollment, step);
+  const result = await client.query(`
+    INSERT INTO workflow_side_effect_outbox (
+      idempotency_key, organization_id, enrollment_id, step_id,
+      enrollment_run_at, effect_type, payload
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+    ON CONFLICT (enrollment_id, step_id, enrollment_run_at) DO UPDATE SET
+      idempotency_key = workflow_side_effect_outbox.idempotency_key
+    RETURNING id, idempotency_key, status
+  `, [
+    idempotencyKey,
+    enrollment.organization_id,
+    enrollment.id,
+    step.id,
+    new Date(enrollment.enrolled_at).toISOString(),
+    effectType,
+    JSON.stringify(payload),
+  ]);
+  return result.rows[0];
+}
+
+const workflowEnrollmentLeaseSeconds = (value) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 3600
+    ? parsed
+    : DEFAULT_ENROLLMENT_LEASE_SECONDS;
+};
+
+async function claimWorkflowEnrollment(queryable, {
+  enrollmentId = null,
+  leaseSeconds = DEFAULT_ENROLLMENT_LEASE_SECONDS,
+} = {}) {
+  const boundedLeaseSeconds = workflowEnrollmentLeaseSeconds(leaseSeconds);
+  const claimToken = randomUUID();
+  const result = await queryable.query(`
+    WITH candidate AS (
+      SELECT id
+      FROM workflow_enrollments
+      WHERE status = 'active'
+        AND next_action_at <= CURRENT_TIMESTAMP
+        AND ($1::integer IS NULL OR id = $1)
+        AND (
+          execution_claim_token IS NULL
+          OR execution_lease_expires_at <= CURRENT_TIMESTAMP
+        )
+      ORDER BY next_action_at, id
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    )
+    UPDATE workflow_enrollments enrollment SET
+      execution_attempt_count = execution_attempt_count + 1,
+      execution_claim_token = $2::uuid,
+      execution_lease_expires_at =
+        CURRENT_TIMESTAMP + ($3::integer * INTERVAL '1 second')
+    FROM candidate
+    WHERE enrollment.id = candidate.id
+    RETURNING
+      enrollment.id,
+      enrollment.execution_attempt_count,
+      enrollment.execution_claim_token,
+      enrollment.execution_lease_expires_at
+  `, [enrollmentId, claimToken, boundedLeaseSeconds]);
+  if (result.rows.length === 0) return null;
+  return {
+    ...result.rows[0],
+    lease_seconds: boundedLeaseSeconds,
+  };
+}
 
 class AutomationEngine {
   constructor(pool) {
@@ -18,6 +116,13 @@ class AutomationEngine {
    * Finds matching workflows and enrolls contacts
    */
   async handleTrigger(triggerType, data) {
+    const normalizedTriggerType = normalizeWorkflowTriggerType(triggerType);
+    if (!normalizedTriggerType) {
+      return {
+        enrolled: 0,
+        error: `Unsupported workflow trigger type: ${triggerType}`,
+      };
+    }
     const { contact, organizationId, ...triggerData } = data;
 
     if (!contact || !organizationId) {
@@ -25,8 +130,9 @@ class AutomationEngine {
       return { enrolled: 0 };
     }
 
+    let client;
     try {
-      const client = await this.pool.connect();
+      client = await this.pool.connect();
 
       // Find active workflows matching this trigger type
       const workflows = await client.query(
@@ -34,7 +140,7 @@ class AutomationEngine {
          WHERE organization_id = $1 
          AND trigger_type = $2 
          AND is_active = true`,
-        [organizationId, triggerType]
+        [organizationId, normalizedTriggerType]
       );
 
       let enrolledCount = 0;
@@ -45,7 +151,7 @@ class AutomationEngine {
         
         if (shouldEnroll) {
           const enrolled = await this.enrollContact(client, workflow.id, contact.id, {
-            trigger_type: triggerType,
+            trigger_type: normalizedTriggerType,
             ...triggerData,
           });
           
@@ -57,13 +163,13 @@ class AutomationEngine {
         }
       }
 
-      client.release();
-      
-      console.log(`AutomationEngine: Trigger ${triggerType} - Enrolled ${enrolledCount} workflows`);
+      console.log(`AutomationEngine: Trigger ${normalizedTriggerType} - Enrolled ${enrolledCount} workflows`);
       return { enrolled: enrolledCount };
     } catch (error) {
       console.error('AutomationEngine: Error handling trigger:', error);
       return { enrolled: 0, error: error.message };
+    } finally {
+      client?.release();
     }
   }
 
@@ -76,28 +182,29 @@ class AutomationEngine {
     }
 
     // Tag-based triggers
-    if (triggerConfig.tag_name && eventData.tag) {
-      return eventData.tag === triggerConfig.tag_name;
+    if (triggerConfig.tag_name) {
+      if (!eventData.tag || eventData.tag !== triggerConfig.tag_name) return false;
     }
 
     // Deal stage triggers
-    if (triggerConfig.stage_id && eventData.newStage) {
-      if (triggerConfig.stage_id !== eventData.newStage) {
-        return false;
-      }
+    if (triggerConfig.stage_id !== undefined) {
+      const eventStage = eventData.newStageId ?? eventData.newStage;
+      if (eventStage === undefined || String(triggerConfig.stage_id) !== String(eventStage)) return false;
     }
 
-    if (triggerConfig.pipeline_id && eventData.pipeline_id) {
-      if (triggerConfig.pipeline_id !== eventData.pipeline_id) {
-        return false;
-      }
+    if (triggerConfig.pipeline_id !== undefined) {
+      const eventPipeline = eventData.pipeline_id ?? eventData.deal?.pipeline_id;
+      if (eventPipeline === undefined || String(triggerConfig.pipeline_id) !== String(eventPipeline)) return false;
     }
 
     // Contact source triggers
-    if (triggerConfig.source && eventData.source) {
-      if (triggerConfig.source !== eventData.source) {
-        return false;
-      }
+    if (triggerConfig.source) {
+      if (!eventData.source || triggerConfig.source !== eventData.source) return false;
+    }
+
+    if (triggerConfig.form_id !== undefined) {
+      const eventForm = eventData.form?.id ?? eventData.form_id;
+      if (eventForm === undefined || String(triggerConfig.form_id) !== String(eventForm)) return false;
     }
 
     return true;
@@ -126,7 +233,9 @@ class AutomationEngine {
           `UPDATE workflow_enrollments 
            SET status = 'active', current_step = 1, enrolled_at = CURRENT_TIMESTAMP,
                trigger_data = $1, context = '{}', error_message = NULL, completed_at = NULL,
-               next_action_at = CURRENT_TIMESTAMP
+               next_action_at = CURRENT_TIMESTAMP, execution_attempt_count = 0,
+               execution_claim_token = NULL, execution_lease_expires_at = NULL,
+               pause_reason = NULL, paused_at = NULL
            WHERE id = $2
            RETURNING ${workflowEnrollmentColumns()}`,
           [JSON.stringify(triggerData), enrollment.id]
@@ -161,10 +270,22 @@ class AutomationEngine {
   /**
    * Process the next step for an enrollment
    */
-  async processEnrollment(client, enrollmentId) {
+  async processEnrollment(client, enrollmentId, claim = null) {
     const startTime = Date.now();
+    const activeClaim = claim || await claimWorkflowEnrollment(client, { enrollmentId });
+    if (!activeClaim) {
+      return {
+        success: false,
+        claimed: true,
+        error: 'Enrollment is already claimed or is not due',
+      };
+    }
+    let transactionOpen = false;
 
     try {
+      await client.query('BEGIN');
+      transactionOpen = true;
+
       // Get enrollment with contact and workflow data
       const enrollmentResult = await client.query(
         `SELECT 
@@ -175,12 +296,27 @@ class AutomationEngine {
         FROM workflow_enrollments we
         JOIN contacts c ON we.contact_id = c.id
         JOIN workflows w ON we.workflow_id = w.id
-        WHERE we.id = $1 AND we.status = 'active'`,
-        [enrollmentId]
+        WHERE we.id = $1
+          AND we.status = 'active'
+          AND we.execution_attempt_count = $2
+          AND we.execution_claim_token = $3::uuid
+        FOR UPDATE OF we`,
+        [
+          enrollmentId,
+          activeClaim.execution_attempt_count,
+          activeClaim.execution_claim_token,
+        ]
       );
 
       if (enrollmentResult.rows.length === 0) {
-        return { success: false, error: 'Enrollment not found or not active' };
+        await client.query('ROLLBACK');
+        transactionOpen = false;
+        return {
+          success: false,
+          claimed: true,
+          stale: true,
+          error: 'Enrollment claim is no longer authoritative',
+        };
       }
 
       const enrollment = enrollmentResult.rows[0];
@@ -194,7 +330,9 @@ class AutomationEngine {
 
       if (stepResult.rows.length === 0) {
         // No more steps - workflow complete
-        await this.completeEnrollment(client, enrollmentId, 'completed');
+        await this.completeEnrollment(client, enrollmentId, 'completed', activeClaim);
+        await client.query('COMMIT');
+        transactionOpen = false;
         return { success: true, completed: true };
       }
 
@@ -213,14 +351,16 @@ class AutomationEngine {
         enrollmentId, 
         step, 
         result.success ? 'completed' : 'failed',
-        { step_config: step.step_config },
+        workflowStepLogInput(step),
         result,
         result.error,
         duration
       );
 
       if (!result.success) {
-        await this.failEnrollment(client, enrollmentId, result.error);
+        await this.failEnrollment(client, enrollmentId, result.error, activeClaim);
+        await client.query('COMMIT');
+        transactionOpen = false;
         return result;
       }
 
@@ -241,28 +381,78 @@ class AutomationEngine {
 
       if (nextStepCheck.rows.length === 0) {
         // Workflow complete
-        await this.completeEnrollment(client, enrollmentId, 'completed');
+        await this.completeEnrollment(client, enrollmentId, 'completed', activeClaim);
+        await client.query('COMMIT');
+        transactionOpen = false;
         return { success: true, completed: true };
       }
 
       // Update enrollment to next step
       const nextActionAt = result.waitUntil || new Date();
-      await client.query(
+      const progress = await client.query(
         `UPDATE workflow_enrollments 
-         SET current_step = $1, next_action_at = $2, context = $3
-         WHERE id = $4`,
-        [nextStep, nextActionAt, JSON.stringify(result.context || enrollment.context), enrollmentId]
+         SET current_step = $1,
+             next_action_at = $2,
+             context = $3,
+             execution_claim_token = CASE WHEN $4::boolean THEN NULL ELSE execution_claim_token END,
+             execution_lease_expires_at = CASE
+               WHEN $4::boolean THEN NULL
+               ELSE CURRENT_TIMESTAMP + ($5::integer * INTERVAL '1 second')
+             END
+         WHERE id = $6
+           AND status = 'active'
+           AND execution_attempt_count = $7
+           AND execution_claim_token = $8::uuid
+         RETURNING id`,
+        [
+          nextStep,
+          nextActionAt,
+          JSON.stringify(result.context || enrollment.context),
+          Boolean(result.waitUntil),
+          activeClaim.lease_seconds,
+          enrollmentId,
+          activeClaim.execution_attempt_count,
+          activeClaim.execution_claim_token,
+        ]
       );
+      if (progress.rows.length === 0) {
+        throw new Error('Enrollment claim expired before progress could be recorded');
+      }
+      await client.query('COMMIT');
+      transactionOpen = false;
 
       // If no wait, process next step immediately
       if (!result.waitUntil) {
-        return this.processEnrollment(client, enrollmentId);
+        return this.processEnrollment(client, enrollmentId, activeClaim);
       }
 
       return { success: true, waiting: true, nextActionAt };
     } catch (error) {
       console.error('AutomationEngine: Error processing enrollment:', error);
-      await this.failEnrollment(client, enrollmentId, error.message);
+      if (transactionOpen) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('AutomationEngine: Error rolling back enrollment step:', rollbackError);
+        }
+        transactionOpen = false;
+      }
+      try {
+        await client.query('BEGIN');
+        transactionOpen = true;
+        await this.failEnrollment(client, enrollmentId, error.message, activeClaim);
+        await client.query('COMMIT');
+        transactionOpen = false;
+      } catch (failureError) {
+        if (transactionOpen) {
+          try {
+            await client.query('ROLLBACK');
+          } catch (rollbackError) {
+            console.error('AutomationEngine: Error rolling back enrollment failure:', rollbackError);
+          }
+        }
+        console.error('AutomationEngine: Error marking enrollment failed:', failureError);
+      }
       return { success: false, error: error.message };
     }
   }
@@ -287,7 +477,7 @@ class AutomationEngine {
 
     switch (step.step_type) {
       case 'send_email':
-        return this.executeSendEmail(client, enrollment, contact, config);
+        return this.executeSendEmail(client, enrollment, contact, config, step);
 
       case 'add_tag':
         return this.executeAddTag(client, enrollment, contact, config);
@@ -308,13 +498,13 @@ class AutomationEngine {
         return this.executeCondition(enrollment, contact, config, step.condition_config);
 
       case 'webhook':
-        return this.executeWebhook(enrollment, contact, config);
+        return this.executeWebhook(client, enrollment, contact, config, step);
 
       case 'move_deal':
         return this.executeMoveDeal(client, enrollment, config);
 
       case 'send_sms':
-        return this.executeSendSms(client, enrollment, contact, config);
+        return this.executeSendSms(client, enrollment, contact, config, step);
 
       default:
         return { success: false, error: `Unknown step type: ${step.step_type}` };
@@ -324,7 +514,7 @@ class AutomationEngine {
   /**
    * Execute send email step
    */
-  async executeSendEmail(client, enrollment, contact, config) {
+  async executeSendEmail(client, enrollment, contact, config, step) {
     if (!contact.email) {
       return { success: false, error: 'Contact has no email address' };
     }
@@ -345,36 +535,30 @@ class AutomationEngine {
       }
 
       const template = templateResult.rows[0];
-
-      // Send email
-      const sendResult = await emailService.sendTemplateEmail({
+      const content = emailService.prepareEmailContent(
         template,
         contact,
-        additionalData: enrollment.context || {},
+        enrollment.context || {}
+      );
+      const outbox = await enqueueWorkflowSideEffect(client, {
+        effectType: 'email',
+        enrollment,
+        step,
+        payload: {
+          bodyHtml: content.html,
+          bodyText: content.text,
+          contactId: contact.id,
+          subject: content.subject,
+          templateId: template.id,
+          to: contact.email,
+        },
       });
 
-      // Log email
-      await client.query(
-        `INSERT INTO email_logs 
-          (organization_id, contact_id, template_id, workflow_enrollment_id, to_email, subject, body_html, status, external_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          enrollment.organization_id,
-          contact.id,
-          template.id,
-          enrollment.id,
-          contact.email,
-          emailService.replaceVariables(template.subject, contact),
-          emailService.replaceVariables(template.body_html, contact),
-          sendResult.success ? 'sent' : 'failed',
-          sendResult.id || null,
-        ]
-      );
-
-      return { 
-        success: sendResult.success || sendResult.simulated, 
-        error: sendResult.error,
-        emailId: sendResult.id,
+      return {
+        success: true,
+        queued: true,
+        outboxId: outbox.id,
+        idempotencyKey: outbox.idempotency_key,
       };
     } catch (error) {
       return { success: false, error: error.message };
@@ -384,7 +568,7 @@ class AutomationEngine {
   /**
    * Execute send SMS step
    */
-  async executeSendSms(client, enrollment, contact, config) {
+  async executeSendSms(client, enrollment, contact, config, step) {
     if (!contact.phone) {
       return { success: false, error: 'Contact has no phone number' };
     }
@@ -419,36 +603,42 @@ class AutomationEngine {
 
       // Get message info for logging
       const messageInfo = smsService.getMessageInfo(message);
+      const normalizedRecipient = smsService.normalizePhoneNumber(contact.phone);
+      if (!smsService.isValidPhoneNumber(normalizedRecipient)) {
+        return { success: false, error: 'Contact phone number is invalid' };
+      }
 
-      // Send SMS
-      const sendResult = await smsService.sendSms({
-        to: contact.phone,
-        message,
+      const senderResult = await client.query(`
+        SELECT phone_number
+        FROM sms_receiving_numbers
+        WHERE organization_id = $1
+          AND provider = 'twilio'
+          AND is_active = TRUE
+        ORDER BY is_primary DESC, id
+        LIMIT 1
+      `, [enrollment.organization_id]);
+      if (senderResult.rows.length === 0) {
+        return { success: false, error: 'No active organization SMS number is configured' };
+      }
+      const outbox = await enqueueWorkflowSideEffect(client, {
+        effectType: 'sms',
+        enrollment,
+        step,
+        payload: {
+          contactId: contact.id,
+          from: senderResult.rows[0].phone_number,
+          message,
+          segments: messageInfo.segments,
+          templateId,
+          to: normalizedRecipient,
+        },
       });
 
-      // Log SMS to database
-      await client.query(
-        `INSERT INTO sms_logs 
-          (organization_id, contact_id, template_id, workflow_enrollment_id, to_phone, from_phone, message, direction, status, external_id, segments)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'outbound', $8, $9, $10)`,
-        [
-          enrollment.organization_id,
-          contact.id,
-          templateId,
-          enrollment.id,
-          smsService.normalizePhoneNumber(contact.phone),
-          process.env.TWILIO_PHONE_NUMBER || null,
-          message,
-          sendResult.success ? 'sent' : 'failed',
-          sendResult.id || null,
-          messageInfo.segments,
-        ]
-      );
-
-      return { 
-        success: sendResult.success || sendResult.simulated, 
-        error: sendResult.error,
-        smsId: sendResult.id,
+      return {
+        success: true,
+        queued: true,
+        outboxId: outbox.id,
+        idempotencyKey: outbox.idempotency_key,
       };
     } catch (error) {
       return { success: false, error: error.message };
@@ -467,8 +657,10 @@ class AutomationEngine {
       const currentTags = contact.tags || [];
       if (!currentTags.includes(config.tag_name)) {
         await client.query(
-          'UPDATE contacts SET tags = array_append(tags, $1), updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-          [config.tag_name, contact.id]
+          `UPDATE contacts
+           SET tags = array_append(tags, $1), updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2 AND organization_id = $3`,
+          [config.tag_name, contact.id, enrollment.organization_id]
         );
       }
       return { success: true };
@@ -487,8 +679,10 @@ class AutomationEngine {
 
     try {
       await client.query(
-        'UPDATE contacts SET tags = array_remove(tags, $1), updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [config.tag_name, contact.id]
+        `UPDATE contacts
+         SET tags = array_remove(tags, $1), updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND organization_id = $3`,
+        [config.tag_name, contact.id, enrollment.organization_id]
       );
       return { success: true };
     } catch (error) {
@@ -500,9 +694,14 @@ class AutomationEngine {
    * Execute wait step
    */
   executeWait(config) {
-    const waitMinutes = config.delay_minutes || config.wait_minutes || 0;
-    const waitHours = config.delay_hours || config.wait_hours || 0;
-    const waitDays = config.delay_days || config.wait_days || 0;
+    const waitMinutes = Number(config.delay_minutes ?? config.wait_minutes ?? 0);
+    const waitHours = Number(config.delay_hours ?? config.wait_hours ?? 0);
+    const waitDays = Number(config.delay_days ?? config.wait_days ?? 0);
+
+    if (![waitMinutes, waitHours, waitDays].every(Number.isFinite)
+      || waitMinutes < 0 || waitHours < 0 || waitDays < 0) {
+      return { success: false, error: 'Wait duration must contain non-negative finite numbers' };
+    }
 
     const totalMinutes = waitMinutes + (waitHours * 60) + (waitDays * 24 * 60);
     
@@ -523,10 +722,15 @@ class AutomationEngine {
         ? new Date(Date.now() + config.due_days * 24 * 60 * 60 * 1000)
         : null;
 
-      await client.query(
+      const result = await client.query(
         `INSERT INTO tasks 
-          (organization_id, contact_id, title, description, due_date, priority, status, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)`,
+          (organization_id, contact_id, title, description, due_date, priority, status, assigned_to)
+        SELECT $1, $2, $3, $4, $5, $6, 'pending', $7
+        WHERE $7::integer IS NULL OR EXISTS (
+          SELECT 1 FROM organization_members
+          WHERE organization_id = $1 AND user_id = $7
+        )
+        RETURNING id`,
         [
           enrollment.organization_id,
           contact.id,
@@ -537,6 +741,10 @@ class AutomationEngine {
           config.assigned_to || null,
         ]
       );
+
+      if (result.rows.length === 0) {
+        return { success: false, error: 'Assigned user is not a member of the workflow organization' };
+      }
 
       return { success: true };
     } catch (error) {
@@ -572,8 +780,8 @@ class AutomationEngine {
       updates.push('updated_at = CURRENT_TIMESTAMP');
 
       await client.query(
-        `UPDATE contacts SET ${updates.join(', ')} WHERE id = $1`,
-        params
+        `UPDATE contacts SET ${updates.join(', ')} WHERE id = $1 AND organization_id = $${paramIndex}`,
+        [...params, enrollment.organization_id]
       );
 
       return { success: true };
@@ -593,7 +801,7 @@ class AutomationEngine {
     const { field, operator, value } = conditionConfig;
     
     // Get field value from contact
-    let fieldValue = contact[field] || contact.custom_fields?.[field];
+    let fieldValue = contact[field] ?? contact.custom_fields?.[field];
 
     // Handle array fields like tags
     if (field === 'tags') {
@@ -610,6 +818,7 @@ class AutomationEngine {
         result = fieldValue !== value;
         break;
       case 'contains':
+        if (fieldValue === undefined || fieldValue === null) break;
         if (Array.isArray(fieldValue)) {
           result = fieldValue.includes(value);
         } else {
@@ -617,6 +826,10 @@ class AutomationEngine {
         }
         break;
       case 'not_contains':
+        if (fieldValue === undefined || fieldValue === null) {
+          result = true;
+          break;
+        }
         if (Array.isArray(fieldValue)) {
           result = !fieldValue.includes(value);
         } else {
@@ -636,7 +849,7 @@ class AutomationEngine {
         result = Number(fieldValue) < Number(value);
         break;
       default:
-        result = true;
+        return { success: false, error: `Unsupported condition operator: ${operator}` };
     }
 
     return { success: true, branchResult: result };
@@ -645,13 +858,19 @@ class AutomationEngine {
   /**
    * Execute webhook step
    */
-  async executeWebhook(enrollment, contact, config) {
+  async executeWebhook(client, enrollment, contact, config, step) {
     if (!config.url) {
       return { success: false, error: 'No webhook URL specified' };
     }
 
     try {
+      const targetUrl = parseWorkflowWebhookUrl(config.url);
+      const method = String(config.method || 'POST').toUpperCase();
+      if (!WORKFLOW_WEBHOOK_METHODS.has(method)) {
+        return { success: false, error: 'Unsupported workflow webhook method' };
+      }
       const payload = {
+        ...(config.custom_payload || {}),
         event: 'workflow_step',
         workflow_id: enrollment.workflow_id,
         contact: {
@@ -663,23 +882,28 @@ class AutomationEngine {
         },
         enrollment_id: enrollment.id,
         timestamp: new Date().toISOString(),
-        ...config.custom_payload,
       };
-
-      const response = await fetch(config.url, {
-        method: config.method || 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...config.headers,
+      if (Buffer.byteLength(JSON.stringify(payload)) > DEFAULT_WEBHOOK_MAX_REQUEST_BYTES) {
+        return { success: false, error: 'Workflow webhook request exceeded the byte limit' };
+      }
+      const outbox = await enqueueWorkflowSideEffect(client, {
+        effectType: 'webhook',
+        enrollment,
+        step,
+        payload: {
+          body: payload,
+          headers: normalizeWorkflowWebhookHeaders(config.headers),
+          method,
+          url: targetUrl.toString(),
         },
-        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        return { success: false, error: `Webhook failed with status ${response.status}` };
-      }
-
-      return { success: true };
+      return {
+        success: true,
+        queued: true,
+        outboxId: outbox.id,
+        idempotencyKey: outbox.idempotency_key,
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -689,8 +913,8 @@ class AutomationEngine {
    * Execute move deal stage step
    */
   async executeMoveDeal(client, enrollment, config) {
-    if (!config.deal_id && !config.stage_id) {
-      return { success: false, error: 'deal_id and stage_id required' };
+    if (!config.stage_id) {
+      return { success: false, error: 'stage_id required' };
     }
 
     try {
@@ -712,10 +936,17 @@ class AutomationEngine {
         dealId = deals.rows[0].id;
       }
 
-      await client.query(
-        'UPDATE deals SET stage_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [config.stage_id, dealId]
+      const result = await client.query(
+        `UPDATE deals
+         SET stage_id = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND organization_id = $3
+         RETURNING id`,
+        [config.stage_id, dealId, enrollment.organization_id]
       );
+
+      if (result.rows.length === 0) {
+        return { success: false, error: 'Deal not found in workflow organization' };
+      }
 
       return { success: true };
     } catch (error) {
@@ -752,18 +983,25 @@ class AutomationEngine {
   /**
    * Complete an enrollment
    */
-  async completeEnrollment(client, enrollmentId, status = 'completed') {
-    await client.query(
-      `UPDATE workflow_enrollments 
-       SET status = $1, completed_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [status, enrollmentId]
-    );
-
-    // Update workflow stats
+  async completeEnrollment(client, enrollmentId, status = 'completed', claim) {
     const enrollment = await client.query(
-      'SELECT workflow_id FROM workflow_enrollments WHERE id = $1',
-      [enrollmentId]
+      `UPDATE workflow_enrollments
+       SET status = $1,
+           completed_at = CURRENT_TIMESTAMP,
+           next_action_at = NULL,
+           execution_claim_token = NULL,
+           execution_lease_expires_at = NULL
+       WHERE id = $2
+         AND status = 'active'
+         AND execution_attempt_count = $3
+         AND execution_claim_token = $4::uuid
+       RETURNING workflow_id`,
+      [
+        status,
+        enrollmentId,
+        claim.execution_attempt_count,
+        claim.execution_claim_token,
+      ]
     );
 
     if (enrollment.rows.length > 0) {
@@ -774,23 +1012,32 @@ class AutomationEngine {
         [enrollment.rows[0].workflow_id]
       );
     }
+    return enrollment.rows.length > 0;
   }
 
   /**
    * Fail an enrollment
    */
-  async failEnrollment(client, enrollmentId, errorMessage) {
-    await client.query(
-      `UPDATE workflow_enrollments 
-       SET status = 'failed', error_message = $1, completed_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [errorMessage, enrollmentId]
-    );
-
-    // Update workflow stats
+  async failEnrollment(client, enrollmentId, errorMessage, claim) {
     const enrollment = await client.query(
-      'SELECT workflow_id FROM workflow_enrollments WHERE id = $1',
-      [enrollmentId]
+      `UPDATE workflow_enrollments
+       SET status = 'failed',
+           error_message = $1,
+           completed_at = CURRENT_TIMESTAMP,
+           next_action_at = NULL,
+           execution_claim_token = NULL,
+           execution_lease_expires_at = NULL
+       WHERE id = $2
+         AND status = 'active'
+         AND execution_attempt_count = $3
+         AND execution_claim_token = $4::uuid
+       RETURNING workflow_id`,
+      [
+        errorMessage,
+        enrollmentId,
+        claim.execution_attempt_count,
+        claim.execution_claim_token,
+      ]
     );
 
     if (enrollment.rows.length > 0) {
@@ -801,14 +1048,16 @@ class AutomationEngine {
         [enrollment.rows[0].workflow_id]
       );
     }
+    return enrollment.rows.length > 0;
   }
 
   /**
    * Process pending enrollments (for scheduled processing)
    */
   async processPendingEnrollments() {
+    let client;
     try {
-      const client = await this.pool.connect();
+      client = await this.pool.connect();
 
       const pending = await client.query(
         `SELECT id FROM workflow_enrollments 
@@ -822,11 +1071,12 @@ class AutomationEngine {
         await this.processEnrollment(client, enrollment.id);
       }
 
-      client.release();
       return { processed: pending.rows.length };
     } catch (error) {
       console.error('AutomationEngine: Error processing pending enrollments:', error);
       return { processed: 0, error: error.message };
+    } finally {
+      client?.release();
     }
   }
 }
@@ -851,5 +1101,11 @@ const getAutomationEngine = () => {
 module.exports = {
   AutomationEngine,
   createAutomationEngine,
+  enqueueWorkflowSideEffect,
   getAutomationEngine,
+  normalizeWorkflowWebhookHeaders,
+  parseWorkflowWebhookUrl,
+  claimWorkflowEnrollment,
+  workflowSideEffectKey,
+  workflowStepLogInput,
 };

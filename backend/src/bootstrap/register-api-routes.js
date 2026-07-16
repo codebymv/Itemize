@@ -10,6 +10,7 @@ const contactsRoutes = require('../routes/contacts.routes');
 const tagsRoutes = require('../routes/tags.routes');
 const pipelinesRoutes = require('../routes/pipelines.routes');
 const emailTemplatesRoutes = require('../routes/email-templates.routes');
+const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
 const workflowsRoutes = require('../routes/workflows.routes');
 const smsTemplatesRoutes = require('../routes/sms-templates.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
@@ -200,7 +201,7 @@ function registerApiRoutes({
     logger.info('Whiteboards routes initialized');
     app.use('/api', wireframesRoutes(pool, authenticateJWT, broadcast));
     logger.info('Wireframes routes initialized');
-    app.use('/api', vaultsRoutes(pool, authenticateJWT, broadcast));
+    app.use('/api', vaultsRoutes(pool, authenticateJWT, broadcast, publicRateLimit));
     logger.info('Vaults routes initialized');
     app.use('/api', categoriesRoutes(pool, authenticateJWT));
     logger.info('Categories routes initialized');
@@ -214,6 +215,8 @@ function registerApiRoutes({
     logger.info('Pipelines routes initialized');
     app.use('/api/email-templates', emailTemplatesRoutes(pool, authenticateJWT));
     logger.info('Email Templates routes initialized');
+    app.use('/api/email', emailWebhooksRoutes(pool, publicRateLimit));
+    logger.info('Email Webhook routes initialized');
     app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));
     logger.info('Workflows routes initialized');
     app.use('/api/sms-templates', smsTemplatesRoutes(pool, authenticateJWT, publicRateLimit));
@@ -259,7 +262,7 @@ function registerApiRoutes({
     logger.info('Conversations routes initialized');
     app.use('/api/analytics', analyticsRoutes(pool, authenticateJWT));
     logger.info('Analytics routes initialized');
-    app.use('/api/contacts', contactProfileRoutes);
+    app.use('/api/contacts', contactProfileRoutes(pool, authenticateJWT));
     logger.info('Contact Profile routes initialized');
     app.use('/api/search', searchRoutes);
     logger.info('Search routes initialized');

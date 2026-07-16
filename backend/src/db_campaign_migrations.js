@@ -28,6 +28,7 @@ async function createEmailCampaignsTable(pool) {
                 
                 -- Targeting
                 segment_type VARCHAR(50) DEFAULT 'all' CHECK (segment_type IN ('all', 'tag', 'status', 'custom', 'segment')),
+                segment_id INTEGER,
                 segment_filter JSONB DEFAULT '{}',
                 tag_ids INTEGER[] DEFAULT '{}',
                 excluded_tag_ids INTEGER[] DEFAULT '{}',

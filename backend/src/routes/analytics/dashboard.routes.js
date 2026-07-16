@@ -1,6 +1,7 @@
 const express = require('express');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendError } = require('../../utils/response');
+const { createSerializedQueryClient, toInteger, toNumber } = require('../../services/analyticsParameters');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -12,7 +13,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
     router.get('/dashboard', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const orgId = req.organizationId;
-            const analytics = await withDbClient(pool, async (client) => {
+            const analytics = await withDbClient(pool, async (rawClient) => {
+            const client = createSerializedQueryClient(rawClient);
 
             // Run all queries in parallel for performance
             const [
@@ -73,14 +75,21 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
                 // Deals by stage (for pipeline funnel)
                 client.query(`
+          WITH selected_pipeline AS (
+            SELECT id, stages
+            FROM pipelines
+            WHERE organization_id = $1
+            ORDER BY is_default DESC, created_at ASC, id ASC
+            LIMIT 1
+          )
           SELECT
             d.stage_id,
             p.stages,
-            COUNT(*) as count,
+            COUNT(d.id) as count,
             COALESCE(SUM(d.value), 0) as total_value
-          FROM deals d
-          JOIN pipelines p ON d.pipeline_id = p.id
-          WHERE d.organization_id = $1
+          FROM selected_pipeline p
+          LEFT JOIN deals d ON d.pipeline_id = p.id
+            AND d.organization_id = $1
             AND d.won_at IS NULL
             AND d.lost_at IS NULL
           GROUP BY d.stage_id, p.stages
@@ -93,8 +102,14 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             COUNT(*) FILTER (WHERE status = 'confirmed') as confirmed,
             COUNT(*) FILTER (WHERE status = 'pending') as pending,
             COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
-            COUNT(*) FILTER (WHERE start_time >= NOW() AND start_time <= NOW() + INTERVAL '7 days') as upcoming_this_week,
-            COUNT(*) FILTER (WHERE start_time >= NOW() AND start_time <= NOW() + INTERVAL '1 day') as upcoming_today
+            COUNT(*) FILTER (
+              WHERE status IN ('pending', 'confirmed')
+                AND start_time >= NOW() AND start_time <= NOW() + INTERVAL '7 days'
+            ) as upcoming_this_week,
+            COUNT(*) FILTER (
+              WHERE status IN ('pending', 'confirmed')
+                AND start_time >= NOW() AND start_time <= NOW() + INTERVAL '1 day'
+            ) as upcoming_today
           FROM bookings
           WHERE organization_id = $1
         `, [orgId]),
@@ -142,7 +157,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 // Invoice metrics for dashboard
                 client.query(`
           SELECT
-            COUNT(*) FILTER (WHERE status = 'pending') as pending,
+            COUNT(*) FILTER (WHERE status IN ('sent', 'viewed', 'partial')) as pending,
             COUNT(*) FILTER (WHERE status = 'overdue') as overdue,
             COALESCE(SUM(total) FILTER (WHERE paid_at IS NOT NULL
                    AND date_trunc('month', paid_at) = date_trunc('month', CURRENT_DATE)), 0) as paid_this_month,
@@ -163,7 +178,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 // Signature metrics for dashboard
                 client.query(`
           SELECT
-            COUNT(*) FILTER (WHERE status = 'awaiting' OR status = 'sent') as awaiting_signatures,
+            COUNT(*) FILTER (WHERE status IN ('sent', 'in_progress')) as awaiting_signatures,
             COUNT(*) FILTER (WHERE status = 'completed' AND date_trunc('week', completed_at) = date_trunc('week', CURRENT_DATE)) as signed_this_week,
             COUNT(*) FILTER (WHERE id IS NOT NULL) as total_signatures
           FROM signature_documents
@@ -212,8 +227,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
                 dealsByStage.forEach(row => {
                     stageMap.set(row.stage_id, {
-                        count: parseInt(row.count),
-                        value: parseFloat(row.total_value)
+                        count: toInteger(row.count),
+                        value: toNumber(row.total_value)
                     });
                 });
 
@@ -232,14 +247,14 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             // Format contact growth data
             const contactGrowth = contactGrowthResult.rows.map(row => ({
                 month: row.month,
-                count: parseInt(row.count)
+                count: toInteger(row.count)
             }));
 
             // Combine deals revenue + invoice payments revenue
-            const dealsRevenue = parseFloat(dealsResult.rows[0].won_value) || 0;
-            const dealsRevenueThisMonth = parseFloat(dealsResult.rows[0].won_this_month) || 0;
-            const paymentsRevenue = parseFloat(paymentsResult.rows[0].total_payments_revenue) || 0;
-            const paymentsRevenueThisMonth = parseFloat(paymentsResult.rows[0].payments_this_month) || 0;
+            const dealsRevenue = toNumber(dealsResult.rows[0].won_value);
+            const dealsRevenueThisMonth = toNumber(dealsResult.rows[0].won_this_month);
+            const paymentsRevenue = toNumber(paymentsResult.rows[0].total_payments_revenue);
+            const paymentsRevenueThisMonth = toNumber(paymentsResult.rows[0].payments_this_month);
 
             const totalRevenueWon = dealsRevenue + paymentsRevenue;
             const totalRevenueThisMonth = dealsRevenueThisMonth + paymentsRevenueThisMonth;
@@ -247,41 +262,41 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             // Build response
             const analytics = {
                 contacts: {
-                    total: parseInt(contactsResult.rows[0].total),
-                    active: parseInt(contactsResult.rows[0].active),
-                    leads: parseInt(contactsResult.rows[0].leads),
-                    customers: parseInt(contactsResult.rows[0].customers),
-                    newThisMonth: parseInt(contactsResult.rows[0].new_this_month),
-                    newThisWeek: parseInt(contactsResult.rows[0].new_this_week),
+                    total: toInteger(contactsResult.rows[0].total),
+                    active: toInteger(contactsResult.rows[0].active),
+                    leads: toInteger(contactsResult.rows[0].leads),
+                    customers: toInteger(contactsResult.rows[0].customers),
+                    newThisMonth: toInteger(contactsResult.rows[0].new_this_month),
+                    newThisWeek: toInteger(contactsResult.rows[0].new_this_week),
                     growth: contactGrowth
                 },
                 deals: {
-                    total: parseInt(dealsResult.rows[0].total),
-                    open: parseInt(dealsResult.rows[0].open),
-                    won: parseInt(dealsResult.rows[0].won),
-                    lost: parseInt(dealsResult.rows[0].lost),
-                    openValue: parseFloat(dealsResult.rows[0].open_value),
+                    total: toInteger(dealsResult.rows[0].total),
+                    open: toInteger(dealsResult.rows[0].open),
+                    won: toInteger(dealsResult.rows[0].won),
+                    lost: toInteger(dealsResult.rows[0].lost),
+                    openValue: toNumber(dealsResult.rows[0].open_value),
                     wonValue: totalRevenueWon, // Combined: deals + invoice payments
                     wonThisMonth: totalRevenueThisMonth, // Combined: deals + invoice payments this month
                     funnel: funnelData
                 },
                 bookings: {
-                    total: parseInt(bookingsResult.rows[0].total),
-                    confirmed: parseInt(bookingsResult.rows[0].confirmed),
-                    pending: parseInt(bookingsResult.rows[0].pending),
-                    cancelled: parseInt(bookingsResult.rows[0].cancelled),
-                    upcomingThisWeek: parseInt(bookingsResult.rows[0].upcoming_this_week),
-                    upcomingToday: parseInt(bookingsResult.rows[0].upcoming_today)
+                    total: toInteger(bookingsResult.rows[0].total),
+                    confirmed: toInteger(bookingsResult.rows[0].confirmed),
+                    pending: toInteger(bookingsResult.rows[0].pending),
+                    cancelled: toInteger(bookingsResult.rows[0].cancelled),
+                    upcomingThisWeek: toInteger(bookingsResult.rows[0].upcoming_this_week),
+                    upcomingToday: toInteger(bookingsResult.rows[0].upcoming_today)
                 },
                 tasks: {
-                    total: parseInt(tasksResult.rows[0].total),
-                    pending: parseInt(tasksResult.rows[0].pending),
-                    inProgress: parseInt(tasksResult.rows[0].in_progress),
-                    completed: parseInt(tasksResult.rows[0].completed),
-                    overdue: parseInt(tasksResult.rows[0].overdue)
+                    total: toInteger(tasksResult.rows[0].total),
+                    pending: toInteger(tasksResult.rows[0].pending),
+                    inProgress: toInteger(tasksResult.rows[0].in_progress),
+                    completed: toInteger(tasksResult.rows[0].completed),
+                    overdue: toInteger(tasksResult.rows[0].overdue)
                 },
                 pipelines: {
-                    total: parseInt(pipelinesResult.rows[0].total)
+                    total: toInteger(pipelinesResult.rows[0].total)
                 },
                 recentActivity: recentActivityResult.rows.map(row => ({
                     id: row.id,
@@ -292,21 +307,21 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     contactId: row.contact_id
                 })),
                 invoiceMetrics: {
-                    pending: invoiceMetricsQuery.rows[0]?.pending || 0,
-                    overdue: invoiceMetricsQuery.rows[0]?.overdue || 0,
-                    paidThisMonth: invoiceMetricsQuery.rows[0]?.paid_this_month || 0,
-                    countThisMonth: invoiceMetricsQuery.rows[0]?.invoice_count_this_month || 0,
+                    pending: toInteger(invoiceMetricsQuery.rows[0]?.pending),
+                    overdue: toInteger(invoiceMetricsQuery.rows[0]?.overdue),
+                    paidThisMonth: toNumber(invoiceMetricsQuery.rows[0]?.paid_this_month),
+                    countThisMonth: toInteger(invoiceMetricsQuery.rows[0]?.invoice_count_this_month),
                     recentInvoices: recentInvoicesQuery.rows.map(inv => ({
                         id: inv.id,
                         number: inv.invoice_number || `INV-${inv.id}`,
-                        amount: inv.total || 0,
+                        amount: toNumber(inv.total),
                         status: inv.status || 'draft'
                     }))
                 },
                 signatureMetrics: {
-                    awaiting: signatureMetricsQuery.rows[0]?.awaiting_signatures || 0,
-                    signedThisWeek: signatureMetricsQuery.rows[0]?.signed_this_week || 0,
-                    total: signatureMetricsQuery.rows[0]?.total_signatures || 0,
+                    awaiting: toInteger(signatureMetricsQuery.rows[0]?.awaiting_signatures),
+                    signedThisWeek: toInteger(signatureMetricsQuery.rows[0]?.signed_this_week),
+                    total: toInteger(signatureMetricsQuery.rows[0]?.total_signatures),
                     recentDocuments: recentSignaturesQuery.rows.map(sig => ({
                         id: sig.id,
                         title: sig.title || 'Document',
@@ -315,9 +330,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     }))
                 },
                 workspaceMetrics: {
-                    activeItems: workspaceMetricsQuery.rows[0]?.active_items || 0,
-                    lists: workspaceMetricsQuery.rows[0]?.lists_count || 0,
-                    notes: workspaceMetricsQuery.rows[0]?.notes_count || 0,
+                    activeItems: toInteger(workspaceMetricsQuery.rows[0]?.active_items),
+                    lists: toInteger(workspaceMetricsQuery.rows[0]?.lists_count),
+                    notes: toInteger(workspaceMetricsQuery.rows[0]?.notes_count),
                     recentItems: recentWorkspaceQuery.rows.map(item => ({
                         type: item.type,
                         title: item.title || 'Item',

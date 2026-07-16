@@ -1,8 +1,10 @@
 const express = require('express');
 const { asyncHandler } = require('../../middleware/errorHandler');
-const { withDbClient } = require('../../utils/db');
+const { withDbClient, withTransaction } = require('../../utils/db');
 const { sendSuccess, sendCreated, sendPaginated, sendBadRequest, sendNotFound, sendError, getPaginationParams, buildPagination } = require('../../utils/response');
 const { campaignColumns, campaignLinkColumns } = require('./columns');
+const { normalizeCampaignAudience } = require('../../services/campaignAudience');
+const { SegmentValidationError } = require('../../services/segmentFilter');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -116,6 +118,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 content_html,
                 content_text,
                 segment_type,
+                segment_id,
                 segment_filter,
                 tag_ids,
                 excluded_tag_ids
@@ -125,14 +128,21 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 return sendBadRequest(res, 'Name and subject are required');
             }
 
-            const result = await withDbClient(pool, async (client) => {
+            const result = await withTransaction(pool, async (client) => {
+                const audience = await normalizeCampaignAudience(client, req.organizationId, {
+                    segment_type,
+                    segment_id,
+                    segment_filter,
+                    tag_ids,
+                    excluded_tag_ids,
+                });
                 return client.query(`
                     INSERT INTO email_campaigns (
                         organization_id, name, subject, from_name, from_email, reply_to,
                         template_id, content_html, content_text,
-                        segment_type, segment_filter, tag_ids, excluded_tag_ids,
+                        segment_type, segment_id, segment_filter, tag_ids, excluded_tag_ids,
                         created_by
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                     RETURNING ${campaignColumns()}
                 `, [
                     req.organizationId,
@@ -144,16 +154,20 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     template_id || null,
                     content_html || null,
                     content_text || null,
-                    segment_type || 'all',
-                    JSON.stringify(segment_filter || {}),
-                    tag_ids || [],
-                    excluded_tag_ids || [],
+                    audience.segment_type,
+                    audience.segment_id,
+                    JSON.stringify(audience.segment_filter),
+                    audience.tag_ids,
+                    audience.excluded_tag_ids,
                     req.user.id
                 ]);
             });
 
             sendCreated(res, result.rows[0]);
         } catch (error) {
+            if (error instanceof SegmentValidationError) {
+                return sendBadRequest(res, error.message, error.field);
+            }
             console.error('Error creating campaign:', error);
             return sendError(res, 'Failed to create campaign');
         }
@@ -175,14 +189,16 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 content_html,
                 content_text,
                 segment_type,
+                segment_id,
                 segment_filter,
                 tag_ids,
                 excluded_tag_ids
             } = req.body;
 
-            const result = await withDbClient(pool, async (client) => {
+            const result = await withTransaction(pool, async (client) => {
                 const checkResult = await client.query(
-                    'SELECT status FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+                    `SELECT ${campaignColumns()} FROM email_campaigns
+                     WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
                     [id, req.organizationId]
                 );
 
@@ -193,6 +209,13 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 if (!['draft', 'scheduled'].includes(checkResult.rows[0].status)) {
                     return { status: 'invalid_status' };
                 }
+
+                const audience = await normalizeCampaignAudience(
+                    client,
+                    req.organizationId,
+                    { segment_type, segment_id, segment_filter, tag_ids, excluded_tag_ids },
+                    checkResult.rows[0]
+                );
 
                 const updateResult = await client.query(`
                     UPDATE email_campaigns SET
@@ -205,11 +228,12 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                         content_html = $7,
                         content_text = $8,
                         segment_type = COALESCE($9, segment_type),
-                        segment_filter = COALESCE($10, segment_filter),
-                        tag_ids = COALESCE($11, tag_ids),
-                        excluded_tag_ids = COALESCE($12, excluded_tag_ids),
+                        segment_id = $10,
+                        segment_filter = $11,
+                        tag_ids = $12,
+                        excluded_tag_ids = $13,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $13 AND organization_id = $14
+                    WHERE id = $14 AND organization_id = $15
                     RETURNING ${campaignColumns()}
                 `, [
                     name,
@@ -220,10 +244,11 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     template_id,
                     content_html,
                     content_text,
-                    segment_type,
-                    segment_filter ? JSON.stringify(segment_filter) : null,
-                    tag_ids,
-                    excluded_tag_ids,
+                    audience.segment_type,
+                    audience.segment_id,
+                    JSON.stringify(audience.segment_filter),
+                    audience.tag_ids,
+                    audience.excluded_tag_ids,
                     id,
                     req.organizationId
                 ]);
@@ -240,6 +265,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
             sendSuccess(res, result.campaign);
         } catch (error) {
+            if (error instanceof SegmentValidationError) {
+                return sendBadRequest(res, error.message, error.field);
+            }
             console.error('Error updating campaign:', error);
             return sendError(res, 'Failed to update campaign');
         }
@@ -309,9 +337,9 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     INSERT INTO email_campaigns (
                         organization_id, name, subject, from_name, from_email, reply_to,
                         template_id, content_html, content_text,
-                        segment_type, segment_filter, tag_ids, excluded_tag_ids,
+                        segment_type, segment_id, segment_filter, tag_ids, excluded_tag_ids,
                         created_by, status
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'draft')
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'draft')
                     RETURNING ${campaignColumns()}
                 `, [
                     req.organizationId,
@@ -324,6 +352,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     campaign.content_html,
                     campaign.content_text,
                     campaign.segment_type,
+                    campaign.segment_id,
                     campaign.segment_filter,
                     campaign.tag_ids,
                     campaign.excluded_tag_ids,

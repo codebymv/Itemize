@@ -42,17 +42,11 @@ import {
 } from '@/services/automationsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
-
-const TRIGGER_TYPE_LABELS: Record<string, string> = {
-  contact_added: 'Contact Added',
-  tag_added: 'Tag Added',
-  tag_removed: 'Tag Removed',
-  deal_stage_changed: 'Deal Stage Changed',
-  form_submitted: 'Form Submitted',
-  manual: 'Manual',
-  scheduled: 'Scheduled',
-  contact_updated: 'Contact Updated',
-};
+import {
+  WORKFLOW_TRIGGER_LABELS,
+  WORKFLOW_TRIGGER_OPTIONS,
+  type WorkflowTriggerType,
+} from '@/domain/workflowRegistry';
 
 const TRIGGER_TYPE_ICONS: Record<string, React.ReactNode> = {
   contact_added: <Users className="h-4 w-4" />,
@@ -107,11 +101,9 @@ export function AutomationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Triggers</SelectItem>
-              <SelectItem value="contact_added">Contact Added</SelectItem>
-              <SelectItem value="tag_added">Tag Added</SelectItem>
-              <SelectItem value="deal_stage_changed">Deal Stage Changed</SelectItem>
-              <SelectItem value="manual">Manual</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
+              {WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => (
+                <SelectItem key={type} value={type}>{label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -163,7 +155,9 @@ export function AutomationsPage() {
     setLoading(true);
     try {
       const response = await getWorkflows(organizationId, {
-        trigger_type: triggerFilter !== 'all' ? triggerFilter : undefined,
+        trigger_type: triggerFilter !== 'all'
+          ? triggerFilter as WorkflowTriggerType
+          : undefined,
         is_active: statusFilter !== 'all' ? statusFilter === 'active' : undefined,
         search: searchQuery || undefined,
       });
@@ -308,9 +302,9 @@ export function AutomationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Triggers</SelectItem>
-              <SelectItem value="contact_added">Contact Added</SelectItem>
-              <SelectItem value="tag_added">Tag Added</SelectItem>
-              <SelectItem value="manual">Manual</SelectItem>
+              {WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => (
+                <SelectItem key={type} value={type}>{label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -478,7 +472,7 @@ export function AutomationsPage() {
                           <h3 className="font-medium text-sm md:text-base truncate">{workflow.name}</h3>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
-                          <span className="truncate">{TRIGGER_TYPE_LABELS[workflow.trigger_type]}</span>
+                          <span className="truncate">{WORKFLOW_TRIGGER_LABELS[workflow.trigger_type]}</span>
                           <Badge className={`text-xs ${getStatBadgeClass(workflow.is_active ? 'green' : 'red')}`}>
                             {workflow.is_active ? 'Active' : 'Inactive'}
                           </Badge>

@@ -10,9 +10,10 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
+  const currentUserId = currentUser?.uid;
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUserId) return;
 
     const BACKEND_URL = getApiUrl();
     logger.log('Canvas: Connecting to WebSocket at:', BACKEND_URL);
@@ -27,7 +28,7 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
     newSocket.on('connect', () => {
       logger.log('Canvas: WebSocket connected, joining user canvas');
       setIsConnected(true);
-      newSocket.emit('joinUserCanvas', { token: 'httponly' });
+      newSocket.emit('joinUserCanvas');
     });
 
     newSocket.on('disconnect', () => {
@@ -35,18 +36,8 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
       setIsConnected(false);
     });
 
-    newSocket.on('joinedUserCanvas', (data) => {
-      logger.log('Canvas: Successfully joined user canvas:', data);
-      logger.log('Canvas: Sending test ping');
-      newSocket.emit('testPing', { message: 'Hello from canvas' });
-    });
-
-    newSocket.onAny((eventName, ...args) => {
-      logger.log('Canvas: Received WebSocket event:', eventName, args);
-    });
-
-    newSocket.on('testPong', (data) => {
-      logger.log('Canvas: Received test pong:', data);
+    newSocket.on('joinedUserCanvas', () => {
+      logger.log('Canvas: Successfully joined user canvas');
     });
 
     newSocket.on('userWireframeUpdated', (update) => {
@@ -55,7 +46,7 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
       onWireframeUpdate(updated);
     });
 
-    newSocket.on('error', (error) => {
+    newSocket.on('realtimeError', (error) => {
       logger.error('Canvas: WebSocket error:', error);
       toast({
         title: "Connection Error",
@@ -74,7 +65,7 @@ export function useCanvasWebSocket(currentUser: User | null, onWireframeUpdate: 
       logger.log('Canvas: Cleaning up WebSocket connection');
       newSocket.disconnect();
     };
-  }, [currentUser?.uid, toast, onWireframeUpdate]);
+  }, [currentUserId, toast, onWireframeUpdate]);
 
   return { socket, isConnected };
 }

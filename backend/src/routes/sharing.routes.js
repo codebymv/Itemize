@@ -19,19 +19,62 @@ const sanitizeContent = (content) => {
     if (typeof content === 'string') {
         return purify.sanitize(content);
     }
+    if (Array.isArray(content)) {
+        return content.map(sanitizeContent);
+    }
     if (typeof content === 'object' && content !== null) {
-        const sanitized = {};
+        const sanitized = Object.create(null);
         for (const [key, value] of Object.entries(content)) {
-            if (typeof value === 'string') {
-                sanitized[key] = purify.sanitize(value);
-            } else {
-                sanitized[key] = value;
-            }
+            if (['__proto__', 'constructor', 'prototype'].includes(key)) continue;
+            sanitized[key] = sanitizeContent(value);
         }
         return sanitized;
     }
     return content;
 };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isShareToken = (token) => UUID_PATTERN.test(token);
+
+const setCapabilityResponseHeaders = (res) => {
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Referrer-Policy', 'no-referrer');
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+};
+
+const enableSharing = async (pool, table, id, userId) => {
+    const newToken = crypto.randomUUID();
+    return withDbClient(pool, async (client) => {
+        const result = await client.query(
+            `UPDATE ${table}
+             SET share_token = CASE
+                   WHEN is_public = TRUE AND share_token IS NOT NULL THEN share_token
+                   ELSE $1
+                 END,
+                 is_public = TRUE,
+                 shared_at = CASE
+                   WHEN is_public = TRUE AND share_token IS NOT NULL THEN shared_at
+                   ELSE CURRENT_TIMESTAMP
+                 END
+             WHERE id = $2 AND user_id = $3
+             RETURNING share_token`,
+            [newToken, id, userId]
+        );
+        return result.rows[0]?.share_token || null;
+    });
+};
+
+const disableSharing = (pool, table, id, userId) => withDbClient(
+    pool,
+    async (client) => client.query(
+        `UPDATE ${table}
+         SET is_public = FALSE, share_token = NULL, shared_at = NULL
+         WHERE id = $1 AND user_id = $2
+         RETURNING id`,
+        [id, userId]
+    )
+);
 
 /**
  * Create sharing routes with injected dependencies
@@ -47,37 +90,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/lists/:listId/share', authenticateJWT, async (req, res) => {
         try {
             const { listId } = req.params;
-            const data = await withDbClient(pool, async (client) => {
-                const listResult = await client.query(
-                    'SELECT id, share_token, is_public FROM lists WHERE id = $1 AND user_id = $2',
-                    [listId, req.user.id]
-                );
-
-                if (listResult.rows.length === 0) {
-                    return { status: 404, error: 'List not found or access denied' };
-                }
-
-                const list = listResult.rows[0];
-                let shareToken = list.share_token;
-
-                if (!shareToken) {
-                    shareToken = crypto.randomUUID();
-                    await client.query(
-                        'UPDATE lists SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP WHERE id = $2',
-                        [shareToken, listId]
-                    );
-                } else if (!list.is_public) {
-                    await client.query(
-                        'UPDATE lists SET is_public = TRUE, shared_at = CURRENT_TIMESTAMP WHERE id = $1',
-                        [listId]
-                    );
-                }
-
-                return { status: 200, shareToken };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
+            const shareToken = await enableSharing(pool, 'lists', listId, req.user.id);
+            if (!shareToken) {
+                return res.status(404).json({ error: 'List not found or access denied' });
             }
 
             const frontendHost = process.env.NODE_ENV === 'production'
@@ -85,8 +100,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 : 'localhost:5173';
 
             res.json({
-                shareToken: data.shareToken,
-                shareUrl: `${req.protocol}://${frontendHost}/shared/list/${data.shareToken}`
+                shareToken,
+                shareUrl: `${req.protocol}://${frontendHost}/shared/list/${shareToken}`
             });
         } catch (error) {
             console.error('Error sharing list:', error);
@@ -98,10 +113,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/lists/:listId/share', authenticateJWT, async (req, res) => {
         try {
             const { listId } = req.params;
-            const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE lists SET is_public = FALSE WHERE id = $1 AND user_id = $2 RETURNING id',
-                [listId, req.user.id]
-            ));
+            const result = await disableSharing(pool, 'lists', listId, req.user.id);
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'List not found or access denied' });
@@ -118,37 +130,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/notes/:noteId/share', authenticateJWT, async (req, res) => {
         try {
             const { noteId } = req.params;
-            const data = await withDbClient(pool, async (client) => {
-                const noteResult = await client.query(
-                    'SELECT id, share_token, is_public FROM notes WHERE id = $1 AND user_id = $2',
-                    [noteId, req.user.id]
-                );
-
-                if (noteResult.rows.length === 0) {
-                    return { status: 404, error: 'Note not found or access denied' };
-                }
-
-                const note = noteResult.rows[0];
-                let shareToken = note.share_token;
-
-                if (!shareToken) {
-                    shareToken = crypto.randomUUID();
-                    await client.query(
-                        'UPDATE notes SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP WHERE id = $2',
-                        [shareToken, noteId]
-                    );
-                } else if (!note.is_public) {
-                    await client.query(
-                        'UPDATE notes SET is_public = TRUE, shared_at = CURRENT_TIMESTAMP WHERE id = $1',
-                        [noteId]
-                    );
-                }
-
-                return { status: 200, shareToken };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
+            const shareToken = await enableSharing(pool, 'notes', noteId, req.user.id);
+            if (!shareToken) {
+                return res.status(404).json({ error: 'Note not found or access denied' });
             }
 
             const frontendHost = process.env.NODE_ENV === 'production'
@@ -156,8 +140,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 : 'localhost:5173';
 
             res.json({
-                shareToken: data.shareToken,
-                shareUrl: `${req.protocol}://${frontendHost}/shared/note/${data.shareToken}`
+                shareToken,
+                shareUrl: `${req.protocol}://${frontendHost}/shared/note/${shareToken}`
             });
         } catch (error) {
             console.error('Error sharing note:', error);
@@ -169,10 +153,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/notes/:noteId/share', authenticateJWT, async (req, res) => {
         try {
             const { noteId } = req.params;
-            const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE notes SET is_public = FALSE WHERE id = $1 AND user_id = $2 RETURNING id',
-                [noteId, req.user.id]
-            ));
+            const result = await disableSharing(pool, 'notes', noteId, req.user.id);
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Note not found or access denied' });
@@ -189,37 +170,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.post('/whiteboards/:whiteboardId/share', authenticateJWT, async (req, res) => {
         try {
             const { whiteboardId } = req.params;
-            const data = await withDbClient(pool, async (client) => {
-                const whiteboardResult = await client.query(
-                    'SELECT id, share_token, is_public FROM whiteboards WHERE id = $1 AND user_id = $2',
-                    [whiteboardId, req.user.id]
-                );
-
-                if (whiteboardResult.rows.length === 0) {
-                    return { status: 404, error: 'Whiteboard not found or access denied' };
-                }
-
-                const whiteboard = whiteboardResult.rows[0];
-                let shareToken = whiteboard.share_token;
-
-                if (!shareToken) {
-                    shareToken = crypto.randomUUID();
-                    await client.query(
-                        'UPDATE whiteboards SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP WHERE id = $2',
-                        [shareToken, whiteboardId]
-                    );
-                } else if (!whiteboard.is_public) {
-                    await client.query(
-                        'UPDATE whiteboards SET is_public = TRUE, shared_at = CURRENT_TIMESTAMP WHERE id = $1',
-                        [whiteboardId]
-                    );
-                }
-
-                return { status: 200, shareToken };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
+            const shareToken = await enableSharing(pool, 'whiteboards', whiteboardId, req.user.id);
+            if (!shareToken) {
+                return res.status(404).json({ error: 'Whiteboard not found or access denied' });
             }
 
             const frontendHost = process.env.NODE_ENV === 'production'
@@ -227,8 +180,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 : 'localhost:5173';
 
             res.json({
-                shareToken: data.shareToken,
-                shareUrl: `${req.protocol}://${frontendHost}/shared/whiteboard/${data.shareToken}`
+                shareToken,
+                shareUrl: `${req.protocol}://${frontendHost}/shared/whiteboard/${shareToken}`
             });
         } catch (error) {
             console.error('Error sharing whiteboard:', error);
@@ -240,10 +193,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.delete('/whiteboards/:whiteboardId/share', authenticateJWT, async (req, res) => {
         try {
             const { whiteboardId } = req.params;
-            const result = await withDbClient(pool, async (client) => client.query(
-                'UPDATE whiteboards SET is_public = FALSE WHERE id = $1 AND user_id = $2 RETURNING id',
-                [whiteboardId, req.user.id]
-            ));
+            const result = await disableSharing(pool, 'whiteboards', whiteboardId, req.user.id);
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Whiteboard not found or access denied' });
@@ -262,6 +212,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/shared/list/:token', publicRateLimit, async (req, res) => {
         try {
             const { token } = req.params;
+            setCapabilityResponseHeaders(res);
+            if (!isShareToken(token)) {
+                return res.status(404).json({ error: 'Shared content not found or no longer available' });
+            }
             const result = await withDbClient(pool, async (client) => client.query(`
         SELECT l.id, l.title, l.category, l.items, l.color_value, l.created_at, l.updated_at,
                u.name as creator_name
@@ -303,6 +257,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/shared/note/:token', publicRateLimit, async (req, res) => {
         try {
             const { token } = req.params;
+            setCapabilityResponseHeaders(res);
+            if (!isShareToken(token)) {
+                return res.status(404).json({ error: 'Shared content not found or no longer available' });
+            }
             const result = await withDbClient(pool, async (client) => client.query(`
         SELECT n.id, n.title, n.content, n.category, n.color_value, n.created_at, n.updated_at,
                u.name as creator_name
@@ -340,6 +298,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     router.get('/shared/whiteboard/:token', publicRateLimit, async (req, res) => {
         try {
             const { token } = req.params;
+            setCapabilityResponseHeaders(res);
+            if (!isShareToken(token)) {
+                return res.status(404).json({ error: 'Shared content not found or no longer available' });
+            }
             const result = await withDbClient(pool, async (client) => client.query(`
         SELECT w.id, w.title, w.category, w.canvas_data, w.canvas_width, w.canvas_height,
                w.background_color, w.color_value, w.created_at, w.updated_at,

@@ -4,6 +4,8 @@ const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
 const { campaignColumns, campaignRecipientColumns } = require('./columns');
+const { normalizeCampaignAudience, compileCampaignAudience } = require('../../services/campaignAudience');
+const { SegmentValidationError } = require('../../services/segmentFilter');
 
 module.exports = (pool, authenticateJWT, requireOrganization) => {
     const router = express.Router();
@@ -95,7 +97,29 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     return { status: 'not_found' };
                 }
 
-                return { status: 'ok', campaign: campaignResult.rows[0] };
+                const campaign = campaignResult.rows[0];
+                const audience = await normalizeCampaignAudience(client, req.organizationId, campaign);
+                const countParams = [req.organizationId];
+                const compiledAudience = compileCampaignAudience(audience, {
+                    alias: 'c',
+                    startIndex: countParams.length + 1,
+                });
+                const countResult = await client.query(`
+                    SELECT COUNT(*) as total
+                    FROM contacts c
+                    WHERE c.organization_id = $1
+                        AND c.email IS NOT NULL
+                        AND c.email != ''
+                        AND (c.email_unsubscribed IS NULL OR c.email_unsubscribed = FALSE)
+                        AND (c.email_bounced IS NULL OR c.email_bounced = FALSE)
+                        AND ${compiledAudience.condition}
+                `, [...countParams, ...compiledAudience.params]);
+
+                return {
+                    status: 'ok',
+                    campaign,
+                    recipientCount: Number(countResult.rows[0].total),
+                };
             });
 
             if (result.status === 'not_found') {
@@ -104,48 +128,17 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
             const campaign = result.campaign;
 
-            // Build recipient count query
-            let countQuery = `
-                SELECT COUNT(*) as total
-                FROM contacts c
-                WHERE c.organization_id = $1
-                    AND c.email IS NOT NULL
-                    AND c.email != ''
-                    AND (c.email_unsubscribed IS NULL OR c.email_unsubscribed = FALSE)
-                    AND (c.email_bounced IS NULL OR c.email_bounced = FALSE)
-            `;
-            const countParams = [req.organizationId];
-
-            if (campaign.segment_type === 'tag' && campaign.tag_ids?.length > 0) {
-                countQuery += ` AND c.id IN (
-                    SELECT ct.contact_id FROM contact_tags ct WHERE ct.tag_id = ANY($2)
-                )`;
-                countParams.push(campaign.tag_ids);
-            }
-
-            if (campaign.segment_type === 'status' && campaign.segment_filter?.status) {
-                countQuery += ` AND c.status = $${countParams.length + 1}`;
-                countParams.push(campaign.segment_filter.status);
-            }
-
-            if (campaign.excluded_tag_ids?.length > 0) {
-                countQuery += ` AND c.id NOT IN (
-                    SELECT ct.contact_id FROM contact_tags ct WHERE ct.tag_id = ANY($${countParams.length + 1})
-                )`;
-                countParams.push(campaign.excluded_tag_ids);
-            }
-
-            const countResult = await withDbClient(pool, async (client) => {
-                return client.query(countQuery, countParams);
-            });
-
             sendSuccess(res, {
-                recipientCount: parseInt(countResult.rows[0].total),
+                recipientCount: result.recipientCount,
                 segmentType: campaign.segment_type,
+                segmentId: campaign.segment_id,
                 tagIds: campaign.tag_ids,
                 excludedTagIds: campaign.excluded_tag_ids
             });
         } catch (error) {
+            if (error instanceof SegmentValidationError) {
+                return sendBadRequest(res, error.message, error.field);
+            }
             console.error('Error previewing campaign:', error);
             return sendError(res, 'Failed to preview campaign');
         }

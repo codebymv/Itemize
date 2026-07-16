@@ -6,18 +6,10 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
-const { logger } = require('../utils/logger');
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const { dealColumns, pipelineColumns } = require('./pipeline-columns');
-
-// Import automation engine for triggers
-let automationEngine = null;
-try {
-  const { getAutomationEngine } = require('../services/automationEngine');
-  automationEngine = { getEngine: getAutomationEngine };
-} catch (e) {
-  logger.warn('Automation engine not available', { error: e.message });
-}
+const { WORKFLOW_TRIGGERS } = require('../domain/workflowRegistry');
+const { enqueueWorkflowTrigger } = require('../services/workflowTriggerQueue');
 
 /**
  * Create pipelines routes with injected dependencies
@@ -27,6 +19,73 @@ try {
 module.exports = (pool, authenticateJWT) => {
   // Use shared organization middleware (Phase 5.3)
   const { requireOrganization } = require('../middleware/organization')(pool);
+
+  const hasStage = (stages, stageId) => (
+    Array.isArray(stages) && stages.some(stage => String(stage.id) === String(stageId))
+  );
+
+  async function validateDealReferences(client, organizationId, {
+    pipelineId,
+    contactId,
+    stageId,
+    assignedTo,
+  }) {
+    const pipelineResult = await client.query(
+      'SELECT id, stages FROM pipelines WHERE id = $1 AND organization_id = $2',
+      [pipelineId, organizationId]
+    );
+    if (pipelineResult.rows.length === 0) {
+      return { status: 'pipeline_not_found' };
+    }
+
+    const pipeline = pipelineResult.rows[0];
+    if (stageId !== null && stageId !== undefined && !hasStage(pipeline.stages, stageId)) {
+      return { status: 'invalid_stage', pipeline };
+    }
+
+    if (contactId !== null && contactId !== undefined) {
+      const contactResult = await client.query(
+        'SELECT 1 FROM contacts WHERE id = $1 AND organization_id = $2',
+        [contactId, organizationId]
+      );
+      if (contactResult.rows.length === 0) {
+        return { status: 'invalid_contact', pipeline };
+      }
+    }
+
+    if (assignedTo !== null && assignedTo !== undefined) {
+      const memberResult = await client.query(
+        `SELECT 1 FROM organization_members
+         WHERE organization_id = $1 AND user_id = $2`,
+        [organizationId, assignedTo]
+      );
+      if (memberResult.rows.length === 0) {
+        return { status: 'invalid_assignee', pipeline };
+      }
+    }
+
+    return { status: 'ok', pipeline };
+  }
+
+  const sendDealReferenceError = (res, status) => {
+    if (status === 'pipeline_not_found') {
+      res.status(404).json({ error: 'Pipeline not found' });
+      return true;
+    }
+    if (status === 'invalid_stage') {
+      res.status(400).json({ error: 'stage_id must belong to the selected pipeline' });
+      return true;
+    }
+    if (status === 'invalid_contact') {
+      res.status(400).json({ error: 'contact_id must belong to the active organization' });
+      return true;
+    }
+    if (status === 'invalid_assignee') {
+      res.status(400).json({ error: 'assigned_to must be a member of the active organization' });
+      return true;
+    }
+    return false;
+  };
 
   // ======================
   // Pipeline Routes
@@ -105,6 +164,14 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Pipeline name is required' });
       }
 
+      if (stages !== undefined && (
+        !Array.isArray(stages)
+        || stages.length === 0
+        || stages.some(stage => !stage?.id || !stage?.name)
+      )) {
+        return res.status(400).json({ error: 'stages must be a non-empty array with an id and name for every stage' });
+      }
+
       // Default stages if none provided
       const defaultStages = stages || [
         { id: crypto.randomUUID(), name: 'Lead', order: 0, color: '#6B7280' },
@@ -115,8 +182,9 @@ module.exports = (pool, authenticateJWT) => {
         { id: crypto.randomUUID(), name: 'Closed Lost', order: 5, color: '#EF4444' },
       ];
 
-      const result = await withDbClient(pool, async (client) => {
+      const result = await withTransaction(pool, async (client) => {
         if (is_default) {
+          await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
           await client.query(
             'UPDATE pipelines SET is_default = FALSE WHERE organization_id = $1',
             [req.organizationId]
@@ -150,15 +218,42 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { name, description, stages, is_default } = req.body;
 
-      const result = await withDbClient(pool, async (client) => {
+      if (name !== undefined && (!name || name.trim().length === 0)) {
+        return res.status(400).json({ error: 'Pipeline name cannot be blank' });
+      }
+
+      const result = await withTransaction(pool, async (client) => {
+        const currentResult = await client.query(
+          'SELECT id FROM pipelines WHERE id = $1 AND organization_id = $2 FOR UPDATE',
+          [id, req.organizationId]
+        );
+        if (currentResult.rows.length === 0) {
+          return { status: 'not_found', rows: [] };
+        }
+
+        if (stages !== undefined) {
+          if (!Array.isArray(stages) || stages.length === 0 || stages.some(stage => !stage?.id || !stage?.name)) {
+            return { status: 'invalid_stages', rows: [] };
+          }
+
+          const usedStages = await client.query(
+            'SELECT DISTINCT stage_id FROM deals WHERE pipeline_id = $1 AND organization_id = $2',
+            [id, req.organizationId]
+          );
+          if (usedStages.rows.some(row => !hasStage(stages, row.stage_id))) {
+            return { status: 'stage_in_use', rows: [] };
+          }
+        }
+
         if (is_default) {
+          await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
           await client.query(
             'UPDATE pipelines SET is_default = FALSE WHERE organization_id = $1 AND id != $2',
             [req.organizationId, id]
           );
         }
 
-        return client.query(`
+        const updateResult = await client.query(`
           UPDATE pipelines SET
             name = COALESCE($1, name),
             description = COALESCE($2, description),
@@ -175,10 +270,19 @@ module.exports = (pool, authenticateJWT) => {
           id,
           req.organizationId
         ]);
+        return { status: 'ok', rows: updateResult.rows };
       });
 
-      if (result.rows.length === 0) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Pipeline not found' });
+      }
+
+      if (result.status === 'invalid_stages') {
+        return res.status(400).json({ error: 'stages must be a non-empty array with an id and name for every stage' });
+      }
+
+      if (result.status === 'stage_in_use') {
+        return res.status(409).json({ error: 'Cannot remove a stage that is still used by a deal' });
       }
 
       res.json(result.rows[0]);
@@ -193,10 +297,18 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const { id } = req.params;
 
-      const result = await withDbClient(pool, async (client) => {
+      const result = await withTransaction(pool, async (client) => {
+        const pipelineResult = await client.query(
+          'SELECT id FROM pipelines WHERE id = $1 AND organization_id = $2 FOR UPDATE',
+          [id, req.organizationId]
+        );
+        if (pipelineResult.rows.length === 0) {
+          return { status: 'not_found' };
+        }
+
         const dealCheck = await client.query(
-          'SELECT COUNT(*) FROM deals WHERE pipeline_id = $1',
-          [id]
+          'SELECT COUNT(*) FROM deals WHERE pipeline_id = $1 AND organization_id = $2',
+          [id, req.organizationId]
         );
 
         if (parseInt(dealCheck.rows[0].count) > 0) {
@@ -217,7 +329,7 @@ module.exports = (pool, authenticateJWT) => {
         });
       }
 
-      if (result.result.rows.length === 0) {
+      if (result.status === 'not_found' || result.result.rows.length === 0) {
         return res.status(404).json({ error: 'Pipeline not found' });
       }
 
@@ -382,17 +494,18 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Deal title is required' });
       }
 
-      const result = await withDbClient(pool, async (client) => {
-        const pipelineResult = await client.query(
-          'SELECT stages FROM pipelines WHERE id = $1 AND organization_id = $2',
-          [pipeline_id, req.organizationId]
-        );
-
-        if (pipelineResult.rows.length === 0) {
-          return { status: 'pipeline_not_found' };
+      const result = await withTransaction(pool, async (client) => {
+        const references = await validateDealReferences(client, req.organizationId, {
+          pipelineId: pipeline_id,
+          contactId: contact_id,
+          stageId: stage_id,
+          assignedTo: assigned_to,
+        });
+        if (references.status !== 'ok') {
+          return references;
         }
 
-        const stages = pipelineResult.rows[0].stages;
+        const stages = references.pipeline.stages;
         const dealStageId = stage_id || (stages[0] ? stages[0].id : 'lead');
 
         const insertResult = await client.query(`
@@ -421,8 +534,8 @@ module.exports = (pool, authenticateJWT) => {
         return { status: 'ok', deal: insertResult.rows[0] };
       });
 
-      if (result.status === 'pipeline_not_found') {
-        return res.status(404).json({ error: 'Pipeline not found' });
+      if (sendDealReferenceError(res, result.status)) {
+        return;
       }
 
       res.status(201).json(result.deal);
@@ -450,8 +563,31 @@ module.exports = (pool, authenticateJWT) => {
         tags
       } = req.body;
 
-      const result = await withDbClient(pool, async (client) => {
-        return client.query(`
+      const result = await withTransaction(pool, async (client) => {
+        const currentResult = await client.query(
+          `SELECT ${dealColumns()} FROM deals
+           WHERE id = $1 AND organization_id = $2
+           FOR UPDATE`,
+          [id, req.organizationId]
+        );
+        if (currentResult.rows.length === 0) {
+          return { status: 'not_found', rows: [] };
+        }
+
+        const current = currentResult.rows[0];
+        const targetPipelineId = pipeline_id ?? current.pipeline_id;
+        const targetStageId = stage_id ?? current.stage_id;
+        const references = await validateDealReferences(client, req.organizationId, {
+          pipelineId: targetPipelineId,
+          contactId: contact_id,
+          stageId: targetStageId,
+          assignedTo: assigned_to,
+        });
+        if (references.status !== 'ok') {
+          return { ...references, rows: [] };
+        }
+
+        const updateResult = await client.query(`
           UPDATE deals SET
             pipeline_id = COALESCE($1, pipeline_id),
             contact_id = $2,
@@ -482,10 +618,15 @@ module.exports = (pool, authenticateJWT) => {
           id,
           req.organizationId
         ]);
+        return { status: 'ok', rows: updateResult.rows };
       });
 
-      if (result.rows.length === 0) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Deal not found' });
+      }
+
+      if (sendDealReferenceError(res, result.status)) {
+        return;
       }
 
       res.json(result.rows[0]);
@@ -505,13 +646,26 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Stage ID is required' });
       }
 
-      const result = await withDbClient(pool, async (client) => {
+      const result = await withTransaction(pool, async (client) => {
         const currentDeal = await client.query(
-          `SELECT ${dealColumns()} FROM deals WHERE id = $1 AND organization_id = $2`,
+          `SELECT ${dealColumns()} FROM deals
+           WHERE id = $1 AND organization_id = $2
+           FOR UPDATE`,
           [id, req.organizationId]
         );
 
-        const oldStageId = currentDeal.rows[0]?.stage_id;
+        if (currentDeal.rows.length === 0) {
+          return { status: 'not_found', rows: [] };
+        }
+
+        const oldStageId = currentDeal.rows[0].stage_id;
+        const references = await validateDealReferences(client, req.organizationId, {
+          pipelineId: currentDeal.rows[0].pipeline_id,
+          stageId: stage_id,
+        });
+        if (references.status !== 'ok') {
+          return { ...references, rows: [] };
+        }
 
         const updateResult = await client.query(`
           UPDATE deals SET
@@ -521,31 +675,35 @@ module.exports = (pool, authenticateJWT) => {
           RETURNING ${dealColumns()}
         `, [stage_id, id, req.organizationId]);
 
-        return { rows: updateResult.rows, oldStageId };
+        const deal = updateResult.rows[0];
+        if (String(oldStageId) !== String(stage_id)) {
+          await enqueueWorkflowTrigger(client, {
+            contactId: deal.contact_id,
+            entityId: deal.id,
+            entityType: 'deal',
+            organizationId: req.organizationId,
+            payload: {
+              deal_id: deal.id,
+              newStageId: stage_id,
+              oldStageId,
+              pipeline_id: deal.pipeline_id,
+            },
+            triggerType: WORKFLOW_TRIGGERS.DEAL_STAGE_CHANGED,
+          });
+        }
+
+        return { status: 'ok', rows: updateResult.rows, oldStageId };
       });
 
-      if (result.rows.length === 0) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Deal not found' });
       }
 
-      const deal = result.rows[0];
-
-      // Fire deal_stage_changed trigger
-      if (automationEngine && result.oldStageId !== stage_id) {
-        try {
-          const engine = automationEngine.getEngine();
-          engine.handleTrigger('deal_stage_changed', {
-            deal: deal,
-            contact: deal.contact_id ? { id: deal.contact_id } : null,
-            organizationId: req.organizationId,
-            oldStageId: result.oldStageId,
-            newStageId: stage_id,
-            pipelineId: deal.pipeline_id,
-          }).catch(err => console.error('Automation trigger error:', err));
-        } catch {
-          console.log('Automation engine not initialized yet');
-        }
+      if (sendDealReferenceError(res, result.status)) {
+        return;
       }
+
+      const deal = result.rows[0];
 
       res.json(deal);
     } catch (error) {

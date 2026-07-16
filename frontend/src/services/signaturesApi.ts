@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+import api, { getApiUrl } from '@/lib/api';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -190,9 +190,8 @@ export const remindSignatureDocument = async (id: number) => {
   return unwrapResponse<SignatureDocument>(response.data);
 };
 
-export const downloadSignedDocument = async (id: number) => {
-  const response = await api.get(`/api/signatures/documents/${id}/download`);
-  return unwrapResponse<{ url: string }>(response.data);
+export const downloadSignedDocument = (id: number) => {
+  return { url: `${getApiUrl()}/api/signatures/documents/${id}/download` };
 };
 
 export interface SignatureEmailPreviewRequest {

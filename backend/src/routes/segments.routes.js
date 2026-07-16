@@ -1,784 +1,411 @@
 /**
- * Segments Routes
- * CRUD operations and dynamic segment filtering
+ * Organization-scoped saved contact segments.
  */
-
 const express = require('express');
-const router = express.Router();
-const { withDbClient } = require('../utils/db');
+const { withDbClient, withTransaction } = require('../utils/db');
 const { sendError } = require('../utils/response');
 const { contactColumns, segmentColumns, segmentHistoryColumns } = require('./segment-columns');
+const {
+    CONTACT_STATUSES,
+    FILTER_OPERATORS,
+    SegmentValidationError,
+    compileSegmentCondition,
+    normalizeSegmentDefinition,
+    validateSegmentReferences,
+} = require('../services/segmentFilter');
 
-module.exports = (pool, authenticateJWT) => {
-    const { requireOrganization } = require('../middleware/organization')(pool);
+const parsePagination = (query) => {
+    const page = query.page === undefined ? 1 : Number(query.page);
+    const limit = query.limit === undefined ? 50 : Number(query.limit);
+    if (!Number.isInteger(page) || page < 1) throw new SegmentValidationError('page must be a positive integer', 'page');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        throw new SegmentValidationError('limit must be an integer between 1 and 100', 'limit');
+    }
+    return { page, limit, offset: (page - 1) * limit };
+};
 
-    /**
-     * Build SQL WHERE clause from segment filters
-     * Supports: status, tags, source, custom_fields, date ranges, email engagement
-     */
-    function buildFilterQuery(filters, filterType = 'and') {
-        if (!filters || !Array.isArray(filters) || filters.length === 0) {
-            return { whereClause: '', params: [], paramIndex: 1 };
-        }
-
-        const conditions = [];
-        const params = [];
-        let paramIndex = 1;
-
-        for (const filter of filters) {
-            const { field, operator, value } = filter;
-            if (!field || !operator) continue;
-
-            let condition = '';
-
-            switch (field) {
-                case 'status':
-                    if (operator === 'equals') {
-                        condition = `c.status = $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'not_equals') {
-                        condition = `c.status != $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'in') {
-                        condition = `c.status = ANY($${paramIndex})`;
-                        params.push(value);
-                        paramIndex++;
-                    }
-                    break;
-
-                case 'source':
-                    if (operator === 'equals') {
-                        condition = `c.source = $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'contains') {
-                        condition = `c.source ILIKE $${paramIndex}`;
-                        params.push(`%${value}%`);
-                        paramIndex++;
-                    } else if (operator === 'is_empty') {
-                        condition = `(c.source IS NULL OR c.source = '')`;
-                    } else if (operator === 'is_not_empty') {
-                        condition = `(c.source IS NOT NULL AND c.source != '')`;
-                    }
-                    break;
-
-                case 'email':
-                    if (operator === 'contains') {
-                        condition = `c.email ILIKE $${paramIndex}`;
-                        params.push(`%${value}%`);
-                        paramIndex++;
-                    } else if (operator === 'ends_with') {
-                        condition = `c.email ILIKE $${paramIndex}`;
-                        params.push(`%${value}`);
-                        paramIndex++;
-                    } else if (operator === 'is_empty') {
-                        condition = `(c.email IS NULL OR c.email = '')`;
-                    } else if (operator === 'is_not_empty') {
-                        condition = `(c.email IS NOT NULL AND c.email != '')`;
-                    }
-                    break;
-
-                case 'phone':
-                    if (operator === 'is_empty') {
-                        condition = `(c.phone IS NULL OR c.phone = '')`;
-                    } else if (operator === 'is_not_empty') {
-                        condition = `(c.phone IS NOT NULL AND c.phone != '')`;
-                    } else if (operator === 'contains') {
-                        condition = `c.phone ILIKE $${paramIndex}`;
-                        params.push(`%${value}%`);
-                        paramIndex++;
-                    }
-                    break;
-
-                case 'tags':
-                    if (operator === 'has_any') {
-                        condition = `c.id IN (SELECT contact_id FROM contact_tags WHERE tag_id = ANY($${paramIndex}))`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'has_all') {
-                        // Contact must have ALL specified tags
-                        const tagCount = Array.isArray(value) ? value.length : 1;
-                        condition = `c.id IN (
-                            SELECT contact_id FROM contact_tags 
-                            WHERE tag_id = ANY($${paramIndex})
-                            GROUP BY contact_id 
-                            HAVING COUNT(DISTINCT tag_id) = ${tagCount}
-                        )`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'has_none') {
-                        condition = `c.id NOT IN (SELECT contact_id FROM contact_tags WHERE tag_id = ANY($${paramIndex}))`;
-                        params.push(value);
-                        paramIndex++;
-                    }
-                    break;
-
-                case 'created_at':
-                    if (operator === 'after') {
-                        condition = `c.created_at >= $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'before') {
-                        condition = `c.created_at <= $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'between') {
-                        condition = `c.created_at BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
-                        params.push(value.start, value.end);
-                        paramIndex += 2;
-                    } else if (operator === 'last_n_days') {
-                        condition = `c.created_at >= NOW() - INTERVAL '${parseInt(value)} days'`;
-                    }
-                    break;
-
-                case 'last_activity':
-                    if (operator === 'last_n_days') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM contact_activities 
-                            WHERE created_at >= NOW() - INTERVAL '${parseInt(value)} days'
-                        )`;
-                    } else if (operator === 'no_activity_days') {
-                        condition = `c.id NOT IN (
-                            SELECT contact_id FROM contact_activities 
-                            WHERE created_at >= NOW() - INTERVAL '${parseInt(value)} days'
-                        )`;
-                    }
-                    break;
-
-                case 'email_engagement':
-                    if (operator === 'opened_campaign') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM campaign_recipients 
-                            WHERE status IN ('opened', 'clicked') AND opened_at IS NOT NULL
-                        )`;
-                    } else if (operator === 'never_opened') {
-                        condition = `c.id NOT IN (
-                            SELECT contact_id FROM campaign_recipients 
-                            WHERE status IN ('opened', 'clicked') AND opened_at IS NOT NULL
-                        )`;
-                    } else if (operator === 'clicked_link') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM campaign_recipients 
-                            WHERE status = 'clicked' AND clicked_at IS NOT NULL
-                        )`;
-                    }
-                    break;
-
-                case 'email_unsubscribed':
-                    if (operator === 'equals') {
-                        condition = `COALESCE(c.email_unsubscribed, FALSE) = $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    }
-                    break;
-
-                case 'assigned_to':
-                    if (operator === 'equals') {
-                        condition = `c.assigned_to = $${paramIndex}`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'is_empty') {
-                        condition = `c.assigned_to IS NULL`;
-                    } else if (operator === 'is_not_empty') {
-                        condition = `c.assigned_to IS NOT NULL`;
-                    }
-                    break;
-
-                case 'custom_field':
-                    // Custom field queries against JSONB
-                    if (filter.custom_field_key) {
-                        const key = filter.custom_field_key;
-                        if (operator === 'equals') {
-                            condition = `c.custom_fields->>'${key}' = $${paramIndex}`;
-                            params.push(value);
-                            paramIndex++;
-                        } else if (operator === 'contains') {
-                            condition = `c.custom_fields->>'${key}' ILIKE $${paramIndex}`;
-                            params.push(`%${value}%`);
-                            paramIndex++;
-                        } else if (operator === 'is_empty') {
-                            condition = `(c.custom_fields->>'${key}' IS NULL OR c.custom_fields->>'${key}' = '')`;
-                        } else if (operator === 'is_not_empty') {
-                            condition = `(c.custom_fields->>'${key}' IS NOT NULL AND c.custom_fields->>'${key}' != '')`;
-                        }
-                    }
-                    break;
-
-                case 'deal_stage':
-                    if (operator === 'in_stage') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM deals 
-                            WHERE stage_id = $${paramIndex} AND won_at IS NULL AND lost_at IS NULL
-                        )`;
-                        params.push(value);
-                        paramIndex++;
-                    } else if (operator === 'has_open_deal') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM deals 
-                            WHERE won_at IS NULL AND lost_at IS NULL
-                        )`;
-                    } else if (operator === 'won_deal') {
-                        condition = `c.id IN (SELECT contact_id FROM deals WHERE won_at IS NOT NULL)`;
-                    } else if (operator === 'lost_deal') {
-                        condition = `c.id IN (SELECT contact_id FROM deals WHERE lost_at IS NOT NULL)`;
-                    }
-                    break;
-
-                case 'booking':
-                    if (operator === 'has_upcoming') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM bookings 
-                            WHERE start_time > NOW() AND status IN ('confirmed', 'pending')
-                        )`;
-                    } else if (operator === 'completed') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM bookings WHERE status = 'completed'
-                        )`;
-                    } else if (operator === 'no_show') {
-                        condition = `c.id IN (
-                            SELECT contact_id FROM bookings WHERE status = 'no_show'
-                        )`;
-                    }
-                    break;
-
-                default:
-                    // Skip unknown fields
-                    continue;
-            }
-
-            if (condition) {
-                conditions.push(condition);
-            }
-        }
-
-        if (conditions.length === 0) {
-            return { whereClause: '', params: [], paramIndex: 1 };
-        }
-
-        const joinOperator = filterType === 'or' ? ' OR ' : ' AND ';
-        const whereClause = `(${conditions.join(joinOperator)})`;
-
-        return { whereClause, params, paramIndex };
+const normalizeMetadata = (input, existing = {}) => {
+    const name = input.name === undefined ? existing.name : input.name;
+    if (typeof name !== 'string' || name.trim() === '' || name.trim().length > 255) {
+        throw new SegmentValidationError('name must be between 1 and 255 characters', 'name');
     }
 
-    // ======================
-    // Segment CRUD
-    // ======================
+    const description = input.description === undefined ? existing.description ?? null : input.description;
+    if (description !== null && (typeof description !== 'string' || description.length > 5000)) {
+        throw new SegmentValidationError('description must be null or at most 5000 characters', 'description');
+    }
 
-    /**
-     * GET /api/segments - List all segments
-     */
-    router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { is_active, search } = req.query;
-            let query = `
-                SELECT ${segmentColumns('s')}, u.name as created_by_name
-                FROM segments s
-                LEFT JOIN users u ON s.created_by = u.id
-                WHERE s.organization_id = $1
-            `;
-            const params = [req.organizationId];
-            let paramIndex = 2;
+    const color = input.color ?? existing.color ?? '#6366F1';
+    if (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)) {
+        throw new SegmentValidationError('color must be a six-digit hex color', 'color');
+    }
 
-            if (is_active !== undefined) {
-                query += ` AND s.is_active = $${paramIndex}`;
-                params.push(is_active === 'true');
-                paramIndex++;
-            }
+    const icon = input.icon ?? existing.icon ?? 'users';
+    if (typeof icon !== 'string' || !/^[a-z0-9_-]{1,50}$/i.test(icon)) {
+        throw new SegmentValidationError('icon is invalid', 'icon');
+    }
 
-            if (search) {
-                query += ` AND (s.name ILIKE $${paramIndex} OR s.description ILIKE $${paramIndex})`;
-                params.push(`%${search}%`);
-                paramIndex++;
-            }
+    const isActive = input.is_active ?? existing.is_active ?? true;
+    if (typeof isActive !== 'boolean') throw new SegmentValidationError('is_active must be boolean', 'is_active');
 
-            query += ' ORDER BY s.name ASC';
+    return { name: name.trim(), description, color, icon, is_active: isActive };
+};
 
-            const result = await withDbClient(pool, async (client) => client.query(query, params));
+module.exports = (pool, authenticateJWT) => {
+    const router = express.Router();
+    const { requireOrganization } = require('../middleware/organization')(pool);
 
-            res.json(result.rows);
-        } catch (error) {
-            console.error('Error fetching segments:', error);
-            return sendError(res, 'Failed to fetch segments');
+    const respondError = (res, error, fallback) => {
+        if (error instanceof SegmentValidationError) {
+            return res.status(400).json({ error: error.message, field: error.field });
         }
-    });
-
-    /**
-     * GET /api/segments/:id - Get segment details
-     */
-    router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const data = await withDbClient(pool, async (client) => {
-                const result = await client.query(`
-                    SELECT ${segmentColumns('s')}, u.name as created_by_name
-                    FROM segments s
-                    LEFT JOIN users u ON s.created_by = u.id
-                    WHERE s.id = $1 AND s.organization_id = $2
-                `, [id, req.organizationId]);
-
-                if (result.rows.length === 0) {
-                    return { status: 404, error: 'Segment not found' };
-                }
-
-                // Get recent history
-                const historyResult = await client.query(`
-                    SELECT ${segmentHistoryColumns()} FROM segment_history
-                    WHERE segment_id = $1 
-                    ORDER BY calculated_at DESC 
-                    LIMIT 30
-                `, [id]);
-
-                return { status: 200, segment: result.rows[0], history: historyResult.rows };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
-            }
-
-            data.segment.history = data.history;
-
-            res.json(data.segment);
-        } catch (error) {
-            console.error('Error fetching segment:', error);
-            return sendError(res, 'Failed to fetch segment');
-        }
-    });
-
-    /**
-     * POST /api/segments - Create segment
-     */
-    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const {
-                name,
-                description,
-                color,
-                icon,
-                filter_type,
-                filters,
-                segment_type,
-                static_contact_ids
-            } = req.body;
-
-            if (!name) {
-                return res.status(400).json({ error: 'Name is required' });
-            }
-
-            if (!filters || !Array.isArray(filters) || filters.length === 0) {
-                return res.status(400).json({ error: 'At least one filter is required' });
-            }
-
-            const segment = await withDbClient(pool, async (client) => {
-                const result = await client.query(`
-                    INSERT INTO segments (
-                        organization_id, name, description, color, icon,
-                        filter_type, filters, segment_type, static_contact_ids,
-                        created_by
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    RETURNING ${segmentColumns()}
-                `, [
-                    req.organizationId,
-                    name,
-                    description || null,
-                    color || '#6366F1',
-                    icon || 'users',
-                    filter_type || 'and',
-                    JSON.stringify(filters),
-                    segment_type || 'dynamic',
-                    static_contact_ids || [],
-                    req.user.id
-                ]);
-
-                // Calculate initial contact count
-                const segment = result.rows[0];
-                await calculateSegmentCount(client, segment);
-
-                return segment;
-            });
-
-            res.status(201).json(segment);
-        } catch (error) {
-            console.error('Error creating segment:', error);
-            return sendError(res, 'Failed to create segment');
-        }
-    });
-
-    /**
-     * PUT /api/segments/:id - Update segment
-     */
-    router.put('/:id', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const {
-                name,
-                description,
-                color,
-                icon,
-                filter_type,
-                filters,
-                is_active
-            } = req.body;
-
-            const data = await withDbClient(pool, async (client) => {
-                const result = await client.query(`
-                    UPDATE segments SET
-                        name = COALESCE($1, name),
-                        description = $2,
-                        color = COALESCE($3, color),
-                        icon = COALESCE($4, icon),
-                        filter_type = COALESCE($5, filter_type),
-                        filters = COALESCE($6, filters),
-                        is_active = COALESCE($7, is_active),
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $8 AND organization_id = $9
-                    RETURNING ${segmentColumns()}
-                `, [
-                    name,
-                    description,
-                    color,
-                    icon,
-                    filter_type,
-                    filters ? JSON.stringify(filters) : null,
-                    is_active,
-                    id,
-                    req.organizationId
-                ]);
-
-                if (result.rows.length === 0) {
-                    return { status: 404, error: 'Segment not found' };
-                }
-
-                // Recalculate contact count if filters changed
-                if (filters) {
-                    await calculateSegmentCount(client, result.rows[0]);
-                }
-
-                return { status: 200, segment: result.rows[0] };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
-            }
-
-            res.json(data.segment);
-        } catch (error) {
-            console.error('Error updating segment:', error);
-            return sendError(res, 'Failed to update segment');
-        }
-    });
-
-    /**
-     * DELETE /api/segments/:id - Delete segment
-     */
-    router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const result = await withDbClient(pool, async (client) => client.query(
-                'DELETE FROM segments WHERE id = $1 AND organization_id = $2 RETURNING id',
-                [id, req.organizationId]
-            ));
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Segment not found' });
-            }
-
-            res.json({ success: true });
-        } catch (error) {
-            console.error('Error deleting segment:', error);
-            return sendError(res, 'Failed to delete segment');
-        }
-    });
-
-    // ======================
-    // Segment Actions
-    // ======================
-
-    /**
-     * POST /api/segments/:id/calculate - Recalculate segment count
-     */
-    router.post('/:id/calculate', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const data = await withDbClient(pool, async (client) => {
-                const segmentResult = await client.query(
-                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
-                    [id, req.organizationId]
-                );
-
-                if (segmentResult.rows.length === 0) {
-                    return { status: 404, error: 'Segment not found' };
-                }
-
-                const segment = segmentResult.rows[0];
-                await calculateSegmentCount(client, segment);
-
-                // Get updated segment
-                const updatedResult = await client.query(
-                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1`,
-                    [id]
-                );
-
-                return { status: 200, segment: updatedResult.rows[0] };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
-            }
-
-            res.json(data.segment);
-        } catch (error) {
-            console.error('Error calculating segment:', error);
-            return sendError(res, 'Failed to calculate segment');
-        }
-    });
-
-    /**
-     * GET /api/segments/:id/contacts - Get contacts in segment
-     */
-    router.get('/:id/contacts', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { page = 1, limit = 50 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
-            const data = await withDbClient(pool, async (client) => {
-                // Get segment
-                const segmentResult = await client.query(
-                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
-                    [id, req.organizationId]
-                );
-
-                if (segmentResult.rows.length === 0) {
-                    return { status: 404, error: 'Segment not found' };
-                }
-
-                const segment = segmentResult.rows[0];
-
-                // Build filter query
-                const { whereClause, params } = buildFilterQuery(segment.filters, segment.filter_type);
-
-                let fromWhere = `
-                    FROM contacts c
-                    WHERE c.organization_id = $1
-                `;
-                const queryParams = [req.organizationId];
-
-                if (whereClause) {
-                    // Adjust param indices
-                    const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                        return `$${parseInt(num) + 1}`;
-                    });
-                    fromWhere += ` AND ${adjustedWhereClause}`;
-                    queryParams.push(...params);
-                }
-
-                // Count query
-                const countQuery = `SELECT COUNT(*) ${fromWhere}`;
-                const countResult = await client.query(countQuery, queryParams);
-
-                // Data query with pagination
-                const contactsQuery = `SELECT ${contactColumns('c')} ${fromWhere} ORDER BY c.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-                queryParams.push(parseInt(limit), offset);
-
-                const contactsResult = await client.query(contactsQuery, queryParams);
-
-                return { status: 200, contactsResult, countResult };
-            });
-
-            if (data.error) {
-                return res.status(data.status).json({ error: data.error });
-            }
-
-            res.json({
-                contacts: data.contactsResult.rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total: parseInt(data.countResult.rows[0].count),
-                    totalPages: Math.ceil(parseInt(data.countResult.rows[0].count) / parseInt(limit))
-                }
-            });
-        } catch (error) {
-            console.error('Error fetching segment contacts:', error);
-            return sendError(res, 'Failed to fetch segment contacts');
-        }
-    });
-
-    /**
-     * POST /api/segments/preview - Preview segment filter results
-     */
-    router.post('/preview', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { filters, filter_type } = req.body;
-
-            if (!filters || !Array.isArray(filters)) {
-                return res.status(400).json({ error: 'Filters array is required' });
-            }
-
-            const data = await withDbClient(pool, async (client) => {
-                const { whereClause, params } = buildFilterQuery(filters, filter_type || 'and');
-
-                let query = `
-                    SELECT COUNT(*) as total FROM contacts c
-                    WHERE c.organization_id = $1
-                `;
-                const queryParams = [req.organizationId];
-
-                if (whereClause) {
-                    const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                        return `$${parseInt(num) + 1}`;
-                    });
-                    query += ` AND ${adjustedWhereClause}`;
-                    queryParams.push(...params);
-                }
-
-                const result = await client.query(query, queryParams);
-
-                // Get sample contacts
-                let sampleQuery = `
-                    SELECT c.id, c.first_name, c.last_name, c.email, c.status
-                    FROM contacts c
-                    WHERE c.organization_id = $1
-                `;
-
-                if (whereClause) {
-                    const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                        return `$${parseInt(num) + 1}`;
-                    });
-                    sampleQuery += ` AND ${adjustedWhereClause}`;
-                }
-                sampleQuery += ' LIMIT 5';
-
-                const sampleResult = await client.query(sampleQuery, queryParams.slice(0, -0) || queryParams);
-
-                return { result, sampleResult };
-            });
-
-            res.json({
-                count: parseInt(data.result.rows[0].total),
-                sample: data.sampleResult.rows
-            });
-        } catch (error) {
-            console.error('Error previewing segment:', error);
-            return sendError(res, 'Failed to preview segment');
-        }
-    });
-
-    /**
-     * GET /api/segments/filter-options - Get available filter options
-     */
-    router.get('/filter-options', authenticateJWT, requireOrganization, async (req, res) => {
-        try {
-            const { tagsResult, usersResult, stagesResult } = await withDbClient(pool, async (client) => {
-                // Get tags
-                const tagsResult = await client.query(
-                    'SELECT id, name, color FROM tags WHERE organization_id = $1 ORDER BY name',
-                    [req.organizationId]
-                );
-
-                // Get users for assignment filter
-                const usersResult = await client.query(`
-                    SELECT u.id, u.name FROM users u
-                    JOIN organization_members om ON u.id = om.user_id
-                    WHERE om.organization_id = $1
-                    ORDER BY u.name
-                `, [req.organizationId]);
-
-                // Get pipeline stages
-                const stagesResult = await client.query(`
-                    SELECT p.id as pipeline_id, p.name as pipeline_name, p.stages
-                    FROM pipelines p
-                    WHERE p.organization_id = $1
-                    ORDER BY p.is_default DESC, p.name
-                `, [req.organizationId]);
-
-                return { tagsResult, usersResult, stagesResult };
-            });
-
-            res.json({
-                fields: [
-                    { id: 'status', label: 'Status', type: 'select', operators: ['equals', 'not_equals', 'in'], options: ['lead', 'active', 'customer', 'inactive'] },
-                    { id: 'source', label: 'Source', type: 'text', operators: ['equals', 'contains', 'is_empty', 'is_not_empty'] },
-                    { id: 'email', label: 'Email', type: 'text', operators: ['contains', 'ends_with', 'is_empty', 'is_not_empty'] },
-                    { id: 'phone', label: 'Phone', type: 'text', operators: ['is_empty', 'is_not_empty', 'contains'] },
-                    { id: 'tags', label: 'Tags', type: 'tags', operators: ['has_any', 'has_all', 'has_none'] },
-                    { id: 'created_at', label: 'Created Date', type: 'date', operators: ['after', 'before', 'between', 'last_n_days'] },
-                    { id: 'last_activity', label: 'Last Activity', type: 'number', operators: ['last_n_days', 'no_activity_days'] },
-                    { id: 'email_engagement', label: 'Email Engagement', type: 'select', operators: ['opened_campaign', 'never_opened', 'clicked_link'] },
-                    { id: 'email_unsubscribed', label: 'Unsubscribed', type: 'boolean', operators: ['equals'] },
-                    { id: 'assigned_to', label: 'Assigned To', type: 'user', operators: ['equals', 'is_empty', 'is_not_empty'] },
-                    { id: 'deal_stage', label: 'Deal Stage', type: 'stage', operators: ['in_stage', 'has_open_deal', 'won_deal', 'lost_deal'] },
-                    { id: 'booking', label: 'Booking', type: 'select', operators: ['has_upcoming', 'completed', 'no_show'] },
-                    { id: 'custom_field', label: 'Custom Field', type: 'custom', operators: ['equals', 'contains', 'is_empty', 'is_not_empty'] }
-                ],
-                tags: tagsResult.rows,
-                users: usersResult.rows,
-                pipelines: stagesResult.rows.map(p => ({
-                    id: p.pipeline_id,
-                    name: p.pipeline_name,
-                    stages: p.stages || []
-                }))
-            });
-        } catch (error) {
-            console.error('Error fetching filter options:', error);
-            return sendError(res, 'Failed to fetch filter options');
-        }
-    });
-
-    /**
-     * Helper: Calculate segment contact count and save history
-     */
-    async function calculateSegmentCount(client, segment) {
-        try {
-            const { whereClause, params } = buildFilterQuery(segment.filters, segment.filter_type);
-
-            let query = `
-                SELECT COUNT(*) as total FROM contacts c
-                WHERE c.organization_id = $1
-            `;
-            const queryParams = [segment.organization_id];
-
-            if (whereClause) {
-                const adjustedWhereClause = whereClause.replace(/\$(\d+)/g, (match, num) => {
-                    return `$${parseInt(num) + 1}`;
-                });
-                query += ` AND ${adjustedWhereClause}`;
-                queryParams.push(...params);
-            }
-
-            const result = await client.query(query, queryParams);
-            const newCount = parseInt(result.rows[0].total);
-            const previousCount = segment.contact_count || 0;
-
-            // Update segment
-            await client.query(`
-                UPDATE segments SET
-                    contact_count = $1,
-                    last_calculated_at = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $2
-            `, [newCount, segment.id]);
-
-            // Record history
-            await client.query(`
-                INSERT INTO segment_history (segment_id, organization_id, contact_count, contacts_added, contacts_removed)
-                VALUES ($1, $2, $3, $4, $5)
-            `, [
+        console.error(fallback, error);
+        return sendError(res, fallback);
+    };
+
+    const calculateSegmentCount = async (client, segment) => {
+        const { condition, params } = compileSegmentCondition(segment, { startIndex: 2 });
+        const result = await client.query(
+            `SELECT COUNT(*)::int AS total
+             FROM contacts c
+             WHERE c.organization_id = $1 AND ${condition}`,
+            [segment.organization_id, ...params]
+        );
+        const newCount = Number(result.rows[0].total);
+        const previousCount = Number(segment.contact_count || 0);
+
+        await client.query(
+            `UPDATE segments
+             SET contact_count = $1, last_calculated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2 AND organization_id = $3`,
+            [newCount, segment.id, segment.organization_id]
+        );
+        await client.query(
+            `INSERT INTO segment_history
+                (segment_id, organization_id, contact_count, contacts_added, contacts_removed)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
                 segment.id,
                 segment.organization_id,
                 newCount,
                 Math.max(0, newCount - previousCount),
-                Math.max(0, previousCount - newCount)
-            ]);
+                Math.max(0, previousCount - newCount),
+            ]
+        );
+        return newCount;
+    };
 
-            return newCount;
+    // This literal route must precede /:id.
+    router.get('/filter-options', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const options = await withDbClient(pool, async (client) => {
+                const tags = await client.query(
+                    'SELECT id, name, color FROM tags WHERE organization_id = $1 ORDER BY name',
+                    [req.organizationId]
+                );
+                const users = await client.query(
+                    `SELECT u.id, u.name FROM users u
+                     JOIN organization_members om ON om.user_id = u.id
+                     WHERE om.organization_id = $1 ORDER BY u.name`,
+                    [req.organizationId]
+                );
+                const pipelines = await client.query(
+                    `SELECT id, name, stages FROM pipelines
+                     WHERE organization_id = $1 ORDER BY is_default DESC, name`,
+                    [req.organizationId]
+                );
+                return { tags: tags.rows, users: users.rows, pipelines: pipelines.rows };
+            });
+
+            res.json({
+                fields: [
+                    { id: 'status', label: 'Status', type: 'select', operators: FILTER_OPERATORS.status, options: CONTACT_STATUSES },
+                    { id: 'source', label: 'Source', type: 'text', operators: FILTER_OPERATORS.source },
+                    { id: 'email', label: 'Email', type: 'text', operators: FILTER_OPERATORS.email },
+                    { id: 'phone', label: 'Phone', type: 'text', operators: FILTER_OPERATORS.phone },
+                    { id: 'tags', label: 'Tags', type: 'tags', operators: FILTER_OPERATORS.tags },
+                    { id: 'created_at', label: 'Created Date', type: 'date', operators: FILTER_OPERATORS.created_at },
+                    { id: 'last_activity', label: 'Last Activity', type: 'number', operators: FILTER_OPERATORS.last_activity },
+                    { id: 'email_engagement', label: 'Email Engagement', type: 'select', operators: FILTER_OPERATORS.email_engagement },
+                    { id: 'email_unsubscribed', label: 'Unsubscribed', type: 'boolean', operators: FILTER_OPERATORS.email_unsubscribed },
+                    { id: 'assigned_to', label: 'Assigned To', type: 'user', operators: FILTER_OPERATORS.assigned_to },
+                    { id: 'deal_stage', label: 'Deal Stage', type: 'stage', operators: FILTER_OPERATORS.deal_stage },
+                    { id: 'booking', label: 'Booking', type: 'select', operators: FILTER_OPERATORS.booking },
+                    { id: 'custom_field', label: 'Custom Field', type: 'custom', operators: FILTER_OPERATORS.custom_field },
+                ],
+                tags: options.tags,
+                users: options.users,
+                pipelines: options.pipelines.map(pipeline => ({
+                    id: pipeline.id,
+                    name: pipeline.name,
+                    stages: Array.isArray(pipeline.stages) ? pipeline.stages : [],
+                })),
+            });
         } catch (error) {
-            console.error('Error calculating segment count:', error);
-            return 0;
+            return respondError(res, error, 'Failed to fetch filter options');
         }
-    }
+    });
+
+    router.post('/preview', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const definition = normalizeSegmentDefinition({
+                segment_type: 'dynamic',
+                filter_type: req.body.filter_type,
+                filters: req.body.filters,
+            });
+            const result = await withDbClient(pool, async (client) => {
+                await validateSegmentReferences(client, req.organizationId, definition);
+                const { condition, params } = compileSegmentCondition(definition, { startIndex: 2 });
+                const queryParams = [req.organizationId, ...params];
+                const count = await client.query(
+                    `SELECT COUNT(*)::int AS total FROM contacts c
+                     WHERE c.organization_id = $1 AND ${condition}`,
+                    queryParams
+                );
+                const sample = await client.query(
+                    `SELECT c.id, c.first_name, c.last_name, c.email, c.status
+                     FROM contacts c
+                     WHERE c.organization_id = $1 AND ${condition}
+                     ORDER BY c.created_at DESC, c.id DESC LIMIT 5`,
+                    queryParams
+                );
+                return { count: count.rows[0].total, sample: sample.rows };
+            });
+            res.json(result);
+        } catch (error) {
+            return respondError(res, error, 'Failed to preview segment');
+        }
+    });
+
+    router.get('/', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const { is_active, search } = req.query;
+            if (is_active !== undefined && !['true', 'false'].includes(is_active)) {
+                throw new SegmentValidationError('is_active must be true or false', 'is_active');
+            }
+            if (search !== undefined && (typeof search !== 'string' || search.length > 200)) {
+                throw new SegmentValidationError('search must be at most 200 characters', 'search');
+            }
+
+            let query = `SELECT ${segmentColumns('s')}, u.name AS created_by_name
+                FROM segments s LEFT JOIN users u ON u.id = s.created_by
+                WHERE s.organization_id = $1`;
+            const params = [req.organizationId];
+            if (is_active !== undefined) {
+                params.push(is_active === 'true');
+                query += ` AND s.is_active = $${params.length}`;
+            }
+            if (search) {
+                params.push(`%${search}%`);
+                query += ` AND (s.name ILIKE $${params.length} OR s.description ILIKE $${params.length})`;
+            }
+            query += ' ORDER BY s.name ASC, s.id ASC';
+            const result = await withDbClient(pool, client => client.query(query, params));
+            res.json(result.rows);
+        } catch (error) {
+            return respondError(res, error, 'Failed to fetch segments');
+        }
+    });
+
+    router.post('/', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const metadata = normalizeMetadata(req.body);
+            const definition = normalizeSegmentDefinition(req.body);
+            const segment = await withTransaction(pool, async (client) => {
+                await validateSegmentReferences(client, req.organizationId, definition);
+                const inserted = await client.query(
+                    `INSERT INTO segments
+                        (organization_id, name, description, color, icon, filter_type, filters,
+                         segment_type, static_contact_ids, is_active, created_by)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9::int[], $10, $11)
+                     RETURNING ${segmentColumns()}`,
+                    [
+                        req.organizationId, metadata.name, metadata.description, metadata.color, metadata.icon,
+                        definition.filter_type, JSON.stringify(definition.filters), definition.segment_type,
+                        definition.static_contact_ids, metadata.is_active, req.user.id,
+                    ]
+                );
+                await calculateSegmentCount(client, inserted.rows[0]);
+                return (await client.query(
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
+                    [inserted.rows[0].id, req.organizationId]
+                )).rows[0];
+            });
+            res.status(201).json(segment);
+        } catch (error) {
+            return respondError(res, error, 'Failed to create segment');
+        }
+    });
+
+    router.get('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isInteger(id) || id < 1) throw new SegmentValidationError('id must be a positive integer', 'id');
+            const data = await withDbClient(pool, async (client) => {
+                const segment = await client.query(
+                    `SELECT ${segmentColumns('s')}, u.name AS created_by_name
+                     FROM segments s LEFT JOIN users u ON u.id = s.created_by
+                     WHERE s.id = $1 AND s.organization_id = $2`,
+                    [id, req.organizationId]
+                );
+                if (segment.rows.length === 0) return null;
+                const history = await client.query(
+                    `SELECT ${segmentHistoryColumns()} FROM segment_history
+                     WHERE segment_id = $1 AND organization_id = $2
+                     ORDER BY calculated_at DESC, id DESC LIMIT 30`,
+                    [id, req.organizationId]
+                );
+                return { ...segment.rows[0], history: history.rows };
+            });
+            if (!data) return res.status(404).json({ error: 'Segment not found' });
+            res.json(data);
+        } catch (error) {
+            return respondError(res, error, 'Failed to fetch segment');
+        }
+    });
+
+    router.put('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isInteger(id) || id < 1) throw new SegmentValidationError('id must be a positive integer', 'id');
+            const segment = await withTransaction(pool, async (client) => {
+                const currentResult = await client.query(
+                    `SELECT ${segmentColumns()} FROM segments
+                     WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+                    [id, req.organizationId]
+                );
+                if (currentResult.rows.length === 0) return null;
+                const current = currentResult.rows[0];
+                const metadata = normalizeMetadata(req.body, current);
+                const definition = normalizeSegmentDefinition(req.body, current);
+                await validateSegmentReferences(client, req.organizationId, definition);
+                const targetingChanged = JSON.stringify({
+                    filter_type: current.filter_type,
+                    filters: current.filters,
+                    segment_type: current.segment_type,
+                    static_contact_ids: current.static_contact_ids,
+                }) !== JSON.stringify(definition);
+
+                const updated = await client.query(
+                    `UPDATE segments SET
+                        name = $1, description = $2, color = $3, icon = $4,
+                        filter_type = $5, filters = $6::jsonb, segment_type = $7,
+                        static_contact_ids = $8::int[], is_active = $9, updated_at = CURRENT_TIMESTAMP
+                     WHERE id = $10 AND organization_id = $11
+                     RETURNING ${segmentColumns()}`,
+                    [
+                        metadata.name, metadata.description, metadata.color, metadata.icon,
+                        definition.filter_type, JSON.stringify(definition.filters), definition.segment_type,
+                        definition.static_contact_ids, metadata.is_active, id, req.organizationId,
+                    ]
+                );
+                if (targetingChanged) await calculateSegmentCount(client, updated.rows[0]);
+                return (await client.query(
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
+                    [id, req.organizationId]
+                )).rows[0];
+            });
+            if (!segment) return res.status(404).json({ error: 'Segment not found' });
+            res.json(segment);
+        } catch (error) {
+            return respondError(res, error, 'Failed to update segment');
+        }
+    });
+
+    router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isInteger(id) || id < 1) throw new SegmentValidationError('id must be a positive integer', 'id');
+            const outcome = await withTransaction(pool, async (client) => {
+                const segment = await client.query(
+                    'SELECT id FROM segments WHERE id = $1 AND organization_id = $2 FOR UPDATE',
+                    [id, req.organizationId]
+                );
+                if (segment.rows.length === 0) return 'not_found';
+                const campaign = await client.query(
+                    `SELECT 1 FROM email_campaigns
+                     WHERE segment_id = $1 AND organization_id = $2 LIMIT 1`,
+                    [id, req.organizationId]
+                );
+                if (campaign.rows.length > 0) return 'in_use';
+                await client.query('DELETE FROM segments WHERE id = $1 AND organization_id = $2', [id, req.organizationId]);
+                return 'deleted';
+            });
+            if (outcome === 'not_found') return res.status(404).json({ error: 'Segment not found' });
+            if (outcome === 'in_use') return res.status(409).json({ error: 'Segment is used by an active campaign' });
+            res.json({ success: true });
+        } catch (error) {
+            return respondError(res, error, 'Failed to delete segment');
+        }
+    });
+
+    router.post('/:id/calculate', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isInteger(id) || id < 1) throw new SegmentValidationError('id must be a positive integer', 'id');
+            const segment = await withTransaction(pool, async (client) => {
+                const current = await client.query(
+                    `SELECT ${segmentColumns()} FROM segments
+                     WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+                    [id, req.organizationId]
+                );
+                if (current.rows.length === 0) return null;
+                const definition = normalizeSegmentDefinition(current.rows[0]);
+                await validateSegmentReferences(client, req.organizationId, definition);
+                await calculateSegmentCount(client, current.rows[0]);
+                return (await client.query(
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
+                    [id, req.organizationId]
+                )).rows[0];
+            });
+            if (!segment) return res.status(404).json({ error: 'Segment not found' });
+            res.json(segment);
+        } catch (error) {
+            return respondError(res, error, 'Failed to calculate segment');
+        }
+    });
+
+    router.get('/:id/contacts', authenticateJWT, requireOrganization, async (req, res) => {
+        try {
+            const id = Number(req.params.id);
+            if (!Number.isInteger(id) || id < 1) throw new SegmentValidationError('id must be a positive integer', 'id');
+            const pagination = parsePagination(req.query);
+            const data = await withDbClient(pool, async (client) => {
+                const segmentResult = await client.query(
+                    `SELECT ${segmentColumns()} FROM segments WHERE id = $1 AND organization_id = $2`,
+                    [id, req.organizationId]
+                );
+                if (segmentResult.rows.length === 0) return null;
+                const { condition, params } = compileSegmentCondition(segmentResult.rows[0], { startIndex: 2 });
+                const baseParams = [req.organizationId, ...params];
+                const count = await client.query(
+                    `SELECT COUNT(*)::int AS total FROM contacts c
+                     WHERE c.organization_id = $1 AND ${condition}`,
+                    baseParams
+                );
+                const contacts = await client.query(
+                    `SELECT ${contactColumns('c')} FROM contacts c
+                     WHERE c.organization_id = $1 AND ${condition}
+                     ORDER BY c.created_at DESC, c.id DESC
+                     LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
+                    [...baseParams, pagination.limit, pagination.offset]
+                );
+                return { contacts: contacts.rows, total: count.rows[0].total };
+            });
+            if (!data) return res.status(404).json({ error: 'Segment not found' });
+            res.json({
+                contacts: data.contacts,
+                pagination: {
+                    page: pagination.page,
+                    limit: pagination.limit,
+                    total: data.total,
+                    totalPages: Math.ceil(data.total / pagination.limit),
+                },
+            });
+        } catch (error) {
+            return respondError(res, error, 'Failed to fetch segment contacts');
+        }
+    });
 
     return router;
 };
