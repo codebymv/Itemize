@@ -4,6 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const backendRoot = path.resolve(__dirname, '..');
+const graphqlRoot = path.resolve(backendRoot, '..', 'backend-v2');
 const composeFile = path.join(backendRoot, 'docker-compose.integration.yml');
 const port = process.env.ITEMIZE_TEST_DB_PORT || '55432';
 const projectName = process.env.ITEMIZE_INTEGRATION_PROJECT || `itemize-integration-${process.pid}`;
@@ -39,10 +40,10 @@ function buildTestEnvironment(environment = process.env) {
 
 const testEnvironment = buildTestEnvironment();
 
-function run(command, args) {
+function run(command, args, cwd = backendRoot) {
     return new Promise((resolve, reject) => {
         const child = spawn(command, args, {
-            cwd: backendRoot,
+            cwd,
             env: testEnvironment,
             stdio: 'inherit',
             shell: false,
@@ -80,6 +81,12 @@ async function main() {
             '--globalSetup=./src/__tests__/integration/global-setup.js',
             '--globalTeardown=./src/__tests__/integration/global-teardown.js',
         ]);
+
+        await run(process.execPath, [
+            require.resolve('jest/bin/jest'),
+            '--config=jest.integration.config.cjs',
+            '--runInBand',
+        ], graphqlRoot);
     } finally {
         if (composeAttempted) {
             await run('docker', composeArgs('down', '--volumes', '--remove-orphans'))

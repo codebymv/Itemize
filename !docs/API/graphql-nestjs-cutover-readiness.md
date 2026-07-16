@@ -1,6 +1,6 @@
 # GraphQL + NestJS cutover readiness
 
-**Status:** Phase 0 baseline validated
+**Status:** Phase 0 baseline validated; Phase 1 foundation started
 
 **Evidence date:** 2026-07-16
 **Authority:** This document supersedes the testing counts and cutover-testing guidance in `ts-nest-rewrite.md`.
@@ -28,6 +28,14 @@ The reproducible source inventory is [generated/rest-surface.md](generated/rest-
 The 27 database integration suites cover realtime Socket.IO authorization, analytics, automation execution, workflow trigger queueing, bookings, calendars, campaigns, contacts and CSV transfer, email templates, Resend email webhooks, Meta social webhooks, estimates, forms, invoice actions, invoices, lists, notes, organizations, pipelines, public sharing, audience segments, signatures, SMS messaging/webhooks, Stripe invoice and subscription webhook concurrency, tags, and workflows. Several suites include cross-organization or cross-owner denial scenarios, so isolation is not wholly untested. Coverage is still far smaller than the 410-operation `/api` surface and is concentrated in selected domains.
 
 The former claim of 8 suites and 73 tests was stale. The current baseline was executed with the disposable runner on 2026-07-16: all 94 expected tables and 61 top-level migration markers were verified before all 27 suites and 436 tests passed.
+
+## Phase 1 GraphQL foundation now in place
+
+The isolated `backend-v2/` workspace now boots NestJS 11 with code-first GraphQL and Apollo Server 5. It is not part of the legacy Railway build/start commands and receives no production traffic.
+
+The first vertical foundation implements the existing access-cookie contract, verifies `itemize_auth` with the shared JWT secret, selects organization context only from `x-organization-id` or the user's database default, re-reads current membership and role from PostgreSQL, and propagates the verified identity through `AsyncLocalStorage`. A public `readiness` query and protected `viewerContext` query prove the middleware and guard chain without introducing a domain cutover.
+
+`npm run build:graphql` passes. `npm run test:graphql` covers 9 focused cases across public readiness, missing-cookie denial, signed-cookie identity, explicit and default membership, outsider privacy, malformed organization IDs before SQL, stable request correlation, and database-failure mapping. The disposable runner also executes 4 GraphQL operations against freshly initialized PostgreSQL, proving default membership, current-role re-read, outsider denial, and immediate denial after membership deletion. Domain resolvers, CSRF enforcement for mutations, dual semantic parity, and consumer tests remain required before traffic cutover.
 
 ## Phase 0 work now in place
 

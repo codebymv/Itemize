@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run docs:watch\"",
     "dev:backend": "cd backend && npm run dev",
+    "dev:graphql": "npm run start:dev --workspace itemize-graphql-api",
     "dev:frontend": "cd frontend && npm run dev",
     "start": "cd backend && npm start",
     "start:backend": "cd backend && npm start",
@@ -13,6 +14,7 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "build": "npm run docs:check && npm run docs:sync && npm run build:backend && npm run build:frontend",
     "build:backend": "cd backend && npm run build",
+    "build:graphql": "npm run build --workspace itemize-graphql-api",
     "build:frontend": "cd frontend && npm run build",
     "railway:build": "npm run build:backend && npm run build:frontend",
     "railway:start": "npm run start:backend",
@@ -24,7 +26,8 @@
     "api:surface": "node scripts/generate-api-surface.js",
     "api:surface:check": "node scripts/generate-api-surface.js --check",
     "api:ledger": "npm run api:surface && node scripts/generate-cutover-ledger.js",
-    "api:ledger:check": "npm run api:surface:check && node scripts/generate-cutover-ledger.js --check"
+    "api:ledger:check": "npm run api:surface:check && node scripts/generate-cutover-ledger.js --check",
+    "test:graphql": "npm run test --workspace itemize-graphql-api"
   },
   "devDependencies": {
     "chokidar": "^3.5.3",
@@ -32,10 +35,20 @@
   },
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "backend-v2"
   ],
   "dependencies": {
+    "@apollo/server": "^5.5.1",
     "dompurify": "^3.2.6",
     "express-rate-limit": "^7.5.1"
+  },
+  "overrides": {
+    "@apollo/server-plugin-landing-page-graphql-playground": {
+      "@apollo/server": "$@apollo/server"
+    },
+    "@nestjs/graphql": {
+      "ws@8.20.1": "8.21.1"
+    }
   }
 }

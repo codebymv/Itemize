@@ -1,6 +1,6 @@
 # Itemize Backend Rewrite Plan — TypeScript / NestJS / GraphQL
 
-> Status: Research & recommendation phase. No code changes made. This document is a handoff summary for the next implementation agent.
+> Status: Phase 1 foundation implementation started in `backend-v2/`. The authoritative gates and current evidence are maintained in `!docs/API/graphql-nestjs-cutover-readiness.md`.
 
 ## Current State
 
