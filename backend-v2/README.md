@@ -11,7 +11,7 @@ The first foundation slice provides:
 - request-local identity and organization context using `AsyncLocalStorage`;
 - tenant-scoped `contacts` and `contact` queries with strict filters, sorting, pagination, and tenant-private detail lookup.
 
-Copy `.env.example` to `.env`, use the same `JWT_SECRET` and `DATABASE_URL` as the legacy backend, then run from the repository root:
+Copy `.env.example` to `.env`, use the same `JWT_SECRET` and `DATABASE_URL` as the legacy backend, and set `FRONTEND_URL` to the browser origin. Use `EXTRA_CORS_ORIGINS` for explicit staging origins. Then run from the repository root:
 
 ```powershell
 npm run dev:graphql

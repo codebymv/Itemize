@@ -15,6 +15,7 @@ describe('GraphQL foundation', () => {
   beforeAll(async () => {
     process.env.JWT_SECRET = 'foundation-test-secret';
     process.env.DATABASE_URL = 'postgresql://unused/test';
+    process.env.FRONTEND_URL = 'https://frontend.test.itemize';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue({ query, end })
@@ -28,6 +29,7 @@ describe('GraphQL foundation', () => {
     await app.close();
     delete process.env.JWT_SECRET;
     delete process.env.DATABASE_URL;
+    delete process.env.FRONTEND_URL;
   });
 
   beforeEach(() => query.mockReset());
@@ -39,6 +41,23 @@ describe('GraphQL foundation', () => {
       .expect(200);
     expect(response.body).toEqual({ data: { readiness: 'ready' } });
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it('allows credentialed GraphQL preflight from the configured frontend', async () => {
+    const response = await request(app.getHttpServer())
+      .options('/graphql')
+      .set('Origin', 'https://frontend.test.itemize')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type,x-organization-id')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'https://frontend.test.itemize',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    expect(response.headers['access-control-allow-headers'].toLowerCase()).toContain(
+      'x-organization-id',
+    );
   });
 
   it('rejects a protected query without an access cookie', async () => {

@@ -176,8 +176,15 @@ export default {
 # Google OAuth Configuration
 VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
-# Backend API URL
-VITE_API_URL=http://localhost:3000
+# Legacy/backend API URL
+VITE_API_URL=http://localhost:3001
+
+# Full side-by-side NestJS GraphQL endpoint.
+VITE_GRAPHQL_URL=http://localhost:3100/graphql
+
+# Contact list/detail reads default to REST. Enable only in a tested environment;
+# setting this back to false is the consumer rollback.
+VITE_CONTACT_READS_GRAPHQL=false
 
 # Optional first-party marketing chat launcher.
 # Defaults enabled unless set to false.

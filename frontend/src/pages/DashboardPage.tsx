@@ -402,7 +402,7 @@ export function DashboardPage() {
                                 { label: 'Notes', value: analytics?.workspaceMetrics?.notes ?? 0, color: 'text-blue-600 dark:text-blue-400' },
                             ]}
                             recentItems={analytics?.workspaceMetrics?.recentItems?.map(item => ({
-                                id: item.id,
+                                id: `${item.type}:${item.date}:${item.title}`,
                                 title: item.title,
                                 status: undefined
                             })) ?? []}

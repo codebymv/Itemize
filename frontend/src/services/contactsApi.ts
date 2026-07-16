@@ -4,6 +4,8 @@
  */
 import api from '@/lib/api';
 import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationMember } from '@/types';
+import { getContactViaGraphql, getContactsViaGraphql } from './contactsGraphql';
+import { isContactGraphqlReadsEnabled } from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -87,6 +89,9 @@ export interface ContactsQueryParams {
 
 export const getContacts = async (params: ContactsQueryParams = {}, organizationId?: number): Promise<ContactsResponse> => {
   const orgId = organizationId ?? params.organization_id;
+  if (isContactGraphqlReadsEnabled()) {
+    return getContactsViaGraphql(params, orgId);
+  }
   const response = await api.get('/api/contacts', {
     params,
     headers: orgId ? { 'x-organization-id': orgId.toString() } : {}
@@ -95,6 +100,9 @@ export const getContacts = async (params: ContactsQueryParams = {}, organization
 };
 
 export const getContact = async (id: number, organizationId?: number): Promise<Contact> => {
+  if (isContactGraphqlReadsEnabled()) {
+    return getContactViaGraphql(id, organizationId);
+  }
   const response = await api.get(`/api/contacts/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
