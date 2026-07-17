@@ -23,6 +23,10 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { importContactsCSV, ImportContactData, ImportResult } from '@/services/contactsApi';
 import { useToast } from '@/hooks/use-toast';
+import {
+    MAX_CONTACT_CSV_BYTES,
+    parseContactCsv,
+} from '../contactCsv';
 
 interface ImportContactsModalProps {
     organizationId: number;
@@ -51,90 +55,6 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
         return 'Failed to import contacts. Please try again.';
     };
 
-    // Parse CSV string to array of objects
-    const parseCSV = useCallback((csvText: string): ImportContactData[] => {
-        const lines = csvText.trim().split('\n');
-        if (lines.length < 2) return [];
-
-        // Parse headers (first row)
-        const headers = lines[0].split(',').map(h =>
-            h.trim().toLowerCase().replace(/["']/g, '').replace(/\s+/g, '_')
-        );
-
-        // Map common header variations to expected field names
-        const headerMap: Record<string, keyof ImportContactData> = {
-            'first_name': 'first_name',
-            'firstname': 'first_name',
-            'first': 'first_name',
-            'last_name': 'last_name',
-            'lastname': 'last_name',
-            'last': 'last_name',
-            'email': 'email',
-            'email_address': 'email',
-            'phone': 'phone',
-            'phone_number': 'phone',
-            'mobile': 'phone',
-            'company': 'company',
-            'company_name': 'company',
-            'organization': 'company',
-            'job_title': 'job_title',
-            'jobtitle': 'job_title',
-            'title': 'job_title',
-            'position': 'job_title',
-            'street': 'street',
-            'address': 'street',
-            'street_address': 'street',
-            'city': 'city',
-            'state': 'state',
-            'province': 'state',
-            'zip': 'zip',
-            'zipcode': 'zip',
-            'zip_code': 'zip',
-            'postal_code': 'zip',
-            'country': 'country',
-            'status': 'status',
-            'tags': 'tags',
-        };
-
-        // Parse data rows
-        const data: ImportContactData[] = [];
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-
-            // Handle quoted values with commas inside
-            const values: string[] = [];
-            let current = '';
-            let inQuotes = false;
-            for (const char of line) {
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    values.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            values.push(current.trim());
-
-            const row: ImportContactData = {};
-            headers.forEach((header, index) => {
-                const mappedField = headerMap[header];
-                if (mappedField && values[index]) {
-                    row[mappedField] = values[index].replace(/^["']|["']$/g, '');
-                }
-            });
-
-            // Only add rows with at least some data
-            if (row.first_name || row.last_name || row.email || row.company) {
-                data.push(row);
-            }
-        }
-
-        return data;
-    }, []);
-
     // Handle file selection
     const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -142,12 +62,16 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
 
         setError(null);
         setFileName(file.name);
+        if (file.size > MAX_CONTACT_CSV_BYTES) {
+            setError('CSV files are limited to 1 MB.');
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const text = e.target?.result as string;
-                const data = parseCSV(text);
+                const data = parseContactCsv(text);
 
                 if (data.length === 0) {
                     setError('No valid contacts found in CSV. Please ensure the file has headers and data rows.');
@@ -157,14 +81,16 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
                 setParsedData(data);
                 setStep('preview');
             } catch (err) {
-                setError('Failed to parse CSV file. Please ensure it is a valid CSV format.');
+                setError(err instanceof Error
+                    ? err.message
+                    : 'Failed to parse CSV file. Please ensure it is a valid CSV format.');
             }
         };
         reader.onerror = () => {
             setError('Failed to read file. Please try again.');
         };
         reader.readAsText(file);
-    }, [parseCSV]);
+    }, []);
 
     // Handle import
     const handleImport = async () => {
@@ -200,7 +126,14 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
         e.stopPropagation();
 
         const file = e.dataTransfer.files?.[0];
-        if (file && file.type === 'text/csv') {
+        if (
+            file
+            && (
+                file.type === 'text/csv'
+                || file.type === 'application/vnd.ms-excel'
+                || file.name.toLowerCase().endsWith('.csv')
+            )
+        ) {
             // Create a synthetic event to reuse handleFileSelect
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
