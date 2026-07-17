@@ -179,8 +179,8 @@ export function FormsPage() {
         }
     };
 
-    const copyFormLink = (slug: string) => {
-        navigator.clipboard.writeText(`${window.location.origin}/form/${slug}`);
+    const copyFormLink = (identifier: string) => {
+        navigator.clipboard.writeText(`${window.location.origin}/form/${identifier}`);
         toast({ title: 'Link Copied', description: toastMessages.copiedToClipboard('form link') });
     };
 
@@ -292,7 +292,7 @@ export function FormsPage() {
                                                                 <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Publish
                                                             </DropdownMenuItem>
                                                         )}
-                                                        <DropdownMenuItem onClick={() => copyFormLink(form.slug)} className="group/menu">
+                                                        <DropdownMenuItem onClick={() => copyFormLink(form.public_id || form.slug)} className="group/menu">
                                                             <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Link
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleDuplicate(form.id)} className="group/menu">
@@ -317,7 +317,7 @@ export function FormsPage() {
                                                     <BarChart3 className="h-3 w-3" />
                                                     {form.submission_count || 0} submissions
                                                 </span>
-                                                <span className="truncate max-w-[100px]">/form/{form.slug}</span>
+                                                <span className="truncate max-w-[100px]">/form/{form.public_id || form.slug}</span>
                                             </div>
                                         </CardContent>
                                     </Card>

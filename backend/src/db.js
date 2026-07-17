@@ -99,6 +99,7 @@ const { runCanonicalPipelineStageModelMigration } = require('./db_pipeline_stage
 const {
   runCanonicalContactEmailIdentityMigration,
 } = require('./db_contact_email_identity_migrations');
+const { runPublicFormContractMigration } = require('./db_public_form_contract_migrations');
 
 // Import Subscription migrations (feature gating and billing)
 const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
@@ -523,6 +524,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'canonical_tag_model_v1', runCanonicalTagModelMigration);
     await runMigrationOnce(pool, 'canonical_pipeline_stage_model_v1', runCanonicalPipelineStageModelMigration);
     await runMigrationOnce(pool, 'canonical_contact_email_identity_v1', runCanonicalContactEmailIdentityMigration);
+    await runMigrationOnce(pool, 'public_form_contract_v1', runPublicFormContractMigration);
     
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);

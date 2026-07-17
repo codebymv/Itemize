@@ -604,6 +604,7 @@ export interface Form {
   name: string;
   description?: string;
   slug: string;
+  public_id: string;
   type: 'form' | 'survey' | 'quiz';
   status: 'draft' | 'published' | 'archived';
   submit_button_text: string;

@@ -6,6 +6,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { withDbClient, withTransaction } = require('../utils/db');
 const UsageTrackingService = require('../services/usageTrackingService');
@@ -21,12 +22,35 @@ const {
     workflowTriggerEventKey,
 } = require('../services/workflowTriggerQueue');
 const { normalizeContactEmail } = require('../utils/contactEmail');
+const {
+    PublicFormValidationError,
+    normalizeNotificationEmails,
+    normalizePublicRedirectUrl,
+    validateFormDefinition,
+    validatePublicFormSubmission,
+} = require('../utils/publicFormContract');
+const {
+    enqueueFormSubmissionNotifications,
+} = require('../services/formSubmissionNotifications');
 
 /**
  * Create forms routes
  */
 module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const { requireOrganization } = require('../middleware/organization')(pool);
+    const publicSubmissionRateLimit = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 60,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+            success: false,
+            error: {
+                message: 'Too many form submissions from this IP',
+                code: 'RATE_LIMIT_EXCEEDED',
+            },
+        },
+    });
     
     // Usage tracking service
     const usageService = new UsageTrackingService(pool);
@@ -61,6 +85,93 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '')
             + '-' + crypto.randomBytes(4).toString('hex');
+    };
+
+    const sendContractError = (res, error) => {
+        if (!(error instanceof PublicFormValidationError)) return false;
+        sendError(
+            res,
+            error.message,
+            400,
+            error.code,
+            error.fieldId === null ? null : { field_id: String(error.fieldId) }
+        );
+        return true;
+    };
+
+    const findPublishedForm = async (client, identifier, columns) => {
+        const byPublicId = await client.query(`
+            SELECT ${columns}
+            FROM forms f
+            JOIN organizations o ON f.organization_id = o.id
+            WHERE f.public_id = $1
+              AND f.status = 'published'
+        `, [identifier]);
+        if (byPublicId.rows.length === 1) return byPublicId.rows[0];
+
+        const byLegacySlug = await client.query(`
+            SELECT ${columns}
+            FROM forms f
+            JOIN organizations o ON f.organization_id = o.id
+            WHERE f.slug = $1
+              AND f.status = 'published'
+            ORDER BY f.id
+            LIMIT 2
+        `, [identifier]);
+        return byLegacySlug.rows.length === 1 ? byLegacySlug.rows[0] : null;
+    };
+
+    const remapInsertedFieldConditions = async (
+        client,
+        formId,
+        sourceFields,
+        insertedFields
+    ) => {
+        const orderedInsertedFields = [...insertedFields].sort(
+            (left, right) => Number(left.field_order) - Number(right.field_order)
+                || Number(left.id) - Number(right.id)
+        );
+        if (orderedInsertedFields.length !== sourceFields.length) {
+            throw new PublicFormValidationError(
+                'Unable to preserve form field conditions',
+                null,
+                'INVALID_FORM_CONFIGURATION'
+            );
+        }
+        const sourceIdToInsertedId = new Map();
+        sourceFields.forEach((field, index) => {
+            if (field.id === undefined || field.id === null) return;
+            sourceIdToInsertedId.set(String(field.id), Number(orderedInsertedFields[index].id));
+        });
+
+        const fieldIds = [];
+        const remappedConditions = [];
+        sourceFields.forEach((field, index) => {
+            const insertedId = Number(orderedInsertedFields[index].id);
+            const conditions = (field.conditions || []).map(condition => {
+                const sourceId = String(condition.field_id ?? condition.fieldId ?? '');
+                const mappedId = sourceIdToInsertedId.get(sourceId);
+                if (!mappedId) {
+                    throw new PublicFormValidationError(
+                        `${field.label} has an invalid condition`,
+                        field.id,
+                        'INVALID_FORM_CONFIGURATION'
+                    );
+                }
+                const { fieldId: _fieldId, ...rest } = condition;
+                return { ...rest, field_id: mappedId };
+            });
+            fieldIds.push(insertedId);
+            remappedConditions.push(JSON.stringify(conditions));
+        });
+
+        await client.query(`
+            UPDATE form_fields AS field
+            SET conditions = source.conditions
+            FROM UNNEST($1::int[], $2::jsonb[]) AS source(id, conditions)
+            WHERE field.id = source.id
+              AND field.form_id = $3
+        `, [fieldIds, remappedConditions, formId]);
     };
 
     // ======================
@@ -162,6 +273,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return sendBadRequest(res, 'Form name is required');
             }
 
+            const safeRedirectUrl = normalizePublicRedirectUrl(redirect_url);
+            const normalizedNotificationEmails = normalizeNotificationEmails(notification_emails);
+            if (fields !== undefined && !Array.isArray(fields)) {
+                throw new PublicFormValidationError('fields must be an array');
+            }
+            if (Array.isArray(fields) && fields.length > 0) {
+                if (fields.some(field => Array.isArray(field.conditions) && field.conditions.length > 0)) {
+                    throw new PublicFormValidationError(
+                        'Create the form before configuring conditions',
+                        null,
+                        'INVALID_FORM_CONFIGURATION'
+                    );
+                }
+                validateFormDefinition(fields);
+            }
+
             const slug = generateSlug(name);
             const outcome = await withTransaction(pool, async (client) => {
                 await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
@@ -186,9 +313,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     type || 'form',
                     submit_button_text || 'Submit',
                     success_message || 'Thank you for your submission!',
-                    redirect_url || null,
+                    safeRedirectUrl,
                     notify_on_submit !== false,
-                    notification_emails || [],
+                    normalizedNotificationEmails,
                     JSON.stringify(theme || { primaryColor: '#3B82F6' }),
                     create_contact !== false,
                     contact_tags || [],
@@ -224,7 +351,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         u_options.push(JSON.stringify(field.options || []));
                         u_field_orders.push(i);
                         u_widths.push(field.width || 'full');
-                        u_conditions.push(JSON.stringify(field.conditions || []));
+                        u_conditions.push(JSON.stringify([]));
                         u_map_to_contact_fields.push(field.map_to_contact_field || null);
                     }
 
@@ -301,6 +428,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             sendCreated(res, outcome.form);
         } catch (error) {
+            if (sendContractError(res, error)) return;
             console.error('Error creating form:', error);
             sendError(res, 'Failed to create form');
         }
@@ -327,7 +455,29 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 contact_tags
             } = req.body;
 
+            const safeRedirectUrl = normalizePublicRedirectUrl(redirect_url);
+            const normalizedNotificationEmails = notification_emails === undefined
+                ? undefined
+                : normalizeNotificationEmails(notification_emails);
+
             const result = await withDbClient(pool, async (client) => {
+                if (status === 'published') {
+                    const formCheck = await client.query(
+                        'SELECT id FROM forms WHERE id = $1 AND organization_id = $2',
+                        [id, req.organizationId]
+                    );
+                    const fieldsResult = await client.query(`
+                        SELECT ${formFieldColumns('field')}
+                        FROM forms form
+                        JOIN form_fields field ON field.form_id = form.id
+                        WHERE form.id = $1
+                          AND form.organization_id = $2
+                        ORDER BY field.field_order, field.id
+                    `, [id, req.organizationId]);
+                    if (formCheck.rows.length > 0) {
+                        validateFormDefinition(fieldsResult.rows);
+                    }
+                }
                 return client.query(`
         UPDATE forms SET
           name = COALESCE($1, name),
@@ -352,9 +502,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 status,
                 submit_button_text,
                 success_message,
-                redirect_url,
+                safeRedirectUrl,
                 notify_on_submit,
-                notification_emails,
+                normalizedNotificationEmails,
                 theme ? JSON.stringify(theme) : null,
                 create_contact,
                 contact_tags,
@@ -369,6 +519,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             sendSuccess(res, result.rows[0]);
         } catch (error) {
+            if (sendContractError(res, error)) return;
             console.error('Error updating form:', error);
             sendError(res, 'Failed to update form');
         }
@@ -385,16 +536,22 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             if (!Array.isArray(fields)) {
                 return sendBadRequest(res, 'fields must be an array');
             }
+            if (fields.length > 0) {
+                validateFormDefinition(fields);
+            }
 
             const result = await withTransaction(pool, async (client) => {
                 // Verify form exists
                 const formCheck = await client.query(
-                    'SELECT id FROM forms WHERE id = $1 AND organization_id = $2',
+                    'SELECT id, status FROM forms WHERE id = $1 AND organization_id = $2 FOR UPDATE',
                     [id, req.organizationId]
                 );
 
                 if (formCheck.rows.length === 0) {
                     return { status: 'not_found' };
+                }
+                if (formCheck.rows[0].status === 'published') {
+                    validateFormDefinition(fields);
                 }
 
                 // Delete existing fields
@@ -427,11 +584,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         u_options.push(JSON.stringify(field.options || []));
                         u_field_orders.push(i);
                         u_widths.push(field.width || 'full');
-                        u_conditions.push(JSON.stringify(field.conditions || []));
+                        u_conditions.push(JSON.stringify([]));
                         u_map_to_contact_fields.push(field.map_to_contact_field || null);
                     }
 
-                    await client.query(`
+                    const insertedFields = await client.query(`
                         INSERT INTO form_fields (
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
@@ -454,11 +611,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             conditions,
                             map_to_contact_field
                         )
+                        RETURNING id, field_order
                     `, [
                         u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
                         u_is_requireds, u_validations, u_options, u_field_orders, u_widths,
                         u_conditions, u_map_to_contact_fields
                     ]);
+                    await remapInsertedFieldConditions(
+                        client,
+                        Number(id),
+                        fields,
+                        insertedFields.rows
+                    );
                 }
 
                 // Fetch updated fields
@@ -476,6 +640,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
             sendSuccess(res, { fields: result.fields });
         } catch (error) {
+            if (sendContractError(res, error)) return;
             console.error('Error updating form fields:', error);
             sendError(res, 'Failed to update form fields');
         }
@@ -573,7 +738,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     const u_conditions = [];
                     const u_map_to_contact_fields = [];
 
-                    for (const field of fieldsResult.rows) {
+                    for (let index = 0; index < fieldsResult.rows.length; index += 1) {
+                        const field = fieldsResult.rows[index];
                         u_form_ids.push(newForm.id);
                         u_field_types.push(field.field_type);
                         u_labels.push(field.label);
@@ -582,13 +748,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         u_is_requireds.push(field.is_required);
                         u_validations.push(JSON.stringify(field.validation));
                         u_options.push(JSON.stringify(field.options));
-                        u_field_orders.push(field.field_order);
+                        u_field_orders.push(index);
                         u_widths.push(field.width);
-                        u_conditions.push(JSON.stringify(field.conditions));
+                        u_conditions.push(JSON.stringify([]));
                         u_map_to_contact_fields.push(field.map_to_contact_field);
                     }
 
-                    await client.query(`
+                    const insertedFields = await client.query(`
                         INSERT INTO form_fields (
                             form_id, field_type, label, placeholder, help_text,
                             is_required, validation, options, field_order, width,
@@ -611,11 +777,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                             conditions,
                             map_to_contact_field
                         )
+                        RETURNING id, field_order
                     `, [
                         u_form_ids, u_field_types, u_labels, u_placeholders, u_help_texts,
                         u_is_requireds, u_validations, u_options, u_field_orders, u_widths,
                         u_conditions, u_map_to_contact_fields
                     ]);
+                    await remapInsertedFieldConditions(
+                        client,
+                        newForm.id,
+                        fieldsResult.rows,
+                        insertedFields.rows
+                    );
                 }
 
                 // Fetch new fields
@@ -736,35 +909,32 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     // ======================
 
     /**
-     * GET /api/public/form/:slug - Get public form
+     * GET /api/public/form/:identifier - Get public form
      */
-    router.get('/public/form/:slug', publicRateLimit, async (req, res) => {
+    router.get('/public/form/:identifier', publicRateLimit, async (req, res) => {
         try {
-            const { slug } = req.params;
+            const { identifier } = req.params;
             const result = await withDbClient(pool, async (client) => {
-                const formResult = await client.query(`
-        SELECT f.id, f.name, f.description, f.slug, f.type,
-               f.submit_button_text, f.success_message, f.redirect_url, f.theme,
-               o.name as organization_name
-        FROM forms f
-        JOIN organizations o ON f.organization_id = o.id
-        WHERE f.slug = $1 AND f.status = 'published'
-      `, [slug]);
-
-                if (formResult.rows.length === 0) {
+                const form = await findPublishedForm(
+                    client,
+                    identifier,
+                    `f.id, f.name, f.description, f.slug, f.public_id, f.type,
+                     f.submit_button_text, f.success_message, f.redirect_url, f.theme,
+                     o.name as organization_name`
+                );
+                if (!form) {
                     return { status: 'not_found' };
                 }
 
-                const form = formResult.rows[0];
-
                 const fieldsResult = await client.query(`
         SELECT id, field_type, label, placeholder, help_text,
-               is_required, validation, options, field_order, width
+               is_required, validation, options, field_order, width, conditions
         FROM form_fields
         WHERE form_id = $1
-        ORDER BY field_order
+        ORDER BY field_order, id
       `, [form.id]);
 
+                validateFormDefinition(fieldsResult.rows);
                 form.fields = fieldsResult.rows;
                 return { status: 'ok', form };
             });
@@ -773,53 +943,46 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return sendNotFound(res, 'Form');
             }
 
+            res.set('Cache-Control', 'no-store');
+            res.set('X-Robots-Tag', 'noindex, nofollow');
             sendSuccess(res, result.form);
         } catch (error) {
+            if (sendContractError(res, error)) return;
             console.error('Error fetching public form:', error);
             sendError(res, 'Failed to load form');
         }
     });
 
     /**
-     * POST /api/public/form/:slug - Submit form
+     * POST /api/public/form/:identifier - Submit form
      */
-    router.post('/public/form/:slug', publicRateLimit, async (req, res) => {
+    router.post(
+        '/public/form/:identifier',
+        publicRateLimit,
+        publicSubmissionRateLimit,
+        async (req, res) => {
         try {
-            const { slug } = req.params;
+            const { identifier } = req.params;
             const { data } = req.body;
-
-            if (!data || typeof data !== 'object') {
-                return sendBadRequest(res, 'Form data is required');
-            }
 
             const outcome = await withTransaction(pool, async (client) => {
                 // Get form
-                const formResult = await client.query(`
-        SELECT ${formColumns('f')}, o.id as org_id
-        FROM forms f
-        JOIN organizations o ON f.organization_id = o.id
-        WHERE f.slug = $1 AND f.status = 'published'
-      `, [slug]);
-
-                if (formResult.rows.length === 0) {
+                const form = await findPublishedForm(
+                    client,
+                    identifier,
+                    `${formColumns('f')}, o.id as org_id`
+                );
+                if (!form) {
                     return { status: 'not_found' };
                 }
 
-                const form = formResult.rows[0];
-
                 // Get fields for validation and contact mapping
                 const fieldsResult = await client.query(
-                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1`,
+                    `SELECT ${formFieldColumns()} FROM form_fields WHERE form_id = $1 ORDER BY field_order, id`,
                     [form.id]
                 );
                 const fields = fieldsResult.rows;
-
-                // Validate required fields
-                for (const field of fields) {
-                    if (field.is_required && !data[field.id]) {
-                        return { status: 'missing_field', label: field.label };
-                    }
-                }
+                const normalizedData = validatePublicFormSubmission(fields, data);
 
                 let contactId = null;
 
@@ -828,8 +991,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     const contactData = { organization_id: form.organization_id };
 
                     for (const field of fields) {
-                        if (field.map_to_contact_field && data[field.id]) {
-                            contactData[field.map_to_contact_field] = data[field.id];
+                        const value = normalizedData[String(field.id)];
+                        if (field.map_to_contact_field && value !== undefined) {
+                            contactData[field.map_to_contact_field] = value;
                         }
                     }
 
@@ -879,10 +1043,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     form.id,
                     form.organization_id,
                     contactId,
-                    JSON.stringify(data),
-                    req.ip,
-                    req.get('user-agent'),
-                    req.get('referrer')
+                    JSON.stringify(normalizedData),
+                    String(req.ip || '').slice(0, 50) || null,
+                    String(req.get('user-agent') || '').slice(0, 2000) || null,
+                    String(req.get('referrer') || '').slice(0, 500) || null
                 ]);
 
                 const submission = submissionResult.rows[0];
@@ -900,6 +1064,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     },
                     triggerType: WORKFLOW_TRIGGERS.FORM_SUBMITTED,
                 });
+                await enqueueFormSubmissionNotifications(client, {
+                    form,
+                    submission,
+                });
 
                 return { status: 'ok', form, submission, contactId };
             });
@@ -908,16 +1076,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return sendNotFound(res, 'Form');
             }
 
-            if (outcome.status === 'missing_field') {
-                return sendBadRequest(res, `${outcome.label} is required`);
-            }
-
+            res.set('Cache-Control', 'no-store');
             sendCreated(res, {
                 success: true,
                 message: outcome.form.success_message,
                 redirect_url: outcome.form.redirect_url
             });
         } catch (error) {
+            if (sendContractError(res, error)) return;
             console.error('Error submitting form:', error);
             sendError(res, 'Failed to submit form');
         }

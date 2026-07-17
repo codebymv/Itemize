@@ -51,6 +51,7 @@ const WorkflowBuilderPage = React.lazy(() => import("./pages/automations/Workflo
 const CalendarsPage = React.lazy(() => import("./pages/calendars/CalendarsPage"));
 const BookingsPage = React.lazy(() => import("./pages/bookings/BookingsPage"));
 const FormsPage = React.lazy(() => import("./pages/forms/FormsPage"));
+const PublicFormPage = React.lazy(() => import("./pages/forms/PublicFormPage"));
 const InboxPage = React.lazy(() => import("./pages/inbox/InboxPage"));
 const ContentsPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.ContentsPage })));
 const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.SharedPage })));
@@ -241,7 +242,8 @@ const AppContent = () => {
   // Determine if this is a public route (no sidebar)
   const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
-    location.pathname.startsWith('/shared/');
+    location.pathname.startsWith('/shared/') ||
+    location.pathname.startsWith('/form/');
   const marketingChatRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const showMarketingChat =
     marketingChatRoutes.includes(location.pathname) ||
@@ -272,6 +274,7 @@ const AppContent = () => {
       <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
       <Route path="/shared/vault/:token" element={<SharedVaultPage />} />
       <Route path="/sign/:token" element={<SignPage />} />
+      <Route path="/form/:identifier" element={<PublicFormPage />} />
 
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>

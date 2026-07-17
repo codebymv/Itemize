@@ -6,6 +6,7 @@ const FORM_COLUMNS = [
     'name',
     'description',
     'slug',
+    'public_id',
     'type',
     'status',
     'submit_button_text',

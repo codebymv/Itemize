@@ -1343,7 +1343,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 73,
+      "line": 184,
       "dynamic": false
     },
     {
@@ -1353,7 +1353,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 144,
+      "line": 255,
       "dynamic": false
     },
     {
@@ -1363,7 +1363,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 487,
+      "line": 652,
       "dynamic": false
     },
     {
@@ -1373,7 +1373,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 106,
+      "line": 217,
       "dynamic": false
     },
     {
@@ -1383,7 +1383,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 312,
+      "line": 440,
       "dynamic": false
     },
     {
@@ -1393,7 +1393,7 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 511,
+      "line": 676,
       "dynamic": false
     },
     {
@@ -1403,7 +1403,7 @@
       ],
       "declaredPath": "/:id/fields",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 380,
+      "line": 531,
       "dynamic": false
     },
     {
@@ -1413,7 +1413,7 @@
       ],
       "declaredPath": "/:id/submissions",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 649,
+      "line": 822,
       "dynamic": false
     },
     {
@@ -1423,27 +1423,27 @@
       ],
       "declaredPath": "/:id/submissions/:subId",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 712,
+      "line": 885,
       "dynamic": false
     },
     {
       "method": "GET",
       "publicPaths": [
-        "/api/forms/public/form/:slug"
+        "/api/forms/public/form/:identifier"
       ],
-      "declaredPath": "/public/form/:slug",
+      "declaredPath": "/public/form/:identifier",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 741,
+      "line": 914,
       "dynamic": false
     },
     {
       "method": "POST",
       "publicPaths": [
-        "/api/forms/public/form/:slug"
+        "/api/forms/public/form/:identifier"
       ],
-      "declaredPath": "/public/form/:slug",
+      "declaredPath": "/public/form/:identifier",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 786,
+      "line": 959,
       "dynamic": false
     },
     {
