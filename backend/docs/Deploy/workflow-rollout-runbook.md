@@ -45,7 +45,7 @@ The provider-mode value is an operator assertion. The application cannot infer f
 
 The harness completed against an isolated Railway staging environment on 2026-07-16:
 
-- the fresh database bootstrap verified 94 expected tables and 61 migration markers, followed by 24/24 deploy migrations;
+- the fresh database bootstrap verified 94 expected tables and 63 migration markers, followed by 24/24 deploy migrations;
 - preflight passed with all three worker flags enabled and zero pending, dead-letter, failed, or reconciliation-required rows;
 - one ID-scoped canary reached `completed` trigger/enrollment states and one `sent` outbox row at `attempt_count = 1`;
 - the provider ID matched the durable email-log external ID, using Resend's `delivered+...@resend.dev` test-address facility;

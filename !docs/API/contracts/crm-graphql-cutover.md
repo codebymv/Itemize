@@ -1,6 +1,6 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 1 contact CRUD, activities, bounded related content, aggregate contact profile, and canonical tag persistence implemented; broader CRM characterization continues
+**Status:** Phase 1 contact CRUD, activities, bounded related content, aggregate contact profile, canonical tag persistence, and canonical pipeline-stage persistence implemented; broader CRM characterization continues
 
 **Evidence date:** 2026-07-17
 
@@ -82,13 +82,17 @@ Database triggers keep both directions synchronized while legacy writers remain:
 
 ### Pipeline stages
 
-Routes currently use the `pipelines.stages` JSON array while a separate `pipeline_stages` normalization table also exists. Choose one authoritative store. Stage IDs are stable opaque identifiers; names and order may change without rewriting deal identity.
+`pipeline_stages` is now authoritative. The `pipelines.stages` JSON array remains a writable compatibility projection for the retained REST, analytics, segment, and frontend consumers. Stage keys are trimmed, case-sensitive opaque identifiers; names, colors, and order may change without rewriting deal identity. Array position defines order for compatibility writes.
 
 - A pipeline has a non-blank name and at least one valid stage.
 - Stage IDs are unique within the pipeline and every stage has a name, order, and validated color.
 - A stage referenced by a deal cannot be removed until deals are moved atomically.
-- Exactly one default pipeline per organization is allowed. Legacy default changes now serialize, but the target database also needs a partial unique constraint.
+- At most one default pipeline per organization is allowed. Legacy default changes serialize and a partial unique index protects direct and future writers.
 - Delete locks and verifies the organization-owned pipeline before checking deals, preventing an existence leak.
+
+Migration `canonical_pipeline_stage_model_v1` treats the live JSON definition as the historical source for overlapping keys, discards unused stale shadow rows, and appends any deal-referenced stage missing from JSON using retained metadata when available. Empty legacy pipelines receive one deterministic lead stage. Bidirectional triggers then keep compatibility JSON and canonical rows synchronized. Composite foreign keys make the deal's organization/pipeline tuple tenant-consistent and require every `(pipeline_id, stage_id)` to reference a canonical row. Core deal validation and segment-stage ownership now read the canonical table.
+
+Fresh PostgreSQL proves normalized JSON writes, canonical ordering, duplicate-key rejection, direct row projection, in-use deletion denial, direct cross-tenant and unknown-stage denial, default uniqueness, and idempotent drift repair that preserves deal-referenced missing stages.
 
 ### Deal contract
 
@@ -160,9 +164,8 @@ The aggregate-profile operation gate passed on 2026-07-17 against GraphQL deploy
 
 The broader CRM slice is not ready for traffic until:
 
-1. JSON pipeline stages and the normalized stage table have one source of truth plus database constraints;
-2. contact email identity policy is selected and dual-tested across manual creation, forms, imports, and messaging;
-3. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
-4. form notifications and CRM workflow events use the durable outbox/worker;
-5. CSV boundaries and remaining profile failure-injection/consumer behavior have complete tests;
-6. remaining tag, pipeline, and form GraphQL/browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.
+1. contact email identity policy is selected and dual-tested across manual creation, forms, imports, and messaging;
+2. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
+3. form notifications and CRM workflow events use the durable outbox/worker;
+4. CSV boundaries and remaining profile failure-injection/consumer behavior have complete tests;
+5. remaining tag, pipeline, and form GraphQL/browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.

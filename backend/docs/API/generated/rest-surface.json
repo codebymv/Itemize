@@ -2573,7 +2573,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 95,
+      "line": 131,
       "dynamic": false
     },
     {
@@ -2583,7 +2583,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 159,
+      "line": 195,
       "dynamic": false
     },
     {
@@ -2593,7 +2593,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 296,
+      "line": 328,
       "dynamic": false
     },
     {
@@ -2603,7 +2603,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 116,
+      "line": 152,
       "dynamic": false
     },
     {
@@ -2613,7 +2613,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 216,
+      "line": 248,
       "dynamic": false
     },
     {
@@ -2623,7 +2623,7 @@
       ],
       "declaredPath": "/deals",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 473,
+      "line": 505,
       "dynamic": false
     },
     {
@@ -2633,7 +2633,7 @@
       ],
       "declaredPath": "/deals/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 798,
+      "line": 829,
       "dynamic": false
     },
     {
@@ -2643,7 +2643,7 @@
       ],
       "declaredPath": "/deals/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 443,
+      "line": 475,
       "dynamic": false
     },
     {
@@ -2653,7 +2653,7 @@
       ],
       "declaredPath": "/deals/:id",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 549,
+      "line": 580,
       "dynamic": false
     },
     {
@@ -2663,7 +2663,7 @@
       ],
       "declaredPath": "/deals/:id/lost",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 743,
+      "line": 774,
       "dynamic": false
     },
     {
@@ -2673,7 +2673,7 @@
       ],
       "declaredPath": "/deals/:id/reopen",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 771,
+      "line": 802,
       "dynamic": false
     },
     {
@@ -2683,7 +2683,7 @@
       ],
       "declaredPath": "/deals/:id/stage",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 640,
+      "line": 671,
       "dynamic": false
     },
     {
@@ -2693,7 +2693,7 @@
       ],
       "declaredPath": "/deals/:id/won",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 716,
+      "line": 747,
       "dynamic": false
     },
     {
@@ -2703,7 +2703,7 @@
       ],
       "declaredPath": "/deals/all",
       "source": "backend/src/routes/pipelines.routes.js",
-      "line": 348,
+      "line": 380,
       "dynamic": false
     },
     {
@@ -3653,7 +3653,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 55,
+      "line": 47,
       "dynamic": false
     },
     {
@@ -3663,7 +3663,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 163,
+      "line": 156,
       "dynamic": false
     },
     {
@@ -3673,7 +3673,7 @@
       ],
       "declaredPath": "/:id",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 96,
+      "line": 91,
       "dynamic": false
     },
     {
@@ -3683,7 +3683,7 @@
       ],
       "declaredPath": "/suggestions",
       "source": "backend/src/routes/tags.routes.js",
-      "line": 214,
+      "line": 195,
       "dynamic": false
     },
     {

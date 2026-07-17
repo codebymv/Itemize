@@ -5,6 +5,9 @@ const cookieParser = require('cookie-parser');
 const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
+const {
+    runCanonicalPipelineStageModelMigration,
+} = require('../../db_pipeline_stage_canonical_migrations');
 
 function createApp(pool) {
     const app = express();
@@ -471,6 +474,298 @@ describe('Pipelines Integration Tests', () => {
         });
     });
 
+    describe('Canonical pipeline-stage persistence', () => {
+        let canonicalPipelineId;
+        const firstStageId = 'canonical-qualified';
+        const secondStageId = 'canonical-proposal';
+
+        beforeAll(async () => {
+            const response = await request(app)
+                .post('/api/pipelines')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    name: 'Canonical Stage Pipeline',
+                    stages: [
+                        {
+                            id: ` ${firstStageId} `,
+                            name: ' Qualified ',
+                            order: 99,
+                            color: ' #123456 ',
+                        },
+                        {
+                            id: secondStageId,
+                            name: 'Proposal',
+                            order: 0,
+                            color: '#654321',
+                        },
+                    ],
+                });
+
+            expect(response.status).toBe(201);
+            canonicalPipelineId = response.body.id;
+        });
+
+        it('normalizes JSON writes into ordered canonical stage rows', async () => {
+            const stages = await dbHelper.pool.query(
+                `SELECT stage_key, name, color, stage_order
+                 FROM pipeline_stages
+                 WHERE pipeline_id = $1
+                 ORDER BY stage_order, id`,
+                [canonicalPipelineId]
+            );
+
+            expect(stages.rows).toEqual([
+                {
+                    stage_key: firstStageId,
+                    name: 'Qualified',
+                    color: '#123456',
+                    stage_order: 0,
+                },
+                {
+                    stage_key: secondStageId,
+                    name: 'Proposal',
+                    color: '#654321',
+                    stage_order: 1,
+                },
+            ]);
+
+            const pipeline = await dbHelper.pool.query(
+                'SELECT stages FROM pipelines WHERE id = $1',
+                [canonicalPipelineId]
+            );
+            expect(pipeline.rows[0].stages).toEqual([
+                { id: firstStageId, name: 'Qualified', order: 0, color: '#123456' },
+                { id: secondStageId, name: 'Proposal', order: 1, color: '#654321' },
+            ]);
+        });
+
+        it('rejects duplicate normalized stage keys at the HTTP boundary', async () => {
+            const response = await request(app)
+                .post('/api/pipelines')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    name: 'Duplicate Stage Pipeline',
+                    stages: [
+                        { id: 'duplicate', name: 'First' },
+                        { id: ' duplicate ', name: 'Second' },
+                    ],
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        it('projects direct canonical edits and prevents deletion of an in-use stage', async () => {
+            await dbHelper.pool.query(
+                `UPDATE pipeline_stages
+                 SET name = 'Qualified Direct', color = '#ABCDEF'
+                 WHERE pipeline_id = $1 AND stage_key = $2`,
+                [canonicalPipelineId, firstStageId]
+            );
+            await dbHelper.pool.query(
+                `INSERT INTO pipeline_stages (
+                    pipeline_id, stage_key, name, color, stage_order
+                 ) VALUES ($1, 'canonical-review', 'Review', '#111111', 2)`,
+                [canonicalPipelineId]
+            );
+
+            let pipeline = await dbHelper.pool.query(
+                'SELECT stages FROM pipelines WHERE id = $1',
+                [canonicalPipelineId]
+            );
+            expect(pipeline.rows[0].stages).toEqual([
+                { id: firstStageId, name: 'Qualified Direct', order: 0, color: '#ABCDEF' },
+                { id: secondStageId, name: 'Proposal', order: 1, color: '#654321' },
+                { id: 'canonical-review', name: 'Review', order: 2, color: '#111111' },
+            ]);
+
+            await dbHelper.pool.query(
+                `DELETE FROM pipeline_stages
+                 WHERE pipeline_id = $1 AND stage_key = 'canonical-review'`,
+                [canonicalPipelineId]
+            );
+
+            const deal = await request(app)
+                .post('/api/pipelines/deals')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    pipeline_id: canonicalPipelineId,
+                    stage_id: firstStageId,
+                    title: 'Canonical Stage Deal',
+                });
+            expect(deal.status).toBe(201);
+
+            const normalizedUpdate = await request(app)
+                .put(`/api/pipelines/${canonicalPipelineId}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    stages: [
+                        {
+                            id: ` ${firstStageId} `,
+                            name: 'Qualified Direct',
+                            color: '#ABCDEF',
+                        },
+                        {
+                            id: secondStageId,
+                            name: 'Proposal',
+                            color: '#654321',
+                        },
+                    ],
+                });
+            expect(normalizedUpdate.status).toBe(200);
+
+            await expect(dbHelper.pool.query(
+                `DELETE FROM pipeline_stages
+                 WHERE pipeline_id = $1 AND stage_key = $2`,
+                [canonicalPipelineId, firstStageId]
+            )).rejects.toMatchObject({ code: '23503' });
+
+            pipeline = await dbHelper.pool.query(
+                'SELECT stages FROM pipelines WHERE id = $1',
+                [canonicalPipelineId]
+            );
+            expect(pipeline.rows[0].stages.map(stage => stage.id)).toEqual([
+                firstStageId,
+                secondStageId,
+            ]);
+        });
+
+        it('enforces tenant ownership and stage membership for direct deal writes', async () => {
+            const foreignPipeline = await request(app)
+                .post('/api/pipelines')
+                .set('Cookie', [`itemize_auth=${userB.token}`])
+                .set('x-organization-id', String(userB.org.id))
+                .send({ name: 'Foreign Canonical Pipeline' });
+            expect(foreignPipeline.status).toBe(201);
+
+            await expect(dbHelper.pool.query(
+                `INSERT INTO deals (
+                    organization_id, pipeline_id, stage_id, title, created_by
+                 ) VALUES ($1, $2, $3, 'Cross Tenant Direct Deal', $4)`,
+                [
+                    userA.org.id,
+                    foreignPipeline.body.id,
+                    foreignPipeline.body.stages[0].id,
+                    userA.user.id,
+                ]
+            )).rejects.toMatchObject({ code: '23503' });
+
+            await expect(dbHelper.pool.query(
+                `INSERT INTO deals (
+                    organization_id, pipeline_id, stage_id, title, created_by
+                 ) VALUES ($1, $2, 'missing-canonical-stage', 'Missing Stage Deal', $3)`,
+                [userA.org.id, canonicalPipelineId, userA.user.id]
+            )).rejects.toMatchObject({ code: '23503' });
+        });
+
+        it('repairs stale shadow rows while preserving deal-referenced missing stages', async () => {
+            const response = await request(app)
+                .post('/api/pipelines')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    name: 'Pipeline Drift Repair',
+                    stages: [
+                        { id: 'json-live', name: 'Live Before Drift', color: '#010101' },
+                        { id: 'deal-shadow', name: 'Deal Before Drift', color: '#020202' },
+                    ],
+                });
+            expect(response.status).toBe(201);
+            const repairPipelineId = response.body.id;
+
+            const deal = await request(app)
+                .post('/api/pipelines/deals')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    pipeline_id: repairPipelineId,
+                    stage_id: 'deal-shadow',
+                    title: 'Drift Repair Deal',
+                });
+            expect(deal.status).toBe(201);
+
+            await dbHelper.pool.query('DROP TRIGGER pipelines_prepare_canonical_stages ON pipelines');
+            await dbHelper.pool.query('DROP TRIGGER pipelines_sync_canonical_stages ON pipelines');
+            await dbHelper.pool.query('DROP TRIGGER pipeline_stages_prepare_row ON pipeline_stages');
+            await dbHelper.pool.query('DROP TRIGGER pipeline_stages_project_json ON pipeline_stages');
+            await dbHelper.pool.query('ALTER TABLE deals DROP CONSTRAINT deals_pipeline_stage_fk');
+            await dbHelper.pool.query(
+                `UPDATE pipelines
+                 SET stages = $2::jsonb
+                 WHERE id = $1`,
+                [
+                    repairPipelineId,
+                    JSON.stringify([
+                        { id: 'json-live', name: 'JSON Wins', color: '#AAAAAA' },
+                    ]),
+                ]
+            );
+            await dbHelper.pool.query(
+                `UPDATE pipeline_stages
+                 SET name = 'Shadow Deal Stage', color = '#BBBBBB'
+                 WHERE pipeline_id = $1 AND stage_key = 'deal-shadow'`,
+                [repairPipelineId]
+            );
+            await dbHelper.pool.query(
+                `INSERT INTO pipeline_stages (
+                    pipeline_id, stage_key, name, color, stage_order
+                 ) VALUES ($1, 'unused-shadow', 'Unused Shadow', '#CCCCCC', 2)`,
+                [repairPipelineId]
+            );
+
+            await runCanonicalPipelineStageModelMigration(dbHelper.pool);
+
+            const stages = await dbHelper.pool.query(
+                `SELECT stage_key, name, color, stage_order
+                 FROM pipeline_stages
+                 WHERE pipeline_id = $1
+                 ORDER BY stage_order, id`,
+                [repairPipelineId]
+            );
+            expect(stages.rows).toEqual([
+                {
+                    stage_key: 'json-live',
+                    name: 'JSON Wins',
+                    color: '#AAAAAA',
+                    stage_order: 0,
+                },
+                {
+                    stage_key: 'deal-shadow',
+                    name: 'Shadow Deal Stage',
+                    color: '#BBBBBB',
+                    stage_order: 1,
+                },
+            ]);
+
+            const pipeline = await dbHelper.pool.query(
+                'SELECT stages FROM pipelines WHERE id = $1',
+                [repairPipelineId]
+            );
+            expect(pipeline.rows[0].stages.map(stage => stage.id)).toEqual([
+                'json-live',
+                'deal-shadow',
+            ]);
+
+            const constraints = await dbHelper.pool.query(
+                `SELECT conname
+                 FROM pg_constraint
+                 WHERE conrelid = 'deals'::regclass
+                   AND conname IN (
+                     'deals_pipeline_organization_fk',
+                     'deals_pipeline_stage_fk'
+                   )
+                 ORDER BY conname`
+            );
+            expect(constraints.rows.map(row => row.conname)).toEqual([
+                'deals_pipeline_organization_fk',
+                'deals_pipeline_stage_fk',
+            ]);
+        });
+    });
+
     describe('Default pipeline concurrency', () => {
         it('leaves exactly one default when concurrent creates request default status', async () => {
             const create = name => request(app)
@@ -484,6 +779,13 @@ describe('Pipelines Integration Tests', () => {
                 create(`Default B ${Date.now()}`),
             ]);
             expect(responses.every(response => response.status === 201)).toBe(true);
+
+            await expect(dbHelper.pool.query(
+                `UPDATE pipelines
+                 SET is_default = true
+                 WHERE id = ANY($1::int[])`,
+                [responses.map(response => response.body.id)]
+            )).rejects.toMatchObject({ code: '23505' });
 
             const defaults = await dbHelper.pool.query(
                 'SELECT COUNT(*)::int AS count FROM pipelines WHERE organization_id = $1 AND is_default = TRUE',

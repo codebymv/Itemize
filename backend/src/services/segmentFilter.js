@@ -189,8 +189,14 @@ async function validateSegmentReferences(client, organizationId, definition) {
         .filter(filter => filter.field === 'deal_stage' && filter.operator === 'in_stage')
         .map(filter => filter.value))];
     if (stageIds.length > 0) {
-        const result = await client.query('SELECT stages FROM pipelines WHERE organization_id = $1', [organizationId]);
-        const ownedStages = new Set(result.rows.flatMap(row => Array.isArray(row.stages) ? row.stages : []).map(stage => String(stage.id)));
+        const result = await client.query(
+            `SELECT ps.stage_key
+             FROM pipeline_stages ps
+             JOIN pipelines p ON p.id = ps.pipeline_id
+             WHERE p.organization_id = $1`,
+            [organizationId]
+        );
+        const ownedStages = new Set(result.rows.map(row => String(row.stage_key)));
         if (stageIds.some(stageId => !ownedStages.has(String(stageId)))) {
             fail('filters.deal_stage contains a stage outside the organization', 'filters.deal_stage');
         }

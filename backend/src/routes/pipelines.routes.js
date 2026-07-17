@@ -21,8 +21,27 @@ module.exports = (pool, authenticateJWT) => {
   const { requireOrganization } = require('../middleware/organization')(pool);
 
   const hasStage = (stages, stageId) => (
-    Array.isArray(stages) && stages.some(stage => String(stage.id) === String(stageId))
+    Array.isArray(stages) && stages.some(
+      stage => String(stage.id).trim() === String(stageId)
+    )
   );
+
+  const stagesAreValid = stages => {
+    if (!Array.isArray(stages) || stages.length === 0) return false;
+    const ids = new Set();
+    return stages.every(stage => {
+      const id = typeof stage?.id === 'string' ? stage.id.trim() : '';
+      const name = typeof stage?.name === 'string' ? stage.name.trim() : '';
+      const color = stage?.color === undefined || stage?.color === null
+        ? ''
+        : String(stage.color).trim();
+      if (!id || !name || id.length > 100 || name.length > 255 || color.length > 50 || ids.has(id)) {
+        return false;
+      }
+      ids.add(id);
+      return true;
+    });
+  };
 
   async function validateDealReferences(client, organizationId, {
     pipelineId,
@@ -31,7 +50,16 @@ module.exports = (pool, authenticateJWT) => {
     assignedTo,
   }) {
     const pipelineResult = await client.query(
-      'SELECT id, stages FROM pipelines WHERE id = $1 AND organization_id = $2',
+      `SELECT p.id, p.stages,
+              (
+                SELECT ps.stage_key
+                FROM pipeline_stages ps
+                WHERE ps.pipeline_id = p.id
+                ORDER BY ps.stage_order, ps.id
+                LIMIT 1
+              ) AS first_stage_id
+       FROM pipelines p
+       WHERE p.id = $1 AND p.organization_id = $2`,
       [pipelineId, organizationId]
     );
     if (pipelineResult.rows.length === 0) {
@@ -39,8 +67,16 @@ module.exports = (pool, authenticateJWT) => {
     }
 
     const pipeline = pipelineResult.rows[0];
-    if (stageId !== null && stageId !== undefined && !hasStage(pipeline.stages, stageId)) {
-      return { status: 'invalid_stage', pipeline };
+    if (stageId !== null && stageId !== undefined) {
+      const stageResult = await client.query(
+        `SELECT 1
+         FROM pipeline_stages
+         WHERE pipeline_id = $1 AND stage_key = $2`,
+        [pipeline.id, String(stageId)]
+      );
+      if (stageResult.rows.length === 0) {
+        return { status: 'invalid_stage', pipeline };
+      }
     }
 
     if (contactId !== null && contactId !== undefined) {
@@ -164,11 +200,7 @@ module.exports = (pool, authenticateJWT) => {
         return res.status(400).json({ error: 'Pipeline name is required' });
       }
 
-      if (stages !== undefined && (
-        !Array.isArray(stages)
-        || stages.length === 0
-        || stages.some(stage => !stage?.id || !stage?.name)
-      )) {
+      if (stages !== undefined && !stagesAreValid(stages)) {
         return res.status(400).json({ error: 'stages must be a non-empty array with an id and name for every stage' });
       }
 
@@ -232,7 +264,7 @@ module.exports = (pool, authenticateJWT) => {
         }
 
         if (stages !== undefined) {
-          if (!Array.isArray(stages) || stages.length === 0 || stages.some(stage => !stage?.id || !stage?.name)) {
+          if (!stagesAreValid(stages)) {
             return { status: 'invalid_stages', rows: [] };
           }
 
@@ -505,8 +537,7 @@ module.exports = (pool, authenticateJWT) => {
           return references;
         }
 
-        const stages = references.pipeline.stages;
-        const dealStageId = stage_id || (stages[0] ? stages[0].id : 'lead');
+        const dealStageId = stage_id || references.pipeline.first_stage_id;
 
         const insertResult = await client.query(`
           INSERT INTO deals (

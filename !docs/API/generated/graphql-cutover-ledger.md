@@ -284,11 +284,11 @@
 | GET | `/api/pages/public/page/:slug` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/pipelines` | 1 | 3 | graphql-query | high | crm / PipelinesModule / pipelines |
-| POST | `/api/pipelines` | 1 | 6 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
+| POST | `/api/pipelines` | 1 | 10 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
 | DELETE | `/api/pipelines/:id` | 1 | 3 | graphql-mutation | high | crm / PipelinesModule / deletePipeline |
 | GET | `/api/pipelines/:id` | 1 | 2 | graphql-query | high | crm / PipelinesModule / pipeline |
-| PUT | `/api/pipelines/:id` | 1 | 3 | graphql-mutation | high | crm / PipelinesModule / updatePipeline |
-| POST | `/api/pipelines/deals` | 1 | 7 | graphql-mutation | high | crm / DealsModule / createDeal |
+| PUT | `/api/pipelines/:id` | 1 | 4 | graphql-mutation | high | crm / PipelinesModule / updatePipeline |
+| POST | `/api/pipelines/deals` | 1 | 9 | graphql-mutation | high | crm / DealsModule / createDeal |
 | DELETE | `/api/pipelines/deals/:id` | 1 | 1 | graphql-mutation | high | crm / DealsModule / deleteDeal |
 | GET | `/api/pipelines/deals/:id` | 1 | 2 | graphql-query | high | crm / DealsModule / deal |
 | PUT | `/api/pipelines/deals/:id` | 1 | 3 | graphql-mutation | high | crm / DealsModule / updateDeal |
@@ -392,8 +392,8 @@
 | POST | `/api/suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/tags` | 0 | 4 | graphql-query | high | crm / TagsModule / tags |
 | POST | `/api/tags` | 0 | 8 | graphql-mutation | high | crm / TagsModule / createTag |
-| DELETE | `/api/tags/:id` | 0 | 6 | graphql-mutation | high | crm / TagsModule / deleteTag |
-| PUT | `/api/tags/:id` | 0 | 4 | graphql-mutation | high | crm / TagsModule / updateTag |
+| DELETE | `/api/tags/:id` | 0 | 7 | graphql-mutation | high | crm / TagsModule / deleteTag |
+| PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
 | GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
 | GET | `/api/vaults` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/vaults` | 1 | 0 | graphql-mutation | high | _unassigned_ |
