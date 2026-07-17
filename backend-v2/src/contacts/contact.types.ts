@@ -85,3 +85,18 @@ export class DeleteContactResult {
   @Field(() => Int)
   deletedId: number;
 }
+
+@ObjectType()
+export class BulkContactMutationResult {
+  @Field(() => [Int])
+  requestedIds: number[];
+
+  @Field(() => [Int])
+  matchedIds: number[];
+
+  @Field(() => [Int])
+  changedIds: number[];
+
+  @Field(() => [Int])
+  rejectedIds: number[];
+}

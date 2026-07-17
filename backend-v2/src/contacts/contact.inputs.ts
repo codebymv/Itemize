@@ -1,6 +1,7 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
 import {
+  ContactBulkTagsMode,
   ContactSource,
   ContactSortField,
   ContactStatus,
@@ -107,4 +108,28 @@ export class ContactSortInput {
 
   @Field(() => SortDirection, { defaultValue: SortDirection.DESC })
   direction = SortDirection.DESC;
+}
+
+@InputType()
+export class BulkContactUpdatesInput {
+  @Field(() => ContactStatus, { nullable: true })
+  status?: ContactStatus | null;
+
+  @Field(() => Int, { nullable: true })
+  assignedToId?: number | null;
+
+  @Field(() => [String], { nullable: true })
+  tags?: string[] | null;
+
+  @Field(() => ContactBulkTagsMode, { nullable: true })
+  tagsMode?: ContactBulkTagsMode | null;
+}
+
+@InputType()
+export class BulkUpdateContactsInput {
+  @Field(() => [Int])
+  contactIds: number[];
+
+  @Field(() => BulkContactUpdatesInput)
+  updates: BulkContactUpdatesInput;
 }

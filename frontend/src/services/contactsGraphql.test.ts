@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
+  bulkDeleteContactsViaGraphql,
+  bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
   getContactViaGraphql,
@@ -9,6 +11,7 @@ import {
 } from './contactsGraphql';
 import {
   GraphqlRequestError,
+  isContactGraphqlBulkMutationsEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -71,6 +74,13 @@ describe('contact GraphQL consumer', () => {
     expect(isContactGraphqlMutationsEnabled()).toBe(false);
     vi.stubEnv('VITE_CONTACT_MUTATIONS_GRAPHQL', 'true');
     expect(isContactGraphqlMutationsEnabled()).toBe(true);
+  });
+
+  it('keeps GraphQL bulk contact mutations independently disabled by default', () => {
+    vi.stubEnv('VITE_CONTACT_BULK_MUTATIONS_GRAPHQL', 'false');
+    expect(isContactGraphqlBulkMutationsEnabled()).toBe(false);
+    vi.stubEnv('VITE_CONTACT_BULK_MUTATIONS_GRAPHQL', 'true');
+    expect(isContactGraphqlBulkMutationsEnabled()).toBe(true);
   });
 
   it('maps list inputs and the GraphQL page into the existing REST-shaped contract', async () => {
@@ -192,5 +202,50 @@ describe('contact GraphQL consumer', () => {
         'x-organization-id': '42',
       });
     }
+  });
+
+  it('maps bulk mutations and preserves the existing REST-shaped results', async () => {
+    vi.mocked(fetchCsrfToken).mockClear();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({
+        data: { bulkUpdateContacts: { matchedIds: [11, 12] } },
+      }))
+      .mockResolvedValueOnce(response({
+        data: { bulkDeleteContacts: { matchedIds: [11] } },
+      }));
+
+    await expect(bulkUpdateContactsViaGraphql({
+      contact_ids: [11, 12, 999],
+      updates: {
+        status: 'inactive',
+        assigned_to: null,
+        tags: ['vip'],
+        tags_mode: 'add',
+      },
+      organization_id: 42,
+    })).resolves.toEqual({
+      message: '2 contacts updated',
+      updated_ids: [11, 12],
+    });
+    await expect(bulkDeleteContactsViaGraphql([11, 999], 42)).resolves.toEqual({
+      message: '1 contacts deleted',
+      deleted_ids: [11],
+    });
+
+    const updateBody = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body));
+    expect(updateBody.variables).toEqual({
+      input: {
+        contactIds: [11, 12, 999],
+        updates: {
+          status: 'INACTIVE',
+          assignedToId: null,
+          tags: ['vip'],
+          tagsMode: 'ADD',
+        },
+      },
+    });
+    const deleteBody = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
+    expect(deleteBody.variables).toEqual({ contactIds: [11, 999] });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(2);
   });
 });

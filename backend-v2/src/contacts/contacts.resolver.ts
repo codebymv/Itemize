@@ -3,12 +3,18 @@ import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
+  BulkUpdateContactsInput,
   ContactFilterInput,
   ContactSortInput,
   CreateContactInput,
   UpdateContactInput,
 } from './contact.inputs';
-import { Contact, ContactPage, DeleteContactResult } from './contact.types';
+import {
+  BulkContactMutationResult,
+  Contact,
+  ContactPage,
+  DeleteContactResult,
+} from './contact.types';
 import { ContactsService } from './contacts.service';
 
 @Resolver(() => Contact)
@@ -63,6 +69,28 @@ export class ContactsResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteContactResult> {
     return { deletedId: await this.contacts.delete(this.organizationId(), id) };
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => BulkContactMutationResult)
+  bulkUpdateContacts(
+    @Args('input') input: BulkUpdateContactsInput,
+  ): Promise<BulkContactMutationResult> {
+    return this.contacts.bulkUpdate(
+      this.organizationId(),
+      this.userId(),
+      input,
+    );
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => BulkContactMutationResult)
+  bulkDeleteContacts(
+    @Args('contactIds', { type: () => [Int] }) contactIds: number[],
+  ): Promise<BulkContactMutationResult> {
+    return this.contacts.bulkDelete(this.organizationId(), contactIds);
   }
 
   private organizationId(): number {

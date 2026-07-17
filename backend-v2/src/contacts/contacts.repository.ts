@@ -2,7 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
-import { ContactSortField, ContactStatus, SortDirection } from './contact.enums';
+import {
+  ContactBulkTagsMode,
+  ContactSortField,
+  ContactStatus,
+  SortDirection,
+} from './contact.enums';
 
 export type ContactRow = {
   id: number;
@@ -78,6 +83,17 @@ export type UpdateContactOutcome =
   | { kind: 'updated'; row: ContactRow; changedFields: string[] }
   | { kind: 'invalid_assignee' }
   | { kind: 'not_found' };
+
+export type BulkContactUpdateValues = Partial<{
+  status: ContactStatus;
+  assignedToId: number | null;
+  tags: string[];
+  tagsMode: ContactBulkTagsMode;
+}>;
+
+export type BulkContactUpdateOutcome =
+  | { kind: 'updated'; matchedIds: number[]; changedIds: number[] }
+  | { kind: 'invalid_assignee' };
 
 const contactSelection = `
   c.id,
@@ -349,6 +365,128 @@ export class ContactsRepository {
     });
   }
 
+  async bulkUpdate(
+    organizationId: number,
+    userId: number,
+    contactIds: number[],
+    values: BulkContactUpdateValues,
+  ): Promise<BulkContactUpdateOutcome> {
+    return this.transaction(async (client) => {
+      if (
+        Object.prototype.hasOwnProperty.call(values, 'assignedToId') &&
+        !(await this.isMember(client, organizationId, values.assignedToId ?? null))
+      ) {
+        return { kind: 'invalid_assignee' };
+      }
+
+      const existingResult = await client.query<Record<string, unknown>>(
+        `SELECT id, status, assigned_to, tags
+         FROM contacts
+         WHERE organization_id = $1 AND id = ANY($2::int[])
+         ORDER BY id
+         FOR UPDATE`,
+        [organizationId, contactIds],
+      );
+      const byId = new Map(
+        existingResult.rows.map((row) => [Number(row.id), row]),
+      );
+      const matchedIds = contactIds.filter((id) => byId.has(id));
+      const changedIds: number[] = [];
+
+      for (const contactId of matchedIds) {
+        const existing = byId.get(contactId);
+        if (!existing) continue;
+        const currentTags = Array.isArray(existing.tags)
+          ? existing.tags.map(String)
+          : [];
+        const nextStatus = values.status ?? String(existing.status);
+        const nextAssignedTo = Object.prototype.hasOwnProperty.call(values, 'assignedToId')
+          ? values.assignedToId ?? null
+          : existing.assigned_to === null
+            ? null
+            : Number(existing.assigned_to);
+        const nextTags = values.tags
+          ? this.applyTags(currentTags, values.tags, values.tagsMode ?? ContactBulkTagsMode.SET)
+          : currentTags;
+        const changedFields = [
+          ...(String(existing.status) !== nextStatus ? ['status'] : []),
+          ...((existing.assigned_to === null ? null : Number(existing.assigned_to)) !== nextAssignedTo
+            ? ['assigned_to']
+            : []),
+          ...(this.comparable(currentTags) !== this.comparable(nextTags) ? ['tags'] : []),
+        ];
+        if (changedFields.length === 0) continue;
+
+        await client.query(
+          `UPDATE contacts
+           SET status = $1, assigned_to = $2, tags = $3::text[],
+               updated_at = CURRENT_TIMESTAMP
+           WHERE organization_id = $4 AND id = $5`,
+          [nextStatus, nextAssignedTo, nextTags, organizationId, contactId],
+        );
+        await this.enqueueTrigger(client, {
+          organizationId,
+          contactId,
+          triggerType: 'contact_updated',
+          eventKey: `domain:${randomUUID()}`,
+          payload: {
+            changed_fields: changedFields,
+            previous_status: existing.status,
+            status: nextStatus,
+          },
+        });
+        for (const tag of this.tagDifference(nextTags, currentTags)) {
+          await this.enqueueTrigger(client, {
+            organizationId,
+            contactId,
+            triggerType: 'tag_added',
+            eventKey: `domain:${randomUUID()}`,
+            payload: { tag },
+          });
+        }
+        for (const tag of this.tagDifference(currentTags, nextTags)) {
+          await this.enqueueTrigger(client, {
+            organizationId,
+            contactId,
+            triggerType: 'tag_removed',
+            eventKey: `domain:${randomUUID()}`,
+            payload: { tag },
+          });
+        }
+        if (changedFields.includes('status')) {
+          await client.query(
+            `INSERT INTO contact_activities (contact_id, user_id, type, title, content)
+             VALUES ($1, $2, 'status_change', 'Status Changed', $3::jsonb)`,
+            [
+              contactId,
+              userId,
+              JSON.stringify({ from: existing.status, to: nextStatus }),
+            ],
+          );
+        }
+        changedIds.push(contactId);
+      }
+
+      return { kind: 'updated', matchedIds, changedIds };
+    });
+  }
+
+  async bulkDelete(
+    organizationId: number,
+    contactIds: number[],
+  ): Promise<number[]> {
+    return this.transaction(async (client) => {
+      const deleted = await client.query<{ id: number }>(
+        `DELETE FROM contacts
+         WHERE organization_id = $1 AND id = ANY($2::int[])
+         RETURNING id`,
+        [organizationId, contactIds],
+      );
+      const deletedIds = new Set(deleted.rows.map((row) => Number(row.id)));
+      return contactIds.filter((id) => deletedIds.has(id));
+    });
+  }
+
   private async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();
     try {
@@ -432,6 +570,24 @@ export class ContactsRepository {
   private comparable(value: unknown): string | null {
     if (value === null || value === undefined) return null;
     return typeof value === 'object' ? JSON.stringify(value) : String(value);
+  }
+
+  private applyTags(
+    existing: string[],
+    requested: string[],
+    mode: ContactBulkTagsMode,
+  ): string[] {
+    if (mode === ContactBulkTagsMode.SET) return requested;
+    if (mode === ContactBulkTagsMode.ADD) {
+      return [...new Set([...existing, ...requested])];
+    }
+    const removed = new Set(requested);
+    return existing.filter((tag) => !removed.has(tag));
+  }
+
+  private tagDifference(values: string[], comparison: string[]): string[] {
+    const compared = new Set(comparison);
+    return values.filter((tag) => !compared.has(tag));
   }
 
   private defaultLimit(plan: string): number {

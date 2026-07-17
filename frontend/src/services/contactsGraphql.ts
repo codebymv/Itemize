@@ -1,5 +1,9 @@
 import type { Contact, ContactAddress, ContactsResponse, JsonRecord } from '@/types';
-import type { ContactsQueryParams, CreateContactData } from './contactsApi';
+import type {
+  BulkUpdateData,
+  ContactsQueryParams,
+  CreateContactData,
+} from './contactsApi';
 import {
   GraphqlRequestError,
   graphqlMutationRequest,
@@ -87,6 +91,28 @@ const updateContactMutation = `
 const deleteContactMutation = `
   mutation DeleteContact($id: Int!) {
     deleteContact(id: $id) { deletedId }
+  }
+`;
+
+const bulkUpdateContactsMutation = `
+  mutation BulkUpdateContacts($input: BulkUpdateContactsInput!) {
+    bulkUpdateContacts(input: $input) {
+      requestedIds
+      matchedIds
+      changedIds
+      rejectedIds
+    }
+  }
+`;
+
+const bulkDeleteContactsMutation = `
+  mutation BulkDeleteContacts($contactIds: [Int!]!) {
+    bulkDeleteContacts(contactIds: $contactIds) {
+      requestedIds
+      matchedIds
+      changedIds
+      rejectedIds
+    }
   }
 `;
 
@@ -240,4 +266,48 @@ export const deleteContactViaGraphql = async (
   if (data.deleteContact.deletedId !== id) {
     throw new GraphqlRequestError('GraphQL delete confirmation did not match the contact', 200);
   }
+};
+
+export const bulkUpdateContactsViaGraphql = async (
+  data: BulkUpdateData,
+): Promise<{ message: string; updated_ids: number[] }> => {
+  const updates = data.updates;
+  const variables = {
+    input: {
+      contactIds: data.contact_ids,
+      updates: {
+        ...(has(updates, 'status') && updates.status
+          ? { status: updates.status.toUpperCase() }
+          : {}),
+        ...(has(updates, 'assigned_to')
+          ? { assignedToId: updates.assigned_to }
+          : {}),
+        ...(has(updates, 'tags') ? { tags: updates.tags } : {}),
+        ...(has(updates, 'tags_mode') && updates.tags_mode
+          ? { tagsMode: updates.tags_mode.toUpperCase() }
+          : {}),
+      },
+    },
+  };
+  const result = await graphqlMutationRequest<{
+    bulkUpdateContacts: { matchedIds: number[] };
+  }, typeof variables>(bulkUpdateContactsMutation, variables, data.organization_id);
+  return {
+    message: `${result.bulkUpdateContacts.matchedIds.length} contacts updated`,
+    updated_ids: result.bulkUpdateContacts.matchedIds,
+  };
+};
+
+export const bulkDeleteContactsViaGraphql = async (
+  contactIds: number[],
+  organizationId?: number,
+): Promise<{ message: string; deleted_ids: number[] }> => {
+  const variables = { contactIds };
+  const result = await graphqlMutationRequest<{
+    bulkDeleteContacts: { matchedIds: number[] };
+  }, typeof variables>(bulkDeleteContactsMutation, variables, organizationId);
+  return {
+    message: `${result.bulkDeleteContacts.matchedIds.length} contacts deleted`,
+    deleted_ids: result.bulkDeleteContacts.matchedIds,
+  };
 };

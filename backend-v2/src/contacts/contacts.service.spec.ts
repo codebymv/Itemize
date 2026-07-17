@@ -38,6 +38,8 @@ const codeFrom = async (promise: Promise<unknown>): Promise<string> => {
 
 describe('ContactsService', () => {
   const repository = {
+    bulkDelete: jest.fn(),
+    bulkUpdate: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
     findPage: jest.fn(),
@@ -175,5 +177,60 @@ describe('ContactsService', () => {
     expect(await codeFrom(service.update(42, 7, 999, { company: 'Nope' })))
       .toBe('NOT_FOUND');
     expect(await codeFrom(service.delete(42, 999))).toBe('NOT_FOUND');
+  });
+
+  it('deduplicates bulk IDs and reports matched, changed, and rejected rows', async () => {
+    repository.bulkUpdate.mockResolvedValue({
+      kind: 'updated',
+      matchedIds: [11],
+      changedIds: [11],
+    });
+
+    await expect(service.bulkUpdate(42, 7, {
+      contactIds: [11, 11, 99],
+      updates: { tags: [' vip ', 'vip'], tagsMode: 'add' as never },
+    })).resolves.toEqual({
+      requestedIds: [11, 99],
+      matchedIds: [11],
+      changedIds: [11],
+      rejectedIds: [99],
+    });
+    expect(repository.bulkUpdate).toHaveBeenCalledWith(
+      42,
+      7,
+      [11, 99],
+      { tags: ['vip'], tagsMode: 'add' },
+    );
+  });
+
+  it('rejects unsafe bulk input before querying', async () => {
+    expect(await codeFrom(service.bulkDelete(42, []))).toBe('BAD_USER_INPUT');
+    expect(await codeFrom(service.bulkDelete(42, [0]))).toBe('BAD_USER_INPUT');
+    expect(await codeFrom(service.bulkDelete(
+      42,
+      Array.from({ length: 101 }, (_, index) => index + 1),
+    ))).toBe('BAD_USER_INPUT');
+    expect(await codeFrom(service.bulkUpdate(42, 7, {
+      contactIds: [11],
+      updates: { tagsMode: 'add' as never },
+    }))).toBe('BAD_USER_INPUT');
+    expect(repository.bulkDelete).not.toHaveBeenCalled();
+    expect(repository.bulkUpdate).not.toHaveBeenCalled();
+  });
+
+  it('maps invalid bulk assignment and exact bulk delete outcomes', async () => {
+    repository.bulkUpdate.mockResolvedValue({ kind: 'invalid_assignee' });
+    expect(await codeFrom(service.bulkUpdate(42, 7, {
+      contactIds: [11],
+      updates: { assignedToId: 99 },
+    }))).toBe('BAD_USER_INPUT');
+
+    repository.bulkDelete.mockResolvedValue([11]);
+    await expect(service.bulkDelete(42, [11, 99])).resolves.toEqual({
+      requestedIds: [11, 99],
+      matchedIds: [11],
+      changedIds: [11],
+      rejectedIds: [99],
+    });
   });
 });

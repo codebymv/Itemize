@@ -1205,12 +1205,12 @@
       "notes": "Related lists, notes, and whiteboards require explicit tenant scope, stable ordering, and pagination rather than unbounded arrays."
     },
     "POST /api/contacts/bulk-update": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Validate IDs, status, tag mode, and assignee membership; return matched and changed IDs without leaking other-tenant rows."
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "characterized", "risk": "high",
+      "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, validates status/tag mode/assignee membership, applies set-like tags, commits workflow triggers and status activities atomically, and returns requested/matched/changed/rejected IDs without distinguishing foreign from absent rows."
     },
     "POST /api/contacts/bulk-delete": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkDeleteContacts", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization-scoped bulk deletion needs limits, partial-result semantics, and dependent-row policy."
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkDeleteContacts", "parityStatus": "characterized", "risk": "high",
+      "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, deletes only active-organization rows, returns requested/matched/changed/rejected IDs, and relies on the verified database cascade policy for dependent activities."
     },
     "GET /api/contacts/export/csv": {
       "disposition": "retain-http", "owner": "crm", "targetModule": "ContactTransfersModule", "targetOperation": "exportContactsCsv", "parityStatus": "characterized", "risk": "high",

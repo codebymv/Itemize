@@ -29,6 +29,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
   let fixtures: Fixture[];
   let corruptContactId: number;
   let mutationContactId: number;
+  let foreignContactId: number;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -107,6 +108,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       status: contact.status,
       tags: contact.tags,
     }));
+    foreignContactId = contacts.rows[3].id;
     const corruptContact = await pool.query<{ id: number }>(
       `INSERT INTO contacts (
          organization_id, first_name, email, source, status, tags,
@@ -547,6 +549,160 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     ).expect(200);
     expect(foreignUpdate.body.errors[0].extensions.code).toBe('NOT_FOUND');
     expect(foreignDelete.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('bulk updates deduplicated tenant rows and emits side effects only for actual changes', async () => {
+    const mutation = `mutation BulkUpdateContacts($input: BulkUpdateContactsInput!) {
+      bulkUpdateContacts(input: $input) {
+        requestedIds matchedIds changedIds rejectedIds
+      }
+    }`;
+    const variables = {
+      input: {
+        contactIds: [fixtures[0].id, fixtures[0].id, fixtures[1].id, foreignContactId],
+        updates: { status: 'ARCHIVED', tags: ['bulk-tested'], tagsMode: 'ADD' },
+      },
+    };
+    const changed = await graphqlMutation(
+      memberToken,
+      organizationId,
+      mutation,
+      variables,
+    ).expect(200);
+    const unchanged = await graphqlMutation(
+      memberToken,
+      organizationId,
+      mutation,
+      variables,
+    ).expect(200);
+
+    expect(changed.body.errors).toBeUndefined();
+    expect(changed.body.data.bulkUpdateContacts).toEqual({
+      requestedIds: [fixtures[0].id, fixtures[1].id, foreignContactId],
+      matchedIds: [fixtures[0].id, fixtures[1].id],
+      changedIds: [fixtures[0].id, fixtures[1].id],
+      rejectedIds: [foreignContactId],
+    });
+    expect(unchanged.body.data.bulkUpdateContacts).toEqual({
+      requestedIds: [fixtures[0].id, fixtures[1].id, foreignContactId],
+      matchedIds: [fixtures[0].id, fixtures[1].id],
+      changedIds: [],
+      rejectedIds: [foreignContactId],
+    });
+
+    const contacts = await pool.query<{ id: number; status: string; tags: string[] }>(
+      `SELECT id, status, tags FROM contacts
+       WHERE id = ANY($1::int[]) ORDER BY id`,
+      [[fixtures[0].id, fixtures[1].id, foreignContactId]],
+    );
+    expect(contacts.rows.slice(0, 2)).toEqual([
+      expect.objectContaining({ status: 'archived', tags: expect.arrayContaining(['bulk-tested']) }),
+      expect.objectContaining({ status: 'archived', tags: expect.arrayContaining(['bulk-tested']) }),
+    ]);
+    expect(contacts.rows.find((row) => row.id === foreignContactId)).toMatchObject({
+      status: 'active',
+      tags: ['vip'],
+    });
+    const evidence = await pool.query<{ trigger_type: string; total: number }>(
+      `SELECT trigger_type, COUNT(*)::int AS total
+       FROM workflow_triggers
+       WHERE organization_id = $1 AND contact_id = ANY($2::int[])
+         AND trigger_type IN ('contact_updated', 'tag_added')
+       GROUP BY trigger_type`,
+      [organizationId, [fixtures[0].id, fixtures[1].id]],
+    );
+    expect(evidence.rows).toEqual(expect.arrayContaining([
+      { trigger_type: 'contact_updated', total: 2 },
+      { trigger_type: 'tag_added', total: 2 },
+    ]));
+    const activities = await pool.query<{ total: number }>(
+      `SELECT COUNT(*)::int AS total FROM contact_activities
+       WHERE contact_id = ANY($1::int[]) AND type = 'status_change'`,
+      [[fixtures[0].id, fixtures[1].id]],
+    );
+    expect(activities.rows[0].total).toBe(2);
+  });
+
+  it('rejects invalid bulk assignment atomically and enforces the request bound', async () => {
+    const invalidAssignment = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation BulkUpdateContacts($input: BulkUpdateContactsInput!) {
+        bulkUpdateContacts(input: $input) { changedIds }
+      }`,
+      {
+        input: {
+          contactIds: [fixtures[0].id],
+          updates: { status: 'ACTIVE', assignedToId: outsiderId },
+        },
+      },
+    ).expect(200);
+    expect(invalidAssignment.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_ASSIGNEE',
+    });
+    const persisted = await pool.query<{ status: string }>(
+      'SELECT status FROM contacts WHERE organization_id = $1 AND id = $2',
+      [organizationId, fixtures[0].id],
+    );
+    expect(persisted.rows[0].status).toBe('archived');
+
+    const oversized = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation BulkDeleteContacts($contactIds: [Int!]!) {
+        bulkDeleteContacts(contactIds: $contactIds) { changedIds }
+      }`,
+      { contactIds: Array.from({ length: 101 }, (_, index) => index + 1) },
+    ).expect(200);
+    expect(oversized.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'BULK_LIMIT_EXCEEDED',
+      limit: 100,
+    });
+  });
+
+  it('bulk deletes only matched tenant rows with exact partial results', async () => {
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id, first_name, source, status, created_by)
+       VALUES ($1, 'Bulk Delete One', 'manual', 'active', $2),
+              ($1, 'Bulk Delete Two', 'manual', 'active', $2)
+       RETURNING id`,
+      [organizationId, memberId],
+    );
+    const ids = inserted.rows.map((row) => row.id);
+    await pool.query(
+      `INSERT INTO contact_activities (contact_id, user_id, type, title, content)
+       VALUES ($1, $3, 'system', 'Delete Evidence', '{}'::jsonb),
+              ($2, $3, 'system', 'Delete Evidence', '{}'::jsonb)`,
+      [ids[0], ids[1], memberId],
+    );
+    const target = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation BulkDeleteContacts($contactIds: [Int!]!) {
+        bulkDeleteContacts(contactIds: $contactIds) {
+          requestedIds matchedIds changedIds rejectedIds
+        }
+      }`,
+      { contactIds: [ids[0], ids[0], foreignContactId, ids[1]] },
+    ).expect(200);
+
+    expect(target.body.errors).toBeUndefined();
+    expect(target.body.data.bulkDeleteContacts).toEqual({
+      requestedIds: [ids[0], foreignContactId, ids[1]],
+      matchedIds: ids,
+      changedIds: ids,
+      rejectedIds: [foreignContactId],
+    });
+    const residue = await pool.query<{ contacts: number; activities: number; foreign: number }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM contacts WHERE id = ANY($1::int[])) AS contacts,
+         (SELECT COUNT(*)::int FROM contact_activities WHERE contact_id = ANY($1::int[])) AS activities,
+         (SELECT COUNT(*)::int FROM contacts WHERE id = $2) AS foreign`,
+      [ids, foreignContactId],
+    );
+    expect(residue.rows[0]).toEqual({ contacts: 0, activities: 0, foreign: 1 });
   });
 
   it('deletes an organization-owned contact and returns an exact confirmation', async () => {

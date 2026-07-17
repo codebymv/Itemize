@@ -4,18 +4,22 @@ import { itemizeGraphqlError } from '../common/graphql-error';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
 import { ContactSortField, SortDirection } from './contact.enums';
 import {
+  BulkUpdateContactsInput,
   ContactFilterInput,
   ContactSortInput,
   CreateContactInput,
   UpdateContactInput,
 } from './contact.inputs';
-import { Contact, ContactPage } from './contact.types';
+import { BulkContactMutationResult, Contact, ContactPage } from './contact.types';
 import {
+  BulkContactUpdateValues,
   ContactCreateValues,
   ContactRow,
   ContactsRepository,
   ContactUpdateValues,
 } from './contacts.repository';
+
+const MAX_BULK_CONTACTS = 100;
 
 @Injectable()
 export class ContactsService {
@@ -144,6 +148,62 @@ export class ContactsService {
       return contactId;
     } catch (error) {
       if (error instanceof GraphQLError) throw error;
+      this.rethrowDatabaseError(error);
+    }
+  }
+
+  async bulkUpdate(
+    organizationId: number,
+    userId: number,
+    input: BulkUpdateContactsInput,
+  ): Promise<BulkContactMutationResult> {
+    const requestedIds = this.normalizeBulkIds(input.contactIds);
+    const values = this.normalizeBulkUpdate(input);
+    try {
+      const outcome = await this.contacts.bulkUpdate(
+        organizationId,
+        userId,
+        requestedIds,
+        values,
+      );
+      if (outcome.kind === 'invalid_assignee') {
+        throw itemizeGraphqlError(
+          'assignedToId must be a member of the active organization',
+          'BAD_USER_INPUT',
+          { field: 'assignedToId', reason: 'INVALID_ASSIGNEE' },
+        );
+      }
+      const matched = new Set(outcome.matchedIds);
+      return {
+        requestedIds,
+        matchedIds: outcome.matchedIds,
+        changedIds: outcome.changedIds,
+        rejectedIds: requestedIds.filter((id) => !matched.has(id)),
+      };
+    } catch (error) {
+      if (error instanceof GraphQLError) throw error;
+      this.rethrowDatabaseError(error);
+    }
+  }
+
+  async bulkDelete(
+    organizationId: number,
+    contactIds: number[],
+  ): Promise<BulkContactMutationResult> {
+    const requestedIds = this.normalizeBulkIds(contactIds);
+    try {
+      const deletedIds = await this.contacts.bulkDelete(
+        organizationId,
+        requestedIds,
+      );
+      const deleted = new Set(deletedIds);
+      return {
+        requestedIds,
+        matchedIds: deletedIds,
+        changedIds: deletedIds,
+        rejectedIds: requestedIds.filter((id) => !deleted.has(id)),
+      };
+    } catch (error) {
       this.rethrowDatabaseError(error);
     }
   }
@@ -277,6 +337,67 @@ export class ContactsService {
       throw itemizeGraphqlError('At least one update field is required', 'BAD_USER_INPUT', {
         reason: 'EMPTY_UPDATE',
       });
+    }
+    return values;
+  }
+
+  private normalizeBulkIds(contactIds: number[]): number[] {
+    if (!Array.isArray(contactIds) || contactIds.length < 1) {
+      throw itemizeGraphqlError(
+        'contactIds must contain at least one ID',
+        'BAD_USER_INPUT',
+        { field: 'contactIds', reason: 'EMPTY_BULK_IDS' },
+      );
+    }
+    if (contactIds.length > MAX_BULK_CONTACTS) {
+      throw itemizeGraphqlError(
+        `contactIds must contain at most ${MAX_BULK_CONTACTS} IDs`,
+        'BAD_USER_INPUT',
+        { field: 'contactIds', reason: 'BULK_LIMIT_EXCEEDED', limit: MAX_BULK_CONTACTS },
+      );
+    }
+    if (contactIds.some((id) => !Number.isSafeInteger(id) || id < 1)) {
+      throw itemizeGraphqlError(
+        'contactIds must contain only positive integers',
+        'BAD_USER_INPUT',
+        { field: 'contactIds', reason: 'INVALID_CONTACT_ID' },
+      );
+    }
+    return [...new Set(contactIds)];
+  }
+
+  private normalizeBulkUpdate(input: BulkUpdateContactsInput): BulkContactUpdateValues {
+    const updates = input.updates ?? {};
+    const has = (field: keyof typeof updates): boolean =>
+      Object.prototype.hasOwnProperty.call(updates, field);
+    if (has('tagsMode') && !has('tags')) {
+      throw itemizeGraphqlError(
+        'tagsMode requires tags',
+        'BAD_USER_INPUT',
+        { field: 'tagsMode', reason: 'TAGS_REQUIRED' },
+      );
+    }
+    if (has('status') && updates.status === null) this.nonNullUpdate('status');
+    if (has('tags') && updates.tags === null) this.nonNullUpdate('tags');
+    if (has('tagsMode') && updates.tagsMode === null) this.nonNullUpdate('tagsMode');
+    const values: BulkContactUpdateValues = {
+      ...(has('status') ? { status: updates.status! } : {}),
+      ...(has('assignedToId')
+        ? {
+            assignedToId: updates.assignedToId === null
+              ? null
+              : this.optionalId(updates.assignedToId, 'assignedToId'),
+          }
+        : {}),
+      ...(has('tags') ? { tags: this.normalizeTags(updates.tags!) } : {}),
+      ...(has('tagsMode') ? { tagsMode: updates.tagsMode! } : {}),
+    };
+    if (Object.keys(values).length === 0) {
+      throw itemizeGraphqlError(
+        'At least one bulk update field is required',
+        'BAD_USER_INPUT',
+        { reason: 'EMPTY_UPDATE' },
+      );
     }
     return values;
   }

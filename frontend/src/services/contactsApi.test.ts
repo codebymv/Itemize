@@ -1,14 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { createContact, deleteContact, getContact, getContacts, updateContact } from './contactsApi';
 import {
+  bulkDeleteContacts,
+  bulkUpdateContacts,
+  createContact,
+  deleteContact,
+  getContact,
+  getContacts,
+  updateContact,
+} from './contactsApi';
+import {
+  bulkDeleteContactsViaGraphql,
+  bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
   getContactViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
-import { isContactGraphqlMutationsEnabled, isContactGraphqlReadsEnabled } from './graphqlClient';
+import {
+  isContactGraphqlBulkMutationsEnabled,
+  isContactGraphqlMutationsEnabled,
+  isContactGraphqlReadsEnabled,
+} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   default: {
@@ -20,6 +34,8 @@ vi.mock('@/lib/api', () => ({
 }));
 
 vi.mock('./contactsGraphql', () => ({
+  bulkDeleteContactsViaGraphql: vi.fn(),
+  bulkUpdateContactsViaGraphql: vi.fn(),
   getContactViaGraphql: vi.fn(),
   getContactsViaGraphql: vi.fn(),
   createContactViaGraphql: vi.fn(),
@@ -28,6 +44,7 @@ vi.mock('./contactsGraphql', () => ({
 }));
 
 vi.mock('./graphqlClient', () => ({
+  isContactGraphqlBulkMutationsEnabled: vi.fn(),
   isContactGraphqlReadsEnabled: vi.fn(),
   isContactGraphqlMutationsEnabled: vi.fn(),
 }));
@@ -37,6 +54,7 @@ describe('contacts API read transport', () => {
     vi.clearAllMocks();
     vi.mocked(isContactGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(false);
   });
 
   it('uses REST by default and retains the organization header contract', async () => {
@@ -111,5 +129,39 @@ describe('contacts API read transport', () => {
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();
+  });
+
+  it('keeps bulk writes on REST unless their independent flag is enabled', async () => {
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({ data: { updated_ids: [11], message: '1 contacts updated' } })
+      .mockResolvedValueOnce({ data: { deleted_ids: [11], message: '1 contacts deleted' } });
+    const update = {
+      contact_ids: [11],
+      updates: { tags: ['vip'], tags_mode: 'add' as const },
+      organization_id: 42,
+    };
+
+    await bulkUpdateContacts(update);
+    await bulkDeleteContacts([11], 42);
+    expect(api.post).toHaveBeenNthCalledWith(1, '/api/contacts/bulk-update', update, {
+      headers: { 'x-organization-id': '42' },
+    });
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/contacts/bulk-delete', {
+      contact_ids: [11],
+    }, { headers: { 'x-organization-id': '42' } });
+
+    vi.clearAllMocks();
+    vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(true);
+    vi.mocked(bulkUpdateContactsViaGraphql).mockResolvedValue({
+      updated_ids: [11], message: '1 contacts updated',
+    });
+    vi.mocked(bulkDeleteContactsViaGraphql).mockResolvedValue({
+      deleted_ids: [11], message: '1 contacts deleted',
+    });
+    await bulkUpdateContacts(update);
+    await bulkDeleteContacts([11], 42);
+    expect(bulkUpdateContactsViaGraphql).toHaveBeenCalledWith(update);
+    expect(bulkDeleteContactsViaGraphql).toHaveBeenCalledWith([11], 42);
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

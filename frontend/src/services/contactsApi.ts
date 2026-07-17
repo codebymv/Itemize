@@ -5,6 +5,8 @@
 import api from '@/lib/api';
 import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationMember } from '@/types';
 import {
+  bulkDeleteContactsViaGraphql,
+  bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
   getContactViaGraphql,
@@ -12,6 +14,7 @@ import {
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
+  isContactGraphqlBulkMutationsEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -187,6 +190,9 @@ export interface BulkUpdateData {
 }
 
 export const bulkUpdateContacts = async (data: BulkUpdateData): Promise<{ message: string; updated_ids: number[] }> => {
+  if (isContactGraphqlBulkMutationsEnabled()) {
+    return bulkUpdateContactsViaGraphql(data);
+  }
   const response = await api.post('/api/contacts/bulk-update', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -194,6 +200,9 @@ export const bulkUpdateContacts = async (data: BulkUpdateData): Promise<{ messag
 };
 
 export const bulkDeleteContacts = async (contactIds: number[], organizationId?: number): Promise<{ message: string; deleted_ids: number[] }> => {
+  if (isContactGraphqlBulkMutationsEnabled()) {
+    return bulkDeleteContactsViaGraphql(contactIds, organizationId);
+  }
   const response = await api.post('/api/contacts/bulk-delete',
     { contact_ids: contactIds },
     { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }

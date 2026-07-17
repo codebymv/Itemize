@@ -190,6 +190,10 @@ VITE_CONTACT_READS_GRAPHQL=false
 # the write-side CSRF and semantic-parity gates pass in the target environment.
 VITE_CONTACT_MUTATIONS_GRAPHQL=false
 
+# Contact bulk update/delete have a separate rollback boundary from single-row
+# mutations. Keep disabled until the bulk staging browser gate passes.
+VITE_CONTACT_BULK_MUTATIONS_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 

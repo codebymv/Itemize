@@ -28,7 +28,14 @@ export enum SortDirection {
   DESC = 'DESC',
 }
 
+export enum ContactBulkTagsMode {
+  ADD = 'add',
+  REMOVE = 'remove',
+  SET = 'set',
+}
+
 registerEnumType(ContactSource, { name: 'ContactSource' });
 registerEnumType(ContactStatus, { name: 'ContactStatus' });
 registerEnumType(ContactSortField, { name: 'ContactSortField' });
 registerEnumType(SortDirection, { name: 'SortDirection' });
+registerEnumType(ContactBulkTagsMode, { name: 'ContactBulkTagsMode' });
