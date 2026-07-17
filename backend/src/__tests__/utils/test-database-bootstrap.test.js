@@ -1,9 +1,25 @@
+const fs = require('fs');
+const path = require('path');
 const {
     discoverExpectedMigrationMarkers,
     discoverExpectedTables,
 } = require('../../../scripts/initialize-test-database');
 
 describe('test database schema contract', () => {
+    test('production Docker context includes the numbered migration stream', () => {
+        const dockerIgnore = fs.readFileSync(
+            path.resolve(__dirname, '../../../.dockerignore'),
+            'utf8'
+        );
+        const ignoredPaths = dockerIgnore
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(line => line && !line.startsWith('#'));
+
+        expect(ignoredPaths).not.toContain('scripts/migrations/');
+        expect(ignoredPaths).not.toContain('scripts/migrations');
+    });
+
     test('discovers the application migration tables used by integration tests', () => {
         const tables = discoverExpectedTables();
         expect(tables).toEqual(expect.arrayContaining([
@@ -201,6 +217,15 @@ describe('test database schema contract', () => {
         } = require('../../db_pipeline_stage_canonical_migrations');
 
         expect(migration.up).toBe(runCanonicalPipelineStageModelMigration);
+    });
+
+    test('production migration stream installs the public form contract', () => {
+        const migration = require('../../../scripts/migrations/027_public_form_contract');
+        const {
+            runPublicFormContractMigration,
+        } = require('../../db_public_form_contract_migrations');
+
+        expect(migration.up).toBe(runPublicFormContractMigration);
     });
 
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {

@@ -350,6 +350,8 @@ describe('Forms Integration Tests', () => {
             expect(copy.status).toBe('draft');
             expect(copy.id).not.toBe(sourceId);
             expect(copy.fields).toHaveLength(SAMPLE_FIELDS.length);
+            expect(copy.field_count).toBe(SAMPLE_FIELDS.length);
+            expect(copy.submission_count).toBe(0);
         });
 
         it('User B cannot duplicate User A form', async () => {

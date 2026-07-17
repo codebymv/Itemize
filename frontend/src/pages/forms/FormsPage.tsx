@@ -55,6 +55,16 @@ export function FormsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
+    const handleCreateForm = useCallback(async () => {
+        if (!organizationId) return;
+        try {
+            const newForm = await createForm({ name: 'New Form', organization_id: organizationId });
+            navigate(`/forms/${newForm.id}`);
+        } catch (error) {
+            toast({ title: 'Error', description: toastMessages.failedToCreate('form'), variant: 'destructive' });
+        }
+    }, [navigate, organizationId, toast]);
+
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
@@ -100,7 +110,7 @@ export function FormsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, statusFilter, theme, setHeaderContent]);
+    }, [handleCreateForm, searchQuery, statusFilter, theme, setHeaderContent]);
 
     useEffect(() => {
         if (orgLoading) {
@@ -135,16 +145,6 @@ export function FormsPage() {
     useEffect(() => {
         fetchForms();
     }, [fetchForms]);
-
-    const handleCreateForm = async () => {
-        if (!organizationId) return;
-        try {
-            const newForm = await createForm({ name: 'New Form', organization_id: organizationId });
-            navigate(`/forms/${newForm.id}`);
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToCreate('form'), variant: 'destructive' });
-        }
-    };
 
     const handleToggleStatus = async (form: Form, newStatus: 'published' | 'draft') => {
         if (!organizationId) return;

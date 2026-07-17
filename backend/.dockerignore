@@ -52,6 +52,3 @@ vitest.config.js
 
 # Uploads (should be mounted as volume)
 uploads/
-
-# Development scripts
-scripts/migrations/

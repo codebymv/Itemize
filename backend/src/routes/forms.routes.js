@@ -797,6 +797,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     [newForm.id]
                 );
                 newForm.fields = newFieldsResult.rows;
+                newForm.field_count = newForm.fields.length;
+                newForm.submission_count = 0;
 
                 return { status: 'ok', form: newForm };
             });
