@@ -1,12 +1,34 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
 import {
+  ContactActivityType,
   ContactBulkTagsMode,
   ContactSource,
   ContactSortField,
   ContactStatus,
   SortDirection,
 } from './contact.enums';
+
+@InputType()
+export class ContactActivityFilterInput {
+  @Field(() => ContactActivityType, { nullable: true })
+  type?: ContactActivityType;
+}
+
+@InputType()
+export class CreateContactActivityInput {
+  @Field(() => ContactActivityType)
+  type: ContactActivityType;
+
+  @Field(() => String, { nullable: true })
+  title?: string | null;
+
+  @Field(() => GraphQLJSON, { nullable: true })
+  content?: Record<string, unknown> | null;
+
+  @Field(() => GraphQLJSON, { nullable: true })
+  metadata?: Record<string, unknown> | null;
+}
 
 @InputType()
 export class CreateContactInput {

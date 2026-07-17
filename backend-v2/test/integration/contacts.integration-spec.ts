@@ -705,6 +705,112 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(residue.rows[0]).toEqual({ contacts: 0, activities: 0, foreign: 1 });
   });
 
+  it('creates a structured activity atomically for an owned contact', async () => {
+    const contactId = fixtures[2].id;
+    const target = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation AddContactActivity(
+        $contactId: Int!,
+        $input: CreateContactActivityInput!
+      ) {
+        addContactActivity(contactId: $contactId, input: $input) {
+          id contactId userId userName userEmail type title
+          content metadata createdAt
+        }
+      }`,
+      {
+        contactId,
+        input: {
+          type: 'NOTE',
+          title: '  GraphQL activity  ',
+          content: { body: 'Call tomorrow' },
+          metadata: { source: 'integration' },
+        },
+      },
+    ).expect(200);
+
+    expect(target.body.errors).toBeUndefined();
+    expect(target.body.data.addContactActivity).toMatchObject({
+      contactId,
+      userId: memberId,
+      userName: 'Contact Member',
+      type: 'NOTE',
+      title: 'GraphQL activity',
+      content: { body: 'Call tomorrow' },
+      metadata: { source: 'integration' },
+    });
+    const persisted = await pool.query(
+      `SELECT contact_id, user_id, type, title, content, metadata
+       FROM contact_activities WHERE id = $1`,
+      [target.body.data.addContactActivity.id],
+    );
+    expect(persisted.rows[0]).toEqual({
+      contact_id: contactId,
+      user_id: memberId,
+      type: 'note',
+      title: 'GraphQL activity',
+      content: { body: 'Call tomorrow' },
+      metadata: { source: 'integration' },
+    });
+  });
+
+  it('matches legacy activity filtering and keeps foreign contacts private', async () => {
+    const contactId = fixtures[2].id;
+    const legacy = await request(legacyApp)
+      .get(`/api/contacts/${contactId}/activities`)
+      .query({ type: 'note', limit: 1, offset: 0 })
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    const target = await graphql(
+      memberToken,
+      organizationId,
+      `query ContactActivities(
+        $contactId: Int!,
+        $filter: ContactActivityFilterInput,
+        $page: PageInput
+      ) {
+        contactActivities(contactId: $contactId, filter: $filter, page: $page) {
+          nodes { id contactId userId type title content metadata }
+          pageInfo { page pageSize total totalPages }
+        }
+      }`,
+      {
+        contactId,
+        filter: { type: 'NOTE' },
+        page: { page: 1, pageSize: 1 },
+      },
+    ).expect(200);
+
+    expect(target.body.errors).toBeUndefined();
+    expect(target.body.data.contactActivities.nodes).toEqual([
+      expect.objectContaining({
+        id: legacy.body[0].id,
+        contactId,
+        userId: memberId,
+        type: 'NOTE',
+        title: legacy.body[0].title,
+        content: legacy.body[0].content,
+      }),
+    ]);
+    expect(target.body.data.contactActivities.pageInfo).toMatchObject({
+      page: 1,
+      pageSize: 1,
+      total: 1,
+      totalPages: 1,
+    });
+
+    const privateResult = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      'query Activity($contactId: Int!) { contactActivities(contactId: $contactId) { nodes { id } } }',
+      { contactId },
+    ).expect(200);
+    expect(privateResult.body.data).toBeNull();
+    expect(privateResult.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
   it('deletes an organization-owned contact and returns an exact confirmation', async () => {
     const target = await graphqlMutation(
       memberToken,

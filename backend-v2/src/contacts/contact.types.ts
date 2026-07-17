@@ -6,7 +6,49 @@ import {
 } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
 import { PageInfo } from '../common/pagination';
-import { ContactSource, ContactStatus } from './contact.enums';
+import { ContactActivityType, ContactSource, ContactStatus } from './contact.enums';
+
+@ObjectType()
+export class ContactActivity {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => Int)
+  contactId: number;
+
+  @Field(() => Int, { nullable: true })
+  userId: number | null;
+
+  @Field(() => String, { nullable: true })
+  userName: string | null;
+
+  @Field(() => String, { nullable: true })
+  userEmail: string | null;
+
+  @Field(() => ContactActivityType)
+  type: ContactActivityType;
+
+  @Field(() => String, { nullable: true })
+  title: string | null;
+
+  @Field(() => GraphQLJSON)
+  content: Record<string, unknown>;
+
+  @Field(() => GraphQLJSON)
+  metadata: Record<string, unknown>;
+
+  @Field(() => GraphQLISODateTime)
+  createdAt: Date;
+}
+
+@ObjectType()
+export class ContactActivityPage {
+  @Field(() => [ContactActivity])
+  nodes: ContactActivity[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+}
 
 @ObjectType()
 export class Contact {

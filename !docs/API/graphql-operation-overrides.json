@@ -1193,12 +1193,12 @@
       "notes": "Aggregate PII query now requires verified authentication and organization context; every child collection remains tenant-scoped."
     },
     "GET /api/contacts/:id/activities": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactActivitiesModule", "targetOperation": "contactActivities", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Define a connection with stable ordering, type filtering, and the parent contact organization boundary."
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "characterized", "risk": "high",
+      "notes": "GraphQL returns a bounded page ordered by created time and ID descending, supports the full database activity enum as a filter, and scopes every row through an organization-owned parent contact."
     },
     "POST /api/contacts/:id/activities": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactActivitiesModule", "targetOperation": "addContactActivity", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Validate the activity enum and structured content while scoping through an organization-owned contact."
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "addContactActivity", "parityStatus": "characterized", "risk": "high",
+      "notes": "GraphQL validates the full database activity enum, bounded title, and object-shaped content/metadata; CSRF is required and the organization-owned contact lock plus insert share one transaction."
     },
     "GET /api/contacts/:id/content": {
       "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "characterizing", "risk": "high",

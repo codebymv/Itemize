@@ -136,8 +136,8 @@
 | DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |
 | GET | `/api/contacts/:id` | 1 | 1 | graphql-query | high | crm / ContactsModule / contact |
 | PUT | `/api/contacts/:id` | 1 | 4 | graphql-mutation | high | crm / ContactsModule / updateContact |
-| GET | `/api/contacts/:id/activities` | 1 | 0 | graphql-query | high | crm / ContactActivitiesModule / contactActivities |
-| POST | `/api/contacts/:id/activities` | 1 | 0 | graphql-mutation | high | crm / ContactActivitiesModule / addContactActivity |
+| GET | `/api/contacts/:id/activities` | 1 | 0 | graphql-query | high | crm / ContactsModule / contactActivities |
+| POST | `/api/contacts/:id/activities` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / addContactActivity |
 | GET | `/api/contacts/:id/content` | 1 | 0 | graphql-query | high | crm / ContactProfilesModule / contactContent |
 | GET | `/api/contacts/:id/profile` | 0 | 3 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |

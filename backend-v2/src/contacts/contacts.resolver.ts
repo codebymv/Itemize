@@ -4,25 +4,56 @@ import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   BulkUpdateContactsInput,
+  ContactActivityFilterInput,
   ContactFilterInput,
   ContactSortInput,
+  CreateContactActivityInput,
   CreateContactInput,
   UpdateContactInput,
 } from './contact.inputs';
 import {
   BulkContactMutationResult,
   Contact,
+  ContactActivity,
+  ContactActivityPage,
   ContactPage,
   DeleteContactResult,
 } from './contact.types';
+import { ContactActivitiesService } from './contact-activities.service';
 import { ContactsService } from './contacts.service';
 
 @Resolver(() => Contact)
 export class ContactsResolver {
   constructor(
     private readonly contacts: ContactsService,
+    private readonly activities: ContactActivitiesService,
     private readonly requestContext: RequestContextService,
   ) {}
+
+  @OrganizationScoped()
+  @Query(() => ContactActivityPage)
+  contactActivities(
+    @Args('contactId', { type: () => Int }) contactId: number,
+    @Args('filter', { nullable: true }) filter?: ContactActivityFilterInput,
+    @Args('page', { nullable: true }) page?: PageInput,
+  ): Promise<ContactActivityPage> {
+    return this.activities.list(this.organizationId(), contactId, filter, page);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => ContactActivity)
+  addContactActivity(
+    @Args('contactId', { type: () => Int }) contactId: number,
+    @Args('input') input: CreateContactActivityInput,
+  ): Promise<ContactActivity> {
+    return this.activities.create(
+      this.organizationId(),
+      this.userId(),
+      contactId,
+      input,
+    );
+  }
 
   @OrganizationScoped()
   @Query(() => ContactPage, { name: 'contacts' })

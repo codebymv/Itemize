@@ -34,8 +34,21 @@ export enum ContactBulkTagsMode {
   SET = 'set',
 }
 
+export enum ContactActivityType {
+  CALL = 'call',
+  DEAL_UPDATE = 'deal_update',
+  EMAIL = 'email',
+  MEETING = 'meeting',
+  NOTE = 'note',
+  SMS = 'sms',
+  STATUS_CHANGE = 'status_change',
+  SYSTEM = 'system',
+  TASK = 'task',
+}
+
 registerEnumType(ContactSource, { name: 'ContactSource' });
 registerEnumType(ContactStatus, { name: 'ContactStatus' });
 registerEnumType(ContactSortField, { name: 'ContactSortField' });
 registerEnumType(SortDirection, { name: 'SortDirection' });
 registerEnumType(ContactBulkTagsMode, { name: 'ContactBulkTagsMode' });
+registerEnumType(ContactActivityType, { name: 'ContactActivityType' });
