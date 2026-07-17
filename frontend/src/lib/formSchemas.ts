@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { hexColorSchema } from '@/lib/schemas';
 
+const optionalFormString = (schema: z.ZodString) =>
+  z.union([
+    z.string().trim().length(0).transform(() => undefined),
+    schema.optional(),
+  ]);
+
 export const createListFormSchema = z.object({
   title: z.string().min(1, 'List title is required').max(200, 'List title is too long'),
   category: z.string().optional(),
@@ -46,12 +52,12 @@ export const createItemFormSchema = z.object({
 export type CreateItemFormValues = z.infer<typeof createItemFormSchema>;
 
 export const createContactFormSchema = z.object({
-  first_name: z.string().min(1, 'First name is required').max(100, 'First name is too long').optional(),
-  last_name: z.string().min(1, 'Last name is required').max(100, 'Last name is too long').optional(),
-  email: z.string().email('Invalid email address').max(255, 'Email is too long').optional(),
-  phone: z.string().min(10, 'Phone number is too short').max(20, 'Phone number is too long').optional(),
-  company: z.string().max(200, 'Company name is too long').optional(),
-  job_title: z.string().max(100, 'Job title is too long').optional(),
+  first_name: optionalFormString(z.string().min(1, 'First name is required').max(100, 'First name is too long')),
+  last_name: optionalFormString(z.string().min(1, 'Last name is required').max(100, 'Last name is too long')),
+  email: optionalFormString(z.string().email('Invalid email address').max(255, 'Email is too long')),
+  phone: optionalFormString(z.string().min(10, 'Phone number is too short').max(20, 'Phone number is too long')),
+  company: optionalFormString(z.string().max(200, 'Company name is too long')),
+  job_title: optionalFormString(z.string().max(100, 'Job title is too long')),
   status: z.enum(['active', 'inactive', 'archived']).default('active'),
   source: z.enum(['manual', 'import', 'form', 'integration', 'api']).default('manual'),
 }).superRefine((data, ctx) => {

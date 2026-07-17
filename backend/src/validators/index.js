@@ -33,8 +33,8 @@ const validate = (req, res, next) => {
 const validators = {
     // Contact validators
     createContact: [
-        body('email').optional().isEmail().withMessage('Invalid email format').normalizeEmail(),
-        body('phone').optional().isMobilePhone('any').withMessage('Invalid phone number'),
+        body('email').trim().optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format').normalizeEmail(),
+        body('phone').trim().optional({ checkFalsy: true }).isMobilePhone('any').withMessage('Invalid phone number'),
         body('first_name').optional().trim().isLength({ max: 100 }).withMessage('First name too long'),
         body('last_name').optional().trim().isLength({ max: 100 }).withMessage('Last name too long'),
         body('company').optional().trim().isLength({ max: 200 }).withMessage('Company name too long'),
@@ -44,8 +44,8 @@ const validators = {
 
     updateContact: [
         param('id').isInt({ min: 1 }).withMessage('Invalid contact ID'),
-        body('email').optional().isEmail().withMessage('Invalid email format').normalizeEmail(),
-        body('phone').optional().isMobilePhone('any').withMessage('Invalid phone number'),
+        body('email').trim().optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format').normalizeEmail(),
+        body('phone').trim().optional({ checkFalsy: true }).isMobilePhone('any').withMessage('Invalid phone number'),
         body('first_name').optional().trim().isLength({ max: 100 }).withMessage('First name too long'),
         body('last_name').optional().trim().isLength({ max: 100 }).withMessage('Last name too long'),
         body('status').optional().isIn(['active', 'inactive', 'archived']).withMessage('Invalid status'),
