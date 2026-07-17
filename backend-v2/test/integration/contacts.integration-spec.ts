@@ -140,11 +140,16 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     await graphqlApp.init();
 
     const createContactsRouter = require('../../../backend/src/routes/contacts.routes');
+    const createContactProfileRouter = require('../../../backend/src/routes/contact-profile.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const { errorHandler } = require('../../../backend/src/middleware/errorHandler');
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
+    legacyApp.use(
+      '/api/contacts',
+      createContactProfileRouter(pool, authenticateJWT),
+    );
     legacyApp.use('/api/contacts', createContactsRouter(pool, authenticateJWT));
     legacyApp.use(errorHandler);
   });
@@ -874,6 +879,247 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       outsiderToken,
       outsiderOrganizationId,
       'query Content($contactId: Int!) { contactContent(contactId: $contactId) { lists { total } } }',
+      { contactId },
+    ).expect(200);
+    expect(privateResult.body.data).toBeNull();
+    expect(privateResult.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('composes a bounded profile with explicit section health and tenant privacy', async () => {
+    const contactId = fixtures[2].id;
+    const invoice = await pool.query<{ id: number }>(
+      `INSERT INTO invoices (
+         organization_id, invoice_number, contact_id, due_date, total, amount_due, status
+       ) VALUES ($1, $2, $3, CURRENT_DATE + 14, 125.50, 125.50, 'sent')
+       RETURNING id`,
+      [organizationId, `PROFILE-${contactId}`, contactId],
+    );
+    const document = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents (
+         organization_id, title, status, created_by, sent_at
+       ) VALUES ($1, 'Profile agreement', 'sent', $2, NOW())
+       RETURNING id`,
+      [organizationId, memberId],
+    );
+    const conversation = await pool.query<{ id: number }>(
+      `INSERT INTO conversations (organization_id, contact_id, subject)
+       VALUES ($1, $2, 'Profile thread')
+       RETURNING id`,
+      [organizationId, contactId],
+    );
+    const calendar = await pool.query<{ id: number }>(
+      `INSERT INTO calendars (
+         organization_id, name, slug, created_by
+       ) VALUES ($1, 'Profile calendar', $2, $3)
+       RETURNING id`,
+      [organizationId, `profile-${contactId}`, memberId],
+    );
+
+    await Promise.all([
+      pool.query(
+        `INSERT INTO payments (
+           organization_id, invoice_id, contact_id, amount, payment_method,
+           status, paid_at
+         ) VALUES ($1, $2, $3, 25.50, 'card', 'succeeded', NOW())`,
+        [organizationId, invoice.rows[0].id, contactId],
+      ),
+      pool.query(
+        `INSERT INTO signature_recipients (
+           document_id, organization_id, contact_id, email, status, sent_at
+         ) VALUES ($1, $2, $3, 'gamma@test.itemize', 'sent', NOW())`,
+        [document.rows[0].id, organizationId, contactId],
+      ),
+      pool.query(
+        `INSERT INTO contact_activities (
+           contact_id, user_id, type, title, content, metadata
+         ) VALUES ($1, $2, 'note', 'Profile activity', '{"body":"Profile"}', '{}')`,
+        [contactId, memberId],
+      ),
+      pool.query(
+        `INSERT INTO notes (
+           user_id, title, category, content, contact_id, organization_id
+         ) VALUES ($1, 'Profile note', 'General', 'Profile body', $2, $3)`,
+        [memberId, contactId, organizationId],
+      ),
+      pool.query(
+        `INSERT INTO lists (
+           user_id, title, category, items, contact_id, organization_id
+         ) VALUES ($1, 'Profile list', 'General', '[]'::jsonb, $2, $3)`,
+        [memberId, contactId, organizationId],
+      ),
+      pool.query(
+        `INSERT INTO messages (
+           conversation_id, organization_id, sender_type, sender_user_id,
+           channel, content
+         ) VALUES ($1, $2, 'user', $3, 'email', 'Profile message')`,
+        [conversation.rows[0].id, organizationId, memberId],
+      ),
+      pool.query(
+        `INSERT INTO tasks (
+           organization_id, contact_id, created_by, title, description,
+           priority, status, due_date
+         ) VALUES (
+           $1, $2, $3, 'Profile task', 'Profile task body',
+           'high', 'pending', NOW() + INTERVAL '1 day'
+         )`,
+        [organizationId, contactId, memberId],
+      ),
+      pool.query(
+        `INSERT INTO bookings (
+           organization_id, calendar_id, contact_id, title, start_time,
+           end_time, timezone, status, source
+         ) VALUES (
+           $1, $2, $3, 'Profile booking', NOW() + INTERVAL '2 days',
+           NOW() + INTERVAL '2 days 30 minutes', 'UTC', 'confirmed', 'manual'
+         )`,
+        [organizationId, calendar.rows[0].id, contactId],
+      ),
+    ]);
+
+    const legacy = await request(legacyApp)
+      .get(`/api/contacts/${contactId}/profile`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    const target = await graphql(
+      memberToken,
+      organizationId,
+      `query ContactProfile($contactId: Int!) {
+        contactProfile(contactId: $contactId) {
+          contact { id email }
+          invoices {
+            status total hasMore
+            nodes { id number status total createdAt dueDate }
+          }
+          signatures {
+            status total hasMore
+            nodes { id title status sentAt signedAt createdAt }
+          }
+          payments {
+            status total hasMore
+            nodes { id invoiceId invoiceNumber amount date }
+          }
+          activities {
+            status total hasMore
+            nodes { id contactId userId type title content metadata createdAt }
+          }
+          notes {
+            status total hasMore
+            nodes { id title content createdAt }
+          }
+          lists {
+            status total hasMore
+            nodes { id title category createdAt }
+          }
+          communications {
+            status total hasMore
+            nodes { id type direction subject content date }
+          }
+          tasks {
+            status total hasMore
+            nodes {
+              id title description status priority dueDate completedAt createdAt
+            }
+          }
+          bookings {
+            status total hasMore
+            nodes { id title calendarId startTime endTime status source }
+          }
+        }
+      }`,
+      { contactId },
+    ).expect(200);
+
+    expect(target.body.errors).toBeUndefined();
+    const profile = target.body.data.contactProfile;
+    expect(profile.contact).toEqual({
+      id: contactId,
+      email: legacy.body.contact.email,
+    });
+    for (const section of [
+      'invoices',
+      'signatures',
+      'payments',
+      'activities',
+      'notes',
+      'lists',
+      'communications',
+      'tasks',
+      'bookings',
+    ]) {
+      expect(profile[section]).toMatchObject({
+        status: 'AVAILABLE',
+        hasMore: false,
+      });
+      expect(profile[section].total).toBe(profile[section].nodes.length);
+    }
+    expect(profile.invoices.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ number: `PROFILE-${contactId}`, total: 125.5 }),
+      ]),
+    );
+    expect(profile.signatures.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: 'Profile agreement', status: 'sent' }),
+      ]),
+    );
+    expect(profile.payments.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          invoiceId: invoice.rows[0].id,
+          invoiceNumber: `PROFILE-${contactId}`,
+          amount: 25.5,
+        }),
+      ]),
+    );
+    expect(profile.activities.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: 'Profile activity', type: 'NOTE' }),
+      ]),
+    );
+    expect(profile.notes.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: 'Profile note', content: 'Profile body' }),
+      ]),
+    );
+    expect(profile.lists.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: 'Profile list', category: 'General' }),
+      ]),
+    );
+    expect(profile.communications.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          subject: 'Profile thread',
+          content: 'Profile message',
+          direction: 'outbound',
+        }),
+      ]),
+    );
+    expect(profile.tasks.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: 'Profile task', priority: 'high' }),
+      ]),
+    );
+    expect(profile.bookings.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: 'Profile booking',
+          calendarId: calendar.rows[0].id,
+        }),
+      ]),
+    );
+
+    // The legacy aggregate masks these two stale child-query failures as empty.
+    expect(legacy.body.payments).toEqual([]);
+    expect(legacy.body.lists).toEqual([]);
+
+    const privateResult = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      `query ContactProfilePrivate($contactId: Int!) {
+        contactProfile(contactId: $contactId) { contact { id } }
+      }`,
       { contactId },
     ).expect(200);
     expect(privateResult.body.data).toBeNull();

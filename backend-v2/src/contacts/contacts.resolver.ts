@@ -18,10 +18,12 @@ import {
   ContactActivityPage,
   ContactContent,
   ContactPage,
+  ContactProfile,
   DeleteContactResult,
 } from './contact.types';
 import { ContactActivitiesService } from './contact-activities.service';
 import { ContactContentService } from './contact-content.service';
+import { ContactProfileService } from './contact-profile.service';
 import { ContactsService } from './contacts.service';
 
 @Resolver(() => Contact)
@@ -30,8 +32,17 @@ export class ContactsResolver {
     private readonly contacts: ContactsService,
     private readonly activities: ContactActivitiesService,
     private readonly content: ContactContentService,
+    private readonly profiles: ContactProfileService,
     private readonly requestContext: RequestContextService,
   ) {}
+
+  @OrganizationScoped()
+  @Query(() => ContactProfile)
+  contactProfile(
+    @Args('contactId', { type: () => Int }) contactId: number,
+  ): Promise<ContactProfile> {
+    return this.profiles.get(this.organizationId(), contactId);
+  }
 
   @OrganizationScoped()
   @Query(() => ContactContent)

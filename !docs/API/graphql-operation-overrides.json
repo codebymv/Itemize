@@ -1190,7 +1190,7 @@
     },
     "GET /api/contacts/:id/profile": {
       "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactProfile", "parityStatus": "characterized", "risk": "high",
-      "notes": "Aggregate PII query now requires verified authentication and organization context; every child collection remains tenant-scoped."
+      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, and repairs the legacy payment-date and nonexistent list-junction queries."
     },
     "GET /api/contacts/:id/activities": {
       "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "characterized", "risk": "high",
@@ -1201,8 +1201,8 @@
       "notes": "GraphQL validates the full database activity enum, bounded title, and object-shaped content/metadata; CSRF is required and the organization-owned contact lock plus insert share one transaction."
     },
     "GET /api/contacts/:id/content": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Related lists, notes, and whiteboards require explicit tenant scope, stable ordering, and pagination rather than unbounded arrays."
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "characterized", "risk": "high",
+      "notes": "Related lists, notes, and whiteboards use a tenant-private parent lookup, stable newest-first ordering, a 100-row collection bound, and explicit total/truncation metadata; GraphQL and REST rollback passed staging."
     },
     "POST /api/contacts/bulk-update": {
       "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "characterized", "risk": "high",

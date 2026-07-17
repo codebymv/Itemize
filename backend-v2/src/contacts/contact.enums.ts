@@ -46,9 +46,17 @@ export enum ContactActivityType {
   TASK = 'task',
 }
 
+export enum ContactProfileSectionStatus {
+  AVAILABLE = 'AVAILABLE',
+  UNAVAILABLE = 'UNAVAILABLE',
+}
+
 registerEnumType(ContactSource, { name: 'ContactSource' });
 registerEnumType(ContactStatus, { name: 'ContactStatus' });
 registerEnumType(ContactSortField, { name: 'ContactSortField' });
 registerEnumType(SortDirection, { name: 'SortDirection' });
 registerEnumType(ContactBulkTagsMode, { name: 'ContactBulkTagsMode' });
 registerEnumType(ContactActivityType, { name: 'ContactActivityType' });
+registerEnumType(ContactProfileSectionStatus, {
+  name: 'ContactProfileSectionStatus',
+});
