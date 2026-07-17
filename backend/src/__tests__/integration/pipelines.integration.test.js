@@ -5,9 +5,7 @@ const cookieParser = require('cookie-parser');
 const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
-const {
-    runCanonicalPipelineStageModelMigration,
-} = require('../../db_pipeline_stage_canonical_migrations');
+const canonicalPipelineStageMigration = require('../../../scripts/migrations/026_canonical_pipeline_stage_contract');
 
 function createApp(pool) {
     const app = express();
@@ -60,6 +58,29 @@ describe('Pipelines Integration Tests', () => {
     afterAll(async () => {
         await dbHelper.teardown();
     }, 30000);
+
+    async function getDealTransitionEvidence(dealId) {
+        const [activities, triggers] = await Promise.all([
+            dbHelper.pool.query(
+                `SELECT kind, from_stage_id, to_stage_id, from_state, to_state
+                 FROM deal_activities
+                 WHERE deal_id = $1
+                 ORDER BY id`,
+                [dealId]
+            ),
+            dbHelper.pool.query(
+                `SELECT trigger_type
+                 FROM workflow_triggers
+                 WHERE entity_type = 'deal' AND entity_id = $1
+                 ORDER BY id`,
+                [dealId]
+            ),
+        ]);
+        return {
+            activities: activities.rows,
+            triggerTypes: triggers.rows.map(row => row.trigger_type),
+        };
+    }
 
     // ── Pipeline CRUD ─────────────────────────────────────────────────────────
 
@@ -171,6 +192,8 @@ describe('Pipelines Integration Tests', () => {
     describe('Deal CRUD & multi-tenant isolation', () => {
         let pipelineId;
         let dealId;
+        let initialStageId;
+        let secondStageId;
 
         beforeAll(async () => {
             // Create a fresh pipeline for deal tests
@@ -180,6 +203,7 @@ describe('Pipelines Integration Tests', () => {
                 .set('x-organization-id', String(userA.org.id))
                 .send({ name: 'Deal Test Pipeline' });
             pipelineId = res.body.id;
+            [initialStageId, secondStageId] = res.body.stages.map(stage => stage.id);
         });
 
         it('creates a deal in User A pipeline', async () => {
@@ -308,6 +332,42 @@ describe('Pipelines Integration Tests', () => {
             expect(res.body.title).toBe('Updated Deal');
         });
 
+        it('records canonical side effects when REST moves or updates a deal stage', async () => {
+            const move = await request(app)
+                .patch(`/api/pipelines/deals/${dealId}/stage`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ stage_id: secondStageId });
+            expect(move.status).toBe(200);
+            expect(move.body.stage_id).toBe(secondStageId);
+
+            const update = await request(app)
+                .put(`/api/pipelines/deals/${dealId}`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ stage_id: initialStageId });
+            expect(update.status).toBe(200);
+            expect(update.body.stage_id).toBe(initialStageId);
+
+            const evidence = await getDealTransitionEvidence(dealId);
+            expect(evidence.activities).toEqual([
+                expect.objectContaining({
+                    kind: 'stage_changed',
+                    from_stage_id: initialStageId,
+                    to_stage_id: secondStageId,
+                }),
+                expect.objectContaining({
+                    kind: 'stage_changed',
+                    from_stage_id: secondStageId,
+                    to_stage_id: initialStageId,
+                }),
+            ]);
+            expect(evidence.triggerTypes).toEqual([
+                'deal_stage_changed',
+                'deal_stage_changed',
+            ]);
+        });
+
         it('prevents User B from updating User A deal', async () => {
             const res = await request(app)
                 .put(`/api/pipelines/deals/${dealId}`)
@@ -373,6 +433,16 @@ describe('Pipelines Integration Tests', () => {
             expect(res.status).toBe(200);
             expect(res.body.won_at).toBeTruthy();
             expect(res.body.lost_at).toBeFalsy();
+
+            const evidence = await getDealTransitionEvidence(dealId);
+            expect(evidence.activities).toEqual([
+                expect.objectContaining({
+                    kind: 'won',
+                    from_state: 'open',
+                    to_state: 'won',
+                }),
+            ]);
+            expect(evidence.triggerTypes).toEqual(['deal_won']);
         });
 
         it('reopens a won deal', async () => {
@@ -384,6 +454,10 @@ describe('Pipelines Integration Tests', () => {
             expect(res.status).toBe(200);
             expect(res.body.won_at).toBeFalsy();
             expect(res.body.lost_at).toBeFalsy();
+
+            const evidence = await getDealTransitionEvidence(dealId);
+            expect(evidence.activities.map(row => row.kind)).toEqual(['won', 'reopened']);
+            expect(evidence.triggerTypes).toEqual(['deal_won', 'deal_reopened']);
         });
 
         it('marks a deal as lost with a reason', async () => {
@@ -397,6 +471,18 @@ describe('Pipelines Integration Tests', () => {
             expect(res.body.lost_at).toBeTruthy();
             expect(res.body.won_at).toBeFalsy();
             expect(res.body.lost_reason).toBe('Budget constraints');
+
+            const evidence = await getDealTransitionEvidence(dealId);
+            expect(evidence.activities.map(row => row.kind)).toEqual([
+                'won',
+                'reopened',
+                'lost',
+            ]);
+            expect(evidence.triggerTypes).toEqual([
+                'deal_won',
+                'deal_reopened',
+                'deal_lost',
+            ]);
         });
 
         it('reopens a lost deal', async () => {
@@ -407,6 +493,32 @@ describe('Pipelines Integration Tests', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.lost_at).toBeFalsy();
+
+            const evidence = await getDealTransitionEvidence(dealId);
+            expect(evidence.activities.map(row => row.kind)).toEqual([
+                'won',
+                'reopened',
+                'lost',
+                'reopened',
+            ]);
+            expect(evidence.triggerTypes).toEqual([
+                'deal_won',
+                'deal_reopened',
+                'deal_lost',
+                'deal_reopened',
+            ]);
+        });
+
+        it('does not duplicate side effects for a no-op reopen', async () => {
+            const res = await request(app)
+                .post(`/api/pipelines/deals/${dealId}/reopen`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id));
+            expect(res.status).toBe(200);
+
+            const evidence = await getDealTransitionEvidence(dealId);
+            expect(evidence.activities).toHaveLength(4);
+            expect(evidence.triggerTypes).toHaveLength(4);
         });
 
         it('prevents User B from marking User A deal as won', async () => {
@@ -716,7 +828,7 @@ describe('Pipelines Integration Tests', () => {
                 [repairPipelineId]
             );
 
-            await runCanonicalPipelineStageModelMigration(dbHelper.pool);
+            await canonicalPipelineStageMigration.up(dbHelper.pool);
 
             const stages = await dbHelper.pool.query(
                 `SELECT stage_key, name, color, stage_order

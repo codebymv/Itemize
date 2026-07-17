@@ -28,6 +28,8 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { createDealFormSchema, type CreateDealFormValues } from '@/lib/formSchemas';
 import logger from '@/lib/logger';
 
+const NO_CONTACT_VALUE = '__no_contact__';
+
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
   return responseData?.error || responseData?.message || fallback;
@@ -158,7 +160,7 @@ export function CreateDealModal({
                         type="number"
                         placeholder="0"
                         min="0"
-                        step="100"
+                        step="0.01"
                         {...field}
                       />
                     </FormControl>
@@ -201,12 +203,17 @@ export function CreateDealModal({
               render={({ field }) => (
                 <FormItem className="space-y-2">
                   <FormLabel htmlFor="contact" style={{ fontFamily: '"Raleway", sans-serif' }}>Contact</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={(value) =>
+                      field.onChange(value === NO_CONTACT_VALUE ? '' : value)
+                    }
+                    value={field.value || NO_CONTACT_VALUE}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a contact (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No contact</SelectItem>
+                      <SelectItem value={NO_CONTACT_VALUE}>No contact</SelectItem>
                       {contacts.map((contact) => (
                         <SelectItem key={contact.id} value={contact.id.toString()}>
                           {getContactDisplayName(contact)}

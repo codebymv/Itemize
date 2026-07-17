@@ -194,6 +194,15 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'deal_reopened'");
     });
 
+    test('production migration stream installs the canonical pipeline-stage contract', () => {
+        const migration = require('../../../scripts/migrations/026_canonical_pipeline_stage_contract');
+        const {
+            runCanonicalPipelineStageModelMigration,
+        } = require('../../db_pipeline_stage_canonical_migrations');
+
+        expect(migration.up).toBe(runCanonicalPipelineStageModelMigration);
+    });
+
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {
         const migration = require('../../../scripts/migrations/024_workflow_sms_reconciliation');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };

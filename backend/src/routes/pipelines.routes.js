@@ -123,6 +123,107 @@ module.exports = (pool, authenticateJWT) => {
     return false;
   };
 
+  async function recordDealTransition(client, userId, deal, {
+    kind,
+    triggerType,
+    fromStageId = null,
+    toStageId = null,
+    fromState = null,
+    toState = null,
+    metadata = {},
+  }) {
+    const payload = {
+      deal_id: deal.id,
+      pipeline_id: deal.pipeline_id,
+      fromStageId,
+      newStageId: toStageId,
+      fromState,
+      newState: toState,
+      ...metadata,
+    };
+    await client.query(
+      `INSERT INTO deal_activities (
+         organization_id, deal_id, contact_id, user_id, kind,
+         from_stage_id, to_stage_id, from_state, to_state, metadata
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
+      [
+        deal.organization_id,
+        deal.id,
+        deal.contact_id,
+        userId,
+        kind,
+        fromStageId,
+        toStageId,
+        fromState,
+        toState,
+        JSON.stringify(metadata),
+      ]
+    );
+
+    if (deal.contact_id !== null) {
+      await client.query(
+        `INSERT INTO contact_activities (
+           contact_id, user_id, type, title, content, metadata
+         ) VALUES ($1, $2, 'deal_update', $3, $4::jsonb, $5::jsonb)`,
+        [
+          deal.contact_id,
+          userId,
+          `Deal ${kind.replaceAll('_', ' ')}`,
+          JSON.stringify(payload),
+          JSON.stringify({ dealId: deal.id, kind }),
+        ]
+      );
+    }
+
+    await enqueueWorkflowTrigger(client, {
+      contactId: deal.contact_id,
+      entityId: deal.id,
+      entityType: 'deal',
+      organizationId: deal.organization_id,
+      payload,
+      triggerType,
+    });
+  }
+
+  async function transitionDeal(client, organizationId, userId, dealId, target, reason = null) {
+    const currentResult = await client.query(
+      `SELECT ${dealColumns()} FROM deals
+       WHERE id = $1 AND organization_id = $2
+       FOR UPDATE`,
+      [dealId, organizationId]
+    );
+    if (currentResult.rows.length === 0) {
+      return { status: 'not_found' };
+    }
+
+    const current = currentResult.rows[0];
+    const previous = current.won_at ? 'won' : current.lost_at ? 'lost' : 'open';
+    const updateResult = await client.query(
+      `UPDATE deals SET
+         won_at = CASE WHEN $1 = 'won' THEN CURRENT_TIMESTAMP ELSE NULL END,
+         lost_at = CASE WHEN $1 = 'lost' THEN CURRENT_TIMESTAMP ELSE NULL END,
+         lost_reason = CASE WHEN $1 = 'lost' THEN $2 ELSE NULL END,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 AND organization_id = $4
+       RETURNING ${dealColumns()}`,
+      [target, reason, dealId, organizationId]
+    );
+    const deal = updateResult.rows[0];
+
+    if (previous !== target) {
+      const kind = target === 'open' ? 'reopened' : target;
+      await recordDealTransition(client, userId, deal, {
+        kind,
+        triggerType: WORKFLOW_TRIGGERS[`DEAL_${kind.toUpperCase()}`],
+        fromState: previous,
+        toState: target,
+        metadata: target === 'lost' && reason ? { reason } : {},
+      });
+    }
+
+    return { status: 'ok', deal };
+  }
+
   // ======================
   // Pipeline Routes
   // ======================
@@ -649,6 +750,22 @@ module.exports = (pool, authenticateJWT) => {
           id,
           req.organizationId
         ]);
+        const deal = updateResult.rows[0];
+        if (
+          Number(current.pipeline_id) !== Number(deal.pipeline_id)
+          || String(current.stage_id) !== String(deal.stage_id)
+        ) {
+          await recordDealTransition(client, req.user.id, deal, {
+            kind: 'stage_changed',
+            triggerType: WORKFLOW_TRIGGERS.DEAL_STAGE_CHANGED,
+            fromStageId: current.stage_id,
+            toStageId: deal.stage_id,
+            metadata: {
+              oldPipelineId: current.pipeline_id,
+              newPipelineId: deal.pipeline_id,
+            },
+          });
+        }
         return { status: 'ok', rows: updateResult.rows };
       });
 
@@ -708,18 +825,11 @@ module.exports = (pool, authenticateJWT) => {
 
         const deal = updateResult.rows[0];
         if (String(oldStageId) !== String(stage_id)) {
-          await enqueueWorkflowTrigger(client, {
-            contactId: deal.contact_id,
-            entityId: deal.id,
-            entityType: 'deal',
-            organizationId: req.organizationId,
-            payload: {
-              deal_id: deal.id,
-              newStageId: stage_id,
-              oldStageId,
-              pipeline_id: deal.pipeline_id,
-            },
+          await recordDealTransition(client, req.user.id, deal, {
+            kind: 'stage_changed',
             triggerType: WORKFLOW_TRIGGERS.DEAL_STAGE_CHANGED,
+            fromStageId: oldStageId,
+            toStageId: stage_id,
           });
         }
 
@@ -747,23 +857,15 @@ module.exports = (pool, authenticateJWT) => {
   router.post('/deals/:id/won', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await withDbClient(pool, async (client) => {
-        return client.query(`
-          UPDATE deals SET
-            won_at = CURRENT_TIMESTAMP,
-            lost_at = NULL,
-            lost_reason = NULL,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $1 AND organization_id = $2
-          RETURNING ${dealColumns()}
-        `, [id, req.organizationId]);
-      });
+      const result = await withTransaction(pool, client => (
+        transitionDeal(client, req.organizationId, req.user.id, id, 'won')
+      ));
 
-      if (result.rows.length === 0) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Deal not found' });
       }
 
-      res.json(result.rows[0]);
+      res.json(result.deal);
     } catch (error) {
       console.error('Error marking deal as won:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -775,23 +877,22 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const result = await withDbClient(pool, async (client) => {
-        return client.query(`
-          UPDATE deals SET
-            lost_at = CURRENT_TIMESTAMP,
-            lost_reason = $1,
-            won_at = NULL,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $2 AND organization_id = $3
-          RETURNING ${dealColumns()}
-        `, [reason || null, id, req.organizationId]);
-      });
+      const result = await withTransaction(pool, client => (
+        transitionDeal(
+          client,
+          req.organizationId,
+          req.user.id,
+          id,
+          'lost',
+          reason || null
+        )
+      ));
 
-      if (result.rows.length === 0) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Deal not found' });
       }
 
-      res.json(result.rows[0]);
+      res.json(result.deal);
     } catch (error) {
       console.error('Error marking deal as lost:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -802,23 +903,15 @@ module.exports = (pool, authenticateJWT) => {
   router.post('/deals/:id/reopen', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await withDbClient(pool, async (client) => {
-        return client.query(`
-          UPDATE deals SET
-            won_at = NULL,
-            lost_at = NULL,
-            lost_reason = NULL,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $1 AND organization_id = $2
-          RETURNING ${dealColumns()}
-        `, [id, req.organizationId]);
-      });
+      const result = await withTransaction(pool, client => (
+        transitionDeal(client, req.organizationId, req.user.id, id, 'open')
+      ));
 
-      if (result.rows.length === 0) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Deal not found' });
       }
 
-      res.json(result.rows[0]);
+      res.json(result.deal);
     } catch (error) {
       console.error('Error reopening deal:', error);
       res.status(500).json({ error: 'Internal server error' });
