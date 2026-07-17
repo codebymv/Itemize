@@ -5,15 +5,18 @@
 import api from '@/lib/api';
 import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationMember } from '@/types';
 import {
+  addContactActivityViaGraphql,
   bulkDeleteContactsViaGraphql,
   bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
   getContactViaGraphql,
+  getContactActivitiesViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
+  isContactGraphqlActivitiesEnabled,
   isContactGraphqlBulkMutationsEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
@@ -216,6 +219,9 @@ export const getContactActivities = async (
   params: { type?: string; limit?: number; offset?: number } = {},
   organizationId?: number
 ): Promise<ContactActivity[]> => {
+  if (isContactGraphqlActivitiesEnabled()) {
+    return getContactActivitiesViaGraphql(contactId, params, organizationId);
+  }
   const response = await api.get(`/api/contacts/${contactId}/activities`, {
     params,
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -233,6 +239,9 @@ export const addContactActivity = async (
   },
   organizationId?: number
 ): Promise<ContactActivity> => {
+  if (isContactGraphqlActivitiesEnabled()) {
+    return addContactActivityViaGraphql(contactId, data, organizationId);
+  }
   const response = await api.post(`/api/contacts/${contactId}/activities`, data, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });

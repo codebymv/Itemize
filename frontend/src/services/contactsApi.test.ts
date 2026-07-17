@@ -1,24 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
+  addContactActivity,
   bulkDeleteContacts,
   bulkUpdateContacts,
   createContact,
   deleteContact,
   getContact,
+  getContactActivities,
   getContacts,
   updateContact,
 } from './contactsApi';
 import {
+  addContactActivityViaGraphql,
   bulkDeleteContactsViaGraphql,
   bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
   getContactViaGraphql,
+  getContactActivitiesViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
+  isContactGraphqlActivitiesEnabled,
   isContactGraphqlBulkMutationsEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
@@ -34,9 +39,11 @@ vi.mock('@/lib/api', () => ({
 }));
 
 vi.mock('./contactsGraphql', () => ({
+  addContactActivityViaGraphql: vi.fn(),
   bulkDeleteContactsViaGraphql: vi.fn(),
   bulkUpdateContactsViaGraphql: vi.fn(),
   getContactViaGraphql: vi.fn(),
+  getContactActivitiesViaGraphql: vi.fn(),
   getContactsViaGraphql: vi.fn(),
   createContactViaGraphql: vi.fn(),
   updateContactViaGraphql: vi.fn(),
@@ -44,6 +51,7 @@ vi.mock('./contactsGraphql', () => ({
 }));
 
 vi.mock('./graphqlClient', () => ({
+  isContactGraphqlActivitiesEnabled: vi.fn(),
   isContactGraphqlBulkMutationsEnabled: vi.fn(),
   isContactGraphqlReadsEnabled: vi.fn(),
   isContactGraphqlMutationsEnabled: vi.fn(),
@@ -55,6 +63,7 @@ describe('contacts API read transport', () => {
     vi.mocked(isContactGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isContactGraphqlActivitiesEnabled).mockReturnValue(false);
   });
 
   it('uses REST by default and retains the organization header contract', async () => {
@@ -162,6 +171,49 @@ describe('contacts API read transport', () => {
     await bulkDeleteContacts([11], 42);
     expect(bulkUpdateContactsViaGraphql).toHaveBeenCalledWith(update);
     expect(bulkDeleteContactsViaGraphql).toHaveBeenCalledWith([11], 42);
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('keeps activity reads and writes on REST by default', async () => {
+    const activity = {
+      id: 91,
+      contact_id: 11,
+      type: 'note',
+      content: { body: 'Call next week' },
+      created_at: '2026-01-03T00:00:00.000Z',
+    };
+    vi.mocked(api.get).mockResolvedValue({ data: [activity] });
+    vi.mocked(api.post).mockResolvedValue({ data: activity });
+    const params = { type: 'note', limit: 25, offset: 25 };
+    const input = { type: 'note', content: { body: 'Call next week' } };
+
+    await expect(getContactActivities(11, params, 42)).resolves.toEqual([activity]);
+    await expect(addContactActivity(11, input, 42)).resolves.toEqual(activity);
+
+    expect(api.get).toHaveBeenCalledWith('/api/contacts/11/activities', {
+      params,
+      headers: { 'x-organization-id': '42' },
+    });
+    expect(api.post).toHaveBeenCalledWith('/api/contacts/11/activities', input, {
+      headers: { 'x-organization-id': '42' },
+    });
+    expect(getContactActivitiesViaGraphql).not.toHaveBeenCalled();
+    expect(addContactActivityViaGraphql).not.toHaveBeenCalled();
+  });
+
+  it('routes both activity operations through GraphQL only when their flag is enabled', async () => {
+    vi.mocked(isContactGraphqlActivitiesEnabled).mockReturnValue(true);
+    vi.mocked(getContactActivitiesViaGraphql).mockResolvedValue([]);
+    vi.mocked(addContactActivityViaGraphql).mockResolvedValue({ id: 91 } as never);
+    const params = { limit: 50 };
+    const input = { type: 'note', content: { body: 'GraphQL' } };
+
+    await getContactActivities(11, params, 42);
+    await addContactActivity(11, input, 42);
+
+    expect(getContactActivitiesViaGraphql).toHaveBeenCalledWith(11, params, 42);
+    expect(addContactActivityViaGraphql).toHaveBeenCalledWith(11, input, 42);
+    expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
 });

@@ -39,6 +39,9 @@ export const isContactGraphqlMutationsEnabled = (): boolean =>
 export const isContactGraphqlBulkMutationsEnabled = (): boolean =>
   import.meta.env.VITE_CONTACT_BULK_MUTATIONS_GRAPHQL === 'true';
 
+export const isContactGraphqlActivitiesEnabled = (): boolean =>
+  import.meta.env.VITE_CONTACT_ACTIVITIES_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

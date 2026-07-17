@@ -194,6 +194,10 @@ VITE_CONTACT_MUTATIONS_GRAPHQL=false
 # mutations. Keep disabled until the bulk staging browser gate passes.
 VITE_CONTACT_BULK_MUTATIONS_GRAPHQL=false
 
+# Contact timeline reads/writes have their own rollback boundary. Keep disabled
+# until the activity staging browser gate passes.
+VITE_CONTACT_ACTIVITIES_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 

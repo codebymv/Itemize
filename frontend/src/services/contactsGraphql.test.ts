@@ -1,16 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
+  addContactActivityViaGraphql,
   bulkDeleteContactsViaGraphql,
   bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
   getContactViaGraphql,
+  getContactActivitiesViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
   GraphqlRequestError,
+  isContactGraphqlActivitiesEnabled,
   isContactGraphqlBulkMutationsEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
@@ -43,6 +46,19 @@ const graphqlContact = {
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-02T00:00:00.000Z',
 };
+
+const graphqlActivity = {
+  id: 91,
+  contactId: 11,
+  userId: 7,
+  userName: 'Owner',
+  userEmail: 'owner@example.com',
+  type: 'NOTE',
+  title: 'Follow up',
+  content: { body: 'Call next week' },
+  metadata: { source: 'timeline' },
+  createdAt: '2026-01-03T00:00:00.000Z',
+} as const;
 
 const response = (payload: unknown, status = 200): Response => ({
   ok: status >= 200 && status < 300,
@@ -81,6 +97,13 @@ describe('contact GraphQL consumer', () => {
     expect(isContactGraphqlBulkMutationsEnabled()).toBe(false);
     vi.stubEnv('VITE_CONTACT_BULK_MUTATIONS_GRAPHQL', 'true');
     expect(isContactGraphqlBulkMutationsEnabled()).toBe(true);
+  });
+
+  it('keeps GraphQL contact activities independently disabled by default', () => {
+    vi.stubEnv('VITE_CONTACT_ACTIVITIES_GRAPHQL', 'false');
+    expect(isContactGraphqlActivitiesEnabled()).toBe(false);
+    vi.stubEnv('VITE_CONTACT_ACTIVITIES_GRAPHQL', 'true');
+    expect(isContactGraphqlActivitiesEnabled()).toBe(true);
   });
 
   it('maps list inputs and the GraphQL page into the existing REST-shaped contract', async () => {
@@ -247,5 +270,75 @@ describe('contact GraphQL consumer', () => {
     const deleteBody = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
     expect(deleteBody.variables).toEqual({ contactIds: [11, 999] });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(2);
+  });
+
+  it('maps activity paging, filters, and fields into the existing REST-shaped contract', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        contactActivities: {
+          nodes: [graphqlActivity],
+          pageInfo: { page: 2, pageSize: 25, total: 26, totalPages: 2 },
+        },
+      },
+    }));
+
+    await expect(getContactActivitiesViaGraphql(
+      11,
+      { type: 'note', limit: 25, offset: 25 },
+      42,
+    )).resolves.toEqual([{
+      id: 91,
+      contact_id: 11,
+      user_id: 7,
+      user_name: 'Owner',
+      user_email: 'owner@example.com',
+      type: 'note',
+      title: 'Follow up',
+      content: { body: 'Call next week' },
+      metadata: { source: 'timeline' },
+      created_at: '2026-01-03T00:00:00.000Z',
+    }]);
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body)).variables).toEqual({
+      contactId: 11,
+      filter: { type: 'NOTE' },
+      page: { page: 2, pageSize: 25 },
+    });
+    expect(init?.headers).toMatchObject({ 'x-organization-id': '42' });
+  });
+
+  it('maps activity writes and forwards CSRF without REST-shaped field names', async () => {
+    vi.mocked(fetchCsrfToken).mockClear();
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: { addContactActivity: graphqlActivity },
+    }));
+
+    await expect(addContactActivityViaGraphql(11, {
+      type: 'note',
+      title: 'Follow up',
+      content: { body: 'Call next week' },
+      metadata: { source: 'timeline' },
+    }, 42)).resolves.toMatchObject({
+      id: 91,
+      contact_id: 11,
+      type: 'note',
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body)).variables).toEqual({
+      contactId: 11,
+      input: {
+        type: 'NOTE',
+        title: 'Follow up',
+        content: { body: 'Call next week' },
+        metadata: { source: 'timeline' },
+      },
+    });
+    expect(init?.headers).toMatchObject({
+      'x-csrf-token': 'csrf-contact-token',
+      'x-organization-id': '42',
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledOnce();
   });
 });

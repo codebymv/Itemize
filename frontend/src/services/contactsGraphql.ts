@@ -1,4 +1,10 @@
-import type { Contact, ContactAddress, ContactsResponse, JsonRecord } from '@/types';
+import type {
+  Contact,
+  ContactActivity,
+  ContactAddress,
+  ContactsResponse,
+  JsonRecord,
+} from '@/types';
 import type {
   BulkUpdateData,
   ContactsQueryParams,
@@ -37,6 +43,19 @@ type GraphqlPageInfo = {
   pageSize: number;
   total: number;
   totalPages: number;
+};
+
+type GraphqlContactActivity = {
+  id: number;
+  contactId: number;
+  userId: number | null;
+  userName: string | null;
+  userEmail: string | null;
+  type: Uppercase<ContactActivity['type']>;
+  title: string | null;
+  content: unknown;
+  metadata: unknown;
+  createdAt: string;
 };
 
 const contactFields = `
@@ -116,6 +135,36 @@ const bulkDeleteContactsMutation = `
   }
 `;
 
+const contactActivityFields = `
+  id
+  contactId
+  userId
+  userName
+  userEmail
+  type
+  title
+  content
+  metadata
+  createdAt
+`;
+
+const contactActivitiesQuery = `
+  query ContactActivities($contactId: Int!, $filter: ContactActivityFilterInput, $page: PageInput) {
+    contactActivities(contactId: $contactId, filter: $filter, page: $page) {
+      nodes { ${contactActivityFields} }
+      pageInfo { page pageSize total totalPages }
+    }
+  }
+`;
+
+const addContactActivityMutation = `
+  mutation AddContactActivity($contactId: Int!, $input: CreateContactActivityInput!) {
+    addContactActivity(contactId: $contactId, input: $input) {
+      ${contactActivityFields}
+    }
+  }
+`;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 
@@ -139,6 +188,19 @@ const mapContact = (contact: GraphqlContact): Contact => ({
   created_by_name: contact.createdByName ?? undefined,
   created_at: contact.createdAt,
   updated_at: contact.updatedAt,
+});
+
+const mapContactActivity = (activity: GraphqlContactActivity): ContactActivity => ({
+  id: activity.id,
+  contact_id: activity.contactId,
+  user_id: activity.userId ?? undefined,
+  user_name: activity.userName ?? undefined,
+  user_email: activity.userEmail ?? undefined,
+  type: activity.type.toLowerCase() as ContactActivity['type'],
+  title: activity.title ?? undefined,
+  content: (isRecord(activity.content) ? activity.content : {}) as JsonRecord,
+  metadata: (isRecord(activity.metadata) ? activity.metadata : {}) as JsonRecord,
+  created_at: activity.createdAt,
 });
 
 const has = (value: object, key: string): boolean =>
@@ -310,4 +372,53 @@ export const bulkDeleteContactsViaGraphql = async (
     message: `${result.bulkDeleteContacts.matchedIds.length} contacts deleted`,
     deleted_ids: result.bulkDeleteContacts.matchedIds,
   };
+};
+
+export const getContactActivitiesViaGraphql = async (
+  contactId: number,
+  params: { type?: string; limit?: number; offset?: number } = {},
+  organizationId?: number,
+): Promise<ContactActivity[]> => {
+  const pageSize = params.limit ?? 50;
+  const offset = params.offset ?? 0;
+  const variables = {
+    contactId,
+    filter: params.type ? { type: params.type.toUpperCase() } : {},
+    page: {
+      page: Math.floor(offset / pageSize) + 1,
+      pageSize,
+    },
+  };
+  const data = await graphqlRequest<{
+    contactActivities: {
+      nodes: GraphqlContactActivity[];
+      pageInfo: GraphqlPageInfo;
+    };
+  }, typeof variables>(contactActivitiesQuery, variables, organizationId);
+  return data.contactActivities.nodes.map(mapContactActivity);
+};
+
+export const addContactActivityViaGraphql = async (
+  contactId: number,
+  input: {
+    type: string;
+    title?: string;
+    content?: JsonRecord;
+    metadata?: JsonRecord;
+  },
+  organizationId?: number,
+): Promise<ContactActivity> => {
+  const variables = {
+    contactId,
+    input: {
+      type: input.type.toUpperCase(),
+      ...(has(input, 'title') ? { title: input.title } : {}),
+      ...(has(input, 'content') ? { content: input.content } : {}),
+      ...(has(input, 'metadata') ? { metadata: input.metadata } : {}),
+    },
+  };
+  const data = await graphqlMutationRequest<{
+    addContactActivity: GraphqlContactActivity;
+  }, typeof variables>(addContactActivityMutation, variables, organizationId);
+  return mapContactActivity(data.addContactActivity);
 };

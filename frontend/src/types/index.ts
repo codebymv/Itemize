@@ -321,7 +321,7 @@ export interface ContactActivity {
   user_id?: number;
   user_name?: string;
   user_email?: string;
-  type: 'note' | 'email' | 'call' | 'task' | 'meeting' | 'status_change' | 'deal_update' | 'system';
+  type: 'note' | 'email' | 'sms' | 'call' | 'task' | 'meeting' | 'status_change' | 'deal_update' | 'system';
   title?: string;
   content: JsonRecord;
   metadata?: JsonRecord;
