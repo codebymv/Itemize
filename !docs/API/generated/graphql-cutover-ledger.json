@@ -11024,7 +11024,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 20,
+          "line": 34,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11077,7 +11077,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 42,
+          "line": 62,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11172,7 +11172,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 56,
+          "line": 82,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11225,7 +11225,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 27,
+          "line": 44,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11272,7 +11272,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 49,
+          "line": 72,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11331,7 +11331,7 @@
           "path": "/api/pipelines/deals",
           "rawPath": "/api/pipelines/deals",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 119,
+          "line": 145,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11420,7 +11420,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 162,
+          "line": 188,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11461,7 +11461,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 97,
+          "line": 123,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11508,7 +11508,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 126,
+          "line": 152,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11561,7 +11561,7 @@
           "path": "/api/pipelines/deals/:id/lost",
           "rawPath": "/api/pipelines/deals/${id}/lost",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 148,
+          "line": 174,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11602,7 +11602,7 @@
           "path": "/api/pipelines/deals/:id/reopen",
           "rawPath": "/api/pipelines/deals/${id}/reopen",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 155,
+          "line": 181,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11649,7 +11649,7 @@
           "path": "/api/pipelines/deals/:id/stage",
           "rawPath": "/api/pipelines/deals/${id}/stage",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 133,
+          "line": 159,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11690,7 +11690,7 @@
           "path": "/api/pipelines/deals/:id/won",
           "rawPath": "/api/pipelines/deals/${id}/won",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 141,
+          "line": 167,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11737,7 +11737,7 @@
           "path": "/api/pipelines/deals/all",
           "rawPath": "/api/pipelines/deals/all",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 89,
+          "line": 115,
           "client": "api",
           "literalInterpolation": false
         }

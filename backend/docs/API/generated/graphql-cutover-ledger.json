@@ -11,15 +11,15 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 387,
     "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 180,
+    "operationsWithBackendTests": 181,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 3,
-    "retainHttpCount": 39,
-    "graphqlQueryCount": 127,
-    "graphqlMutationCount": 245,
-    "highRiskCount": 330,
+    "retainHttpCount": 37,
+    "graphqlQueryCount": 128,
+    "graphqlMutationCount": 246,
+    "highRiskCount": 328,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -5537,7 +5537,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 73
+          "line": 184
         }
       ],
       "consumerCallsites": [
@@ -5556,19 +5556,19 @@
           "method": "GET",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 121
+          "line": 124
         },
         {
           "method": "GET",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 133
+          "line": 136
         },
         {
           "method": "GET",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 508
+          "line": 860
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5590,7 +5590,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 144
+          "line": 255
         }
       ],
       "consumerCallsites": [
@@ -5609,61 +5609,73 @@
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 68
+          "line": 70
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 92
+          "line": 95
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 111
+          "line": 114
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 220
+          "line": 223
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 278
+          "line": 322
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 329
+          "line": 373
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 395
+          "line": 439
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 459
+          "line": 497
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 466
+          "line": 546
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 485
+          "line": 811
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 818
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 837
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5685,7 +5697,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 487
+          "line": 652
         }
       ],
       "consumerCallsites": [
@@ -5704,19 +5716,19 @@
           "method": "DELETE",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 104
+          "line": 107
         },
         {
           "method": "DELETE",
           "path": "/api/forms/:formId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 196
+          "line": 199
         },
         {
           "method": "DELETE",
           "path": "/api/forms/:formId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 205
+          "line": 208
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5738,7 +5750,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 106
+          "line": 217
         }
       ],
       "consumerCallsites": [
@@ -5757,13 +5769,19 @@
           "method": "GET",
           "path": "/api/forms/:formId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 144
+          "line": 147
         },
         {
           "method": "GET",
           "path": "/api/forms/:formId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 160
+          "line": 163
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/:formId",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 255
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5785,7 +5803,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 312
+          "line": 440
         }
       ],
       "consumerCallsites": [
@@ -5804,19 +5822,37 @@
           "method": "PUT",
           "path": "/api/forms/:formId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 169
+          "line": 172
         },
         {
           "method": "PUT",
           "path": "/api/forms/:formId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 186
+          "line": 189
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 402
+          "line": 446
+        },
+        {
+          "method": "PUT",
+          "path": "/api/forms/:id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 536
+        },
+        {
+          "method": "PUT",
+          "path": "/api/forms/:id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 553
+        },
+        {
+          "method": "PUT",
+          "path": "/api/forms/:id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 594
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5838,7 +5874,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 511
+          "line": 676
         }
       ],
       "consumerCallsites": [
@@ -5855,15 +5891,21 @@
       "testCallsites": [
         {
           "method": "POST",
-          "path": "/api/forms/:sourceId/duplicate",
+          "path": "/api/forms/:formId/duplicate",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 299
+          "line": 283
         },
         {
           "method": "POST",
           "path": "/api/forms/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 313
+          "line": 343
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/:sourceId/duplicate",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 357
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5885,7 +5927,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 380
+          "line": 531
         }
       ],
       "consumerCallsites": [
@@ -5904,19 +5946,25 @@
           "method": "PUT",
           "path": "/api/forms/:formId/fields",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 239
+          "line": 242
         },
         {
           "method": "PUT",
           "path": "/api/forms/:formId/fields",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 252
+          "line": 261
         },
         {
           "method": "PUT",
           "path": "/api/forms/:formId/fields",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 262
+          "line": 296
+        },
+        {
+          "method": "PUT",
+          "path": "/api/forms/:formId/fields",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 306
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5938,7 +5986,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 649
+          "line": 822
         }
       ],
       "consumerCallsites": [
@@ -5957,13 +6005,13 @@
           "method": "GET",
           "path": "/api/forms/:formId/submissions",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 352
+          "line": 396
         },
         {
           "method": "GET",
           "path": "/api/forms/:formId/submissions",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 363
+          "line": 407
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5985,7 +6033,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 712
+          "line": 885
         }
       ],
       "consumerCallsites": [
@@ -6004,13 +6052,13 @@
           "method": "DELETE",
           "path": "/api/forms/:formId/submissions/:submissionId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 372
+          "line": 416
         },
         {
           "method": "DELETE",
           "path": "/api/forms/:formId/submissions/:submissionId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 381
+          "line": 425
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -6025,57 +6073,76 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/forms/public/form/:slug",
+      "id": "GET /api/forms/public/form/:identifier",
       "key": "GET /api/forms/public/form/:*",
       "method": "GET",
-      "path": "/api/forms/public/form/:slug",
+      "path": "/api/forms/public/form/:identifier",
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 741
+          "line": 914
         }
       ],
       "consumerCallsites": [
         {
           "method": "GET",
-          "path": "/api/forms/public/form/:slug",
-          "rawPath": "/api/forms/public/form/${slug}",
+          "path": "/api/forms/public/form/:identifier",
+          "rawPath": "/api/forms/public/form/${identifier}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 143,
+          "line": 144,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 569
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:slug",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 583
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 587
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "retain-http",
-      "owner": "crm",
-      "targetOperation": "getPublicForm",
-      "targetModule": "PublicFormsModule",
-      "parityStatus": "characterizing",
-      "notes": "Retain anonymous rate-limited HTTP for embedded forms; public identity must become globally unambiguous rather than relying on an organization-local slug.",
+      "disposition": "graphql-query",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "medium"
     },
     {
-      "id": "POST /api/forms/public/form/:slug",
+      "id": "POST /api/forms/public/form/:identifier",
       "key": "POST /api/forms/public/form/:*",
       "method": "POST",
-      "path": "/api/forms/public/form/:slug",
+      "path": "/api/forms/public/form/:identifier",
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 786
+          "line": 959
         }
       ],
       "consumerCallsites": [
         {
           "method": "POST",
-          "path": "/api/forms/public/form/:slug",
-          "rawPath": "/api/forms/public/form/${slug}",
+          "path": "/api/forms/public/form/:identifier",
+          "rawPath": "/api/forms/public/form/${identifier}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 151,
+          "line": 152,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6085,19 +6152,43 @@
           "method": "POST",
           "path": "/api/forms/public/form/:slug",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 417
+          "line": 461
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 607
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 683
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 693
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 704
         }
       ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "retain-http",
-      "owner": "crm",
-      "targetOperation": "submitPublicForm",
-      "targetModule": "PublicFormsModule",
-      "parityStatus": "characterizing",
-      "notes": "Retain anonymous rate-limited HTTP; contact reuse and submission now commit transactionally with same-email race serialization. Add durable notification/event delivery and complete field validation.",
+      "disposition": "graphql-mutation",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "medium"
     },
     {
       "id": "GET /api/health",
@@ -10933,7 +11024,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 20,
+          "line": 34,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10986,7 +11077,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 42,
+          "line": 62,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11081,7 +11172,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 56,
+          "line": 82,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11134,7 +11225,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 27,
+          "line": 44,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11181,7 +11272,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 49,
+          "line": 72,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11240,7 +11331,7 @@
           "path": "/api/pipelines/deals",
           "rawPath": "/api/pipelines/deals",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 119,
+          "line": 145,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11329,7 +11420,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 162,
+          "line": 188,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11370,7 +11461,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 97,
+          "line": 123,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11417,7 +11508,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 126,
+          "line": 152,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11470,7 +11561,7 @@
           "path": "/api/pipelines/deals/:id/lost",
           "rawPath": "/api/pipelines/deals/${id}/lost",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 148,
+          "line": 174,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11511,7 +11602,7 @@
           "path": "/api/pipelines/deals/:id/reopen",
           "rawPath": "/api/pipelines/deals/${id}/reopen",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 155,
+          "line": 181,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11558,7 +11649,7 @@
           "path": "/api/pipelines/deals/:id/stage",
           "rawPath": "/api/pipelines/deals/${id}/stage",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 133,
+          "line": 159,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11599,7 +11690,7 @@
           "path": "/api/pipelines/deals/:id/won",
           "rawPath": "/api/pipelines/deals/${id}/won",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 141,
+          "line": 167,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11646,7 +11737,7 @@
           "path": "/api/pipelines/deals/all",
           "rawPath": "/api/pipelines/deals/all",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 89,
+          "line": 115,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17684,6 +17775,9 @@
       "line": 133
     }
   ],
-  "orphanedOverrides": [],
+  "orphanedOverrides": [
+    "GET /api/forms/public/form/:slug",
+    "POST /api/forms/public/form/:slug"
+  ],
   "orphanedRuntimeExpressionOverrides": []
 }

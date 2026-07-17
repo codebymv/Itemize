@@ -10,6 +10,8 @@ describe('Environment Validation', () => {
     expect(env.VITE_CONTACT_BULK_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CONTACT_ACTIVITIES_GRAPHQL).toBe('false');
     expect(env.VITE_CONTACT_CONTENT_GRAPHQL).toBe('false');
+    expect(env.VITE_PIPELINE_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_PIPELINE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

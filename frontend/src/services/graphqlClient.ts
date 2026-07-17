@@ -45,6 +45,12 @@ export const isContactGraphqlActivitiesEnabled = (): boolean =>
 export const isContactGraphqlContentEnabled = (): boolean =>
   import.meta.env.VITE_CONTACT_CONTENT_GRAPHQL === 'true';
 
+export const isPipelineGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_PIPELINE_READS_GRAPHQL === 'true';
+
+export const isPipelineGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_PIPELINE_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

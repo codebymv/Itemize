@@ -354,6 +354,8 @@ export interface Pipeline {
   stages: PipelineStage[];
   is_default: boolean;
   created_by?: number;
+  deal_count?: number;
+  total_value?: number;
   created_at: string;
   updated_at: string;
 }

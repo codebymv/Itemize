@@ -198,6 +198,14 @@ VITE_CONTACT_BULK_MUTATIONS_GRAPHQL=false
 # until the activity staging browser gate passes.
 VITE_CONTACT_ACTIVITIES_GRAPHQL=false
 
+# Contact related-content reads have their own rollback boundary.
+VITE_CONTACT_CONTENT_GRAPHQL=false
+
+# Pipeline definition/list/detail reads and definition mutations are independent
+# rollback boundaries. Deal mutations remain on REST.
+VITE_PIPELINE_READS_GRAPHQL=false
+VITE_PIPELINE_MUTATIONS_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 

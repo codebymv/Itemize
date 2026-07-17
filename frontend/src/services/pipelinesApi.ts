@@ -4,6 +4,17 @@
  */
 import api from '@/lib/api';
 import { Pipeline, Deal, PipelineStage, JsonRecord } from '@/types';
+import {
+  createPipelineViaGraphql,
+  deletePipelineViaGraphql,
+  getPipelineViaGraphql,
+  getPipelinesViaGraphql,
+  updatePipelineViaGraphql,
+} from './pipelinesGraphql';
+import {
+  isPipelineGraphqlMutationsEnabled,
+  isPipelineGraphqlReadsEnabled,
+} from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -17,6 +28,9 @@ const unwrapResponse = <T>(payload: unknown): T => {
 // ======================
 
 export const getPipelines = async (organizationId?: number): Promise<Pipeline[]> => {
+  if (isPipelineGraphqlReadsEnabled()) {
+    return getPipelinesViaGraphql(organizationId);
+  }
   const response = await api.get('/api/pipelines', {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
@@ -24,6 +38,9 @@ export const getPipelines = async (organizationId?: number): Promise<Pipeline[]>
 };
 
 export const getPipeline = async (id: number, organizationId?: number): Promise<Pipeline & { deals: Deal[] }> => {
+  if (isPipelineGraphqlReadsEnabled()) {
+    return getPipelineViaGraphql(id, organizationId);
+  }
   const response = await api.get(`/api/pipelines/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
@@ -32,13 +49,16 @@ export const getPipeline = async (id: number, organizationId?: number): Promise<
 
 export interface CreatePipelineData {
   name: string;
-  description?: string;
-  stages?: PipelineStage[];
+  description?: string | null;
+  stages?: PipelineStage[] | null;
   is_default?: boolean;
   organization_id?: number;
 }
 
 export const createPipeline = async (data: CreatePipelineData): Promise<Pipeline> => {
+  if (isPipelineGraphqlMutationsEnabled()) {
+    return createPipelineViaGraphql(data);
+  }
   const response = await api.post('/api/pipelines', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -46,6 +66,9 @@ export const createPipeline = async (data: CreatePipelineData): Promise<Pipeline
 };
 
 export const updatePipeline = async (id: number, data: Partial<CreatePipelineData>): Promise<Pipeline> => {
+  if (isPipelineGraphqlMutationsEnabled()) {
+    return updatePipelineViaGraphql(id, data);
+  }
   const response = await api.put(`/api/pipelines/${id}`, data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -53,6 +76,9 @@ export const updatePipeline = async (id: number, data: Partial<CreatePipelineDat
 };
 
 export const deletePipeline = async (id: number, organizationId?: number): Promise<void> => {
+  if (isPipelineGraphqlMutationsEnabled()) {
+    return deletePipelineViaGraphql(id, organizationId);
+  }
   await api.delete(`/api/pipelines/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
