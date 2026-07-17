@@ -1,12 +1,12 @@
 # File, binary, and bulk-transfer cutover contract
 
-**Status:** Characterized legacy boundary; retained HTTP target
+**Status:** Retained HTTP target implemented for contact transfer; remaining file-service boundaries characterized
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-17
 
 ## Decision
 
-GraphQL owns file metadata, document lifecycle, logo deletion, and upload-intent orchestration. It does not carry multipart bodies, PDF streams, generated invoice PDFs, public logo bytes, or large CSV transfers. Those protocols remain HTTP endpoints behind the same NestJS authentication, tenancy, capability, rate-limit, and observability services as GraphQL.
+GraphQL owns file metadata, document lifecycle, logo deletion, and upload-intent orchestration. It does not carry multipart bodies, PDF streams, generated invoice PDFs, public logo bytes, or CSV transfers. Those protocols remain HTTP endpoints behind the same NestJS authentication, tenancy, capability, rate-limit, and observability services as GraphQL. `ContactTransfersModule` now owns the two retained CSV routes; the legacy origin can proxy only those routes behind a default-off rollback flag.
 
 Never persist or return a permanent public URL for a private signature document. A GraphQL field may return metadata or an audience-bound, short-lived delivery capability; it must not expose a raw local path, bucket key, or unrestricted object URL.
 
@@ -21,7 +21,7 @@ Never persist or return a permanent public URL for a private signature document.
 | Invoice PDF | Authenticated HTTP binary response | Organization-owned invoice; preserve generation semantics and attachment headers outside GraphQL |
 | Business/settings logos | Authenticated multipart HTTP for writes; public HTTP for bytes | One image, 2 MiB maximum, PNG/JPEG/GIF/WebP magic bytes, safe server-selected extension/name; JSON metadata writes cannot select `logo_url` |
 | Contact export | Authenticated HTTP CSV attachment | Organization filters, deterministic newest-first order, 50,000-row rejection boundary, quoted cells, formula neutralization, private/no-store and `nosniff` |
-| Contact import | Authenticated HTTP JSON bulk request despite the legacy `/csv` name | Non-empty object array, strict boolean duplicate policy, 10,000 rows maximum, 500-row insert batches, organization lock and plan-limit enforcement |
+| Contact import | Authenticated, CSRF-protected HTTP JSON bulk request despite the legacy `/csv` name | 1 MiB body, non-empty object array, 10,000 rows, 20 columns, strict field validation and duplicate policy, at most 100 returned row errors with total/truncation metadata, organization lock, atomic plan-limit enforcement, and a 30-second query/upstream timeout |
 
 ## Storage namespaces
 
@@ -51,14 +51,16 @@ Persist at least byte length, normalized media type, SHA-256, storage key, uploa
 
 CSV export quotes every data cell, doubles embedded quotes, and prefixes values whose first meaningful character is `=`, `+`, `-`, or `@` so spreadsheet clients do not execute formulas. The header row is server controlled.
 
-The current import route does not parse an uploaded CSV file. Its compatibility contract is a JSON array of mapped contact objects. A future real CSV upload must be a separately versioned operation with explicit encoding, delimiter, header mapping, per-field length, row-error, partial-success, cancellation, and asynchronous-job semantics.
+The import route does not parse an uploaded CSV file. Its compatibility contract is a JSON array of mapped contact objects. The browser parser accepts CRLF, escaped quotes, quoted commas/newlines, BOM, and documented header aliases, then enforces the same 1 MiB, 10,000-row, and 20-column limits before sending JSON. Malformed rows, unclosed quotes, duplicate mapped headers, and rows wider than the header fail before transport. A future server-side file upload must be a separately versioned operation with explicit encoding, delimiter, cancellation, and asynchronous-job semantics.
+
+Fresh-PostgreSQL tests prove authentication, membership and CSRF denial; tenant/status/tag export filtering; deterministic quoting and formula neutralization; strict row validation; both duplicate modes including concurrent imports; atomic plan-limit enforcement; bounded body/row/column/error behavior; and transactional contact, workflow-trigger, and activity writes. The 2026-07-17 staging gate enabled the two-route proxy, wrote and exported data through NestJS, then removed only the flag and read that same data plus a new legacy import through Express without repair. Cleanup left no fixture rows and production was untouched.
 
 ## Required cutover gates
 
 - MIME spoof, oversize, malformed PDF/image, unsafe filename, traversal, S3-host lookalike, arbitrary remote URL, missing object, and foreign-tenant denial tests
 - Authenticated, public-capability, inline, attachment, cache/header, reconnect/viewer, and browser download tests
 - Replacement, rollback, abandoned-stage, retry, deletion, immutable-evidence, and garbage-collection tests against the production storage provider
-- CSV formula, quote/newline, Unicode, row-limit, duplicate, plan-limit race, and cross-organization tests
+- Keep the completed CSV formula, quote/newline, malformed-input, byte/row/column/error-limit, duplicate-mode, plan-limit race, tenant-denial, side-effect, and rollback scenarios in the fresh and frontend gates
 - Multi-instance storage behavior and storage-provider outage/timeout/backpressure tests
 
 ## Open blockers
