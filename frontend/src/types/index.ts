@@ -387,6 +387,8 @@ export interface Deal {
   contact_first_name?: string;
   contact_last_name?: string;
   contact_company?: string;
+  contact_email?: string;
+  pipeline_name?: string;
   pipeline?: Pipeline;
 }
 

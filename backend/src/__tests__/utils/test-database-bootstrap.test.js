@@ -10,6 +10,7 @@ describe('test database schema contract', () => {
             '_migrations',
             'bookings',
             'contacts',
+            'deal_activities',
             'email_webhook_events',
             'invoices',
             'organization_members',
@@ -32,6 +33,7 @@ describe('test database schema contract', () => {
             'core_users_table',
             'users_email_password_auth',
             'feature_onboarding',
+            'deal_activity_contract_v1',
             'module_crm',
             'email_webhook_events',
             'email_webhook_reconciliation',
@@ -177,6 +179,19 @@ describe('test database schema contract', () => {
         expect(sql).toContain('operator_retry_count');
         expect(sql).toContain('last_operator_retry_at');
         expect(sql).toContain("'cancelled'");
+    });
+
+    test('production migration stream creates the deal transition ledger', async () => {
+        const migration = require('../../../scripts/migrations/025_deal_activity_contract');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS deal_activities');
+        expect(sql).toContain('deals_terminal_state_check');
+        expect(sql).toContain('deal_activities_deal_org_fk');
+        expect(sql).toContain("'deal_won'");
+        expect(sql).toContain("'deal_reopened'");
     });
 
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {

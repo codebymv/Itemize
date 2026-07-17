@@ -382,7 +382,7 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
         contactId,
         stageId: 'lead',
         title: 'Parity Deal',
-        value: 1250.5,
+        value: '1250.50',
         assignedToName: 'Vocabulary Member',
         contactFirstName: 'Tagged Contact',
       }),
@@ -540,5 +540,224 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
       { id: pipelineId },
     ).expect(200);
     expect(foreignDelete.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('implements strict deal reads, validation, CSRF, and tenant privacy', async () => {
+    const list = await graphql(
+      memberToken,
+      organizationId,
+      `query Deals($filter: DealFilterInput, $sort: DealSortInput, $page: PageInput) {
+        deals(filter: $filter, sort: $sort, page: $page) {
+          nodes { id value pipelineName contactEmail }
+          pageInfo { page pageSize total totalPages }
+        }
+      }`,
+      {
+        filter: { pipelineId, status: 'OPEN' },
+        sort: { field: 'VALUE', direction: 'ASC' },
+        page: { page: 1, pageSize: 10 },
+      },
+    ).expect(200);
+    expect(list.body.errors).toBeUndefined();
+    expect(list.body.data.deals.nodes).toContainEqual(expect.objectContaining({
+      id: dealId,
+      value: '1250.50',
+      pipelineName: 'Sales',
+    }));
+
+    const foreign = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      `query Deal($id: Int!) { deal(id: $id) { id } }`,
+      { id: dealId },
+    ).expect(200);
+    expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const invalidValue = await mutation(
+      memberToken,
+      organizationId,
+      `mutation CreateDeal($input: CreateDealInput!) {
+        createDeal(input: $input) { id }
+      }`,
+      { input: { pipelineId, title: 'Invalid', value: '1.234' } },
+    ).expect(200);
+    expect(invalidValue.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      field: 'value',
+    });
+
+    const foreignContact = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id, first_name, created_by)
+       VALUES ($1, 'Foreign deal contact', $2) RETURNING id`,
+      [outsiderOrganizationId, outsiderId],
+    );
+    const invalidReference = await mutation(
+      memberToken,
+      organizationId,
+      `mutation CreateDeal($input: CreateDealInput!) {
+        createDeal(input: $input) { id }
+      }`,
+      {
+        input: {
+          pipelineId,
+          title: 'Invalid reference',
+          contactId: Number(foreignContact.rows[0].id),
+        },
+      },
+    ).expect(200);
+    expect(invalidReference.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      field: 'contactId',
+    });
+
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      `mutation CreateDeal($input: CreateDealInput!) {
+        createDeal(input: $input) { id }
+      }`,
+      { input: { pipelineId, title: 'Blocked' } },
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
+
+  it('serializes deal changes and atomically records real transitions', async () => {
+    const created = await mutation(
+      memberToken,
+      organizationId,
+      `mutation CreateDeal($input: CreateDealInput!) {
+        createDeal(input: $input) {
+          id title value currency probability stageId contactId wonAt lostAt
+        }
+      }`,
+      {
+        input: {
+          pipelineId,
+          contactId,
+          title: 'Lifecycle parity',
+          value: '99.90',
+          currency: 'usd',
+          probability: 55,
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createDeal).toMatchObject({
+      title: 'Lifecycle parity',
+      value: '99.90',
+      currency: 'USD',
+      probability: 55,
+      stageId: 'lead',
+      contactId,
+    });
+    const lifecycleDealId = created.body.data.createDeal.id;
+
+    const update = (title: string) => mutation(
+      memberToken,
+      organizationId,
+      `mutation UpdateDeal($id: Int!, $input: UpdateDealInput!) {
+        updateDeal(id: $id, input: $input) { id title }
+      }`,
+      { id: lifecycleDealId, input: { title } },
+    );
+    const concurrent = await Promise.all([update('Concurrent A'), update('Concurrent B')]);
+    expect(concurrent.every((response) => !response.body.errors)).toBe(true);
+
+    const move = () => mutation(
+      memberToken,
+      organizationId,
+      `mutation MoveDeal($id: Int!) {
+        moveDeal(id: $id, stageId: "qualified") { id stageId }
+      }`,
+      { id: lifecycleDealId },
+    );
+    await move().expect(200);
+    await move().expect(200);
+    const won = await mutation(
+      memberToken,
+      organizationId,
+      `mutation Won($id: Int!) { markDealWon(id: $id) { wonAt lostAt } }`,
+      { id: lifecycleDealId },
+    ).expect(200);
+    expect(won.body.data.markDealWon.wonAt).toBeTruthy();
+    expect(won.body.data.markDealWon.lostAt).toBeNull();
+    await mutation(
+      memberToken,
+      organizationId,
+      `mutation Won($id: Int!) { markDealWon(id: $id) { id } }`,
+      { id: lifecycleDealId },
+    ).expect(200);
+    const lost = await mutation(
+      memberToken,
+      organizationId,
+      `mutation Lost($id: Int!) {
+        markDealLost(id: $id, reason: " Budget ") { wonAt lostAt lostReason }
+      }`,
+      { id: lifecycleDealId },
+    ).expect(200);
+    expect(lost.body.data.markDealLost).toMatchObject({
+      wonAt: null,
+      lostReason: 'Budget',
+    });
+    expect(lost.body.data.markDealLost.lostAt).toBeTruthy();
+    const reopened = await mutation(
+      memberToken,
+      organizationId,
+      `mutation Reopen($id: Int!) {
+        reopenDeal(id: $id) { wonAt lostAt lostReason }
+      }`,
+      { id: lifecycleDealId },
+    ).expect(200);
+    expect(reopened.body.data.reopenDeal).toEqual({
+      wonAt: null,
+      lostAt: null,
+      lostReason: null,
+    });
+
+    const evidence = await pool.query<{
+      activities: number;
+      contact_activities: number;
+      triggers: number;
+    }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM deal_activities
+          WHERE organization_id = $1 AND deal_id = $2) AS activities,
+         (SELECT COUNT(*)::int FROM contact_activities
+          WHERE contact_id = $3 AND type = 'deal_update'
+            AND metadata->>'dealId' = $2::text) AS contact_activities,
+         (SELECT COUNT(*)::int FROM workflow_triggers
+          WHERE organization_id = $1 AND entity_type = 'deal' AND entity_id = $2) AS triggers`,
+      [organizationId, lifecycleDealId, contactId],
+    );
+    expect(evidence.rows[0]).toEqual({
+      activities: 4,
+      contact_activities: 4,
+      triggers: 4,
+    });
+    const kinds = await pool.query<{ kind: string; trigger_type: string }>(
+      `SELECT activity.kind, trigger.trigger_type
+       FROM deal_activities activity
+       JOIN workflow_triggers trigger
+         ON trigger.organization_id = activity.organization_id
+        AND trigger.entity_id = activity.deal_id
+        AND trigger.occurred_at >= activity.created_at - interval '1 second'
+       WHERE activity.organization_id = $1 AND activity.deal_id = $2
+       ORDER BY activity.id, trigger.id`,
+      [organizationId, lifecycleDealId],
+    );
+    expect(new Set(kinds.rows.map((row) => row.kind))).toEqual(
+      new Set(['stage_changed', 'won', 'lost', 'reopened']),
+    );
+    expect(new Set(kinds.rows.map((row) => row.trigger_type))).toEqual(
+      new Set(['deal_stage_changed', 'deal_won', 'deal_lost', 'deal_reopened']),
+    );
+
+    const deleted = await mutation(
+      memberToken,
+      organizationId,
+      `mutation DeleteDeal($id: Int!) { deleteDeal(id: $id) { deletedId } }`,
+      { id: lifecycleDealId },
+    ).expect(200);
+    expect(deleted.body.data.deleteDeal.deletedId).toBe(lifecycleDealId);
   });
 });

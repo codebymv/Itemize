@@ -16,7 +16,7 @@ type GraphqlDeal = {
   contactId: number | null;
   stageId: string;
   title: string;
-  value: number;
+  value: string;
   currency: string;
   probability: number;
   expectedCloseDate: string | null;
@@ -137,7 +137,7 @@ const mapDeal = (deal: GraphqlDeal): Deal => ({
   ...(deal.contactId === null ? {} : { contact_id: deal.contactId }),
   stage_id: deal.stageId,
   title: deal.title,
-  value: deal.value,
+  value: Number(deal.value),
   currency: deal.currency,
   probability: deal.probability,
   ...(deal.expectedCloseDate === null

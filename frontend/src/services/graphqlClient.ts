@@ -51,6 +51,12 @@ export const isPipelineGraphqlReadsEnabled = (): boolean =>
 export const isPipelineGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_PIPELINE_MUTATIONS_GRAPHQL === 'true';
 
+export const isDealGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_DEAL_READS_GRAPHQL === 'true';
+
+export const isDealGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_DEAL_MUTATIONS_GRAPHQL === 'true';
+
 export const isFormGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_FORM_READS_GRAPHQL === 'true';
 

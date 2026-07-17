@@ -202,9 +202,13 @@ VITE_CONTACT_ACTIVITIES_GRAPHQL=false
 VITE_CONTACT_CONTENT_GRAPHQL=false
 
 # Pipeline definition/list/detail reads and definition mutations are independent
-# rollback boundaries. Deal mutations remain on REST.
+# rollback boundaries.
 VITE_PIPELINE_READS_GRAPHQL=false
 VITE_PIPELINE_MUTATIONS_GRAPHQL=false
+
+# Deal list/detail reads and all deal writes have independent rollback boundaries.
+VITE_DEAL_READS_GRAPHQL=false
+VITE_DEAL_MUTATIONS_GRAPHQL=false
 
 # Authenticated form list/detail, definition mutations, and submission
 # management are three independent rollback boundaries. Anonymous public form

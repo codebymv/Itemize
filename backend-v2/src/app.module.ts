@@ -9,6 +9,7 @@ import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
 import { formatItemizeGraphqlError } from './common/graphql-error';
 import { ContactsModule } from './contacts/contacts.module';
 import { DatabaseModule } from './database/database.module';
+import { DealsModule } from './deals/deals.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
@@ -32,6 +33,7 @@ const observabilityPlugins = [
     AuthModule,
     OrganizationsModule,
     ContactsModule,
+    DealsModule,
     PipelinesModule,
     TagsModule,
     FormsModule,

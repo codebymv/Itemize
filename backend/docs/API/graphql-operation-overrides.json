@@ -1285,39 +1285,39 @@
       "notes": "Lock and verify organization ownership before checking dependent deals so outsiders receive not found without an existence leak."
     },
     "GET /api/pipelines/deals/all": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deals", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deals", "parityStatus": "implemented", "risk": "high",
       "notes": "Organization-scoped filters, strict pagination, Decimal value transport, and stable tie-breaker ordering."
     },
     "POST /api/pipelines/deals": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "createDeal", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "createDeal", "parityStatus": "implemented", "risk": "high",
       "notes": "Pipeline, stage, contact, and assignee references must all belong to the active organization."
     },
     "GET /api/pipelines/deals/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deal", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deal", "parityStatus": "implemented", "risk": "high",
       "notes": "Outside-organization IDs are not found and relation projections must preserve tenant scope."
     },
     "PUT /api/pipelines/deals/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "updateDeal", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "updateDeal", "parityStatus": "implemented", "risk": "high",
       "notes": "Lock the deal and validate the effective pipeline/stage/contact/assignee tuple before update."
     },
     "DELETE /api/pipelines/deals/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deleteDeal", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deleteDeal", "parityStatus": "implemented", "risk": "high",
       "notes": "Organization-scoped deletion with explicit activity/event semantics."
     },
     "PATCH /api/pipelines/deals/:id/stage": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "moveDeal", "parityStatus": "characterizing", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "moveDeal", "parityStatus": "implemented", "risk": "high",
       "notes": "Lock the deal, validate the destination against its pipeline, and publish the durable deal-stage-changed event only after commit."
     },
     "POST /api/pipelines/deals/:id/won": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealWon", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealWon", "parityStatus": "implemented", "risk": "high",
       "notes": "Atomically set won state, clear lost state, and emit lifecycle activity/event."
     },
     "POST /api/pipelines/deals/:id/lost": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealLost", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealLost", "parityStatus": "implemented", "risk": "high",
       "notes": "Atomically set lost state/reason, clear won state, and emit lifecycle activity/event."
     },
     "POST /api/pipelines/deals/:id/reopen": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "reopenDeal", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "reopenDeal", "parityStatus": "implemented", "risk": "high",
       "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event."
     },
     "GET /api/tags": {

@@ -1,29 +1,9 @@
-import {
-  Field,
-  Float,
-  GraphQLISODateTime,
-  Int,
-  ObjectType,
-} from '@nestjs/graphql';
+import { Field, GraphQLISODateTime, Int, ObjectType } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
+import { PageInfo } from '../common/pagination';
 
 @ObjectType()
-export class PipelineStage {
-  @Field()
-  id: string;
-
-  @Field()
-  name: string;
-
-  @Field(() => Int)
-  order: number;
-
-  @Field()
-  color: string;
-}
-
-@ObjectType()
-export class PipelineDeal {
+export class Deal {
   @Field(() => Int)
   id: number;
 
@@ -87,44 +67,11 @@ export class PipelineDeal {
   @Field(() => String, { nullable: true })
   contactEmail: string | null;
 
-  @Field(() => GraphQLISODateTime)
-  createdAt: Date;
-
-  @Field(() => GraphQLISODateTime)
-  updatedAt: Date;
-}
-
-@ObjectType()
-export class Pipeline {
-  @Field(() => Int)
-  id: number;
-
-  @Field(() => Int)
-  organizationId: number;
-
-  @Field()
-  name: string;
+  @Field(() => String, { nullable: true })
+  contactCompany: string | null;
 
   @Field(() => String, { nullable: true })
-  description: string | null;
-
-  @Field(() => [PipelineStage])
-  stages: PipelineStage[];
-
-  @Field()
-  isDefault: boolean;
-
-  @Field(() => Int, { nullable: true })
-  createdById: number | null;
-
-  @Field(() => Int)
-  dealCount: number;
-
-  @Field(() => Float)
-  totalValue: number;
-
-  @Field(() => [PipelineDeal])
-  deals: PipelineDeal[];
+  pipelineName: string | null;
 
   @Field(() => GraphQLISODateTime)
   createdAt: Date;
@@ -134,7 +81,16 @@ export class Pipeline {
 }
 
 @ObjectType()
-export class DeletePipelineResult {
+export class DealPage {
+  @Field(() => [Deal])
+  nodes: Deal[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+}
+
+@ObjectType()
+export class DeleteDealResult {
   @Field(() => Int)
   deletedId: number;
 }

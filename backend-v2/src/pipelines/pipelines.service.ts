@@ -252,7 +252,7 @@ export class PipelinesService {
     contactId: row.contact_id === null ? null : Number(row.contact_id),
     stageId: row.stage_id,
     title: row.title,
-    value: Number(row.value),
+    value: row.value,
     currency: row.currency,
     probability: Number(row.probability),
     expectedCloseDate:

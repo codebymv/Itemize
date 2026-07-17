@@ -11024,7 +11024,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 34,
+          "line": 47,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11077,7 +11077,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 62,
+          "line": 75,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11172,7 +11172,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 82,
+          "line": 95,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11225,7 +11225,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 44,
+          "line": 57,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11272,7 +11272,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 72,
+          "line": 85,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11331,7 +11331,7 @@
           "path": "/api/pipelines/deals",
           "rawPath": "/api/pipelines/deals",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 145,
+          "line": 167,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11398,7 +11398,7 @@
       "owner": "crm",
       "targetOperation": "createDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Pipeline, stage, contact, and assignee references must all belong to the active organization.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11420,7 +11420,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 188,
+          "line": 228,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11439,7 +11439,7 @@
       "owner": "crm",
       "targetOperation": "deleteDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Organization-scoped deletion with explicit activity/event semantics.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11461,7 +11461,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 123,
+          "line": 142,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11486,7 +11486,7 @@
       "owner": "crm",
       "targetOperation": "deal",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Outside-organization IDs are not found and relation projections must preserve tenant scope.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11508,7 +11508,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 152,
+          "line": 177,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11539,7 +11539,7 @@
       "owner": "crm",
       "targetOperation": "updateDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Lock the deal and validate the effective pipeline/stage/contact/assignee tuple before update.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11561,7 +11561,7 @@
           "path": "/api/pipelines/deals/:id/lost",
           "rawPath": "/api/pipelines/deals/${id}/lost",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 174,
+          "line": 208,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11580,7 +11580,7 @@
       "owner": "crm",
       "targetOperation": "markDealLost",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Atomically set lost state/reason, clear won state, and emit lifecycle activity/event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11602,7 +11602,7 @@
           "path": "/api/pipelines/deals/:id/reopen",
           "rawPath": "/api/pipelines/deals/${id}/reopen",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 181,
+          "line": 218,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11627,7 +11627,7 @@
       "owner": "crm",
       "targetOperation": "reopenDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11649,7 +11649,7 @@
           "path": "/api/pipelines/deals/:id/stage",
           "rawPath": "/api/pipelines/deals/${id}/stage",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 159,
+          "line": 187,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11668,7 +11668,7 @@
       "owner": "crm",
       "targetOperation": "moveDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "notes": "Lock the deal, validate the destination against its pipeline, and publish the durable deal-stage-changed event only after commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11690,7 +11690,7 @@
           "path": "/api/pipelines/deals/:id/won",
           "rawPath": "/api/pipelines/deals/${id}/won",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 167,
+          "line": 198,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11715,7 +11715,7 @@
       "owner": "crm",
       "targetOperation": "markDealWon",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Atomically set won state, clear lost state, and emit lifecycle activity/event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11737,7 +11737,7 @@
           "path": "/api/pipelines/deals/all",
           "rawPath": "/api/pipelines/deals/all",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 115,
+          "line": 131,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11762,7 +11762,7 @@
       "owner": "crm",
       "targetOperation": "deals",
       "targetModule": "DealsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "notes": "Organization-scoped filters, strict pagination, Decimal value transport, and stable tie-breaker ordering.",
       "literalInterpolationRisk": false,
       "risk": "high"

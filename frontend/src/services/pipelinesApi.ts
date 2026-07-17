@@ -12,6 +12,19 @@ import {
   updatePipelineViaGraphql,
 } from './pipelinesGraphql';
 import {
+  createDealViaGraphql,
+  deleteDealViaGraphql,
+  getDealViaGraphql,
+  getDealsViaGraphql,
+  markDealLostViaGraphql,
+  markDealWonViaGraphql,
+  moveDealViaGraphql,
+  reopenDealViaGraphql,
+  updateDealViaGraphql,
+} from './dealsGraphql';
+import {
+  isDealGraphqlMutationsEnabled,
+  isDealGraphqlReadsEnabled,
   isPipelineGraphqlMutationsEnabled,
   isPipelineGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -112,6 +125,9 @@ export interface DealsResponse {
 }
 
 export const getDeals = async (params: DealsQueryParams = {}): Promise<DealsResponse> => {
+  if (isDealGraphqlReadsEnabled()) {
+    return getDealsViaGraphql(params);
+  }
   const response = await api.get('/api/pipelines/deals/all', {
     params,
     headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {}
@@ -120,6 +136,9 @@ export const getDeals = async (params: DealsQueryParams = {}): Promise<DealsResp
 };
 
 export const getDeal = async (id: number, organizationId?: number): Promise<Deal> => {
+  if (isDealGraphqlReadsEnabled()) {
+    return getDealViaGraphql(id, organizationId);
+  }
   const response = await api.get(`/api/pipelines/deals/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
@@ -142,6 +161,9 @@ export interface CreateDealData {
 }
 
 export const createDeal = async (data: CreateDealData): Promise<Deal> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return createDealViaGraphql(data);
+  }
   const response = await api.post('/api/pipelines/deals', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -149,6 +171,9 @@ export const createDeal = async (data: CreateDealData): Promise<Deal> => {
 };
 
 export const updateDeal = async (id: number, data: Partial<CreateDealData>): Promise<Deal> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return updateDealViaGraphql(id, data);
+  }
   const response = await api.put(`/api/pipelines/deals/${id}`, data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -156,6 +181,9 @@ export const updateDeal = async (id: number, data: Partial<CreateDealData>): Pro
 };
 
 export const moveDealToStage = async (id: number, stageId: string, organizationId?: number): Promise<Deal> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return moveDealViaGraphql(id, stageId, organizationId);
+  }
   const response = await api.patch(`/api/pipelines/deals/${id}/stage`, 
     { stage_id: stageId },
     { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
@@ -164,6 +192,9 @@ export const moveDealToStage = async (id: number, stageId: string, organizationI
 };
 
 export const markDealWon = async (id: number, organizationId?: number): Promise<Deal> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return markDealWonViaGraphql(id, organizationId);
+  }
   const response = await api.post(`/api/pipelines/deals/${id}/won`, {}, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
@@ -171,6 +202,9 @@ export const markDealWon = async (id: number, organizationId?: number): Promise<
 };
 
 export const markDealLost = async (id: number, reason?: string, organizationId?: number): Promise<Deal> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return markDealLostViaGraphql(id, reason, organizationId);
+  }
   const response = await api.post(`/api/pipelines/deals/${id}/lost`, { reason }, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
@@ -178,6 +212,9 @@ export const markDealLost = async (id: number, reason?: string, organizationId?:
 };
 
 export const reopenDeal = async (id: number, organizationId?: number): Promise<Deal> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return reopenDealViaGraphql(id, organizationId);
+  }
   const response = await api.post(`/api/pipelines/deals/${id}/reopen`, {}, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
@@ -185,6 +222,9 @@ export const reopenDeal = async (id: number, organizationId?: number): Promise<D
 };
 
 export const deleteDeal = async (id: number, organizationId?: number): Promise<void> => {
+  if (isDealGraphqlMutationsEnabled()) {
+    return deleteDealViaGraphql(id, organizationId);
+  }
   await api.delete(`/api/pipelines/deals/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
