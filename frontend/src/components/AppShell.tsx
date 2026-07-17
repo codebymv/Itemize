@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSessionWarning } from '@/hooks/useSessionExpiration';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { cn } from '@/lib/utils';
+import { OrganizationSwitcher } from '@/components/OrganizationSwitcher';
 
 const SearchContext = createContext<{
   searchOpen: boolean;
@@ -178,6 +179,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        <OrganizationSwitcher />
+
                         {/* Trial Badge - Compact indicator */}
                         <TrialBadge
                             trialEndsAt={billingStatus?.trial_ends_at || null}

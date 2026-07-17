@@ -181,6 +181,15 @@
       "risk": "medium",
       "notes": "Owners cannot leave; remove only the authenticated user's membership and repair an invalid default organization."
     },
+    "POST /api/organizations/:organizationId/select": {
+      "disposition": "graphql-mutation",
+      "owner": "workspace",
+      "targetModule": "OrganizationsModule",
+      "targetOperation": "selectOrganization",
+      "parityStatus": "characterizing",
+      "risk": "medium",
+      "notes": "Re-read current membership, persist the selected default, clear tenant-scoped client caches, and preserve an immediate REST rollback path until the GraphQL mutation is proven."
+    },
     "GET /api/organizations/:organizationId/members": {
       "disposition": "graphql-query",
       "owner": "workspace",

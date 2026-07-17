@@ -83,9 +83,11 @@ module.exports = (pool, authenticateJWT) => {
   router.get('/', authenticateJWT, asyncHandler(async (req, res) => {
       const result = await withDbClient(pool, async (client) => {
         return client.query(`
-        SELECT ${organizationColumns('o')}, om.role, om.joined_at
+        SELECT ${organizationColumns('o')}, om.role, om.joined_at,
+               (u.default_organization_id = o.id) AS is_default
         FROM organizations o
         JOIN organization_members om ON o.id = om.organization_id
+        JOIN users u ON u.id = om.user_id
         WHERE om.user_id = $1
         ORDER BY o.name ASC
       `, [req.user.id]);
@@ -328,14 +330,49 @@ module.exports = (pool, authenticateJWT) => {
         return sendForbidden(res, 'Owner cannot leave. Transfer ownership or delete the organization.');
       }
 
-      await withDbClient(pool, async (client) => {
-        return client.query(
+      await withTransaction(pool, async (client) => {
+        await client.query(
           'DELETE FROM organization_members WHERE organization_id = $1 AND user_id = $2',
           [req.organizationId, req.user.id]
         );
+
+        await client.query(`
+          UPDATE users
+          SET default_organization_id = (
+            SELECT om.organization_id
+            FROM organization_members om
+            WHERE om.user_id = $2
+            ORDER BY om.organization_id ASC
+            LIMIT 1
+          )
+          WHERE id = $2 AND default_organization_id = $1
+        `, [req.organizationId, req.user.id]);
       });
 
       return sendSuccess(res, { message: 'Successfully left organization' });
+  }));
+
+  // Persist the workspace selected by the current member.
+  router.post('/:organizationId/select', authenticateJWT, requireOrgAccess(), asyncHandler(async (req, res) => {
+      const selectedOrganization = await withTransaction(pool, async (client) => {
+        await client.query(`
+          UPDATE users
+          SET default_organization_id = $1
+          WHERE id = $2
+        `, [req.organizationId, req.user.id]);
+
+        const result = await client.query(
+          `SELECT ${organizationColumns()} FROM organizations WHERE id = $1`,
+          [req.organizationId]
+        );
+        return result.rows[0];
+      });
+
+      return sendSuccess(res, {
+        ...selectedOrganization,
+        role: req.orgRole,
+        is_default: true
+      });
   }));
 
   // Get or create default organization for user
@@ -345,7 +382,9 @@ module.exports = (pool, authenticateJWT) => {
           SELECT ${organizationColumns('o')}, om.role
           FROM organizations o
           JOIN organization_members om ON o.id = om.organization_id
+          JOIN users u ON u.id = om.user_id
           WHERE om.user_id = $1
+          ORDER BY (u.default_organization_id = o.id) DESC, o.id ASC
           LIMIT 1
         `, [req.user.id]);
       });
@@ -356,7 +395,7 @@ module.exports = (pool, authenticateJWT) => {
           return client.query(`
             UPDATE users 
             SET default_organization_id = $1 
-            WHERE id = $2 AND default_organization_id IS NULL
+            WHERE id = $2 AND default_organization_id IS DISTINCT FROM $1
           `, [org.id, req.user.id]);
         });
         return sendSuccess(res, org);

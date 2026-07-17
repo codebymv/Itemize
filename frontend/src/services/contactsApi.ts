@@ -47,6 +47,11 @@ export const ensureDefaultOrganization = async (): Promise<Organization> => {
   return unwrapResponse<Organization>(response.data);
 };
 
+export const selectOrganization = async (id: number): Promise<Organization> => {
+  const response = await api.post(`/api/organizations/${id}/select`);
+  return unwrapResponse<Organization>(response.data);
+};
+
 // Organization members
 export const getOrganizationMembers = async (orgId: number): Promise<OrganizationMember[]> => {
   const response = await api.get(`/api/organizations/${orgId}/members`);
@@ -298,6 +303,7 @@ export default {
   updateOrganization,
   deleteOrganization,
   ensureDefaultOrganization,
+  selectOrganization,
   getOrganizationMembers,
   inviteMember,
   updateMemberRole,

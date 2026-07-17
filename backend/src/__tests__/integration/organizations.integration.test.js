@@ -348,11 +348,21 @@ describe('Organizations Integration Tests', () => {
         });
 
         it('a member can leave an org', async () => {
+            const selectRes = await request(app)
+                .post(`/api/organizations/${leaveOrgId}/select`)
+                .set('Cookie', [`itemize_auth=${member.token}`]);
+            expect(selectRes.status).toBe(200);
+
             const res = await request(app)
                 .post(`/api/organizations/${leaveOrgId}/leave`)
                 .set('Cookie', [`itemize_auth=${member.token}`]);
 
             expect(res.status).toBe(200);
+            const userResult = await dbHelper.pool.query(
+                'SELECT default_organization_id FROM users WHERE id = $1',
+                [member.user.id]
+            );
+            expect(userResult.rows[0].default_organization_id).toBe(member.org.id);
         });
 
         it('the owner cannot leave their own org', async () => {
@@ -374,6 +384,72 @@ describe('Organizations Integration Tests', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.data.id).toBeTruthy();
+        });
+
+        it('persists and returns the explicitly selected organization', async () => {
+            const createRes = await request(app)
+                .post('/api/organizations')
+                .set('Cookie', [`itemize_auth=${owner.token}`])
+                .send({ name: 'Selected Workspace' });
+            const selectedId = createRes.body.data.id;
+
+            try {
+                const selectRes = await request(app)
+                    .post(`/api/organizations/${selectedId}/select`)
+                    .set('Cookie', [`itemize_auth=${owner.token}`]);
+
+                expect(selectRes.status).toBe(200);
+                expect(selectRes.body.data).toMatchObject({
+                    id: selectedId,
+                    role: 'owner',
+                    is_default: true,
+                });
+
+                const ensureRes = await request(app)
+                    .post('/api/organizations/ensure-default')
+                    .set('Cookie', [`itemize_auth=${owner.token}`]);
+                expect(ensureRes.status).toBe(200);
+                expect(ensureRes.body.data.id).toBe(selectedId);
+
+                const listRes = await request(app)
+                    .get('/api/organizations')
+                    .set('Cookie', [`itemize_auth=${owner.token}`]);
+                expect(listRes.body.data.find(org => org.id === selectedId).is_default).toBe(true);
+                expect(listRes.body.data.find(org => org.id === owner.org.id).is_default).toBe(false);
+            } finally {
+                await dbHelper.pool.query('DELETE FROM organizations WHERE id = $1', [selectedId]);
+                await dbHelper.pool.query(
+                    'UPDATE users SET default_organization_id = $1 WHERE id = $2',
+                    [owner.org.id, owner.user.id]
+                );
+            }
+        });
+
+        it('rejects selecting an organization without membership', async () => {
+            const res = await request(app)
+                .post(`/api/organizations/${outsider.org.id}/select`)
+                .set('Cookie', [`itemize_auth=${owner.token}`]);
+
+            expect(res.status).toBe(403);
+        });
+
+        it('repairs a default that no longer belongs to the user', async () => {
+            await dbHelper.pool.query(
+                'UPDATE users SET default_organization_id = $1 WHERE id = $2',
+                [outsider.org.id, owner.user.id]
+            );
+
+            const res = await request(app)
+                .post('/api/organizations/ensure-default')
+                .set('Cookie', [`itemize_auth=${owner.token}`]);
+
+            expect(res.status).toBe(200);
+            expect(res.body.data.id).toBe(owner.org.id);
+            const userResult = await dbHelper.pool.query(
+                'SELECT default_organization_id FROM users WHERE id = $1',
+                [owner.user.id]
+            );
+            expect(userResult.rows[0].default_organization_id).toBe(owner.org.id);
         });
     });
 });

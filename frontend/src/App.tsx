@@ -4,6 +4,7 @@ import "@/lib/api";
 import { DeferredToaster } from "@/components/DeferredToaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -377,19 +378,21 @@ const App = () => {
             }}
           >
             <AuthProvider>
-              <OnboardingProvider>
-                <SubscriptionProviderWrapper>
-                  <AISuggestProvider>
-                    <DeferredToaster />
-                    <DeferredCookieConsent />
-                    <ErrorBoundary>
-                      <Suspense fallback={<PageLoading />}>
-                        <AppContent />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </AISuggestProvider>
-                </SubscriptionProviderWrapper>
-              </OnboardingProvider>
+              <OrganizationProvider>
+                <OnboardingProvider>
+                  <SubscriptionProviderWrapper>
+                    <AISuggestProvider>
+                      <DeferredToaster />
+                      <DeferredCookieConsent />
+                      <ErrorBoundary>
+                        <Suspense fallback={<PageLoading />}>
+                          <AppContent />
+                        </Suspense>
+                      </ErrorBoundary>
+                    </AISuggestProvider>
+                  </SubscriptionProviderWrapper>
+                </OnboardingProvider>
+              </OrganizationProvider>
             </AuthProvider>
           </BrowserRouter>
         </ThemeProvider>

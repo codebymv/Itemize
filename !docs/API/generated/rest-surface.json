@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 423,
-    "resolvedDeclarationCount": 423,
+    "declarationCount": 424,
+    "resolvedDeclarationCount": 424,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 418,
+    "uniqueResolvedOperationCount": 419,
     "sourceFileCount": 82
   },
   "caveats": [
@@ -2233,7 +2233,7 @@
       ],
       "declaredPath": "/",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 113,
+      "line": 115,
       "dynamic": false
     },
     {
@@ -2243,7 +2243,7 @@
       ],
       "declaredPath": "/:organizationId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 172,
+      "line": 174,
       "dynamic": false
     },
     {
@@ -2253,7 +2253,7 @@
       ],
       "declaredPath": "/:organizationId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 97,
+      "line": 99,
       "dynamic": false
     },
     {
@@ -2263,7 +2263,7 @@
       ],
       "declaredPath": "/:organizationId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 149,
+      "line": 151,
       "dynamic": false
     },
     {
@@ -2273,7 +2273,7 @@
       ],
       "declaredPath": "/:organizationId/leave",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 326,
+      "line": 328,
       "dynamic": false
     },
     {
@@ -2283,7 +2283,7 @@
       ],
       "declaredPath": "/:organizationId/members",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 181,
+      "line": 183,
       "dynamic": false
     },
     {
@@ -2293,7 +2293,7 @@
       ],
       "declaredPath": "/:organizationId/members",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 196,
+      "line": 198,
       "dynamic": false
     },
     {
@@ -2303,7 +2303,7 @@
       ],
       "declaredPath": "/:organizationId/members/:memberId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 288,
+      "line": 290,
       "dynamic": false
     },
     {
@@ -2313,7 +2313,17 @@
       ],
       "declaredPath": "/:organizationId/members/:memberId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 242,
+      "line": 244,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/organizations/:organizationId/select"
+      ],
+      "declaredPath": "/:organizationId/select",
+      "source": "backend/src/routes/organizations.routes.js",
+      "line": 356,
       "dynamic": false
     },
     {
@@ -2323,7 +2333,7 @@
       ],
       "declaredPath": "/ensure-default",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 342,
+      "line": 379,
       "dynamic": false
     },
     {

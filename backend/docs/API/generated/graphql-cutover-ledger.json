@@ -6,19 +6,19 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 418,
-    "apiOperationCount": 411,
+    "operationCount": 419,
+    "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 386,
-    "operationsWithFrontendConsumers": 364,
-    "operationsWithBackendTests": 178,
+    "frontendCallsiteCount": 387,
+    "operationsWithFrontendConsumers": 365,
+    "operationsWithBackendTests": 179,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 3,
     "retainHttpCount": 39,
     "graphqlQueryCount": 127,
-    "graphqlMutationCount": 244,
+    "graphqlMutationCount": 245,
     "highRiskCount": 330,
     "literalInterpolationRiskCount": 0
   },
@@ -4158,7 +4158,7 @@
           "path": "/api/contacts",
           "rawPath": "/api/contacts",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 95,
+          "line": 100,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4199,7 +4199,7 @@
           "path": "/api/contacts",
           "rawPath": "/api/contacts",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 135,
+          "line": 140,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4264,7 +4264,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 149,
+          "line": 154,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4311,7 +4311,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 106,
+          "line": 111,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4352,7 +4352,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 142,
+          "line": 147,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4411,7 +4411,7 @@
           "path": "/api/contacts/:contactId/activities",
           "rawPath": "/api/contacts/${contactId}/activities",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 187,
+          "line": 192,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4445,7 +4445,7 @@
           "path": "/api/contacts/:contactId/activities",
           "rawPath": "/api/contacts/${contactId}/activities",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 204,
+          "line": 209,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4479,7 +4479,7 @@
           "path": "/api/contacts/:contactId/content",
           "rawPath": "/api/contacts/${contactId}/content",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 216,
+          "line": 221,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4556,7 +4556,7 @@
           "path": "/api/contacts/bulk-delete",
           "rawPath": "/api/contacts/bulk-delete",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 174,
+          "line": 179,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4590,7 +4590,7 @@
           "path": "/api/contacts/bulk-update",
           "rawPath": "/api/contacts/bulk-update",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 167,
+          "line": 172,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4637,7 +4637,7 @@
           "path": "/api/contacts/export/csv",
           "rawPath": "/api/contacts/export/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 261,
+          "line": 266,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4678,7 +4678,7 @@
           "path": "/api/contacts/import/csv",
           "rawPath": "/api/contacts/import/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 284,
+          "line": 289,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9520,6 +9520,12 @@
           "path": "/api/organizations",
           "source": "backend/src/__tests__/integration/organizations.integration.test.js",
           "line": 78
+        },
+        {
+          "method": "GET",
+          "path": "/api/organizations",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 415
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -9541,7 +9547,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 113
+          "line": 115
         }
       ],
       "consumerCallsites": [
@@ -9573,6 +9579,12 @@
           "path": "/api/organizations",
           "source": "backend/src/__tests__/integration/organizations.integration.test.js",
           "line": 332
+        },
+        {
+          "method": "POST",
+          "path": "/api/organizations",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 391
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -9594,7 +9606,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 172
+          "line": 174
         }
       ],
       "consumerCallsites": [
@@ -9628,7 +9640,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 97
+          "line": 99
         }
       ],
       "consumerCallsites": [
@@ -9681,7 +9693,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 149
+          "line": 151
         }
       ],
       "consumerCallsites": [
@@ -9728,7 +9740,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 326
+          "line": 328
         }
       ],
       "consumerCallsites": [
@@ -9737,7 +9749,7 @@
           "path": "/api/organizations/:orgId/leave",
           "rawPath": "/api/organizations/${orgId}/leave",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 71,
+          "line": 76,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9747,13 +9759,13 @@
           "method": "POST",
           "path": "/api/organizations/:leaveOrgId/leave",
           "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 352
+          "line": 357
         },
         {
           "method": "POST",
           "path": "/api/organizations/:leaveOrgId/leave",
           "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 360
+          "line": 370
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -9775,7 +9787,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 181
+          "line": 183
         }
       ],
       "consumerCallsites": [
@@ -9784,7 +9796,7 @@
           "path": "/api/organizations/:orgId/members",
           "rawPath": "/api/organizations/${orgId}/members",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 52,
+          "line": 57,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9828,7 +9840,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 196
+          "line": 198
         }
       ],
       "consumerCallsites": [
@@ -9837,7 +9849,7 @@
           "path": "/api/organizations/:orgId/members",
           "rawPath": "/api/organizations/${orgId}/members",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 57,
+          "line": 62,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9905,7 +9917,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 288
+          "line": 290
         }
       ],
       "consumerCallsites": [
@@ -9914,7 +9926,7 @@
           "path": "/api/organizations/:orgId/members/:memberId",
           "rawPath": "/api/organizations/${orgId}/members/${memberId}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 67,
+          "line": 72,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9952,7 +9964,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 242
+          "line": 244
         }
       ],
       "consumerCallsites": [
@@ -9961,7 +9973,7 @@
           "path": "/api/organizations/:orgId/members/:memberId",
           "rawPath": "/api/organizations/${orgId}/members/${memberId}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 62,
+          "line": 67,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10010,6 +10022,59 @@
       "risk": "medium"
     },
     {
+      "id": "POST /api/organizations/:organizationId/select",
+      "key": "POST /api/organizations/:*/select",
+      "method": "POST",
+      "path": "/api/organizations/:organizationId/select",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/organizations.routes.js",
+          "line": 356
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/organizations/:id/select",
+          "rawPath": "/api/organizations/${id}/select",
+          "source": "frontend/src/services/contactsApi.ts",
+          "line": 51,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/organizations/:leaveOrgId/select",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 352
+        },
+        {
+          "method": "POST",
+          "path": "/api/organizations/:selectedId/select",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 398
+        },
+        {
+          "method": "POST",
+          "path": "/api/organizations/:id/select",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 430
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "graphql-mutation",
+      "owner": "workspace",
+      "targetOperation": "selectOrganization",
+      "targetModule": "OrganizationsModule",
+      "parityStatus": "characterizing",
+      "notes": "Re-read current membership, persist the selected default, clear tenant-scoped client caches, and preserve an immediate REST rollback path until the GraphQL mutation is proven.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
       "id": "POST /api/organizations/ensure-default",
       "key": "POST /api/organizations/ensure-default",
       "method": "POST",
@@ -10017,7 +10082,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 342
+          "line": 379
         }
       ],
       "consumerCallsites": [
@@ -10036,7 +10101,19 @@
           "method": "POST",
           "path": "/api/organizations/ensure-default",
           "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 372
+          "line": 382
+        },
+        {
+          "method": "POST",
+          "path": "/api/organizations/ensure-default",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 409
+        },
+        {
+          "method": "POST",
+          "path": "/api/organizations/ensure-default",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 443
         }
       ],
       "recommendedDisposition": "graphql-mutation",

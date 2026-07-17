@@ -4,14 +4,14 @@
 
 ## Summary
 
-- Registered method/path operations: 418
-- API operations under `/api`: 411
+- Registered method/path operations: 419
+- API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 386
-- Operations with frontend consumers: 364
-- Operations referenced by backend tests: 178
+- Static frontend callsites: 387
+- Operations with frontend consumers: 365
+- Operations referenced by backend tests: 179
 - Recommended GraphQL queries: 127
-- Recommended GraphQL mutations: 244
+- Recommended GraphQL mutations: 245
 - Recommended retained HTTP endpoints: 39
 - High-risk operations: 330
 - Unmatched frontend calls: 0
@@ -248,8 +248,8 @@
 | GET | `/api/onboarding/progress` | 1 | 0 | graphql-query | high | _unassigned_ |
 | GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | _unassigned_ |
 | DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/organizations` | 1 | 2 | graphql-query | medium | workspace / OrganizationsModule / organizations |
-| POST | `/api/organizations` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
+| GET | `/api/organizations` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organizations |
+| POST | `/api/organizations` | 1 | 4 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
 | DELETE | `/api/organizations/:organizationId` | 1 | 0 | graphql-mutation | high | workspace / OrganizationsModule / deleteOrganization |
 | GET | `/api/organizations/:organizationId` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organization |
 | PUT | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganization |
@@ -258,7 +258,8 @@
 | POST | `/api/organizations/:organizationId/members` | 1 | 7 | graphql-mutation | medium | workspace / OrganizationsModule / addOrganizationMember |
 | DELETE | `/api/organizations/:organizationId/members/:memberId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / removeOrganizationMember |
 | PUT | `/api/organizations/:organizationId/members/:memberId` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganizationMemberRole |
-| POST | `/api/organizations/ensure-default` | 1 | 1 | graphql-mutation | medium | workspace / OrganizationsModule / ensureDefaultOrganization |
+| POST | `/api/organizations/:organizationId/select` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / selectOrganization |
+| POST | `/api/organizations/ensure-default` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / ensureDefaultOrganization |
 | GET | `/api/pages` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/pages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | DELETE | `/api/pages/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |

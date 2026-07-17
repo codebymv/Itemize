@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 423
-- Resolved declarations: 423
+- Route declarations: 424
+- Resolved declarations: 424
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 418
+- Unique resolved method/path operations: 419
 - Files containing declarations: 82
 
 ## Interpretation limits
@@ -244,16 +244,17 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/onboarding/progress/:featureKey` | `/progress/:featureKey` | `backend/src/routes/onboarding.routes.js:45` |
 | DELETE | `/api/onboarding/reset` | `/reset` | `backend/src/routes/onboarding.routes.js:221` |
 | GET | `/api/organizations` | `/` | `backend/src/routes/organizations.routes.js:83` |
-| POST | `/api/organizations` | `/` | `backend/src/routes/organizations.routes.js:113` |
-| DELETE | `/api/organizations/:organizationId` | `/:organizationId` | `backend/src/routes/organizations.routes.js:172` |
-| GET | `/api/organizations/:organizationId` | `/:organizationId` | `backend/src/routes/organizations.routes.js:97` |
-| PUT | `/api/organizations/:organizationId` | `/:organizationId` | `backend/src/routes/organizations.routes.js:149` |
-| POST | `/api/organizations/:organizationId/leave` | `/:organizationId/leave` | `backend/src/routes/organizations.routes.js:326` |
-| GET | `/api/organizations/:organizationId/members` | `/:organizationId/members` | `backend/src/routes/organizations.routes.js:181` |
-| POST | `/api/organizations/:organizationId/members` | `/:organizationId/members` | `backend/src/routes/organizations.routes.js:196` |
-| DELETE | `/api/organizations/:organizationId/members/:memberId` | `/:organizationId/members/:memberId` | `backend/src/routes/organizations.routes.js:288` |
-| PUT | `/api/organizations/:organizationId/members/:memberId` | `/:organizationId/members/:memberId` | `backend/src/routes/organizations.routes.js:242` |
-| POST | `/api/organizations/ensure-default` | `/ensure-default` | `backend/src/routes/organizations.routes.js:342` |
+| POST | `/api/organizations` | `/` | `backend/src/routes/organizations.routes.js:115` |
+| DELETE | `/api/organizations/:organizationId` | `/:organizationId` | `backend/src/routes/organizations.routes.js:174` |
+| GET | `/api/organizations/:organizationId` | `/:organizationId` | `backend/src/routes/organizations.routes.js:99` |
+| PUT | `/api/organizations/:organizationId` | `/:organizationId` | `backend/src/routes/organizations.routes.js:151` |
+| POST | `/api/organizations/:organizationId/leave` | `/:organizationId/leave` | `backend/src/routes/organizations.routes.js:328` |
+| GET | `/api/organizations/:organizationId/members` | `/:organizationId/members` | `backend/src/routes/organizations.routes.js:183` |
+| POST | `/api/organizations/:organizationId/members` | `/:organizationId/members` | `backend/src/routes/organizations.routes.js:198` |
+| DELETE | `/api/organizations/:organizationId/members/:memberId` | `/:organizationId/members/:memberId` | `backend/src/routes/organizations.routes.js:290` |
+| PUT | `/api/organizations/:organizationId/members/:memberId` | `/:organizationId/members/:memberId` | `backend/src/routes/organizations.routes.js:244` |
+| POST | `/api/organizations/:organizationId/select` | `/:organizationId/select` | `backend/src/routes/organizations.routes.js:356` |
+| POST | `/api/organizations/ensure-default` | `/ensure-default` | `backend/src/routes/organizations.routes.js:379` |
 | GET | `/api/pages` | `/` | `backend/src/routes/pages/crud.routes.js:19` |
 | POST | `/api/pages` | `/` | `backend/src/routes/pages/crud.routes.js:119` |
 | DELETE | `/api/pages/:id` | `/:id` | `backend/src/routes/pages/crud.routes.js:361` |

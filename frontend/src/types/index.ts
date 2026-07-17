@@ -264,6 +264,7 @@ export interface Organization {
   settings: JsonRecord;
   logo_url?: string;
   role?: 'owner' | 'admin' | 'member' | 'viewer';
+  is_default?: boolean;
   created_at: string;
   updated_at: string;
 }

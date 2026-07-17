@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ensureDefaultOrganization } from '@/services/contactsApi';
+import { useMemo } from 'react';
+import { useOrganizationContext } from '@/contexts/organization-context';
 import { Organization } from '@/types';
 
 interface UseOrganizationOptions {
@@ -17,44 +17,20 @@ interface UseOrganizationResult {
 
 export const useOrganization = (options: UseOrganizationOptions = {}): UseOrganizationResult => {
   const { autoInit = true, onError } = options;
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const onErrorRef = useRef(onError);
-
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
-
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const org = await ensureDefaultOrganization();
-      setOrganization(org);
-      setError(null);
-      return org;
-    } catch (err) {
-      const defaultMessage = 'Failed to initialize organization. Please check your connection.';
-      const customMessage = onErrorRef.current ? onErrorRef.current(err) : null;
-      const message = typeof customMessage === 'string' ? customMessage : defaultMessage;
-      setError(message);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (autoInit) {
-      refresh();
-    }
-  }, [autoInit, refresh]);
+  const context = useOrganizationContext();
+  const error = useMemo(() => {
+    if (!context.error) return null;
+    const customMessage = onError?.(context.error);
+    return typeof customMessage === 'string'
+      ? customMessage
+      : 'Failed to initialize organization. Please check your connection.';
+  }, [context.error, onError]);
 
   return {
-    organizationId: organization?.id ?? null,
-    organization,
-    isLoading,
+    organizationId: autoInit ? context.organizationId : null,
+    organization: autoInit ? context.organization : null,
+    isLoading: autoInit ? context.isLoading : false,
     error,
-    refresh
+    refresh: context.refresh,
   };
 };
