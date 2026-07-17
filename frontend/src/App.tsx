@@ -51,6 +51,7 @@ const WorkflowBuilderPage = React.lazy(() => import("./pages/automations/Workflo
 const CalendarsPage = React.lazy(() => import("./pages/calendars/CalendarsPage"));
 const BookingsPage = React.lazy(() => import("./pages/bookings/BookingsPage"));
 const FormsPage = React.lazy(() => import("./pages/forms/FormsPage"));
+const FormEditorPage = React.lazy(() => import("./pages/forms/FormEditorPage"));
 const PublicFormPage = React.lazy(() => import("./pages/forms/PublicFormPage"));
 const InboxPage = React.lazy(() => import("./pages/inbox/InboxPage"));
 const ContentsPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.ContentsPage })));
@@ -285,6 +286,7 @@ const AppContent = () => {
         <Route path="/calendars" element={<AuthenticatedLayout><CalendarsPage /></AuthenticatedLayout>} />
         <Route path="/bookings" element={<AuthenticatedLayout><BookingsPage /></AuthenticatedLayout>} />
         <Route path="/forms" element={<AuthenticatedLayout><FormsPage /></AuthenticatedLayout>} />
+        <Route path="/forms/:id" element={<AuthenticatedLayout><FormEditorPage /></AuthenticatedLayout>} />
         <Route path="/inbox" element={<AuthenticatedLayout><InboxPage /></AuthenticatedLayout>} />
         <Route path="/automations" element={<AuthenticatedLayout><AutomationsPage /></AuthenticatedLayout>} />
         <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
