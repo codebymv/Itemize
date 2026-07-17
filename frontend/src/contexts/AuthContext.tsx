@@ -263,12 +263,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (email: string, password: string, name?: string): Promise<void> => {
     try {
-      const response = await api.post('/api/auth/register', { email, password, name });
-
-      if (!response.data.success) {
-        const { message, code } = getAuthErrorDetails(response.data, 'Registration failed');
-        throw new AuthError(message, code);
-      }
+      // Axios rejects non-2xx responses. Successful response envelopes are
+      // unwrapped by the shared interceptor, so a 201 resolves with `{ email }`
+      // rather than the original `{ success, data }` object.
+      await api.post('/api/auth/register', { email, password, name });
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.data) {
         const { message, code } = getAuthErrorDetails(error.response.data, 'Registration failed');

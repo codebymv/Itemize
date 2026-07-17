@@ -1,4 +1,5 @@
 import { useToast } from "@/hooks/use-toast"
+import { normalizeToastContent } from "@/lib/toast-content"
 import {
   Toast,
   ToastClose,
@@ -17,9 +18,9 @@ export function Toaster() {
         return (
           <Toast key={id} {...props}>
             <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
+              {title && <ToastTitle>{normalizeToastContent(title)}</ToastTitle>}
               {description && (
-                <ToastDescription>{description}</ToastDescription>
+                <ToastDescription>{normalizeToastContent(description)}</ToastDescription>
               )}
             </div>
             {action}

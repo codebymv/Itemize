@@ -21,11 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Contact } from '@/types';
 import { updateContact } from '@/services/contactsApi';
-
-const getApiErrorMessage = (error: unknown, fallback: string): string => {
-  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
-  return responseData?.error || responseData?.message || (error instanceof Error ? error.message : fallback);
-};
+import { getApiErrorMessage } from '@/lib/error-messages';
 
 interface EditContactModalProps {
   contact: Contact;

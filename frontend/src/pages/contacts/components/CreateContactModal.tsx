@@ -25,12 +25,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { createContactFormSchema, type CreateContactFormValues } from '@/lib/formSchemas';
+import { getApiErrorMessage } from '@/lib/error-messages';
 import logger from '@/lib/logger';
-
-const getApiErrorMessage = (error: unknown, fallback: string): string => {
-  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
-  return responseData?.error || responseData?.message || (error instanceof Error ? error.message : fallback);
-};
 
 interface CreateContactModalProps {
   organizationId: number;

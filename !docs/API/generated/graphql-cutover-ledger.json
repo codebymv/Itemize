@@ -1026,7 +1026,7 @@
           "path": "/api/auth/logout",
           "rawPath": "/api/auth/logout",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 304,
+          "line": 302,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1192,7 +1192,7 @@
           "path": "/api/auth/register",
           "rawPath": "/api/auth/register",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 266,
+          "line": 269,
           "client": "api",
           "literalInterpolation": false
         }

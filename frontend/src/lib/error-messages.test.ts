@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getUserFriendlyError, getErrorTitle, getErrorMessage } from './error-messages';
+import { getApiErrorMessage, getUserFriendlyError, getErrorTitle, getErrorMessage } from './error-messages';
 import { AxiosError, AxiosHeaders } from 'axios';
 import type { AxiosResponse } from 'axios';
 
@@ -127,5 +127,38 @@ describe('getErrorMessage', () => {
     };
 
     expect(getErrorMessage(error)).toBe('Test Message');
+  });
+});
+
+describe('getApiErrorMessage', () => {
+  it('extracts a nested structured API error as a string', () => {
+    const error = {
+      response: {
+        data: {
+          error: {
+            message: 'A contact identifier is required',
+            code: 'BAD_USER_INPUT',
+            details: { field: 'email' },
+          },
+        },
+      },
+    };
+
+    expect(getApiErrorMessage(error, 'Failed to create contact'))
+      .toBe('A contact identifier is required');
+  });
+
+  it('uses the intercepted friendly message before a generic Error message', () => {
+    const error = Object.assign(new Error('Request failed with status code 400'), {
+      userFriendlyError: { message: 'Please check the submitted contact details.' },
+    });
+
+    expect(getApiErrorMessage(error, 'Failed to create contact'))
+      .toBe('Please check the submitted contact details.');
+  });
+
+  it('always falls back to a string for unknown values', () => {
+    expect(getApiErrorMessage({ response: { data: { error: { code: 'UNKNOWN' } } } }, 'Try again'))
+      .toBe('Try again');
   });
 });

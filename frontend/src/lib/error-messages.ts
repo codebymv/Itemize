@@ -14,9 +14,60 @@ export interface UserError {
 type ErrorResponseData = {
   message?: string;
   code?: string;
-  error?: string | { code?: string; details?: { remaining?: number } };
+  error?: string | { message?: string; code?: string; details?: { remaining?: number } };
   details?: { remaining?: number };
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object';
+
+const extractPayloadMessage = (payload: unknown): string | undefined => {
+  if (typeof payload === 'string') {
+    const message = payload.trim();
+    return message || undefined;
+  }
+
+  if (!isRecord(payload)) return undefined;
+
+  if (typeof payload.message === 'string' && payload.message.trim()) {
+    return payload.message;
+  }
+
+  if (typeof payload.error === 'string' && payload.error.trim()) {
+    return payload.error;
+  }
+
+  if (isRecord(payload.error)) {
+    return extractPayloadMessage(payload.error);
+  }
+
+  if (isRecord(payload.data)) {
+    return extractPayloadMessage(payload.data);
+  }
+
+  return undefined;
+};
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  const responsePayload = isRecord(error) && isRecord(error.response)
+    ? error.response.data
+    : undefined;
+  const responseMessage = extractPayloadMessage(responsePayload);
+  if (responseMessage) return responseMessage;
+
+  const friendlyMessage = isRecord(error) && isRecord(error.userFriendlyError)
+    ? error.userFriendlyError.message
+    : undefined;
+  if (typeof friendlyMessage === 'string' && friendlyMessage.trim()) {
+    return friendlyMessage;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
 
 export function getUserFriendlyError(error: unknown): UserError {
   if (!(error instanceof AxiosError)) {
@@ -52,7 +103,7 @@ export function getUserFriendlyError(error: unknown): UserError {
     const responseData = error.response.data as ErrorResponseData;
 
     // Server returned user-friendly message
-    if (responseData?.message) {
+    if (typeof responseData?.message === 'string' && responseData.message) {
       return {
         title: status === 500 ? 'Server Error' : 'Error',
         message: responseData.message,
@@ -130,9 +181,10 @@ export function getUserFriendlyError(error: unknown): UserError {
 
     // 4xx Client errors
     if (status >= 400) {
+      const responseMessage = extractPayloadMessage(responseData);
       return {
         title: 'Request Failed',
-        message: 'Something went wrong with your request. Please try again.',
+        message: responseMessage || 'Something went wrong with your request. Please try again.',
         type: 'client',
       };
     }
