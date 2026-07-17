@@ -15,6 +15,8 @@ export class OrganizationContextGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (context.getType<string>() !== 'graphql') return true;
+
     const isOrganizationScoped =
       this.reflector.getAllAndOverride<boolean>(ORGANIZATION_SCOPED_KEY, [
         context.getHandler(),

@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
 import request from 'supertest';
@@ -8,7 +8,7 @@ import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
 describe('GraphQL request context against PostgreSQL', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let pool: Pool;
   let organizationId: number;
   let memberId: number;
@@ -74,7 +74,10 @@ describe('GraphQL request context against PostgreSQL', () => {
       .overrideProvider(PG_POOL)
       .useValue(pool)
       .compile();
-    app = moduleRef.createNestApplication({ logger: false });
+    app = moduleRef.createNestApplication<NestExpressApplication>({
+      bodyParser: false,
+      logger: false,
+    });
     configureApp(app);
     await app.init();
   });

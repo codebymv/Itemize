@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
@@ -17,7 +17,7 @@ type Fixture = {
 };
 
 describe('Contacts REST/GraphQL PostgreSQL parity', () => {
-  let graphqlApp: INestApplication;
+  let graphqlApp: NestExpressApplication;
   let legacyApp: Express;
   let pool: Pool;
   let organizationId: number;
@@ -135,7 +135,10 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       .overrideProvider(PG_POOL)
       .useValue(pool)
       .compile();
-    graphqlApp = moduleRef.createNestApplication({ logger: false });
+    graphqlApp = moduleRef.createNestApplication<NestExpressApplication>({
+      bodyParser: false,
+      logger: false,
+    });
     configureApp(graphqlApp);
     await graphqlApp.init();
 
@@ -1179,6 +1182,290 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       code: 'BAD_USER_INPUT',
       reason: 'INVALID_CONTACT_ID',
       field: 'id',
+    });
+  });
+
+  describe('NestJS retained contact-transfer HTTP boundary', () => {
+    const csrf = 'contact-transfer-integration-csrf';
+    const transferRequest = (
+      method: 'get' | 'post',
+      path: string,
+      token = memberToken,
+      selectedOrganizationId = organizationId,
+    ) =>
+      request(graphqlApp.getHttpServer())
+        [method](path)
+        .set('Cookie', [
+          `itemize_auth=${token}`,
+          `csrf-token=${csrf}`,
+        ])
+        .set('x-csrf-token', csrf)
+        .set('x-organization-id', String(selectedOrganizationId));
+
+    it('requires authentication, verified membership, and CSRF', async () => {
+      await request(graphqlApp.getHttpServer())
+        .get('/api/contacts/export/csv')
+        .set('x-organization-id', String(organizationId))
+        .expect(401);
+
+      const foreign = await transferRequest(
+        'get',
+        '/api/contacts/export/csv',
+        memberToken,
+        outsiderOrganizationId,
+      ).expect(403);
+      expect(foreign.body.code).toBe('FORBIDDEN');
+
+      const missingCsrf = await request(graphqlApp.getHttpServer())
+        .post('/api/contacts/import/csv')
+        .set('Cookie', `itemize_auth=${memberToken}`)
+        .set('x-organization-id', String(organizationId))
+        .send({
+          contacts: [{ first_name: 'Missing CSRF' }],
+          skipDuplicates: true,
+        })
+        .expect(403);
+      expect(missingCsrf.body).toMatchObject({
+        code: 'FORBIDDEN',
+        reason: 'CSRF_COOKIE_MISSING',
+      });
+    });
+
+    it('exports only the verified tenant with safe CSV cells and filters', async () => {
+      const suffix = `${Date.now()}-${process.pid}`;
+      await pool.query(
+        `INSERT INTO contacts (
+           organization_id, first_name, email, company, status, tags, created_by
+         ) VALUES
+           ($1, '=1+1', $2, 'Acme, "HQ"', 'active', ARRAY['csv-safe'], $3),
+           ($4, '@foreign', $5, 'Foreign', 'active', ARRAY['csv-safe'], $6)`,
+        [
+          organizationId,
+          `csv-export-${suffix}@test.itemize`,
+          memberId,
+          outsiderOrganizationId,
+          `csv-export-foreign-${suffix}@test.itemize`,
+          outsiderId,
+        ],
+      );
+
+      const response = await transferRequest(
+        'get',
+        '/api/contacts/export/csv?status=active&tags=csv-safe',
+      ).expect(200);
+      expect(response.headers).toMatchObject({
+        'cache-control': 'private, no-store',
+        'content-type': 'text/csv; charset=utf-8',
+        'x-content-type-options': 'nosniff',
+      });
+      expect(response.text).toContain(`"'=1+1"`);
+      expect(response.text).toContain(`"Acme, ""HQ"""`);
+      expect(response.text).not.toContain(`csv-export-foreign-${suffix}`);
+    });
+
+    it('reports invalid rows, skips canonical duplicates, and commits effects atomically', async () => {
+      const suffix = `${Date.now()}-${process.pid}`;
+      const canonicalEmail = `csv-import-${suffix}@test.itemize`;
+      const response = await transferRequest(
+        'post',
+        '/api/contacts/import/csv',
+      )
+        .send({
+          contacts: [
+            {
+              first_name: 'Imported First',
+              email: ` ${canonicalEmail.toUpperCase()} `,
+              tags: 'vip; newsletter;vip',
+            },
+            {
+              first_name: 'Duplicate Variant',
+              email: canonicalEmail,
+            },
+            { first_name: 'Imported Without Email' },
+            { first_name: '', email: '   ' },
+            { first_name: 'Unknown Column', unexpected: 'value' },
+          ],
+          skipDuplicates: true,
+        })
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        imported: 2,
+        skipped: 1,
+        errorCount: 2,
+        errorsTruncated: false,
+      });
+      expect(response.body.errors).toEqual([
+        expect.objectContaining({ row: 4 }),
+        expect.objectContaining({ row: 5, error: 'Unknown columns: unexpected' }),
+      ]);
+
+      const persisted = await pool.query<{
+        id: number;
+        email: string | null;
+        tags: string[];
+      }>(
+        `SELECT id, email, tags
+         FROM contacts
+         WHERE organization_id = $1
+           AND first_name IN ('Imported First', 'Imported Without Email')
+         ORDER BY first_name`,
+        [organizationId],
+      );
+      expect(persisted.rows).toHaveLength(2);
+      expect(persisted.rows.find((row) => row.email === canonicalEmail)?.tags)
+        .toEqual(['vip', 'newsletter']);
+
+      const effects = await pool.query<{
+        triggers: number;
+        activities: number;
+      }>(
+        `SELECT
+           (SELECT COUNT(*)::int
+            FROM workflow_triggers
+            WHERE contact_id = ANY($1::int[])
+              AND trigger_type = 'contact_added') AS triggers,
+           (SELECT COUNT(*)::int
+            FROM contact_activities
+            WHERE contact_id = ANY($1::int[])
+              AND title = 'Contact Created') AS activities`,
+        [persisted.rows.map((row) => row.id)],
+      );
+      expect(effects.rows[0]).toEqual({ triggers: 2, activities: 2 });
+    });
+
+    it('preserves duplicates when requested and serializes same-email imports when skipping', async () => {
+      const suffix = `${Date.now()}-${process.pid}`;
+      const preservedEmail = `csv-preserved-${suffix}@test.itemize`;
+      const preserved = await transferRequest(
+        'post',
+        '/api/contacts/import/csv',
+      )
+        .send({
+          contacts: [
+            { first_name: 'Preserved One', email: preservedEmail },
+            { first_name: 'Preserved Two', email: preservedEmail.toUpperCase() },
+          ],
+          skipDuplicates: false,
+        })
+        .expect(201);
+      expect(preserved.body).toMatchObject({ imported: 2, skipped: 0 });
+
+      const serializedEmail = `csv-serialized-${suffix}@test.itemize`;
+      const [first, second] = await Promise.all([
+        transferRequest('post', '/api/contacts/import/csv').send({
+          contacts: [{ first_name: 'Serialized One', email: serializedEmail }],
+          skipDuplicates: true,
+        }),
+        transferRequest('post', '/api/contacts/import/csv').send({
+          contacts: [{ first_name: 'Serialized Two', email: serializedEmail }],
+          skipDuplicates: true,
+        }),
+      ]);
+      expect([first.status, second.status]).toEqual([201, 201]);
+      expect([first.body.imported, second.body.imported].sort()).toEqual([0, 1]);
+      expect([first.body.skipped, second.body.skipped].sort()).toEqual([0, 1]);
+
+      const counts = await pool.query<{ email: string; total: number }>(
+        `SELECT email, COUNT(*)::int AS total
+         FROM contacts
+         WHERE organization_id = $1
+           AND email = ANY($2::text[])
+         GROUP BY email
+         ORDER BY email`,
+        [organizationId, [preservedEmail, serializedEmail]],
+      );
+      expect(counts.rows).toEqual([
+        { email: preservedEmail, total: 2 },
+        { email: serializedEmail, total: 1 },
+      ]);
+    });
+
+    it('rejects an import that would exceed the tenant plan without partial writes', async () => {
+      const suffix = `${Date.now()}-${process.pid}`;
+      const count = await pool.query<{ total: number }>(
+        'SELECT COUNT(*)::int AS total FROM contacts WHERE organization_id = $1',
+        [organizationId],
+      );
+      await pool.query(
+        'UPDATE organizations SET contacts_limit = $1 WHERE id = $2',
+        [count.rows[0].total + 1, organizationId],
+      );
+      try {
+        const response = await transferRequest(
+          'post',
+          '/api/contacts/import/csv',
+        )
+          .send({
+            contacts: [
+              {
+                first_name: 'Plan First',
+                email: `csv-plan-first-${suffix}@test.itemize`,
+              },
+              {
+                first_name: 'Plan Second',
+                email: `csv-plan-second-${suffix}@test.itemize`,
+              },
+            ],
+            skipDuplicates: false,
+          })
+          .expect(403);
+        expect(response.body).toMatchObject({
+          code: 'PLAN_LIMIT_REACHED',
+          current: count.rows[0].total,
+          limit: count.rows[0].total + 1,
+          attempted: 2,
+        });
+        const residue = await pool.query<{ total: number }>(
+          `SELECT COUNT(*)::int AS total
+           FROM contacts
+           WHERE organization_id = $1 AND first_name LIKE 'Plan %'`,
+          [organizationId],
+        );
+        expect(residue.rows[0].total).toBe(0);
+      } finally {
+        await pool.query(
+          'UPDATE organizations SET contacts_limit = NULL WHERE id = $1',
+          [organizationId],
+        );
+      }
+    });
+
+    it('enforces row, body, and bounded error-report limits before writes', async () => {
+      const tooManyRows = await transferRequest(
+        'post',
+        '/api/contacts/import/csv',
+      )
+        .send({
+          contacts: Array.from({ length: 10_001 }, () => ({})),
+          skipDuplicates: true,
+        })
+        .expect(400);
+      expect(tooManyRows.body).toMatchObject({ code: 'INVALID_IMPORT' });
+
+      const boundedErrors = await transferRequest(
+        'post',
+        '/api/contacts/import/csv',
+      )
+        .send({
+          contacts: Array.from({ length: 101 }, () => ({})),
+          skipDuplicates: true,
+        })
+        .expect(201);
+      expect(boundedErrors.body).toMatchObject({
+        imported: 0,
+        errorCount: 101,
+        errorsTruncated: true,
+      });
+      expect(boundedErrors.body.errors).toHaveLength(100);
+
+      await transferRequest('post', '/api/contacts/import/csv')
+        .send({
+          contacts: [{ first_name: 'x'.repeat(1_100_000) }],
+          skipDuplicates: true,
+        })
+        .expect(413);
     });
   });
 });

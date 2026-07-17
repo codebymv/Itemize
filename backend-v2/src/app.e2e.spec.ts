@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { AppModule } from './app.module';
@@ -7,7 +7,7 @@ import { configureApp } from './configure-app';
 import { PG_POOL } from './database/database.module';
 
 describe('GraphQL foundation', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   const query = jest.fn();
   const end = jest.fn();
   const jwt = new JwtService();
@@ -20,7 +20,10 @@ describe('GraphQL foundation', () => {
       .overrideProvider(PG_POOL)
       .useValue({ query, end })
       .compile();
-    app = moduleRef.createNestApplication({ logger: false });
+    app = moduleRef.createNestApplication<NestExpressApplication>({
+      bodyParser: false,
+      logger: false,
+    });
     configureApp(app);
     await app.init();
   });

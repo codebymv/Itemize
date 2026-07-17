@@ -20,6 +20,8 @@ export class GraphqlCsrfGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    if (context.getType<string>() !== 'graphql') return true;
+
     const protectedMutation = this.reflector.getAllAndOverride<boolean>(
       CSRF_PROTECTED_KEY,
       [context.getHandler(), context.getClass()],

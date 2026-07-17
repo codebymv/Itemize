@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
 import { formatItemizeGraphqlError } from './common/graphql-error';
+import { ContactTransfersModule } from './contact-transfers/contact-transfers.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
@@ -33,6 +34,7 @@ const observabilityPlugins = [
     AuthModule,
     OrganizationsModule,
     ContactsModule,
+    ContactTransfersModule,
     DealsModule,
     PipelinesModule,
     TagsModule,

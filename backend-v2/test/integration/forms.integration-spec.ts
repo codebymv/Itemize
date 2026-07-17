@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
@@ -10,7 +10,7 @@ import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
 describe('Authenticated forms REST/GraphQL PostgreSQL parity', () => {
-  let graphqlApp: INestApplication;
+  let graphqlApp: NestExpressApplication;
   let legacyApp: Express;
   let pool: Pool;
   let organizationId: number;
@@ -118,7 +118,10 @@ describe('Authenticated forms REST/GraphQL PostgreSQL parity', () => {
       .overrideProvider(PG_POOL)
       .useValue(pool)
       .compile();
-    graphqlApp = moduleRef.createNestApplication({ logger: false });
+    graphqlApp = moduleRef.createNestApplication<NestExpressApplication>({
+      bodyParser: false,
+      logger: false,
+    });
     configureApp(graphqlApp);
     await graphqlApp.init();
 
