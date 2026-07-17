@@ -48,7 +48,7 @@ describe('GraphQL foundation', () => {
       .options('/graphql')
       .set('Origin', 'https://frontend.test.itemize')
       .set('Access-Control-Request-Method', 'POST')
-      .set('Access-Control-Request-Headers', 'content-type,x-organization-id')
+      .set('Access-Control-Request-Headers', 'content-type,x-organization-id,x-csrf-token')
       .expect(204);
 
     expect(response.headers['access-control-allow-origin']).toBe(
@@ -57,6 +57,9 @@ describe('GraphQL foundation', () => {
     expect(response.headers['access-control-allow-credentials']).toBe('true');
     expect(response.headers['access-control-allow-headers'].toLowerCase()).toContain(
       'x-organization-id',
+    );
+    expect(response.headers['access-control-allow-headers'].toLowerCase()).toContain(
+      'x-csrf-token',
     );
   });
 

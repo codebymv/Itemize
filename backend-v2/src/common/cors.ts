@@ -62,6 +62,7 @@ export const graphqlCorsOptions = (
     'Origin',
     'X-Organization-Id',
     'X-Request-Id',
+    'X-CSRF-Token',
   ],
   exposedHeaders: ['X-Request-Id'],
 });

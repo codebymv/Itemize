@@ -1,6 +1,10 @@
 import type { Contact, ContactAddress, ContactsResponse, JsonRecord } from '@/types';
-import type { ContactsQueryParams } from './contactsApi';
-import { GraphqlRequestError, graphqlRequest } from './graphqlClient';
+import type { ContactsQueryParams, CreateContactData } from './contactsApi';
+import {
+  GraphqlRequestError,
+  graphqlMutationRequest,
+  graphqlRequest,
+} from './graphqlClient';
 
 type GraphqlContact = {
   id: number;
@@ -68,6 +72,24 @@ const contactQuery = `
   }
 `;
 
+const createContactMutation = `
+  mutation CreateContact($input: CreateContactInput!) {
+    createContact(input: $input) { ${contactFields} }
+  }
+`;
+
+const updateContactMutation = `
+  mutation UpdateContact($id: Int!, $input: UpdateContactInput!) {
+    updateContact(id: $id, input: $input) { ${contactFields} }
+  }
+`;
+
+const deleteContactMutation = `
+  mutation DeleteContact($id: Int!) {
+    deleteContact(id: $id) { deletedId }
+  }
+`;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 
@@ -91,6 +113,28 @@ const mapContact = (contact: GraphqlContact): Contact => ({
   created_by_name: contact.createdByName ?? undefined,
   created_at: contact.createdAt,
   updated_at: contact.updatedAt,
+});
+
+const has = (value: object, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const contactInput = (data: Partial<CreateContactData>): Record<string, unknown> => ({
+  ...(has(data, 'first_name') ? { firstName: data.first_name } : {}),
+  ...(has(data, 'last_name') ? { lastName: data.last_name } : {}),
+  ...(has(data, 'email') ? { email: data.email } : {}),
+  ...(has(data, 'phone') ? { phone: data.phone } : {}),
+  ...(has(data, 'company') ? { company: data.company } : {}),
+  ...(has(data, 'job_title') ? { jobTitle: data.job_title } : {}),
+  ...(has(data, 'address') ? { address: data.address } : {}),
+  ...(has(data, 'source') && data.source
+    ? { source: data.source.toUpperCase() }
+    : {}),
+  ...(has(data, 'status') && data.status
+    ? { status: data.status.toUpperCase() }
+    : {}),
+  ...(has(data, 'custom_fields') ? { customFields: data.custom_fields } : {}),
+  ...(has(data, 'tags') ? { tags: data.tags } : {}),
+  ...(has(data, 'assigned_to') ? { assignedToId: data.assigned_to } : {}),
 });
 
 const sortFields: Record<NonNullable<ContactsQueryParams['sort_by']>, string> = {
@@ -158,4 +202,42 @@ export const getContactViaGraphql = async (
     throw new GraphqlRequestError('Contact not found', 200, 'NOT_FOUND');
   }
   return mapContact(data.contact);
+};
+
+export const createContactViaGraphql = async (
+  input: CreateContactData,
+): Promise<Contact> => {
+  const organizationId = input.organization_id;
+  const variables = { input: contactInput(input) };
+  const data = await graphqlMutationRequest<
+    { createContact: GraphqlContact },
+    typeof variables
+  >(createContactMutation, variables, organizationId);
+  return mapContact(data.createContact);
+};
+
+export const updateContactViaGraphql = async (
+  id: number,
+  input: Partial<CreateContactData>,
+): Promise<Contact> => {
+  const variables = { id, input: contactInput(input) };
+  const data = await graphqlMutationRequest<
+    { updateContact: GraphqlContact },
+    typeof variables
+  >(updateContactMutation, variables, input.organization_id);
+  return mapContact(data.updateContact);
+};
+
+export const deleteContactViaGraphql = async (
+  id: number,
+  organizationId?: number,
+): Promise<void> => {
+  const variables = { id };
+  const data = await graphqlMutationRequest<
+    { deleteContact: { deletedId: number } },
+    typeof variables
+  >(deleteContactMutation, variables, organizationId);
+  if (data.deleteContact.deletedId !== id) {
+    throw new GraphqlRequestError('GraphQL delete confirmation did not match the contact', 200);
+  }
 };

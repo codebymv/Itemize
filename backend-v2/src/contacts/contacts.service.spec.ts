@@ -38,8 +38,11 @@ const codeFrom = async (promise: Promise<unknown>): Promise<string> => {
 
 describe('ContactsService', () => {
   const repository = {
+    create: jest.fn(),
+    delete: jest.fn(),
     findPage: jest.fn(),
     findById: jest.fn(),
+    update: jest.fn(),
   } as unknown as jest.Mocked<ContactsRepository>;
   const service = new ContactsService(repository);
 
@@ -128,5 +131,49 @@ describe('ContactsService', () => {
         'SERVICE_UNAVAILABLE',
       );
     }
+  });
+
+  it('normalizes create input and maps the created contact', async () => {
+    repository.create.mockResolvedValue({ kind: 'created', row: row() });
+    await expect(service.create(42, 7, {
+      firstName: '  Ada  ',
+      email: 'ADA@EXAMPLE.COM',
+      tags: [' vip ', 'vip'],
+    })).resolves.toMatchObject({ id: 11, firstName: 'Ada' });
+    expect(repository.create).toHaveBeenCalledWith(42, 7, expect.objectContaining({
+      firstName: 'Ada',
+      email: 'ada@example.com',
+      source: 'manual',
+      status: 'active',
+      tags: ['vip'],
+    }));
+  });
+
+  it('rejects create without identity and invalid assignment outcomes', async () => {
+    expect(await codeFrom(service.create(42, 7, { phone: '+1 555 123 4567' })))
+      .toBe('BAD_USER_INPUT');
+    expect(repository.create).not.toHaveBeenCalled();
+
+    repository.create.mockResolvedValue({ kind: 'invalid_assignee' });
+    expect(await codeFrom(service.create(42, 7, { firstName: 'Ada', assignedToId: 99 })))
+      .toBe('BAD_USER_INPUT');
+  });
+
+  it('preserves omitted update fields and turns explicit empty strings into null', async () => {
+    repository.update.mockResolvedValue({
+      kind: 'updated',
+      row: row({ company: null }),
+      changedFields: ['company'],
+    });
+    await service.update(42, 7, 11, { company: '' });
+    expect(repository.update).toHaveBeenCalledWith(42, 7, 11, { company: null });
+  });
+
+  it('maps private update/delete misses to NOT_FOUND', async () => {
+    repository.update.mockResolvedValue({ kind: 'not_found' });
+    repository.delete.mockResolvedValue(false);
+    expect(await codeFrom(service.update(42, 7, 999, { company: 'Nope' })))
+      .toBe('NOT_FOUND');
+    expect(await codeFrom(service.delete(42, 999))).toBe('NOT_FOUND');
   });
 });

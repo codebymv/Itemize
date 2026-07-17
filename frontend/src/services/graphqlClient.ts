@@ -1,4 +1,4 @@
-import { getApiUrl, refreshAuthenticatedSession } from '@/lib/api';
+import { fetchCsrfToken, getApiUrl, refreshAuthenticatedSession } from '@/lib/api';
 
 type GraphqlErrorPayload = {
   message?: string;
@@ -33,6 +33,9 @@ export class GraphqlRequestError extends Error {
 export const isContactGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_CONTACT_READS_GRAPHQL === 'true';
 
+export const isContactGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_CONTACT_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;
@@ -43,6 +46,7 @@ const executeGraphqlRequest = async <TData, TVariables extends object>(
   query: string,
   variables: TVariables,
   organizationId?: number,
+  csrfToken?: string,
 ): Promise<GraphqlResult<TData>> => {
   const response = await fetch(getGraphqlUrl(), {
     method: 'POST',
@@ -52,6 +56,7 @@ const executeGraphqlRequest = async <TData, TVariables extends object>(
       ...(organizationId
         ? { 'x-organization-id': organizationId.toString() }
         : {}),
+      ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
     },
     body: JSON.stringify({ query, variables }),
   });
@@ -69,15 +74,17 @@ const executeGraphqlRequest = async <TData, TVariables extends object>(
   }
 };
 
-export const graphqlRequest = async <TData, TVariables extends object>(
+const runGraphqlRequest = async <TData, TVariables extends object>(
   query: string,
   variables: TVariables,
   organizationId?: number,
+  csrfToken?: string,
 ): Promise<TData> => {
   let result = await executeGraphqlRequest<TData, TVariables>(
     query,
     variables,
     organizationId,
+    csrfToken,
   );
   if (result.payload.errors?.[0]?.extensions?.code === 'UNAUTHENTICATED') {
     try {
@@ -92,6 +99,7 @@ export const graphqlRequest = async <TData, TVariables extends object>(
       query,
       variables,
       organizationId,
+      csrfToken,
     );
   }
 
@@ -105,4 +113,19 @@ export const graphqlRequest = async <TData, TVariables extends object>(
   }
 
   return result.payload.data;
+};
+
+export const graphqlRequest = async <TData, TVariables extends object>(
+  query: string,
+  variables: TVariables,
+  organizationId?: number,
+): Promise<TData> => runGraphqlRequest(query, variables, organizationId);
+
+export const graphqlMutationRequest = async <TData, TVariables extends object>(
+  query: string,
+  variables: TVariables,
+  organizationId?: number,
+): Promise<TData> => {
+  const csrfToken = await fetchCsrfToken();
+  return runGraphqlRequest(query, variables, organizationId, csrfToken);
 };

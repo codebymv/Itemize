@@ -13,6 +13,7 @@ type ErrorDetails = {
   reason?: string;
   field?: string;
   requestId?: string;
+  [key: string]: unknown;
 };
 
 export const itemizeGraphqlError = (
@@ -36,7 +37,7 @@ export const formatItemizeGraphqlError = (error: GraphQLFormattedError) => {
       : error.message;
 
   const extensions: Record<string, unknown> = { code };
-  for (const key of ['reason', 'field', 'requestId'] as const) {
+  for (const key of ['reason', 'field', 'requestId', 'current', 'limit', 'plan'] as const) {
     if (sourceExtensions[key] !== undefined) {
       extensions[key] = sourceExtensions[key];
     }

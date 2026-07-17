@@ -4,8 +4,17 @@
  */
 import api from '@/lib/api';
 import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationMember } from '@/types';
-import { getContactViaGraphql, getContactsViaGraphql } from './contactsGraphql';
-import { isContactGraphqlReadsEnabled } from './graphqlClient';
+import {
+  createContactViaGraphql,
+  deleteContactViaGraphql,
+  getContactViaGraphql,
+  getContactsViaGraphql,
+  updateContactViaGraphql,
+} from './contactsGraphql';
+import {
+  isContactGraphqlMutationsEnabled,
+  isContactGraphqlReadsEnabled,
+} from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -137,6 +146,9 @@ export interface CreateContactData {
 }
 
 export const createContact = async (data: CreateContactData): Promise<Contact> => {
+  if (isContactGraphqlMutationsEnabled()) {
+    return createContactViaGraphql(data);
+  }
   const response = await api.post('/api/contacts', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -144,6 +156,9 @@ export const createContact = async (data: CreateContactData): Promise<Contact> =
 };
 
 export const updateContact = async (id: number, data: Partial<CreateContactData>): Promise<Contact> => {
+  if (isContactGraphqlMutationsEnabled()) {
+    return updateContactViaGraphql(id, data);
+  }
   const response = await api.put(`/api/contacts/${id}`, data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
@@ -151,6 +166,9 @@ export const updateContact = async (id: number, data: Partial<CreateContactData>
 };
 
 export const deleteContact = async (id: number, organizationId?: number): Promise<void> => {
+  if (isContactGraphqlMutationsEnabled()) {
+    return deleteContactViaGraphql(id, organizationId);
+  }
   await api.delete(`/api/contacts/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });

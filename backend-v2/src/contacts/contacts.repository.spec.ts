@@ -74,4 +74,20 @@ describe('ContactsRepository', () => {
       'om_created.organization_id = c.organization_id',
     );
   });
+
+  it('deletes only through the organization-qualified transaction', async () => {
+    query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 11 }] })
+      .mockResolvedValueOnce({});
+
+    await expect(repository.delete(42, 11)).resolves.toBe(true);
+    expect(query.mock.calls[1]).toEqual([
+      expect.stringContaining('WHERE organization_id = $1 AND id = $2'),
+      [42, 11],
+    ]);
+    expect(query.mock.calls[0][0]).toBe('BEGIN');
+    expect(query.mock.calls[2][0]).toBe('COMMIT');
+    expect(release).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,8 +1,8 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Phase 1 contact CRUD implemented locally; broader CRM characterization continues
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-17
 
 ## Decision
 
@@ -47,7 +47,7 @@ A contact requires at least one of first name, last name, email, or company. Sta
 
 Email is not currently unique within an organization. Do not silently make it a universal identity key: public-form reuse, CSV duplicate handling, messaging recipients, and manually duplicated contacts need an explicit product decision. Email comparisons used for form reuse are case-insensitive.
 
-GraphQL update inputs must distinguish omitted from explicit null. The legacy partial `PUT` behavior is inconsistent: some fields use `COALESCE` while assignee is cleared when omitted. Dual-parity normalization must select and test one rule before consumer migration; the target rule is omission preserves and explicit null clears nullable fields.
+GraphQL update inputs distinguish omitted from explicit null. The implemented and tested target rule is: omission preserves; explicit null or an empty string clears nullable scalar fields; explicit null resets JSON objects to `{}` and tags to `[]`; source and status cannot be null. The legacy partial `PUT` behavior remains inconsistent, so the frontend mutation flag is independent from the read flag and REST remains the default rollback path until the staging semantic rehearsal passes.
 
 ### Lists and aggregate profile
 
@@ -144,14 +144,16 @@ Contact reuse/creation and submission now share one transaction. Concurrent subm
 
 Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, tag propagation/removal and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits.
 
-The NestJS `ContactsModule` now implements the read-only `contacts` and `contact` operations. PostgreSQL tests prove dual REST/GraphQL list membership, deterministic ordering, pagination totals, search/status/tag/assignee filters, detail projection, tenant-private missing-resource behavior, invalid-ID rejection, and suppression of user projections from corrupt cross-tenant references. The shared frontend contact API has a strict opt-in GraphQL transport that preserves the existing consumer shape and a REST-default rollback flag. Frontend tests cover dispatch, mapping, organization headers, error visibility, nullable detail handling, and expired-session recovery. The 2026-07-16 staging rehearsals passed authenticated browser list, detail, search, inactive-status, and second-page reads through the legacy-origin `/graphql` proxy, plus equivalent search/page behavior after rollback to REST. Explicit organization headers proved isolation between two temporary staging organizations. On 2026-07-17, the deployed workspace selector proved the same isolation through user-visible selection and persisted reload behavior under both GraphQL and REST contact reads. All temporary fixtures were removed after both rehearsals. The flag remains disabled in deployed frontend builds and no production traffic uses these operations.
+The NestJS `ContactsModule` now implements `contacts`, `contact`, `createContact`, `updateContact`, and `deleteContact`. Fresh-PostgreSQL tests prove dual REST/GraphQL list membership, deterministic ordering, pagination totals, filters, detail projection, tenant-private missing-resource behavior, invalid-ID rejection, and suppression of corrupt cross-tenant user projections. Mutation cases additionally prove double-submit CSRF rejection/success, normalized creation, serialized plan enforcement, assignee membership, omitted-versus-null updates, one durable trigger only for an actual supplied-field change, status activity creation, foreign-tenant privacy, and exact deletion confirmation. Create/update domain state, workflow triggers, and activities share transactions.
+
+The shared frontend contact API has separate strict opt-ins for reads and mutations, preserves the existing consumer shape, fetches and forwards CSRF for GraphQL writes, surfaces GraphQL error messages in contact modals, and defaults both paths to REST. All 70 frontend cases pass. The 2026-07-16 staging rehearsals passed authenticated browser list, detail, search, inactive-status, and second-page reads through the legacy-origin `/graphql` proxy, plus equivalent REST rollback. Explicit organization headers proved isolation between two temporary staging organizations. On 2026-07-17, the deployed workspace selector proved the same isolation through user-visible selection and persisted reload behavior under GraphQL and REST reads. All temporary fixtures were removed. The mutation flag remains disabled in deployed builds, mutation browser behavior has not yet been rehearsed on staging, and no production traffic uses these operations.
 
 The CRM slice is not ready for traffic until:
 
 1. contact/deal tag arrays, tag rows, and junction tables are reconciled behind one canonical model;
 2. JSON pipeline stages and the normalized stage table have one source of truth plus database constraints;
-3. omitted-versus-null update semantics and contact email identity policy are selected and dual-tested;
+3. contact email identity policy is selected and dual-tested across manual creation, forms, imports, and messaging;
 4. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
 5. form notifications and CRM workflow events use the durable outbox/worker;
 6. activities, related content, bulk success paths, CSV boundaries, and profile partial failures have complete tests;
-7. credential login, mutations, and remaining contact/pipeline/form browser journeys pass semantic parity and rollback tests.
+7. credential login, contact mutation/rollback, and remaining pipeline/form browser journeys pass staging semantic-parity tests.

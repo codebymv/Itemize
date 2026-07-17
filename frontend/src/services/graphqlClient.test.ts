@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { refreshAuthenticatedSession } from '@/lib/api';
-import { GraphqlRequestError, graphqlRequest } from './graphqlClient';
+import { fetchCsrfToken, refreshAuthenticatedSession } from '@/lib/api';
+import { GraphqlRequestError, graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   getApiUrl: vi.fn(() => 'https://api.test.itemize'),
+  fetchCsrfToken: vi.fn(),
   refreshAuthenticatedSession: vi.fn(),
 }));
 
@@ -17,6 +18,7 @@ describe('GraphQL session recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(refreshAuthenticatedSession).mockResolvedValue();
+    vi.mocked(fetchCsrfToken).mockResolvedValue('csrf-test-token');
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://api.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
   });
@@ -55,5 +57,19 @@ describe('GraphQL session recovery', () => {
     } satisfies Partial<GraphqlRequestError>);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(refreshAuthenticatedSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches and sends CSRF proof for mutations', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({ data: { deleted: true } }));
+
+    await expect(graphqlMutationRequest('mutation { deleted }', {}, 42))
+      .resolves.toEqual({ deleted: true });
+
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(init?.headers).toMatchObject({
+      'x-csrf-token': 'csrf-test-token',
+      'x-organization-id': '42',
+    });
   });
 });

@@ -1,6 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getContactViaGraphql, getContactsViaGraphql } from './contactsGraphql';
-import { GraphqlRequestError, isContactGraphqlReadsEnabled } from './graphqlClient';
+import { fetchCsrfToken } from '@/lib/api';
+import {
+  createContactViaGraphql,
+  deleteContactViaGraphql,
+  getContactViaGraphql,
+  getContactsViaGraphql,
+  updateContactViaGraphql,
+} from './contactsGraphql';
+import {
+  GraphqlRequestError,
+  isContactGraphqlMutationsEnabled,
+  isContactGraphqlReadsEnabled,
+} from './graphqlClient';
+
+vi.mock('@/lib/api', () => ({
+  fetchCsrfToken: vi.fn(),
+  getApiUrl: vi.fn(() => 'https://api.test.itemize'),
+  refreshAuthenticatedSession: vi.fn(),
+}));
 
 const graphqlContact = {
   id: 11,
@@ -34,6 +51,7 @@ describe('contact GraphQL consumer', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
+    vi.mocked(fetchCsrfToken).mockResolvedValue('csrf-contact-token');
   });
 
   afterEach(() => {
@@ -46,6 +64,13 @@ describe('contact GraphQL consumer', () => {
     expect(isContactGraphqlReadsEnabled()).toBe(false);
     vi.stubEnv('VITE_CONTACT_READS_GRAPHQL', 'true');
     expect(isContactGraphqlReadsEnabled()).toBe(true);
+  });
+
+  it('keeps GraphQL contact mutations independently disabled by default', () => {
+    vi.stubEnv('VITE_CONTACT_MUTATIONS_GRAPHQL', 'false');
+    expect(isContactGraphqlMutationsEnabled()).toBe(false);
+    vi.stubEnv('VITE_CONTACT_MUTATIONS_GRAPHQL', 'true');
+    expect(isContactGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps list inputs and the GraphQL page into the existing REST-shaped contract', async () => {
@@ -134,5 +159,38 @@ describe('contact GraphQL consumer', () => {
       code: 'NOT_FOUND',
       status: 200,
     });
+  });
+
+  it('maps create, update, and delete mutations with CSRF and no REST-shaped organization field', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { createContact: graphqlContact } }))
+      .mockResolvedValueOnce(response({ data: { updateContact: graphqlContact } }))
+      .mockResolvedValueOnce(response({ data: { deleteContact: { deletedId: 11 } } }));
+
+    await createContactViaGraphql({
+      first_name: 'Ada',
+      status: 'active',
+      source: 'manual',
+      organization_id: 42,
+    });
+    await updateContactViaGraphql(11, {
+      company: 'New Engines',
+      organization_id: 42,
+    });
+    await expect(deleteContactViaGraphql(11, 42)).resolves.toBeUndefined();
+
+    const createBody = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body));
+    expect(createBody.variables).toEqual({
+      input: { firstName: 'Ada', status: 'ACTIVE', source: 'MANUAL' },
+    });
+    const updateBody = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
+    expect(updateBody.variables).toEqual({ id: 11, input: { company: 'New Engines' } });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(3);
+    for (const [, init] of vi.mocked(fetch).mock.calls) {
+      expect(init?.headers).toMatchObject({
+        'x-csrf-token': 'csrf-contact-token',
+        'x-organization-id': '42',
+      });
+    }
   });
 });

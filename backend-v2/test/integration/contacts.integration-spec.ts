@@ -28,6 +28,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
   let outsiderToken: string;
   let fixtures: Fixture[];
   let corruptContactId: number;
+  let mutationContactId: number;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -173,6 +174,21 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       .set('Cookie', `itemize_auth=${token}`)
       .set('x-organization-id', String(organization))
       .send({ query, variables });
+
+  const graphqlMutation = (
+    token: string,
+    organization: number,
+    query: string,
+    variables: Record<string, unknown> = {},
+  ) => {
+    const csrf = 'contact-mutation-csrf';
+    return request(graphqlApp.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `itemize_auth=${token}; csrf-token=${csrf}`)
+      .set('x-csrf-token', csrf)
+      .set('x-organization-id', String(organization))
+      .send({ query, variables });
+  };
 
   it('matches legacy list membership, order, and page counts', async () => {
     const legacy = await request(legacyApp)
@@ -329,6 +345,221 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       createdById: null,
       createdByName: null,
     });
+  });
+
+  it('rejects contact mutations without matching CSRF proof', async () => {
+    const email = `csrf-rejected-${Date.now()}@test.itemize`;
+    const target = await graphql(
+      memberToken,
+      organizationId,
+      `mutation CreateContact($input: CreateContactInput!) {
+        createContact(input: $input) { id }
+      }`,
+      { input: { email } },
+    ).expect(200);
+
+    expect(target.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'CSRF_COOKIE_MISSING',
+    });
+    const persisted = await pool.query(
+      'SELECT id FROM contacts WHERE organization_id = $1 AND email = $2',
+      [organizationId, email],
+    );
+    expect(persisted.rowCount).toBe(0);
+  });
+
+  it('serializes concurrent GraphQL creates at the organization contact limit', async () => {
+    const count = await pool.query<{ total: number }>(
+      'SELECT COUNT(*)::int AS total FROM contacts WHERE organization_id = $1',
+      [organizationId],
+    );
+    await pool.query(
+      'UPDATE organizations SET contacts_limit = $1 WHERE id = $2',
+      [count.rows[0].total + 1, organizationId],
+    );
+    const mutation = `mutation CreateContact($input: CreateContactInput!) {
+      createContact(input: $input) { id email }
+    }`;
+    const suffix = `${Date.now()}-${process.pid}`;
+    const responses = await Promise.all([
+      graphqlMutation(memberToken, organizationId, mutation, {
+        input: { email: `limit-first-${suffix}@test.itemize` },
+      }),
+      graphqlMutation(memberToken, organizationId, mutation, {
+        input: { email: `limit-second-${suffix}@test.itemize` },
+      }),
+    ]);
+    const createdIds = responses
+      .map((response) => response.body.data?.createContact?.id as number | undefined)
+      .filter((id): id is number => Number.isSafeInteger(id));
+    await pool.query('UPDATE organizations SET contacts_limit = NULL WHERE id = $1', [organizationId]);
+    if (createdIds.length > 0) {
+      await pool.query('DELETE FROM contacts WHERE organization_id = $1 AND id = ANY($2::int[])', [
+        organizationId,
+        createdIds,
+      ]);
+    }
+
+    expect(createdIds).toHaveLength(1);
+    const rejected = responses.find((response) => response.body.errors?.length);
+    expect(rejected?.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'PLAN_LIMIT_REACHED',
+      current: count.rows[0].total + 1,
+      limit: count.rows[0].total + 1,
+    });
+  });
+
+  it('creates a contact atomically with tenant assignment, workflow, and activity evidence', async () => {
+    const target = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation CreateContact($input: CreateContactInput!) {
+        createContact(input: $input) {
+          id organizationId firstName email source status tags assignedToId createdById
+        }
+      }`,
+      {
+        input: {
+          firstName: '  Mutation  ',
+          email: 'MUTATION@TEST.ITEMIZE',
+          source: 'API',
+          tags: ['graphql', 'graphql'],
+          assignedToId: memberId,
+        },
+      },
+    ).expect(200);
+
+    expect(target.body.errors).toBeUndefined();
+    expect(target.body.data.createContact).toMatchObject({
+      organizationId,
+      firstName: 'Mutation',
+      email: 'mutation@test.itemize',
+      source: 'API',
+      status: 'ACTIVE',
+      tags: ['graphql'],
+      assignedToId: memberId,
+      createdById: memberId,
+    });
+    mutationContactId = target.body.data.createContact.id;
+
+    const evidence = await pool.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM workflow_triggers
+          WHERE organization_id = $1 AND contact_id = $2
+            AND trigger_type = 'contact_added' AND status = 'queued') AS triggers,
+         (SELECT COUNT(*)::int FROM contact_activities
+          WHERE contact_id = $2 AND type = 'system' AND title = 'Contact Created') AS activities`,
+      [organizationId, mutationContactId],
+    );
+    expect(evidence.rows[0]).toEqual({ triggers: 1, activities: 1 });
+  });
+
+  it('updates only supplied fields, clears explicit nulls, and queues one committed change', async () => {
+    const mutation = `mutation UpdateContact($id: Int!, $input: UpdateContactInput!) {
+      updateContact(id: $id, input: $input) {
+        id firstName email company status assignedToId
+      }
+    }`;
+    const variables = {
+      id: mutationContactId,
+      input: {
+        email: null,
+        company: 'GraphQL Updated',
+        status: 'INACTIVE',
+        assignedToId: null,
+      },
+    };
+    const changed = await graphqlMutation(
+      memberToken,
+      organizationId,
+      mutation,
+      variables,
+    ).expect(200);
+    const unchanged = await graphqlMutation(
+      memberToken,
+      organizationId,
+      mutation,
+      variables,
+    ).expect(200);
+
+    expect(changed.body.errors).toBeUndefined();
+    expect(changed.body.data.updateContact).toMatchObject({
+      id: mutationContactId,
+      firstName: 'Mutation',
+      email: null,
+      company: 'GraphQL Updated',
+      status: 'INACTIVE',
+      assignedToId: null,
+    });
+    expect(unchanged.body.errors).toBeUndefined();
+
+    const events = await pool.query(
+      `SELECT trigger_type, payload
+       FROM workflow_triggers
+       WHERE organization_id = $1 AND contact_id = $2
+         AND trigger_type = 'contact_updated'`,
+      [organizationId, mutationContactId],
+    );
+    expect(events.rows).toHaveLength(1);
+    expect(events.rows[0].payload.changed_fields).toEqual(expect.arrayContaining([
+      'email', 'company', 'status', 'assigned_to',
+    ]));
+    const statusActivities = await pool.query(
+      `SELECT content FROM contact_activities
+       WHERE contact_id = $1 AND type = 'status_change'`,
+      [mutationContactId],
+    );
+    expect(statusActivities.rows).toEqual([
+      { content: { from: 'active', to: 'inactive' } },
+    ]);
+  });
+
+  it('rejects cross-tenant assignment and hides foreign mutations as NOT_FOUND', async () => {
+    const invalidAssignee = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation UpdateContact($id: Int!, $input: UpdateContactInput!) {
+        updateContact(id: $id, input: $input) { id }
+      }`,
+      { id: mutationContactId, input: { assignedToId: outsiderId } },
+    ).expect(200);
+    expect(invalidAssignee.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_ASSIGNEE',
+      field: 'assignedToId',
+    });
+
+    const foreignUpdate = await graphqlMutation(
+      outsiderToken,
+      outsiderOrganizationId,
+      `mutation UpdateContact($id: Int!, $input: UpdateContactInput!) {
+        updateContact(id: $id, input: $input) { id }
+      }`,
+      { id: mutationContactId, input: { company: 'Foreign write' } },
+    ).expect(200);
+    const foreignDelete = await graphqlMutation(
+      outsiderToken,
+      outsiderOrganizationId,
+      `mutation DeleteContact($id: Int!) { deleteContact(id: $id) { deletedId } }`,
+      { id: mutationContactId },
+    ).expect(200);
+    expect(foreignUpdate.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    expect(foreignDelete.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('deletes an organization-owned contact and returns an exact confirmation', async () => {
+    const target = await graphqlMutation(
+      memberToken,
+      organizationId,
+      `mutation DeleteContact($id: Int!) { deleteContact(id: $id) { deletedId } }`,
+      { id: mutationContactId },
+    ).expect(200);
+    expect(target.body.errors).toBeUndefined();
+    expect(target.body.data.deleteContact).toEqual({ deletedId: mutationContactId });
+    const persisted = await pool.query('SELECT id FROM contacts WHERE id = $1', [mutationContactId]);
+    expect(persisted.rowCount).toBe(0);
   });
 
   it('rejects invalid identifiers before querying contact data', async () => {

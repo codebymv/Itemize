@@ -61,6 +61,7 @@ const createGraphqlProxy = ({
         forwardHeader(req, headers, 'cookie');
         forwardHeader(req, headers, 'x-organization-id');
         forwardHeader(req, headers, 'x-request-id');
+        forwardHeader(req, headers, 'x-csrf-token');
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);

@@ -29,7 +29,7 @@ import logger from '@/lib/logger';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
-  return responseData?.error || responseData?.message || fallback;
+  return responseData?.error || responseData?.message || (error instanceof Error ? error.message : fallback);
 };
 
 interface CreateContactModalProps {

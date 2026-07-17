@@ -35,6 +35,7 @@ describe('legacy-origin GraphQL proxy', () => {
             .set('Cookie', 'itemize_auth=signed-token')
             .set('X-Organization-Id', '42')
             .set('X-Request-Id', 'browser-request')
+            .set('X-CSRF-Token', 'csrf-value')
             .set('Authorization', 'Bearer must-not-forward')
             .send({ query: 'query { readiness }' });
 
@@ -49,6 +50,7 @@ describe('legacy-origin GraphQL proxy', () => {
         expect(options.headers.get('cookie')).toBe('itemize_auth=signed-token');
         expect(options.headers.get('x-organization-id')).toBe('42');
         expect(options.headers.get('x-request-id')).toBe('browser-request');
+        expect(options.headers.get('x-csrf-token')).toBe('csrf-value');
         expect(options.headers.get('authorization')).toBeNull();
         expect(JSON.parse(options.body.toString())).toEqual({ query: 'query { readiness }' });
     });

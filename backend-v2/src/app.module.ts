@@ -5,6 +5,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 import { AuthModule } from './auth/auth.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
+import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
 import { formatItemizeGraphqlError } from './common/graphql-error';
 import { ContactsModule } from './contacts/contacts.module';
 import { DatabaseModule } from './database/database.module';
@@ -34,6 +35,7 @@ import { RequestContextModule } from './request-context/request-context.module';
   ],
   providers: [
     { provide: APP_GUARD, useExisting: GraphqlAuthGuard },
+    { provide: APP_GUARD, useExisting: GraphqlCsrfGuard },
     { provide: APP_GUARD, useExisting: OrganizationContextGuard },
   ],
 })

@@ -79,3 +79,9 @@ export class ContactPage {
   @Field(() => PageInfo)
   pageInfo: PageInfo;
 }
+
+@ObjectType()
+export class DeleteContactResult {
+  @Field(() => Int)
+  deletedId: number;
+}
