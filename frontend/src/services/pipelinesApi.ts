@@ -36,6 +36,23 @@ const unwrapResponse = <T>(payload: unknown): T => {
   return payload as T;
 };
 
+const normalizeRestDeal = (deal: Deal): Deal => ({
+  ...deal,
+  value: Number(deal.value),
+});
+
+const normalizeRestPipeline = (
+  pipeline: Pipeline & { deals?: Deal[] },
+): Pipeline & { deals?: Deal[] } => ({
+  ...pipeline,
+  ...(pipeline.total_value === undefined
+    ? {}
+    : { total_value: Number(pipeline.total_value) }),
+  ...(pipeline.deals === undefined
+    ? {}
+    : { deals: pipeline.deals.map(normalizeRestDeal) }),
+});
+
 // ======================
 // Pipelines API
 // ======================
@@ -47,7 +64,7 @@ export const getPipelines = async (organizationId?: number): Promise<Pipeline[]>
   const response = await api.get('/api/pipelines', {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<Pipeline[]>(response.data);
+  return unwrapResponse<Pipeline[]>(response.data).map(normalizeRestPipeline);
 };
 
 export const getPipeline = async (id: number, organizationId?: number): Promise<Pipeline & { deals: Deal[] }> => {
@@ -57,7 +74,9 @@ export const getPipeline = async (id: number, organizationId?: number): Promise<
   const response = await api.get(`/api/pipelines/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<Pipeline & { deals: Deal[] }>(response.data);
+  return normalizeRestPipeline(
+    unwrapResponse<Pipeline & { deals: Deal[] }>(response.data),
+  ) as Pipeline & { deals: Deal[] };
 };
 
 export interface CreatePipelineData {
@@ -132,7 +151,8 @@ export const getDeals = async (params: DealsQueryParams = {}): Promise<DealsResp
     params,
     headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {}
   });
-  return unwrapResponse<DealsResponse>(response.data);
+  const result = unwrapResponse<DealsResponse>(response.data);
+  return { ...result, deals: result.deals.map(normalizeRestDeal) };
 };
 
 export const getDeal = async (id: number, organizationId?: number): Promise<Deal> => {
@@ -142,7 +162,7 @@ export const getDeal = async (id: number, organizationId?: number): Promise<Deal
   const response = await api.get(`/api/pipelines/deals/${id}`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export interface CreateDealData {
@@ -167,7 +187,7 @@ export const createDeal = async (data: CreateDealData): Promise<Deal> => {
   const response = await api.post('/api/pipelines/deals', data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export const updateDeal = async (id: number, data: Partial<CreateDealData>): Promise<Deal> => {
@@ -177,7 +197,7 @@ export const updateDeal = async (id: number, data: Partial<CreateDealData>): Pro
   const response = await api.put(`/api/pipelines/deals/${id}`, data, {
     headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
   });
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export const moveDealToStage = async (id: number, stageId: string, organizationId?: number): Promise<Deal> => {
@@ -188,7 +208,7 @@ export const moveDealToStage = async (id: number, stageId: string, organizationI
     { stage_id: stageId },
     { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
   );
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export const markDealWon = async (id: number, organizationId?: number): Promise<Deal> => {
@@ -198,7 +218,7 @@ export const markDealWon = async (id: number, organizationId?: number): Promise<
   const response = await api.post(`/api/pipelines/deals/${id}/won`, {}, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export const markDealLost = async (id: number, reason?: string, organizationId?: number): Promise<Deal> => {
@@ -208,7 +228,7 @@ export const markDealLost = async (id: number, reason?: string, organizationId?:
   const response = await api.post(`/api/pipelines/deals/${id}/lost`, { reason }, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export const reopenDeal = async (id: number, organizationId?: number): Promise<Deal> => {
@@ -218,7 +238,7 @@ export const reopenDeal = async (id: number, organizationId?: number): Promise<D
   const response = await api.post(`/api/pipelines/deals/${id}/reopen`, {}, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<Deal>(response.data);
+  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
 };
 
 export const deleteDeal = async (id: number, organizationId?: number): Promise<void> => {
