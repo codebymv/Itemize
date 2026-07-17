@@ -5546,7 +5546,7 @@
           "path": "/api/forms",
           "rawPath": "/api/forms",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 42,
+          "line": 61,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5599,7 +5599,7 @@
           "path": "/api/forms",
           "rawPath": "/api/forms",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 57,
+          "line": 82,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5706,7 +5706,7 @@
           "path": "/api/forms/:id",
           "rawPath": "/api/forms/${id}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 75,
+          "line": 106,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5759,7 +5759,7 @@
           "path": "/api/forms/:id",
           "rawPath": "/api/forms/${id}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 50,
+          "line": 72,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5812,7 +5812,7 @@
           "path": "/api/forms/:id",
           "rawPath": "/api/forms/${id}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 68,
+          "line": 96,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5883,7 +5883,7 @@
           "path": "/api/forms/:id/duplicate",
           "rawPath": "/api/forms/${id}/duplicate",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 92,
+          "line": 129,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5936,7 +5936,7 @@
           "path": "/api/forms/:id/fields",
           "rawPath": "/api/forms/${id}/fields",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 85,
+          "line": 119,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5995,7 +5995,7 @@
           "path": "/api/forms/:formId/submissions",
           "rawPath": "/api/forms/${formId}/submissions",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 107,
+          "line": 147,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6042,7 +6042,7 @@
           "path": "/api/forms/:formId/submissions/:submissionId",
           "rawPath": "/api/forms/${formId}/submissions/${submissionId}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 119,
+          "line": 162,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6089,7 +6089,7 @@
           "path": "/api/forms/public/form/:identifier",
           "rawPath": "/api/forms/public/form/${identifier}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 144,
+          "line": 187,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6142,7 +6142,7 @@
           "path": "/api/forms/public/form/:identifier",
           "rawPath": "/api/forms/public/form/${identifier}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 152,
+          "line": 195,
           "client": "api",
           "literalInterpolation": false
         }

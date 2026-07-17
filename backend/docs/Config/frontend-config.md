@@ -206,6 +206,13 @@ VITE_CONTACT_CONTENT_GRAPHQL=false
 VITE_PIPELINE_READS_GRAPHQL=false
 VITE_PIPELINE_MUTATIONS_GRAPHQL=false
 
+# Authenticated form list/detail, definition mutations, and submission
+# management are three independent rollback boundaries. Anonymous public form
+# retrieval/submission always remains on the retained HTTP endpoints.
+VITE_FORM_READS_GRAPHQL=false
+VITE_FORM_MUTATIONS_GRAPHQL=false
+VITE_FORM_SUBMISSIONS_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 

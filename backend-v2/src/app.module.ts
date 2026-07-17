@@ -10,6 +10,7 @@ import { formatItemizeGraphqlError } from './common/graphql-error';
 import { ContactsModule } from './contacts/contacts.module';
 import { DatabaseModule } from './database/database.module';
 import { FoundationModule } from './foundation/foundation.module';
+import { FormsModule } from './forms/forms.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { createGraphqlObservabilityPlugin } from './observability/graphql-observability.plugin';
@@ -33,6 +34,7 @@ const observabilityPlugins = [
     ContactsModule,
     PipelinesModule,
     TagsModule,
+    FormsModule,
     FoundationModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,

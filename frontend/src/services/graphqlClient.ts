@@ -51,6 +51,15 @@ export const isPipelineGraphqlReadsEnabled = (): boolean =>
 export const isPipelineGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_PIPELINE_MUTATIONS_GRAPHQL === 'true';
 
+export const isFormGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_FORM_READS_GRAPHQL === 'true';
+
+export const isFormGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_FORM_MUTATIONS_GRAPHQL === 'true';
+
+export const isFormSubmissionGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_FORM_SUBMISSIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

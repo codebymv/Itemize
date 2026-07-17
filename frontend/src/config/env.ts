@@ -16,6 +16,9 @@ const envSchema = z.object({
   VITE_CONTACT_CONTENT_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_PIPELINE_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_PIPELINE_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_FORM_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_FORM_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_FORM_SUBMISSIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -51,6 +54,9 @@ if (import.meta.env.DEV) {
     contactContentGraphql: env.VITE_CONTACT_CONTENT_GRAPHQL === 'true',
     pipelineReadsGraphql: env.VITE_PIPELINE_READS_GRAPHQL === 'true',
     pipelineMutationsGraphql: env.VITE_PIPELINE_MUTATIONS_GRAPHQL === 'true',
+    formReadsGraphql: env.VITE_FORM_READS_GRAPHQL === 'true',
+    formMutationsGraphql: env.VITE_FORM_MUTATIONS_GRAPHQL === 'true',
+    formSubmissionsGraphql: env.VITE_FORM_SUBMISSIONS_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,
