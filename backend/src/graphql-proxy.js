@@ -1,4 +1,6 @@
 const DEFAULT_TIMEOUT_MS = 10000;
+const ACCEPTED_REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+const ACCEPTED_OPERATION_NAME = /^[_A-Za-z][_0-9A-Za-z]{0,127}$/;
 
 const graphqlError = (message, code) => ({
     errors: [{ message, extensions: { code } }],
@@ -38,6 +40,60 @@ const forwardHeader = (request, headers, name) => {
     if (value) headers.set(name, value);
 };
 
+const requestIdFor = (request) => {
+    if (typeof request.requestId === 'string' && ACCEPTED_REQUEST_ID.test(request.requestId)) {
+        return request.requestId;
+    }
+    const supplied = request.get('x-request-id');
+    return typeof supplied === 'string' && ACCEPTED_REQUEST_ID.test(supplied)
+        ? supplied
+        : null;
+};
+
+const operationMetadata = (body) => {
+    const requestedName = typeof body?.operationName === 'string'
+        && ACCEPTED_OPERATION_NAME.test(body.operationName)
+        ? body.operationName
+        : null;
+    const query = typeof body?.query === 'string' ? body.query : '';
+    const definitions = [...query.matchAll(/\b(query|mutation|subscription)\s+([_A-Za-z][_0-9A-Za-z]*)\b/g)];
+    const selected = requestedName
+        ? definitions.find((definition) => definition[2] === requestedName)
+        : definitions[0];
+
+    return {
+        operationName: requestedName || selected?.[2] || 'anonymous',
+        operationType: selected?.[1] || (query.trimStart().startsWith('{') ? 'query' : 'unknown'),
+    };
+};
+
+const graphqlErrorCodes = (responseBody) => {
+    try {
+        const parsed = JSON.parse(responseBody.toString('utf8'));
+        if (!Array.isArray(parsed?.errors)) return [];
+        return [...new Set(parsed.errors.map((error) => (
+            typeof error?.extensions?.code === 'string'
+                ? error.extensions.code
+                : 'UNKNOWN'
+        )))].sort();
+    } catch {
+        return [];
+    }
+};
+
+const elapsedMilliseconds = (startedAt) => Number(process.hrtime.bigint() - startedAt) / 1e6;
+
+const logOperation = (logger, event) => {
+    const isServerError = event.statusCode >= 500
+        || event.errorCodes.includes('INTERNAL_SERVER_ERROR')
+        || event.errorCodes.includes('SERVICE_UNAVAILABLE');
+    const level = isServerError ? 'error' : event.errorCount > 0 ? 'warn' : 'info';
+    const writer = logger?.[level] || logger?.log;
+    if (typeof writer === 'function') {
+        writer.call(logger, 'GraphQL operation completed', event);
+    }
+};
+
 const createGraphqlProxy = ({
     environment = process.env,
     fetchImpl = global.fetch,
@@ -47,7 +103,24 @@ const createGraphqlProxy = ({
     const requestTimeoutMs = timeoutMs(environment);
 
     return async (req, res) => {
+        const startedAt = process.hrtime.bigint();
+        const requestId = requestIdFor(req);
+        const operation = operationMetadata(req.body);
+
         if (!upstreamUrl) {
+            logOperation(logger, {
+                event: 'graphql_operation_completed',
+                layer: 'legacy_proxy',
+                transport: 'graphql_proxy',
+                requestId,
+                ...operation,
+                statusCode: 503,
+                durationMs: elapsedMilliseconds(startedAt),
+                outcome: 'error',
+                operationCount: 1,
+                errorCount: 1,
+                errorCodes: ['SERVICE_UNAVAILABLE'],
+            });
             return res.status(503).json(graphqlError(
                 'GraphQL service is unavailable',
                 'SERVICE_UNAVAILABLE',
@@ -60,8 +133,8 @@ const createGraphqlProxy = ({
         });
         forwardHeader(req, headers, 'cookie');
         forwardHeader(req, headers, 'x-organization-id');
-        forwardHeader(req, headers, 'x-request-id');
         forwardHeader(req, headers, 'x-csrf-token');
+        if (requestId) headers.set('x-request-id', requestId);
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
@@ -79,15 +152,45 @@ const createGraphqlProxy = ({
 
             res.status(upstream.status);
             const contentType = upstream.headers.get('content-type');
-            const requestId = upstream.headers.get('x-request-id');
+            const upstreamRequestId = upstream.headers.get('x-request-id');
             if (contentType) res.set('content-type', contentType);
-            if (requestId) res.set('x-request-id', requestId);
+            if (upstreamRequestId || requestId) {
+                res.set('x-request-id', upstreamRequestId || requestId);
+            }
 
             const responseBody = Buffer.from(await upstream.arrayBuffer());
+            const errorCodes = graphqlErrorCodes(responseBody);
+            if (upstream.status >= 400 && errorCodes.length === 0) {
+                errorCodes.push('UNKNOWN');
+            }
+            logOperation(logger, {
+                event: 'graphql_operation_completed',
+                layer: 'legacy_proxy',
+                transport: 'graphql_proxy',
+                requestId: upstreamRequestId || requestId,
+                ...operation,
+                statusCode: upstream.status,
+                durationMs: elapsedMilliseconds(startedAt),
+                outcome: errorCodes.length > 0 ? 'error' : 'success',
+                operationCount: 1,
+                errorCount: errorCodes.length > 0 ? 1 : 0,
+                errorCodes,
+            });
             return res.send(responseBody);
         } catch (error) {
-            logger.error('GraphQL upstream request failed', {
-                error: error?.name === 'AbortError' ? 'timeout' : error?.message,
+            logOperation(logger, {
+                event: 'graphql_operation_completed',
+                layer: 'legacy_proxy',
+                transport: 'graphql_proxy',
+                requestId,
+                ...operation,
+                statusCode: 502,
+                durationMs: elapsedMilliseconds(startedAt),
+                outcome: 'error',
+                operationCount: 1,
+                errorCount: 1,
+                errorCodes: ['SERVICE_UNAVAILABLE'],
+                failureReason: error?.name === 'AbortError' ? 'timeout' : 'upstream_failure',
             });
             return res.status(502).json(graphqlError(
                 'GraphQL service is unavailable',

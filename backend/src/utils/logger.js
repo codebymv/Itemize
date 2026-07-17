@@ -6,6 +6,8 @@
 const winston = require('winston');
 const crypto = require('crypto');
 
+const acceptedRequestId = /^[A-Za-z0-9._:-]{1,128}$/;
+
 // Create logger instance
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
@@ -37,8 +39,23 @@ const logger = winston.createLogger({
  * Adds request ID and logs request completion with timing
  */
 const requestLogger = (req, res, next) => {
-    req.requestId = crypto.randomUUID();
+    const existingRequestId = typeof req.requestId === 'string' && acceptedRequestId.test(req.requestId)
+        ? req.requestId
+        : null;
+    const suppliedRequestId = req.get('x-request-id');
+    const suppliedCorrelationId = req.get('x-correlation-id');
+    req.requestId = existingRequestId
+        || (typeof suppliedRequestId === 'string' && acceptedRequestId.test(suppliedRequestId)
+            ? suppliedRequestId
+            : null)
+        || (typeof suppliedCorrelationId === 'string' && acceptedRequestId.test(suppliedCorrelationId)
+            ? suppliedCorrelationId
+            : null)
+        || crypto.randomUUID();
+    req.id = req.requestId;
     req.logger = logger.child({ requestId: req.requestId });
+    res.setHeader('x-request-id', req.requestId);
+    res.setHeader('x-correlation-id', req.requestId);
     
     const start = Date.now();
     

@@ -91,6 +91,18 @@ Financial amounts use `Decimal`. Money-bearing objects include both `amount` and
 - Delete mutations return the deleted ID and a boolean outcome only when repeat behavior is defined; they do not return arbitrary REST messages.
 - Resolver-level failures use GraphQL errors rather than `{ success, error }` payload unions unless partial success is a deliberate domain behavior.
 
+## Operational event contract
+
+Every GraphQL request emits a metric-ready `graphql_operation_completed` event at the NestJS execution layer. Requests entering through the legacy origin emit a second event at the proxy layer with the same validated request ID. The event contains only:
+
+- `layer` and `transport` so proxy and direct execution can be separated;
+- request ID, resolved operation name and type, HTTP status, and numeric duration in milliseconds;
+- `operationCount: 1`, an operation-level `errorCount` of zero or one, and deduplicated stable GraphQL error codes.
+
+GraphQL errors returned with HTTP 200 still increment `errorCount`. Server failures log at error level, characterized client/domain failures at warning level, and successful operations at info level. Request IDs accept only 1-128 ASCII letters, digits, dots, underscores, colons, and hyphens; unsafe values are replaced with a UUID and the canonical value is returned in both request/correlation response headers.
+
+The event never includes GraphQL source text, variables, response data, cookies, CSRF values, contact fields, user email, SQL, or exception messages. Counts and latency percentiles are derived from these fixed-cardinality events in the deployment logging system rather than kept in process memory.
+
 ## Executable gates
 
 `backend/src/contracts/graphql-contract.js` currently proves:
@@ -101,5 +113,7 @@ Financial amounts use `Decimal`. Money-bearing objects include both `amount` and
 - page input is strict and produces a deterministic SQL offset;
 - canonical `PageInfo` names and empty-page behavior are stable;
 - decimal strings preserve PostgreSQL precision and malformed/non-finite values fail.
+
+The legacy proxy and NestJS plugin additionally prove correlation-ID forwarding, named query/mutation classification, numeric latency, operation/error counters, stable error-code severity, and omission of variables from logs.
 
 Each NestJS exception filter, pagination input, and custom scalar must run these shared cases plus resolver-specific cases before the first dual-parity slice.

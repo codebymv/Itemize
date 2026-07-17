@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from 'express';
 import { RequestContextService } from './request-context.service';
 
 const acceptedRequestId = /^[A-Za-z0-9._:-]{1,128}$/;
+export type RequestWithRequestId = Request & { requestId?: string };
 
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
@@ -16,6 +17,7 @@ export class RequestContextMiddleware implements NestMiddleware {
         ? supplied
         : randomUUID();
 
+    (request as RequestWithRequestId).requestId = requestId;
     response.setHeader('x-request-id', requestId);
     this.requestContext.run({ requestId }, next);
   }

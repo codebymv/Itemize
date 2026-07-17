@@ -1,34 +1,20 @@
 const { v4: uuid } = require('uuid');
-const { logger } = require('../utils/logger');
+
+const acceptedRequestId = /^[A-Za-z0-9._:-]{1,128}$/;
+
+const safeHeader = (value) => (
+  typeof value === 'string' && acceptedRequestId.test(value) ? value : null
+);
 
 const correlationIdMiddleware = (req, res, next) => {
-  req.id = req.headers['x-request-id'] || req.headers['x-correlation-id'] || uuid();
-  req.start = Date.now();
+  const requestId = safeHeader(req.headers['x-request-id'])
+    || safeHeader(req.headers['x-correlation-id'])
+    || uuid();
+  req.id = requestId;
+  req.requestId = requestId;
   
-  res.setHeader('X-Request-Id', req.id);
-  res.setHeader('X-Correlation-ID', req.id);
-  
-  const originalMeta = { ...logger.defaultMeta };
-  
-  logger.defaultMeta = {
-    ...originalMeta,
-    correlationId: req.id,
-    path: req.path,
-    method: req.method,
-  };
-  
-  res.on('finish', () => {
-    const duration = Date.now() - req.start;
-    logger.info('Request completed', {
-      correlationId: req.id,
-      path: req.path,
-      method: req.method,
-      status: res.statusCode,
-      duration,
-    });
-    
-    logger.defaultMeta = originalMeta;
-  });
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Correlation-ID', requestId);
   
   next();
 };

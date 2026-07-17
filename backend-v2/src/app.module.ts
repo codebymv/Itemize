@@ -12,8 +12,15 @@ import { DatabaseModule } from './database/database.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { createGraphqlObservabilityPlugin } from './observability/graphql-observability.plugin';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
 import { RequestContextModule } from './request-context/request-context.module';
+
+// Apollo's conditional exports expose distinct ESM/CJS private HeaderMap types to
+// ts-jest even though the plugin is runtime-compatible with Nest's Apollo driver.
+const observabilityPlugins = [
+  createGraphqlObservabilityPlugin(),
+] as unknown as NonNullable<ApolloDriverConfig['plugins']>;
 
 @Module({
   imports: [
@@ -31,6 +38,7 @@ import { RequestContextModule } from './request-context/request-context.module';
       graphiql: process.env.NODE_ENV !== 'production',
       context: ({ req, res }: { req: Request; res: Response }) => ({ req, res }),
       formatError: formatItemizeGraphqlError,
+      plugins: observabilityPlugins,
     }),
   ],
   providers: [
