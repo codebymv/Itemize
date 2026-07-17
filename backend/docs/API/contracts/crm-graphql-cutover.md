@@ -1,6 +1,6 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 1 contact CRUD, activities, and bounded related content implemented and staging-rehearsed; aggregate contact profile implemented with staging operation gate pending; broader CRM characterization continues
+**Status:** Phase 1 contact CRUD, activities, bounded related content, and aggregate contact profile implemented and staging-rehearsed; broader CRM characterization continues
 
 **Evidence date:** 2026-07-17
 
@@ -156,6 +156,8 @@ The activity transport and rollback gate passed on 2026-07-17 against GraphQL de
 
 The related-content transport and rollback gate passed on 2026-07-17 against GraphQL deployment `5426037f-c308-4f0e-977f-25f6e2d13623` through backend deployment `a954a6c2-e165-4611-9924-c24ca3dbb68e`. A disposable verified account signed in through the real credential form, created a contact, and opened its Related Content tab. With `VITE_CONTACT_CONTENT_GRAPHQL` enabled, the browser rendered one linked list, note, and whiteboard; proxy request `5b268fd0-34fa-405c-80a4-d72b36f80abb` recorded `ContactContent` as HTTP `200` with zero errors. Disabling only the content flag retained the same session and rows and rendered the identical collections through `GET /api/contacts/69/content` (`200`) without a later `ContactContent` operation. Rollback required no data repair. Transactional cleanup reported zero remaining fixture accounts, temporary localhost CORS was removed, and backend deployment `a82a6554-0a4c-4021-80af-5a221ca4a834` restored clean current source. The content flag remains disabled in deployed builds and production was untouched.
 
+The aggregate-profile operation gate passed on 2026-07-17 against GraphQL deployment `95142285-8705-49c6-b6ac-781230d8bf6e` through the retained legacy origin. A complete disposable profile populated all nine child domains. GraphQL request `39666ef1-4b7e-49af-8c4f-d5ed22e5c3ac` returned HTTP `200`, all sections `AVAILABLE`, one row per section, and no truncation. The parallel REST request returned HTTP `200` while reproducing the legacy payment/list masked failures; GraphQL returned the current-schema payment and direct linked-list rows. Outsider request `0bebcf0d-1360-4b31-adef-f056b2f1008f` returned `NOT_FOUND`. Cleanup removed both disposable organizations and left zero fixture users. Readiness remained `ready`, no browser transport flag was added because the endpoint has no current frontend consumer, and production was untouched.
+
 The CRM slice is not ready for traffic until:
 
 1. contact/deal tag arrays, tag rows, and junction tables are reconciled behind one canonical model;
@@ -164,4 +166,4 @@ The CRM slice is not ready for traffic until:
 4. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
 5. form notifications and CRM workflow events use the durable outbox/worker;
 6. CSV boundaries and remaining profile failure-injection/consumer behavior have complete tests;
-7. remaining bulk-contact, activity/profile, pipeline, and form browser journeys pass staging semantic-parity and rollback tests.
+7. remaining pipeline and form browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.
