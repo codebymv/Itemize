@@ -1,6 +1,6 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 1 contact CRUD implemented locally; broader CRM characterization continues
+**Status:** Phase 1 contact CRUD implemented and staging-rehearsed; broader CRM characterization continues
 
 **Evidence date:** 2026-07-17
 
@@ -47,7 +47,7 @@ A contact requires at least one of first name, last name, email, or company. Sta
 
 Email is not currently unique within an organization. Do not silently make it a universal identity key: public-form reuse, CSV duplicate handling, messaging recipients, and manually duplicated contacts need an explicit product decision. Email comparisons used for form reuse are case-insensitive.
 
-GraphQL update inputs distinguish omitted from explicit null. The implemented and tested target rule is: omission preserves; explicit null or an empty string clears nullable scalar fields; explicit null resets JSON objects to `{}` and tags to `[]`; source and status cannot be null. The legacy partial `PUT` behavior remains inconsistent, so the frontend mutation flag is independent from the read flag and REST remains the default rollback path until the staging semantic rehearsal passes.
+GraphQL update inputs distinguish omitted from explicit null. The implemented and tested target rule is: omission preserves; explicit null or an empty string clears nullable scalar fields; explicit null resets JSON objects to `{}` and tags to `[]`; source and status cannot be null. The legacy partial `PUT` behavior remains inconsistent, so the frontend mutation flag is independent from the read flag. REST remains the default rollback path until the staging observation gate passes.
 
 ### Lists and aggregate profile
 
@@ -146,7 +146,9 @@ Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication a
 
 The NestJS `ContactsModule` now implements `contacts`, `contact`, `createContact`, `updateContact`, and `deleteContact`. Fresh-PostgreSQL tests prove dual REST/GraphQL list membership, deterministic ordering, pagination totals, filters, detail projection, tenant-private missing-resource behavior, invalid-ID rejection, and suppression of corrupt cross-tenant user projections. Mutation cases additionally prove double-submit CSRF rejection/success, normalized creation, serialized plan enforcement, assignee membership, omitted-versus-null updates, one durable trigger only for an actual supplied-field change, status activity creation, foreign-tenant privacy, and exact deletion confirmation. Create/update domain state, workflow triggers, and activities share transactions.
 
-The shared frontend contact API has separate strict opt-ins for reads and mutations, preserves the existing consumer shape, fetches and forwards CSRF for GraphQL writes, surfaces GraphQL error messages in contact modals, and defaults both paths to REST. All 70 frontend cases pass. The 2026-07-16 staging rehearsals passed authenticated browser list, detail, search, inactive-status, and second-page reads through the legacy-origin `/graphql` proxy, plus equivalent REST rollback. Explicit organization headers proved isolation between two temporary staging organizations. On 2026-07-17, the deployed workspace selector proved the same isolation through user-visible selection and persisted reload behavior under GraphQL and REST reads. All temporary fixtures were removed. The mutation flag remains disabled in deployed builds, mutation browser behavior has not yet been rehearsed on staging, and no production traffic uses these operations.
+The shared frontend contact API has separate strict opt-ins for reads and mutations, preserves the existing consumer shape, fetches and forwards CSRF for GraphQL writes, surfaces GraphQL error messages in contact modals, and defaults both paths to REST. All 70 frontend cases pass. The 2026-07-16 staging rehearsals passed authenticated browser list, detail, search, inactive-status, and second-page reads through the legacy-origin `/graphql` proxy, plus equivalent REST rollback. Explicit organization headers proved isolation between two temporary staging organizations. On 2026-07-17, the deployed workspace selector proved the same isolation through user-visible selection and persisted reload behavior under GraphQL and REST reads.
+
+The 2026-07-17 mutation rehearsal used a disposable staging account and real credential login against GraphQL deployment `239de591-6f1a-4be7-b10a-08a59070cc15` through backend deployment `095eb5e5-a5c4-4da4-94e8-686fb1e842f6`. Browser create, edit, activity display, and delete passed with GraphQL writes and double-submit CSRF. PostgreSQL showed the expected create/update workflow triggers. Disabling only the mutation flag repeated create/edit/delete through REST while contact reads remained on GraphQL, proving rollback without data repair. Cleanup left zero temporary users, organizations, contacts, or triggers. The mutation flag remains disabled in deployed builds, mutation-specific observability and an observation window remain required, and no production traffic uses these operations.
 
 The CRM slice is not ready for traffic until:
 
@@ -156,4 +158,4 @@ The CRM slice is not ready for traffic until:
 4. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
 5. form notifications and CRM workflow events use the durable outbox/worker;
 6. activities, related content, bulk success paths, CSV boundaries, and profile partial failures have complete tests;
-7. credential login, contact mutation/rollback, and remaining pipeline/form browser journeys pass staging semantic-parity tests.
+7. contact mutation observability and its staging observation window complete, and remaining pipeline/form browser journeys pass staging semantic-parity tests.

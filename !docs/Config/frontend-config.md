@@ -186,6 +186,10 @@ VITE_GRAPHQL_URL=http://localhost:3100/graphql
 # setting this back to false is the consumer rollback.
 VITE_CONTACT_READS_GRAPHQL=false
 
+# Contact create/update/delete independently default to REST. Enable only after
+# the write-side CSRF and semantic-parity gates pass in the target environment.
+VITE_CONTACT_MUTATIONS_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 
