@@ -811,6 +811,75 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(privateResult.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
+  it('matches bounded related content and keeps foreign contacts private', async () => {
+    const contactId = fixtures[1].id;
+    await Promise.all([
+      pool.query(
+        `INSERT INTO lists (user_id, title, category, items, contact_id, created_at)
+         VALUES ($1, 'Linked list', 'General', '[]'::jsonb, $2, NOW())`,
+        [memberId, contactId],
+      ),
+      pool.query(
+        `INSERT INTO notes (user_id, title, category, content, contact_id, created_at)
+         VALUES ($1, 'Linked note', 'General', 'Body', $2, NOW())`,
+        [memberId, contactId],
+      ),
+      pool.query(
+        `INSERT INTO whiteboards (user_id, title, category, canvas_data, contact_id, created_at)
+         VALUES ($1, 'Linked board', 'General', '{}'::jsonb, $2, NOW())`,
+        [memberId, contactId],
+      ),
+    ]);
+
+    const legacy = await request(legacyApp)
+      .get(`/api/contacts/${contactId}/content`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    const target = await graphql(
+      memberToken,
+      organizationId,
+      `query ContactContent($contactId: Int!) {
+        contactContent(contactId: $contactId) {
+          lists { nodes { id title category createdAt } total hasMore }
+          notes { nodes { id title category createdAt } total hasMore }
+          whiteboards { nodes { id title category createdAt } total hasMore }
+        }
+      }`,
+      { contactId },
+    ).expect(200);
+
+    expect(target.body.errors).toBeUndefined();
+    for (const collection of ['lists', 'notes', 'whiteboards'] as const) {
+      expect(target.body.data.contactContent[collection]).toMatchObject({
+        total: legacy.body[collection].length,
+        hasMore: false,
+      });
+      expect(target.body.data.contactContent[collection].nodes).toEqual(
+        legacy.body[collection].map((item: {
+          id: number;
+          title: string;
+          category: string;
+          created_at: string;
+        }) => ({
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          createdAt: new Date(item.created_at).toISOString(),
+        })),
+      );
+    }
+
+    const privateResult = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      'query Content($contactId: Int!) { contactContent(contactId: $contactId) { lists { total } } }',
+      { contactId },
+    ).expect(200);
+    expect(privateResult.body.data).toBeNull();
+    expect(privateResult.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
   it('deletes an organization-owned contact and returns an exact confirmation', async () => {
     const target = await graphqlMutation(
       memberToken,

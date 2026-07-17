@@ -8,6 +8,7 @@ import {
   deleteContact,
   getContact,
   getContactActivities,
+  getContactContent,
   getContacts,
   updateContact,
 } from './contactsApi';
@@ -19,12 +20,14 @@ import {
   deleteContactViaGraphql,
   getContactViaGraphql,
   getContactActivitiesViaGraphql,
+  getContactContentViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
   isContactGraphqlActivitiesEnabled,
   isContactGraphqlBulkMutationsEnabled,
+  isContactGraphqlContentEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -44,6 +47,7 @@ vi.mock('./contactsGraphql', () => ({
   bulkUpdateContactsViaGraphql: vi.fn(),
   getContactViaGraphql: vi.fn(),
   getContactActivitiesViaGraphql: vi.fn(),
+  getContactContentViaGraphql: vi.fn(),
   getContactsViaGraphql: vi.fn(),
   createContactViaGraphql: vi.fn(),
   updateContactViaGraphql: vi.fn(),
@@ -53,6 +57,7 @@ vi.mock('./contactsGraphql', () => ({
 vi.mock('./graphqlClient', () => ({
   isContactGraphqlActivitiesEnabled: vi.fn(),
   isContactGraphqlBulkMutationsEnabled: vi.fn(),
+  isContactGraphqlContentEnabled: vi.fn(),
   isContactGraphqlReadsEnabled: vi.fn(),
   isContactGraphqlMutationsEnabled: vi.fn(),
 }));
@@ -64,6 +69,7 @@ describe('contacts API read transport', () => {
     vi.mocked(isContactGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlActivitiesEnabled).mockReturnValue(false);
+    vi.mocked(isContactGraphqlContentEnabled).mockReturnValue(false);
   });
 
   it('uses REST by default and retains the organization header contract', async () => {
@@ -215,5 +221,23 @@ describe('contacts API read transport', () => {
     expect(addContactActivityViaGraphql).toHaveBeenCalledWith(11, input, 42);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('keeps contact content on REST unless its independent flag is enabled', async () => {
+    const content = { lists: [], notes: [], whiteboards: [] };
+    vi.mocked(api.get).mockResolvedValue({ data: content });
+
+    await expect(getContactContent(11, 42)).resolves.toEqual(content);
+    expect(api.get).toHaveBeenCalledWith('/api/contacts/11/content', {
+      headers: { 'x-organization-id': '42' },
+    });
+    expect(getContactContentViaGraphql).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    vi.mocked(isContactGraphqlContentEnabled).mockReturnValue(true);
+    vi.mocked(getContactContentViaGraphql).mockResolvedValue(content);
+    await expect(getContactContent(11, 42)).resolves.toEqual(content);
+    expect(getContactContentViaGraphql).toHaveBeenCalledWith(11, 42);
+    expect(api.get).not.toHaveBeenCalled();
   });
 });

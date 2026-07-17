@@ -51,6 +51,45 @@ export class ContactActivityPage {
 }
 
 @ObjectType()
+export class ContactContentItem {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => String)
+  title: string;
+
+  @Field(() => String, { nullable: true })
+  category: string | null;
+
+  @Field(() => GraphQLISODateTime)
+  createdAt: Date;
+}
+
+@ObjectType()
+export class ContactContentCollection {
+  @Field(() => [ContactContentItem])
+  nodes: ContactContentItem[];
+
+  @Field(() => Int)
+  total: number;
+
+  @Field(() => Boolean)
+  hasMore: boolean;
+}
+
+@ObjectType()
+export class ContactContent {
+  @Field(() => ContactContentCollection)
+  lists: ContactContentCollection;
+
+  @Field(() => ContactContentCollection)
+  notes: ContactContentCollection;
+
+  @Field(() => ContactContentCollection)
+  whiteboards: ContactContentCollection;
+}
+
+@ObjectType()
 export class Contact {
   @Field(() => Int)
   id: number;

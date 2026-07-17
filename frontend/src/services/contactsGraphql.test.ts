@@ -8,6 +8,7 @@ import {
   deleteContactViaGraphql,
   getContactViaGraphql,
   getContactActivitiesViaGraphql,
+  getContactContentViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
@@ -15,6 +16,7 @@ import {
   GraphqlRequestError,
   isContactGraphqlActivitiesEnabled,
   isContactGraphqlBulkMutationsEnabled,
+  isContactGraphqlContentEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -104,6 +106,13 @@ describe('contact GraphQL consumer', () => {
     expect(isContactGraphqlActivitiesEnabled()).toBe(false);
     vi.stubEnv('VITE_CONTACT_ACTIVITIES_GRAPHQL', 'true');
     expect(isContactGraphqlActivitiesEnabled()).toBe(true);
+  });
+
+  it('keeps GraphQL contact content independently disabled by default', () => {
+    vi.stubEnv('VITE_CONTACT_CONTENT_GRAPHQL', 'false');
+    expect(isContactGraphqlContentEnabled()).toBe(false);
+    vi.stubEnv('VITE_CONTACT_CONTENT_GRAPHQL', 'true');
+    expect(isContactGraphqlContentEnabled()).toBe(true);
   });
 
   it('maps list inputs and the GraphQL page into the existing REST-shaped contract', async () => {
@@ -340,5 +349,56 @@ describe('contact GraphQL consumer', () => {
       'x-organization-id': '42',
     });
     expect(fetchCsrfToken).toHaveBeenCalledOnce();
+  });
+
+  it('maps bounded contact content into the existing REST-shaped contract', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        contactContent: {
+          lists: {
+            nodes: [{
+              id: 3,
+              title: 'Priority',
+              category: null,
+              createdAt: '2026-01-03T00:00:00.000Z',
+            }],
+            total: 1,
+            hasMore: false,
+          },
+          notes: { nodes: [], total: 0, hasMore: false },
+          whiteboards: { nodes: [], total: 0, hasMore: false },
+        },
+      },
+    }));
+
+    await expect(getContactContentViaGraphql(11, 42)).resolves.toEqual({
+      lists: [{
+        id: 3,
+        title: 'Priority',
+        category: '',
+        created_at: '2026-01-03T00:00:00.000Z',
+      }],
+      notes: [],
+      whiteboards: [],
+    });
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body)).variables).toEqual({ contactId: 11 });
+    expect(init?.headers).toMatchObject({ 'x-organization-id': '42' });
+  });
+
+  it('fails closed instead of silently truncating contact content', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        contactContent: {
+          lists: { nodes: [], total: 101, hasMore: true },
+          notes: { nodes: [], total: 0, hasMore: false },
+          whiteboards: { nodes: [], total: 0, hasMore: false },
+        },
+      },
+    }));
+
+    await expect(getContactContentViaGraphql(11, 42)).rejects.toMatchObject({
+      code: 'CONTENT_PAGE_REQUIRED',
+    });
   });
 });

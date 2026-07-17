@@ -12,12 +12,14 @@ import {
   deleteContactViaGraphql,
   getContactViaGraphql,
   getContactActivitiesViaGraphql,
+  getContactContentViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
   isContactGraphqlActivitiesEnabled,
   isContactGraphqlBulkMutationsEnabled,
+  isContactGraphqlContentEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -249,19 +251,23 @@ export const addContactActivity = async (
 };
 
 // Related content
-export const getContactContent = async (contactId: number, organizationId?: number): Promise<{
+export type ContactContentResponse = {
   lists: Array<{ id: number; title: string; category: string; created_at: string }>;
   notes: Array<{ id: number; title: string; category: string; created_at: string }>;
   whiteboards: Array<{ id: number; title: string; category: string; created_at: string }>;
-}> => {
+};
+
+export const getContactContent = async (
+  contactId: number,
+  organizationId?: number,
+): Promise<ContactContentResponse> => {
+  if (isContactGraphqlContentEnabled()) {
+    return getContactContentViaGraphql(contactId, organizationId);
+  }
   const response = await api.get(`/api/contacts/${contactId}/content`, {
     headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
   });
-  return unwrapResponse<{
-    lists: Array<{ id: number; title: string; category: string; created_at: string }>;
-    notes: Array<{ id: number; title: string; category: string; created_at: string }>;
-    whiteboards: Array<{ id: number; title: string; category: string; created_at: string }>;
-  }>(response.data);
+  return unwrapResponse<ContactContentResponse>(response.data);
 };
 
 // CSV Import/Export

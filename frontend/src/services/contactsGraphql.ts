@@ -7,6 +7,7 @@ import type {
 } from '@/types';
 import type {
   BulkUpdateData,
+  ContactContentResponse,
   ContactsQueryParams,
   CreateContactData,
 } from './contactsApi';
@@ -56,6 +57,19 @@ type GraphqlContactActivity = {
   content: unknown;
   metadata: unknown;
   createdAt: string;
+};
+
+type GraphqlContactContentItem = {
+  id: number;
+  title: string;
+  category: string | null;
+  createdAt: string;
+};
+
+type GraphqlContactContentCollection = {
+  nodes: GraphqlContactContentItem[];
+  total: number;
+  hasMore: boolean;
 };
 
 const contactFields = `
@@ -161,6 +175,16 @@ const addContactActivityMutation = `
   mutation AddContactActivity($contactId: Int!, $input: CreateContactActivityInput!) {
     addContactActivity(contactId: $contactId, input: $input) {
       ${contactActivityFields}
+    }
+  }
+`;
+
+const contactContentQuery = `
+  query ContactContent($contactId: Int!) {
+    contactContent(contactId: $contactId) {
+      lists { nodes { id title category createdAt } total hasMore }
+      notes { nodes { id title category createdAt } total hasMore }
+      whiteboards { nodes { id title category createdAt } total hasMore }
     }
   }
 `;
@@ -421,4 +445,38 @@ export const addContactActivityViaGraphql = async (
     addContactActivity: GraphqlContactActivity;
   }, typeof variables>(addContactActivityMutation, variables, organizationId);
   return mapContactActivity(data.addContactActivity);
+};
+
+export const getContactContentViaGraphql = async (
+  contactId: number,
+  organizationId?: number,
+): Promise<ContactContentResponse> => {
+  const variables = { contactId };
+  const data = await graphqlRequest<{
+    contactContent: {
+      lists: GraphqlContactContentCollection;
+      notes: GraphqlContactContentCollection;
+      whiteboards: GraphqlContactContentCollection;
+    };
+  }, typeof variables>(contactContentQuery, variables, organizationId);
+  const collections = data.contactContent;
+  if (collections.lists.hasMore || collections.notes.hasMore || collections.whiteboards.hasMore) {
+    throw new GraphqlRequestError(
+      'Contact content exceeds the bounded GraphQL preview',
+      200,
+      'CONTENT_PAGE_REQUIRED',
+    );
+  }
+  const map = (collection: GraphqlContactContentCollection) =>
+    collection.nodes.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category ?? '',
+      created_at: item.createdAt,
+    }));
+  return {
+    lists: map(collections.lists),
+    notes: map(collections.notes),
+    whiteboards: map(collections.whiteboards),
+  };
 };
