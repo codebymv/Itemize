@@ -94,6 +94,7 @@ const { runAllIndexMigrations } = require('./db_indexes_migrations');
 
 // Import Normalization migrations (schema improvements)
 const { runAllNormalizationMigrations } = require('./db_normalization_migrations');
+const { runCanonicalTagModelMigration } = require('./db_tag_canonical_migrations');
 
 // Import Subscription migrations (feature gating and billing)
 const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
@@ -515,6 +516,7 @@ const initializeDatabase = async (pool) => {
     // Performance and schema optimization (run last)
     await runMigrationOnce(pool, 'optimization_indexes', runAllIndexMigrations);
     await runMigrationOnce(pool, 'optimization_normalization', runAllNormalizationMigrations);
+    await runMigrationOnce(pool, 'canonical_tag_model_v1', runCanonicalTagModelMigration);
     
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);

@@ -1,6 +1,6 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 1 contact CRUD, activities, bounded related content, and aggregate contact profile implemented and staging-rehearsed; broader CRM characterization continues
+**Status:** Phase 1 contact CRUD, activities, bounded related content, aggregate contact profile, and canonical tag persistence implemented; broader CRM characterization continues
 
 **Evidence date:** 2026-07-17
 
@@ -68,15 +68,15 @@ CSV export remains authenticated HTTP because it is a streamed file response. Im
 
 ## Tag model
 
-Three representations coexist:
+Three representations remain available during the compatibility window:
 
-1. canonical-looking rows in `tags`;
-2. freeform strings in `contacts.tags` and `deals.tags`;
-3. normalized `contact_tags` and `deal_tags` junction tables used by campaign/segment code.
+1. organization-owned rows in `tags` are the canonical tag identity;
+2. `contact_tags` and `deal_tags` are the canonical membership stores used by campaign/segment code;
+3. strings in `contacts.tags` and `deals.tags` are compatibility projections for retained REST, UI, import, form, and automation writers.
 
-These stores can disagree. The NestJS schema must choose canonical tag IDs and migrate/reconcile arrays and junction rows before campaign targeting or workflow `tag_added` semantics can be trusted. Freeform suggestions may remain a separate field only if that distinction is intentional.
+Migration `canonical_tag_model_v1` repairs historical drift without discarding either side: it merges case-insensitive duplicate rows to the lowest stable ID, removes cross-tenant junction corruption, creates canonical rows and junctions for array-only values, and projects junction-only membership into the arrays. A normalized organization/name unique index is the database concurrency boundary. Blank names are rejected and retained writers are bounded to 100 characters.
 
-Legacy tag create/rename now serializes case-insensitive uniqueness. Rename plus propagation to contact arrays, and delete plus optional removal, execute transactionally. Database uniqueness remains case-sensitive, so the target migration needs a case-insensitive unique index on normalized name.
+Database triggers keep both directions synchronized while legacy writers remain: array writes normalize whitespace/case to canonical spelling and update junctions; direct junction writes update arrays; tag rename preserves IDs and propagates to contact and deal projections; canonical deletion always removes contact and deal membership. Cross-organization junction writes fail at the database boundary. The retained tag list now counts junction membership set-wise and suggestions come from canonical rows. Fresh PostgreSQL proves migration repair, case-insensitive uniqueness, array/junction projection, contact/deal rename and deletion, tenant denial, and immediate campaign/segment evaluator visibility.
 
 ## Pipelines and deals
 
@@ -142,7 +142,7 @@ Contact reuse/creation and submission now share one transaction. Concurrent subm
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, tag propagation/removal and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits.
+Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, canonical tag drift repair/projection/tenancy and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits.
 
 The NestJS `ContactsModule` now implements `contacts`, `contact`, `createContact`, `updateContact`, `deleteContact`, `bulkUpdateContacts`, `bulkDeleteContacts`, `contactActivities`, `addContactActivity`, `contactContent`, and `contactProfile`. Fresh-PostgreSQL tests prove dual REST/GraphQL list membership, deterministic ordering, pagination totals, filters, detail projection, tenant-private missing-resource behavior, invalid-ID rejection, and suppression of corrupt cross-tenant user projections. Mutation cases additionally prove double-submit CSRF rejection/success, normalized creation, serialized plan enforcement, assignee membership, omitted-versus-null updates, one durable trigger only for an actual supplied-field change, status activity creation, foreign-tenant privacy, and exact deletion confirmation. Bulk cases prove the 100-ID boundary, request-order deduplication, mixed-tenant partial results, atomic assignment denial, idempotent tag/status updates, transactionally coupled contact/tag workflows and status activities, and dependent-activity cleanup on deletion. Activity cases prove newest-first deterministic paging, enum filtering, user projection, structured content/metadata persistence, CSRF-protected writes, contact-lock-plus-insert atomicity, REST parity, and cross-tenant privacy. Related-content cases prove REST parity for linked lists, notes, and whiteboards, stable newest-first ordering, tenant-private parent lookup, an explicit 100-row collection bound, and total/truncation metadata. Aggregate-profile cases compose invoices, signatures, payments, activities, notes, lists, communications, tasks, and bookings with explicit section health, prove current-schema repairs for two silently broken legacy children, and return `NOT_FOUND` across tenant boundaries. Create/update domain state, workflow triggers, and activities share transactions.
 
@@ -158,12 +158,11 @@ The related-content transport and rollback gate passed on 2026-07-17 against Gra
 
 The aggregate-profile operation gate passed on 2026-07-17 against GraphQL deployment `95142285-8705-49c6-b6ac-781230d8bf6e` through the retained legacy origin. A complete disposable profile populated all nine child domains. GraphQL request `39666ef1-4b7e-49af-8c4f-d5ed22e5c3ac` returned HTTP `200`, all sections `AVAILABLE`, one row per section, and no truncation. The parallel REST request returned HTTP `200` while reproducing the legacy payment/list masked failures; GraphQL returned the current-schema payment and direct linked-list rows. Outsider request `0bebcf0d-1360-4b31-adef-f056b2f1008f` returned `NOT_FOUND`. Cleanup removed both disposable organizations and left zero fixture users. Readiness remained `ready`, no browser transport flag was added because the endpoint has no current frontend consumer, and production was untouched.
 
-The CRM slice is not ready for traffic until:
+The broader CRM slice is not ready for traffic until:
 
-1. contact/deal tag arrays, tag rows, and junction tables are reconciled behind one canonical model;
-2. JSON pipeline stages and the normalized stage table have one source of truth plus database constraints;
-3. contact email identity policy is selected and dual-tested across manual creation, forms, imports, and messaging;
-4. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
-5. form notifications and CRM workflow events use the durable outbox/worker;
-6. CSV boundaries and remaining profile failure-injection/consumer behavior have complete tests;
-7. remaining pipeline and form browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.
+1. JSON pipeline stages and the normalized stage table have one source of truth plus database constraints;
+2. contact email identity policy is selected and dual-tested across manual creation, forms, imports, and messaging;
+3. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
+4. form notifications and CRM workflow events use the durable outbox/worker;
+5. CSV boundaries and remaining profile failure-injection/consumer behavior have complete tests;
+6. remaining tag, pipeline, and form GraphQL/browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.

@@ -8,6 +8,7 @@ const graphqlRoot = path.resolve(backendRoot, '..', 'backend-v2');
 const composeFile = path.join(backendRoot, 'docker-compose.integration.yml');
 const port = process.env.ITEMIZE_TEST_DB_PORT || '55432';
 const projectName = process.env.ITEMIZE_INTEGRATION_PROJECT || `itemize-integration-${process.pid}`;
+const requestedLegacyJestArgs = process.argv.slice(2);
 
 function buildTestEnvironment(environment = process.env) {
     return {
@@ -80,6 +81,7 @@ async function main() {
             '--testTimeout=60000',
             '--globalSetup=./src/__tests__/integration/global-setup.js',
             '--globalTeardown=./src/__tests__/integration/global-teardown.js',
+            ...requestedLegacyJestArgs,
         ]);
 
         await run(process.execPath, [

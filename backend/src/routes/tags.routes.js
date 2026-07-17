@@ -23,25 +23,17 @@ module.exports = (pool, authenticateJWT) => {
     try {
       const tagsWithCounts = await withDbClient(pool, async (client) => {
         const result = await client.query(`
-        SELECT ${tagColumns('t')},
-               (SELECT COUNT(*) FROM contacts WHERE $1 = ANY(tags)) as contact_count
-        FROM tags t
-        WHERE t.organization_id = $2
-        ORDER BY t.name ASC
-      `, [null, req.organizationId]); // Note: This count query is simplified, see below for proper implementation
-      
-        // Get tag usage counts properly
-        const counts = await Promise.all(result.rows.map(async (tag) => {
-          const countResult = await client.query(`
-          SELECT COUNT(*) FROM contacts 
-          WHERE organization_id = $1 AND $2 = ANY(tags)
-        `, [req.organizationId, tag.name]);
-          return {
-            ...tag,
-            contact_count: parseInt(countResult.rows[0].count)
-          };
-        }));
-        return counts;
+          SELECT ${tagColumns('t')},
+                 COUNT(DISTINCT ct.contact_id)::int AS contact_count,
+                 COUNT(DISTINCT dt.deal_id)::int AS deal_count
+          FROM tags t
+          LEFT JOIN contact_tags ct ON ct.tag_id = t.id
+          LEFT JOIN deal_tags dt ON dt.tag_id = t.id
+          WHERE t.organization_id = $1
+          GROUP BY t.id
+          ORDER BY lower(t.name) ASC, t.id ASC
+        `, [req.organizationId]);
+        return result.rows;
       });
 
       return sendSuccess(res, tagsWithCounts);
@@ -58,6 +50,9 @@ module.exports = (pool, authenticateJWT) => {
 
       if (!name || name.trim().length === 0) {
         return sendBadRequest(res, 'Tag name is required', 'name');
+      }
+      if (name.trim().length > 100) {
+        return sendBadRequest(res, 'Tag name cannot exceed 100 characters', 'name');
       }
 
       const data = await withTransaction(pool, async (client) => {
@@ -98,6 +93,13 @@ module.exports = (pool, authenticateJWT) => {
       const { id } = req.params;
       const { name, color } = req.body;
 
+      if (name !== undefined && (!name || name.trim().length === 0)) {
+        return sendBadRequest(res, 'Tag name is required', 'name');
+      }
+      if (name?.trim().length > 100) {
+        return sendBadRequest(res, 'Tag name cannot exceed 100 characters', 'name');
+      }
+
       const data = await withTransaction(pool, async (client) => {
         await client.query('SELECT pg_advisory_xact_lock($1)', [req.organizationId]);
 
@@ -133,15 +135,6 @@ module.exports = (pool, authenticateJWT) => {
         RETURNING ${tagColumns()}
       `, [name?.trim(), color, id, req.organizationId]);
 
-        // If name changed, update all contacts with this tag
-        if (name && name.trim() !== oldName) {
-          await client.query(`
-          UPDATE contacts 
-          SET tags = array_replace(tags, $1, $2)
-          WHERE organization_id = $3 AND $1 = ANY(tags)
-        `, [oldName, name.trim(), req.organizationId]);
-        }
-
         return { error: null, status: 200, result };
       });
 
@@ -163,8 +156,6 @@ module.exports = (pool, authenticateJWT) => {
   router.delete('/:id', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const { id } = req.params;
-      const { removeFromContacts } = req.query;
-
       const data = await withTransaction(pool, async (client) => {
         // Get tag to delete
         const tagResult = await client.query(
@@ -176,18 +167,8 @@ module.exports = (pool, authenticateJWT) => {
           return { error: 'Tag not found', status: 404 };
         }
 
-        const tagName = tagResult.rows[0].name;
-
-        // Remove tag from all contacts if requested
-        if (removeFromContacts === 'true') {
-          await client.query(`
-          UPDATE contacts 
-          SET tags = array_remove(tags, $1)
-          WHERE organization_id = $2 AND $1 = ANY(tags)
-        `, [tagName, req.organizationId]);
-        }
-
-        // Delete the tag
+        // Canonical deletion always removes membership. The database projects
+        // that change to contact/deal compatibility arrays transactionally.
         await client.query(
           'DELETE FROM tags WHERE id = $1 AND organization_id = $2',
           [id, req.organizationId]
@@ -214,10 +195,10 @@ module.exports = (pool, authenticateJWT) => {
   router.get('/suggestions', authenticateJWT, requireOrganization, async (req, res) => {
     try {
       const result = await withDbClient(pool, async (client) => client.query(`
-        SELECT DISTINCT unnest(tags) as tag
-        FROM contacts
+        SELECT name AS tag
+        FROM tags
         WHERE organization_id = $1
-        ORDER BY tag ASC
+        ORDER BY lower(name) ASC, id ASC
       `, [req.organizationId]));
 
       return sendSuccess(res, result.rows.map(r => r.tag));
