@@ -85,7 +85,7 @@ Password recovery and verification resend must not expose account existence thro
 7. Google token failure, wrong audience, unverified email, normalized verified identity, existing account, new account, and workspace-creation rollback.
 8. Organization header/default selection, non-member denial, role changes after token issuance, and cross-tenant record denial.
 
-Current executable evidence covers cookie-only local login, `viewer`, CSRF enforcement, access refresh, missing refresh cookie, logout cookie expiration, profile update, Google legacy-payload rejection, Google audience validation, verified-email enforcement, and server-derived Google identity. Real PostgreSQL concurrency and transaction scenarios still require the disposable integration environment.
+Current executable evidence covers cookie-only local login, `viewer`, CSRF enforcement, access refresh, missing refresh cookie, logout cookie expiration, profile update, Google legacy-payload rejection, Google audience validation, verified-email enforcement, and server-derived Google identity. A staging browser rehearsal also proved that an expired GraphQL access cookie producing an HTTP-`200` `UNAUTHENTICATED` error performs one CSRF-protected retained-HTTP refresh and retries the GraphQL operation successfully; two frontend tests cover successful recovery and invalid-refresh failure. The rehearsal used a synthetic session, so credential-login browser coverage remains required. Real PostgreSQL concurrency and transaction scenarios still require the disposable integration environment.
 
 ## Known consumer issue
 

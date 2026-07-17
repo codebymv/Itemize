@@ -1,4 +1,4 @@
-import { getApiUrl } from '@/lib/api';
+import { getApiUrl, refreshAuthenticatedSession } from '@/lib/api';
 
 type GraphqlErrorPayload = {
   message?: string;
@@ -11,6 +11,11 @@ type GraphqlErrorPayload = {
 type GraphqlResponse<TData> = {
   data?: TData;
   errors?: GraphqlErrorPayload[];
+};
+
+type GraphqlResult<TData> = {
+  response: Response;
+  payload: GraphqlResponse<TData>;
 };
 
 export class GraphqlRequestError extends Error {
@@ -34,11 +39,11 @@ export const getGraphqlUrl = (): string => {
   return `${getApiUrl().replace(/\/$/, '')}/graphql`;
 };
 
-export const graphqlRequest = async <TData, TVariables extends object>(
+const executeGraphqlRequest = async <TData, TVariables extends object>(
   query: string,
   variables: TVariables,
   organizationId?: number,
-): Promise<TData> => {
+): Promise<GraphqlResult<TData>> => {
   const response = await fetch(getGraphqlUrl(), {
     method: 'POST',
     credentials: 'include',
@@ -51,24 +56,53 @@ export const graphqlRequest = async <TData, TVariables extends object>(
     body: JSON.stringify({ query, variables }),
   });
 
-  let payload: GraphqlResponse<TData>;
   try {
-    payload = (await response.json()) as GraphqlResponse<TData>;
+    return {
+      response,
+      payload: (await response.json()) as GraphqlResponse<TData>,
+    };
   } catch {
     throw new GraphqlRequestError(
       'GraphQL service returned an invalid response',
       response.status,
     );
   }
+};
 
-  const firstError = payload.errors?.[0];
-  if (!response.ok || firstError || payload.data === undefined) {
+export const graphqlRequest = async <TData, TVariables extends object>(
+  query: string,
+  variables: TVariables,
+  organizationId?: number,
+): Promise<TData> => {
+  let result = await executeGraphqlRequest<TData, TVariables>(
+    query,
+    variables,
+    organizationId,
+  );
+  if (result.payload.errors?.[0]?.extensions?.code === 'UNAUTHENTICATED') {
+    try {
+      await refreshAuthenticatedSession();
+    } catch (error) {
+      const status = error && typeof error === 'object'
+        ? (error as { response?: { status?: number } }).response?.status
+        : undefined;
+      throw new GraphqlRequestError('Session refresh failed', status ?? 401, 'UNAUTHENTICATED');
+    }
+    result = await executeGraphqlRequest<TData, TVariables>(
+      query,
+      variables,
+      organizationId,
+    );
+  }
+
+  const firstError = result.payload.errors?.[0];
+  if (!result.response.ok || firstError || result.payload.data === undefined) {
     throw new GraphqlRequestError(
-      firstError?.message || `GraphQL request failed with status ${response.status}`,
-      response.status,
+      firstError?.message || `GraphQL request failed with status ${result.response.status}`,
+      result.response.status,
       firstError?.extensions?.code,
     );
   }
 
-  return payload.data;
+  return result.payload.data;
 };
