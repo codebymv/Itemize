@@ -2,7 +2,7 @@
 
 **Status:** Phase 0 baseline validated; Phase 1 foundation, first read slice, and staging cutover rehearsal completed
 
-**Evidence date:** 2026-07-16
+**Evidence date:** 2026-07-17
 **Authority:** This document supersedes the testing counts and cutover-testing guidance in `ts-nest-rewrite.md`.
 
 ## Decision
@@ -17,8 +17,8 @@ The reproducible source inventory is [generated/rest-surface.md](generated/rest-
 
 | Surface | Verified snapshot | Interpretation |
 | --- | ---: | --- |
-| Express route declarations | 423 | Static declarations under `backend/src`, excluding tests and comment examples |
-| Unique resolved method/path operations | 418 | Includes 411 `/api` operations and 7 GraphQL/documentation/health/fallback routes; this is the migration ledger input, not a claim that all operations are externally reachable |
+| Express route declarations | 424 | Static declarations under `backend/src`, excluding tests and comment examples |
+| Unique resolved method/path operations | 419 | Includes 412 `/api` operations and 7 GraphQL/documentation/health/fallback routes; this is the migration ledger input, not a claim that all operations are externally reachable |
 | Backend test files | 77 | Includes database safety/bootstrap, workflow-registry drift and alias behavior, transactional trigger enqueue and leased workers, webhook idempotency, tenant denial, the legacy-origin GraphQL proxy, shared GraphQL contracts, analytics parameters, realtime authorization, OAuth-state route/signing coverage, signature/file delivery, public-upload isolation, logo validation, CSV-transfer policy, public-sharing, audience-segment, campaign delivery, messaging delivery, ordered workflow rollout and staging safety, workflow execution/controlled egress, SMS provider ambiguity, and billing/scheduling concurrency tests added during Phase 0 |
 | Real-database integration suites | 27 | 439/439 passed against a database built from zero, including live Socket.IO authorization, analytics tenant/bucket/number semantics, selected-workspace persistence/denial/repair, concurrent Stripe invoice/subscription delivery, deterministic ordering and reconciliation workers, invoice numbering, estimate conversion, CRM and CSV-transfer boundaries, booking collision prevention, audience calculation/campaign snapshots, signature integrity, public-sharing issuance/revocation, all canonical workflow producers, one-shot scheduled dispatch, leased trigger fan-out, an enabled contact-to-provider workflow cycle, an ID-scoped staging canary with automatic fixture retirement, durable enrollment-step fencing, workflow pause/deactivation/retry/cancellation policy, payload-free workflow execution visibility, webhook-upgrade replay compatibility, provider-outbox claims, outbound SMS ambiguity quarantine and operator reconciliation, owned-number Twilio routing/replay, Resend verification/replay/ordering/reconciliation, and signed replay-safe Meta batch routing/reconciliation |
 | All backend test cases | 729 | 290/290 non-database cases and 439/439 fresh-PostgreSQL cases passed on 2026-07-16 |
@@ -27,7 +27,7 @@ The reproducible source inventory is [generated/rest-surface.md](generated/rest-
 
 The 27 database integration suites cover realtime Socket.IO authorization, analytics, automation execution, workflow trigger queueing, bookings, calendars, campaigns, contacts and CSV transfer, email templates, Resend email webhooks, Meta social webhooks, estimates, forms, invoice actions, invoices, lists, notes, organizations, pipelines, public sharing, audience segments, signatures, SMS messaging/webhooks, Stripe invoice and subscription webhook concurrency, tags, and workflows. Several suites include cross-organization or cross-owner denial scenarios, so isolation is not wholly untested. Coverage is still far smaller than the 412-operation `/api` surface and is concentrated in selected domains.
 
-The former claim of 8 suites and 73 tests was stale. The current baseline was executed with the disposable runner on 2026-07-16: all 94 expected tables and 61 top-level migration markers were verified before all 27 suites and 436 tests passed.
+The former claim of 8 suites and 73 tests was stale. The current baseline was executed with the disposable runner on 2026-07-16: all 94 expected tables and 61 top-level migration markers were verified before all 27 suites and 439 tests passed.
 
 ## Phase 1 GraphQL foundation now in place
 
@@ -47,7 +47,9 @@ Wire checks passed for public readiness, exact credentialed CORS, hostile-origin
 
 A second browser rehearsal used 55 temporary contacts plus the existing canary to prove GraphQL search, inactive-status filtering, and page navigation (`51`–`56` of `56`), then repeated search and pagination with REST rollback enabled. An eight-second access token exposed a client defect: GraphQL returned HTTP `200` with `UNAUTHENTICATED`, bypassing the Axios HTTP-401 refresh interceptor. The shared GraphQL client now performs one CSRF-protected `POST /api/auth/refresh`, retries the operation once, and fails closed if refresh is rejected; the browser replay passed and unit tests cover success and invalid-refresh behavior. Explicit organization headers returned zero matching rows in the default organization and the one isolation row in the second organization. Temporary contacts, membership, and organization were removed, returning staging to its original one contact and one organization.
 
-The frontend now has one shared organization provider and a compact switcher that appears for multi-workspace memberships. `POST /api/organizations/:organizationId/select` re-verifies membership, persists the selection as the user's default, and returns the selected workspace; initialization repairs stale defaults, and switching clears tenant-scoped React Query caches before consumers reload. Four frontend tests cover selected membership initialization, switching/cache clearing, first-workspace creation, and stale-default repair; three new PostgreSQL cases cover persistence, outsider denial, and repair. A deployed browser switch journey is still required. Credential login, deployed organization switching, mutations, and long-running observability remain unproven; the browser refresh evidence used a short-lived synthetic staging session with the real refresh endpoint.
+The frontend now has one shared organization provider and a compact switcher that appears for multi-workspace memberships. `POST /api/organizations/:organizationId/select` re-verifies membership, persists the selection as the user's default, and returns the selected workspace; initialization repairs stale defaults, and switching clears tenant-scoped React Query caches before consumers reload. Four frontend tests cover selected membership initialization, switching/cache clearing, first-workspace creation, and stale-default repair; three new PostgreSQL cases cover persistence, outsider denial, and repair.
+
+On 2026-07-17 the legacy staging backend deployment `839c2af2-cbdd-48e3-8802-72a27a7d2d33` passed its health gate, and the real workspace selector was replayed against two memberships with one distinctive contact in each tenant. With GraphQL reads enabled, Alpha exposed only the Alpha fixture, selecting Beta produced `POST /api/organizations/3/select` followed by `POST /graphql`, Beta exposed only its fixture, and the Beta selection survived a full page reload. After switching back, the same journey passed with GraphQL reads disabled: the trace changed to tenant-scoped `GET /api/contacts?organization_id=1` and `organization_id=3`, and persisted selection again survived reload. The original workspace was restored before cleanup; two temporary contacts and the temporary organization were deleted, and a final database query found zero fixture rows. Production was not deployed, the frontend GraphQL flag remains off in deployed builds, and the browser session used a synthetic staging session. Credential login, mutations, and long-running observability remain unproven.
 
 ## Phase 0 work now in place
 
@@ -125,7 +127,7 @@ Workflow execution has a dedicated contract and its code-level and deployed-stag
 
 ### 5. Consumer-level verification
 
-Twelve frontend test files include seven focused contact-read cases proving REST-default rollback, explicit GraphQL selection, variable/header mapping, response-shape compatibility, nullable detail handling, and visible GraphQL errors, two GraphQL session-recovery cases, and four organization-provider cases. The staging browser rehearsals prove authenticated contact list/detail/search/status/page behavior, expired-access refresh and retry, explicit organization isolation, and REST rollback through the legacy API origin. Add production-like browser scenarios around credential login, the new organization-switching control, CRUD, optimistic updates, uploads, billing/invoicing, campaigns/workflows, sharing/revocation, and realtime updates.
+Twelve frontend test files include seven focused contact-read cases proving REST-default rollback, explicit GraphQL selection, variable/header mapping, response-shape compatibility, nullable detail handling, and visible GraphQL errors, two GraphQL session-recovery cases, and four organization-provider cases. The staging browser rehearsals prove authenticated contact list/detail/search/status/page behavior, expired-access refresh and retry, selector-driven organization switching and persistence, explicit organization isolation, and REST rollback through the legacy API origin. Add production-like browser scenarios around credential login, CRUD, optimistic updates, uploads, billing/invoicing, campaigns/workflows, sharing/revocation, and realtime updates.
 
 ## Required test layers
 
