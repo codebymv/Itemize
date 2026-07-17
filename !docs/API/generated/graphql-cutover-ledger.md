@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 387
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 179
+- Operations referenced by backend tests: 180
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 245
 - Recommended retained HTTP endpoints: 39
@@ -78,7 +78,7 @@
 | PATCH | `/api/bookings/:id/cancel` | 1 | 2 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |
 | PATCH | `/api/bookings/:id/reschedule` | 1 | 3 | graphql-mutation | high | scheduling / BookingsModule / rescheduleBooking |
 | GET | `/api/bookings/public/book/:slug` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
-| POST | `/api/bookings/public/book/:slug` | 1 | 3 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
+| POST | `/api/bookings/public/book/:slug` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 3 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
 | GET | `/api/bookings/public/book/:slug/slots` | 1 | 0 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
 | GET | `/api/calendar-integrations/connections` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarConnections |
@@ -98,17 +98,17 @@
 | POST | `/api/calendars/:id/date-override` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / upsertCalendarDateOverride |
 | DELETE | `/api/calendars/:id/date-override/:overrideId` | 1 | 2 | graphql-mutation | medium | scheduling / CalendarsModule / deleteCalendarDateOverride |
 | GET | `/api/campaigns` | 1 | 6 | graphql-query | medium | growth / CampaignsModule / campaigns |
-| POST | `/api/campaigns` | 1 | 9 | graphql-mutation | medium | growth / CampaignsModule / createCampaign |
+| POST | `/api/campaigns` | 1 | 10 | graphql-mutation | medium | growth / CampaignsModule / createCampaign |
 | DELETE | `/api/campaigns/:id` | 1 | 4 | graphql-mutation | medium | growth / CampaignsModule / deleteCampaign |
 | GET | `/api/campaigns/:id` | 1 | 2 | graphql-query | medium | growth / CampaignsModule / campaign |
 | PUT | `/api/campaigns/:id` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / updateCampaign |
 | POST | `/api/campaigns/:id/duplicate` | 1 | 2 | graphql-mutation | medium | growth / CampaignsModule / duplicateCampaign |
 | POST | `/api/campaigns/:id/pause` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / pauseCampaign |
-| GET | `/api/campaigns/:id/preview` | 1 | 0 | graphql-query | high | growth / CampaignsModule / campaignAudiencePreview |
+| GET | `/api/campaigns/:id/preview` | 1 | 1 | graphql-query | high | growth / CampaignsModule / campaignAudiencePreview |
 | GET | `/api/campaigns/:id/recipients` | 1 | 0 | graphql-query | high | growth / CampaignDeliveryModule / campaignRecipients |
 | POST | `/api/campaigns/:id/resume` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / resumeCampaign |
 | POST | `/api/campaigns/:id/schedule` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / scheduleCampaign |
-| POST | `/api/campaigns/:id/send` | 1 | 1 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
+| POST | `/api/campaigns/:id/send` | 1 | 2 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
 | POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | GET | `/api/canvas/lists` | 1 | 0 | graphql-query | high | _unassigned_ |
@@ -132,7 +132,7 @@
 | POST | `/api/chat-widget/sessions/:id/convert` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/chat-widget/sessions/:id/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/contacts` | 1 | 1 | graphql-query | high | crm / ContactsModule / contacts |
-| POST | `/api/contacts` | 1 | 5 | graphql-mutation | high | crm / ContactsModule / createContact |
+| POST | `/api/contacts` | 1 | 6 | graphql-mutation | high | crm / ContactsModule / createContact |
 | DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |
 | GET | `/api/contacts/:id` | 1 | 1 | graphql-query | high | crm / ContactsModule / contact |
 | PUT | `/api/contacts/:id` | 1 | 4 | graphql-mutation | high | crm / ContactsModule / updateContact |
@@ -143,7 +143,7 @@
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
 | GET | `/api/contacts/export/csv` | 1 | 1 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
-| POST | `/api/contacts/import/csv` | 1 | 1 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
+| POST | `/api/contacts/import/csv` | 1 | 2 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
 | GET | `/api/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/conversations` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |

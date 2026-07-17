@@ -445,6 +445,76 @@ describe('Campaigns Integration Tests', () => {
         });
     });
 
+    describe('Canonical email audience identity', () => {
+        it('previews and snapshots one recipient per canonical email', async () => {
+            const suffix = `${Date.now()}-${process.pid}`;
+            const email = `campaign-duplicate-${suffix}@example.test`;
+            const contacts = await dbHelper.pool.query(
+                `INSERT INTO contacts (
+                    organization_id, first_name, email, source, created_by
+                 ) VALUES
+                    ($1, 'Campaign Canonical', $2, 'manual', $3),
+                    ($1, 'Campaign Duplicate', $2, 'manual', $3)
+                 RETURNING id`,
+                [userA.org.id, email, userA.user.id]
+            );
+            const campaign = await request(app)
+                .post('/api/campaigns')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send(campaignPayload({ name: `Canonical Audience ${suffix}` }));
+            expect(campaign.status).toBe(201);
+            await dbHelper.pool.query(
+                `INSERT INTO subscriptions (organization_id, plan_id, status)
+                 SELECT $1, id, 'trialing'
+                 FROM subscription_plans
+                 WHERE name = 'starter'
+                 ON CONFLICT (organization_id) DO UPDATE SET
+                    plan_id = EXCLUDED.plan_id,
+                    status = EXCLUDED.status`,
+                [userA.org.id]
+            );
+
+            const preview = await request(app)
+                .get(`/api/campaigns/${campaign.body.data.id}/preview`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id));
+            expect(preview.status).toBe(200);
+
+            const rawEligible = await dbHelper.pool.query(
+                `SELECT COUNT(*)::int AS count,
+                        COUNT(DISTINCT email)::int AS distinct_count
+                 FROM contacts
+                 WHERE organization_id = $1
+                   AND email IS NOT NULL
+                   AND COALESCE(email_unsubscribed, false) = false
+                   AND COALESCE(email_bounced, false) = false`,
+                [userA.org.id]
+            );
+            expect(rawEligible.rows[0].count).toBeGreaterThan(rawEligible.rows[0].distinct_count);
+            expect(preview.body.data.recipientCount).toBe(rawEligible.rows[0].distinct_count);
+
+            const sent = await request(app)
+                .post(`/api/campaigns/${campaign.body.data.id}/send`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({});
+            expect(sent.status).toBe(200);
+            expect(sent.body.data.recipientCount).toBe(rawEligible.rows[0].distinct_count);
+
+            const snapshot = await dbHelper.pool.query(
+                `SELECT contact_id, email
+                 FROM campaign_recipients
+                 WHERE campaign_id = $1 AND email = $2`,
+                [campaign.body.data.id, email]
+            );
+            expect(snapshot.rows).toEqual([{
+                contact_id: Math.min(...contacts.rows.map(row => row.id)),
+                email,
+            }]);
+        });
+    });
+
     // ── Auth guard ────────────────────────────────────────────────────────────
 
     describe('Authentication guard', () => {

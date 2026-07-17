@@ -127,7 +127,8 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 }
 
                 let recipientQuery = `
-                    SELECT c.id, c.email, c.first_name, c.last_name
+                    SELECT DISTINCT ON (c.email)
+                        c.id, c.email, c.first_name, c.last_name
                     FROM contacts c
                     WHERE c.organization_id = $1
                         AND c.email IS NOT NULL
@@ -146,6 +147,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     startIndex: recipientParams.length + 1,
                 });
                 recipientQuery += ` AND ${compiledAudience.condition}`;
+                recipientQuery += ' ORDER BY c.email, c.id';
                 recipientParams.push(...compiledAudience.params);
 
                 const recipientsResult = await client.query(recipientQuery, recipientParams);

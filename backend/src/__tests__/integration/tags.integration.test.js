@@ -492,7 +492,12 @@ describe('Tags Integration Tests', () => {
             const rowName = `LegacyDrift-${suffix}`;
             const arrayOnlyName = `ArrayOnly-${suffix}`;
 
-            await dbHelper.pool.query('ALTER TABLE contacts DISABLE TRIGGER USER');
+            await dbHelper.pool.query(
+                'ALTER TABLE contacts DISABLE TRIGGER contacts_prepare_canonical_tags'
+            );
+            await dbHelper.pool.query(
+                'ALTER TABLE contacts DISABLE TRIGGER contacts_sync_canonical_tags'
+            );
             await dbHelper.pool.query('ALTER TABLE deals DISABLE TRIGGER USER');
             await dbHelper.pool.query('ALTER TABLE tags DISABLE TRIGGER USER');
             await dbHelper.pool.query('ALTER TABLE contact_tags DISABLE TRIGGER USER');

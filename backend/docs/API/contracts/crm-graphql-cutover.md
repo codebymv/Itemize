@@ -1,6 +1,6 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 1 contact CRUD, activities, bounded related content, aggregate contact profile, canonical tag persistence, and canonical pipeline-stage persistence implemented; broader CRM characterization continues
+**Status:** Phase 1 contact CRUD, activities, bounded related content, aggregate contact profile, canonical contact-email identity, canonical tag persistence, and canonical pipeline-stage persistence implemented; broader CRM characterization continues
 
 **Evidence date:** 2026-07-17
 
@@ -45,7 +45,9 @@ The formerly unprotected aggregate profile endpoint trusted `organization_id` fr
 
 A contact requires at least one of first name, last name, email, or company. Status is `active`, `inactive`, or `archived`; source is `manual`, `import`, `form`, `integration`, or `api`.
 
-Email is not currently unique within an organization. Do not silently make it a universal identity key: public-form reuse, CSV duplicate handling, messaging recipients, and manually duplicated contacts need an explicit product decision. Email comparisons used for form reuse are case-insensitive.
+Email is canonicalized to trimmed lowercase storage; blank values become `NULL`. It is deliberately not unique: manually created and imported duplicates, plus multiple email-less contacts, remain legal. Migration `canonical_contact_email_identity_v1` repairs historical values and installs a database trigger and check constraint so retained REST, GraphQL, import, public, automation, and direct SQL writers share the same boundary.
+
+Email-to-contact resolution is organization-scoped and deterministic. Public forms and bookings serialize concurrent resolution and reuse the lowest eligible contact ID for the canonical email. CSV import skips existing and same-batch canonical duplicates only when `skipDuplicates` is true; false preserves duplicate rows. Campaign preview and recipient snapshots count one eligible recipient per canonical email and select the lowest contact ID. Provider-specific rewrites such as Gmail dot or plus removal are forbidden because they would merge distinct user-supplied identities.
 
 GraphQL update inputs distinguish omitted from explicit null. The implemented and tested target rule is: omission preserves; explicit null or an empty string clears nullable scalar fields; explicit null resets JSON objects to `{}` and tags to `[]`; source and status cannot be null. The legacy partial `PUT` behavior remains inconsistent, so the frontend mutation flag is independent from the read flag. REST remains the default rollback path until the staging observation gate passes.
 
@@ -62,7 +64,7 @@ Contact lists use the shared strict page input and deterministic ordering. Exist
 - Tag add is set-like and idempotent; tag removal removes every requested string.
 - Results distinguish requested, matched, changed, and rejected rows.
 - Contact creation and import serialize the count check per organization so concurrent calls cannot exceed the plan limit.
-- Import skips existing and same-batch email duplicates case-insensitively when `skipDuplicates` is true.
+- Import skips existing and same-batch canonical email duplicates when `skipDuplicates` is true; false preserves duplicates.
 
 CSV export remains authenticated HTTP because it is a streamed file response. Import remains HTTP because it is a bounded bulk-transfer job, even though the current frontend parses CSV before sending JSON. Define byte, row, column, timeout, audit, formula-injection, and error-report limits before cutover; large imports should become durable jobs.
 
@@ -146,7 +148,7 @@ Contact reuse/creation and submission now share one transaction. Concurrent subm
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, canonical tag drift repair/projection/tenancy and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits.
+Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, canonical email migration repair and direct/API/GraphQL normalization, legal duplicate and email-less contacts, both CSV duplicate modes, deterministic public-form and booking resolution, deduplicated campaign preview/snapshots, canonical tag drift repair/projection/tenancy and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits.
 
 The NestJS `ContactsModule` now implements `contacts`, `contact`, `createContact`, `updateContact`, `deleteContact`, `bulkUpdateContacts`, `bulkDeleteContacts`, `contactActivities`, `addContactActivity`, `contactContent`, and `contactProfile`. Fresh-PostgreSQL tests prove dual REST/GraphQL list membership, deterministic ordering, pagination totals, filters, detail projection, tenant-private missing-resource behavior, invalid-ID rejection, and suppression of corrupt cross-tenant user projections. Mutation cases additionally prove double-submit CSRF rejection/success, normalized creation, serialized plan enforcement, assignee membership, omitted-versus-null updates, one durable trigger only for an actual supplied-field change, status activity creation, foreign-tenant privacy, and exact deletion confirmation. Bulk cases prove the 100-ID boundary, request-order deduplication, mixed-tenant partial results, atomic assignment denial, idempotent tag/status updates, transactionally coupled contact/tag workflows and status activities, and dependent-activity cleanup on deletion. Activity cases prove newest-first deterministic paging, enum filtering, user projection, structured content/metadata persistence, CSRF-protected writes, contact-lock-plus-insert atomicity, REST parity, and cross-tenant privacy. Related-content cases prove REST parity for linked lists, notes, and whiteboards, stable newest-first ordering, tenant-private parent lookup, an explicit 100-row collection bound, and total/truncation metadata. Aggregate-profile cases compose invoices, signatures, payments, activities, notes, lists, communications, tasks, and bookings with explicit section health, prove current-schema repairs for two silently broken legacy children, and return `NOT_FOUND` across tenant boundaries. Create/update domain state, workflow triggers, and activities share transactions.
 
@@ -164,8 +166,7 @@ The aggregate-profile operation gate passed on 2026-07-17 against GraphQL deploy
 
 The broader CRM slice is not ready for traffic until:
 
-1. contact email identity policy is selected and dual-tested across manual creation, forms, imports, and messaging;
-2. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
-3. form notifications and CRM workflow events use the durable outbox/worker;
-4. CSV boundaries and remaining profile failure-injection/consumer behavior have complete tests;
-5. remaining tag, pipeline, and form GraphQL/browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.
+1. public forms have globally unambiguous identity, complete field validation, safe redirects, and abuse/body limits;
+2. form notifications and CRM workflow events use the durable outbox/worker;
+3. remaining CSV boundaries and profile failure-injection/consumer behavior have complete tests;
+4. remaining tag, pipeline, and form GraphQL/browser journeys pass staging semantic-parity and rollback tests; profile browser coverage becomes required if a consumer is introduced.

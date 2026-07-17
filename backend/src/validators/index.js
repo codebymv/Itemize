@@ -4,6 +4,7 @@
  */
 
 const { body, param, query, validationResult } = require('express-validator');
+const { normalizeContactEmail } = require('../utils/contactEmail');
 
 /**
  * Validation middleware - checks for validation errors and returns standardized response
@@ -33,7 +34,8 @@ const validate = (req, res, next) => {
 const validators = {
     // Contact validators
     createContact: [
-        body('email').trim().optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format').normalizeEmail(),
+        body('email').trim().optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format')
+            .customSanitizer(normalizeContactEmail),
         body('phone').trim().optional({ checkFalsy: true }).isMobilePhone('any').withMessage('Invalid phone number'),
         body('first_name').optional().trim().isLength({ max: 100 }).withMessage('First name too long'),
         body('last_name').optional().trim().isLength({ max: 100 }).withMessage('Last name too long'),
@@ -44,7 +46,8 @@ const validators = {
 
     updateContact: [
         param('id').isInt({ min: 1 }).withMessage('Invalid contact ID'),
-        body('email').trim().optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format').normalizeEmail(),
+        body('email').trim().optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format')
+            .customSanitizer(normalizeContactEmail),
         body('phone').trim().optional({ checkFalsy: true }).isMobilePhone('any').withMessage('Invalid phone number'),
         body('first_name').optional().trim().isLength({ max: 100 }).withMessage('First name too long'),
         body('last_name').optional().trim().isLength({ max: 100 }).withMessage('Last name too long'),

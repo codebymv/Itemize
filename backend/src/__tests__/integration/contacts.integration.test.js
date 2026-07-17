@@ -11,6 +11,9 @@ const {
     runWorkflowCanary,
     workflowRolloutDatabaseIdentity,
 } = require('../../services/workflowRolloutOperations');
+const {
+    runCanonicalContactEmailIdentityMigration,
+} = require('../../db_contact_email_identity_migrations');
 
 /**
  * Build a minimal Express app wired to the provided pool.
@@ -461,6 +464,133 @@ describe('Contacts Integration Tests', () => {
 
             expect(response.status).toBe(400);
             expect(response.body).toMatchObject({ code: 'INVALID_IMPORT' });
+        });
+
+        it('normalizes contact emails while preserving intentional duplicate and blank contacts', async () => {
+            const suffix = `${Date.now()}-${process.pid}`;
+            const email = `identity-${suffix}@example.test`;
+            const create = (first_name, submittedEmail) => request(app)
+                .post('/api/contacts')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ first_name, email: submittedEmail });
+
+            const first = await create('Identity First', `  ${email.toUpperCase()}  `);
+            const duplicate = await create('Identity Duplicate', email);
+            const direct = await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, email, created_by)
+                 VALUES ($1, 'Identity Blank', '   ', $2),
+                        ($1, 'Identity Direct', $3, $2)
+                 RETURNING id, email`,
+                [userA.org.id, userA.user.id, `  DIRECT-${suffix}@EXAMPLE.TEST  `]
+            );
+
+            expect(first.status).toBe(201);
+            expect(duplicate.status).toBe(201);
+            expect(first.body.id).not.toBe(duplicate.body.id);
+            expect(first.body.email).toBe(email);
+            expect(duplicate.body.email).toBe(email);
+            expect(direct.rows).toEqual([
+                expect.objectContaining({ email: null }),
+                expect.objectContaining({ email: `direct-${suffix}@example.test` }),
+            ]);
+
+            const persisted = await dbHelper.pool.query(
+                `SELECT id, email
+                 FROM contacts
+                 WHERE organization_id = $1
+                   AND (email = $2 OR id = $3)
+                 ORDER BY id`,
+                [userA.org.id, email, direct.rows[0].id]
+            );
+            expect(persisted.rows.filter(row => row.email === email)).toHaveLength(2);
+        });
+
+        it('applies canonical duplicate policy to CSV imports', async () => {
+            const suffix = `${Date.now()}-${process.pid}`;
+            const existingEmail = `import-existing-${suffix}@example.test`;
+            const batchEmail = `import-batch-${suffix}@example.test`;
+            await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, email, created_by)
+                 VALUES ($1, 'Existing Import', $2, $3)`,
+                [userA.org.id, existingEmail, userA.user.id]
+            );
+
+            const importing = (contacts, skipDuplicates) => request(app)
+                .post('/api/contacts/import/csv')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ contacts, skipDuplicates });
+
+            const skipped = await importing([
+                { first_name: 'Existing Variant', email: ` ${existingEmail.toUpperCase()} ` },
+                { first_name: 'Batch First', email: ` ${batchEmail.toUpperCase()} ` },
+                { first_name: 'Batch Variant', email: batchEmail },
+                { first_name: 'No Email', email: '   ' },
+            ], true);
+            expect(skipped.status).toBe(200);
+            expect(skipped.body).toMatchObject({ imported: 2, skipped: 2 });
+
+            const duplicateEmail = `import-allowed-${suffix}@example.test`;
+            const allowed = await importing([
+                { first_name: 'Allowed First', email: duplicateEmail.toUpperCase() },
+                { first_name: 'Allowed Second', email: ` ${duplicateEmail} ` },
+            ], false);
+            expect(allowed.status).toBe(200);
+            expect(allowed.body).toMatchObject({ imported: 2, skipped: 0 });
+
+            const persisted = await dbHelper.pool.query(
+                `SELECT email, COUNT(*)::int AS count
+                 FROM contacts
+                 WHERE organization_id = $1
+                   AND email = ANY($2::text[])
+                 GROUP BY email
+                 ORDER BY email`,
+                [userA.org.id, [batchEmail, duplicateEmail]]
+            );
+            expect(persisted.rows).toEqual([
+                { email: duplicateEmail, count: 2 },
+                { email: batchEmail, count: 1 },
+            ]);
+        });
+
+        it('repairs historical whitespace/case drift without merging duplicate contacts', async () => {
+            const suffix = `${Date.now()}-${process.pid}`;
+            const email = `migration-identity-${suffix}@example.test`;
+            await dbHelper.pool.query(
+                'ALTER TABLE contacts DISABLE TRIGGER contacts_normalize_email'
+            );
+            await dbHelper.pool.query(
+                'ALTER TABLE contacts DROP CONSTRAINT contacts_email_canonical'
+            );
+            const drifted = await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, email, created_by)
+                 VALUES ($1, 'Migration First', $2, $3),
+                        ($1, 'Migration Duplicate', $4, $3),
+                        ($1, 'Migration Blank', '   ', $3)
+                 RETURNING id`,
+                [
+                    userA.org.id,
+                    `  ${email.toUpperCase()}  `,
+                    userA.user.id,
+                    email,
+                ]
+            );
+
+            await runCanonicalContactEmailIdentityMigration(dbHelper.pool);
+
+            const repaired = await dbHelper.pool.query(
+                `SELECT email
+                 FROM contacts
+                 WHERE id = ANY($1::int[])
+                 ORDER BY id`,
+                [drifted.rows.map(row => row.id)]
+            );
+            expect(repaired.rows).toEqual([
+                { email },
+                { email },
+                { email: null },
+            ]);
         });
     });
 

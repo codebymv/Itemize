@@ -96,6 +96,9 @@ const { runAllIndexMigrations } = require('./db_indexes_migrations');
 const { runAllNormalizationMigrations } = require('./db_normalization_migrations');
 const { runCanonicalTagModelMigration } = require('./db_tag_canonical_migrations');
 const { runCanonicalPipelineStageModelMigration } = require('./db_pipeline_stage_canonical_migrations');
+const {
+  runCanonicalContactEmailIdentityMigration,
+} = require('./db_contact_email_identity_migrations');
 
 // Import Subscription migrations (feature gating and billing)
 const { runAllSubscriptionMigrations } = require('./db_subscription_migrations');
@@ -519,6 +522,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'optimization_normalization', runAllNormalizationMigrations);
     await runMigrationOnce(pool, 'canonical_tag_model_v1', runCanonicalTagModelMigration);
     await runMigrationOnce(pool, 'canonical_pipeline_stage_model_v1', runCanonicalPipelineStageModelMigration);
+    await runMigrationOnce(pool, 'canonical_contact_email_identity_v1', runCanonicalContactEmailIdentityMigration);
     
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);

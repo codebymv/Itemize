@@ -413,16 +413,19 @@ describe('Forms Integration Tests', () => {
         it('serializes same-email contact creation while preserving both submissions', async () => {
             const nameField = form.fields.find(field => field.map_to_contact_field === 'first_name');
             const emailField = form.fields.find(field => field.map_to_contact_field === 'email');
-            const submit = () => request(app)
+            const submit = submittedEmail => request(app)
                 .post(`/api/forms/public/form/${form.slug}`)
                 .send({
                     data: {
                         [nameField.id]: 'Public Lead',
-                        [emailField.id]: email,
+                        [emailField.id]: submittedEmail,
                     },
                 });
 
-            const responses = await Promise.all([submit(), submit()]);
+            const responses = await Promise.all([
+                submit(`  ${email.toUpperCase()}  `),
+                submit(email),
+            ]);
             expect(responses.every(response => response.status === 201)).toBe(true);
 
             const contacts = await dbHelper.pool.query(

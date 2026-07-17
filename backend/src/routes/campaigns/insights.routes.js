@@ -105,7 +105,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                     startIndex: countParams.length + 1,
                 });
                 const countResult = await client.query(`
-                    SELECT COUNT(*) as total
+                    SELECT COUNT(DISTINCT c.email) as total
                     FROM contacts c
                     WHERE c.organization_id = $1
                         AND c.email IS NOT NULL

@@ -14,6 +14,7 @@ const {
     enqueueWorkflowTrigger,
     workflowTriggerEventKey,
 } = require('../services/workflowTriggerQueue');
+const { normalizeContactEmail } = require('../utils/contactEmail');
 
 /**
  * Create bookings routes with injected dependencies
@@ -619,13 +620,18 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 // Try to find or create contact
                 let contactId = null;
                 try {
+                    const normalizedAttendeeEmail = normalizeContactEmail(attendee_email);
                     await client.query(
-                        'SELECT pg_advisory_xact_lock($1, hashtext(LOWER($2)))',
-                        [calendar.organization_id, String(attendee_email)]
+                        "SELECT pg_advisory_xact_lock(hashtext('contact-email'), hashtext($1::text || ':' || $2))",
+                        [calendar.organization_id, normalizedAttendeeEmail]
                     );
                     const existingContact = await client.query(
-                        'SELECT id FROM contacts WHERE organization_id = $1 AND LOWER(email) = LOWER($2)',
-                        [calendar.organization_id, attendee_email]
+                        `SELECT id
+                         FROM contacts
+                         WHERE organization_id = $1 AND email = $2
+                         ORDER BY id
+                         LIMIT 1`,
+                        [calendar.organization_id, normalizedAttendeeEmail]
                     );
 
                     if (existingContact.rows.length > 0) {
@@ -640,7 +646,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             INSERT INTO contacts (organization_id, first_name, last_name, email, phone, source)
             VALUES ($1, $2, $3, $4, $5, 'form')
             RETURNING id
-          `, [calendar.organization_id, firstName, lastName, attendee_email, attendee_phone]);
+          `, [calendar.organization_id, firstName, lastName, normalizedAttendeeEmail, attendee_phone]);
 
                         contactId = newContact.rows[0].id;
                     }

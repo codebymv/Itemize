@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 387,
     "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 179,
+    "operationsWithBackendTests": 180,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -1574,7 +1574,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 67
+          "line": 68
         }
       ],
       "consumerCallsites": [
@@ -1629,7 +1629,7 @@
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 519
+          "line": 547
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1651,7 +1651,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 196
+          "line": 197
         }
       ],
       "consumerCallsites": [
@@ -1718,13 +1718,13 @@
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 466
+          "line": 494
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 487
+          "line": 515
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1746,7 +1746,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 165
+          "line": 166
         }
       ],
       "consumerCallsites": [
@@ -1793,7 +1793,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 300
+          "line": 301
         }
       ],
       "consumerCallsites": [
@@ -1840,7 +1840,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 348
+          "line": 349
         }
       ],
       "consumerCallsites": [
@@ -1893,7 +1893,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 432
+          "line": 433
         }
       ],
       "consumerCallsites": [
@@ -1940,7 +1940,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 562
+          "line": 563
         }
       ],
       "consumerCallsites": [
@@ -1965,13 +1965,19 @@
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 434
+          "line": 442
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 496
+          "line": 462
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarSlug",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 524
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1993,7 +1999,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 713
+          "line": 719
         }
       ],
       "consumerCallsites": [
@@ -2012,19 +2018,19 @@
           "method": "POST",
           "path": "/api/bookings/public/book/not-:calendarSlug/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 501
+          "line": 529
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 506
+          "line": 534
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 511
+          "line": 539
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2046,7 +2052,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 479
+          "line": 480
         }
       ],
       "consumerCallsites": [
@@ -2446,7 +2452,7 @@
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 449
+          "line": 477
         },
         {
           "method": "POST",
@@ -2853,7 +2859,7 @@
           "method": "GET",
           "path": "/api/campaigns",
           "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 452
+          "line": 522
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2943,6 +2949,12 @@
           "path": "/api/campaigns",
           "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
           "line": 395
+        },
+        {
+          "method": "POST",
+          "path": "/api/campaigns",
+          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
+          "line": 462
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3170,7 +3182,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 267
+          "line": 269
         }
       ],
       "consumerCallsites": [
@@ -3218,7 +3230,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/campaigns/:id/preview",
+          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
+          "line": 479
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
@@ -3272,7 +3291,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 294
+          "line": 296
         }
       ],
       "consumerCallsites": [
@@ -3374,6 +3393,12 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/campaigns/:id/send",
+          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
+          "line": 498
+        },
         {
           "method": "POST",
           "path": "/api/campaigns/12/send",
@@ -4149,7 +4174,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 106
+          "line": 107
         }
       ],
       "consumerCallsites": [
@@ -4168,7 +4193,7 @@
           "method": "GET",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 88
+          "line": 91
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -4190,7 +4215,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 224
+          "line": 225
         }
       ],
       "consumerCallsites": [
@@ -4209,31 +4234,37 @@
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 75
+          "line": 78
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 291
+          "line": 294
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 480
+          "line": 473
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 487
+          "line": 610
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 506
+          "line": 617
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts",
+          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
+          "line": 636
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4255,7 +4286,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 438
+          "line": 439
         }
       ],
       "consumerCallsites": [
@@ -4274,13 +4305,13 @@
           "method": "DELETE",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 122
+          "line": 125
         },
         {
           "method": "DELETE",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 253
+          "line": 256
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4302,7 +4333,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 200
+          "line": 201
         }
       ],
       "consumerCallsites": [
@@ -4321,7 +4352,7 @@
           "method": "GET",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 103
+          "line": 106
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -4343,7 +4374,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 321
+          "line": 322
         }
       ],
       "consumerCallsites": [
@@ -4362,25 +4393,25 @@
           "method": "PUT",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 112
+          "line": 115
         },
         {
           "method": "PUT",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 131
+          "line": 134
         },
         {
           "method": "PUT",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 138
+          "line": 141
         },
         {
           "method": "PUT",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 186
+          "line": 189
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4402,7 +4433,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 611
+          "line": 612
         }
       ],
       "consumerCallsites": [
@@ -4436,7 +4467,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 656
+          "line": 657
         }
       ],
       "consumerCallsites": [
@@ -4470,7 +4501,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 704
+          "line": 705
         }
       ],
       "consumerCallsites": [
@@ -4513,19 +4544,19 @@
           "method": "GET",
           "path": "/api/contacts/:contactIdA/profile",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 157
+          "line": 160
         },
         {
           "method": "GET",
           "path": "/api/contacts/:contactIdA/profile",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 165
+          "line": 168
         },
         {
           "method": "GET",
           "path": "/api/contacts/:contactIdA/profile",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 176
+          "line": 179
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -4547,7 +4578,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 589
+          "line": 590
         }
       ],
       "consumerCallsites": [
@@ -4581,7 +4612,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 456
+          "line": 457
         }
       ],
       "consumerCallsites": [
@@ -4600,13 +4631,13 @@
           "method": "POST",
           "path": "/api/contacts/bulk-update",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 194
+          "line": 197
         },
         {
           "method": "POST",
           "path": "/api/contacts/bulk-update",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 213
+          "line": 216
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4628,7 +4659,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 748
+          "line": 749
         }
       ],
       "consumerCallsites": [
@@ -4647,7 +4678,7 @@
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 441
+          "line": 444
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -4669,7 +4700,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/contacts.routes.js",
-          "line": 831
+          "line": 832
         }
       ],
       "consumerCallsites": [
@@ -4688,7 +4719,13 @@
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 457
+          "line": 460
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
+          "line": 520
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -5500,7 +5537,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 72
+          "line": 73
         }
       ],
       "consumerCallsites": [
@@ -5531,7 +5568,7 @@
           "method": "GET",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 505
+          "line": 508
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5553,7 +5590,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 143
+          "line": 144
         }
       ],
       "consumerCallsites": [
@@ -5614,19 +5651,19 @@
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 456
+          "line": 459
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 463
+          "line": 466
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 482
+          "line": 485
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5648,7 +5685,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 486
+          "line": 487
         }
       ],
       "consumerCallsites": [
@@ -5701,7 +5738,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 105
+          "line": 106
         }
       ],
       "consumerCallsites": [
@@ -5748,7 +5785,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 311
+          "line": 312
         }
       ],
       "consumerCallsites": [
@@ -5801,7 +5838,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 510
+          "line": 511
         }
       ],
       "consumerCallsites": [
@@ -5848,7 +5885,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 379
+          "line": 380
         }
       ],
       "consumerCallsites": [
@@ -5901,7 +5938,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 648
+          "line": 649
         }
       ],
       "consumerCallsites": [
@@ -5948,7 +5985,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 711
+          "line": 712
         }
       ],
       "consumerCallsites": [
@@ -5995,7 +6032,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 740
+          "line": 741
         }
       ],
       "consumerCallsites": [
@@ -6029,7 +6066,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 785
+          "line": 786
         }
       ],
       "consumerCallsites": [
@@ -15033,7 +15070,7 @@
           "method": "GET",
           "path": "/api/tags",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 705
+          "line": 710
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -15100,13 +15137,13 @@
           "method": "POST",
           "path": "/api/tags",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 574
+          "line": 579
         },
         {
           "method": "POST",
           "path": "/api/tags",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 628
+          "line": 633
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -15173,7 +15210,7 @@
           "method": "DELETE",
           "path": "/api/tags/:tagId",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 649
+          "line": 654
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -15228,7 +15265,7 @@
           "method": "PUT",
           "path": "/api/tags/:tagId",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 603
+          "line": 608
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -15259,13 +15296,13 @@
           "method": "GET",
           "path": "/api/tags/suggestions",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 678
+          "line": 683
         },
         {
           "method": "GET",
           "path": "/api/tags/suggestions",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 691
+          "line": 696
         }
       ],
       "recommendedDisposition": "graphql-query",

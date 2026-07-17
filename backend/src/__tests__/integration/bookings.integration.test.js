@@ -429,6 +429,34 @@ describe('Bookings Integration Tests', () => {
             expect(typeof res.body.booking.cancellation_token).toBe('string');
         });
 
+        it('links canonical duplicate email to the lowest organization contact ID', async () => {
+            const email = `public-identity-${Date.now()}@test.itemize`;
+            const contacts = await dbHelper.pool.query(
+                `INSERT INTO contacts (organization_id, first_name, email, created_by)
+                 VALUES ($1, 'Booking Identity First', $2, $3),
+                        ($1, 'Booking Identity Duplicate', $2, $3)
+                 RETURNING id`,
+                [userA.org.id, email, userA.user.id]
+            );
+            const res = await request(app)
+                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .send({
+                    attendee_name: 'Canonical Booker',
+                    attendee_email: `  ${email.toUpperCase()}  `,
+                    timezone: 'UTC',
+                    ...futureSlot(228),
+                });
+
+            expect(res.status).toBe(201);
+            const persisted = await dbHelper.pool.query(
+                'SELECT contact_id FROM bookings WHERE id = $1',
+                [res.body.booking.id]
+            );
+            expect(persisted.rows[0].contact_id).toBe(
+                Math.min(...contacts.rows.map(row => row.id))
+            );
+        });
+
         it('rejects public booking without required fields', async () => {
             const res = await request(app)
                 .post(`/api/bookings/public/book/${calendarSlug}`)

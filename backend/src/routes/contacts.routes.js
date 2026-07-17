@@ -22,6 +22,7 @@ const {
   enqueueWorkflowTrigger,
   workflowTriggerEventKey,
 } = require('../services/workflowTriggerQueue');
+const { normalizeContactEmail } = require('../utils/contactEmail');
 
 const CONTACT_UPDATE_FIELDS = [
   'first_name',
@@ -847,7 +848,7 @@ module.exports = (pool, authenticateJWT) => {
       let existingEmails = new Set();
       if (skipDuplicates) {
         const emails = importData
-          .map(row => row.email)
+          .map(row => normalizeContactEmail(row.email))
           .filter(Boolean);
 
         if (emails.length > 0) {
@@ -855,7 +856,7 @@ module.exports = (pool, authenticateJWT) => {
             'SELECT email FROM contacts WHERE organization_id = $1 AND email = ANY($2::text[])',
             [req.organizationId, emails]
           );
-          existingEmails = new Set(existingResult.rows.map(r => r.email.toLowerCase()));
+          existingEmails = new Set(existingResult.rows.map(r => r.email));
         }
       }
 
@@ -867,8 +868,10 @@ module.exports = (pool, authenticateJWT) => {
         const row = importData[i];
 
         try {
+          const normalizedEmail = normalizeContactEmail(row.email);
+
           // Skip duplicates based on pre-fetched data
-          if (skipDuplicates && row.email && existingEmails.has(row.email.toLowerCase())) {
+          if (skipDuplicates && normalizedEmail && existingEmails.has(normalizedEmail)) {
             outcome.skipped++;
             continue;
           }
@@ -894,7 +897,7 @@ module.exports = (pool, authenticateJWT) => {
           contactsToInsert.push({
             first_name: row.first_name || row.firstName || null,
             last_name: row.last_name || row.lastName || null,
-            email: row.email || null,
+            email: normalizedEmail,
             phone: row.phone || null,
             company: row.company || null,
             job_title: row.job_title || row.jobTitle || null,
@@ -904,8 +907,8 @@ module.exports = (pool, authenticateJWT) => {
             rowIndex: i
           });
 
-          if (skipDuplicates && row.email) {
-            existingEmails.add(row.email.toLowerCase());
+          if (skipDuplicates && normalizedEmail) {
+            existingEmails.add(normalizedEmail);
           }
         } catch (rowError) {
           outcome.errors.push({

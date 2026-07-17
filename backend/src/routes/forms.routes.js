@@ -20,6 +20,7 @@ const {
     enqueueWorkflowTrigger,
     workflowTriggerEventKey,
 } = require('../services/workflowTriggerQueue');
+const { normalizeContactEmail } = require('../utils/contactEmail');
 
 /**
  * Create forms routes
@@ -832,14 +833,19 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                         }
                     }
 
-                    // Check for existing contact by email
+                    // Check for an existing deterministic contact by canonical email.
+                    contactData.email = normalizeContactEmail(contactData.email);
                     if (contactData.email) {
                         await client.query(
-                            'SELECT pg_advisory_xact_lock($1, hashtext(LOWER($2)))',
-                            [form.organization_id, String(contactData.email)]
+                            "SELECT pg_advisory_xact_lock(hashtext('contact-email'), hashtext($1::text || ':' || $2))",
+                            [form.organization_id, contactData.email]
                         );
                         const existingContact = await client.query(
-                            'SELECT id FROM contacts WHERE organization_id = $1 AND LOWER(email) = LOWER($2)',
+                            `SELECT id
+                             FROM contacts
+                             WHERE organization_id = $1 AND email = $2
+                             ORDER BY id
+                             LIMIT 1`,
                             [form.organization_id, contactData.email]
                         );
 

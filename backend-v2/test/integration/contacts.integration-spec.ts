@@ -463,6 +463,35 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(evidence.rows[0]).toEqual({ triggers: 1, activities: 1 });
   });
 
+  it('preserves duplicate contacts while canonicalizing GraphQL email writes', async () => {
+    const email = `graphql-duplicate-${Date.now()}-${process.pid}@test.itemize`;
+    const mutation = `mutation CreateContact($input: CreateContactInput!) {
+      createContact(input: $input) { id email }
+    }`;
+    const [first, duplicate] = await Promise.all([
+      graphqlMutation(memberToken, organizationId, mutation, {
+        input: { firstName: 'Duplicate First', email: `  ${email.toUpperCase()}  ` },
+      }),
+      graphqlMutation(memberToken, organizationId, mutation, {
+        input: { firstName: 'Duplicate Second', email },
+      }),
+    ]);
+
+    expect(first.body.errors).toBeUndefined();
+    expect(duplicate.body.errors).toBeUndefined();
+    expect(first.body.data.createContact.email).toBe(email);
+    expect(duplicate.body.data.createContact.email).toBe(email);
+    expect(first.body.data.createContact.id).not.toBe(duplicate.body.data.createContact.id);
+
+    const persisted = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM contacts
+       WHERE organization_id = $1 AND email = $2`,
+      [organizationId, email],
+    );
+    expect(persisted.rows[0].count).toBe(2);
+  });
+
   it('updates only supplied fields, clears explicit nulls, and queues one committed change', async () => {
     const mutation = `mutation UpdateContact($id: Int!, $input: UpdateContactInput!) {
       updateContact(id: $id, input: $input) {

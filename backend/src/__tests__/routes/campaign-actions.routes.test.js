@@ -32,7 +32,7 @@ describe('campaign send transaction contract', () => {
         const client = {
             query: jest.fn(async sql => {
                 if (/SELECT[\s\S]+FROM email_campaigns c/.test(sql)) return { rows: [campaign] };
-                if (/SELECT c\.id, c\.email/.test(sql)) {
+                if (/SELECT DISTINCT ON \(c\.email\)/.test(sql)) {
                     return { rows: [{ id: 44, email: 'recipient@example.com', first_name: 'A', last_name: 'B' }] };
                 }
                 if (/SELECT[\s\S]+FROM email_campaigns WHERE id/.test(sql)) {
@@ -60,6 +60,10 @@ describe('campaign send transaction contract', () => {
             /FROM email_campaigns c/.test(sql)
         );
         expect(campaignRead[0]).toContain('FOR UPDATE OF c');
+        const recipientRead = client.query.mock.calls.find(([sql]) =>
+            /SELECT DISTINCT ON \(c\.email\)/.test(sql)
+        );
+        expect(recipientRead[0]).toContain('ORDER BY c.email, c.id');
         expect(mockSendCampaignEmails).toHaveBeenCalledWith(
             pool,
             '12',

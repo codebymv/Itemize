@@ -35,4 +35,16 @@ describe('contact validators', () => {
             expect.objectContaining({ field: 'phone', message: 'Invalid phone number' }),
         ]));
     });
+
+    it.each([
+        ['create', () => request(app).post('/contacts')],
+        ['update', () => request(app).put('/contacts/1')],
+    ])('uses lowercase/trim identity normalization without provider-specific rewriting on %s', async (_name, buildRequest) => {
+        const response = await buildRequest().send({
+            email: '  First.Last+campaign@GMAIL.COM  ',
+        });
+
+        expect(response.status).toBe(200);
+        expect(response.body.email).toBe('first.last+campaign@gmail.com');
+    });
 });
