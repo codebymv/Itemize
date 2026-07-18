@@ -2,6 +2,16 @@ import api, { type RetryConfig } from '../lib/api';
 import { logger } from '../lib/logger';
 import { MIN_LIST_WIDTH } from '../constants/dimensions';
 import type { JsonValue } from '@/types';
+import {
+  createCategoryViaGraphql,
+  deleteCategoryViaGraphql,
+  getCategoriesViaGraphql,
+  updateCategoryViaGraphql,
+} from './categoriesGraphql';
+import {
+  isCategoryGraphqlMutationsEnabled,
+  isCategoryGraphqlReadsEnabled,
+} from './graphqlClient';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -426,6 +436,9 @@ export const updateWireframePosition = async (wireframeId: number, x: number, y:
 
 // Category API functions
 export const getCategories = async (token?: string): Promise<Category[]> => {
+  if (isCategoryGraphqlReadsEnabled()) {
+    return getCategoriesViaGraphql();
+  }
   const response = await api.get('/api/categories', {
     headers: getAuthHeaders(token)
   });
@@ -433,6 +446,9 @@ export const getCategories = async (token?: string): Promise<Category[]> => {
 };
 
 export const createCategory = async (categoryData: CreateCategoryPayload, token?: string): Promise<Category> => {
+  if (isCategoryGraphqlMutationsEnabled()) {
+    return createCategoryViaGraphql(categoryData);
+  }
   const response = await api.post('/api/categories', categoryData, {
     headers: getAuthHeaders(token)
   });
@@ -440,6 +456,9 @@ export const createCategory = async (categoryData: CreateCategoryPayload, token?
 };
 
 export const updateCategory = async (categoryId: number, categoryData: CreateCategoryPayload, token?: string): Promise<Category> => {
+  if (isCategoryGraphqlMutationsEnabled()) {
+    return updateCategoryViaGraphql(categoryId, categoryData);
+  }
   const response = await api.put(`/api/categories/${categoryId}`, categoryData, {
     headers: getAuthHeaders(token)
   });
@@ -447,6 +466,9 @@ export const updateCategory = async (categoryId: number, categoryData: CreateCat
 };
 
 export const deleteCategory = async (categoryId: number, token?: string) => {
+  if (isCategoryGraphqlMutationsEnabled()) {
+    return deleteCategoryViaGraphql(categoryId);
+  }
   const response = await api.delete(`/api/categories/${categoryId}`, {
     headers: getAuthHeaders(token)
   });

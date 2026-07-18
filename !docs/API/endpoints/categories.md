@@ -7,7 +7,7 @@ Returns a list of all the categories that the user has access to.
 ### Endpoint
 
 ```
-GET /categories
+GET /api/categories
 ```
 
 ### Response
@@ -15,9 +15,11 @@ GET /categories
 ```json
 [
   {
-    "id": "1",
+    "id": 1,
     "name": "My Category",
-    "color": "#ff0000"
+    "color_value": "#ff0000",
+    "created_at": "2026-07-18T12:00:00.000Z",
+    "updated_at": "2026-07-18T12:00:00.000Z"
   }
 ]
 ```
@@ -29,7 +31,7 @@ Creates a new category.
 ### Endpoint
 
 ```
-POST /categories
+POST /api/categories
 ```
 
 ### Request Body
@@ -37,7 +39,7 @@ POST /categories
 ```json
 {
   "name": "My New Category",
-  "color": "#00ff00"
+  "color_value": "#00ff00"
 }
 ```
 
@@ -45,9 +47,9 @@ POST /categories
 
 ```json
 {
-  "id": "2",
+  "id": 2,
   "name": "My New Category",
-  "color": "#00ff00"
+  "color_value": "#00ff00"
 }
 ```
 
@@ -58,7 +60,7 @@ Updates a specific category.
 ### Endpoint
 
 ```
-PUT /categories/{categoryId}
+PUT /api/categories/{categoryId}
 ```
 
 ### Request Body
@@ -66,7 +68,7 @@ PUT /categories/{categoryId}
 ```json
 {
   "name": "My Updated Category",
-  "color": "#0000ff"
+  "color_value": "#0000ff"
 }
 ```
 
@@ -74,9 +76,9 @@ PUT /categories/{categoryId}
 
 ```json
 {
-  "id": "1",
+  "id": 1,
   "name": "My Updated Category",
-  "color": "#0000ff"
+  "color_value": "#0000ff"
 }
 ```
 
@@ -87,7 +89,7 @@ Deletes a specific category.
 ### Endpoint
 
 ```
-DELETE /categories/{categoryId}
+DELETE /api/categories/{categoryId}
 ```
 
 ### Response
@@ -97,3 +99,7 @@ DELETE /categories/{categoryId}
   "message": "Category deleted successfully"
 }
 ```
+
+The legacy routes remain available during the GraphQL cutover. The target
+schema and deliberate invariant fixes are frozen in
+[Categories GraphQL cutover contract](../contracts/categories-graphql-cutover.md).

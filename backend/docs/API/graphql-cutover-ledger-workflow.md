@@ -1,6 +1,6 @@
 # GraphQL cutover ledger workflow
 
-The generated cutover ledger connects the Express route inventory to static frontend consumers and backend characterization tests. It is the working queue for deciding what becomes GraphQL, what remains HTTP, and what must be reconciled before migration.
+The generated cutover ledger connects the Express route inventory to static frontend consumers and characterization tests in both `backend/src/__tests__` and `backend-v2/test`. It is the working queue for deciding what becomes GraphQL, what remains HTTP, and what must be reconciled before migration.
 
 ## Commands
 
@@ -26,7 +26,7 @@ Generated artifacts:
 | API operations under `/api` | 412 |
 | Frontend API callsites | 390 |
 | Operations with frontend consumers | 365 |
-| Operations referenced by backend tests | 185 |
+| Operations referenced by backend tests | 192 |
 | Unmatched frontend callsites | 0 |
 | Runtime URL expressions requiring review | 0 |
 | Acknowledged generic runtime URL helpers | 2 |
@@ -118,6 +118,12 @@ They remain user-scoped across workspace changes, return deterministic typed
 feature progress, serialize concurrent feature updates, and commit analytics
 events with their state changes. See
 [Onboarding GraphQL cutover contract](contracts/onboarding-graphql-cutover.md).
+
+All 4 personal category operations are assigned to `CategoriesModule`.
+New users receive a canonical General category, mutations preserve that
+invariant, and rename/delete propagate transactionally across all five
+personal content stores. See
+[Categories GraphQL cutover contract](contracts/categories-graphql-cutover.md).
 
 ## Matching limits
 

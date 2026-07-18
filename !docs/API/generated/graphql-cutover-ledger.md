@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 390
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 185
+- Operations referenced by backend tests: 192
 - Recommended GraphQL queries: 128
 - Recommended GraphQL mutations: 246
 - Recommended retained HTTP endpoints: 37
@@ -113,10 +113,10 @@
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | GET | `/api/canvas/lists` | 1 | 0 | graphql-query | high | _unassigned_ |
 | PUT | `/api/canvas/positions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/categories` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/categories` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/categories/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/categories/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
+| POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
+| DELETE | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / deleteCategory |
+| PUT | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / updateCategory |
 | GET | `/api/chat-widget` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | PUT | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
@@ -131,19 +131,19 @@
 | GET | `/api/chat-widget/sessions/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/chat-widget/sessions/:id/convert` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/chat-widget/sessions/:id/messages` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
-| GET | `/api/contacts` | 1 | 1 | graphql-query | high | crm / ContactsModule / contacts |
+| GET | `/api/contacts` | 1 | 3 | graphql-query | high | crm / ContactsModule / contacts |
 | POST | `/api/contacts` | 1 | 6 | graphql-mutation | high | crm / ContactsModule / createContact |
 | DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |
-| GET | `/api/contacts/:id` | 1 | 1 | graphql-query | high | crm / ContactsModule / contact |
+| GET | `/api/contacts/:id` | 1 | 3 | graphql-query | high | crm / ContactsModule / contact |
 | PUT | `/api/contacts/:id` | 1 | 4 | graphql-mutation | high | crm / ContactsModule / updateContact |
-| GET | `/api/contacts/:id/activities` | 1 | 0 | graphql-query | high | crm / ContactsModule / contactActivities |
+| GET | `/api/contacts/:id/activities` | 1 | 1 | graphql-query | high | crm / ContactsModule / contactActivities |
 | POST | `/api/contacts/:id/activities` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / addContactActivity |
-| GET | `/api/contacts/:id/content` | 1 | 0 | graphql-query | high | crm / ContactProfilesModule / contactContent |
-| GET | `/api/contacts/:id/profile` | 0 | 3 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
+| GET | `/api/contacts/:id/content` | 1 | 1 | graphql-query | high | crm / ContactProfilesModule / contactContent |
+| GET | `/api/contacts/:id/profile` | 0 | 4 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
-| GET | `/api/contacts/export/csv` | 1 | 5 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
-| POST | `/api/contacts/import/csv` | 1 | 5 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
+| GET | `/api/contacts/export/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
+| POST | `/api/contacts/import/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
 | GET | `/api/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/conversations` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
@@ -161,7 +161,7 @@
 | GET | `/api/email-templates/categories/list` | 1 | 1 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplateCategories |
 | POST | `/api/email-templates/send-to-contact` | 1 | 2 | graphql-mutation | high | messaging / MessagingDeliveryModule / enqueueContactEmail |
 | POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
-| GET | `/api/forms` | 1 | 3 | graphql-query | high | crm / FormsModule / forms |
+| GET | `/api/forms` | 1 | 4 | graphql-query | high | crm / FormsModule / forms |
 | POST | `/api/forms` | 1 | 12 | graphql-mutation | high | crm / FormsModule / createForm |
 | DELETE | `/api/forms/:id` | 1 | 3 | graphql-mutation | high | crm / FormsModule / deleteForm |
 | GET | `/api/forms/:id` | 1 | 3 | graphql-query | high | crm / FormsModule / form |
@@ -245,7 +245,7 @@
 | POST | `/api/onboarding/complete-step` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / completeOnboardingStep |
 | POST | `/api/onboarding/dismiss` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / dismissOnboarding |
 | POST | `/api/onboarding/mark-seen` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / markOnboardingSeen |
-| GET | `/api/onboarding/progress` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingProgress |
+| GET | `/api/onboarding/progress` | 1 | 1 | graphql-query | high | onboarding / OnboardingModule / onboardingProgress |
 | GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingFeatureProgress |
 | DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / resetOnboarding |
 | GET | `/api/organizations` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organizations |
@@ -283,7 +283,7 @@
 | POST | `/api/pages/:id/versions/:versionId/restore` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/pages/public/page/:slug` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/pipelines` | 1 | 3 | graphql-query | high | crm / PipelinesModule / pipelines |
+| GET | `/api/pipelines` | 1 | 4 | graphql-query | high | crm / PipelinesModule / pipelines |
 | POST | `/api/pipelines` | 1 | 10 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
 | DELETE | `/api/pipelines/:id` | 1 | 3 | graphql-mutation | high | crm / PipelinesModule / deletePipeline |
 | GET | `/api/pipelines/:id` | 1 | 2 | graphql-query | high | crm / PipelinesModule / pipeline |
@@ -390,7 +390,7 @@
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
 | POST | `/api/suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/tags` | 0 | 4 | graphql-query | high | crm / TagsModule / tags |
+| GET | `/api/tags` | 0 | 5 | graphql-query | high | crm / TagsModule / tags |
 | POST | `/api/tags` | 0 | 8 | graphql-mutation | high | crm / TagsModule / createTag |
 | DELETE | `/api/tags/:id` | 0 | 7 | graphql-mutation | high | crm / TagsModule / deleteTag |
 | PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |

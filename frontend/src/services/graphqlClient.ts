@@ -72,6 +72,12 @@ export const isOnboardingGraphqlReadsEnabled = (): boolean =>
 export const isOnboardingGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_ONBOARDING_MUTATIONS_GRAPHQL === 'true';
 
+export const isCategoryGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_CATEGORY_READS_GRAPHQL === 'true';
+
+export const isCategoryGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_CATEGORY_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

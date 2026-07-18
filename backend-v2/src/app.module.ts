@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { AuthModule } from './auth/auth.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
+import { CategoriesModule } from './categories/categories.module';
 import { formatItemizeGraphqlError } from './common/graphql-error';
 import { ContactTransfersModule } from './contact-transfers/contact-transfers.module';
 import { ContactsModule } from './contacts/contacts.module';
@@ -34,6 +35,7 @@ const observabilityPlugins = [
     DatabaseModule,
     AuthModule,
     OrganizationsModule,
+    CategoriesModule,
     ContactsModule,
     ContactTransfersModule,
     DealsModule,

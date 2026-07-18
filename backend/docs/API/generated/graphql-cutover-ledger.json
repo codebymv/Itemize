@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 390,
     "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 185,
+    "operationsWithBackendTests": 192,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -3509,7 +3509,7 @@
           "path": "/api/canvas/lists",
           "rawPath": "/api/canvas/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 129,
+          "line": 139,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3547,7 +3547,7 @@
           "path": "/api/canvas/positions",
           "rawPath": "/api/canvas/positions",
           "source": "frontend/src/services/api.ts",
-          "line": 246,
+          "line": 256,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3581,20 +3581,27 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 429,
+          "line": 442,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/categories",
+          "source": "backend-v2/test/integration/categories.integration-spec.ts",
+          "line": 129
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "categories",
+      "targetModule": "CategoriesModule",
+      "parityStatus": "dual-parity",
+      "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3615,20 +3622,27 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 436,
+          "line": 452,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/categories",
+          "source": "backend-v2/test/integration/categories.integration-spec.ts",
+          "line": 150
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "createCategory",
+      "targetModule": "CategoriesModule",
+      "parityStatus": "dual-parity",
+      "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3649,20 +3663,27 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 450,
+          "line": 472,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "DELETE",
+          "path": "/api/categories/:categoryId",
+          "source": "backend-v2/test/integration/categories.integration-spec.ts",
+          "line": 172
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "deleteCategory",
+      "targetModule": "CategoriesModule",
+      "parityStatus": "dual-parity",
+      "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3683,20 +3704,27 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 443,
+          "line": 462,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "PUT",
+          "path": "/api/categories/:categoryId",
+          "source": "backend-v2/test/integration/categories.integration-spec.ts",
+          "line": 161
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "updateCategory",
+      "targetModule": "CategoriesModule",
+      "parityStatus": "dual-parity",
+      "notes": "User-owned partial update; General cannot be renamed and name changes propagate transactionally across all personal content stores.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -4220,6 +4248,18 @@
         {
           "method": "GET",
           "path": "/api/contacts",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 205
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 243
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
           "line": 91
         }
@@ -4378,6 +4418,18 @@
       "testCallsites": [
         {
           "method": "GET",
+          "path": "/api/contacts/:contactId",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 284
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/:contactId",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 321
+        },
+        {
+          "method": "GET",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
           "line": 106
@@ -4475,7 +4527,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/:contactId/activities",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 798
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
@@ -4543,7 +4602,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/:contactId/content",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 872
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
@@ -4568,6 +4634,12 @@
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/:contactId/profile",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 1012
+        },
         {
           "method": "GET",
           "path": "/api/contacts/:contactIdA/profile",
@@ -4709,6 +4781,12 @@
         {
           "method": "GET",
           "path": "/api/contacts/export/csv",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 1207
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
           "line": 25
         },
@@ -4775,6 +4853,12 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 1220
+        },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
@@ -5630,6 +5714,12 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/forms",
+          "source": "backend-v2/test/integration/forms.integration-spec.ts",
+          "line": 188
+        },
         {
           "method": "GET",
           "path": "/api/forms",
@@ -8448,7 +8538,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 165,
+          "line": 175,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8498,7 +8588,7 @@
           "path": "/api/lists/:listId",
           "rawPath": "/api/lists/${listId}",
           "source": "frontend/src/services/api.ts",
-          "line": 232,
+          "line": 242,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8554,7 +8644,7 @@
           "path": "/api/lists/:id",
           "rawPath": "/api/lists/${listData.id}",
           "source": "frontend/src/services/api.ts",
-          "line": 207,
+          "line": 217,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8677,7 +8767,7 @@
           "path": "/api/lists/:listId/position",
           "rawPath": "/api/lists/${listId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 239,
+          "line": 249,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8766,7 +8856,7 @@
           "path": "/api/lists/:listId/share",
           "rawPath": "/api/lists/${listId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 642,
+          "line": 664,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8831,7 +8921,7 @@
           "path": "/api/lists/:listId/share",
           "rawPath": "/api/lists/${listId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 634,
+          "line": 656,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8998,7 +9088,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 259,
+          "line": 269,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9075,7 +9165,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 266,
+          "line": 276,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9146,7 +9236,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 305,
+          "line": 315,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9205,7 +9295,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 273,
+          "line": 283,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9252,7 +9342,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 295,
+          "line": 305,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9299,7 +9389,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 281,
+          "line": 291,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9361,7 +9451,7 @@
           "path": "/api/notes/:noteId/share",
           "rawPath": "/api/notes/${noteId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 658,
+          "line": 680,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9411,7 +9501,7 @@
           "path": "/api/notes/:noteId/share",
           "rawPath": "/api/notes/${noteId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 650,
+          "line": 672,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9458,7 +9548,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 288,
+          "line": 298,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9612,7 +9702,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/onboarding/progress",
+          "source": "backend-v2/test/integration/onboarding.integration-spec.ts",
+          "line": 114
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
@@ -11108,6 +11205,12 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/pipelines",
+          "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+          "line": 336
+        },
         {
           "method": "GET",
           "path": "/api/pipelines",
@@ -13361,7 +13464,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 607,
+          "line": 629,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15265,6 +15368,12 @@
         {
           "method": "GET",
           "path": "/api/tags",
+          "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+          "line": 201
+        },
+        {
+          "method": "GET",
+          "path": "/api/tags",
           "source": "backend/src/__tests__/integration/tags.integration.test.js",
           "line": 102
         },
@@ -15547,7 +15656,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 491,
+          "line": 513,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15581,7 +15690,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 519,
+          "line": 541,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15615,7 +15724,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 543,
+          "line": 565,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15649,7 +15758,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 510,
+          "line": 532,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15683,7 +15792,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 527,
+          "line": 549,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15717,7 +15826,7 @@
           "path": "/api/vaults/:vaultId/items",
           "rawPath": "/api/vaults/${vaultId}/items",
           "source": "frontend/src/services/api.ts",
-          "line": 551,
+          "line": 573,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15751,7 +15860,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 575,
+          "line": 597,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15785,7 +15894,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 567,
+          "line": 589,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15819,7 +15928,7 @@
           "path": "/api/vaults/:vaultId/items/bulk",
           "rawPath": "/api/vaults/${vaultId}/items/bulk",
           "source": "frontend/src/services/api.ts",
-          "line": 559,
+          "line": 581,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15853,7 +15962,7 @@
           "path": "/api/vaults/:vaultId/items/reorder",
           "rawPath": "/api/vaults/${vaultId}/items/reorder",
           "source": "frontend/src/services/api.ts",
-          "line": 583,
+          "line": 605,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15887,7 +15996,7 @@
           "path": "/api/vaults/:vaultId/lock",
           "rawPath": "/api/vaults/${vaultId}/lock",
           "source": "frontend/src/services/api.ts",
-          "line": 613,
+          "line": 635,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15925,7 +16034,7 @@
           "path": "/api/vaults/:vaultId/position",
           "rawPath": "/api/vaults/${vaultId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 535,
+          "line": 557,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15968,7 +16077,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 599,
+          "line": 621,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16024,7 +16133,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 591,
+          "line": 613,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16083,7 +16192,7 @@
           "path": "/api/vaults/:vaultId/unlock",
           "rawPath": "/api/vaults/${vaultId}/unlock",
           "source": "frontend/src/services/api.ts",
-          "line": 624,
+          "line": 646,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16178,7 +16287,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 315,
+          "line": 325,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16212,7 +16321,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 322,
+          "line": 332,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16250,7 +16359,7 @@
           "path": "/api/whiteboards/:whiteboardId/position",
           "rawPath": "/api/whiteboards/${whiteboardId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 344,
+          "line": 354,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16284,7 +16393,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 337,
+          "line": 347,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16318,7 +16427,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 330,
+          "line": 340,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16361,7 +16470,7 @@
           "path": "/api/whiteboards/:whiteboardId/share",
           "rawPath": "/api/whiteboards/${whiteboardId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 674,
+          "line": 696,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16411,7 +16520,7 @@
           "path": "/api/whiteboards/:whiteboardId/share",
           "rawPath": "/api/whiteboards/${whiteboardId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 666,
+          "line": 688,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16458,7 +16567,7 @@
           "path": "/api/wireframes",
           "rawPath": "/api/wireframes",
           "source": "frontend/src/services/api.ts",
-          "line": 392,
+          "line": 402,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16492,7 +16601,7 @@
           "path": "/api/wireframes",
           "rawPath": "/api/wireframes",
           "source": "frontend/src/services/api.ts",
-          "line": 399,
+          "line": 409,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16530,7 +16639,7 @@
           "path": "/api/wireframes/:wireframeId/position",
           "rawPath": "/api/wireframes/${wireframeId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 421,
+          "line": 431,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16564,7 +16673,7 @@
           "path": "/api/wireframes/:wireframeId",
           "rawPath": "/api/wireframes/${wireframeId}",
           "source": "frontend/src/services/api.ts",
-          "line": 414,
+          "line": 424,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16598,7 +16707,7 @@
           "path": "/api/wireframes/:wireframeId",
           "rawPath": "/api/wireframes/${wireframeId}",
           "source": "frontend/src/services/api.ts",
-          "line": 407,
+          "line": 417,
           "client": "api",
           "literalInterpolation": false
         }

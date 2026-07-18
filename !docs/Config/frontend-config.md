@@ -222,6 +222,11 @@ VITE_FORM_SUBMISSIONS_GRAPHQL=false
 VITE_ONBOARDING_READS_GRAPHQL=false
 VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 
+# Personal workspace category reads and writes have independent rollback
+# boundaries. Both remain disabled until the browser gate passes.
+VITE_CATEGORY_READS_GRAPHQL=false
+VITE_CATEGORY_MUTATIONS_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 

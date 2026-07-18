@@ -1702,6 +1702,22 @@
       "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "characterized", "risk": "high",
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
     },
+    "GET /api/categories": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "categories", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data."
+    },
+    "POST /api/categories": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user."
+    },
+    "PUT /api/categories/:id": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "updateCategory", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-owned partial update; General cannot be renamed and name changes propagate transactionally across all personal content stores."
+    },
+    "DELETE /api/categories/:id": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "deleteCategory", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed."
+    },
     "GET /api/onboarding/progress": {
       "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."

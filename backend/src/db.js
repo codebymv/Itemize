@@ -17,6 +17,8 @@ const runMigrationOnce = async (pool, migrationName, migrationFn) => {
 // Import database migrations
 const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runEmailPasswordAuthMigration, runWireframesMigration, runWireframesDimensionsMigration, runOnboardingMigration } = require('./db_migrations');
 
+const { runCategoryContractMigration } = require('./db_category_contract_migrations');
+
 // Import CRM migrations
 const { runAllCRMMigrations } = require('./db_crm_migrations');
 
@@ -410,6 +412,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_categories_table', runCategoriesTableMigration);
     await runMigrationOnce(pool, 'feature_categories_data', runCategoriesDataMigration);
     await runMigrationOnce(pool, 'feature_categories_cleanup', runCleanupDefaultCategories);
+    await runMigrationOnce(pool, 'category_contract_v1', runCategoryContractMigration);
     await runMigrationOnce(pool, 'feature_sharing', runSharingMigration);
     await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
     await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);

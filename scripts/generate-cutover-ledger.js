@@ -5,7 +5,10 @@ const path = require('path');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const frontendRoot = path.join(repositoryRoot, 'frontend', 'src');
-const backendTestsRoot = path.join(repositoryRoot, 'backend', 'src', '__tests__');
+const backendTestRoots = [
+    path.join(repositoryRoot, 'backend', 'src', '__tests__'),
+    path.join(repositoryRoot, 'backend-v2', 'test'),
+];
 const inventoryPath = path.join(repositoryRoot, '!docs', 'API', 'generated', 'rest-surface.json');
 const overridesPath = path.join(repositoryRoot, '!docs', 'API', 'graphql-operation-overrides.json');
 const outputDirectory = path.join(repositoryRoot, '!docs', 'API', 'generated');
@@ -136,8 +139,9 @@ function discoverFrontendCalls() {
 
 function discoverBackendTestCalls() {
     const calls = [];
-    for (const file of walkSourceFiles(backendTestsRoot).sort()) {
-        if (!/\.(test|spec)\.js$/.test(file)) continue;
+    const testFiles = backendTestRoots.flatMap(root => walkSourceFiles(root));
+    for (const file of testFiles.sort()) {
+        if (!/(?:\.(?:test|spec)|-spec)\.[jt]sx?$/.test(file)) continue;
         const contents = fs.readFileSync(file, 'utf8');
         let match;
         testCallPattern.lastIndex = 0;

@@ -16,3 +16,10 @@ This table stores the categories created by users.
 ## Constraints
 
 *   `UNIQUE(user_id, name)`: Prevents a user from creating multiple categories with the same name.
+
+## General category invariant
+
+Migration `category_contract_v1` backfills `General` for every user and installs
+an `AFTER INSERT` trigger on `users` so new accounts receive it automatically.
+The NestJS GraphQL category contract prevents renaming or deleting this row and
+transactionally keeps personal content category names aligned.
