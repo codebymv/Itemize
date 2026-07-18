@@ -109,10 +109,12 @@ module.exports = (pool, authenticateJWT, requireOrganization, io) => {
                 return res.status(400).json({ error: 'Message content is required' });
             }
 
-            const data = await withDbClient(pool, async (client) => {
+            const data = await withTransaction(pool, async (client) => {
                 // Verify session
                 const sessionCheck = await client.query(
-                    'SELECT id, session_token FROM chat_sessions WHERE id = $1 AND organization_id = $2',
+                    `SELECT id, session_token FROM chat_sessions
+                     WHERE id = $1 AND organization_id = $2 AND status = 'active'
+                     FOR UPDATE`,
                     [id, req.organizationId]
                 );
 

@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 390,
     "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 181,
+    "operationsWithBackendTests": 185,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -19,7 +19,7 @@
     "retainHttpCount": 37,
     "graphqlQueryCount": 128,
     "graphqlMutationCount": 246,
-    "highRiskCount": 328,
+    "highRiskCount": 324,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3878,7 +3878,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 335
+          "line": 338
         }
       ],
       "consumerCallsites": [
@@ -3892,7 +3892,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 214
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
@@ -3902,7 +3909,7 @@
       "parityStatus": "not-started",
       "notes": null,
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "medium"
     },
     {
       "id": "POST /api/chat-widget/public/messages",
@@ -3912,7 +3919,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 263
+          "line": 265
         }
       ],
       "consumerCallsites": [
@@ -3960,7 +3967,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:CHAT_TOKEN",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 246
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
@@ -3970,7 +3984,7 @@
       "parityStatus": "not-started",
       "notes": null,
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "medium"
     },
     {
       "id": "POST /api/chat-widget/public/session",
@@ -4014,11 +4028,18 @@
       "routeSources": [
         {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 375
+          "line": 381
         }
       ],
       "consumerCallsites": [],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 236
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
@@ -4028,7 +4049,7 @@
       "parityStatus": "not-started",
       "notes": null,
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "medium"
     },
     {
       "id": "GET /api/chat-widget/sessions",
@@ -4106,7 +4127,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/chat-widget/sessions.routes.js",
-          "line": 176
+          "line": 178
         }
       ],
       "consumerCallsites": [
@@ -4154,7 +4175,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/sessions/:id/messages",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 241
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
@@ -4164,7 +4192,7 @@
       "parityStatus": "not-started",
       "notes": null,
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "medium"
     },
     {
       "id": "GET /api/contacts",

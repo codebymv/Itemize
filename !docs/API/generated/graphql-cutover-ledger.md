@@ -9,11 +9,11 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 390
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 181
+- Operations referenced by backend tests: 185
 - Recommended GraphQL queries: 128
 - Recommended GraphQL mutations: 246
 - Recommended retained HTTP endpoints: 37
-- High-risk operations: 328
+- High-risk operations: 324
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -122,15 +122,15 @@
 | PUT | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/chat-widget/embed-code` | 1 | 0 | graphql-query | high | _unassigned_ |
 | GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget/public/end-session` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| POST | `/api/chat-widget/public/end-session` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
 | POST | `/api/chat-widget/public/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 0 | graphql-query | high | _unassigned_ |
+| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | graphql-query | medium | _unassigned_ |
 | POST | `/api/chat-widget/public/session` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/chat-widget/public/typing` | 0 | 0 | graphql-mutation | high | _unassigned_ |
+| POST | `/api/chat-widget/public/typing` | 0 | 1 | graphql-mutation | medium | _unassigned_ |
 | GET | `/api/chat-widget/sessions` | 1 | 0 | graphql-query | high | _unassigned_ |
 | GET | `/api/chat-widget/sessions/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/chat-widget/sessions/:id/convert` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/chat-widget/sessions/:id/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| POST | `/api/chat-widget/sessions/:id/messages` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
 | GET | `/api/contacts` | 1 | 1 | graphql-query | high | crm / ContactsModule / contacts |
 | POST | `/api/contacts` | 1 | 6 | graphql-mutation | high | crm / ContactsModule / createContact |
 | DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |

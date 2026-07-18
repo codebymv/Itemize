@@ -271,6 +271,29 @@ describe('Socket.IO authorization boundary', () => {
         }
     });
 
+    test('evicts every visitor socket when a chat session ends without exposing its capability', async () => {
+        const query = jest.fn().mockResolvedValue({
+            rows: [{ id: 31, organization_id: 14 }],
+        });
+        const { connect, result } = createHarness(query);
+        const first = new FakeSocket();
+        const second = new FakeSocket();
+        connect(first);
+        connect(second);
+        await first.trigger('joinChatSession', CHAT_TOKEN);
+        await second.trigger('joinChatSession', CHAT_TOKEN);
+
+        await expect(result.broadcast.endChatSession(CHAT_TOKEN)).resolves.toBe(true);
+
+        for (const socket of [first, second]) {
+            expect(socket.rooms).not.toContain(`chat-session-${CHAT_TOKEN}`);
+            expect(socket.data.realtime.chatSessions.has(CHAT_TOKEN)).toBe(false);
+            const event = emitted(socket, 'chatSessionEnded').at(-1);
+            expect(event.payload).toMatchObject({ reason: 'session_ended' });
+            expect(JSON.stringify(event.payload)).not.toContain(CHAT_TOKEN);
+        }
+    });
+
     test('broadcast helpers reject malformed room keys', () => {
         const { result, roomEvents } = createHarness();
 
@@ -285,6 +308,7 @@ describe('Socket.IO authorization boundary', () => {
 
         await expect(result.broadcast.revokeShared('note', '../secret')).resolves.toBe(false);
         await expect(result.broadcast.revokeShared('unknown', SHARE_TOKEN)).resolves.toBe(false);
+        await expect(result.broadcast.endChatSession('cs_short')).resolves.toBe(false);
 
         expect(io.in).not.toHaveBeenCalled();
     });

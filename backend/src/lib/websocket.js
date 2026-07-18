@@ -98,7 +98,11 @@ function authenticateSocket(socket) {
     }
 }
 
-function createBroadcast(io, onSharedRevoked = () => {}) {
+function createBroadcast(
+    io,
+    onSharedRevoked = () => {},
+    onChatSessionEnded = () => {}
+) {
     const sharedBroadcast = (kind, shareToken, eventType, data) => {
         const config = SHARED_ROOM_TYPES[kind];
         if (!io || !isShareToken(shareToken) || !config || typeof eventType !== 'string') return;
@@ -137,6 +141,22 @@ function createBroadcast(io, onSharedRevoked = () => {}) {
         return true;
     };
 
+    const endChatSession = async (sessionToken, reason = 'session_ended') => {
+        if (!io || !isChatSessionToken(sessionToken) || typeof io.in !== 'function') return false;
+
+        const roomName = `chat-session-${sessionToken}`;
+        const sockets = await io.in(roomName).fetchSockets();
+        io.to(roomName).emit('chatSessionEnded', {
+            reason,
+            timestamp: new Date().toISOString(),
+        });
+        await Promise.all(sockets.map(async socket => {
+            await socket.leave(roomName);
+            onChatSessionEnded(sessionToken, socket);
+        }));
+        return true;
+    };
+
     return {
         listUpdate: (token, type, data) => sharedBroadcast('list', token, type, data),
         noteUpdate: (token, type, data) => sharedBroadcast('note', token, type, data),
@@ -146,6 +166,7 @@ function createBroadcast(io, onSharedRevoked = () => {}) {
         userWireframeUpdate: (userId, type, data) => userBroadcast(userId, 'userWireframeUpdated', type, data),
         userListDeleted: (userId, data) => userBroadcast(userId, 'userListDeleted', 'LIST_DELETED', data),
         revokeShared,
+        endChatSession,
     };
 }
 
@@ -172,13 +193,23 @@ module.exports = (io, pool) => {
         return true;
     };
 
-    const broadcast = createBroadcast(io, (kind, shareToken, socket) => {
-        removeConnection(viewerMaps[kind], shareToken, socket.id);
-        const publicRooms = socket.data?.realtime?.publicRooms;
-        if (typeof publicRooms?.delete === 'function') {
-            publicRooms.delete(`${kind}:${shareToken}`);
+    const broadcast = createBroadcast(
+        io,
+        (kind, shareToken, socket) => {
+            removeConnection(viewerMaps[kind], shareToken, socket.id);
+            const publicRooms = socket.data?.realtime?.publicRooms;
+            if (typeof publicRooms?.delete === 'function') {
+                publicRooms.delete(`${kind}:${shareToken}`);
+            }
+        },
+        (sessionToken, socket) => {
+            removeConnection(chatSessionConnections, sessionToken, socket.id);
+            const chatSessions = socket.data?.realtime?.chatSessions;
+            if (typeof chatSessions?.delete === 'function') {
+                chatSessions.delete(sessionToken);
+            }
         }
-    });
+    );
 
     const registerSharedJoin = (socket, kind, config) => {
         socket.on(config.event, async shareToken => {

@@ -1,9 +1,13 @@
 const { createServer } = require('http');
+const express = require('express');
+const request = require('supertest');
 const { Server } = require('socket.io');
 const { io: createClient } = require('socket.io-client');
 
 const TestDbHelper = require('./test-db-helper');
 const initializeWebSocket = require('../../lib/websocket');
+const publicChatRoutes = require('../../routes/chat-widget/public.routes');
+const agentChatRoutes = require('../../routes/chat-widget/sessions.routes');
 
 const SHARE_TOKEN = '123e4567-e89b-42d3-a456-426614174111';
 const CHAT_TOKEN = `cs_${'b'.repeat(48)}`;
@@ -22,6 +26,7 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
     let dbHelper;
     let owner;
     let outsider;
+    let app;
     let server;
     let io;
     let realtime;
@@ -63,9 +68,33 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
             [owner.org.id, widget.rows[0].id, CHAT_TOKEN]
         );
 
-        server = createServer();
+        app = express();
+        app.use(express.json());
+        server = createServer(app);
         io = new Server(server, { cors: { origin: true, credentials: true } });
         realtime = initializeWebSocket(io, dbHelper.pool);
+        const noopRateLimit = (_req, _res, next) => next();
+        app.use(
+            '/api/chat-widget',
+            publicChatRoutes(dbHelper.pool, noopRateLimit, io, realtime.broadcast)
+        );
+        const authenticateOwner = (req, _res, next) => {
+            req.user = owner.user;
+            next();
+        };
+        const selectOwnerOrganization = (req, _res, next) => {
+            req.organizationId = owner.org.id;
+            next();
+        };
+        app.use(
+            '/api/chat-widget',
+            agentChatRoutes(
+                dbHelper.pool,
+                authenticateOwner,
+                selectOwnerOrganization,
+                io
+            )
+        );
         await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
         url = `http://127.0.0.1:${server.address().port}`;
     }, 30000);
@@ -166,5 +195,60 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
         });
         const remaining = await io.in(`shared-note-${SHARE_TOKEN}`).fetchSockets();
         expect(remaining).toHaveLength(0);
+    });
+
+    it('ends a chat capability, evicts active visitors, and denies post-end activity', async () => {
+        const visitor = await connect();
+        const visitorJoined = once(visitor, 'joinedChatSession');
+        visitor.emit('joinChatSession', CHAT_TOKEN);
+        await visitorJoined;
+
+        const agent = await connect(owner.token);
+        const orgJoined = once(agent, 'joinedOrgChat');
+        agent.emit('joinOrgChat', { organizationId: owner.org.id });
+        await orgJoined;
+
+        const visitorEnded = once(visitor, 'chatSessionEnded');
+        const agentEnded = once(agent, 'chatSessionEnded');
+        const response = await request(app)
+            .post('/api/chat-widget/public/end-session')
+            .send({ session_token: CHAT_TOKEN });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ success: true });
+        await expect(visitorEnded).resolves.toMatchObject({ reason: 'session_ended' });
+        await expect(agentEnded).resolves.toMatchObject({ session_id: expect.any(Number) });
+
+        const remaining = await io.in(`chat-session-${CHAT_TOKEN}`).fetchSockets();
+        expect(remaining).toHaveLength(0);
+        const stored = await dbHelper.pool.query(
+            'SELECT id, status, is_online, ended_at FROM chat_sessions WHERE session_token = $1',
+            [CHAT_TOKEN]
+        );
+        expect(stored.rows[0]).toMatchObject({ status: 'ended', is_online: false });
+        expect(stored.rows[0].ended_at).toBeTruthy();
+
+        const rejected = once(visitor, 'realtimeError');
+        visitor.emit('joinChatSession', CHAT_TOKEN);
+        await expect(rejected).resolves.toMatchObject({ code: 'INVALID_CAPABILITY' });
+
+        const typing = await request(app)
+            .post('/api/chat-widget/public/typing')
+            .send({ session_token: CHAT_TOKEN, is_typing: true });
+        expect(typing.status).toBe(404);
+
+        const agentMessage = await request(app)
+            .post(`/api/chat-widget/sessions/${stored.rows[0].id}/messages`)
+            .send({ content: 'This session has ended.' });
+        expect(agentMessage.status).toBe(404);
+
+        const history = await request(app)
+            .get(`/api/chat-widget/public/messages/${CHAT_TOKEN}`);
+        expect(history.status).toBe(200);
+        const afterHistory = await dbHelper.pool.query(
+            'SELECT status, is_online FROM chat_sessions WHERE session_token = $1',
+            [CHAT_TOKEN]
+        );
+        expect(afterHistory.rows[0]).toMatchObject({ status: 'ended', is_online: false });
     });
 });

@@ -1,6 +1,6 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Phase 0 characterized; legacy authorization, public-content revocation, and shared-viewer reconnect recovery hardened
+**Status:** Phase 0 characterized; legacy authorization, public-content revocation, shared-viewer reconnect recovery, and chat-session termination hardened
 **Evidence date:** 2026-07-17
 
 ## Transport decision
@@ -36,7 +36,7 @@ Public-content rooms emit `viewerCount` and one content event (`listUpdated`, `n
 
 Successful list, note, whiteboard, and wireframe unshare operations emit `sharedContentRevoked { kind, reason, timestamp }` to the old room without exposing the capability, then remove every socket returned by the Socket.IO adapter from that room. The three reachable public viewers immediately discard their local projection, disconnect, and render the unavailable state. Database revocation completes before eviction begins; an outsider or missing-object response never publishes an eviction.
 
-Chat emits `newChatSession`, `newChatMessage`, `chatSessionEnded`, `agentTyping`, and `visitorTyping`. Social emits `social_message`. Chat and social have distinct organization rooms; the legacy `org-{id}`/`org_{id}` mismatch is removed.
+Chat emits `newChatSession`, `newChatMessage`, `chatSessionEnded`, `agentTyping`, and `visitorTyping`. Ending a session commits `status = 'ended'` first, emits the existing organization notification, emits a token-free `chatSessionEnded { reason, timestamp }` to the visitor room, and removes every visitor socket returned by the adapter. Visitor and agent message writes lock the active session row in their transaction, so an end/send race resolves before the terminal transition. A terminated socket cannot publish visitor typing, a reconnect cannot rejoin, retained HTTP typing and agent-message writes require an active session, and reading retained transcript history cannot restore online presence. Social emits `social_message`. Chat and social have distinct organization rooms; the legacy `org-{id}`/`org_{id}` mismatch is removed.
 
 `agentTyping { sessionToken, isTyping }` requires cookie authentication plus current membership in the active session's organization. `visitorTyping { sessionToken, isTyping }` is accepted only after the same socket has joined that active session capability. `isTyping` is a strict boolean. Typing output uses camelCase and never includes the raw session capability.
 
@@ -53,7 +53,7 @@ Events are currently best-effort, in-process notifications emitted after legacy 
 The following block multi-instance realtime cutover, but not a single-instance GraphQL request/response migration:
 
 1. Room fan-out and viewer maps are process-local. Before running multiple API instances, add a supported Socket.IO adapter (normally Redis) and replace local viewer counting with adapter-aware or separately stored presence.
-2. Public-content revocation now uses adapter-wide `fetchSockets`, room emit, and leave operations, and live tests prove immediate eviction on the current in-memory adapter. Multi-instance proof still requires the selected shared adapter. Chat-session termination/revocation does not yet publish the equivalent eviction/re-authorization event.
+2. Public-content revocation and chat-session termination now use adapter-wide `fetchSockets`, room emit, and leave operations, and live tests prove immediate eviction on the current in-memory adapter. Multi-instance proof still requires the selected shared adapter.
 3. Route commits and realtime emits have no transactional outbox, delivery ID, replay cursor, or ordering contract.
 4. No active frontend source consumer was found for organization chat or social events. Those protocols must not be declared production-required until a reachable consumer or external client is identified.
 5. Shared pages receive viewer counts but do not render them. Browser coverage must decide whether presence is a supported feature or removable telemetry.
@@ -73,7 +73,8 @@ NestJS should expose a dedicated `RealtimeModule` that consumes authenticated co
 - reconnect reauthorizes, refetches authoritative state, and rejoins before accepting queued events;
 - database failures fail closed without leaking query details or capabilities;
 - public revocation evicts existing sockets before multi-instance production rollout;
+- chat-session termination evicts active visitors, denies rejoin and post-end visitor/agent writes, and keeps transcript reads from restoring presence;
 - two API instances provide correct fan-out, presence counts, and revocation through the selected adapter;
 - browser tests prove static fallback, reconnect/refetch, deletion, and capability rotation behavior.
 
-The current executable baseline includes 15 boundary unit cases, 6 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, and 4 focused frontend realtime cases covering active revocation, reconnect/refetch ordering, capability denial, and failed-refetch fallback. The fresh run proves two connected public viewers receive the token-free event and leave the room. The frontend contract proves the shipped viewers do not accept queued events until recovery completes, but a real browser/network-disruption journey is still required. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).
+The current executable baseline includes 16 boundary unit cases, 7 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, and 4 focused frontend realtime cases covering active revocation, reconnect/refetch ordering, capability denial, and failed-refetch fallback. The fresh run proves two connected public viewers receive the token-free revocation event and leave their room; it also proves the real end-session HTTP route commits the terminal state, notifies agents and visitors, evicts the visitor, denies rejoin and post-end visitor/agent writes, and does not let a transcript read restore online presence. The frontend contract proves the shipped shared viewers do not accept queued events until recovery completes, but a real browser/network-disruption journey is still required. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).

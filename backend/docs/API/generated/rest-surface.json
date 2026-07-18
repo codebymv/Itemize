@@ -953,7 +953,7 @@
       ],
       "declaredPath": "/public/end-session",
       "source": "backend/src/routes/chat-widget/public.routes.js",
-      "line": 335,
+      "line": 338,
       "dynamic": false
     },
     {
@@ -963,7 +963,7 @@
       ],
       "declaredPath": "/public/messages",
       "source": "backend/src/routes/chat-widget/public.routes.js",
-      "line": 263,
+      "line": 265,
       "dynamic": false
     },
     {
@@ -993,7 +993,7 @@
       ],
       "declaredPath": "/public/typing",
       "source": "backend/src/routes/chat-widget/public.routes.js",
-      "line": 375,
+      "line": 381,
       "dynamic": false
     },
     {
@@ -1023,7 +1023,7 @@
       ],
       "declaredPath": "/sessions/:id/convert",
       "source": "backend/src/routes/chat-widget/sessions.routes.js",
-      "line": 176,
+      "line": 178,
       "dynamic": false
     },
     {

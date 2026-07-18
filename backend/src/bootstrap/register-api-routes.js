@@ -225,7 +225,13 @@ function registerApiRoutes({
     logger.info('Workflows routes initialized');
     app.use('/api/sms-templates', smsTemplatesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('SMS Templates routes initialized');
-    app.use('/api/chat-widget', chatWidgetRoutes(pool, authenticateJWT, publicRateLimit, io));
+    app.use('/api/chat-widget', chatWidgetRoutes(
+        pool,
+        authenticateJWT,
+        publicRateLimit,
+        io,
+        broadcast
+    ));
     logger.info('Chat Widget routes initialized');
     app.use('/api/marketing-chat', marketingChatRoutes(publicRateLimit));
     logger.info('Marketing Chat routes initialized');

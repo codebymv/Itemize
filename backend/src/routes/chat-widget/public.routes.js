@@ -1,10 +1,10 @@
 const express = require('express');
-const { withDbClient } = require('../../utils/db');
+const { withDbClient, withTransaction } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
 const { generateSessionToken } = require('./helpers');
 const { chatMessageColumns } = require('./columns');
 
-module.exports = (pool, publicRateLimit, io) => {
+module.exports = (pool, publicRateLimit, io, broadcast) => {
     const router = express.Router();
 
 
@@ -240,7 +240,9 @@ module.exports = (pool, publicRateLimit, io) => {
 
                 // Update last_seen
                 await client.query(`
-                UPDATE chat_sessions SET last_seen_at = CURRENT_TIMESTAMP, is_online = TRUE WHERE id = $1
+                UPDATE chat_sessions
+                SET last_seen_at = CURRENT_TIMESTAMP, is_online = TRUE
+                WHERE id = $1 AND status = 'active'
             `, [sessionResult.rows[0].id]);
 
                 return { sessionId: sessionResult.rows[0].id, messages: messagesResult.rows };
@@ -268,12 +270,13 @@ module.exports = (pool, publicRateLimit, io) => {
                 return res.status(400).json({ error: 'session_token and content are required' });
             }
 
-            const data = await withDbClient(pool, async (client) => {
+            const data = await withTransaction(pool, async (client) => {
                 // Get session
                 const sessionResult = await client.query(`
                 SELECT cs.id, cs.organization_id, cs.widget_id, cs.visitor_name, cs.custom_data
                 FROM chat_sessions cs
                 WHERE cs.session_token = $1 AND cs.status = 'active'
+                FOR UPDATE
             `, [session_token]);
 
                 if (sessionResult.rows.length === 0) {
@@ -346,7 +349,7 @@ module.exports = (pool, publicRateLimit, io) => {
                     is_online = FALSE,
                     ended_at = CURRENT_TIMESTAMP,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE session_token = $1
+                WHERE session_token = $1 AND status = 'active'
                 RETURNING id, organization_id
             `, [session_token]));
 
@@ -360,6 +363,9 @@ module.exports = (pool, publicRateLimit, io) => {
                     session_id: result.rows[0].id,
                     timestamp: new Date().toISOString()
                 });
+            }
+            if (broadcast?.endChatSession) {
+                await broadcast.endChatSession(session_token);
             }
 
             res.json({ success: true });
@@ -381,7 +387,8 @@ module.exports = (pool, publicRateLimit, io) => {
             }
 
             const sessionResult = await withDbClient(pool, async (client) => client.query(
-                'SELECT id, organization_id FROM chat_sessions WHERE session_token = $1',
+                `SELECT id, organization_id FROM chat_sessions
+                 WHERE session_token = $1 AND status = 'active'`,
                 [session_token]
             ));
 
