@@ -32,6 +32,7 @@ describe('test database schema contract', () => {
             'organization_members',
             'organizations',
             'payments',
+            'realtime_event_outbox',
             'sms_receiving_numbers',
             'social_webhook_events',
             'stripe_subscription_webhook_events',
@@ -51,6 +52,7 @@ describe('test database schema contract', () => {
             'feature_onboarding',
             'deal_activity_contract_v1',
             'module_crm',
+            'realtime_event_outbox',
             'email_webhook_events',
             'email_webhook_reconciliation',
             'workflow_webhook_idempotency',
@@ -226,6 +228,21 @@ describe('test database schema contract', () => {
         } = require('../../db_public_form_contract_migrations');
 
         expect(migration.up).toBe(runPublicFormContractMigration);
+    });
+
+    test('production migration stream creates the durable realtime bridge', async () => {
+        const migration = require('../../../scripts/migrations/028_realtime_outbox');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS realtime_event_outbox');
+        expect(sql).toContain('lease_expires_at');
+        expect(sql).toContain("'dead_letter'");
+        expect(sql).toContain('idx_realtime_event_outbox_queue');
+        expect(sql).toContain('realtime_event_outbox_channel_event_check');
+        expect(sql).toContain('CHECK (aggregate_id > 0)');
+        expect(sql).toContain("CHECK (jsonb_typeof(payload) = 'object')");
     });
 
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {

@@ -120,5 +120,5 @@ adapter is default-off and preserves the existing `{ notes, pagination }`
 shape. See
 [Workspace lists and notes GraphQL cutover contract](../../API/contracts/workspace-content-graphql-cutover.md).
 
-Note mutations remain on REST until their shared-viewer Socket.IO events can
-be published after commit across the separate legacy and NestJS services.
+Note mutations remain on REST until each Nest repository writes its
+shared-viewer outbox event in the same transaction as the note change.

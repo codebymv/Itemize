@@ -103,23 +103,23 @@ function createBroadcast(
     onSharedRevoked = () => {},
     onChatSessionEnded = () => {}
 ) {
-    const sharedBroadcast = (kind, shareToken, eventType, data) => {
+    const sharedBroadcast = (kind, shareToken, eventType, data, occurredAt) => {
         const config = SHARED_ROOM_TYPES[kind];
         if (!io || !isShareToken(shareToken) || !config || typeof eventType !== 'string') return;
         io.to(`${config.roomPrefix}${shareToken}`).emit(config.updateEvent, {
             type: eventType,
             data,
-            timestamp: new Date().toISOString(),
+            timestamp: occurredAt || new Date().toISOString(),
         });
     };
 
-    const userBroadcast = (userId, eventName, eventType, data) => {
+    const userBroadcast = (userId, eventName, eventType, data, occurredAt) => {
         const parsedUserId = parseOrganizationId(userId);
         if (!io || !parsedUserId) return;
         io.to(`user-canvas-${parsedUserId}`).emit(eventName, {
             type: eventType,
             data,
-            timestamp: new Date().toISOString(),
+            timestamp: occurredAt || new Date().toISOString(),
         });
     };
 
@@ -158,13 +158,13 @@ function createBroadcast(
     };
 
     return {
-        listUpdate: (token, type, data) => sharedBroadcast('list', token, type, data),
-        noteUpdate: (token, type, data) => sharedBroadcast('note', token, type, data),
-        whiteboardUpdate: (token, type, data) => sharedBroadcast('whiteboard', token, type, data),
-        wireframeUpdate: (token, type, data) => sharedBroadcast('wireframe', token, type, data),
-        userListUpdate: (userId, type, data) => userBroadcast(userId, 'userListUpdated', type, data),
-        userWireframeUpdate: (userId, type, data) => userBroadcast(userId, 'userWireframeUpdated', type, data),
-        userListDeleted: (userId, data) => userBroadcast(userId, 'userListDeleted', 'LIST_DELETED', data),
+        listUpdate: (token, type, data, occurredAt) => sharedBroadcast('list', token, type, data, occurredAt),
+        noteUpdate: (token, type, data, occurredAt) => sharedBroadcast('note', token, type, data, occurredAt),
+        whiteboardUpdate: (token, type, data, occurredAt) => sharedBroadcast('whiteboard', token, type, data, occurredAt),
+        wireframeUpdate: (token, type, data, occurredAt) => sharedBroadcast('wireframe', token, type, data, occurredAt),
+        userListUpdate: (userId, type, data, occurredAt) => userBroadcast(userId, 'userListUpdated', type, data, occurredAt),
+        userWireframeUpdate: (userId, type, data, occurredAt) => userBroadcast(userId, 'userWireframeUpdated', type, data, occurredAt),
+        userListDeleted: (userId, data, occurredAt) => userBroadcast(userId, 'userListDeleted', 'LIST_DELETED', data, occurredAt),
         revokeShared,
         endChatSession,
     };

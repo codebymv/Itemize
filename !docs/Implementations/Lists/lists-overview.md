@@ -173,7 +173,7 @@ standalone and canvas frontend adapters have one default-off read flag and
 preserve the REST shapes. See
 [Workspace lists and notes GraphQL cutover contract](../../API/contracts/workspace-content-graphql-cutover.md).
 
-List mutations remain on REST because they currently publish owner-canvas and
-public-share Socket.IO events from the legacy process. Write cutover requires
-a post-commit cross-service realtime bridge and explicit concurrent item-edit
-semantics.
+List mutations remain on REST. The cross-service realtime outbox is available,
+but each Nest repository must atomically enqueue owner-canvas and public-share
+projections and define explicit concurrent item-edit semantics before its
+write flag can exist.

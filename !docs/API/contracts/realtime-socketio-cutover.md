@@ -1,7 +1,7 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Phase 0 characterized; legacy authorization, public-content revocation, shared-viewer reconnect recovery/browser gate, and chat-session termination hardened
-**Evidence date:** 2026-07-17
+**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, and chat termination hardened
+**Evidence date:** 2026-07-18
 
 ## Transport decision
 
@@ -46,7 +46,26 @@ Socket.IO reconnection creates a new socket and loses all room membership. Every
 
 The shipped list, note, and whiteboard viewers register their handlers before connecting and do not become live merely because the transport connected. The first authorized `joined` acknowledgement establishes the live session without a redundant read. After a disconnect, a new authorized `joined` acknowledgement gates an authoritative HTTP refetch; updates received during recovery are queued and applied only after that refetch succeeds. An `INVALID_CAPABILITY` response clears the stale projection and disconnects. A failed recovery read leaves the last-loaded static projection visible but offline, discards queued updates, and reports the failure.
 
-Events are currently best-effort, in-process notifications emitted after legacy HTTP mutations. They are not a durable business-event log: a process failure between commit and emit can lose a notification, so reconnect recovery depends on the authoritative refetch rather than event replay. Any notification that becomes must-deliver needs a transactional outbox and replay cursor rather than stronger promises layered onto the current emitter.
+Legacy HTTP mutations still emit best-effort in process. Nest mutations must
+instead use `RealtimeOutboxService` with their existing PostgreSQL transaction.
+One `realtime_event_outbox` row represents one audience. The event key is
+idempotent, the payload is capped at 64 KiB, and database constraints bind
+list/note aggregates to the allowed private or shared channel and recipient
+format.
+
+The legacy Socket.IO host owns the opt-in worker. It claims rows using
+`FOR UPDATE SKIP LOCKED`, attempt fencing, a named worker, and an expiring
+lease. Transient failures retry with bounded exponential delay; exhausted or
+invalid events dead-letter with a redacted error. A successful emit records
+delivery and clears the claim. Socket.IO acknowledgement is not a client
+receipt, so the contract is at-least-once publication, not exactly-once
+observation. Every event payload is an idempotent projection and reconnect
+still performs an authoritative refetch.
+
+`REALTIME_OUTBOX_WORKER_ENABLED` defaults to false. Migration
+`028_realtime_outbox` and the matching Nest mutation enqueue must be deployed
+before enabling it. The worker uses the committed `occurred_at` value for the
+legacy `{ type, data, timestamp }` envelope.
 
 ## Scaling and revocation blockers
 
@@ -54,13 +73,21 @@ The following block multi-instance realtime cutover, but not a single-instance G
 
 1. Room fan-out and viewer maps are process-local. Before running multiple API instances, add a supported Socket.IO adapter (normally Redis) and replace local viewer counting with adapter-aware or separately stored presence.
 2. Public-content revocation and chat-session termination now use adapter-wide `fetchSockets`, room emit, and leave operations, and live tests prove immediate eviction on the current in-memory adapter. Multi-instance proof still requires the selected shared adapter.
-3. Route commits and realtime emits have no transactional outbox, delivery ID, replay cursor, or ordering contract.
+3. The outbox provides ordered durable handoff but no browser replay cursor.
+   Reconnect recovery remains the correctness boundary for missed or duplicate
+   observations.
 4. No active frontend source consumer was found for organization chat or social events. Those protocols must not be declared production-required until a reachable consumer or external client is identified.
 5. Viewer count is retained only as protocol telemetry for presence/scaling verification. It must not be advertised as a user-facing feature unless a later product decision adds UI and browser coverage.
 
 ## GraphQL/NestJS ownership
 
-NestJS should expose a dedicated `RealtimeModule` that consumes authenticated context and domain events; resolvers must not call Socket.IO rooms directly. Domain services commit first, then publish typed events through an interface implemented by the legacy emitter during dual run. Event schemas need explicit versions before payload shapes change. A future GraphQL subscription layer, if chosen, consumes the same domain events and repeats authorization on subscribe and after tenant/capability revocation.
+NestJS exposes `RealtimeOutboxModule`; resolvers never call Socket.IO rooms
+directly. A mutation repository writes its domain rows and every required
+audience row with the same `PoolClient`, then commits. Reusing an event key with
+different content fails rather than silently discarding a side effect. Event
+schemas need explicit versions before payload shapes change. A future GraphQL
+subscription layer, if chosen, consumes the same domain events and repeats
+authorization on subscribe and after tenant/capability revocation.
 
 ## Required parity scenarios
 
@@ -72,11 +99,24 @@ NestJS should expose a dedicated `RealtimeModule` that consumes authenticated co
 - repeated joins do not inflate viewer counts and disconnect removes tracking;
 - reconnect reauthorizes, refetches authoritative state, and rejoins before accepting queued events;
 - database failures fail closed without leaking query details or capabilities;
+- an outbox insert rolls back with its domain transaction;
+- identical event-key replay deduplicates and conflicting reuse fails;
+- competing workers deliver once, transient failure retries, and an expired
+  lease is recovered once;
+- a committed outbox event reaches a live Socket.IO room with its commit-time
+  timestamp;
 - public revocation evicts existing sockets before multi-instance production rollout;
 - chat-session termination evicts active visitors, denies rejoin and post-end visitor/agent writes, and keeps transcript reads from restoring presence;
 - two API instances provide correct fan-out, presence counts, and revocation through the selected adapter;
 - browser tests prove static fallback, reconnect/refetch, deletion, and capability rotation behavior. **Passed locally on 2026-07-17.**
 
-The current executable baseline includes 16 boundary unit cases, 7 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, 4 focused frontend realtime cases covering active revocation, reconnect/refetch ordering, capability denial, and failed-refetch fallback, and a repeatable 4-scenario Chromium gate. The fresh run proves two connected public viewers receive the token-free revocation event and leave their room; it also proves the real end-session HTTP route commits the terminal state, notifies agents and visitors, evicts the visitor, denies rejoin and post-end visitor/agent writes, and does not let a transcript read restore online presence.
+The executable baseline includes 16 Socket.IO boundary unit cases, 4 Nest
+enqueue cases, 5 PostgreSQL outbox cases, 8 live Socket.IO/PostgreSQL
+scenarios, route-level proof for all four public-content revocation paths, 4
+focused frontend recovery cases, and a repeatable 4-scenario Chromium gate.
+The outbox cases prove rollback, idempotency conflict detection, competing
+claims, retry, expired-lease recovery, and a database row reaching a real
+shared-note client. Production and Railway remain untouched and the worker
+flag remains off.
 
 Run the browser gate from `backend/` with `npm run test:browser:shared-realtime`. It starts a disposable local HTTP/Socket.IO fixture and Vite instance, launches real headless Chromium, and leaves no database or cloud resources. The gate drops the live transport, holds the recovery read, and proves an authoritative refetch completes before a queued update is applied; proves a failed recovery read preserves the last projection in the offline state; proves a live deletion clears the projection; and proves capability rotation denies the old link while admitting the new one. The run also exposed and closed the missing public-list deletion broadcast. The rendered live page was separately inspected in the in-app browser. Production and Railway were untouched. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).

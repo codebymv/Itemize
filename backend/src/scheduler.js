@@ -21,6 +21,7 @@ const {
     workflowJobFlags,
 } = require('./jobs/workflow-rollout-jobs');
 const { scheduleTrialReminderCron } = require('./jobs/trialReminderCron');
+const { startRealtimeOutboxWorker } = require('./jobs/realtime-outbox-jobs');
 const { logger } = require('./utils/logger');
 
 let schedulerInitialized = false;
@@ -29,8 +30,9 @@ let schedulerInitialized = false;
  * Initialize all scheduled jobs
  * @param {Object} pool - PostgreSQL connection pool
  * @param {Object} io - Socket.IO server
+ * @param {Object} broadcast - Authorized Socket.IO broadcast adapter
  */
-function initScheduler(pool, io) {
+function initScheduler(pool, io, broadcast) {
     if (schedulerInitialized) {
         logger.warn('Scheduler already initialized, skipping...');
         return;
@@ -65,6 +67,16 @@ function initScheduler(pool, io) {
 
     // Schedule trial reminder cron job (daily at 9:00 AM)
     scheduleTrialReminderCron();
+
+    if (process.env.REALTIME_OUTBOX_WORKER_ENABLED === 'true') {
+        startRealtimeOutboxWorker(pool, broadcast, {
+            batchSize: process.env.REALTIME_OUTBOX_BATCH_SIZE,
+            leaseSeconds: process.env.REALTIME_OUTBOX_LEASE_SECONDS,
+            maxAttempts: process.env.REALTIME_OUTBOX_MAX_ATTEMPTS,
+            pollIntervalMs: process.env.REALTIME_OUTBOX_POLL_INTERVAL_MS,
+        });
+        logger.info('Realtime outbox worker initialized');
+    }
 
     if (process.env.SUBSCRIPTION_WEBHOOK_JOBS_ENABLED !== 'false') {
         cron.schedule('* * * * *', async () => {

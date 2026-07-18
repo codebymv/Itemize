@@ -6,6 +6,8 @@ const { io: createClient } = require('socket.io-client');
 
 const TestDbHelper = require('./test-db-helper');
 const initializeWebSocket = require('../../lib/websocket');
+const { runRealtimeOutboxJobs } = require('../../jobs/realtime-outbox-jobs');
+const { enqueueRealtimeEvent } = require('../../services/realtimeOutbox');
 const publicChatRoutes = require('../../routes/chat-widget/public.routes');
 const agentChatRoutes = require('../../routes/chat-widget/sessions.routes');
 
@@ -30,6 +32,7 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
     let server;
     let io;
     let realtime;
+    let sharedNote;
     let url;
     const clients = new Set();
 
@@ -52,11 +55,12 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
             dbHelper.seedUser(`realtime-owner-${Date.now()}@test.itemize`, 'Realtime Owner'),
             dbHelper.seedUser(`realtime-outsider-${Date.now()}@test.itemize`, 'Realtime Outsider'),
         ]);
-        await dbHelper.pool.query(
+        sharedNote = (await dbHelper.pool.query(
             `INSERT INTO notes (user_id, title, content, share_token, is_public)
-             VALUES ($1, 'Realtime note', 'Content', $2, TRUE)`,
+             VALUES ($1, 'Realtime note', 'Content', $2, TRUE)
+             RETURNING id`,
             [owner.user.id, SHARE_TOKEN]
-        );
+        )).rows[0];
         const widget = await dbHelper.pool.query(
             `INSERT INTO chat_widgets (organization_id, widget_key, name)
              VALUES ($1, $2, 'Realtime widget') RETURNING id`,
@@ -129,6 +133,44 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
         const rejected = once(client, 'realtimeError');
         client.emit('joinSharedNote', '123e4567-e89b-42d3-a456-426614174222');
         await expect(rejected).resolves.toMatchObject({ code: 'INVALID_CAPABILITY' });
+    });
+
+    it('delivers a committed outbox event through the socket host', async () => {
+        const client = await connect();
+        const joined = once(client, 'joinedSharedNote');
+        client.emit('joinSharedNote', SHARE_TOKEN);
+        await joined;
+
+        const occurredAt = new Date('2026-07-18T12:34:56.000Z');
+        const update = once(client, 'noteUpdated');
+        const queued = await enqueueRealtimeEvent(dbHelper.pool, {
+            eventKey: `realtime-socket:${Date.now()}:${Math.random()}`,
+            aggregateType: 'note',
+            aggregateId: sharedNote.id,
+            channel: 'shared_note',
+            recipientKey: SHARE_TOKEN,
+            eventName: 'noteUpdated',
+            eventType: 'CONTENT_CHANGED',
+            payload: { id: sharedNote.id, content: 'Committed content' },
+            occurredAt,
+        });
+
+        const summary = await runRealtimeOutboxJobs(
+            dbHelper.pool,
+            realtime.broadcast,
+            {
+                batchSize: 1,
+                outboxId: queued.event.id,
+                workerId: 'integration-socket-host',
+            }
+        );
+
+        expect(summary).toMatchObject({ claimed: 1, sent: 1 });
+        await expect(update).resolves.toEqual({
+            type: 'CONTENT_CHANGED',
+            data: { id: sharedNote.id, content: 'Committed content' },
+            timestamp: occurredAt.toISOString(),
+        });
     });
 
     it('enforces organization membership on authenticated room admission', async () => {

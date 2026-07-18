@@ -10,9 +10,9 @@ enable/disable operations remain owned by `PublicSharingModule` and
 
 This checkpoint moves reads only. List and note writes currently publish
 Socket.IO events to the owner's canvas and to active public-share viewers from
-the legacy process. The separate NestJS service cannot omit those observable
-side effects, so every mutation remains on REST until a durable cross-service
-realtime bridge is implemented and tested.
+the legacy process. The transactional cross-service outbox is now implemented
+and tested, but every mutation remains on REST until its repository writes the
+domain change and all required audience rows atomically.
 
 | Legacy read | GraphQL query |
 | --- | --- |
@@ -82,11 +82,11 @@ The following target mutations are characterized but blocked:
 
 Before enabling any write flag:
 
-1. mutations must preserve owner and public-share Socket.IO behavior across
-   separate Railway processes;
+1. mutations must enqueue owner and public-share Socket.IO projections through
+   `RealtimeOutboxService` in the domain transaction;
 2. realtime publication must occur only after a successful database commit;
-3. replay, duplicate delivery, service outage, and reconnect/refetch behavior
-   must be explicit;
+3. event keys, at-least-once duplicate delivery, dead letters, and
+   reconnect/refetch behavior must follow the realtime contract;
 4. category ID/name writes must be atomic and user-scoped;
 5. list-item concurrent edits must not silently overwrite one another;
 6. GraphQL and REST rollback paths must read each other's writes without

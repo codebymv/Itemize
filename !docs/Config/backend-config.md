@@ -105,6 +105,14 @@ GEMINI_API_KEY=your-gemini-api-key
 
 # Optional: set to false to disable Gemini-powered replies in marketing chat
 MARKETING_CHAT_AI_ENABLED=true
+
+# Opt-in PostgreSQL-to-Socket.IO bridge. Requires migration 028 and a single
+# Socket.IO host while the in-memory adapter is in use.
+REALTIME_OUTBOX_WORKER_ENABLED=false
+REALTIME_OUTBOX_POLL_INTERVAL_MS=500
+REALTIME_OUTBOX_BATCH_SIZE=25
+REALTIME_OUTBOX_LEASE_SECONDS=30
+REALTIME_OUTBOX_MAX_ATTEMPTS=5
 ```
 
 ## Package.json Scripts

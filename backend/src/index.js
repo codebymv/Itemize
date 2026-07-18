@@ -499,7 +499,7 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '027_public_form_contract'
+                    WHERE version = '028_realtime_outbox'
                 ) AS has_required_migration
             `);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {
@@ -550,7 +550,7 @@ app.use(dbMonitor(pool));
         });
 
         // Initialize background job scheduler
-        initScheduler(pool, io);
+        initScheduler(pool, io, broadcast);
         logger.info('Background job scheduler initialized');
 
         // 404 handler for undefined API routes

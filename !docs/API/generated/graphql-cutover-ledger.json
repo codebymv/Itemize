@@ -3932,7 +3932,7 @@
           "method": "POST",
           "path": "/api/chat-widget/public/end-session",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 214
+          "line": 256
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4007,7 +4007,7 @@
           "method": "GET",
           "path": "/api/chat-widget/public/messages/:CHAT_TOKEN",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 246
+          "line": 288
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -4072,7 +4072,7 @@
           "method": "POST",
           "path": "/api/chat-widget/public/typing",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 236
+          "line": 278
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4215,7 +4215,7 @@
           "method": "POST",
           "path": "/api/chat-widget/sessions/:id/messages",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 241
+          "line": 283
         }
       ],
       "recommendedDisposition": "graphql-mutation",

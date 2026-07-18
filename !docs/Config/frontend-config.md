@@ -228,7 +228,8 @@ VITE_CATEGORY_READS_GRAPHQL=false
 VITE_CATEGORY_MUTATIONS_GRAPHQL=false
 
 # Personal list reads (standalone and canvas) and note reads have independent
-# rollback boundaries. Writes remain REST pending the realtime bridge.
+# rollback boundaries. Writes remain REST until their repositories atomically
+# enqueue the now-available realtime outbox projections.
 VITE_WORKSPACE_LIST_READS_GRAPHQL=false
 VITE_WORKSPACE_NOTE_READS_GRAPHQL=false
 

@@ -40,6 +40,7 @@ const {
 const {
     runWorkflowSideEffectOutboxMigration,
 } = require('./db_workflow_side_effect_migrations');
+const { runRealtimeOutboxMigration } = require('./db_realtime_outbox_migrations');
 
 // Import Calendar migrations
 const { runAllCalendarMigrations } = require('./db_calendar_migrations');
@@ -451,6 +452,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);
     await runMigrationOnce(pool, 'workflow_side_effect_outbox', runWorkflowSideEffectOutboxMigration);
+    await runMigrationOnce(pool, 'realtime_event_outbox', runRealtimeOutboxMigration);
     await runMigrationOnce(pool, 'workflow_lifecycle', runWorkflowLifecycleMigration);
     await runMigrationOnce(pool, 'workflow_sms_reconciliation', runWorkflowSmsReconciliationMigration);
     await runMigrationOnce(pool, 'sms_webhook_idempotency', runSmsWebhookIdempotencyMigration);
