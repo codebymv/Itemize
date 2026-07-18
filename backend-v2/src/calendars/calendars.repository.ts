@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
 export type CalendarRow = {
@@ -54,6 +54,49 @@ export type CalendarDetailRows = {
   availabilityWindows: AvailabilityWindowRow[];
   dateOverrides: CalendarDateOverrideRow[];
 };
+
+export type CalendarAvailabilityWindowValue = {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+};
+
+export type CreateCalendarValues = {
+  name: string;
+  description: string | null;
+  slug: string;
+  timezone: string;
+  durationMinutes: number;
+  bufferBeforeMinutes: number;
+  bufferAfterMinutes: number;
+  minNoticeHours: number;
+  maxFutureDays: number;
+  assignedToId: number | null;
+  assignmentMode: string;
+  confirmationEmail: boolean;
+  reminderEmail: boolean;
+  reminderHours: number;
+  color: string;
+  isActive: boolean;
+  availabilityWindows: CalendarAvailabilityWindowValue[];
+};
+
+export type UpdateCalendarValues = Partial<
+  Omit<CreateCalendarValues, 'slug' | 'availabilityWindows'>
+>;
+
+export type CalendarLimit = { current: number; limit: number; plan: string };
+export type CreateCalendarOutcome =
+  | { kind: 'created'; value: CalendarDetailRows }
+  | { kind: 'limit'; limit: CalendarLimit }
+  | { kind: 'invalid_assignee' }
+  | { kind: 'assignee_required' };
+export type UpdateCalendarOutcome =
+  | { kind: 'updated'; value: CalendarDetailRows }
+  | { kind: 'not_found' }
+  | { kind: 'invalid_assignee' }
+  | { kind: 'assignee_required' };
 
 const calendarSelection = `
   c.id,
@@ -115,49 +158,288 @@ export class CalendarsRepository {
   ): Promise<CalendarDetailRows | null> {
     const client = await this.pool.connect();
     try {
-      const calendar = await client.query<CalendarRow>(
-        `SELECT ${calendarSelection}
-         FROM calendars c
-         ${calendarJoins}
-         WHERE c.organization_id = $1 AND c.id = $2`,
-        [organizationId, calendarId],
-      );
-      if (!calendar.rows[0]) return null;
+      return this.selectById(client, organizationId, calendarId);
+    } finally {
+      client.release();
+    }
+  }
 
-      const availability = await client.query<AvailabilityWindowRow>(
-        `SELECT
-           id,
-           calendar_id,
-           day_of_week,
-           start_time,
-           end_time,
-           is_active,
-           created_at
-         FROM availability_windows
-         WHERE calendar_id = $1
-         ORDER BY day_of_week, start_time, id`,
-        [calendarId],
+  async create(
+    organizationId: number,
+    userId: number,
+    values: CreateCalendarValues,
+  ): Promise<CreateCalendarOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const limit = await this.calendarLimit(client, organizationId);
+      if (limit.limit !== -1 && limit.current >= limit.limit) {
+        return { kind: 'limit', limit };
+      }
+      if (
+        values.assignmentMode === 'specific' &&
+        values.assignedToId === null
+      ) {
+        return { kind: 'assignee_required' };
+      }
+      if (
+        values.assignedToId !== null &&
+        !(await this.isOrganizationMember(
+          client,
+          organizationId,
+          values.assignedToId,
+        ))
+      ) {
+        return { kind: 'invalid_assignee' };
+      }
+      const inserted = await client.query<{ id: number }>(
+        `INSERT INTO calendars (
+           organization_id, name, description, slug, timezone,
+           duration_minutes, buffer_before_minutes, buffer_after_minutes,
+           min_notice_hours, max_future_days, assigned_to, assignment_mode,
+           confirmation_email, reminder_email, reminder_hours, color,
+           is_active, created_by
+         ) VALUES (
+           $1, $2, $3, $4, $5,
+           $6, $7, $8,
+           $9, $10, $11, $12,
+           $13, $14, $15, $16,
+           $17, $18
+         )
+         RETURNING id`,
+        [
+          organizationId,
+          values.name,
+          values.description,
+          values.slug,
+          values.timezone,
+          values.durationMinutes,
+          values.bufferBeforeMinutes,
+          values.bufferAfterMinutes,
+          values.minNoticeHours,
+          values.maxFutureDays,
+          values.assignedToId,
+          values.assignmentMode,
+          values.confirmationEmail,
+          values.reminderEmail,
+          values.reminderHours,
+          values.color,
+          values.isActive,
+          userId,
+        ],
       );
-      const overrides = await client.query<CalendarDateOverrideRow>(
-        `SELECT
-           id,
-           calendar_id,
-           override_date,
-           is_available,
-           start_time,
-           end_time,
-           reason,
-           created_at
-         FROM calendar_date_overrides
-         WHERE calendar_id = $1 AND override_date >= CURRENT_DATE
-         ORDER BY override_date, id`,
-        [calendarId],
+      await this.insertAvailabilityWindows(
+        client,
+        inserted.rows[0].id,
+        values.availabilityWindows,
       );
-      return {
-        calendar: calendar.rows[0],
-        availabilityWindows: availability.rows,
-        dateOverrides: overrides.rows,
+      const created = await this.selectById(
+        client,
+        organizationId,
+        inserted.rows[0].id,
+      );
+      if (!created) throw new Error('Created calendar could not be reloaded');
+      return { kind: 'created', value: created };
+    });
+  }
+
+  async update(
+    organizationId: number,
+    calendarId: number,
+    values: UpdateCalendarValues,
+  ): Promise<UpdateCalendarOutcome> {
+    return this.transaction(async (client) => {
+      const current = await client.query<{
+        assigned_to: number | null;
+        assignment_mode: string;
+      }>(
+        `SELECT assigned_to, assignment_mode
+         FROM calendars
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [calendarId, organizationId],
+      );
+      if (!current.rows[0]) return { kind: 'not_found' };
+
+      const assignedToId =
+        values.assignedToId === undefined
+          ? current.rows[0].assigned_to
+          : values.assignedToId;
+      const assignmentMode =
+        values.assignmentMode === undefined
+          ? current.rows[0].assignment_mode
+          : values.assignmentMode;
+      if (assignmentMode === 'specific' && assignedToId === null) {
+        return { kind: 'assignee_required' };
+      }
+      if (
+        assignedToId !== null &&
+        !(await this.isOrganizationMember(client, organizationId, assignedToId))
+      ) {
+        return { kind: 'invalid_assignee' };
+      }
+
+      const columns: Record<keyof UpdateCalendarValues, string> = {
+        name: 'name',
+        description: 'description',
+        timezone: 'timezone',
+        durationMinutes: 'duration_minutes',
+        bufferBeforeMinutes: 'buffer_before_minutes',
+        bufferAfterMinutes: 'buffer_after_minutes',
+        minNoticeHours: 'min_notice_hours',
+        maxFutureDays: 'max_future_days',
+        assignedToId: 'assigned_to',
+        assignmentMode: 'assignment_mode',
+        confirmationEmail: 'confirmation_email',
+        reminderEmail: 'reminder_email',
+        reminderHours: 'reminder_hours',
+        color: 'color',
+        isActive: 'is_active',
       };
+      const assignments: string[] = [];
+      const params: unknown[] = [calendarId, organizationId];
+      for (const [key, value] of Object.entries(values) as [
+        keyof UpdateCalendarValues,
+        unknown,
+      ][]) {
+        params.push(value);
+        assignments.push(`${columns[key]} = $${params.length}`);
+      }
+      if (assignments.length > 0) {
+        await client.query(
+          `UPDATE calendars
+           SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 AND organization_id = $2`,
+          params,
+        );
+      }
+      const updated = await this.selectById(client, organizationId, calendarId);
+      if (!updated) throw new Error('Updated calendar could not be reloaded');
+      return { kind: 'updated', value: updated };
+    });
+  }
+
+  private async selectById(
+    client: PoolClient,
+    organizationId: number,
+    calendarId: number,
+  ): Promise<CalendarDetailRows | null> {
+    const calendar = await client.query<CalendarRow>(
+      `SELECT ${calendarSelection}
+       FROM calendars c
+       ${calendarJoins}
+       WHERE c.organization_id = $1 AND c.id = $2`,
+      [organizationId, calendarId],
+    );
+    if (!calendar.rows[0]) return null;
+
+    const availability = await client.query<AvailabilityWindowRow>(
+      `SELECT
+         id,
+         calendar_id,
+         day_of_week,
+         start_time,
+         end_time,
+         is_active,
+         created_at
+       FROM availability_windows
+       WHERE calendar_id = $1
+       ORDER BY day_of_week, start_time, id`,
+      [calendarId],
+    );
+    const overrides = await client.query<CalendarDateOverrideRow>(
+      `SELECT
+         id,
+         calendar_id,
+         override_date,
+         is_available,
+         start_time,
+         end_time,
+         reason,
+         created_at
+       FROM calendar_date_overrides
+       WHERE calendar_id = $1 AND override_date >= CURRENT_DATE
+       ORDER BY override_date, id`,
+      [calendarId],
+    );
+    return {
+      calendar: calendar.rows[0],
+      availabilityWindows: availability.rows,
+      dateOverrides: overrides.rows,
+    };
+  }
+
+  private async insertAvailabilityWindows(
+    client: PoolClient,
+    calendarId: number,
+    windows: CalendarAvailabilityWindowValue[],
+  ): Promise<void> {
+    if (windows.length === 0) return;
+    const params: unknown[] = [];
+    const rows = windows.map((window) => {
+      params.push(
+        calendarId,
+        window.dayOfWeek,
+        window.startTime,
+        window.endTime,
+        window.isActive,
+      );
+      const offset = params.length - 4;
+      return `($${offset}, $${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
+    });
+    await client.query(
+      `INSERT INTO availability_windows (
+         calendar_id, day_of_week, start_time, end_time, is_active
+       ) VALUES ${rows.join(', ')}`,
+      params,
+    );
+  }
+
+  private async isOrganizationMember(
+    client: PoolClient,
+    organizationId: number,
+    userId: number,
+  ): Promise<boolean> {
+    const result = await client.query(
+      `SELECT 1
+       FROM organization_members
+       WHERE organization_id = $1 AND user_id = $2
+       FOR KEY SHARE`,
+      [organizationId, userId],
+    );
+    return result.rows.length === 1;
+  }
+
+  private async calendarLimit(
+    client: PoolClient,
+    organizationId: number,
+  ): Promise<CalendarLimit> {
+    const result = await client.query<CalendarLimit>(
+      `SELECT
+         COUNT(c.id)::int AS current,
+         COALESCE(o.calendars_limit, 3)::int AS limit,
+         COALESCE(o.plan, 'free') AS plan
+       FROM organizations o
+       LEFT JOIN calendars c ON c.organization_id = o.id
+       WHERE o.id = $1
+       GROUP BY o.id, o.calendars_limit, o.plan`,
+      [organizationId],
+    );
+    if (!result.rows[0]) throw new Error('Organization limit could not be loaded');
+    return result.rows[0];
+  }
+
+  private async transaction<T>(
+    work: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
     } finally {
       client.release();
     }

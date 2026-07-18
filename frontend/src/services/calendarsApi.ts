@@ -5,10 +5,15 @@
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
+    createCalendarViaGraphql,
     getCalendarViaGraphql,
     getCalendarsViaGraphql,
+    updateCalendarViaGraphql,
 } from './calendarsGraphql';
-import { isCalendarGraphqlReadsEnabled } from './graphqlClient';
+import {
+    isCalendarGraphqlMutationsEnabled,
+    isCalendarGraphqlReadsEnabled,
+} from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -33,14 +38,14 @@ import {
 
 export interface CalendarCreateData {
     name: string;
-    description?: string;
+    description?: string | null;
     timezone?: string;
     duration_minutes?: number;
     buffer_before_minutes?: number;
     buffer_after_minutes?: number;
     min_notice_hours?: number;
     max_future_days?: number;
-    assigned_to?: number;
+    assigned_to?: number | null;
     assignment_mode?: 'specific' | 'round_robin';
     confirmation_email?: boolean;
     reminder_email?: boolean;
@@ -72,6 +77,9 @@ export const getCalendar = async (id: number, organizationId?: number): Promise<
 };
 
 export const createCalendar = async (data: CalendarCreateData): Promise<Calendar> => {
+    if (isCalendarGraphqlMutationsEnabled()) {
+        return createCalendarViaGraphql(data);
+    }
     const response = await api.post('/api/calendars', data, {
         headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {},
     });
@@ -83,6 +91,9 @@ export const updateCalendar = async (
     data: Partial<CalendarCreateData>,
     organizationId?: number
 ): Promise<Calendar> => {
+    if (isCalendarGraphqlMutationsEnabled()) {
+        return updateCalendarViaGraphql(id, data, organizationId);
+    }
     const response = await api.put(`/api/calendars/${id}`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });

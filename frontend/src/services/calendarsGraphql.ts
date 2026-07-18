@@ -4,7 +4,8 @@ import type {
   CalendarDateOverride,
   CalendarsResponse,
 } from '@/types';
-import { graphqlRequest } from './graphqlClient';
+import type { CalendarCreateData } from './calendarsApi';
+import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlAvailabilityWindow = {
   id: number;
@@ -114,6 +115,41 @@ const calendarQuery = `
   }
 `;
 
+const calendarDetailFields = `
+  ${calendarFields}
+  availabilityWindows {
+    id
+    calendarId
+    dayOfWeek
+    startTime
+    endTime
+    isActive
+    createdAt
+  }
+  dateOverrides {
+    id
+    calendarId
+    overrideDate
+    isAvailable
+    startTime
+    endTime
+    reason
+    createdAt
+  }
+`;
+
+const createCalendarMutation = `
+  mutation CreateCalendar($input: CreateCalendarInput!) {
+    createCalendar(input: $input) { ${calendarDetailFields} }
+  }
+`;
+
+const updateCalendarMutation = `
+  mutation UpdateCalendar($id: Int!, $input: UpdateCalendarInput!) {
+    updateCalendar(id: $id, input: $input) { ${calendarDetailFields} }
+  }
+`;
+
 const mapAvailabilityWindow = (
   window: GraphqlAvailabilityWindow,
 ): AvailabilityWindow => ({
@@ -201,4 +237,100 @@ export const getCalendarViaGraphql = async (
     { id: number }
   >(calendarQuery, { id }, organizationId);
   return mapCalendar(data.calendar);
+};
+
+const has = <T extends object>(value: T, key: PropertyKey): boolean =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const calendarInput = (
+  data: Partial<CalendarCreateData>,
+): Record<string, unknown> => ({
+  ...(has(data, 'name') && data.name !== undefined ? { name: data.name } : {}),
+  ...(has(data, 'description') && data.description !== undefined
+    ? { description: data.description }
+    : {}),
+  ...(has(data, 'timezone') && data.timezone !== undefined
+    ? { timezone: data.timezone }
+    : {}),
+  ...(has(data, 'duration_minutes') && data.duration_minutes !== undefined
+    ? { durationMinutes: data.duration_minutes }
+    : {}),
+  ...(has(data, 'buffer_before_minutes') &&
+  data.buffer_before_minutes !== undefined
+    ? { bufferBeforeMinutes: data.buffer_before_minutes }
+    : {}),
+  ...(has(data, 'buffer_after_minutes') &&
+  data.buffer_after_minutes !== undefined
+    ? { bufferAfterMinutes: data.buffer_after_minutes }
+    : {}),
+  ...(has(data, 'min_notice_hours') && data.min_notice_hours !== undefined
+    ? { minNoticeHours: data.min_notice_hours }
+    : {}),
+  ...(has(data, 'max_future_days') && data.max_future_days !== undefined
+    ? { maxFutureDays: data.max_future_days }
+    : {}),
+  ...(has(data, 'assigned_to') && data.assigned_to !== undefined
+    ? { assignedToId: data.assigned_to }
+    : {}),
+  ...(has(data, 'assignment_mode') && data.assignment_mode !== undefined
+    ? { assignmentMode: data.assignment_mode }
+    : {}),
+  ...(has(data, 'confirmation_email') && data.confirmation_email !== undefined
+    ? { confirmationEmail: data.confirmation_email }
+    : {}),
+  ...(has(data, 'reminder_email') && data.reminder_email !== undefined
+    ? { reminderEmail: data.reminder_email }
+    : {}),
+  ...(has(data, 'reminder_hours') && data.reminder_hours !== undefined
+    ? { reminderHours: data.reminder_hours }
+    : {}),
+  ...(has(data, 'color') && data.color !== undefined
+    ? { color: data.color }
+    : {}),
+  ...(has(data, 'is_active') && data.is_active !== undefined
+    ? { isActive: data.is_active }
+    : {}),
+  ...(has(data, 'availability_windows') &&
+  data.availability_windows !== undefined
+    ? {
+        availabilityWindows: data.availability_windows.map((window) => ({
+          dayOfWeek: window.day_of_week,
+          startTime: window.start_time,
+          endTime: window.end_time,
+          ...(window.is_active === undefined
+            ? {}
+            : { isActive: window.is_active }),
+        })),
+      }
+    : {}),
+});
+
+export const createCalendarViaGraphql = async (
+  data: CalendarCreateData,
+): Promise<Calendar> => {
+  const response = await graphqlMutationRequest<
+    { createCalendar: GraphqlCalendar },
+    { input: Record<string, unknown> }
+  >(
+    createCalendarMutation,
+    { input: calendarInput(data) },
+    data.organization_id,
+  );
+  return mapCalendar(response.createCalendar);
+};
+
+export const updateCalendarViaGraphql = async (
+  id: number,
+  data: Partial<CalendarCreateData>,
+  organizationId?: number,
+): Promise<Calendar> => {
+  const response = await graphqlMutationRequest<
+    { updateCalendar: GraphqlCalendar },
+    { id: number; input: Record<string, unknown> }
+  >(
+    updateCalendarMutation,
+    { id, input: calendarInput(data) },
+    organizationId,
+  );
+  return mapCalendar(response.updateCalendar);
 };

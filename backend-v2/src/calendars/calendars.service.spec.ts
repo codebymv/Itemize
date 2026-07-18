@@ -66,8 +66,10 @@ describe('CalendarsService', () => {
 
   beforeEach(() => {
     repository = {
+      create: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
+      update: jest.fn(),
     } as unknown as jest.Mocked<CalendarsRepository>;
     service = new CalendarsService(repository);
   });
@@ -128,6 +130,110 @@ describe('CalendarsService', () => {
     repository.findById.mockResolvedValue(null);
     await expect(service.get(3, 999)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
+    });
+  });
+
+  it('normalizes create defaults and recurring availability before persistence', async () => {
+    repository.create.mockImplementation(async (_organizationId, _userId, values) => ({
+      kind: 'created',
+      value: {
+        calendar: calendarRow({
+          name: values.name,
+          description: values.description,
+          slug: values.slug,
+          timezone: values.timezone,
+          assigned_to: values.assignedToId,
+          assignment_mode: values.assignmentMode,
+          color: values.color,
+        }),
+        availabilityWindows: values.availabilityWindows.map((window, index) =>
+          availabilityRow({
+            id: index + 1,
+            day_of_week: window.dayOfWeek,
+            start_time: window.startTime,
+            end_time: window.endTime,
+            is_active: window.isActive,
+          }),
+        ),
+        dateOverrides: [],
+      },
+    }));
+
+    await service.create(3, 7, {
+      name: '  Consultation  ',
+      color: '#aabbcc',
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      3,
+      7,
+      expect.objectContaining({
+        name: 'Consultation',
+        timezone: 'America/New_York',
+        assignedToId: 7,
+        assignmentMode: 'specific',
+        color: '#AABBCC',
+        availabilityWindows: [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+          dayOfWeek,
+          startTime: '09:00:00',
+          endTime: '17:00:00',
+          isActive: true,
+        })),
+      }),
+    );
+  });
+
+  it('rejects invalid create windows before writing', async () => {
+    await expect(
+      service.create(3, 7, {
+        name: 'Overlap',
+        availabilityWindows: [
+          { dayOfWeek: 1, startTime: '09:00', endTime: '12:00' },
+          { dayOfWeek: 1, startTime: '11:00', endTime: '13:00' },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'OVERLAPPING_WINDOWS',
+      },
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('preserves update omission and returns stable assignment errors', async () => {
+    repository.update.mockResolvedValueOnce({
+      kind: 'updated',
+      value: {
+        calendar: calendarRow({
+          description: null,
+          assigned_to: null,
+          assigned_to_name: null,
+          assignment_mode: 'round_robin',
+        }),
+        availabilityWindows: [],
+        dateOverrides: [],
+      },
+    });
+    await service.update(3, 4, {
+      description: null,
+      assignedToId: null,
+      assignmentMode: 'round_robin',
+    });
+    expect(repository.update).toHaveBeenCalledWith(3, 4, {
+      description: null,
+      assignedToId: null,
+      assignmentMode: 'round_robin',
+    });
+
+    repository.update.mockResolvedValueOnce({ kind: 'invalid_assignee' });
+    await expect(
+      service.update(3, 4, { assignedToId: 99 }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_ASSIGNEE',
+      },
     });
   });
 });

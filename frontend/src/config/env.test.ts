@@ -20,6 +20,7 @@ describe('Environment Validation', () => {
     expect(env.VITE_ORGANIZATION_READS_GRAPHQL).toBe('false');
     expect(env.VITE_ORGANIZATION_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CALENDAR_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_CALENDAR_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_LIST_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_NOTE_READS_GRAPHQL).toBe('false');

@@ -1,6 +1,6 @@
 # Scheduling GraphQL cutover contract
 
-**Status:** Phase 1 authenticated calendar-read checkpoint implemented and browser-gated
+**Status:** Phase 1 authenticated calendar reads browser-gated; calendar definition create/update checkpoint implemented and awaiting staging gate
 
 **Evidence date:** 2026-07-18
 
@@ -99,7 +99,11 @@ The legacy booking routes call dormant engine triggers named `booking_created`, 
 
 Fresh PostgreSQL suites cover calendar CRUD/tenancy, availability replacement, overrides, booking CRUD/tenancy, public creation, public cancellation capability binding/replay, invalid intervals, and simultaneous overlap prevention. Unit tests cover signed OAuth state, expiry, tampering, and redirect normalization.
 
-The first bounded NestJS checkpoint implements only authenticated `calendars` and `calendar` reads. Both require verified organization context, qualify every calendar lookup by organization, expose an assignee name only through a current membership, return deterministic list ordering and confirmed-booking aggregates, and project ordered recurring availability plus current/future date overrides on detail. `VITE_CALENDAR_READS_GRAPHQL` is independently default-off and preserves the existing REST response shape; all calendar writes, authenticated booking operations, anonymous booking protocols, OAuth, provider connections, and sync remain on their current transports. The frontend now registers `/calendars/:id` as the shipped detail consumer. It edits core settings and recurring availability through the retained REST mutation adapters while list and detail reads follow the independent flag. Three focused service cases, eight frontend adapter/page cases, and three fresh-PostgreSQL cases prove mapping, REST-default selection, REST interoperability, selected-tenant isolation, foreign-calendar concealment, availability/override projection, confirmed-booking counts, and browser input persistence.
+The first bounded NestJS checkpoint implements authenticated `calendars` and `calendar` reads. Both require verified organization context, qualify every calendar lookup by organization, expose an assignee name only through a current membership, return deterministic list ordering and confirmed-booking aggregates, and project ordered recurring availability plus current/future date overrides on detail. `VITE_CALENDAR_READS_GRAPHQL` is independently default-off and preserves the existing REST response shape.
+
+The second checkpoint adds only `createCalendar` and `updateCalendar`. Both are CSRF-protected and organization-scoped. Create applies normalized legacy-compatible defaults, validates IANA timezone and bounded settings, validates and deterministically orders optional recurring windows, creates Mon-Fri defaults when windows are omitted, verifies assignee membership, and enforces the organization calendar limit under an advisory transaction lock. Update distinguishes omission from explicit nullable clearing, locks the organization-owned row, validates the final assignment mode/assignee tuple, preserves omitted fields, and reloads the complete retained projection. `VITE_CALENDAR_MUTATIONS_GRAPHQL` is independent and default-off; delete, availability replacement, date overrides, authenticated booking operations, anonymous booking protocols, OAuth, provider connections, and sync remain on their current transports.
+
+The frontend `/calendars/:id` consumer now routes definition create/update through GraphQL only when that mutation flag is enabled, while recurring availability continues through retained REST. Six focused calendar service cases, ten adapter/config cases, and six fresh-PostgreSQL calendar cases prove normalization, null/omission behavior, custom availability, plan limits, CSRF, assignee denial, REST-default routing, REST interoperability, tenant isolation, and retained-shape mapping. The complete gates pass at 130/130 NestJS focused cases, 77/77 NestJS fresh-PostgreSQL cases, 172/172 frontend cases, and 475/475 legacy fresh-PostgreSQL cases. The definition-mutation staging/browser and rollback rehearsal is still required before enabling its flag.
 
 The completed browser gate ran on 2026-07-18 against GraphQL deployment `9705daa8-115f-4a44-acff-87919b3ee38a` through backend gate deployment `b7e0d641-4c1e-41f4-be13-f19c87ef84f5`. A disposable verified account first rendered the empty list, then created a distinctive calendar through retained REST. A real navigation reload rendered that persisted row through nonempty `CalendarReads`, and the Settings action opened `/calendars/3` through `CalendarRead`, including five recurring weekday windows. Proxy and NestJS events paired by request ID with HTTP `200` and zero errors, including list request `4811017d-e568-47e7-904f-20926f14eb41` and detail request `62871253-558f-4684-a4c7-988860483aa4`.
 
@@ -109,7 +113,7 @@ The scheduling slice is not ready for traffic until:
 
 1. server-authoritative slot generation and write validation enforce windows, overrides, buffers, notice, horizon, activity, timezone, and DST rules;
 2. public calendar identity is globally unambiguous and cancellation tokens are hashed, expiring, and redacted;
-3. calendar/booking assignee and contact references are tenant-validated and update null semantics are frozen;
+3. booking assignee/contact references and the remaining availability/override/delete null and reference semantics are tenant-validated and frozen; calendar definition assignee and update-null semantics are now covered;
 4. provider tokens are encrypted with rotation and concurrent refresh protection;
 5. sync becomes durable idempotent work, and `pull`/`both` behavior matches advertised settings;
 6. booking workflow events use the durable outbox and the invalid legacy trigger calls are removed;

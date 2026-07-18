@@ -9,11 +9,12 @@ import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Calendar read GraphQL PostgreSQL contract', () => {
+describe('Calendar GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
   let legacyApp: Express;
   let pool: Pool;
   let userId: number;
+  let outsiderUserId: number;
   let organizationId: number;
   let otherOrganizationId: number;
   let calendarId: number;
@@ -41,6 +42,13 @@ describe('Calendar read GraphQL PostgreSQL contract', () => {
       [`calendar-member-${suffix}@test.itemize`],
     );
     userId = Number(user.rows[0].id);
+    const outsider = await pool.query<{ id: number }>(
+      `INSERT INTO users (email, name, provider, email_verified)
+       VALUES ($1, 'Calendar Outsider', 'email', true)
+       RETURNING id`,
+      [`calendar-outsider-${suffix}@test.itemize`],
+    );
+    outsiderUserId = Number(outsider.rows[0].id);
 
     const organizations = await pool.query<{ id: number }>(
       `INSERT INTO organizations (name, slug)
@@ -59,6 +67,10 @@ describe('Calendar read GraphQL PostgreSQL contract', () => {
     await pool.query(
       'UPDATE users SET default_organization_id = $1 WHERE id = $2',
       [organizationId, userId],
+    );
+    await pool.query(
+      'UPDATE organizations SET calendars_limit = 10 WHERE id = ANY($1::int[])',
+      [[organizationId, otherOrganizationId]],
     );
 
     const calendars = await pool.query<{ id: number }>(
@@ -147,8 +159,10 @@ describe('Calendar read GraphQL PostgreSQL contract', () => {
         [organizationId, otherOrganizationId].filter(Boolean),
       ]);
     }
-    if (pool && userId) {
-      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    if (pool && (userId || outsiderUserId)) {
+      await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
+        [userId, outsiderUserId].filter(Boolean),
+      ]);
     }
     if (app) await app.close();
   });
@@ -163,6 +177,20 @@ describe('Calendar read GraphQL PostgreSQL contract', () => {
       .set('Cookie', `itemize_auth=${token}`)
       .set('x-organization-id', String(organization))
       .send({ query: document, variables });
+
+  const mutation = (
+    organization: number,
+    document: string,
+    variables: Record<string, unknown> = {},
+  ) => {
+    const csrf = 'calendar-csrf';
+    return request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `itemize_auth=${token}; csrf-token=${csrf}`)
+      .set('x-csrf-token', csrf)
+      .set('x-organization-id', String(organization))
+      .send({ query: document, variables });
+  };
 
   const calendarFields = `
     id
@@ -272,5 +300,194 @@ describe('Calendar read GraphQL PostgreSQL contract', () => {
         organizationId: otherOrganizationId,
       },
     ]);
+  });
+
+  it('creates a validated calendar with custom availability and preserves REST projection', async () => {
+    const response = await mutation(
+      organizationId,
+      `mutation CreateCalendar($input: CreateCalendarInput!) {
+        createCalendar(input: $input) {
+          ${calendarFields}
+          durationMinutes
+          bufferBeforeMinutes
+          assignmentMode
+          color
+          availabilityWindows {
+            dayOfWeek
+            startTime
+            endTime
+            isActive
+          }
+        }
+      }`,
+      {
+        input: {
+          name: '  Discovery call  ',
+          description: '  New lead review  ',
+          timezone: 'America/Los_Angeles',
+          durationMinutes: 45,
+          bufferBeforeMinutes: 10,
+          assignedToId: userId,
+          color: '#aabbcc',
+          availabilityWindows: [
+            {
+              dayOfWeek: 3,
+              startTime: '13:30',
+              endTime: '16:00',
+            },
+            {
+              dayOfWeek: 1,
+              startTime: '08:00:00',
+              endTime: '12:00:00',
+              isActive: false,
+            },
+          ],
+        },
+      },
+    ).expect(200);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.createCalendar).toMatchObject({
+      organizationId,
+      name: 'Discovery call',
+      description: 'New lead review',
+      timezone: 'America/Los_Angeles',
+      durationMinutes: 45,
+      bufferBeforeMinutes: 10,
+      assignedToId: userId,
+      assignedToName: 'Calendar Member',
+      assignmentMode: 'specific',
+      color: '#AABBCC',
+      availabilityWindows: [
+        {
+          dayOfWeek: 1,
+          startTime: '08:00:00',
+          endTime: '12:00:00',
+          isActive: false,
+        },
+        {
+          dayOfWeek: 3,
+          startTime: '13:30:00',
+          endTime: '16:00:00',
+          isActive: true,
+        },
+      ],
+    });
+    const createdId = response.body.data.createCalendar.id;
+    const legacy = await request(legacyApp)
+      .get(`/api/calendars/${createdId}`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(legacy.body).toMatchObject({
+      id: createdId,
+      name: 'Discovery call',
+      description: 'New lead review',
+      assigned_to: userId,
+      color: '#AABBCC',
+    });
+    expect(legacy.body.availability_windows).toHaveLength(2);
+  });
+
+  it('updates only supplied fields, clears nullable values, and validates the final assignment', async () => {
+    const updated = await mutation(
+      organizationId,
+      `mutation UpdateCalendar($id: Int!, $input: UpdateCalendarInput!) {
+        updateCalendar(id: $id, input: $input) {
+          id name description timezone assignedToId assignmentMode reminderHours
+        }
+      }`,
+      {
+        id: calendarId,
+        input: {
+          description: null,
+          assignmentMode: 'round_robin',
+          assignedToId: null,
+          reminderHours: 12,
+        },
+      },
+    ).expect(200);
+    expect(updated.body.errors).toBeUndefined();
+    expect(updated.body.data.updateCalendar).toEqual({
+      id: calendarId,
+      name: 'Primary consultation',
+      description: null,
+      timezone: 'America/Phoenix',
+      assignedToId: null,
+      assignmentMode: 'round_robin',
+      reminderHours: 12,
+    });
+
+    const legacy = await request(legacyApp)
+      .get(`/api/calendars/${calendarId}`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(legacy.body).toMatchObject({
+      id: calendarId,
+      name: 'Primary consultation',
+      description: null,
+      timezone: 'America/Phoenix',
+      assigned_to: null,
+      assignment_mode: 'round_robin',
+      reminder_hours: 12,
+    });
+
+    const invalid = await mutation(
+      organizationId,
+      `mutation UpdateCalendar($id: Int!, $input: UpdateCalendarInput!) {
+        updateCalendar(id: $id, input: $input) { id }
+      }`,
+      { id: calendarId, input: { assignedToId: outsiderUserId } },
+    ).expect(200);
+    expect(invalid.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_ASSIGNEE',
+    });
+  });
+
+  it('enforces mutation CSRF, window validation, and the organization calendar limit', async () => {
+    const noCsrf = await query(
+      organizationId,
+      `mutation { updateCalendar(id: ${calendarId}, input: { name: "Blocked" }) { id } }`,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const overlapping = await mutation(
+      organizationId,
+      `mutation CreateCalendar($input: CreateCalendarInput!) {
+        createCalendar(input: $input) { id }
+      }`,
+      {
+        input: {
+          name: 'Overlap',
+          availabilityWindows: [
+            { dayOfWeek: 1, startTime: '09:00', endTime: '12:00' },
+            { dayOfWeek: 1, startTime: '11:00', endTime: '13:00' },
+          ],
+        },
+      },
+    ).expect(200);
+    expect(overlapping.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'OVERLAPPING_WINDOWS',
+    });
+
+    const count = await pool.query<{ count: number }>(
+      'SELECT COUNT(*)::int AS count FROM calendars WHERE organization_id = $1',
+      [organizationId],
+    );
+    await pool.query(
+      'UPDATE organizations SET calendars_limit = $1 WHERE id = $2',
+      [count.rows[0].count, organizationId],
+    );
+    const limited = await mutation(
+      organizationId,
+      `mutation { createCalendar(input: { name: "Limit blocked" }) { id } }`,
+    ).expect(200);
+    expect(limited.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'PLAN_LIMIT_REACHED',
+    });
   });
 });

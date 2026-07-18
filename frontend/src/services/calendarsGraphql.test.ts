@@ -1,9 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  createCalendarViaGraphql,
   getCalendarViaGraphql,
   getCalendarsViaGraphql,
+  updateCalendarViaGraphql,
 } from './calendarsGraphql';
-import { isCalendarGraphqlReadsEnabled } from './graphqlClient';
+import {
+  isCalendarGraphqlMutationsEnabled,
+  isCalendarGraphqlReadsEnabled,
+} from './graphqlClient';
+import { fetchCsrfToken } from '@/lib/api';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -48,6 +54,7 @@ describe('calendar GraphQL consumer', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
+    vi.mocked(fetchCsrfToken).mockResolvedValue('calendar-csrf');
   });
 
   afterEach(() => {
@@ -60,6 +67,10 @@ describe('calendar GraphQL consumer', () => {
     expect(isCalendarGraphqlReadsEnabled()).toBe(false);
     vi.stubEnv('VITE_CALENDAR_READS_GRAPHQL', 'true');
     expect(isCalendarGraphqlReadsEnabled()).toBe(true);
+    vi.stubEnv('VITE_CALENDAR_MUTATIONS_GRAPHQL', 'false');
+    expect(isCalendarGraphqlMutationsEnabled()).toBe(false);
+    vi.stubEnv('VITE_CALENDAR_MUTATIONS_GRAPHQL', 'true');
+    expect(isCalendarGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps list fields into the retained REST response shape', async () => {
@@ -160,5 +171,103 @@ describe('calendar GraphQL consumer', () => {
       String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
     );
     expect(body.variables).toEqual({ id: 4 });
+  });
+
+  it('creates through a CSRF-protected mutation and maps availability input casing', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          createCalendar: {
+            ...calendar,
+            availabilityWindows: [],
+            dateOverrides: [],
+          },
+        },
+      }),
+    );
+
+    await expect(
+      createCalendarViaGraphql({
+        name: 'Consultation',
+        description: null,
+        duration_minutes: 45,
+        assigned_to: 7,
+        availability_windows: [
+          {
+            day_of_week: 2,
+            start_time: '09:00',
+            end_time: '12:00',
+            is_active: false,
+          },
+        ],
+        organization_id: 3,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ id: 4, name: 'Consultation' }));
+
+    expect(fetchCsrfToken).toHaveBeenCalledOnce();
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      'x-organization-id': '3',
+      'x-csrf-token': 'calendar-csrf',
+    });
+    expect(JSON.parse(String(request.body)).variables).toEqual({
+      input: {
+        name: 'Consultation',
+        description: null,
+        durationMinutes: 45,
+        assignedToId: 7,
+        availabilityWindows: [
+          {
+            dayOfWeek: 2,
+            startTime: '09:00',
+            endTime: '12:00',
+            isActive: false,
+          },
+        ],
+      },
+    });
+  });
+
+  it('preserves explicit nulls and omitted fields on update', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          updateCalendar: {
+            ...calendar,
+            description: null,
+            assignedToId: null,
+            assignedToName: null,
+            assignmentMode: 'round_robin',
+            availabilityWindows: [],
+            dateOverrides: [],
+          },
+        },
+      }),
+    );
+
+    await updateCalendarViaGraphql(
+      4,
+      {
+        name: 'Renamed',
+        description: null,
+        assigned_to: null,
+        assignment_mode: 'round_robin',
+      },
+      3,
+    );
+
+    const body = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(body.variables).toEqual({
+      id: 4,
+      input: {
+        name: 'Renamed',
+        description: null,
+        assignedToId: null,
+        assignmentMode: 'round_robin',
+      },
+    });
+    expect(body.variables.input).not.toHaveProperty('timezone');
   });
 });
