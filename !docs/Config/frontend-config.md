@@ -227,10 +227,11 @@ VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 VITE_CATEGORY_READS_GRAPHQL=false
 VITE_CATEGORY_MUTATIONS_GRAPHQL=false
 
-# Personal list reads (standalone and canvas), note reads, and note mutations
-# have independent rollback boundaries. Keep the note mutation flag disabled
-# until the realtime outbox worker and staging browser gate are enabled.
+# Personal list and note reads/writes have independent rollback boundaries.
+# Keep mutation flags disabled until the realtime outbox worker and each
+# staging browser gate are enabled.
 VITE_WORKSPACE_LIST_READS_GRAPHQL=false
+VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL=false
 VITE_WORKSPACE_NOTE_READS_GRAPHQL=false
 VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL=false
 

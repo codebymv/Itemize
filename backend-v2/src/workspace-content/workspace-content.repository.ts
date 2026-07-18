@@ -75,6 +75,23 @@ export type CreateWorkspaceNoteValues = {
   zIndex: number;
 };
 
+export type CreateWorkspaceListValues = {
+  title: string;
+  category: string;
+  items: WorkspaceListItemRow[];
+  colorValue: string | null;
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+};
+
+export type UpdateWorkspaceListValues =
+  Partial<CreateWorkspaceListValues> & {
+    mutationId: string;
+    expectedUpdatedAt: Date;
+  };
+
 export type UpdateWorkspaceNoteValues = Partial<CreateWorkspaceNoteValues> & {
   mutationId: string;
   eventType: string;
@@ -86,6 +103,16 @@ export type WorkspaceNoteMutationOutcome =
   | { kind: 'category_not_found' };
 
 export type DeleteWorkspaceNoteOutcome =
+  | { kind: 'deleted'; deletedId: number }
+  | { kind: 'not_found' };
+
+export type WorkspaceListMutationOutcome =
+  | { kind: 'completed'; row: WorkspaceListRow }
+  | { kind: 'not_found' }
+  | { kind: 'category_not_found' }
+  | { kind: 'conflict'; currentUpdatedAt: Date };
+
+export type DeleteWorkspaceListOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
 
@@ -101,6 +128,25 @@ const noteMutationSelection = `
   content,
   category,
   category_id,
+  color_value,
+  position_x,
+  position_y,
+  width,
+  height,
+  z_index,
+  share_token,
+  is_public,
+  shared_at,
+  created_at,
+  updated_at`;
+
+const listMutationSelection = `
+  id,
+  user_id,
+  title,
+  category,
+  category_id,
+  items,
   color_value,
   position_x,
   position_y,
@@ -196,6 +242,190 @@ export class WorkspaceContentRepository {
       ),
     ]);
     return { rows: rows.rows, total: count.rows[0]?.total ?? 0 };
+  }
+
+  async createList(
+    userId: number,
+    values: CreateWorkspaceListValues,
+  ): Promise<WorkspaceListMutationOutcome> {
+    return this.transaction(async (client) => {
+      const category = await this.categoryForCreate(
+        client,
+        userId,
+        values.category,
+      );
+      if (!category) return { kind: 'category_not_found' };
+
+      const result = await client.query<WorkspaceListRow>(
+        `INSERT INTO lists (
+           user_id, title, category, category_id, items, color_value,
+           position_x, position_y, width, height
+         )
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
+         RETURNING ${listMutationSelection}`,
+        [
+          userId,
+          values.title,
+          category.name,
+          category.id,
+          JSON.stringify(values.items),
+          values.colorValue,
+          values.positionX,
+          values.positionY,
+          values.width,
+          values.height,
+        ],
+      );
+      return { kind: 'completed', row: result.rows[0] };
+    });
+  }
+
+  async updateList(
+    userId: number,
+    listId: number,
+    values: UpdateWorkspaceListValues,
+  ): Promise<WorkspaceListMutationOutcome> {
+    return this.transaction(async (client) => {
+      const currentResult = await client.query<WorkspaceListRow>(
+        `SELECT ${listMutationSelection}
+         FROM lists
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [listId, userId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) return { kind: 'not_found' };
+      if (
+        new Date(current.updated_at).getTime() !==
+        values.expectedUpdatedAt.getTime()
+      ) {
+        return {
+          kind: 'conflict',
+          currentUpdatedAt: new Date(current.updated_at),
+        };
+      }
+
+      const category = await this.category(
+        client,
+        userId,
+        values.category ?? current.category ?? 'General',
+      );
+      if (!category) return { kind: 'category_not_found' };
+
+      const updatedResult = await client.query<WorkspaceListRow>(
+        `UPDATE lists SET
+           title = $1,
+           category = $2,
+           category_id = $3,
+           items = $4::jsonb,
+           color_value = $5,
+           position_x = $6,
+           position_y = $7,
+           width = $8,
+           height = $9,
+           updated_at = GREATEST(
+             clock_timestamp(),
+             updated_at + INTERVAL '1 millisecond'
+           )
+         WHERE id = $10 AND user_id = $11
+         RETURNING ${listMutationSelection}`,
+        [
+          values.title ?? current.title,
+          category.name,
+          category.id,
+          JSON.stringify(values.items ?? current.items),
+          values.colorValue === undefined
+            ? current.color_value
+            : values.colorValue,
+          values.positionX ?? current.position_x ?? 0,
+          values.positionY ?? current.position_y ?? 0,
+          values.width ?? current.width ?? 340,
+          values.height ?? current.height ?? 265,
+          listId,
+          userId,
+        ],
+      );
+      const updated = updatedResult.rows[0];
+      await this.realtimeOutbox.enqueue(client, {
+        eventKey: `list:${listId}:update:${values.mutationId}:owner`,
+        aggregateType: 'list',
+        aggregateId: listId,
+        channel: 'user_canvas',
+        recipientKey: String(userId),
+        eventName: 'userListUpdated',
+        eventType: 'LIST_UPDATE',
+        payload: this.ownerListPayload(updated),
+        occurredAt: new Date(updated.updated_at),
+      });
+      if (updated.is_public && updated.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey: `list:${listId}:update:${values.mutationId}:shared`,
+          aggregateType: 'list',
+          aggregateId: listId,
+          channel: 'shared_list',
+          recipientKey: updated.share_token,
+          eventName: 'listUpdated',
+          eventType: 'LIST_UPDATE',
+          payload: this.sharedListPayload(updated),
+          occurredAt: new Date(updated.updated_at),
+        });
+      }
+      return { kind: 'completed', row: updated };
+    });
+  }
+
+  async deleteList(
+    userId: number,
+    listId: number,
+    mutationId: string,
+  ): Promise<DeleteWorkspaceListOutcome> {
+    return this.transaction(async (client) => {
+      const currentResult = await client.query<
+        WorkspaceListRow & { mutation_occurred_at: Date }
+      >(
+        `SELECT ${listMutationSelection},
+                clock_timestamp() AS mutation_occurred_at
+         FROM lists
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [listId, userId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) return { kind: 'not_found' };
+
+      await client.query(
+        'DELETE FROM lists WHERE id = $1 AND user_id = $2',
+        [listId, userId],
+      );
+      await this.realtimeOutbox.enqueue(client, {
+        eventKey: `list:${listId}:delete:${mutationId}:owner`,
+        aggregateType: 'list',
+        aggregateId: listId,
+        channel: 'user_canvas',
+        recipientKey: String(userId),
+        eventName: 'userListDeleted',
+        eventType: 'listDeleted',
+        payload: { id: listId },
+        occurredAt: new Date(current.mutation_occurred_at),
+      });
+      if (current.is_public && current.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey: `list:${listId}:delete:${mutationId}:shared`,
+          aggregateType: 'list',
+          aggregateId: listId,
+          channel: 'shared_list',
+          recipientKey: current.share_token,
+          eventName: 'listUpdated',
+          eventType: 'listDeleted',
+          payload: {
+            id: listId,
+            message: 'This list has been deleted by the owner.',
+          },
+          occurredAt: new Date(current.mutation_occurred_at),
+        });
+      }
+      return { kind: 'deleted', deletedId: listId };
+    });
   }
 
   async createNote(
@@ -439,6 +669,41 @@ export class WorkspaceContentRepository {
       category: note.category,
       color_value: note.color_value,
       updated_at: updatedAt,
+    };
+  }
+
+  private ownerListPayload(
+    list: WorkspaceListRow,
+  ): Record<string, unknown> {
+    return {
+      ...this.sharedListPayload(list),
+      user_id: list.user_id,
+      type: list.category ?? 'General',
+      category_id: list.category_id,
+      position_x: Number(list.position_x ?? 0),
+      position_y: Number(list.position_y ?? 0),
+      width: list.width,
+      height: list.height,
+      z_index: Number(list.z_index ?? 0),
+      share_token: list.share_token,
+      is_public: Boolean(list.is_public),
+      shared_at: list.shared_at
+        ? new Date(list.shared_at).toISOString()
+        : null,
+      created_at: new Date(list.created_at).toISOString(),
+    };
+  }
+
+  private sharedListPayload(
+    list: WorkspaceListRow,
+  ): Record<string, unknown> {
+    return {
+      id: list.id,
+      title: list.title,
+      category: list.category ?? 'General',
+      items: list.items,
+      color_value: list.color_value,
+      updated_at: new Date(list.updated_at).toISOString(),
     };
   }
 

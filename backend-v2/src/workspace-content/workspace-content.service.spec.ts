@@ -57,10 +57,13 @@ describe('WorkspaceContentService', () => {
 
   beforeEach(() => {
     repository = {
+      createList: jest.fn(),
       createNote: jest.fn(),
+      deleteList: jest.fn(),
       deleteNote: jest.fn(),
       findLists: jest.fn(),
       findNotes: jest.fn(),
+      updateList: jest.fn(),
       updateNote: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceContentRepository>;
     service = new WorkspaceContentService(repository);
@@ -174,6 +177,97 @@ describe('WorkspaceContentService', () => {
       height: null,
       zIndex: 0,
     });
+  });
+
+  it('normalizes bounded list creation and canonical defaults', async () => {
+    repository.createList.mockResolvedValue({
+      kind: 'completed',
+      row: listRow(),
+    });
+
+    await service.createList(7, {
+      title: ' Tasks ',
+      category: ' general ',
+      colorValue: '#abcdef',
+      items: [{ id: ' one ', text: ' Ship ', completed: false }],
+      positionX: -10.25,
+      positionY: 15.5,
+    });
+
+    expect(repository.createList).toHaveBeenCalledWith(7, {
+      title: 'Tasks',
+      category: 'general',
+      colorValue: '#ABCDEF',
+      items: [{ id: 'one', text: 'Ship', completed: false }],
+      positionX: -10.25,
+      positionY: 15.5,
+      width: 340,
+      height: 265,
+    });
+  });
+
+  it('requires a list revision and surfaces stale updates as conflicts', async () => {
+    const expectedUpdatedAt = new Date('2026-07-18T12:01:00.000Z');
+    repository.updateList.mockResolvedValue({
+      kind: 'conflict',
+      currentUpdatedAt: new Date('2026-07-18T12:02:00.000Z'),
+    });
+
+    await expect(
+      service.updateList(7, 2, {
+        mutationId: 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+        expectedUpdatedAt,
+        items: [{ id: 'one', text: 'Ship', completed: true }],
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'STALE_LIST_REVISION',
+        currentUpdatedAt: '2026-07-18T12:02:00.000Z',
+      },
+    });
+    expect(repository.updateList).toHaveBeenCalledWith(7, 2, {
+      mutationId: 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+      expectedUpdatedAt,
+      items: [{ id: 'one', text: 'Ship', completed: true }],
+    });
+  });
+
+  it('rejects duplicate item identities before writing a list', async () => {
+    await expect(
+      service.createList(7, {
+        title: 'Tasks',
+        items: [
+          { id: 'same', text: 'First', completed: false },
+          { id: 'same', text: 'Second', completed: false },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_LIST_ITEM_ID',
+      },
+    });
+    expect(repository.createList).not.toHaveBeenCalled();
+  });
+
+  it('rejects an item projection that cannot fit the realtime outbox', async () => {
+    await expect(
+      service.createList(7, {
+        title: 'Oversized',
+        items: Array.from({ length: 81 }, (_, index) => ({
+          id: `item-${index}`,
+          text: 'x'.repeat(500),
+          completed: false,
+        })),
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'LIST_ITEMS_TOO_LARGE',
+      },
+    });
+    expect(repository.createList).not.toHaveBeenCalled();
   });
 
   it('preserves fractional canvas coordinates for note mutations', async () => {

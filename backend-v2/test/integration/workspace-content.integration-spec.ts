@@ -18,7 +18,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let memberToken: string;
   let outsiderToken: string;
   let workCategoryId: number;
+  let mutationListId: number;
   let mutationNoteId: number;
+  const sharedListToken = 'f0b7d55d-ec6b-4eb6-aaf4-165c0d82e417';
   const sharedNoteToken = '87a47b12-f802-4e70-97af-8cf98bff3d4d';
   const jwt = new JwtService();
 
@@ -118,16 +120,27 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     if (pool && (memberId || outsiderId)) {
       await pool.query(
         `DELETE FROM realtime_event_outbox
-         WHERE aggregate_type = 'note'
+         WHERE (
+           aggregate_type = 'note'
            AND (
              aggregate_id = $2
              OR aggregate_id IN (
                SELECT id FROM notes WHERE user_id = ANY($1::int[])
              )
-           )`,
+           )
+         ) OR (
+           aggregate_type = 'list'
+           AND (
+             aggregate_id = $3
+             OR aggregate_id IN (
+               SELECT id FROM lists WHERE user_id = ANY($1::int[])
+             )
+           )
+         )`,
         [
           [memberId, outsiderId].filter(Boolean),
           mutationNoteId || 0,
+          mutationListId || 0,
         ],
       );
       await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
@@ -238,6 +251,170 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       category: 'Work',
       categoryId: workCategoryId,
     });
+  });
+
+  it('creates a canonical list that remains readable through REST', async () => {
+    const result = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceListInput!) {
+        createWorkspaceList(input: $input) { ${listFields} }
+      }`,
+      {
+        input: {
+          title: ' GraphQL tasks ',
+          category: 'work',
+          colorValue: '#abcdef',
+          items: [{ id: 'ship', text: ' Ship it ', completed: false }],
+          positionX: -15.25,
+          positionY: 100.125,
+          width: 340,
+          height: 265,
+        },
+      },
+    ).expect(200);
+
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.createWorkspaceList).toMatchObject({
+      userId: memberId,
+      title: 'GraphQL tasks',
+      category: 'Work',
+      categoryId: workCategoryId,
+      colorValue: '#ABCDEF',
+      items: [{ id: 'ship', text: 'Ship it', completed: false }],
+      positionX: -15.25,
+      positionY: 100.125,
+    });
+    mutationListId = result.body.data.createWorkspaceList.id;
+
+    const rest = await request(legacyApp)
+      .get('/api/canvas/lists')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .expect(200);
+    expect(rest.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: mutationListId,
+          category: 'Work',
+          category_id: workCategoryId,
+        }),
+      ]),
+    );
+  });
+
+  it('commits list owner/shared projections and rejects a stale snapshot', async () => {
+    await pool.query(
+      `UPDATE lists
+       SET is_public = TRUE, share_token = $1, shared_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3`,
+      [sharedListToken, mutationListId, memberId],
+    );
+    const revision = await pool.query<{ updated_at: Date }>(
+      'SELECT updated_at FROM lists WHERE id = $1',
+      [mutationListId],
+    );
+    const expectedUpdatedAt = revision.rows[0].updated_at.toISOString();
+    const mutationId = 'f3d0863d-73de-4267-821a-91c06c827b54';
+    const document = `mutation Update(
+      $id: Int!, $input: UpdateWorkspaceListInput!
+    ) {
+      updateWorkspaceList(id: $id, input: $input) { ${listFields} }
+    }`;
+    const updated = await mutation(memberToken, document, {
+      id: mutationListId,
+      input: {
+        mutationId,
+        expectedUpdatedAt,
+        items: [{ id: 'ship', text: 'Ship it', completed: true }],
+      },
+    }).expect(200);
+    expect(updated.body.errors).toBeUndefined();
+    expect(updated.body.data.updateWorkspaceList.items[0].completed).toBe(true);
+    expect(
+      new Date(updated.body.data.updateWorkspaceList.updatedAt).getTime(),
+    ).toBeGreaterThan(new Date(expectedUpdatedAt).getTime());
+
+    const events = await pool.query<{
+      channel: string;
+      event_name: string;
+      event_type: string;
+      payload: Record<string, unknown>;
+    }>(
+      `SELECT channel, event_name, event_type, payload
+       FROM realtime_event_outbox
+       WHERE event_key = ANY($1::text[])
+       ORDER BY channel`,
+      [[
+        `list:${mutationListId}:update:${mutationId}:owner`,
+        `list:${mutationListId}:update:${mutationId}:shared`,
+      ]],
+    );
+    expect(events.rows).toEqual([
+      expect.objectContaining({
+        channel: 'shared_list',
+        event_name: 'listUpdated',
+        event_type: 'LIST_UPDATE',
+        payload: expect.objectContaining({ id: mutationListId }),
+      }),
+      expect.objectContaining({
+        channel: 'user_canvas',
+        event_name: 'userListUpdated',
+        event_type: 'LIST_UPDATE',
+        payload: expect.objectContaining({
+          id: mutationListId,
+          type: 'Work',
+        }),
+      }),
+    ]);
+
+    const stale = await mutation(memberToken, document, {
+      id: mutationListId,
+      input: {
+        mutationId: '2d804cdb-b890-45a0-a779-41d8c9bb866b',
+        expectedUpdatedAt,
+        title: 'Stale overwrite',
+      },
+    }).expect(200);
+    expect(stale.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'STALE_LIST_REVISION',
+      currentUpdatedAt: expect.any(String),
+    });
+  });
+
+  it('deletes a list with durable owner and shared projections', async () => {
+    const mutationId = 'd71ce421-8cee-443b-b672-7a0428020b88';
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $mutationId: String!) {
+        deleteWorkspaceList(id: $id, mutationId: $mutationId) { deletedId }
+      }`,
+      { id: mutationListId, mutationId },
+    ).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteWorkspaceList.deletedId).toBe(
+      mutationListId,
+    );
+
+    const events = await pool.query<{ channel: string; event_type: string }>(
+      `SELECT channel, event_type
+       FROM realtime_event_outbox
+       WHERE event_key = ANY($1::text[])
+       ORDER BY channel`,
+      [[
+        `list:${mutationListId}:delete:${mutationId}:owner`,
+        `list:${mutationListId}:delete:${mutationId}:shared`,
+      ]],
+    );
+    expect(events.rows).toEqual([
+      { channel: 'shared_list', event_type: 'listDeleted' },
+      { channel: 'user_canvas', event_type: 'listDeleted' },
+    ]);
+    const rest = await request(legacyApp)
+      .put(`/api/lists/${mutationListId}/title`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .send({ title: 'Gone' })
+      .expect(404);
+    expect(rest.body.error).toBe('List not found');
   });
 
   it('self-heals a missing General category for default note creation', async () => {

@@ -150,3 +150,9 @@ export class DeleteWorkspaceNoteResult {
   @Field(() => Int)
   deletedId: number;
 }
+
+@ObjectType()
+export class DeleteWorkspaceListResult {
+  @Field(() => Int)
+  deletedId: number;
+}

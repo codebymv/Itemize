@@ -4,14 +4,14 @@
 
 Personal lists and notes belong to the authenticated user and are independent
 of the selected organization. `WorkspaceContentModule` owns their private
-reads and note mutations. Public capability reads and share
+reads and reachable list/note mutations. Public capability reads and share
 enable/disable operations remain owned by `PublicSharingModule` and
 `WorkspaceSharingModule`.
 
-This checkpoint adds note create/update/delete while list writes remain on
-REST. Shared-note updates and deletes write the domain change and the required
-Socket.IO projection to the transactional cross-service outbox atomically.
-The legacy socket host delivers those rows after commit.
+List and note writes use separate default-off GraphQL flags. Shared-content
+updates/deletes and private list-canvas events write the domain change and the
+required Socket.IO projections to the transactional cross-service outbox
+atomically. The legacy socket host delivers those rows after commit.
 
 | Legacy read | GraphQL query |
 | --- | --- |
@@ -25,17 +25,25 @@ The legacy socket host delivers those rows after commit.
 | `PUT /api/notes/:noteId` and the content/title/category variants | `updateWorkspaceNote(id, input)` |
 | `DELETE /api/notes/:noteId` | `deleteWorkspaceNote(id, mutationId)` |
 
+| Reachable legacy list write | GraphQL mutation |
+| --- | --- |
+| `POST /api/lists` | `createWorkspaceList(input)` |
+| `PUT /api/lists/:id` | `updateWorkspaceList(id, input)` |
+| `DELETE /api/lists/:id` | `deleteWorkspaceList(id, mutationId)` |
+
 ## Authentication and transport
 
 - Both queries require the verified `itemize_auth` cookie.
 - Resolvers derive `userId` only from verified request context.
 - The active organization never changes the result.
-- All note mutations require the verified cookie and CSRF header/token pair.
+- All list and note mutations require the verified cookie and CSRF header/token pair.
 - `VITE_WORKSPACE_LIST_READS_GRAPHQL` controls both list surfaces.
+- `VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL` independently controls the three
+  reachable list-write service methods.
 - `VITE_WORKSPACE_NOTE_READS_GRAPHQL` independently controls note reads.
 - `VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` independently controls all six
   existing note-write service methods.
-- All three flags default to false. Selected GraphQL requests never retry through
+- All four flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
 The retained `UserHome` source uses the shared service adapter and correctly
@@ -72,7 +80,7 @@ Legacy list/note rows store both a category name and an incompletely populated
 a category owned by the same user. They do not trust a foreign or stale stored
 ID and return null when the name has no canonical category.
 
-Note create/update/category mutations now accept the existing category-name
+List and note create/update/category mutations accept the existing category-name
 contract, resolve it case-insensitively to a category owned by the same user,
 and write the canonical ID and name projection together. Legacy rollback reads
 remain compatible with rows created through GraphQL. A create that resolves to
@@ -80,29 +88,42 @@ the default `General` category transactionally creates that canonical category
 when a brand-new account has no category rows; concurrent creates converge on
 the same row. Other unknown category names still fail closed.
 
-Canvas `positionX` and `positionY` are finite non-negative GraphQL `Float`
-values. Fractional coordinates are preserved through validation, PostgreSQL,
-GraphQL responses, and retained REST reads. Width, height, and z-index retain
-their integer contracts.
+Canvas `positionX` and `positionY` are finite GraphQL `Float` values.
+Fractional coordinates are preserved through validation, PostgreSQL, GraphQL
+responses, and retained REST reads. Lists preserve valid negative canvas
+coordinates; note coordinates retain their existing non-negative contract.
+Width, height, and z-index retain their integer contracts.
 
 ## Typed list items
 
-List items are returned as `id`, `text`, and `completed`. Malformed historical
-JSON entries are omitted rather than exposed as an invalid GraphQL value.
-Mutation design must add bounded item count/text limits and concurrency
-semantics before replacing whole-array REST writes.
+List items are returned and mutated as `id`, `text`, and `completed`. Malformed
+historical JSON entries are omitted rather than exposed as an invalid GraphQL
+value. Writes allow at most 100 items, require unique 1-100 character IDs and
+1-500 character trimmed text, require boolean completion state, and cap the
+serialized item array at 40,000 bytes so owner/shared realtime projections
+remain below the database's 64 KiB outbox boundary.
+
+The reachable UI still sends whole-list snapshots. Each GraphQL update
+therefore requires the `updatedAt` value returned by the preceding read/write.
+The repository locks the row and compares that revision before changing any
+field. A stale snapshot fails with `CONFLICT`,
+`reason: STALE_LIST_REVISION`, and `currentUpdatedAt`; it cannot silently
+overwrite a newer item edit.
 
 ## Mutation status
 
-Note create/update/delete and the existing content/title/category variants are
-implemented through the three GraphQL mutations above. Updates lock the note
-row, so concurrent disjoint partial updates compose instead of overwriting one
-another. Update/delete clients supply a UUID mutation ID that becomes part of
-the stable outbox event key.
+List and note create/update/delete are implemented through the mutations above.
+Note updates lock the row, so concurrent disjoint partial updates compose.
+List updates combine row locking with the required optimistic revision because
+the current consumer replaces the item array. Update/delete clients supply a
+UUID mutation ID that becomes part of each stable outbox event key. List
+updates atomically enqueue the owner-canvas projection and, when public, the
+shared-viewer projection; deletes do the same for both audiences.
 
-The following target mutations remain characterized but blocked:
+The following target mutations remain characterized but blocked because no
+shipped consumer needs them for this checkpoint:
 
-- list create/update/delete, position/title changes, and item add/remove/toggle.
+- dedicated list position/title changes and item add/remove/toggle.
 
 Before enabling the note write flag in a deployed environment:
 
@@ -115,8 +136,9 @@ Before enabling the note write flag in a deployed environment:
 4. a staging browser rehearsal must pass with the write flag enabled and then
    disabled.
 
-List mutations additionally require atomic outbox adoption and explicit
-list-item concurrent-edit semantics.
+Before enabling the list write flag, the same outbox, rollback, and staging
+requirements apply. The code-level atomic outbox and concurrent-edit gates
+have passed; a real Canvas/Contents staging write rehearsal is still required.
 
 ## Staging read and rollback gate
 
@@ -193,10 +215,12 @@ GraphQL frontend flags remain default-off. Production was untouched.
 - Fresh PostgreSQL tests for user isolation, deterministic paging, category
   identity repair, title/content search, all three REST rollback reads, note
   create/update/delete, fractional geometry, default-category self-healing,
-  CSRF, concurrent partial updates, and outbox delivery.
+  CSRF, concurrent partial updates, list create/update/delete, stale list
+  revision rejection, owner/shared list projections, and outbox delivery.
 - Frontend tests for independent default-off flags, casing/envelope mapping,
-  canvas multi-page reads, note mutation mapping, granular-update reuse, and
-  REST-default selection.
+  canvas multi-page reads, list/note mutation mapping, granular-update reuse,
+  revision preservation, and REST-default selection.
 - A staging browser rehearsal for the shipped Canvas and Contents pages with
   each read flag independently enabled and disabled, plus note writes with
-  their mutation flag enabled and rolled back. **Passed on 2026-07-18.**
+  their mutation flag enabled and rolled back. **Reads and notes passed on
+  2026-07-18; reachable list writes remain to rehearse.**

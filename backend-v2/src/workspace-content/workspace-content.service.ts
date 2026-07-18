@@ -11,18 +11,30 @@ import {
   WorkspaceNotePage,
 } from './workspace-content.types';
 import {
+  CreateWorkspaceListValues,
   CreateWorkspaceNoteValues,
+  UpdateWorkspaceListValues,
   WorkspaceContentRepository,
   WorkspaceListRow,
   UpdateWorkspaceNoteValues,
   WorkspaceNoteRow,
 } from './workspace-content.repository';
 import {
+  CreateWorkspaceListInput,
+  UpdateWorkspaceListInput,
+  WorkspaceListItemInput,
+} from './workspace-list.inputs';
+import {
   CreateWorkspaceNoteInput,
   UpdateWorkspaceNoteInput,
 } from './workspace-note.inputs';
 
 const DEFAULT_NOTE_COLOR = '#3B82F6';
+const DEFAULT_LIST_WIDTH = 340;
+const DEFAULT_LIST_HEIGHT = 265;
+const MAX_LIST_ITEMS = 100;
+const MAX_LIST_ITEM_TEXT_LENGTH = 500;
+const MAX_LIST_ITEMS_JSON_BYTES = 40_000;
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const MUTATION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -80,6 +92,144 @@ export class WorkspaceContentService {
           result.total,
         ),
       };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async createList(
+    userId: number,
+    input: CreateWorkspaceListInput,
+  ): Promise<WorkspaceList> {
+    const values: CreateWorkspaceListValues = {
+      title: this.listTitle(input.title),
+      category: input.category === undefined
+        ? 'General'
+        : this.listCategory(input.category),
+      items: input.items === undefined || input.items === null
+        ? []
+        : this.listItems(input.items),
+      colorValue: input.colorValue === undefined
+        ? null
+        : this.listColor(input.colorValue),
+      positionX: input.positionX === undefined
+        ? 0
+        : this.listCoordinate(input.positionX, 'positionX'),
+      positionY: input.positionY === undefined
+        ? 0
+        : this.listCoordinate(input.positionY, 'positionY'),
+      width: input.width === undefined
+        ? DEFAULT_LIST_WIDTH
+        : this.listDimension(input.width, 'width'),
+      height: input.height === undefined
+        ? DEFAULT_LIST_HEIGHT
+        : this.listDimension(input.height, 'height'),
+    };
+    try {
+      const outcome = await this.content.createList(userId, values);
+      if (outcome.kind === 'category_not_found') {
+        throw this.listCategoryNotFound();
+      }
+      if (outcome.kind !== 'completed') {
+        throw itemizeGraphqlError(
+          'Workspace list could not be created',
+          'SERVICE_UNAVAILABLE',
+        );
+      }
+      return this.mapList(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async updateList(
+    userId: number,
+    listId: number,
+    input: UpdateWorkspaceListInput,
+  ): Promise<WorkspaceList> {
+    this.listId(listId);
+    const values: Partial<CreateWorkspaceListValues> = {};
+    if (input.title !== undefined) {
+      values.title = this.listTitle(input.title);
+    }
+    if (input.category !== undefined) {
+      values.category = this.listCategory(input.category);
+    }
+    if (input.items !== undefined) {
+      if (input.items === null) {
+        throw itemizeGraphqlError(
+          'List items cannot be null',
+          'BAD_USER_INPUT',
+          { field: 'items', reason: 'INVALID_LIST_ITEMS' },
+        );
+      }
+      values.items = this.listItems(input.items);
+    }
+    if (input.colorValue !== undefined) {
+      values.colorValue = this.listColor(input.colorValue);
+    }
+    if (input.positionX !== undefined) {
+      values.positionX = this.listCoordinate(input.positionX, 'positionX');
+    }
+    if (input.positionY !== undefined) {
+      values.positionY = this.listCoordinate(input.positionY, 'positionY');
+    }
+    if (input.width !== undefined) {
+      values.width = this.listDimension(input.width, 'width');
+    }
+    if (input.height !== undefined) {
+      values.height = this.listDimension(input.height, 'height');
+    }
+    if (Object.keys(values).length === 0) {
+      throw itemizeGraphqlError(
+        'Workspace list update must include at least one field',
+        'BAD_USER_INPUT',
+        { reason: 'EMPTY_LIST_UPDATE' },
+      );
+    }
+    const update: UpdateWorkspaceListValues = {
+      ...values,
+      mutationId: this.mutationId(input.mutationId),
+      expectedUpdatedAt: this.expectedUpdatedAt(input.expectedUpdatedAt),
+    };
+
+    try {
+      const outcome = await this.content.updateList(userId, listId, update);
+      if (outcome.kind === 'not_found') throw this.listNotFound();
+      if (outcome.kind === 'category_not_found') {
+        throw this.listCategoryNotFound();
+      }
+      if (outcome.kind === 'conflict') {
+        throw itemizeGraphqlError(
+          'Workspace list changed since it was loaded',
+          'CONFLICT',
+          {
+            reason: 'STALE_LIST_REVISION',
+            currentUpdatedAt: outcome.currentUpdatedAt.toISOString(),
+          },
+        );
+      }
+      return this.mapList(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async deleteList(
+    userId: number,
+    listId: number,
+    mutationId: string,
+  ): Promise<number> {
+    this.listId(listId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.deleteList(
+        userId,
+        listId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.listNotFound();
+      return outcome.deletedId;
     } catch (error) {
       this.rethrow(error);
     }
@@ -333,6 +483,16 @@ export class WorkspaceContentService {
     }
   }
 
+  private listId(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw itemizeGraphqlError(
+        'Workspace list ID must be a positive integer',
+        'BAD_USER_INPUT',
+        { field: 'id', reason: 'INVALID_LIST_ID' },
+      );
+    }
+  }
+
   private mutationId(value: string): string {
     const mutationId = value?.trim();
     if (!MUTATION_ID_PATTERN.test(mutationId)) {
@@ -428,6 +588,144 @@ export class WorkspaceContentService {
 
   private noteNotFound(): GraphQLError {
     return itemizeGraphqlError('Workspace note not found', 'NOT_FOUND');
+  }
+
+  private listTitle(value: string | null): string {
+    const title = value?.trim();
+    if (!title || title.length > 200) {
+      throw itemizeGraphqlError(
+        'List title must contain between 1 and 200 characters',
+        'BAD_USER_INPUT',
+        { field: 'title', reason: 'INVALID_LIST_TITLE' },
+      );
+    }
+    return title;
+  }
+
+  private listCategory(value: string | null): string {
+    const category = value?.trim();
+    if (!category || category.length > 50) {
+      throw itemizeGraphqlError(
+        'List category must contain between 1 and 50 characters',
+        'BAD_USER_INPUT',
+        { field: 'category', reason: 'INVALID_LIST_CATEGORY' },
+      );
+    }
+    return category;
+  }
+
+  private listColor(value: string | null): string | null {
+    if (value === null) return null;
+    const color = value.trim();
+    if (!COLOR_PATTERN.test(color)) {
+      throw itemizeGraphqlError(
+        'List color must be a six-digit hex color',
+        'BAD_USER_INPUT',
+        { field: 'colorValue', reason: 'INVALID_LIST_COLOR' },
+      );
+    }
+    return color.toUpperCase();
+  }
+
+  private listCoordinate(value: number | null, field: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw itemizeGraphqlError(
+        `${field} must be a finite number`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_LIST_GEOMETRY' },
+      );
+    }
+    return value;
+  }
+
+  private listDimension(value: number | null, field: string): number {
+    if (!Number.isSafeInteger(value) || (value as number) < 1) {
+      throw itemizeGraphqlError(
+        `${field} must be a positive integer`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_LIST_GEOMETRY' },
+      );
+    }
+    return value as number;
+  }
+
+  private listItems(items: WorkspaceListItemInput[]): WorkspaceListItem[] {
+    if (items.length > MAX_LIST_ITEMS) {
+      throw itemizeGraphqlError(
+        `List cannot contain more than ${MAX_LIST_ITEMS} items`,
+        'BAD_USER_INPUT',
+        { field: 'items', reason: 'TOO_MANY_LIST_ITEMS' },
+      );
+    }
+    const ids = new Set<string>();
+    const normalized = items.map((item, index) => {
+      const id = item.id?.trim();
+      const text = item.text?.trim();
+      if (!id || id.length > 100 || ids.has(id)) {
+        throw itemizeGraphqlError(
+          'List item IDs must be unique and contain between 1 and 100 characters',
+          'BAD_USER_INPUT',
+          { field: `items.${index}.id`, reason: 'INVALID_LIST_ITEM_ID' },
+        );
+      }
+      if (!text || text.length > MAX_LIST_ITEM_TEXT_LENGTH) {
+        throw itemizeGraphqlError(
+          `List item text must contain between 1 and ${MAX_LIST_ITEM_TEXT_LENGTH} characters`,
+          'BAD_USER_INPUT',
+          { field: `items.${index}.text`, reason: 'INVALID_LIST_ITEM_TEXT' },
+        );
+      }
+      if (typeof item.completed !== 'boolean') {
+        throw itemizeGraphqlError(
+          'List item completed must be a boolean',
+          'BAD_USER_INPUT',
+          {
+            field: `items.${index}.completed`,
+            reason: 'INVALID_LIST_ITEM_COMPLETED',
+          },
+        );
+      }
+      ids.add(id);
+      return { id, text, completed: item.completed };
+    });
+    if (
+      Buffer.byteLength(JSON.stringify(normalized), 'utf8') >
+      MAX_LIST_ITEMS_JSON_BYTES
+    ) {
+      throw itemizeGraphqlError(
+        'Serialized list items must not exceed 40000 bytes',
+        'BAD_USER_INPUT',
+        { field: 'items', reason: 'LIST_ITEMS_TOO_LARGE' },
+      );
+    }
+    return normalized;
+  }
+
+  private expectedUpdatedAt(value: Date): Date {
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(date.getTime())) {
+      throw itemizeGraphqlError(
+        'expectedUpdatedAt must be a valid timestamp',
+        'BAD_USER_INPUT',
+        {
+          field: 'expectedUpdatedAt',
+          reason: 'INVALID_LIST_REVISION',
+        },
+      );
+    }
+    return date;
+  }
+
+  private listNotFound(): GraphQLError {
+    return itemizeGraphqlError('Workspace list not found', 'NOT_FOUND');
+  }
+
+  private listCategoryNotFound(): GraphQLError {
+    return itemizeGraphqlError(
+      'List category was not found',
+      'BAD_USER_INPUT',
+      { field: 'category', reason: 'LIST_CATEGORY_NOT_FOUND' },
+    );
   }
 
   private categoryNotFound(): GraphQLError {

@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 387
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 193
+- Operations referenced by backend tests: 194
 - Recommended GraphQL queries: 128
 - Recommended GraphQL mutations: 246
 - Recommended retained HTTP endpoints: 37
@@ -111,7 +111,7 @@
 | POST | `/api/campaigns/:id/send` | 1 | 2 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
 | POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
-| GET | `/api/canvas/lists` | 1 | 1 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
+| GET | `/api/canvas/lists` | 1 | 2 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | PUT | `/api/canvas/positions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
@@ -227,7 +227,7 @@
 | DELETE | `/api/lists/:id/items/:itemId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / removeWorkspaceListItem |
 | PUT | `/api/lists/:id/items/:itemId/toggle` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / toggleWorkspaceListItem |
 | PUT | `/api/lists/:id/position` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceList |
-| PUT | `/api/lists/:id/title` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceList |
+| PUT | `/api/lists/:id/title` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceList |
 | DELETE | `/api/lists/:listId/share` | 3 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableListSharing |
 | POST | `/api/lists/:listId/share` | 3 | 5 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableListSharing |
 | POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |

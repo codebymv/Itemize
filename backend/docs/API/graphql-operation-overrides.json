@@ -1558,23 +1558,23 @@
     },
     "GET /api/canvas/lists": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
-      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering and REST rollback."
+      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging."
     },
     "GET /api/lists": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
-      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering."
+      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead."
     },
     "POST /api/lists": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked until category ID/name dual-write and post-commit cross-service owner/public realtime publication are durable."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag."
     },
     "PUT /api/lists/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceList", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on durable realtime parity and explicit whole-item-array concurrency semantics."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceList", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows."
     },
     "DELETE /api/lists/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked until owner-canvas and active public-viewer deletion events can publish after commit across services."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox."
     },
     "POST /api/lists/:id/items": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "addWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
@@ -1610,7 +1610,7 @@
     },
     "GET /api/notes": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceNotes", "parityStatus": "dual-parity", "risk": "high",
-      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering."
+      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging."
     },
     "POST /api/notes": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",

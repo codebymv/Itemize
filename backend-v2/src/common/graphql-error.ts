@@ -2,6 +2,7 @@ import { GraphQLError, GraphQLFormattedError } from 'graphql';
 
 export type ItemizeGraphqlErrorCode =
   | 'BAD_USER_INPUT'
+  | 'CONFLICT'
   | 'FORBIDDEN'
   | 'INTERNAL_SERVER_ERROR'
   | 'NOT_FOUND'
@@ -37,7 +38,15 @@ export const formatItemizeGraphqlError = (error: GraphQLFormattedError) => {
       : error.message;
 
   const extensions: Record<string, unknown> = { code };
-  for (const key of ['reason', 'field', 'requestId', 'current', 'limit', 'plan'] as const) {
+  for (const key of [
+    'reason',
+    'field',
+    'requestId',
+    'current',
+    'currentUpdatedAt',
+    'limit',
+    'plan',
+  ] as const) {
     if (sourceExtensions[key] !== undefined) {
       extensions[key] = sourceExtensions[key];
     }

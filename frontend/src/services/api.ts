@@ -12,6 +12,7 @@ import {
   isCategoryGraphqlMutationsEnabled,
   isCategoryGraphqlReadsEnabled,
   isWorkspaceListGraphqlReadsEnabled,
+  isWorkspaceListGraphqlMutationsEnabled,
   isWorkspaceNoteGraphqlMutationsEnabled,
   isWorkspaceNoteGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -25,6 +26,11 @@ import {
   deleteWorkspaceNoteViaGraphql,
   updateWorkspaceNoteViaGraphql,
 } from './workspaceNoteMutationsGraphql';
+import {
+  createWorkspaceListViaGraphql,
+  deleteWorkspaceListViaGraphql,
+  updateWorkspaceListViaGraphql,
+} from './workspaceListMutationsGraphql';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -84,6 +90,7 @@ export interface ListPayload {
   position_y?: number;
   width?: number;
   height?: number;
+  updated_at?: string;
 }
 
 export interface NotePayload {
@@ -164,6 +171,7 @@ export const fetchCanvasLists = async (token?: string) => {
     type: listFromBackend.category || listFromBackend.type || 'General',
     items: listFromBackend.items || [],
     createdAt: listFromBackend.created_at ? new Date(listFromBackend.created_at) : undefined,
+    updated_at: listFromBackend.updated_at,
     color_value: listFromBackend.color_value,
     position_x: listFromBackend.position_x,
     position_y: listFromBackend.position_y,
@@ -189,6 +197,32 @@ export const getLists = async (token?: string) => {
 
 export const createList = async (listData: ListPayload, token?: string) => {
   try {
+    if (isWorkspaceListGraphqlMutationsEnabled()) {
+      const response = await createWorkspaceListViaGraphql({
+        ...listData,
+        width: MIN_LIST_WIDTH,
+      });
+      return {
+        id: response.id,
+        title: response.title,
+        type: response.category,
+        items: response.items,
+        createdAt: response.created_at
+          ? new Date(response.created_at)
+          : undefined,
+        updated_at: response.updated_at,
+        color_value: response.color_value,
+        position_x: response.position_x,
+        position_y: response.position_y,
+        width: MIN_LIST_WIDTH,
+        height: response.height,
+        share_token: response.share_token,
+        is_public: response.is_public,
+        shared_at: response.shared_at
+          ? new Date(response.shared_at)
+          : undefined,
+      };
+    }
     // Transform frontend 'type' field to backend 'category' field
     const backendData = {
       ...listData,
@@ -214,6 +248,7 @@ export const createList = async (listData: ListPayload, token?: string) => {
       type: response.data.category || response.data.type || 'General',
       items: response.data.items || [],
       createdAt: response.data.created_at ? new Date(response.data.created_at) : undefined,
+      updated_at: response.data.updated_at,
       color_value: response.data.color_value,
       position_x: response.data.position_x,
       position_y: response.data.position_y,
@@ -232,6 +267,29 @@ export const createList = async (listData: ListPayload, token?: string) => {
 };
 
 export const updateList = async (listData: ListPayload & { id: string | number }, token?: string) => {
+  if (isWorkspaceListGraphqlMutationsEnabled()) {
+    const response = await updateWorkspaceListViaGraphql(listData);
+    return {
+      id: response.id,
+      title: response.title,
+      type: response.category,
+      items: response.items,
+      createdAt: response.created_at
+        ? new Date(response.created_at)
+        : undefined,
+      updated_at: response.updated_at,
+      color_value: response.color_value,
+      position_x: response.position_x,
+      position_y: response.position_y,
+      width: response.width,
+      height: response.height,
+      share_token: response.share_token,
+      is_public: response.is_public,
+      shared_at: response.shared_at
+        ? new Date(response.shared_at)
+        : undefined,
+    };
+  }
   // Transform frontend 'type' field to backend 'category' field
   const backendData = {
     ...listData,
@@ -252,6 +310,7 @@ export const updateList = async (listData: ListPayload & { id: string | number }
     type: response.data.category || response.data.type || 'General',
     items: response.data.items || [],
     createdAt: response.data.created_at ? new Date(response.data.created_at) : undefined,
+    updated_at: response.data.updated_at,
     color_value: response.data.color_value,
     position_x: response.data.position_x,
     position_y: response.data.position_y,
@@ -266,6 +325,9 @@ export const updateList = async (listData: ListPayload & { id: string | number }
 };
 
 export const deleteList = async (listId: string, token?: string) => {
+  if (isWorkspaceListGraphqlMutationsEnabled()) {
+    return deleteWorkspaceListViaGraphql(listId);
+  }
   const response = await api.delete(`/api/lists/${listId}`, {
     headers: getAuthHeaders(token)
   });

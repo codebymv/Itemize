@@ -5,11 +5,17 @@ import { RequestContextService } from '../request-context/request-context.servic
 import { WorkspaceContentFilterInput } from './workspace-content.inputs';
 import { WorkspaceContentService } from './workspace-content.service';
 import {
+  CreateWorkspaceListInput,
+  UpdateWorkspaceListInput,
+} from './workspace-list.inputs';
+import {
   CreateWorkspaceNoteInput,
   UpdateWorkspaceNoteInput,
 } from './workspace-note.inputs';
 import {
+  DeleteWorkspaceListResult,
   DeleteWorkspaceNoteResult,
+  WorkspaceList,
   WorkspaceListPage,
   WorkspaceNote,
   WorkspaceNotePage,
@@ -36,6 +42,38 @@ export class WorkspaceContentResolver {
     @Args('page', { nullable: true }) page?: PageInput,
   ): Promise<WorkspaceNotePage> {
     return this.content.notes(this.userId(), filter, page);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceList)
+  createWorkspaceList(
+    @Args('input') input: CreateWorkspaceListInput,
+  ): Promise<WorkspaceList> {
+    return this.content.createList(this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceList)
+  updateWorkspaceList(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: UpdateWorkspaceListInput,
+  ): Promise<WorkspaceList> {
+    return this.content.updateList(this.userId(), id, input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DeleteWorkspaceListResult)
+  async deleteWorkspaceList(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DeleteWorkspaceListResult> {
+    return {
+      deletedId: await this.content.deleteList(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
   }
 
   @CsrfProtected()
