@@ -2733,8 +2733,8 @@
       "owner": "scheduling",
       "targetOperation": "replaceCalendarAvailability",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind an independent default-off frontend flag as an atomic full replacement with bounded weekdays/windows, overlap rejection, start-before-end validation, tenant concealment, CSRF, and GraphQL-to-REST interoperability coverage.",
+      "parityStatus": "dual-parity",
+      "notes": "The active settings writer passed a real-browser GraphQL replacement, persisted GraphQL readback, and independent flag-off REST replacement on the same staged calendar without repair. Atomic replacement, bounded weekdays/windows, overlap rejection, tenant concealment, and CSRF remain covered in fresh PostgreSQL.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2793,7 +2793,7 @@
       "targetOperation": "upsertCalendarDateOverride",
       "targetModule": "CalendarsModule",
       "parityStatus": "implemented",
-      "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage.",
+      "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage. The shipped settings page currently has no active override writer control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2840,7 +2840,7 @@
       "targetOperation": "deleteCalendarDateOverride",
       "targetModule": "CalendarsModule",
       "parityStatus": "implemented",
-      "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary.",
+      "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary. The shipped settings page currently has no active override writer control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
