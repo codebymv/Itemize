@@ -92,6 +92,8 @@ npm start
 
 The backend no longer runs schema-changing startup migrations in production unless `RUN_STARTUP_MIGRATIONS=true` is set for an emergency/manual recovery window. Normal production deploys should leave that flag unset so failed or missing migrations block startup instead of being hidden during boot.
 
+The production startup preflight requires the latest numbered contract migration. Apply pending migrations before deploying application code; for the CRM deal cutover this includes `025_deal_activity_contract` followed by `026_canonical_pipeline_stage_contract`.
+
 ### Automated Deployment (Recommended)
 
 1.  **Connect to GitHub**: Link your GitHub repository to a Railway project.

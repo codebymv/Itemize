@@ -3,6 +3,17 @@ import { ContactProfileRepository } from './contact-profile.repository';
 describe('ContactProfileRepository', () => {
   const query = jest.fn();
   const repository = new ContactProfileRepository({ query } as never);
+  const sectionSql = {
+    invoices: 'FROM invoices i',
+    signatures: 'FROM signature_documents sd',
+    payments: 'FROM payments p',
+    activities: 'FROM contact_activities ca',
+    notes: 'FROM notes n',
+    lists: 'FROM lists l',
+    communications: 'FROM messages m',
+    tasks: 'FROM tasks t',
+    bookings: 'FROM bookings b',
+  } as const;
 
   beforeEach(() => jest.resetAllMocks());
 
@@ -28,18 +39,31 @@ describe('ContactProfileRepository', () => {
     expect(result.payments).toEqual({ status: 'AVAILABLE', rows: [] });
   });
 
-  it('marks one failed child query unavailable without hiding healthy sections', async () => {
-    query.mockImplementation((sql: string) => {
-      if (sql.includes('FROM notes n')) {
-        return Promise.reject(new Error('notes unavailable'));
+  it.each(Object.entries(sectionSql))(
+    'marks a failed %s child query unavailable without hiding healthy sections',
+    async (failedSection, failedSql) => {
+      query.mockImplementation((sql: string) => {
+        if (sql.includes(failedSql)) {
+          return Promise.reject(new Error(`${failedSection} unavailable`));
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const result = await repository.find(42, 11);
+
+      expect(result[failedSection as keyof typeof result]).toEqual({
+        status: 'UNAVAILABLE',
+        rows: [],
+      });
+      for (const healthySection of Object.keys(sectionSql).filter(
+        (section) => section !== failedSection,
+      )) {
+        expect(result[healthySection as keyof typeof result]).toEqual({
+          status: 'AVAILABLE',
+          rows: [],
+        });
       }
-      return Promise.resolve({ rows: [] });
-    });
-
-    const result = await repository.find(42, 11);
-
-    expect(result.notes).toEqual({ status: 'UNAVAILABLE', rows: [] });
-    expect(result.invoices).toEqual({ status: 'AVAILABLE', rows: [] });
-    expect(result.bookings).toEqual({ status: 'AVAILABLE', rows: [] });
-  });
+      expect(query).toHaveBeenCalledTimes(9);
+    },
+  );
 });

@@ -142,8 +142,8 @@
 | GET | `/api/contacts/:id/profile` | 0 | 3 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
-| GET | `/api/contacts/export/csv` | 1 | 1 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
-| POST | `/api/contacts/import/csv` | 1 | 2 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
+| GET | `/api/contacts/export/csv` | 1 | 5 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
+| POST | `/api/contacts/import/csv` | 1 | 5 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
 | GET | `/api/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/conversations` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |

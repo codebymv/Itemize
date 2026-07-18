@@ -3,8 +3,8 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 424,
-    "resolvedDeclarationCount": 424,
+    "declarationCount": 426,
+    "resolvedDeclarationCount": 426,
     "unresolvedDeclarationCount": 0,
     "uniqueResolvedOperationCount": 419,
     "sourceFileCount": 82
@@ -843,7 +843,7 @@
       ],
       "declaredPath": "/api/canvas/positions",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 49,
+      "line": 50,
       "dynamic": false
     },
     {
@@ -1151,9 +1151,29 @@
       "publicPaths": [
         "/api/contacts/export/csv"
       ],
+      "declaredPath": "/api/contacts/export/csv",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 212,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/export/csv"
+      ],
       "declaredPath": "/export/csv",
       "source": "backend/src/routes/contacts.routes.js",
       "line": 749,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts/import/csv"
+      ],
+      "declaredPath": "/api/contacts/import/csv",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 213,
       "dynamic": false
     },
     {
@@ -1413,7 +1433,7 @@
       ],
       "declaredPath": "/:id/submissions",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 822,
+      "line": 824,
       "dynamic": false
     },
     {
@@ -1423,7 +1443,7 @@
       ],
       "declaredPath": "/:id/submissions/:subId",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 885,
+      "line": 887,
       "dynamic": false
     },
     {
@@ -1433,7 +1453,7 @@
       ],
       "declaredPath": "/public/form/:identifier",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 914,
+      "line": 916,
       "dynamic": false
     },
     {
@@ -1443,7 +1463,7 @@
       ],
       "declaredPath": "/public/form/:identifier",
       "source": "backend/src/routes/forms.routes.js",
-      "line": 959,
+      "line": 961,
       "dynamic": false
     },
     {
@@ -1993,7 +2013,7 @@
       ],
       "declaredPath": "/api/lists/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 45,
+      "line": 46,
       "dynamic": false
     },
     {
@@ -3623,7 +3643,7 @@
       ],
       "declaredPath": "/api/status",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 113,
+      "line": 114,
       "dynamic": false
     },
     {
@@ -3633,7 +3653,7 @@
       ],
       "declaredPath": "/api/suggestions",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 57,
+      "line": 58,
       "dynamic": false
     },
     {
@@ -3803,7 +3823,7 @@
       ],
       "declaredPath": "/api/vaults/:vaultId/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 48,
+      "line": 49,
       "dynamic": false
     },
     {
@@ -3883,7 +3903,7 @@
       ],
       "declaredPath": "/api/whiteboards/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 46,
+      "line": 47,
       "dynamic": false
     },
     {
@@ -3963,7 +3983,7 @@
       ],
       "declaredPath": "/api/wireframes/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 47,
+      "line": 48,
       "dynamic": false
     },
     {

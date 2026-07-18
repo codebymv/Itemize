@@ -3534,7 +3534,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 50
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4565,8 +4565,8 @@
       "owner": "crm",
       "targetOperation": "contactProfile",
       "targetModule": "ContactProfilesModule",
-      "parityStatus": "characterized",
-      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, and passed the authenticated staging operation/foreign-tenant gate.",
+      "parityStatus": "implemented",
+      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, passed the authenticated staging operation/foreign-tenant gate, and has exhaustive nine-section failure isolation. The generated ledger and source regression prove there is no current frontend consumer; introducing one requires a browser/rollback gate.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -4658,6 +4658,10 @@
       "path": "/api/contacts/export/csv",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 212
+        },
+        {
           "source": "backend/src/routes/contacts.routes.js",
           "line": 749
         }
@@ -4674,6 +4678,30 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 40
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 70
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 152
+        },
         {
           "method": "GET",
           "path": "/api/contacts/export/csv",
@@ -4699,6 +4727,10 @@
       "path": "/api/contacts/import/csv",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 213
+        },
+        {
           "source": "backend/src/routes/contacts.routes.js",
           "line": 832
         }
@@ -4715,6 +4747,24 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 28
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 123
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 164
+        },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
@@ -5568,7 +5618,7 @@
           "method": "GET",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 860
+          "line": 862
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5639,43 +5689,43 @@
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 373
+          "line": 375
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 439
+          "line": 441
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 497
+          "line": 499
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 546
+          "line": 548
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 811
+          "line": 813
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 818
+          "line": 820
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 837
+          "line": 839
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5834,25 +5884,25 @@
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 446
+          "line": 448
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 536
+          "line": 538
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 553
+          "line": 555
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 594
+          "line": 596
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5905,7 +5955,7 @@
           "method": "POST",
           "path": "/api/forms/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 357
+          "line": 359
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5986,7 +6036,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 822
+          "line": 824
         }
       ],
       "consumerCallsites": [
@@ -6005,13 +6055,13 @@
           "method": "GET",
           "path": "/api/forms/:formId/submissions",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 396
+          "line": 398
         },
         {
           "method": "GET",
           "path": "/api/forms/:formId/submissions",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 407
+          "line": 409
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -6033,7 +6083,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 885
+          "line": 887
         }
       ],
       "consumerCallsites": [
@@ -6052,13 +6102,13 @@
           "method": "DELETE",
           "path": "/api/forms/:formId/submissions/:submissionId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 416
+          "line": 418
         },
         {
           "method": "DELETE",
           "path": "/api/forms/:formId/submissions/:submissionId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 425
+          "line": 427
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -6080,7 +6130,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 914
+          "line": 916
         }
       ],
       "consumerCallsites": [
@@ -6099,19 +6149,19 @@
           "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 569
+          "line": 571
         },
         {
           "method": "GET",
           "path": "/api/forms/public/form/:slug",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 583
+          "line": 585
         },
         {
           "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 587
+          "line": 589
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -6133,7 +6183,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 959
+          "line": 961
         }
       ],
       "consumerCallsites": [
@@ -6152,31 +6202,31 @@
           "method": "POST",
           "path": "/api/forms/public/form/:slug",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 461
+          "line": 463
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 607
+          "line": 609
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 683
+          "line": 685
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 693
+          "line": 695
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 704
+          "line": 706
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8586,7 +8636,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 45
+          "line": 46
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -11015,7 +11065,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 131
+          "line": 232
         }
       ],
       "consumerCallsites": [
@@ -11024,7 +11074,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 47,
+          "line": 64,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11034,19 +11084,19 @@
           "method": "GET",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 97
+          "line": 118
         },
         {
           "method": "GET",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 108
+          "line": 129
         },
         {
           "method": "GET",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 803
+          "line": 915
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -11068,7 +11118,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 195
+          "line": 296
         }
       ],
       "consumerCallsites": [
@@ -11077,7 +11127,7 @@
           "path": "/api/pipelines",
           "rawPath": "/api/pipelines",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 75,
+          "line": 94,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11087,61 +11137,61 @@
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 71
+          "line": 92
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 87
+          "line": 108
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 178
+          "line": 201
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 353
+          "line": 413
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 437
+          "line": 549
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 484
+          "line": 596
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 545
+          "line": 657
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 638
+          "line": 750
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 666
+          "line": 778
         },
         {
           "method": "POST",
           "path": "/api/pipelines",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 772
+          "line": 884
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11163,7 +11213,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 328
+          "line": 429
         }
       ],
       "consumerCallsites": [
@@ -11172,7 +11222,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 95,
+          "line": 114,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11182,19 +11232,19 @@
           "method": "DELETE",
           "path": "/api/pipelines/:pipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 160
+          "line": 181
         },
         {
           "method": "DELETE",
           "path": "/api/pipelines/:protectedPipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 450
+          "line": 562
         },
         {
           "method": "DELETE",
           "path": "/api/pipelines/:protectedPipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 458
+          "line": 570
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11216,7 +11266,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 152
+          "line": 253
         }
       ],
       "consumerCallsites": [
@@ -11225,7 +11275,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 57,
+          "line": 74,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11235,13 +11285,13 @@
           "method": "GET",
           "path": "/api/pipelines/:pipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 119
+          "line": 140
         },
         {
           "method": "GET",
           "path": "/api/pipelines/:pipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 130
+          "line": 151
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -11263,7 +11313,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 248
+          "line": 349
         }
       ],
       "consumerCallsites": [
@@ -11272,7 +11322,7 @@
           "path": "/api/pipelines/:id",
           "rawPath": "/api/pipelines/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 85,
+          "line": 104,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11282,25 +11332,25 @@
           "method": "PUT",
           "path": "/api/pipelines/:pipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 139
+          "line": 160
         },
         {
           "method": "PUT",
           "path": "/api/pipelines/:pipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 150
+          "line": 171
         },
         {
           "method": "PUT",
           "path": "/api/pipelines/:protectedPipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 469
+          "line": 581
         },
         {
           "method": "PUT",
           "path": "/api/pipelines/:canonicalPipelineId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 601
+          "line": 713
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11322,7 +11372,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 505
+          "line": 606
         }
       ],
       "consumerCallsites": [
@@ -11331,7 +11381,7 @@
           "path": "/api/pipelines/deals",
           "rawPath": "/api/pipelines/deals",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 167,
+          "line": 187,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11341,55 +11391,55 @@
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 187
+          "line": 211
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 206
+          "line": 230
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 216
+          "line": 240
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 227
+          "line": 251
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 244
+          "line": 268
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 360
+          "line": 420
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 444
+          "line": 556
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 590
+          "line": 702
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 680
+          "line": 792
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11411,7 +11461,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 829
+          "line": 922
         }
       ],
       "consumerCallsites": [
@@ -11420,7 +11470,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 228,
+          "line": 248,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11430,7 +11480,7 @@
           "method": "DELETE",
           "path": "/api/pipelines/deals/:dealId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 423
+          "line": 535
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11452,7 +11502,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 475
+          "line": 576
         }
       ],
       "consumerCallsites": [
@@ -11461,7 +11511,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 142,
+          "line": 162,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11471,13 +11521,13 @@
           "method": "GET",
           "path": "/api/pipelines/deals/:dealId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 262
+          "line": 286
         },
         {
           "method": "GET",
           "path": "/api/pipelines/deals/:dealId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 272
+          "line": 296
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -11499,7 +11549,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 580
+          "line": 681
         }
       ],
       "consumerCallsites": [
@@ -11508,7 +11558,7 @@
           "path": "/api/pipelines/deals/:id",
           "rawPath": "/api/pipelines/deals/${id}",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 177,
+          "line": 197,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11518,19 +11568,25 @@
           "method": "PUT",
           "path": "/api/pipelines/deals/:dealId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 302
+          "line": 326
         },
         {
           "method": "PUT",
           "path": "/api/pipelines/deals/:dealId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 313
+          "line": 345
         },
         {
           "method": "PUT",
           "path": "/api/pipelines/deals/:dealId",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 330
+          "line": 373
+        },
+        {
+          "method": "PUT",
+          "path": "/api/pipelines/deals/:dealId",
+          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
+          "line": 390
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11552,7 +11608,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 774
+          "line": 876
         }
       ],
       "consumerCallsites": [
@@ -11561,7 +11617,7 @@
           "path": "/api/pipelines/deals/:id/lost",
           "rawPath": "/api/pipelines/deals/${id}/lost",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 208,
+          "line": 228,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11571,7 +11627,7 @@
           "method": "POST",
           "path": "/api/pipelines/deals/:dealId/lost",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 391
+          "line": 465
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11593,7 +11649,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 802
+          "line": 903
         }
       ],
       "consumerCallsites": [
@@ -11602,7 +11658,7 @@
           "path": "/api/pipelines/deals/:id/reopen",
           "rawPath": "/api/pipelines/deals/${id}/reopen",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 218,
+          "line": 238,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11612,13 +11668,19 @@
           "method": "POST",
           "path": "/api/pipelines/deals/:dealId/reopen",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 380
+          "line": 450
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals/:dealId/reopen",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 404
+          "line": 490
+        },
+        {
+          "method": "POST",
+          "path": "/api/pipelines/deals/:dealId/reopen",
+          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
+          "line": 514
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11640,7 +11702,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 671
+          "line": 788
         }
       ],
       "consumerCallsites": [
@@ -11649,7 +11711,7 @@
           "path": "/api/pipelines/deals/:id/stage",
           "rawPath": "/api/pipelines/deals/${id}/stage",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 187,
+          "line": 207,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11660,6 +11722,12 @@
           "path": "/api/pipelines/deals/:dealId/stage",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
           "line": 337
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/pipelines/deals/:dealId/stage",
+          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
+          "line": 397
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11681,7 +11749,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 747
+          "line": 857
         }
       ],
       "consumerCallsites": [
@@ -11690,7 +11758,7 @@
           "path": "/api/pipelines/deals/:id/won",
           "rawPath": "/api/pipelines/deals/${id}/won",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 198,
+          "line": 218,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11700,13 +11768,13 @@
           "method": "POST",
           "path": "/api/pipelines/deals/:dealId/won",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 369
+          "line": 429
         },
         {
           "method": "POST",
           "path": "/api/pipelines/deals/:dealId/won",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 414
+          "line": 526
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11728,7 +11796,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/pipelines.routes.js",
-          "line": 380
+          "line": 481
         }
       ],
       "consumerCallsites": [
@@ -11737,7 +11805,7 @@
           "path": "/api/pipelines/deals/all",
           "rawPath": "/api/pipelines/deals/all",
           "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 131,
+          "line": 150,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11747,13 +11815,13 @@
           "method": "GET",
           "path": "/api/pipelines/deals/all",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 281
+          "line": 305
         },
         {
           "method": "GET",
           "path": "/api/pipelines/deals/all",
           "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 292
+          "line": 316
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -15066,7 +15134,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 113
+          "line": 114
         }
       ],
       "consumerCallsites": [
@@ -15100,7 +15168,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 58
         }
       ],
       "consumerCallsites": [
@@ -15789,7 +15857,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 48
+          "line": 49
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16114,7 +16182,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 46
+          "line": 47
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -16394,7 +16462,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 47
+          "line": 48
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

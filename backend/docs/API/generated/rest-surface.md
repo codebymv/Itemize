@@ -6,8 +6,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 424
-- Resolved declarations: 424
+- Route declarations: 426
+- Resolved declarations: 426
 - Unresolved declarations: 0
 - Unique resolved method/path operations: 419
 - Files containing declarations: 82
@@ -105,7 +105,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/campaigns/:id/send-test` | `/:id/send-test` | `backend/src/routes/campaigns/insights.routes.js:150` |
 | POST | `/api/campaigns/:id/unschedule` | `/:id/unschedule` | `backend/src/routes/campaigns/actions.routes.js:79` |
 | GET | `/api/canvas/lists` | `/canvas/lists` | `backend/src/routes/lists.routes.js:202` |
-| PUT | `/api/canvas/positions` | `/api/canvas/positions` | `backend/src/bootstrap/register-api-routes.js:49` |
+| PUT | `/api/canvas/positions` | `/api/canvas/positions` | `backend/src/bootstrap/register-api-routes.js:50` |
 | PUT | `/api/canvas/positions` | `/canvas/positions` | `backend/src/routes/canvas.routes.js:14` |
 | GET | `/api/categories` | `/categories` | `backend/src/routes/categories.routes.js:19` |
 | POST | `/api/categories` | `/categories` | `backend/src/routes/categories.routes.js:56` |
@@ -136,7 +136,9 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/contacts/:id/profile` | `/:id/profile` | `backend/src/routes/contact-profile.routes.js:14` |
 | POST | `/api/contacts/bulk-delete` | `/bulk-delete` | `backend/src/routes/contacts.routes.js:590` |
 | POST | `/api/contacts/bulk-update` | `/bulk-update` | `backend/src/routes/contacts.routes.js:457` |
+| GET | `/api/contacts/export/csv` | `/api/contacts/export/csv` | `backend/src/bootstrap/register-api-routes.js:212` |
 | GET | `/api/contacts/export/csv` | `/export/csv` | `backend/src/routes/contacts.routes.js:749` |
+| POST | `/api/contacts/import/csv` | `/api/contacts/import/csv` | `backend/src/bootstrap/register-api-routes.js:213` |
 | POST | `/api/contacts/import/csv` | `/import/csv` | `backend/src/routes/contacts.routes.js:832` |
 | GET | `/api/conversations` | `/` | `backend/src/routes/conversations.routes.js:22` |
 | POST | `/api/conversations` | `/` | `backend/src/routes/conversations.routes.js:141` |
@@ -162,10 +164,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/forms/:id` | `/:id` | `backend/src/routes/forms.routes.js:440` |
 | POST | `/api/forms/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/forms.routes.js:676` |
 | PUT | `/api/forms/:id/fields` | `/:id/fields` | `backend/src/routes/forms.routes.js:531` |
-| GET | `/api/forms/:id/submissions` | `/:id/submissions` | `backend/src/routes/forms.routes.js:822` |
-| DELETE | `/api/forms/:id/submissions/:subId` | `/:id/submissions/:subId` | `backend/src/routes/forms.routes.js:885` |
-| GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:914` |
-| POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:959` |
+| GET | `/api/forms/:id/submissions` | `/:id/submissions` | `backend/src/routes/forms.routes.js:824` |
+| DELETE | `/api/forms/:id/submissions/:subId` | `/:id/submissions/:subId` | `backend/src/routes/forms.routes.js:887` |
+| GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:916` |
+| POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:961` |
 | GET | `/api/health` | `/api/health` | `backend/src/index.js:263` |
 | GET | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:18` |
 | POST | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:145` |
@@ -220,7 +222,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/lists/:id/items` | `/lists/:id/items` | `backend/src/routes/lists.routes.js:325` |
 | DELETE | `/api/lists/:id/items/:itemId` | `/lists/:id/items/:itemId` | `backend/src/routes/lists.routes.js:398` |
 | PUT | `/api/lists/:id/items/:itemId/toggle` | `/lists/:id/items/:itemId/toggle` | `backend/src/routes/lists.routes.js:258` |
-| PUT | `/api/lists/:id/position` | `/api/lists/:id/position` | `backend/src/bootstrap/register-api-routes.js:45` |
+| PUT | `/api/lists/:id/position` | `/api/lists/:id/position` | `backend/src/bootstrap/register-api-routes.js:46` |
 | PUT | `/api/lists/:id/position` | `/lists/:id/position` | `backend/src/routes/lists.routes.js:223` |
 | PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:458` |
 | DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:113` |
@@ -278,20 +280,20 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/pages/:id/versions/:versionId/restore` | `/:id/versions/:versionId/restore` | `backend/src/routes/pageVersions.routes.js:348` |
 | GET | `/api/pages/public/page/:slug` | `/public/page/:slug` | `backend/src/routes/pages/public.routes.js:18` |
 | POST | `/api/pages/public/page/:slug/analytics` | `/public/page/:slug/analytics` | `backend/src/routes/pages/public.routes.js:141` |
-| GET | `/api/pipelines` | `/` | `backend/src/routes/pipelines.routes.js:131` |
-| POST | `/api/pipelines` | `/` | `backend/src/routes/pipelines.routes.js:195` |
-| DELETE | `/api/pipelines/:id` | `/:id` | `backend/src/routes/pipelines.routes.js:328` |
-| GET | `/api/pipelines/:id` | `/:id` | `backend/src/routes/pipelines.routes.js:152` |
-| PUT | `/api/pipelines/:id` | `/:id` | `backend/src/routes/pipelines.routes.js:248` |
-| POST | `/api/pipelines/deals` | `/deals` | `backend/src/routes/pipelines.routes.js:505` |
-| DELETE | `/api/pipelines/deals/:id` | `/deals/:id` | `backend/src/routes/pipelines.routes.js:829` |
-| GET | `/api/pipelines/deals/:id` | `/deals/:id` | `backend/src/routes/pipelines.routes.js:475` |
-| PUT | `/api/pipelines/deals/:id` | `/deals/:id` | `backend/src/routes/pipelines.routes.js:580` |
-| POST | `/api/pipelines/deals/:id/lost` | `/deals/:id/lost` | `backend/src/routes/pipelines.routes.js:774` |
-| POST | `/api/pipelines/deals/:id/reopen` | `/deals/:id/reopen` | `backend/src/routes/pipelines.routes.js:802` |
-| PATCH | `/api/pipelines/deals/:id/stage` | `/deals/:id/stage` | `backend/src/routes/pipelines.routes.js:671` |
-| POST | `/api/pipelines/deals/:id/won` | `/deals/:id/won` | `backend/src/routes/pipelines.routes.js:747` |
-| GET | `/api/pipelines/deals/all` | `/deals/all` | `backend/src/routes/pipelines.routes.js:380` |
+| GET | `/api/pipelines` | `/` | `backend/src/routes/pipelines.routes.js:232` |
+| POST | `/api/pipelines` | `/` | `backend/src/routes/pipelines.routes.js:296` |
+| DELETE | `/api/pipelines/:id` | `/:id` | `backend/src/routes/pipelines.routes.js:429` |
+| GET | `/api/pipelines/:id` | `/:id` | `backend/src/routes/pipelines.routes.js:253` |
+| PUT | `/api/pipelines/:id` | `/:id` | `backend/src/routes/pipelines.routes.js:349` |
+| POST | `/api/pipelines/deals` | `/deals` | `backend/src/routes/pipelines.routes.js:606` |
+| DELETE | `/api/pipelines/deals/:id` | `/deals/:id` | `backend/src/routes/pipelines.routes.js:922` |
+| GET | `/api/pipelines/deals/:id` | `/deals/:id` | `backend/src/routes/pipelines.routes.js:576` |
+| PUT | `/api/pipelines/deals/:id` | `/deals/:id` | `backend/src/routes/pipelines.routes.js:681` |
+| POST | `/api/pipelines/deals/:id/lost` | `/deals/:id/lost` | `backend/src/routes/pipelines.routes.js:876` |
+| POST | `/api/pipelines/deals/:id/reopen` | `/deals/:id/reopen` | `backend/src/routes/pipelines.routes.js:903` |
+| PATCH | `/api/pipelines/deals/:id/stage` | `/deals/:id/stage` | `backend/src/routes/pipelines.routes.js:788` |
+| POST | `/api/pipelines/deals/:id/won` | `/deals/:id/won` | `backend/src/routes/pipelines.routes.js:857` |
+| GET | `/api/pipelines/deals/all` | `/deals/all` | `backend/src/routes/pipelines.routes.js:481` |
 | GET | `/api/preview/version/:versionId` | `/version/:versionId` | `backend/src/routes/preview.routes.js:24` |
 | GET | `/api/public/sign/:token` | `/public/sign/:token` | `backend/src/routes/signatures.routes.js:559` |
 | POST | `/api/public/sign/:token` | `/public/sign/:token` | `backend/src/routes/signatures.routes.js:586` |
@@ -383,8 +385,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/social/conversations/:id/messages` | `/conversations/:id/messages` | `backend/src/routes/social/conversations.routes.js:204` |
 | GET | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:43` |
 | POST | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:66` |
-| GET | `/api/status` | `/api/status` | `backend/src/bootstrap/register-api-routes.js:113` |
-| POST | `/api/suggestions` | `/api/suggestions` | `backend/src/bootstrap/register-api-routes.js:57` |
+| GET | `/api/status` | `/api/status` | `backend/src/bootstrap/register-api-routes.js:114` |
+| POST | `/api/suggestions` | `/api/suggestions` | `backend/src/bootstrap/register-api-routes.js:58` |
 | GET | `/api/tags` | `/` | `backend/src/routes/tags.routes.js:22` |
 | POST | `/api/tags` | `/` | `backend/src/routes/tags.routes.js:47` |
 | DELETE | `/api/tags/:id` | `/:id` | `backend/src/routes/tags.routes.js:156` |
@@ -401,7 +403,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/vaults/:vaultId/items/bulk` | `/vaults/:vaultId/items/bulk` | `backend/src/routes/vaults/items.routes.js:129` |
 | PUT | `/api/vaults/:vaultId/items/reorder` | `/vaults/:vaultId/items/reorder` | `backend/src/routes/vaults/items.routes.js:13` |
 | POST | `/api/vaults/:vaultId/lock` | `/vaults/:vaultId/lock` | `backend/src/routes/vaults/password.routes.js:14` |
-| PUT | `/api/vaults/:vaultId/position` | `/api/vaults/:vaultId/position` | `backend/src/bootstrap/register-api-routes.js:48` |
+| PUT | `/api/vaults/:vaultId/position` | `/api/vaults/:vaultId/position` | `backend/src/bootstrap/register-api-routes.js:49` |
 | PUT | `/api/vaults/:vaultId/position` | `/vaults/:vaultId/position` | `backend/src/routes/vaults/crud.routes.js:270` |
 | DELETE | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:58` |
 | POST | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:17` |
@@ -409,7 +411,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/webhooks/:workflowId` | `/:workflowId` | `backend/src/routes/webhooks.routes.js:54` |
 | GET | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:20` |
 | POST | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:85` |
-| PUT | `/api/whiteboards/:id/position` | `/api/whiteboards/:id/position` | `backend/src/bootstrap/register-api-routes.js:46` |
+| PUT | `/api/whiteboards/:id/position` | `/api/whiteboards/:id/position` | `backend/src/bootstrap/register-api-routes.js:47` |
 | PUT | `/api/whiteboards/:id/position` | `/whiteboards/:id/position` | `backend/src/routes/whiteboards.routes.js:233` |
 | DELETE | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:270` |
 | PUT | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:146` |
@@ -417,7 +419,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:170` |
 | GET | `/api/wireframes` | `/wireframes` | `backend/src/routes/wireframes.routes.js:20` |
 | POST | `/api/wireframes` | `/wireframes` | `backend/src/routes/wireframes.routes.js:85` |
-| PUT | `/api/wireframes/:id/position` | `/api/wireframes/:id/position` | `backend/src/bootstrap/register-api-routes.js:47` |
+| PUT | `/api/wireframes/:id/position` | `/api/wireframes/:id/position` | `backend/src/bootstrap/register-api-routes.js:48` |
 | PUT | `/api/wireframes/:id/position` | `/wireframes/:id/position` | `backend/src/routes/wireframes.routes.js:243` |
 | DELETE | `/api/wireframes/:wireframeId` | `/wireframes/:wireframeId` | `backend/src/routes/wireframes.routes.js:289` |
 | PUT | `/api/wireframes/:wireframeId` | `/wireframes/:wireframeId` | `backend/src/routes/wireframes.routes.js:144` |

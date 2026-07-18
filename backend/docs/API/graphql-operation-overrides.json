@@ -1189,8 +1189,8 @@
       "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content."
     },
     "GET /api/contacts/:id/profile": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactProfile", "parityStatus": "characterized", "risk": "high",
-      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, and passed the authenticated staging operation/foreign-tenant gate."
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactProfile", "parityStatus": "implemented", "risk": "high",
+      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, passed the authenticated staging operation/foreign-tenant gate, and has exhaustive nine-section failure isolation. The generated ledger and source regression prove there is no current frontend consumer; introducing one requires a browser/rollback gate."
     },
     "GET /api/contacts/:id/activities": {
       "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "characterized", "risk": "high",

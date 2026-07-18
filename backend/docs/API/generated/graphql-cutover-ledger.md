@@ -142,8 +142,8 @@
 | GET | `/api/contacts/:id/profile` | 0 | 3 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
-| GET | `/api/contacts/export/csv` | 1 | 1 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
-| POST | `/api/contacts/import/csv` | 1 | 2 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
+| GET | `/api/contacts/export/csv` | 1 | 5 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
+| POST | `/api/contacts/import/csv` | 1 | 5 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
 | GET | `/api/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/conversations` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
@@ -291,10 +291,10 @@
 | POST | `/api/pipelines/deals` | 1 | 9 | graphql-mutation | high | crm / DealsModule / createDeal |
 | DELETE | `/api/pipelines/deals/:id` | 1 | 1 | graphql-mutation | high | crm / DealsModule / deleteDeal |
 | GET | `/api/pipelines/deals/:id` | 1 | 2 | graphql-query | high | crm / DealsModule / deal |
-| PUT | `/api/pipelines/deals/:id` | 1 | 3 | graphql-mutation | high | crm / DealsModule / updateDeal |
+| PUT | `/api/pipelines/deals/:id` | 1 | 4 | graphql-mutation | high | crm / DealsModule / updateDeal |
 | POST | `/api/pipelines/deals/:id/lost` | 1 | 1 | graphql-mutation | high | crm / DealsModule / markDealLost |
-| POST | `/api/pipelines/deals/:id/reopen` | 1 | 2 | graphql-mutation | high | crm / DealsModule / reopenDeal |
-| PATCH | `/api/pipelines/deals/:id/stage` | 1 | 1 | graphql-mutation | high | crm / DealsModule / moveDeal |
+| POST | `/api/pipelines/deals/:id/reopen` | 1 | 3 | graphql-mutation | high | crm / DealsModule / reopenDeal |
+| PATCH | `/api/pipelines/deals/:id/stage` | 1 | 2 | graphql-mutation | high | crm / DealsModule / moveDeal |
 | POST | `/api/pipelines/deals/:id/won` | 1 | 2 | graphql-mutation | high | crm / DealsModule / markDealWon |
 | GET | `/api/pipelines/deals/all` | 1 | 2 | graphql-query | high | crm / DealsModule / deals |
 | GET | `/api/preview/version/:versionId` | 0 | 0 | graphql-query | unknown | _unassigned_ |

@@ -3534,7 +3534,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 50
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4565,8 +4565,8 @@
       "owner": "crm",
       "targetOperation": "contactProfile",
       "targetModule": "ContactProfilesModule",
-      "parityStatus": "characterized",
-      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, and passed the authenticated staging operation/foreign-tenant gate.",
+      "parityStatus": "implemented",
+      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, passed the authenticated staging operation/foreign-tenant gate, and has exhaustive nine-section failure isolation. The generated ledger and source regression prove there is no current frontend consumer; introducing one requires a browser/rollback gate.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -4658,6 +4658,10 @@
       "path": "/api/contacts/export/csv",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 212
+        },
+        {
           "source": "backend/src/routes/contacts.routes.js",
           "line": 749
         }
@@ -4674,6 +4678,30 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 40
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 70
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 152
+        },
         {
           "method": "GET",
           "path": "/api/contacts/export/csv",
@@ -4699,6 +4727,10 @@
       "path": "/api/contacts/import/csv",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 213
+        },
+        {
           "source": "backend/src/routes/contacts.routes.js",
           "line": 832
         }
@@ -4715,6 +4747,24 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 28
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 123
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 164
+        },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
@@ -5568,7 +5618,7 @@
           "method": "GET",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 860
+          "line": 862
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5639,43 +5689,43 @@
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 373
+          "line": 375
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 439
+          "line": 441
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 497
+          "line": 499
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 546
+          "line": 548
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 811
+          "line": 813
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 818
+          "line": 820
         },
         {
           "method": "POST",
           "path": "/api/forms",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 837
+          "line": 839
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5834,25 +5884,25 @@
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 446
+          "line": 448
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 536
+          "line": 538
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 553
+          "line": 555
         },
         {
           "method": "PUT",
           "path": "/api/forms/:id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 594
+          "line": 596
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5905,7 +5955,7 @@
           "method": "POST",
           "path": "/api/forms/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 357
+          "line": 359
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5986,7 +6036,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 822
+          "line": 824
         }
       ],
       "consumerCallsites": [
@@ -6005,13 +6055,13 @@
           "method": "GET",
           "path": "/api/forms/:formId/submissions",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 396
+          "line": 398
         },
         {
           "method": "GET",
           "path": "/api/forms/:formId/submissions",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 407
+          "line": 409
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -6033,7 +6083,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 885
+          "line": 887
         }
       ],
       "consumerCallsites": [
@@ -6052,13 +6102,13 @@
           "method": "DELETE",
           "path": "/api/forms/:formId/submissions/:submissionId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 416
+          "line": 418
         },
         {
           "method": "DELETE",
           "path": "/api/forms/:formId/submissions/:submissionId",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 425
+          "line": 427
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -6080,7 +6130,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 914
+          "line": 916
         }
       ],
       "consumerCallsites": [
@@ -6099,19 +6149,19 @@
           "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 569
+          "line": 571
         },
         {
           "method": "GET",
           "path": "/api/forms/public/form/:slug",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 583
+          "line": 585
         },
         {
           "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 587
+          "line": 589
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -6133,7 +6183,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 959
+          "line": 961
         }
       ],
       "consumerCallsites": [
@@ -6152,31 +6202,31 @@
           "method": "POST",
           "path": "/api/forms/public/form/:slug",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 461
+          "line": 463
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 607
+          "line": 609
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 683
+          "line": 685
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 693
+          "line": 695
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 704
+          "line": 706
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8586,7 +8636,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 45
+          "line": 46
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -15084,7 +15134,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 113
+          "line": 114
         }
       ],
       "consumerCallsites": [
@@ -15118,7 +15168,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 58
         }
       ],
       "consumerCallsites": [
@@ -15807,7 +15857,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 48
+          "line": 49
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16132,7 +16182,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 46
+          "line": 47
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -16412,7 +16462,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 47
+          "line": 48
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
