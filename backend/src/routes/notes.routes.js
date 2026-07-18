@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
-const { sendError } = require('../utils/response');
+const { disableConditionalCaching, sendError } = require('../utils/response');
 const { noteColumns } = require('./workspace-object-columns');
 
 /**
@@ -18,6 +18,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
     // Get all notes for the current user with pagination
     router.get('/notes', authenticateJWT, async (req, res) => {
+        disableConditionalCaching(req, res);
         try {
             const { 
                 page = 1, 

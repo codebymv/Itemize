@@ -152,6 +152,17 @@ function sendNoContent(res) {
 }
 
 /**
+ * Personalized API responses must always return their current JSON body.
+ * Removing request validators also repairs clients that retained an ETag
+ * before the no-store policy was introduced.
+ */
+function disableConditionalCaching(req, res) {
+    delete req.headers['if-none-match'];
+    delete req.headers['if-modified-since'];
+    res.set('Cache-Control', 'private, no-store');
+}
+
+/**
  * Wrap pagination parameters
  * 
  * @param {Object} query - Request query parameters
@@ -200,6 +211,7 @@ module.exports = {
     sendForbidden,
     sendCreated,
     sendNoContent,
+    disableConditionalCaching,
     getPaginationParams,
     buildPagination
 };

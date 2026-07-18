@@ -137,8 +137,10 @@ Before enabling the note write flag in a deployed environment:
    disabled.
 
 Before enabling the list write flag, the same outbox, rollback, and staging
-requirements apply. The code-level atomic outbox and concurrent-edit gates
-have passed; a real Canvas/Contents staging write rehearsal is still required.
+requirements apply. The code-level atomic outbox and concurrent-edit gates and
+the Canvas/Contents staging write-and-rollback rehearsal have passed. A
+production enablement still requires a monitored change window with the
+realtime outbox worker enabled; the flag remains default-off.
 
 ## Staging read and rollback gate
 
@@ -208,6 +210,49 @@ variables were removed, clean staging deployments
 GraphQL readiness returned `ready`. The outbox worker and all workspace
 GraphQL frontend flags remain default-off. Production was untouched.
 
+## Staging list mutation and rollback gate
+
+The list-mutation gate passed on 2026-07-18 against GraphQL deployment
+`67a436eb-5175-48bc-b1ad-9c5eab74a5ac`. The GraphQL UI phase used legacy
+backend deployment `c2c8eb70-c744-4939-827f-a2ac930e3b99`; corrected REST
+rollback passed through backend deployment
+`afd0a162-e2c6-4b5e-bb66-e92b485aee38`. A disposable verified account used
+the real Canvas UI with `VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL=true` to create
+a list with the omitted-category `General` fallback, add an item, enable
+sharing, update its title, and toggle item completion. Canvas and Contents
+rendered the same list. An already-open anonymous viewer received the title
+and completion updates over Socket.IO without a reload.
+
+A deliberately stale update using revision
+`2026-07-18T17:53:28.615Z` failed with `CONFLICT`,
+`reason: STALE_LIST_REVISION`, and current revision
+`2026-07-18T17:54:24.960Z`; the stale overwrite did not persist. Before
+cleanup, the transactional outbox contained three sent shared-viewer
+`listUpdated` projections and four sent owner-canvas `userListUpdated`
+projections for the fixture.
+
+Turning the mutation flag off exposed a rollback defect in the personalized
+REST reads: a retained browser ETag could make Express return `304` with an
+empty Axios response body even though the row still existed. The three
+workspace rollback reads now return `Cache-Control: private, no-store` and
+ignore conditional request validators. The fresh-PostgreSQL regression replays
+each returned ETag and requires HTTP `200` plus the complete list/note body.
+With that correction deployed, `GET /api/canvas/lists` returned a full `200`,
+the same fixture rendered in Contents, and REST `PUT /api/lists/:id` plus
+`DELETE /api/lists/:id` updated the open anonymous viewer in real time. Backend
+logs showed only the retained REST reads/writes after rollback, and GraphQL
+logs contained no later workspace mutation.
+
+Cleanup removed the disposable user, personal organization, membership,
+category, list, and outbox rows; explicit verification returned zero for all
+six fixture classes. Temporary localhost CORS and outbox-worker variables were
+removed. Clean backend deployment
+`e402baa8-6154-4367-aa6d-a560737ad766` succeeded, public GraphQL readiness
+returned `ready`, and `EXTRA_CORS_ORIGINS`,
+`REALTIME_OUTBOX_WORKER_ENABLED`, and
+`VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL` are unset in staging. All workspace
+GraphQL flags remain default-off. Production was untouched.
+
 ## Required cutover evidence
 
 - Service tests for strict pagination/filter validation, mapping, malformed
@@ -221,6 +266,6 @@ GraphQL frontend flags remain default-off. Production was untouched.
   canvas multi-page reads, list/note mutation mapping, granular-update reuse,
   revision preservation, and REST-default selection.
 - A staging browser rehearsal for the shipped Canvas and Contents pages with
-  each read flag independently enabled and disabled, plus note writes with
-  their mutation flag enabled and rolled back. **Reads and notes passed on
-  2026-07-18; reachable list writes remain to rehearse.**
+  each read flag independently enabled and disabled, plus list and note writes
+  with their mutation flags enabled and rolled back. **All reachable workspace
+  reads, list writes, and note writes passed on 2026-07-18.**

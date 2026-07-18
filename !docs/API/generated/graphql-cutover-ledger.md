@@ -111,7 +111,7 @@
 | POST | `/api/campaigns/:id/send` | 1 | 2 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
 | POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
-| GET | `/api/canvas/lists` | 1 | 2 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
+| GET | `/api/canvas/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | PUT | `/api/canvas/positions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
@@ -219,7 +219,7 @@
 | DELETE | `/api/invoices/settings/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceSettingsModule / removeInvoiceSettingsLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 4 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
-| GET | `/api/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
+| GET | `/api/lists` | 1 | 4 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | POST | `/api/lists` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceList |
 | DELETE | `/api/lists/:id` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceList |
 | PUT | `/api/lists/:id` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceList |
@@ -233,7 +233,7 @@
 | POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/marketing-chat/token` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/note-suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/notes` | 1 | 9 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
+| GET | `/api/notes` | 1 | 10 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
 | POST | `/api/notes` | 1 | 6 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceNote |
 | DELETE | `/api/notes/:noteId` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceNote |
 | PUT | `/api/notes/:noteId` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |

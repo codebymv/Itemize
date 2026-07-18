@@ -833,7 +833,7 @@
       ],
       "declaredPath": "/canvas/lists",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 209,
+      "line": 210,
       "dynamic": false
     },
     {
@@ -1953,7 +1953,7 @@
       ],
       "declaredPath": "/lists",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 89,
+      "line": 90,
       "dynamic": false
     },
     {
@@ -1963,7 +1963,7 @@
       ],
       "declaredPath": "/lists/:id",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 176,
+      "line": 177,
       "dynamic": false
     },
     {
@@ -1973,7 +1973,7 @@
       ],
       "declaredPath": "/lists/:id",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 128,
+      "line": 129,
       "dynamic": false
     },
     {
@@ -1983,7 +1983,7 @@
       ],
       "declaredPath": "/lists/:id/items",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 332,
+      "line": 334,
       "dynamic": false
     },
     {
@@ -1993,7 +1993,7 @@
       ],
       "declaredPath": "/lists/:id/items/:itemId",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 405,
+      "line": 407,
       "dynamic": false
     },
     {
@@ -2003,7 +2003,7 @@
       ],
       "declaredPath": "/lists/:id/items/:itemId/toggle",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 265,
+      "line": 267,
       "dynamic": false
     },
     {
@@ -2023,7 +2023,7 @@
       ],
       "declaredPath": "/lists/:id/position",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 230,
+      "line": 232,
       "dynamic": false
     },
     {
@@ -2033,7 +2033,7 @@
       ],
       "declaredPath": "/lists/:id/title",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 465,
+      "line": 467,
       "dynamic": false
     },
     {
@@ -2103,7 +2103,7 @@
       ],
       "declaredPath": "/notes",
       "source": "backend/src/routes/notes.routes.js",
-      "line": 88,
+      "line": 89,
       "dynamic": false
     },
     {
@@ -2113,7 +2113,7 @@
       ],
       "declaredPath": "/notes/:noteId",
       "source": "backend/src/routes/notes.routes.js",
-      "line": 189,
+      "line": 190,
       "dynamic": false
     },
     {
@@ -2123,7 +2123,7 @@
       ],
       "declaredPath": "/notes/:noteId",
       "source": "backend/src/routes/notes.routes.js",
-      "line": 129,
+      "line": 130,
       "dynamic": false
     },
     {
@@ -2133,7 +2133,7 @@
       ],
       "declaredPath": "/notes/:noteId/category",
       "source": "backend/src/routes/notes.routes.js",
-      "line": 311,
+      "line": 312,
       "dynamic": false
     },
     {
@@ -2143,7 +2143,7 @@
       ],
       "declaredPath": "/notes/:noteId/content",
       "source": "backend/src/routes/notes.routes.js",
-      "line": 239,
+      "line": 240,
       "dynamic": false
     },
     {
@@ -2173,7 +2173,7 @@
       ],
       "declaredPath": "/notes/:noteId/title",
       "source": "backend/src/routes/notes.routes.js",
-      "line": 275,
+      "line": 276,
       "dynamic": false
     },
     {

@@ -3500,7 +3500,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 209
+          "line": 210
         }
       ],
       "consumerCallsites": [
@@ -3526,6 +3526,12 @@
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
           "line": 692
+        },
+        {
+          "method": "GET",
+          "path": "/api/canvas/lists",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 713
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3535,7 +3541,7 @@
       "targetOperation": "workspaceLists",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging.",
+      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8510,6 +8516,12 @@
         {
           "method": "GET",
           "path": "/api/lists",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 708
+        },
+        {
+          "method": "GET",
+          "path": "/api/lists",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
           "line": 94
         },
@@ -8527,7 +8539,7 @@
       "targetOperation": "workspaceLists",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead.",
+      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. Its personalized rollback response is private/no-store and ignores conditional validators. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8539,7 +8551,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 89
+          "line": 90
         }
       ],
       "consumerCallsites": [
@@ -8568,7 +8580,7 @@
       "targetOperation": "createWorkspaceList",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag.",
+      "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag. Canvas/Contents creation and REST rollback passed the staging browser gate.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8580,7 +8592,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 176
+          "line": 177
         }
       ],
       "consumerCallsites": [
@@ -8615,7 +8627,7 @@
       "targetOperation": "deleteWorkspaceList",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox.",
+      "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox. The staging browser gate proved GraphQL deletion and flag-off REST deletion reach the shipped owner and anonymous-viewer surfaces.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8627,7 +8639,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 128
+          "line": 129
         }
       ],
       "consumerCallsites": [
@@ -8649,7 +8661,7 @@
       "targetOperation": "updateWorkspaceList",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows.",
+      "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows. Staging proved stale-write rejection, sent owner/shared projections, an open anonymous viewer update, and REST rollback without later GraphQL traffic.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8661,7 +8673,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 332
+          "line": 334
         }
       ],
       "consumerCallsites": [],
@@ -8685,7 +8697,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 405
+          "line": 407
         }
       ],
       "consumerCallsites": [],
@@ -8709,7 +8721,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 265
+          "line": 267
         }
       ],
       "consumerCallsites": [],
@@ -8750,7 +8762,7 @@
         },
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 230
+          "line": 232
         }
       ],
       "consumerCallsites": [
@@ -8797,7 +8809,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 465
+          "line": 467
         }
       ],
       "consumerCallsites": [],
@@ -9108,6 +9120,12 @@
         {
           "method": "GET",
           "path": "/api/notes",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 718
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes",
           "source": "backend/src/__tests__/integration/notes.integration.test.js",
           "line": 87
         },
@@ -9155,7 +9173,7 @@
       "targetOperation": "workspaceNotes",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging.",
+      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9167,7 +9185,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/notes.routes.js",
-          "line": 88
+          "line": 89
         }
       ],
       "consumerCallsites": [
@@ -9238,7 +9256,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/notes.routes.js",
-          "line": 189
+          "line": 190
         }
       ],
       "consumerCallsites": [
@@ -9297,7 +9315,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/notes.routes.js",
-          "line": 129
+          "line": 130
         }
       ],
       "consumerCallsites": [
@@ -9344,7 +9362,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/notes.routes.js",
-          "line": 311
+          "line": 312
         }
       ],
       "consumerCallsites": [
@@ -9391,7 +9409,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/notes.routes.js",
-          "line": 239
+          "line": 240
         }
       ],
       "consumerCallsites": [
@@ -9556,7 +9574,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/notes.routes.js",
-          "line": 275
+          "line": 276
         }
       ],
       "consumerCallsites": [

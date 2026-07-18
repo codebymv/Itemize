@@ -697,9 +697,35 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .set('Cookie', `itemize_auth=${memberToken}`)
       .expect(200);
 
+    expect(lists.headers['cache-control']).toBe('private, no-store');
+    expect(canvasLists.headers['cache-control']).toBe('private, no-store');
+    expect(notes.headers['cache-control']).toBe('private, no-store');
+    expect(lists.headers.etag).toEqual(expect.any(String));
+    expect(canvasLists.headers.etag).toEqual(expect.any(String));
+    expect(notes.headers.etag).toEqual(expect.any(String));
+
+    const conditionalLists = await request(legacyApp)
+      .get('/api/lists')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('If-None-Match', lists.headers.etag)
+      .expect(200);
+    const conditionalCanvasLists = await request(legacyApp)
+      .get('/api/canvas/lists')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('If-None-Match', canvasLists.headers.etag)
+      .expect(200);
+    const conditionalNotes = await request(legacyApp)
+      .get('/api/notes')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('If-None-Match', notes.headers.etag)
+      .expect(200);
+
     expect(lists.body.lists).toHaveLength(2);
     expect(canvasLists.body).toHaveLength(2);
     expect(notes.body.notes).toHaveLength(2);
+    expect(conditionalLists.body.lists).toHaveLength(2);
+    expect(conditionalCanvasLists.body).toHaveLength(2);
+    expect(conditionalNotes.body.notes).toHaveLength(2);
   });
 
   it('rejects invalid filters and pagination without querying another user', async () => {

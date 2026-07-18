@@ -6,7 +6,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
-const { sendError } = require('../utils/response');
+const { disableConditionalCaching, sendError } = require('../utils/response');
 const { listColumns } = require('./list-columns');
 
 /**
@@ -19,6 +19,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
     // Get all lists for the current user with pagination
     router.get('/lists', authenticateJWT, async (req, res) => {
+        disableConditionalCaching(req, res);
         try {
             const { 
                 page = 1, 
@@ -207,6 +208,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
     // Get all lists for canvas view with positions
     router.get('/canvas/lists', authenticateJWT, async (req, res) => {
+        disableConditionalCaching(req, res);
         try {
             const result = await withDbClient(pool, async (client) => client.query(
                 `SELECT ${listColumns()} FROM lists WHERE user_id = $1 ORDER BY created_at DESC`,
