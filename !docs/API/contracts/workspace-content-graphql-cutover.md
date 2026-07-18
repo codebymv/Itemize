@@ -15,7 +15,7 @@ The legacy socket host delivers those rows after commit.
 
 | Legacy read | GraphQL query |
 | --- | --- |
-| `GET /api/lists` | `workspaceLists(filter, page)` |
+| `GET /api/lists` (retained adapter; no active routed page) | `workspaceLists(filter, page)` |
 | `GET /api/canvas/lists` | repeated bounded `workspaceLists` pages |
 | `GET /api/notes` | `workspaceNotes(filter, page)` |
 
@@ -38,9 +38,12 @@ The legacy socket host delivers those rows after commit.
 - All three flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
-The standalone list page now uses the shared service adapter. The legacy page
-previously treated `GET /api/lists` as a bare array even though the route
-returns `{ lists, pagination }`.
+The retained `UserHome` source uses the shared service adapter and correctly
+handles the `{ lists, pagination }` REST envelope. The active `App` router no
+longer mounts its legacy `/lists` route, so it is not a shipped browser
+consumer. The current Canvas and Contents pages both use the canvas-list
+adapter: `GET /api/canvas/lists` on REST or repeated bounded
+`workspaceLists` pages on GraphQL.
 
 ## Query contract
 
@@ -115,6 +118,36 @@ Before enabling the note write flag in a deployed environment:
 List mutations additionally require atomic outbox adoption and explicit
 list-item concurrent-edit semantics.
 
+## Staging read and rollback gate
+
+The independent workspace-read gate passed on 2026-07-18 against GraphQL
+deployment `1bb70077-4237-406f-ad33-1e115a79a5ea` through legacy backend
+deployment `07a810a1-5979-4508-9f12-317c12ab9d64`. A disposable verified
+account created one distinctive list and note through retained REST writes.
+
+With only `VITE_WORKSPACE_LIST_READS_GRAPHQL=true`, both the shipped Canvas and
+Contents pages rendered the two fixtures while Railway recorded successful
+`WorkspaceLists` operations and `GET /api/notes`; there was no REST list read.
+After inverting only the read flags, both pages rendered the same rows while
+Railway recorded successful `WorkspaceNotes` operations and
+`GET /api/canvas/lists`. With both flags false, both pages still rendered the
+fixtures and Railway recorded only `GET /api/canvas/lists` plus
+`GET /api/notes`, with no later workspace GraphQL operation. No data repair was
+required between phases.
+
+The rehearsal also corrected a stale consumer claim: the retained `UserHome`
+and `/lists` service call remain in source, but the active app router does not
+mount `/lists`. The browser gate therefore covers the two reachable workspace
+surfaces rather than treating dead route source as a shipped consumer.
+
+Cleanup returned zero disposable users, organizations, memberships, lists,
+notes, categories, and related outbox rows. Temporary localhost CORS was
+removed from both services. Clean post-gate deployments
+`fd5f06f0-70eb-4573-9eee-6141e42e6c8d` (legacy backend) and
+`296c3ac3-faf0-476c-a502-d46788c11f08` (GraphQL) restore the default staging
+configuration. All workspace GraphQL flags remain default-off and production
+was untouched.
+
 ## Staging mutation and rollback gate
 
 The note-mutation gate passed on 2026-07-18 against GraphQL deployment
@@ -164,6 +197,6 @@ GraphQL frontend flags remain default-off. Production was untouched.
 - Frontend tests for independent default-off flags, casing/envelope mapping,
   canvas multi-page reads, note mutation mapping, granular-update reuse, and
   REST-default selection.
-- A staging browser rehearsal for the standalone list page and canvas with
+- A staging browser rehearsal for the shipped Canvas and Contents pages with
   each read flag independently enabled and disabled, plus note writes with
-  their mutation flag enabled and rolled back.
+  their mutation flag enabled and rolled back. **Passed on 2026-07-18.**

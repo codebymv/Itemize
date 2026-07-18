@@ -3529,7 +3529,7 @@
       "targetOperation": "workspaceLists",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering and REST rollback.",
+      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8521,7 +8521,7 @@
       "targetOperation": "workspaceLists",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering.",
+      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9142,7 +9142,7 @@
       "targetOperation": "workspaceNotes",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "dual-parity",
-      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering.",
+      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

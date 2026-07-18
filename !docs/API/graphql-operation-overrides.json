@@ -1558,11 +1558,11 @@
     },
     "GET /api/canvas/lists": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
-      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering and REST rollback."
+      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging."
     },
     "GET /api/lists": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
-      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering."
+      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead."
     },
     "POST /api/lists": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "blocked", "risk": "high",
@@ -1610,7 +1610,7 @@
     },
     "GET /api/notes": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceNotes", "parityStatus": "dual-parity", "risk": "high",
-      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering."
+      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging."
     },
     "POST /api/notes": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
