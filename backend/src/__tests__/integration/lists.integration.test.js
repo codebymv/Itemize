@@ -26,6 +26,7 @@ function createApp(pool) {
         userListDeleted: jest.fn(),
     };
     const mockIo = { to: jest.fn().mockReturnThis(), emit: jest.fn() };
+    app.locals.mockBroadcast = mockBroadcast;
 
     registerApiRoutes({
         app, pool,
@@ -156,12 +157,26 @@ describe('Lists Integration Tests', () => {
         });
 
         it('allows User A to delete their list', async () => {
+            const shareToken = '123e4567-e89b-42d3-a456-426614174000';
+            await dbHelper.pool.query(
+                'UPDATE lists SET is_public = TRUE, share_token = $1 WHERE id = $2',
+                [shareToken, listIdA]
+            );
+
             const res = await request(app)
                 .delete(`/api/lists/${listIdA}`)
                 .set('Cookie', [`itemize_auth=${userA.token}`]);
 
             expect(res.status).toBe(200);
             expect(res.body.message).toBe('List deleted successfully');
+            expect(app.locals.mockBroadcast.listUpdate).toHaveBeenCalledWith(
+                shareToken,
+                'listDeleted',
+                {
+                    id: listIdA,
+                    message: 'This list has been deleted by the owner.'
+                }
+            );
         });
     });
 });

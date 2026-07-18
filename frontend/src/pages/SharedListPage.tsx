@@ -39,7 +39,6 @@ const SharedListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
-  const [viewerCount, setViewerCount] = useState<number>(0);
   const socketRef = useRef<Socket | null>(null);
 
   // Store original title for cleanup
@@ -94,10 +93,7 @@ const SharedListPage: React.FC = () => {
             const latest = await api.get(`/api/shared/list/${token}`);
             setListData(latest.data);
           },
-          onLiveChange: (live) => {
-            setIsLive(live);
-            if (!live) setViewerCount(0);
-          },
+          onLiveChange: setIsLive,
           onUnavailable: markUnavailable,
           onRecoveryError: () => {
             toast({
@@ -113,6 +109,13 @@ const SharedListPage: React.FC = () => {
         socket.on('listUpdated', (update) => {
           console.log('Received list update:', update);
           recovery.acceptUpdate(() => {
+            if (update?.type === 'listDeleted') {
+              setError('This list has been deleted by the owner.');
+              setListData(null);
+              socket.disconnect();
+              return;
+            }
+
             setListData(prevData => {
               if (!prevData) return prevData;
 
@@ -126,12 +129,6 @@ const SharedListPage: React.FC = () => {
               };
             });
           });
-        });
-
-        // Listen for viewer count updates
-        socket.on('viewerCount', (count: number) => {
-          console.log('Viewer count updated:', count);
-          setViewerCount(count);
         });
 
         // Handle connection errors

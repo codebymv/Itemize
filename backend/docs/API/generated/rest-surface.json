@@ -833,7 +833,7 @@
       ],
       "declaredPath": "/canvas/lists",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 202,
+      "line": 209,
       "dynamic": false
     },
     {
@@ -1983,7 +1983,7 @@
       ],
       "declaredPath": "/lists/:id/items",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 325,
+      "line": 332,
       "dynamic": false
     },
     {
@@ -1993,7 +1993,7 @@
       ],
       "declaredPath": "/lists/:id/items/:itemId",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 398,
+      "line": 405,
       "dynamic": false
     },
     {
@@ -2003,7 +2003,7 @@
       ],
       "declaredPath": "/lists/:id/items/:itemId/toggle",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 258,
+      "line": 265,
       "dynamic": false
     },
     {
@@ -2023,7 +2023,7 @@
       ],
       "declaredPath": "/lists/:id/position",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 223,
+      "line": 230,
       "dynamic": false
     },
     {
@@ -2033,7 +2033,7 @@
       ],
       "declaredPath": "/lists/:id/title",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 458,
+      "line": 465,
       "dynamic": false
     },
     {

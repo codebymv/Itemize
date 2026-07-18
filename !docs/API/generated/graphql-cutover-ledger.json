@@ -3500,7 +3500,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 202
+          "line": 209
         }
       ],
       "consumerCallsites": [
@@ -8402,13 +8402,13 @@
           "method": "GET",
           "path": "/api/lists",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 93
+          "line": 94
         },
         {
           "method": "GET",
           "path": "/api/lists",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 103
+          "line": 104
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8458,7 +8458,7 @@
           "method": "POST",
           "path": "/api/lists",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 73
+          "line": 74
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8508,13 +8508,13 @@
           "method": "DELETE",
           "path": "/api/lists/:listIdA",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 152
+          "line": 153
         },
         {
           "method": "DELETE",
           "path": "/api/lists/:listIdA",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 160
+          "line": 167
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8579,7 +8579,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 325
+          "line": 332
         }
       ],
       "consumerCallsites": [],
@@ -8603,7 +8603,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 398
+          "line": 405
         }
       ],
       "consumerCallsites": [],
@@ -8627,7 +8627,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 258
+          "line": 265
         }
       ],
       "consumerCallsites": [],
@@ -8636,13 +8636,13 @@
           "method": "PUT",
           "path": "/api/lists/:listIdA/items/item1/toggle",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 133
+          "line": 134
         },
         {
           "method": "PUT",
           "path": "/api/lists/:listIdA/items/item1/toggle",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 144
+          "line": 145
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8668,7 +8668,7 @@
         },
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 223
+          "line": 230
         }
       ],
       "consumerCallsites": [
@@ -8687,13 +8687,13 @@
           "method": "PUT",
           "path": "/api/lists/:listIdA/position",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 113
+          "line": 114
         },
         {
           "method": "PUT",
           "path": "/api/lists/:listIdA/position",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 124
+          "line": 125
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8715,7 +8715,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 458
+          "line": 465
         }
       ],
       "consumerCallsites": [],
@@ -13237,7 +13237,7 @@
           "path": "/api/shared/list/:token",
           "rawPath": "/api/shared/list/${token}",
           "source": "frontend/src/pages/SharedListPage.tsx",
-          "line": 60,
+          "line": 59,
           "client": "api",
           "literalInterpolation": false
         },
@@ -13246,7 +13246,7 @@
           "path": "/api/shared/list/:token",
           "rawPath": "/api/shared/list/${token}",
           "source": "frontend/src/pages/SharedListPage.tsx",
-          "line": 94,
+          "line": 93,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13305,7 +13305,7 @@
           "path": "/api/shared/note/:token",
           "rawPath": "/api/shared/note/${token}",
           "source": "frontend/src/pages/SharedNotePage.tsx",
-          "line": 56,
+          "line": 55,
           "client": "api",
           "literalInterpolation": false
         },
@@ -13314,7 +13314,7 @@
           "path": "/api/shared/note/:token",
           "rawPath": "/api/shared/note/${token}",
           "source": "frontend/src/pages/SharedNotePage.tsx",
-          "line": 110,
+          "line": 109,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13414,7 +13414,7 @@
           "path": "/api/shared/whiteboard/:token",
           "rawPath": "/api/shared/whiteboard/${token}",
           "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
-          "line": 57,
+          "line": 56,
           "client": "api",
           "literalInterpolation": false
         },
@@ -13423,7 +13423,7 @@
           "path": "/api/shared/whiteboard/:token",
           "rawPath": "/api/shared/whiteboard/${token}",
           "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
-          "line": 111,
+          "line": 110,
           "client": "api",
           "literalInterpolation": false
         }

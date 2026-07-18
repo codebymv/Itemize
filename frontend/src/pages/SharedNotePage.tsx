@@ -38,7 +38,6 @@ const SharedNotePage: React.FC = () => {
   // WebSocket state
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [viewerCount, setViewerCount] = useState(0);
   const sharedNoteId = noteData?.id;
 
   // Store original title for cleanup
@@ -110,10 +109,7 @@ const SharedNotePage: React.FC = () => {
         const latest = await api.get(`/api/shared/note/${token}`);
         setNoteData(latest.data);
       },
-      onLiveChange: (live) => {
-        setIsConnected(live);
-        if (!live) setViewerCount(0);
-      },
+      onLiveChange: setIsConnected,
       onUnavailable: markUnavailable,
       onRecoveryError: () => {
         toast({
@@ -122,11 +118,6 @@ const SharedNotePage: React.FC = () => {
           variant: "destructive",
         });
       },
-    });
-
-    newSocket.on('viewerCount', (count) => {
-      console.log('Viewer count updated:', count);
-      setViewerCount(count);
     });
 
     newSocket.on('noteUpdated', (update) => {

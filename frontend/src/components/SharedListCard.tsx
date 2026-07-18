@@ -84,7 +84,10 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
   }, [listData.title, isLive]);
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div
+      className="w-full max-w-md mx-auto"
+      data-realtime-status={isLive ? 'live' : 'offline'}
+    >
       <Card
         className="w-full shadow-lg border transition-all duration-200"
         style={{

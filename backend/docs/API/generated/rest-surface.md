@@ -104,7 +104,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/campaigns/:id/send` | `/:id/send` | `backend/src/routes/campaigns/actions.routes.js:107` |
 | POST | `/api/campaigns/:id/send-test` | `/:id/send-test` | `backend/src/routes/campaigns/insights.routes.js:150` |
 | POST | `/api/campaigns/:id/unschedule` | `/:id/unschedule` | `backend/src/routes/campaigns/actions.routes.js:79` |
-| GET | `/api/canvas/lists` | `/canvas/lists` | `backend/src/routes/lists.routes.js:202` |
+| GET | `/api/canvas/lists` | `/canvas/lists` | `backend/src/routes/lists.routes.js:209` |
 | PUT | `/api/canvas/positions` | `/api/canvas/positions` | `backend/src/bootstrap/register-api-routes.js:50` |
 | PUT | `/api/canvas/positions` | `/canvas/positions` | `backend/src/routes/canvas.routes.js:14` |
 | GET | `/api/categories` | `/categories` | `backend/src/routes/categories.routes.js:19` |
@@ -219,12 +219,12 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/lists` | `/lists` | `backend/src/routes/lists.routes.js:89` |
 | DELETE | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:176` |
 | PUT | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:128` |
-| POST | `/api/lists/:id/items` | `/lists/:id/items` | `backend/src/routes/lists.routes.js:325` |
-| DELETE | `/api/lists/:id/items/:itemId` | `/lists/:id/items/:itemId` | `backend/src/routes/lists.routes.js:398` |
-| PUT | `/api/lists/:id/items/:itemId/toggle` | `/lists/:id/items/:itemId/toggle` | `backend/src/routes/lists.routes.js:258` |
+| POST | `/api/lists/:id/items` | `/lists/:id/items` | `backend/src/routes/lists.routes.js:332` |
+| DELETE | `/api/lists/:id/items/:itemId` | `/lists/:id/items/:itemId` | `backend/src/routes/lists.routes.js:405` |
+| PUT | `/api/lists/:id/items/:itemId/toggle` | `/lists/:id/items/:itemId/toggle` | `backend/src/routes/lists.routes.js:265` |
 | PUT | `/api/lists/:id/position` | `/api/lists/:id/position` | `backend/src/bootstrap/register-api-routes.js:46` |
-| PUT | `/api/lists/:id/position` | `/lists/:id/position` | `backend/src/routes/lists.routes.js:223` |
-| PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:458` |
+| PUT | `/api/lists/:id/position` | `/lists/:id/position` | `backend/src/routes/lists.routes.js:230` |
+| PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:465` |
 | DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:126` |
 | POST | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:103` |
 | POST | `/api/marketing-chat/ask` | `/ask` | `backend/src/routes/marketing-chat.routes.js:84` |

@@ -18,6 +18,7 @@
     "test:integration:config": "jest src/__tests__/utils/test-database-config.test.js --runInBand",
     "test:integration": "jest --testPathIgnorePatterns=\"/node_modules/|/dist/\" --testMatch=\"**/src/__tests__/integration/**/*.test.js\" --runInBand --testTimeout=60000 --globalSetup=./src/__tests__/integration/global-setup.js --globalTeardown=./src/__tests__/integration/global-teardown.js",
     "test:integration:fresh": "node scripts/run-integration-tests-fresh.js",
+    "test:browser:shared-realtime": "node scripts/run-shared-realtime-browser-tests.mjs",
     "workflow:rollout:identity": "node scripts/workflow-rollout.js identity",
     "workflow:rollout:preflight": "node scripts/workflow-rollout.js preflight",
     "workflow:rollout:canary": "node scripts/workflow-rollout.js canary",

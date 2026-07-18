@@ -1,6 +1,6 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Phase 0 characterized; legacy authorization, public-content revocation, shared-viewer reconnect recovery, and chat-session termination hardened
+**Status:** Phase 0 characterized; legacy authorization, public-content revocation, shared-viewer reconnect recovery/browser gate, and chat-session termination hardened
 **Evidence date:** 2026-07-17
 
 ## Transport decision
@@ -32,7 +32,7 @@ The generated REST ledger intentionally does not inventory Socket.IO events. Thi
 | `joinOrgChat` | Cookie plus organization membership | `org-chat-{organizationId}` | `joinedOrgChat { organizationId }` |
 | `joinOrgSocial` | Cookie plus organization membership | `org-social-{organizationId}` | `joinedOrgSocial { organizationId }` |
 
-Public-content rooms emit `viewerCount` and one content event (`listUpdated`, `noteUpdated`, `whiteboardUpdated`, or `wireframeUpdated`). Content payloads retain the legacy envelope `{ type, data, timestamp }`. User canvas emits `userListUpdated`, `userListDeleted`, and `userWireframeUpdated` with the same envelope. Event-specific `type` values currently come from the owning mutation route and include full-update, field-change, position-change, item-change, and deletion variants.
+Public-content rooms emit `viewerCount` and one content event (`listUpdated`, `noteUpdated`, `whiteboardUpdated`, or `wireframeUpdated`). Viewer count remains protocol telemetry for server-side presence validation; it is not a supported shared-page UI feature and the shipped pages do not subscribe to it. Content payloads retain the legacy envelope `{ type, data, timestamp }`. User canvas emits `userListUpdated`, `userListDeleted`, and `userWireframeUpdated` with the same envelope. Event-specific `type` values currently come from the owning mutation route and include full-update, field-change, position-change, item-change, and deletion variants. Deleting a public list now emits `listUpdated { type: "listDeleted", data, timestamp }`; the list viewer clears its projection and disconnects, matching the existing note and whiteboard deletion behavior.
 
 Successful list, note, whiteboard, and wireframe unshare operations emit `sharedContentRevoked { kind, reason, timestamp }` to the old room without exposing the capability, then remove every socket returned by the Socket.IO adapter from that room. The three reachable public viewers immediately discard their local projection, disconnect, and render the unavailable state. Database revocation completes before eviction begins; an outsider or missing-object response never publishes an eviction.
 
@@ -56,7 +56,7 @@ The following block multi-instance realtime cutover, but not a single-instance G
 2. Public-content revocation and chat-session termination now use adapter-wide `fetchSockets`, room emit, and leave operations, and live tests prove immediate eviction on the current in-memory adapter. Multi-instance proof still requires the selected shared adapter.
 3. Route commits and realtime emits have no transactional outbox, delivery ID, replay cursor, or ordering contract.
 4. No active frontend source consumer was found for organization chat or social events. Those protocols must not be declared production-required until a reachable consumer or external client is identified.
-5. Shared pages receive viewer counts but do not render them. Browser coverage must decide whether presence is a supported feature or removable telemetry.
+5. Viewer count is retained only as protocol telemetry for presence/scaling verification. It must not be advertised as a user-facing feature unless a later product decision adds UI and browser coverage.
 
 ## GraphQL/NestJS ownership
 
@@ -75,6 +75,8 @@ NestJS should expose a dedicated `RealtimeModule` that consumes authenticated co
 - public revocation evicts existing sockets before multi-instance production rollout;
 - chat-session termination evicts active visitors, denies rejoin and post-end visitor/agent writes, and keeps transcript reads from restoring presence;
 - two API instances provide correct fan-out, presence counts, and revocation through the selected adapter;
-- browser tests prove static fallback, reconnect/refetch, deletion, and capability rotation behavior.
+- browser tests prove static fallback, reconnect/refetch, deletion, and capability rotation behavior. **Passed locally on 2026-07-17.**
 
-The current executable baseline includes 16 boundary unit cases, 7 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, and 4 focused frontend realtime cases covering active revocation, reconnect/refetch ordering, capability denial, and failed-refetch fallback. The fresh run proves two connected public viewers receive the token-free revocation event and leave their room; it also proves the real end-session HTTP route commits the terminal state, notifies agents and visitors, evicts the visitor, denies rejoin and post-end visitor/agent writes, and does not let a transcript read restore online presence. The frontend contract proves the shipped shared viewers do not accept queued events until recovery completes, but a real browser/network-disruption journey is still required. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).
+The current executable baseline includes 16 boundary unit cases, 7 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, 4 focused frontend realtime cases covering active revocation, reconnect/refetch ordering, capability denial, and failed-refetch fallback, and a repeatable 4-scenario Chromium gate. The fresh run proves two connected public viewers receive the token-free revocation event and leave their room; it also proves the real end-session HTTP route commits the terminal state, notifies agents and visitors, evicts the visitor, denies rejoin and post-end visitor/agent writes, and does not let a transcript read restore online presence.
+
+Run the browser gate from `backend/` with `npm run test:browser:shared-realtime`. It starts a disposable local HTTP/Socket.IO fixture and Vite instance, launches real headless Chromium, and leaves no database or cloud resources. The gate drops the live transport, holds the recovery read, and proves an authoritative refetch completes before a queued update is applied; proves a failed recovery read preserves the last projection in the offline state; proves a live deletion clears the projection; and proves capability rotation denies the old link while admitting the new one. The run also exposed and closed the missing public-list deletion broadcast. The rendered live page was separately inspected in the in-app browser. Production and Railway were untouched. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).

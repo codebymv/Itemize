@@ -39,7 +39,6 @@ const SharedWhiteboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [viewerCount, setViewerCount] = useState(0);
   const sharedWhiteboardId = whiteboardData?.id;
 
   // Store original title for cleanup
@@ -111,10 +110,7 @@ const SharedWhiteboardPage: React.FC = () => {
         const latest = await api.get(`/api/shared/whiteboard/${token}`);
         setWhiteboardData(latest.data);
       },
-      onLiveChange: (live) => {
-        setIsConnected(live);
-        if (!live) setViewerCount(0);
-      },
+      onLiveChange: setIsConnected,
       onUnavailable: markUnavailable,
       onRecoveryError: () => {
         toast({
@@ -123,11 +119,6 @@ const SharedWhiteboardPage: React.FC = () => {
           variant: "destructive",
         });
       },
-    });
-
-    newSocket.on('viewerCount', (count) => {
-      console.log('Viewer count updated:', count);
-      setViewerCount(count);
     });
 
     newSocket.on('whiteboardUpdated', (update) => {

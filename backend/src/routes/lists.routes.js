@@ -178,7 +178,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { id } = req.params;
 
             const result = await withDbClient(pool, async (client) => client.query(
-                'DELETE FROM lists WHERE id = $1 AND user_id = $2 RETURNING id',
+                'DELETE FROM lists WHERE id = $1 AND user_id = $2 RETURNING id, share_token, is_public',
                 [id, req.user.id]
             ));
 
@@ -189,6 +189,13 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             // Broadcast to user's own canvas for real-time updates
             if (broadcast.userListDeleted) {
                 broadcast.userListDeleted(req.user.id, { id: result.rows[0].id });
+            }
+
+            if (result.rows[0].is_public && result.rows[0].share_token && broadcast.listUpdate) {
+                broadcast.listUpdate(result.rows[0].share_token, 'listDeleted', {
+                    id: result.rows[0].id,
+                    message: 'This list has been deleted by the owner.'
+                });
             }
 
             res.json({ message: 'List deleted successfully' });
