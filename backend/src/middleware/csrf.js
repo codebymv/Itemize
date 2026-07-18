@@ -145,14 +145,19 @@ function setCsrfToken(req, res, next) {
 }
 
 function issueCsrfToken(req, res) {
-    const token = generateToken();
-    res.cookie(CSRF_COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
-        path: '/'
-    });
+    const existingToken = req.cookies?.[CSRF_COOKIE_NAME];
+    const token = typeof existingToken === 'string' && existingToken.length > 0
+        ? existingToken
+        : generateToken();
+    if (!existingToken) {
+        res.cookie(CSRF_COOKIE_NAME, token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/'
+        });
+    }
     res.setHeader('X-CSRF-Token', token);
     res.json({ success: true, csrfToken: token });
 }

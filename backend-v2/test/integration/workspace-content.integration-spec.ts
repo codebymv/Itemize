@@ -240,6 +240,46 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
   });
 
+  it('self-heals a missing General category for default note creation', async () => {
+    await pool.query(
+      `DELETE FROM categories
+       WHERE user_id = $1 AND name = 'General'`,
+      [memberId],
+    );
+
+    const result = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceNoteInput!) {
+        createWorkspaceNote(input: $input) { id category categoryId }
+      }`,
+      {
+        input: {
+          title: 'Default category note',
+          positionX: 2013.7268237520689,
+          positionY: 1987.125,
+        },
+      },
+    ).expect(200);
+
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.createWorkspaceNote).toMatchObject({
+      category: 'General',
+      categoryId: expect.any(Number),
+    });
+
+    const category = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM categories
+       WHERE user_id = $1 AND name = 'General'`,
+      [memberId],
+    );
+    expect(category.rows[0].count).toBe('1');
+    await pool.query('DELETE FROM notes WHERE id = $1 AND user_id = $2', [
+      result.body.data.createWorkspaceNote.id,
+      memberId,
+    ]);
+  });
+
   it('creates a canonical note that remains readable through REST', async () => {
     const result = await mutation(
       memberToken,
@@ -252,8 +292,8 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
           content: 'Created through Nest',
           category: 'work',
           colorValue: '#abcdef',
-          positionX: 90,
-          positionY: 100,
+          positionX: 90.75,
+          positionY: 100.125,
           width: 570,
           height: 350,
         },
@@ -268,8 +308,8 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       category: 'Work',
       categoryId: workCategoryId,
       colorValue: '#ABCDEF',
-      positionX: 90,
-      positionY: 100,
+      positionX: 90.75,
+      positionY: 100.125,
     });
     mutationNoteId = result.body.data.createWorkspaceNote.id;
 

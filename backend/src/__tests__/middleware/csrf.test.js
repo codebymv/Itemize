@@ -1,7 +1,14 @@
-const { csrfProtection, CSRF_COOKIE_NAME, CSRF_HEADER_NAME } = require('../../middleware/csrf');
+const {
+    csrfProtection,
+    issueCsrfToken,
+    CSRF_COOKIE_NAME,
+    CSRF_HEADER_NAME,
+} = require('../../middleware/csrf');
 
 function mockResponse() {
     return {
+        cookie: jest.fn().mockReturnThis(),
+        setHeader: jest.fn().mockReturnThis(),
         status: jest.fn().mockReturnThis(),
         json: jest.fn().mockReturnThis(),
     };
@@ -62,5 +69,24 @@ describe('csrfProtection', () => {
         csrfProtection(req, res, next);
 
         expect(next).toHaveBeenCalled();
+    });
+
+    it('reuses an existing csrf cookie instead of invalidating other tabs', () => {
+        const req = {
+            cookies: { [CSRF_COOKIE_NAME]: 'shared-tab-token' },
+        };
+        const res = mockResponse();
+
+        issueCsrfToken(req, res);
+
+        expect(res.cookie).not.toHaveBeenCalled();
+        expect(res.setHeader).toHaveBeenCalledWith(
+            'X-CSRF-Token',
+            'shared-tab-token',
+        );
+        expect(res.json).toHaveBeenCalledWith({
+            success: true,
+            csrfToken: 'shared-tab-token',
+        });
     });
 });

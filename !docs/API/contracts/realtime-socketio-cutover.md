@@ -1,6 +1,6 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, and chat termination hardened
+**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, chat termination, and workspace-note staging delivery verified
 **Evidence date:** 2026-07-18
 
 ## Transport decision
@@ -120,3 +120,15 @@ shared-note client. Production and Railway remain untouched and the worker
 flag remains off.
 
 Run the browser gate from `backend/` with `npm run test:browser:shared-realtime`. It starts a disposable local HTTP/Socket.IO fixture and Vite instance, launches real headless Chromium, and leaves no database or cloud resources. The gate drops the live transport, holds the recovery read, and proves an authoritative refetch completes before a queued update is applied; proves a failed recovery read preserves the last projection in the offline state; proves a live deletion clears the projection; and proves capability rotation denies the old link while admitting the new one. The run also exposed and closed the missing public-list deletion broadcast. The rendered live page was separately inspected in the in-app browser. Production and Railway were untouched. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).
+
+On 2026-07-18 the deployed staging note-mutation gate temporarily enabled the
+legacy outbox worker and used the real owner canvas plus an already-open public
+note viewer. GraphQL title and rich-content mutations each reached the public
+viewer without a reload, and GraphQL deletion immediately rendered the
+deleted-content state. The worker logged successful leased delivery cycles and
+the GraphQL service logged the matching successful operations. Cleanup removed
+all fixture outbox rows, restored the worker flag to absent/default-off, and
+redeployed the legacy backend successfully as
+`7f9cce4e-c9e2-45ad-94da-517dad9e27d6`. This proves the current
+single-socket-host staging handoff; it does not remove the shared-adapter
+multi-instance blocker.

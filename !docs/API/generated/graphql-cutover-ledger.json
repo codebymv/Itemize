@@ -3519,7 +3519,7 @@
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 475
+          "line": 515
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8499,7 +8499,7 @@
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 471
+          "line": 511
         },
         {
           "method": "GET",
@@ -9084,13 +9084,13 @@
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 277
+          "line": 317
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 479
+          "line": 519
         },
         {
           "method": "GET",
@@ -9397,7 +9397,7 @@
           "method": "PUT",
           "path": "/api/notes/:mutationNoteId/content",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 462
+          "line": 502
         },
         {
           "method": "PUT",

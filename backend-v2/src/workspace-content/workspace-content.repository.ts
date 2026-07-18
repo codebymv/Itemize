@@ -203,7 +203,11 @@ export class WorkspaceContentRepository {
     values: CreateWorkspaceNoteValues,
   ): Promise<WorkspaceNoteMutationOutcome> {
     return this.transaction(async (client) => {
-      const category = await this.category(client, userId, values.category);
+      const category = await this.categoryForCreate(
+        client,
+        userId,
+        values.category,
+      );
       if (!category) return { kind: 'category_not_found' };
 
       const result = await client.query<WorkspaceNoteRow>(
@@ -229,6 +233,25 @@ export class WorkspaceContentRepository {
       );
       return { kind: 'completed', row: result.rows[0] };
     });
+  }
+
+  private async categoryForCreate(
+    client: PoolClient,
+    userId: number,
+    name: string,
+  ): Promise<CategoryIdentity | null> {
+    const existing = await this.category(client, userId, name);
+    if (existing || name.toLowerCase() !== 'general') return existing;
+
+    const created = await client.query<CategoryIdentity>(
+      `INSERT INTO categories (user_id, name, color_value)
+       VALUES ($1, 'General', '#6B7280')
+       ON CONFLICT (user_id, name)
+       DO UPDATE SET name = EXCLUDED.name
+       RETURNING id, name`,
+      [userId],
+    );
+    return created.rows[0] ?? null;
   }
 
   async updateNote(

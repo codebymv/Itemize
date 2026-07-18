@@ -104,10 +104,10 @@ export class WorkspaceContentService {
         : this.color(input.colorValue),
       positionX: input.positionX === undefined
         ? 2000
-        : this.nonNegativeInteger(input.positionX, 'positionX'),
+        : this.nonNegativeNumber(input.positionX, 'positionX'),
       positionY: input.positionY === undefined
         ? 2000
-        : this.nonNegativeInteger(input.positionY, 'positionY'),
+        : this.nonNegativeNumber(input.positionY, 'positionY'),
       width: input.width === undefined
         ? null
         : this.positiveInteger(input.width, 'width'),
@@ -154,13 +154,13 @@ export class WorkspaceContentService {
       values.colorValue = this.color(input.colorValue);
     }
     if (input.positionX !== undefined) {
-      values.positionX = this.nonNegativeInteger(
+      values.positionX = this.nonNegativeNumber(
         input.positionX,
         'positionX',
       );
     }
     if (input.positionY !== undefined) {
-      values.positionY = this.nonNegativeInteger(
+      values.positionY = this.nonNegativeNumber(
         input.positionY,
         'positionY',
       );
@@ -392,16 +392,15 @@ export class WorkspaceContentService {
     return color.toUpperCase();
   }
 
-  private nonNegativeInteger(value: number | null, field: string): number {
-    const integer = this.integer(value, field);
-    if (integer < 0) {
+  private nonNegativeNumber(value: number | null, field: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
       throw itemizeGraphqlError(
         `${field} must be at least 0`,
         'BAD_USER_INPUT',
         { field, reason: 'INVALID_NOTE_GEOMETRY' },
       );
     }
-    return integer;
+    return value;
   }
 
   private positiveInteger(value: number | null, field: string): number {

@@ -1,4 +1,4 @@
-import { Field, InputType, Int } from '@nestjs/graphql';
+import { Field, Float, InputType, Int } from '@nestjs/graphql';
 
 @InputType()
 export class CreateWorkspaceNoteInput {
@@ -14,10 +14,10 @@ export class CreateWorkspaceNoteInput {
   @Field(() => String, { nullable: true })
   colorValue?: string | null;
 
-  @Field(() => Int, { nullable: true })
+  @Field(() => Float, { nullable: true })
   positionX?: number | null;
 
-  @Field(() => Int, { nullable: true })
+  @Field(() => Float, { nullable: true })
   positionY?: number | null;
 
   @Field(() => Int, { nullable: true })
@@ -47,10 +47,10 @@ export class UpdateWorkspaceNoteInput {
   @Field(() => String, { nullable: true })
   colorValue?: string | null;
 
-  @Field(() => Int, { nullable: true })
+  @Field(() => Float, { nullable: true })
   positionX?: number | null;
 
-  @Field(() => Int, { nullable: true })
+  @Field(() => Float, { nullable: true })
   positionY?: number | null;
 
   @Field(() => Int, { nullable: true })

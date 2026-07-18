@@ -19,6 +19,8 @@ function asyncCssPlugin(): Plugin {
 }
 
 const devProxyTarget = process.env.DEV_API_PROXY_TARGET?.trim();
+const devGraphqlProxyTarget =
+  process.env.DEV_GRAPHQL_PROXY_TARGET?.trim() || devProxyTarget;
 
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -78,8 +80,13 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
       },
       '/graphql': {
+        target: devGraphqlProxyTarget,
+        changeOrigin: true,
+      },
+      '/socket.io': {
         target: devProxyTarget,
         changeOrigin: true,
+        ws: true,
       },
     } : undefined,
   }

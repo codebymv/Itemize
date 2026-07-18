@@ -72,7 +72,15 @@ ID and return null when the name has no canonical category.
 Note create/update/category mutations now accept the existing category-name
 contract, resolve it case-insensitively to a category owned by the same user,
 and write the canonical ID and name projection together. Legacy rollback reads
-remain compatible with rows created through GraphQL.
+remain compatible with rows created through GraphQL. A create that resolves to
+the default `General` category transactionally creates that canonical category
+when a brand-new account has no category rows; concurrent creates converge on
+the same row. Other unknown category names still fail closed.
+
+Canvas `positionX` and `positionY` are finite non-negative GraphQL `Float`
+values. Fractional coordinates are preserved through validation, PostgreSQL,
+GraphQL responses, and retained REST reads. Width, height, and z-index retain
+their integer contracts.
 
 ## Typed list items
 
@@ -107,13 +115,52 @@ Before enabling the note write flag in a deployed environment:
 List mutations additionally require atomic outbox adoption and explicit
 list-item concurrent-edit semantics.
 
+## Staging mutation and rollback gate
+
+The note-mutation gate passed on 2026-07-18 against GraphQL deployment
+`d94ce176-cb73-43aa-ac46-58a430f59a30` through legacy backend deployment
+`535b0cd4-5e41-4751-a135-15007afcbdb7`. A disposable verified account used the
+real canvas UI with `VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL=true` to create a
+note at fractional coordinates, update its title and rich content, create a
+second note without any pre-existing categories, and delete the shared note.
+An already-open anonymous viewer received both updates and the deletion over
+Socket.IO without a reload.
+
+The rehearsal exposed and closed three parity gaps:
+
+- GraphQL integer geometry rejected the fractional coordinates emitted by the
+  canvas, so note positions now use validated floats.
+- A brand-new account had no category rows even though the UI promises that an
+  omitted category uses `General`, so create now self-heals that default
+  category transactionally.
+- Loading a public page in another tab rotated the shared CSRF cookie and
+  invalidated the owner tab's cached header, so the CSRF issuance endpoint now
+  reuses an existing cookie.
+
+With only `VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` changed to `false`, the same
+canvas session updated title and content through
+`PUT /api/notes/:id/title` and `PUT /api/notes/:id/content`, then deleted
+through `DELETE /api/notes/:id`. The writes persisted across a reload and
+required no data repair. Railway operation logs distinguish the successful
+GraphQL create/update/delete operations from the later REST requests.
+
+Cleanup deleted the disposable user, personal organization, memberships,
+categories, notes, and five note outbox rows; explicit verification returned
+zero for every fixture class. Temporary localhost CORS and outbox-worker
+variables were removed, clean staging deployments
+`7f9cce4e-c9e2-45ad-94da-517dad9e27d6` (legacy backend) and
+`b8a0546e-96b6-4ec8-82af-0ad1b100bbba` (GraphQL) succeeded, and public
+GraphQL readiness returned `ready`. The outbox worker and all workspace
+GraphQL frontend flags remain default-off. Production was untouched.
+
 ## Required cutover evidence
 
 - Service tests for strict pagination/filter validation, mapping, malformed
   item handling, and safe dependency errors.
 - Fresh PostgreSQL tests for user isolation, deterministic paging, category
   identity repair, title/content search, all three REST rollback reads, note
-  create/update/delete, CSRF, concurrent partial updates, and outbox delivery.
+  create/update/delete, fractional geometry, default-category self-healing,
+  CSRF, concurrent partial updates, and outbox delivery.
 - Frontend tests for independent default-off flags, casing/envelope mapping,
   canvas multi-page reads, note mutation mapping, granular-update reuse, and
   REST-default selection.

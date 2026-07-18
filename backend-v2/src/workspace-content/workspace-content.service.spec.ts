@@ -176,6 +176,30 @@ describe('WorkspaceContentService', () => {
     });
   });
 
+  it('preserves fractional canvas coordinates for note mutations', async () => {
+    repository.createNote.mockResolvedValue({
+      kind: 'completed',
+      row: noteRow({
+        position_x: 2013.7268237520689,
+        position_y: 1987.125,
+      }),
+    });
+
+    await service.createNote(7, {
+      title: 'Fractional position',
+      positionX: 2013.7268237520689,
+      positionY: 1987.125,
+    });
+
+    expect(repository.createNote).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        positionX: 2013.7268237520689,
+        positionY: 1987.125,
+      }),
+    );
+  });
+
   it('classifies granular note updates for realtime parity', async () => {
     repository.updateNote.mockResolvedValue({
       kind: 'completed',

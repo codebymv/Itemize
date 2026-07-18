@@ -242,10 +242,15 @@ VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 VITE_MARKETING_CHAT_ENABLED=true
 ```
 
-For local side-by-side or staging rehearsals, set the shell-only `DEV_API_PROXY_TARGET` before starting Vite to proxy `/api` and `/graphql` through one backend origin. It is disabled when unset and is never embedded in a production bundle:
+For local side-by-side or staging rehearsals, set the shell-only
+`DEV_API_PROXY_TARGET` before starting Vite. It proxies `/api` and credentialed
+Socket.IO traffic to the legacy backend. `/graphql` uses the same target unless
+the separate `DEV_GRAPHQL_PROXY_TARGET` is set. Both are disabled when the API
+target is unset and neither is embedded in a production bundle:
 
 ```powershell
 $env:DEV_API_PROXY_TARGET = 'http://127.0.0.1:3001'
+$env:DEV_GRAPHQL_PROXY_TARGET = 'http://127.0.0.1:3100'
 npm run dev
 ```
 
