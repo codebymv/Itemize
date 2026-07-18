@@ -150,6 +150,59 @@ const updateCalendarMutation = `
   }
 `;
 
+const replaceCalendarAvailabilityMutation = `
+  mutation ReplaceCalendarAvailability(
+    $calendarId: Int!,
+    $windows: [CalendarAvailabilityWindowInput!]!
+  ) {
+    replaceCalendarAvailability(
+      calendarId: $calendarId,
+      windows: $windows
+    ) {
+      id
+      calendarId
+      dayOfWeek
+      startTime
+      endTime
+      isActive
+      createdAt
+    }
+  }
+`;
+
+const upsertCalendarDateOverrideMutation = `
+  mutation UpsertCalendarDateOverride(
+    $calendarId: Int!,
+    $input: CalendarDateOverrideInput!
+  ) {
+    upsertCalendarDateOverride(
+      calendarId: $calendarId,
+      input: $input
+    ) {
+      id
+      calendarId
+      overrideDate
+      isAvailable
+      startTime
+      endTime
+      reason
+      createdAt
+    }
+  }
+`;
+
+const deleteCalendarDateOverrideMutation = `
+  mutation DeleteCalendarDateOverride(
+    $calendarId: Int!,
+    $overrideId: Int!
+  ) {
+    deleteCalendarDateOverride(
+      calendarId: $calendarId,
+      overrideId: $overrideId
+    )
+  }
+`;
+
 const mapAvailabilityWindow = (
   window: GraphqlAvailabilityWindow,
 ): AvailabilityWindow => ({
@@ -333,4 +386,91 @@ export const updateCalendarViaGraphql = async (
     organizationId,
   );
   return mapCalendar(response.updateCalendar);
+};
+
+export const replaceCalendarAvailabilityViaGraphql = async (
+  calendarId: number,
+  windows: AvailabilityWindow[],
+  organizationId?: number,
+): Promise<{ availability_windows: AvailabilityWindow[] }> => {
+  const response = await graphqlMutationRequest<
+    { replaceCalendarAvailability: GraphqlAvailabilityWindow[] },
+    {
+      calendarId: number;
+      windows: Array<{
+        dayOfWeek: number;
+        startTime: string;
+        endTime: string;
+        isActive?: boolean;
+      }>;
+    }
+  >(
+    replaceCalendarAvailabilityMutation,
+    {
+      calendarId,
+      windows: windows.map((window) => ({
+        dayOfWeek: window.day_of_week,
+        startTime: window.start_time,
+        endTime: window.end_time,
+        ...(window.is_active === undefined
+          ? {}
+          : { isActive: window.is_active }),
+      })),
+    },
+    organizationId,
+  );
+  return {
+    availability_windows:
+      response.replaceCalendarAvailability.map(mapAvailabilityWindow),
+  };
+};
+
+export const upsertCalendarDateOverrideViaGraphql = async (
+  calendarId: number,
+  data: {
+    override_date: string;
+    is_available?: boolean;
+    start_time?: string;
+    end_time?: string;
+    reason?: string;
+  },
+  organizationId?: number,
+): Promise<CalendarDateOverride> => {
+  const response = await graphqlMutationRequest<
+    { upsertCalendarDateOverride: GraphqlCalendarDateOverride },
+    { calendarId: number; input: Record<string, unknown> }
+  >(
+    upsertCalendarDateOverrideMutation,
+    {
+      calendarId,
+      input: {
+        overrideDate: data.override_date,
+        ...(data.is_available === undefined
+          ? {}
+          : { isAvailable: data.is_available }),
+        ...(data.start_time === undefined
+          ? {}
+          : { startTime: data.start_time }),
+        ...(data.end_time === undefined ? {} : { endTime: data.end_time }),
+        ...(data.reason === undefined ? {} : { reason: data.reason }),
+      },
+    },
+    organizationId,
+  );
+  return mapDateOverride(response.upsertCalendarDateOverride);
+};
+
+export const deleteCalendarDateOverrideViaGraphql = async (
+  calendarId: number,
+  overrideId: number,
+  organizationId?: number,
+): Promise<void> => {
+  await graphqlMutationRequest<
+    { deleteCalendarDateOverride: boolean },
+    { calendarId: number; overrideId: number }
+  >(
+    deleteCalendarDateOverrideMutation,
+    { calendarId, overrideId },
+    organizationId,
+  );
 };

@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createCalendarViaGraphql,
+  deleteCalendarDateOverrideViaGraphql,
   getCalendarViaGraphql,
   getCalendarsViaGraphql,
+  replaceCalendarAvailabilityViaGraphql,
+  upsertCalendarDateOverrideViaGraphql,
   updateCalendarViaGraphql,
 } from './calendarsGraphql';
 import {
+  isCalendarGraphqlAvailabilityMutationsEnabled,
   isCalendarGraphqlMutationsEnabled,
   isCalendarGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -71,6 +75,10 @@ describe('calendar GraphQL consumer', () => {
     expect(isCalendarGraphqlMutationsEnabled()).toBe(false);
     vi.stubEnv('VITE_CALENDAR_MUTATIONS_GRAPHQL', 'true');
     expect(isCalendarGraphqlMutationsEnabled()).toBe(true);
+    vi.stubEnv('VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL', 'false');
+    expect(isCalendarGraphqlAvailabilityMutationsEnabled()).toBe(false);
+    vi.stubEnv('VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL', 'true');
+    expect(isCalendarGraphqlAvailabilityMutationsEnabled()).toBe(true);
   });
 
   it('maps list fields into the retained REST response shape', async () => {
@@ -269,5 +277,135 @@ describe('calendar GraphQL consumer', () => {
       },
     });
     expect(body.variables.input).not.toHaveProperty('timezone');
+  });
+
+  it('replaces availability through a CSRF-protected mutation and maps the retained envelope', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          replaceCalendarAvailability: [
+            {
+              id: 10,
+              calendarId: 4,
+              dayOfWeek: 2,
+              startTime: '10:00:00',
+              endTime: '16:00:00',
+              isActive: false,
+              createdAt: calendar.createdAt,
+            },
+          ],
+        },
+      }),
+    );
+
+    await expect(
+      replaceCalendarAvailabilityViaGraphql(
+        4,
+        [
+          {
+            day_of_week: 2,
+            start_time: '10:00',
+            end_time: '16:00',
+            is_active: false,
+          },
+        ],
+        3,
+      ),
+    ).resolves.toEqual({
+      availability_windows: [
+        {
+          id: 10,
+          calendar_id: 4,
+          day_of_week: 2,
+          start_time: '10:00:00',
+          end_time: '16:00:00',
+          is_active: false,
+          created_at: calendar.createdAt,
+        },
+      ],
+    });
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      'x-organization-id': '3',
+      'x-csrf-token': 'calendar-csrf',
+    });
+    expect(JSON.parse(String(request.body)).variables).toEqual({
+      calendarId: 4,
+      windows: [
+        {
+          dayOfWeek: 2,
+          startTime: '10:00',
+          endTime: '16:00',
+          isActive: false,
+        },
+      ],
+    });
+  });
+
+  it('upserts and deletes date overrides through retained-shape adapters', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            upsertCalendarDateOverride: {
+              id: 9,
+              calendarId: 4,
+              overrideDate: '2026-08-01',
+              isAvailable: true,
+              startTime: '10:00:00',
+              endTime: '14:30:00',
+              reason: 'Extended hours',
+              createdAt: calendar.createdAt,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({ data: { deleteCalendarDateOverride: true } }),
+      );
+
+    await expect(
+      upsertCalendarDateOverrideViaGraphql(
+        4,
+        {
+          override_date: '2026-08-01',
+          is_available: true,
+          start_time: '10:00',
+          end_time: '14:30',
+          reason: 'Extended hours',
+        },
+        3,
+      ),
+    ).resolves.toEqual({
+      id: 9,
+      calendar_id: 4,
+      override_date: '2026-08-01',
+      is_available: true,
+      start_time: '10:00:00',
+      end_time: '14:30:00',
+      reason: 'Extended hours',
+      created_at: calendar.createdAt,
+    });
+    const upsertBody = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(upsertBody.variables).toEqual({
+      calendarId: 4,
+      input: {
+        overrideDate: '2026-08-01',
+        isAvailable: true,
+        startTime: '10:00',
+        endTime: '14:30',
+        reason: 'Extended hours',
+      },
+    });
+
+    await expect(
+      deleteCalendarDateOverrideViaGraphql(4, 9, 3),
+    ).resolves.toBeUndefined();
+    const deleteBody = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body),
+    );
+    expect(deleteBody.variables).toEqual({ calendarId: 4, overrideId: 9 });
   });
 });

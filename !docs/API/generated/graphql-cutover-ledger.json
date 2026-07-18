@@ -1583,7 +1583,7 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 168,
+          "line": 181,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1660,7 +1660,7 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 200,
+          "line": 213,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1755,7 +1755,7 @@
           "path": "/api/bookings/:id",
           "rawPath": "/api/bookings/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 176,
+          "line": 189,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1802,7 +1802,7 @@
           "path": "/api/bookings/:id/cancel",
           "rawPath": "/api/bookings/${id}/cancel",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 211,
+          "line": 224,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1849,7 +1849,7 @@
           "path": "/api/bookings/:id/reschedule",
           "rawPath": "/api/bookings/${id}/reschedule",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 226,
+          "line": 239,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1902,7 +1902,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 237,
+          "line": 250,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1949,7 +1949,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 267,
+          "line": 280,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2008,7 +2008,7 @@
           "path": "/api/bookings/public/book/:slug/cancel/:token",
           "rawPath": "/api/bookings/public/book/${slug}/cancel/${token}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 276,
+          "line": 289,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2061,7 +2061,7 @@
           "path": "/api/bookings/public/book/:slug/slots",
           "rawPath": "/api/bookings/public/book/${slug}/slots",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 246,
+          "line": 259,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2377,7 +2377,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 63,
+          "line": 67,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2436,7 +2436,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 83,
+          "line": 87,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2525,7 +2525,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 104,
+          "line": 108,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2578,7 +2578,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 73,
+          "line": 77,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2595,6 +2595,18 @@
           "path": "/api/calendars/:calendarId",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
           "line": 422
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendars/:calendarId",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 503
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendars/:calendarId",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 649
         },
         {
           "method": "GET",
@@ -2637,7 +2649,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 97,
+          "line": 101,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2684,12 +2696,18 @@
           "path": "/api/calendars/:id/availability",
           "rawPath": "/api/calendars/${id}/availability",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 114,
+          "line": 121,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "PUT",
+          "path": "/api/calendars/:calendarId/availability",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 521
+        },
         {
           "method": "PUT",
           "path": "/api/calendars/:calendarId/availability",
@@ -2715,8 +2733,8 @@
       "owner": "scheduling",
       "targetOperation": "replaceCalendarAvailability",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterizing",
-      "notes": "Atomic full replacement with validated weekdays, non-overlapping windows, and start-before-end semantics.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind an independent default-off frontend flag as an atomic full replacement with bounded weekdays/windows, overlap rejection, start-before-end validation, tenant concealment, CSRF, and GraphQL-to-REST interoperability coverage.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2737,12 +2755,18 @@
           "path": "/api/calendars/:calendarId/date-override",
           "rawPath": "/api/calendars/${calendarId}/date-override",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 135,
+          "line": 145,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/calendars/:calendarId/date-override",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 667
+        },
         {
           "method": "POST",
           "path": "/api/calendars/:calendarId/date-override",
@@ -2768,8 +2792,8 @@
       "owner": "scheduling",
       "targetOperation": "upsertCalendarDateOverride",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-owned upsert; available overrides require a valid local-time window.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2790,7 +2814,7 @@
           "path": "/api/calendars/:calendarId/date-override/:overrideId",
           "rawPath": "/api/calendars/${calendarId}/date-override/${overrideId}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 146,
+          "line": 159,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2815,8 +2839,8 @@
       "owner": "scheduling",
       "targetOperation": "deleteCalendarDateOverride",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterized",
-      "notes": "Scopes the child override through its organization-owned calendar.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },

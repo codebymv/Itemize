@@ -92,10 +92,10 @@
 | GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |
 | POST | `/api/calendars` | 1 | 9 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
 | DELETE | `/api/calendars/:id` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / deleteCalendar |
-| GET | `/api/calendars/:id` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendar |
+| GET | `/api/calendars/:id` | 1 | 6 | graphql-query | medium | scheduling / CalendarsModule / calendar |
 | PUT | `/api/calendars/:id` | 1 | 2 | graphql-mutation | high | scheduling / CalendarsModule / updateCalendar |
-| PUT | `/api/calendars/:id/availability` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / replaceCalendarAvailability |
-| POST | `/api/calendars/:id/date-override` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / upsertCalendarDateOverride |
+| PUT | `/api/calendars/:id/availability` | 1 | 4 | graphql-mutation | high | scheduling / CalendarsModule / replaceCalendarAvailability |
+| POST | `/api/calendars/:id/date-override` | 1 | 4 | graphql-mutation | high | scheduling / CalendarsModule / upsertCalendarDateOverride |
 | DELETE | `/api/calendars/:id/date-override/:overrideId` | 1 | 2 | graphql-mutation | medium | scheduling / CalendarsModule / deleteCalendarDateOverride |
 | GET | `/api/campaigns` | 1 | 6 | graphql-query | medium | growth / CampaignsModule / campaigns |
 | POST | `/api/campaigns` | 1 | 10 | graphql-mutation | medium | growth / CampaignsModule / createCampaign |

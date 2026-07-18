@@ -3,12 +3,14 @@ import { randomBytes } from 'node:crypto';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   CalendarAvailabilityWindowInput,
+  CalendarDateOverrideInput,
   CreateCalendarInput,
   UpdateCalendarInput,
 } from './calendar.inputs';
 import {
   AvailabilityWindowRow,
   CalendarAvailabilityWindowValue,
+  CalendarDateOverrideValue,
   CalendarDateOverrideRow,
   CalendarRow,
   CalendarsRepository,
@@ -66,11 +68,7 @@ export class CalendarsService {
         : this.availabilityWindows(input.availabilityWindows);
     const outcome = await this.calendars.create(organizationId, userId, {
       name: this.text(input.name, 'name', 255),
-      description: this.nullableText(
-        input.description,
-        'description',
-        10000,
-      ),
+      description: this.nullableText(input.description, 'description', 10000),
       slug: this.slug(input.name),
       timezone: this.timezone(input.timezone ?? 'America/New_York'),
       durationMinutes: this.integer(
@@ -233,17 +231,12 @@ export class CalendarsService {
         : {}),
       ...(input.assignedToId !== undefined
         ? {
-            assignedToId: this.nullableId(
-              input.assignedToId,
-              'assignedToId',
-            ),
+            assignedToId: this.nullableId(input.assignedToId, 'assignedToId'),
           }
         : {}),
       ...(input.assignmentMode !== undefined
         ? {
-            assignmentMode: this.assignmentMode(
-              input.assignmentMode as string,
-            ),
+            assignmentMode: this.assignmentMode(input.assignmentMode as string),
           }
         : {}),
       ...(input.confirmationEmail !== undefined
@@ -285,12 +278,105 @@ export class CalendarsService {
     );
   }
 
+  async replaceAvailability(
+    organizationId: number,
+    calendarId: number,
+    input: CalendarAvailabilityWindowInput[],
+  ): Promise<CalendarAvailabilityWindow[]> {
+    this.id(calendarId);
+    const outcome = await this.calendars.replaceAvailability(
+      organizationId,
+      calendarId,
+      this.availabilityWindows(input),
+    );
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Calendar not found', 'NOT_FOUND');
+    }
+    return outcome.value.map(this.mapAvailabilityWindow);
+  }
+
+  async upsertDateOverride(
+    organizationId: number,
+    calendarId: number,
+    input: CalendarDateOverrideInput,
+  ): Promise<CalendarDateOverride> {
+    this.id(calendarId);
+    const isAvailable = input.isAvailable ?? false;
+    const startTime =
+      input.startTime == null ? null : this.time(input.startTime, 'startTime');
+    const endTime =
+      input.endTime == null ? null : this.time(input.endTime, 'endTime');
+    if (isAvailable && (startTime === null || endTime === null)) {
+      throw itemizeGraphqlError(
+        'Available date overrides require startTime and endTime',
+        'BAD_USER_INPUT',
+        { field: 'input', reason: 'OVERRIDE_WINDOW_REQUIRED' },
+      );
+    }
+    if (!isAvailable && (startTime !== null || endTime !== null)) {
+      throw itemizeGraphqlError(
+        'Unavailable date overrides cannot include a time window',
+        'BAD_USER_INPUT',
+        { field: 'input', reason: 'UNAVAILABLE_OVERRIDE_WINDOW' },
+      );
+    }
+    if (startTime !== null && endTime !== null && startTime >= endTime) {
+      throw itemizeGraphqlError(
+        'Date override startTime must be before endTime',
+        'BAD_USER_INPUT',
+        { field: 'input', reason: 'INVALID_OVERRIDE_WINDOW' },
+      );
+    }
+    const values: CalendarDateOverrideValue = {
+      overrideDate: this.date(input.overrideDate, 'overrideDate'),
+      isAvailable,
+      startTime,
+      endTime,
+      reason: this.nullableText(input.reason, 'reason', 255),
+    };
+    const outcome = await this.calendars.upsertDateOverride(
+      organizationId,
+      calendarId,
+      values,
+    );
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Calendar not found', 'NOT_FOUND');
+    }
+    return this.mapDateOverride(outcome.value);
+  }
+
+  async deleteDateOverride(
+    organizationId: number,
+    calendarId: number,
+    overrideId: number,
+  ): Promise<boolean> {
+    this.id(calendarId);
+    this.positiveId(overrideId, 'overrideId');
+    const outcome = await this.calendars.deleteDateOverride(
+      organizationId,
+      calendarId,
+      overrideId,
+    );
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Date override not found', 'NOT_FOUND');
+    }
+    return true;
+  }
+
   private id(value: number): void {
+    this.positiveId(value, 'id', 'INVALID_CALENDAR_ID');
+  }
+
+  private positiveId(
+    value: number,
+    field: string,
+    reason = 'INVALID_ID',
+  ): void {
     if (!Number.isSafeInteger(value) || value < 1) {
       throw itemizeGraphqlError(
-        'Calendar ID must be a positive integer',
+        `${field} must be a positive integer`,
         'BAD_USER_INPUT',
-        { field: 'id', reason: 'INVALID_CALENDAR_ID' },
+        { field, reason },
       );
     }
   }
@@ -331,11 +417,7 @@ export class CalendarsService {
     minimum: number,
     maximum: number,
   ): number {
-    if (
-      !Number.isSafeInteger(value) ||
-      value < minimum ||
-      value > maximum
-    ) {
+    if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
       throw itemizeGraphqlError(
         `${field} must be an integer between ${minimum} and ${maximum}`,
         'BAD_USER_INPUT',
@@ -345,10 +427,7 @@ export class CalendarsService {
     return value;
   }
 
-  private nullableId(
-    value: number | null,
-    field: string,
-  ): number | null {
+  private nullableId(value: number | null, field: string): number | null {
     if (value === null) return null;
     this.integer(value, field, 1, Number.MAX_SAFE_INTEGER);
     return value;
@@ -461,6 +540,34 @@ export class CalendarsService {
     return `${match[1]}:${match[2]}:${match[3] ?? '00'}`;
   }
 
+  private date(value: string, field: string): string {
+    const normalized = value.trim();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
+    if (!match) {
+      throw itemizeGraphqlError(
+        `${field} must be an ISO calendar date`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_DATE' },
+      );
+    }
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (
+      parsed.getUTCFullYear() !== year ||
+      parsed.getUTCMonth() !== month - 1 ||
+      parsed.getUTCDate() !== day
+    ) {
+      throw itemizeGraphqlError(
+        `${field} must be an ISO calendar date`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_DATE' },
+      );
+    }
+    return normalized;
+  }
+
   private defaultAvailabilityWindows(): CalendarAvailabilityWindowValue[] {
     return [1, 2, 3, 4, 5].map((dayOfWeek) => ({
       dayOfWeek,
@@ -517,8 +624,7 @@ export class CalendarsService {
       bufferAfterMinutes: Number(row.buffer_after_minutes),
       minNoticeHours: Number(row.min_notice_hours),
       maxFutureDays: Number(row.max_future_days),
-      assignedToId:
-        row.assigned_to === null ? null : Number(row.assigned_to),
+      assignedToId: row.assigned_to === null ? null : Number(row.assigned_to),
       assignedToName: row.assigned_to_name,
       assignmentMode: row.assignment_mode,
       confirmationEmail: row.confirmation_email,
@@ -528,9 +634,7 @@ export class CalendarsService {
       isActive: row.is_active,
       createdById: row.created_by === null ? null : Number(row.created_by),
       upcomingBookings:
-        row.upcoming_bookings === null
-          ? null
-          : Number(row.upcoming_bookings),
+        row.upcoming_bookings === null ? null : Number(row.upcoming_bookings),
       availabilityWindows: availabilityWindows.map(this.mapAvailabilityWindow),
       dateOverrides: dateOverrides.map(this.mapDateOverride),
       createdAt: new Date(row.created_at),

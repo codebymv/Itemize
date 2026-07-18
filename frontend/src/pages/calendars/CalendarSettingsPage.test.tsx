@@ -123,7 +123,7 @@ describe('CalendarSettingsPage', () => {
         expect(toastMock).toHaveBeenCalledWith({ title: 'Calendar settings saved' });
     });
 
-    it('saves the edited recurring schedule through the REST availability adapter', async () => {
+  it('saves the edited recurring schedule through the availability adapter', async () => {
         renderPage();
 
         const mondayStart = await screen.findByLabelText('Monday start');

@@ -446,12 +446,294 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     });
   });
 
+  it('atomically replaces availability and interoperates with retained REST', async () => {
+    const replaced = await mutation(
+      organizationId,
+      `mutation ReplaceCalendarAvailability(
+        $calendarId: Int!,
+        $windows: [CalendarAvailabilityWindowInput!]!
+      ) {
+        replaceCalendarAvailability(
+          calendarId: $calendarId,
+          windows: $windows
+        ) {
+          calendarId
+          dayOfWeek
+          startTime
+          endTime
+          isActive
+        }
+      }`,
+      {
+        calendarId,
+        windows: [
+          {
+            dayOfWeek: 5,
+            startTime: '13:30',
+            endTime: '17:00',
+          },
+          {
+            dayOfWeek: 1,
+            startTime: '08:00',
+            endTime: '12:00',
+            isActive: false,
+          },
+        ],
+      },
+    ).expect(200);
+    expect(replaced.body.errors).toBeUndefined();
+    expect(replaced.body.data.replaceCalendarAvailability).toEqual([
+      {
+        calendarId,
+        dayOfWeek: 1,
+        startTime: '08:00:00',
+        endTime: '12:00:00',
+        isActive: false,
+      },
+      {
+        calendarId,
+        dayOfWeek: 5,
+        startTime: '13:30:00',
+        endTime: '17:00:00',
+        isActive: true,
+      },
+    ]);
+
+    const legacyRead = await request(legacyApp)
+      .get(`/api/calendars/${calendarId}`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(legacyRead.body.availability_windows).toEqual([
+      expect.objectContaining({
+        day_of_week: 1,
+        start_time: '08:00:00',
+        is_active: false,
+      }),
+      expect.objectContaining({
+        day_of_week: 5,
+        start_time: '13:30:00',
+        is_active: true,
+      }),
+    ]);
+
+    await request(legacyApp)
+      .put(`/api/calendars/${calendarId}/availability`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .send({
+        availability_windows: [
+          {
+            day_of_week: 2,
+            start_time: '10:00',
+            end_time: '16:00',
+            is_active: true,
+          },
+        ],
+      })
+      .expect(200);
+    const graphqlRead = await query(
+      organizationId,
+      `query Calendar($id: Int!) {
+        calendar(id: $id) {
+          availabilityWindows { dayOfWeek startTime endTime isActive }
+        }
+      }`,
+      { id: calendarId },
+    ).expect(200);
+    expect(graphqlRead.body.data.calendar.availabilityWindows).toEqual([
+      {
+        dayOfWeek: 2,
+        startTime: '10:00:00',
+        endTime: '16:00:00',
+        isActive: true,
+      },
+    ]);
+  });
+
+  it('rejects invalid or foreign availability replacement without changing rows', async () => {
+    const before = await pool.query(
+      `SELECT day_of_week, start_time, end_time, is_active
+       FROM availability_windows
+       WHERE calendar_id = $1
+       ORDER BY day_of_week, start_time`,
+      [calendarId],
+    );
+    const invalid = await mutation(
+      organizationId,
+      `mutation ReplaceCalendarAvailability(
+        $calendarId: Int!,
+        $windows: [CalendarAvailabilityWindowInput!]!
+      ) {
+        replaceCalendarAvailability(
+          calendarId: $calendarId,
+          windows: $windows
+        ) { id }
+      }`,
+      {
+        calendarId,
+        windows: [
+          { dayOfWeek: 2, startTime: '09:00', endTime: '12:00' },
+          { dayOfWeek: 2, startTime: '11:00', endTime: '13:00' },
+        ],
+      },
+    ).expect(200);
+    expect(invalid.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'OVERLAPPING_WINDOWS',
+    });
+    const after = await pool.query(
+      `SELECT day_of_week, start_time, end_time, is_active
+       FROM availability_windows
+       WHERE calendar_id = $1
+       ORDER BY day_of_week, start_time`,
+      [calendarId],
+    );
+    expect(after.rows).toEqual(before.rows);
+
+    const foreign = await mutation(
+      organizationId,
+      `mutation {
+        replaceCalendarAvailability(
+          calendarId: ${otherCalendarId},
+          windows: []
+        ) { id }
+      }`,
+    ).expect(200);
+    expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('upserts and tenant-scopes date override deletion across GraphQL and REST', async () => {
+    const upserted = await mutation(
+      organizationId,
+      `mutation UpsertCalendarDateOverride(
+        $calendarId: Int!,
+        $input: CalendarDateOverrideInput!
+      ) {
+        upsertCalendarDateOverride(
+          calendarId: $calendarId,
+          input: $input
+        ) {
+          id
+          calendarId
+          overrideDate
+          isAvailable
+          startTime
+          endTime
+          reason
+        }
+      }`,
+      {
+        calendarId,
+        input: {
+          overrideDate: '2099-02-02',
+          isAvailable: true,
+          startTime: '10:00',
+          endTime: '14:30',
+          reason: 'Extended hours',
+        },
+      },
+    ).expect(200);
+    expect(upserted.body.errors).toBeUndefined();
+    expect(upserted.body.data.upsertCalendarDateOverride).toMatchObject({
+      calendarId,
+      overrideDate: '2099-02-02',
+      isAvailable: true,
+      startTime: '10:00:00',
+      endTime: '14:30:00',
+      reason: 'Extended hours',
+    });
+    const overrideId = upserted.body.data.upsertCalendarDateOverride.id;
+
+    const legacyRead = await request(legacyApp)
+      .get(`/api/calendars/${calendarId}`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    const legacyOverride = legacyRead.body.date_overrides.find(
+      (override: { id: number }) => override.id === overrideId,
+    );
+    expect(legacyOverride).toMatchObject({
+      id: overrideId,
+      is_available: true,
+      start_time: '10:00:00',
+      end_time: '14:30:00',
+    });
+    expect(
+      new Date(legacyOverride.override_date).toISOString().slice(0, 10),
+    ).toBe('2099-02-02');
+
+    await request(legacyApp)
+      .post(`/api/calendars/${calendarId}/date-override`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .send({
+        override_date: '2099-02-02',
+        is_available: false,
+        reason: 'Closed through REST',
+      })
+      .expect(200);
+    const graphqlRead = await query(
+      organizationId,
+      `query Calendar($id: Int!) {
+        calendar(id: $id) {
+          dateOverrides {
+            id overrideDate isAvailable startTime endTime reason
+          }
+        }
+      }`,
+      { id: calendarId },
+    ).expect(200);
+    expect(graphqlRead.body.data.calendar.dateOverrides).toContainEqual({
+      id: overrideId,
+      overrideDate: '2099-02-02',
+      isAvailable: false,
+      startTime: null,
+      endTime: null,
+      reason: 'Closed through REST',
+    });
+
+    const foreignDelete = await mutation(
+      otherOrganizationId,
+      `mutation {
+        deleteCalendarDateOverride(
+          calendarId: ${calendarId},
+          overrideId: ${overrideId}
+        )
+      }`,
+    ).expect(200);
+    expect(foreignDelete.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const deleted = await mutation(
+      organizationId,
+      `mutation {
+        deleteCalendarDateOverride(
+          calendarId: ${calendarId},
+          overrideId: ${overrideId}
+        )
+      }`,
+    ).expect(200);
+    expect(deleted.body).toEqual({
+      data: { deleteCalendarDateOverride: true },
+    });
+  });
+
   it('enforces mutation CSRF, window validation, and the organization calendar limit', async () => {
     const noCsrf = await query(
       organizationId,
       `mutation { updateCalendar(id: ${calendarId}, input: { name: "Blocked" }) { id } }`,
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const availabilityNoCsrf = await query(
+      organizationId,
+      `mutation {
+        replaceCalendarAvailability(calendarId: ${calendarId}, windows: []) {
+          id
+        }
+      }`,
+    ).expect(200);
+    expect(availabilityNoCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
 
     const overlapping = await mutation(
       organizationId,

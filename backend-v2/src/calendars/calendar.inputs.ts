@@ -16,6 +16,24 @@ export class CalendarAvailabilityWindowInput {
 }
 
 @InputType()
+export class CalendarDateOverrideInput {
+  @Field()
+  overrideDate: string;
+
+  @Field(() => Boolean, { nullable: true })
+  isAvailable?: boolean;
+
+  @Field(() => String, { nullable: true })
+  startTime?: string | null;
+
+  @Field(() => String, { nullable: true })
+  endTime?: string | null;
+
+  @Field(() => String, { nullable: true })
+  reason?: string | null;
+}
+
+@InputType()
 export class CreateCalendarInput {
   @Field()
   name: string;

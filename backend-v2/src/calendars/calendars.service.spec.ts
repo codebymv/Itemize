@@ -67,9 +67,12 @@ describe('CalendarsService', () => {
   beforeEach(() => {
     repository = {
       create: jest.fn(),
+      deleteDateOverride: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
+      replaceAvailability: jest.fn(),
       update: jest.fn(),
+      upsertDateOverride: jest.fn(),
     } as unknown as jest.Mocked<CalendarsRepository>;
     service = new CalendarsService(repository);
   });
@@ -134,30 +137,32 @@ describe('CalendarsService', () => {
   });
 
   it('normalizes create defaults and recurring availability before persistence', async () => {
-    repository.create.mockImplementation(async (_organizationId, _userId, values) => ({
-      kind: 'created',
-      value: {
-        calendar: calendarRow({
-          name: values.name,
-          description: values.description,
-          slug: values.slug,
-          timezone: values.timezone,
-          assigned_to: values.assignedToId,
-          assignment_mode: values.assignmentMode,
-          color: values.color,
-        }),
-        availabilityWindows: values.availabilityWindows.map((window, index) =>
-          availabilityRow({
-            id: index + 1,
-            day_of_week: window.dayOfWeek,
-            start_time: window.startTime,
-            end_time: window.endTime,
-            is_active: window.isActive,
+    repository.create.mockImplementation(
+      async (_organizationId, _userId, values) => ({
+        kind: 'created',
+        value: {
+          calendar: calendarRow({
+            name: values.name,
+            description: values.description,
+            slug: values.slug,
+            timezone: values.timezone,
+            assigned_to: values.assignedToId,
+            assignment_mode: values.assignmentMode,
+            color: values.color,
           }),
-        ),
-        dateOverrides: [],
-      },
-    }));
+          availabilityWindows: values.availabilityWindows.map((window, index) =>
+            availabilityRow({
+              id: index + 1,
+              day_of_week: window.dayOfWeek,
+              start_time: window.startTime,
+              end_time: window.endTime,
+              is_active: window.isActive,
+            }),
+          ),
+          dateOverrides: [],
+        },
+      }),
+    );
 
     await service.create(3, 7, {
       name: '  Consultation  ',
@@ -234,6 +239,172 @@ describe('CalendarsService', () => {
         code: 'BAD_USER_INPUT',
         reason: 'INVALID_ASSIGNEE',
       },
+    });
+  });
+
+  it('validates, sorts, and replaces recurring availability', async () => {
+    repository.replaceAvailability.mockImplementation(
+      async (_organizationId, _calendarId, windows) => ({
+        kind: 'updated',
+        value: windows.map((window, index) =>
+          availabilityRow({
+            id: index + 20,
+            day_of_week: window.dayOfWeek,
+            start_time: window.startTime,
+            end_time: window.endTime,
+            is_active: window.isActive,
+          }),
+        ),
+      }),
+    );
+
+    await expect(
+      service.replaceAvailability(3, 4, [
+        { dayOfWeek: 5, startTime: '13:30', endTime: '17:00' },
+        {
+          dayOfWeek: 1,
+          startTime: '08:00:00',
+          endTime: '12:00:00',
+          isActive: false,
+        },
+      ]),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        dayOfWeek: 1,
+        startTime: '08:00:00',
+        isActive: false,
+      }),
+      expect.objectContaining({
+        dayOfWeek: 5,
+        startTime: '13:30:00',
+        isActive: true,
+      }),
+    ]);
+    expect(repository.replaceAvailability).toHaveBeenCalledWith(3, 4, [
+      {
+        dayOfWeek: 1,
+        startTime: '08:00:00',
+        endTime: '12:00:00',
+        isActive: false,
+      },
+      {
+        dayOfWeek: 5,
+        startTime: '13:30:00',
+        endTime: '17:00:00',
+        isActive: true,
+      },
+    ]);
+  });
+
+  it('rejects invalid replacement windows before deleting the current schedule', async () => {
+    await expect(
+      service.replaceAvailability(3, 4, [
+        { dayOfWeek: 2, startTime: '09:00', endTime: '12:00' },
+        { dayOfWeek: 2, startTime: '11:59', endTime: '13:00' },
+      ]),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'OVERLAPPING_WINDOWS',
+      },
+    });
+    expect(repository.replaceAvailability).not.toHaveBeenCalled();
+  });
+
+  it('normalizes available and unavailable date overrides', async () => {
+    repository.upsertDateOverride
+      .mockResolvedValueOnce({
+        kind: 'updated',
+        value: overrideRow({
+          is_available: true,
+          start_time: '10:00:00',
+          end_time: '14:30:00',
+          reason: 'Extended hours',
+        }),
+      })
+      .mockResolvedValueOnce({
+        kind: 'updated',
+        value: overrideRow({
+          is_available: false,
+          start_time: null,
+          end_time: null,
+          reason: null,
+        }),
+      });
+
+    await service.upsertDateOverride(3, 4, {
+      overrideDate: '2026-08-01',
+      isAvailable: true,
+      startTime: '10:00',
+      endTime: '14:30',
+      reason: '  Extended hours  ',
+    });
+    expect(repository.upsertDateOverride).toHaveBeenNthCalledWith(1, 3, 4, {
+      overrideDate: '2026-08-01',
+      isAvailable: true,
+      startTime: '10:00:00',
+      endTime: '14:30:00',
+      reason: 'Extended hours',
+    });
+
+    await service.upsertDateOverride(3, 4, {
+      overrideDate: '2026-08-01',
+    });
+    expect(repository.upsertDateOverride).toHaveBeenNthCalledWith(2, 3, 4, {
+      overrideDate: '2026-08-01',
+      isAvailable: false,
+      startTime: null,
+      endTime: null,
+      reason: null,
+    });
+  });
+
+  it('rejects invalid override dates and window combinations before writing', async () => {
+    await expect(
+      service.upsertDateOverride(3, 4, {
+        overrideDate: '2026-02-30',
+      }),
+    ).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_DATE' },
+    });
+    await expect(
+      service.upsertDateOverride(3, 4, {
+        overrideDate: '2026-08-01',
+        isAvailable: true,
+        startTime: '10:00',
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'OVERRIDE_WINDOW_REQUIRED',
+      },
+    });
+    await expect(
+      service.upsertDateOverride(3, 4, {
+        overrideDate: '2026-08-01',
+        startTime: '10:00',
+        endTime: '11:00',
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'UNAVAILABLE_OVERRIDE_WINDOW',
+      },
+    });
+    expect(repository.upsertDateOverride).not.toHaveBeenCalled();
+  });
+
+  it('conceals missing availability and override targets', async () => {
+    repository.replaceAvailability.mockResolvedValue({ kind: 'not_found' });
+    await expect(service.replaceAvailability(3, 999, [])).rejects.toMatchObject(
+      {
+        extensions: { code: 'NOT_FOUND' },
+      },
+    );
+
+    repository.deleteDateOverride.mockResolvedValue({ kind: 'not_found' });
+    await expect(service.deleteDateOverride(3, 4, 999)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
     });
   });
 });

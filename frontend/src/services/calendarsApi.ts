@@ -6,11 +6,15 @@ import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
     createCalendarViaGraphql,
+    deleteCalendarDateOverrideViaGraphql,
     getCalendarViaGraphql,
     getCalendarsViaGraphql,
+    replaceCalendarAvailabilityViaGraphql,
+    upsertCalendarDateOverrideViaGraphql,
     updateCalendarViaGraphql,
 } from './calendarsGraphql';
 import {
+    isCalendarGraphqlAvailabilityMutationsEnabled,
     isCalendarGraphqlMutationsEnabled,
     isCalendarGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -111,6 +115,9 @@ export const updateCalendarAvailability = async (
     availability_windows: AvailabilityWindow[],
     organizationId?: number
 ): Promise<{ availability_windows: AvailabilityWindow[] }> => {
+    if (isCalendarGraphqlAvailabilityMutationsEnabled()) {
+        return replaceCalendarAvailabilityViaGraphql(id, availability_windows, organizationId);
+    }
     const response = await api.put(
         `/api/calendars/${id}/availability`,
         { availability_windows },
@@ -132,6 +139,9 @@ export const addDateOverride = async (
     },
     organizationId?: number
 ): Promise<CalendarDateOverride> => {
+    if (isCalendarGraphqlAvailabilityMutationsEnabled()) {
+        return upsertCalendarDateOverrideViaGraphql(calendarId, data, organizationId);
+    }
     const response = await api.post(`/api/calendars/${calendarId}/date-override`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
@@ -143,6 +153,9 @@ export const removeDateOverride = async (
     overrideId: number,
     organizationId?: number
 ): Promise<void> => {
+    if (isCalendarGraphqlAvailabilityMutationsEnabled()) {
+        return deleteCalendarDateOverrideViaGraphql(calendarId, overrideId, organizationId);
+    }
     await api.delete(`/api/calendars/${calendarId}/date-override/${overrideId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });

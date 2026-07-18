@@ -1,20 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
+  addDateOverride,
   createCalendar,
   deleteCalendar,
   getCalendar,
   getCalendars,
+  removeDateOverride,
   updateCalendar,
   updateCalendarAvailability,
 } from './calendarsApi';
 import {
   createCalendarViaGraphql,
+  deleteCalendarDateOverrideViaGraphql,
   getCalendarViaGraphql,
   getCalendarsViaGraphql,
+  replaceCalendarAvailabilityViaGraphql,
+  upsertCalendarDateOverrideViaGraphql,
   updateCalendarViaGraphql,
 } from './calendarsGraphql';
 import {
+  isCalendarGraphqlAvailabilityMutationsEnabled,
   isCalendarGraphqlMutationsEnabled,
   isCalendarGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -31,12 +37,16 @@ vi.mock('@/lib/api', () => ({
 vi.mock('./graphqlClient', () => ({
   isCalendarGraphqlReadsEnabled: vi.fn(),
   isCalendarGraphqlMutationsEnabled: vi.fn(),
+  isCalendarGraphqlAvailabilityMutationsEnabled: vi.fn(),
 }));
 
 vi.mock('./calendarsGraphql', () => ({
   createCalendarViaGraphql: vi.fn(),
+  deleteCalendarDateOverrideViaGraphql: vi.fn(),
   getCalendarViaGraphql: vi.fn(),
   getCalendarsViaGraphql: vi.fn(),
+  replaceCalendarAvailabilityViaGraphql: vi.fn(),
+  upsertCalendarDateOverrideViaGraphql: vi.fn(),
   updateCalendarViaGraphql: vi.fn(),
 }));
 
@@ -66,6 +76,7 @@ describe('calendar API transport selection', () => {
     vi.clearAllMocks();
     vi.mocked(isCalendarGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isCalendarGraphqlMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(false);
   });
 
   it('keeps list and detail reads on REST by default', async () => {
@@ -148,5 +159,51 @@ describe('calendar API transport selection', () => {
       headers: { 'x-organization-id': '3' },
     });
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('routes availability and override writes through their independent GraphQL flag', async () => {
+    vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(true);
+    vi.mocked(replaceCalendarAvailabilityViaGraphql).mockResolvedValue({
+      availability_windows: [],
+    });
+    vi.mocked(upsertCalendarDateOverrideViaGraphql).mockResolvedValue({
+      id: 8,
+      calendar_id: 4,
+      override_date: '2026-08-01',
+      is_available: false,
+      created_at: '2026-07-18T12:00:00.000Z',
+    });
+
+    const overrideInput = {
+      override_date: '2026-08-01',
+      is_available: false,
+      reason: 'Closed',
+    };
+    await updateCalendarAvailability(4, [], 3);
+    await addDateOverride(4, overrideInput, 3);
+    await removeDateOverride(4, 8, 3);
+    await deleteCalendar(4, 3);
+
+    expect(replaceCalendarAvailabilityViaGraphql).toHaveBeenCalledWith(
+      4,
+      [],
+      3,
+    );
+    expect(upsertCalendarDateOverrideViaGraphql).toHaveBeenCalledWith(
+      4,
+      overrideInput,
+      3,
+    );
+    expect(deleteCalendarDateOverrideViaGraphql).toHaveBeenCalledWith(
+      4,
+      8,
+      3,
+    );
+    expect(api.put).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.delete).toHaveBeenCalledTimes(1);
+    expect(api.delete).toHaveBeenCalledWith('/api/calendars/4', {
+      headers: { 'x-organization-id': '3' },
+    });
   });
 });

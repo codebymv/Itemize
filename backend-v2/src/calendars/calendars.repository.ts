@@ -62,6 +62,14 @@ export type CalendarAvailabilityWindowValue = {
   isActive: boolean;
 };
 
+export type CalendarDateOverrideValue = {
+  overrideDate: string;
+  isAvailable: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  reason: string | null;
+};
+
 export type CreateCalendarValues = {
   name: string;
   description: string | null;
@@ -97,6 +105,12 @@ export type UpdateCalendarOutcome =
   | { kind: 'not_found' }
   | { kind: 'invalid_assignee' }
   | { kind: 'assignee_required' };
+export type ReplaceCalendarAvailabilityOutcome =
+  { kind: 'updated'; value: AvailabilityWindowRow[] } | { kind: 'not_found' };
+export type UpsertCalendarDateOverrideOutcome =
+  { kind: 'updated'; value: CalendarDateOverrideRow } | { kind: 'not_found' };
+export type DeleteCalendarDateOverrideOutcome =
+  { kind: 'deleted' } | { kind: 'not_found' };
 
 const calendarSelection = `
   c.id,
@@ -318,6 +332,116 @@ export class CalendarsRepository {
     });
   }
 
+  async replaceAvailability(
+    organizationId: number,
+    calendarId: number,
+    windows: CalendarAvailabilityWindowValue[],
+  ): Promise<ReplaceCalendarAvailabilityOutcome> {
+    return this.transaction(async (client) => {
+      const calendar = await client.query(
+        `SELECT id
+         FROM calendars
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [calendarId, organizationId],
+      );
+      if (!calendar.rows[0]) return { kind: 'not_found' };
+
+      await client.query(
+        'DELETE FROM availability_windows WHERE calendar_id = $1',
+        [calendarId],
+      );
+      await this.insertAvailabilityWindows(client, calendarId, windows);
+      const result = await client.query<AvailabilityWindowRow>(
+        `SELECT
+           id,
+           calendar_id,
+           day_of_week,
+           start_time,
+           end_time,
+           is_active,
+           created_at
+         FROM availability_windows
+         WHERE calendar_id = $1
+         ORDER BY day_of_week, start_time, end_time, id`,
+        [calendarId],
+      );
+      return { kind: 'updated', value: result.rows };
+    });
+  }
+
+  async upsertDateOverride(
+    organizationId: number,
+    calendarId: number,
+    values: CalendarDateOverrideValue,
+  ): Promise<UpsertCalendarDateOverrideOutcome> {
+    return this.transaction(async (client) => {
+      const calendar = await client.query(
+        `SELECT id
+         FROM calendars
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [calendarId, organizationId],
+      );
+      if (!calendar.rows[0]) return { kind: 'not_found' };
+
+      const result = await client.query<CalendarDateOverrideRow>(
+        `INSERT INTO calendar_date_overrides (
+           calendar_id,
+           override_date,
+           is_available,
+           start_time,
+           end_time,
+           reason
+         ) VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (calendar_id, override_date)
+         DO UPDATE SET
+           is_available = EXCLUDED.is_available,
+           start_time = EXCLUDED.start_time,
+           end_time = EXCLUDED.end_time,
+           reason = EXCLUDED.reason
+         RETURNING
+           id,
+           calendar_id,
+           override_date,
+           is_available,
+           start_time,
+           end_time,
+           reason,
+           created_at`,
+        [
+          calendarId,
+          values.overrideDate,
+          values.isAvailable,
+          values.startTime,
+          values.endTime,
+          values.reason,
+        ],
+      );
+      return { kind: 'updated', value: result.rows[0] };
+    });
+  }
+
+  async deleteDateOverride(
+    organizationId: number,
+    calendarId: number,
+    overrideId: number,
+  ): Promise<DeleteCalendarDateOverrideOutcome> {
+    return this.transaction(async (client) => {
+      const result = await client.query(
+        `DELETE FROM calendar_date_overrides override
+         USING calendars calendar
+         WHERE override.id = $1
+           AND override.calendar_id = $2
+           AND calendar.id = override.calendar_id
+           AND calendar.organization_id = $3
+         RETURNING override.id`,
+        [overrideId, calendarId, organizationId],
+      );
+      return result.rows[0] ? { kind: 'deleted' } : { kind: 'not_found' };
+    });
+  }
+
   private async selectById(
     client: PoolClient,
     organizationId: number,
@@ -424,7 +548,8 @@ export class CalendarsRepository {
        GROUP BY o.id, o.calendars_limit, o.plan`,
       [organizationId],
     );
-    if (!result.rows[0]) throw new Error('Organization limit could not be loaded');
+    if (!result.rows[0])
+      throw new Error('Organization limit could not be loaded');
     return result.rows[0];
   }
 
