@@ -9878,8 +9878,8 @@
       "owner": "workspace",
       "targetOperation": "organizations",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "implemented",
-      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag.",
+      "parityStatus": "dual-parity",
+      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag. The real staging provider passed both GraphQL selection and flag-off REST reads with the same persisted default.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -10413,8 +10413,8 @@
       "owner": "workspace",
       "targetOperation": "selectOrganization",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "implemented",
-      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag.",
+      "parityStatus": "dual-parity",
+      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag. The staging browser passed GraphQL selection and reload persistence, then REST selection and reload persistence without data repair.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -10467,7 +10467,7 @@
       "targetOperation": "ensureDefaultOrganization",
       "targetModule": "OrganizationsModule",
       "parityStatus": "implemented",
-      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag.",
+      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag. Repeated authenticated staging GraphQL probes returned the existing selected membership; first-workspace creation remains proven by fresh PostgreSQL rather than the disposable staging browser.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
