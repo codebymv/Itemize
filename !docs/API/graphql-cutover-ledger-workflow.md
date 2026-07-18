@@ -22,17 +22,17 @@ Generated artifacts:
 
 | Evidence | Count |
 | --- | ---: |
-| Registered method/path operations | 409 |
-| API operations under `/api` | 404 |
-| Frontend API callsites | 386 |
-| Operations with frontend consumers | 364 |
-| Operations referenced by backend tests | 167 |
+| Registered method/path operations | 419 |
+| API operations under `/api` | 412 |
+| Frontend API callsites | 390 |
+| Operations with frontend consumers | 365 |
+| Operations referenced by backend tests | 185 |
 | Unmatched frontend callsites | 0 |
 | Runtime URL expressions requiring review | 0 |
 | Acknowledged generic runtime URL helpers | 2 |
 | Literal `${...}` inside a non-template string | 0 |
-| Recommended retained HTTP operations | 38 |
-| High-risk operations | 321 |
+| Recommended retained HTTP operations | 37 |
+| High-risk operations | 324 |
 
 These are static matches, not production-traffic measurements. An operation with no frontend match may still serve integrations, webhooks, automation, old clients, or manually entered URLs.
 
@@ -112,6 +112,12 @@ All 9 audience-segment operations are assigned to `SegmentsModule`. Dynamic and 
 All 9 dashboard and analytics operations are assigned to `AnalyticsModule`. Strict period/ID inputs, tenant and numeric normalization, bucket merging, selected-pipeline funnels, communication lifecycle counts, and the unresolved revenue/lifecycle/timezone/stage-history decisions are frozen in the [Analytics and dashboard GraphQL cutover contract](contracts/analytics-graphql-cutover.md).
 
 Socket.IO events are a protocol surface outside the REST operation ledger. Cookie-only private room authentication, bearer-capability admission, organization isolation, event/room names, reconnect behavior, and the multi-instance/revocation blockers are frozen in the [Realtime and Socket.IO cutover contract](contracts/realtime-socketio-cutover.md).
+
+All 6 authenticated onboarding operations are assigned to `OnboardingModule`.
+They remain user-scoped across workspace changes, return deterministic typed
+feature progress, serialize concurrent feature updates, and commit analytics
+events with their state changes. See
+[Onboarding GraphQL cutover contract](contracts/onboarding-graphql-cutover.md).
 
 ## Matching limits
 

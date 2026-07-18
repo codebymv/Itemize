@@ -1701,6 +1701,30 @@
     "GET /api/segments/filter-options": {
       "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "characterized", "risk": "high",
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
+    },
+    "GET /api/onboarding/progress": {
+      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."
+    },
+    "GET /api/onboarding/progress/:featureKey": {
+      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingFeatureProgress", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Validated feature key with an explicit unseen projection when no entry is stored."
+    },
+    "POST /api/onboarding/mark-seen": {
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "markOnboardingSeen", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected row-locked user update with the viewed event committed in the same transaction."
+    },
+    "POST /api/onboarding/dismiss": {
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "dismissOnboarding", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected user-scoped dismissal that preserves existing feature fields and commits its event atomically."
+    },
+    "POST /api/onboarding/complete-step": {
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "completeOnboardingStep", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected non-negative integer step update with an atomic durable analytics event."
+    },
+    "DELETE /api/onboarding/reset": {
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "resetOnboarding", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained."
     }
   },
   "runtimeExpressions": [

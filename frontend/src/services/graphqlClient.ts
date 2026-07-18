@@ -66,6 +66,12 @@ export const isFormGraphqlMutationsEnabled = (): boolean =>
 export const isFormSubmissionGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_FORM_SUBMISSIONS_GRAPHQL === 'true';
 
+export const isOnboardingGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_ONBOARDING_READS_GRAPHQL === 'true';
+
+export const isOnboardingGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_ONBOARDING_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

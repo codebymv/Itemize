@@ -13,6 +13,7 @@ import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { createGraphqlObservabilityPlugin } from './observability/graphql-observability.plugin';
@@ -39,6 +40,7 @@ const observabilityPlugins = [
     PipelinesModule,
     TagsModule,
     FormsModule,
+    OnboardingModule,
     FoundationModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,

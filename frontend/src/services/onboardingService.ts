@@ -1,4 +1,16 @@
 import api from '@/lib/api';
+import {
+  isOnboardingGraphqlMutationsEnabled,
+  isOnboardingGraphqlReadsEnabled,
+} from './graphqlClient';
+import {
+  completeOnboardingStepViaGraphql,
+  dismissOnboardingViaGraphql,
+  getOnboardingFeatureProgressViaGraphql,
+  getOnboardingProgressViaGraphql,
+  markOnboardingSeenViaGraphql,
+  resetOnboardingViaGraphql,
+} from './onboardingGraphql';
 
 export interface OnboardingFeatureProgress {
   seen: boolean;
@@ -20,6 +32,9 @@ export const onboardingService = {
    * Get user's complete onboarding progress
    */
   async getProgress(): Promise<OnboardingProgress> {
+    if (isOnboardingGraphqlReadsEnabled()) {
+      return getOnboardingProgressViaGraphql();
+    }
     const response = await api.get('/api/onboarding/progress');
     return response.data || {};
   },
@@ -28,6 +43,9 @@ export const onboardingService = {
    * Get specific feature's onboarding status
    */
   async getFeatureProgress(feature: string): Promise<OnboardingFeatureProgress> {
+    if (isOnboardingGraphqlReadsEnabled()) {
+      return getOnboardingFeatureProgressViaGraphql(feature);
+    }
     const response = await api.get(`/api/onboarding/progress/${feature}`);
     return response.data;
   },
@@ -36,6 +54,9 @@ export const onboardingService = {
    * Mark a feature as seen
    */
   async markSeen(feature: string, version: string = '1.0'): Promise<OnboardingProgress> {
+    if (isOnboardingGraphqlMutationsEnabled()) {
+      return markOnboardingSeenViaGraphql(feature, version);
+    }
     const response = await api.post('/api/onboarding/mark-seen', { feature, version });
     return response.data || {};
   },
@@ -44,6 +65,9 @@ export const onboardingService = {
    * Dismiss a feature's onboarding
    */
   async dismiss(feature: string): Promise<OnboardingProgress> {
+    if (isOnboardingGraphqlMutationsEnabled()) {
+      return dismissOnboardingViaGraphql(feature);
+    }
     const response = await api.post('/api/onboarding/dismiss', { feature });
     return response.data || {};
   },
@@ -52,6 +76,9 @@ export const onboardingService = {
    * Mark a specific step as completed
    */
   async completeStep(feature: string, step: number): Promise<OnboardingProgress> {
+    if (isOnboardingGraphqlMutationsEnabled()) {
+      return completeOnboardingStepViaGraphql(feature, step);
+    }
     const response = await api.post('/api/onboarding/complete-step', { feature, step });
     return response.data || {};
   },
@@ -60,6 +87,9 @@ export const onboardingService = {
    * Reset onboarding progress
    */
   async reset(feature?: string): Promise<OnboardingProgress> {
+    if (isOnboardingGraphqlMutationsEnabled()) {
+      return resetOnboardingViaGraphql(feature);
+    }
     const response = await api.delete('/api/onboarding/reset', {
       params: feature ? { feature } : undefined,
     });
