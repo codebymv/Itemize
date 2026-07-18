@@ -528,8 +528,8 @@ export function CalendarSettingsPage() {
                                                         className="w-32"
                                                         aria-label={`${day} start`}
                                                         value={window.start_time.slice(0, 5)}
-                                                        onChange={event => changeWindow(index, {
-                                                            start_time: event.target.value,
+                                                        onInput={event => changeWindow(index, {
+                                                            start_time: (event.target as HTMLInputElement).value,
                                                         })}
                                                     />
                                                     <span className="text-sm text-muted-foreground">to</span>
@@ -538,8 +538,8 @@ export function CalendarSettingsPage() {
                                                         className="w-32"
                                                         aria-label={`${day} end`}
                                                         value={window.end_time.slice(0, 5)}
-                                                        onChange={event => changeWindow(index, {
-                                                            end_time: event.target.value,
+                                                        onInput={event => changeWindow(index, {
+                                                            end_time: (event.target as HTMLInputElement).value,
                                                         })}
                                                     />
                                                     <Switch

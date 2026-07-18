@@ -127,7 +127,7 @@ describe('CalendarSettingsPage', () => {
         renderPage();
 
         const mondayStart = await screen.findByLabelText('Monday start');
-        fireEvent.change(mondayStart, { target: { value: '10:00' } });
+        fireEvent.input(mondayStart, { target: { value: '10:00' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save availability' }));
 
         await waitFor(() => expect(apiMocks.updateCalendarAvailability).toHaveBeenCalledWith(
