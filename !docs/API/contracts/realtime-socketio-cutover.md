@@ -1,6 +1,6 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, chat termination, and workspace list/note staging delivery verified; whiteboard handoff code-complete
+**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, chat termination, and workspace list/note/whiteboard staging delivery verified
 **Evidence date:** 2026-07-18
 
 ## Transport decision
@@ -135,3 +135,17 @@ redeployed the legacy backend successfully as
 `7f9cce4e-c9e2-45ad-94da-517dad9e27d6`. This proves the current
 single-socket-host staging handoff; it does not remove the shared-adapter
 multi-instance blocker.
+
+The whiteboard staging gate then used the real Canvas and an already-open
+anonymous viewer with both whiteboard GraphQL flags enabled. The worker
+delivered a bounded `whiteboardUpdated` projection, the viewer refetched the
+authoritative public representation, and the changed title rendered without a
+reload. With both flags disabled, a retained REST update produced the same
+live outcome and REST deletion moved the open viewer to its terminal
+unavailable state. Fixture and outbox cleanup returned zero rows. Temporary
+CORS and worker variables were removed; clean backend deployment
+`3f180b58-1988-42c5-87be-b187e4c4b924` and GraphQL deployment
+`6e5ea4b8-6e9a-4ed8-bc2b-296345188055` succeeded with the worker
+default-off. Production was untouched. This completes single-host whiteboard
+delivery evidence but does not remove the shared-adapter multi-instance
+blocker.

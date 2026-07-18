@@ -14,6 +14,7 @@ import { getCampaigns } from '@/services/campaignsApi';
 import { getWorkflows } from '@/services/automationsApi';
 import { getInvoices } from '@/services/invoicesApi';
 import { getSignatures } from '@/services/signaturesApi';
+import { normalizeWhiteboardSearchRows } from './globalSearchUtils';
 import type { Invoice } from '@/services/invoicesApi';
 import type { SignatureDocument } from '@/services/signaturesApi';
 
@@ -205,8 +206,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               allResults.push(...matchedNotes);
             }
 
-            if (whiteboardsData.status === 'fulfilled' && Array.isArray(whiteboardsData.value)) {
-              const matchedWhiteboards = whiteboardsData.value
+            if (whiteboardsData.status === 'fulfilled') {
+              const matchedWhiteboards = normalizeWhiteboardSearchRows(whiteboardsData.value)
                 .filter((w: { title?: string }) => (w.title || '').toLowerCase().includes(lowerQuery))
                 .slice(0, 3)
                 .map((w: { id: number; title?: string }) => ({

@@ -260,6 +260,17 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'whiteboardUpdated'");
     });
 
+    test('production startup requires the latest whiteboard migration marker', () => {
+        const startupSource = fs.readFileSync(
+            path.resolve(__dirname, '../../index.js'),
+            'utf8'
+        );
+
+        expect(startupSource).toContain(
+            "WHERE version = '029_whiteboard_realtime_outbox'"
+        );
+    });
+
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {
         const migration = require('../../../scripts/migrations/024_workflow_sms_reconciliation');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };

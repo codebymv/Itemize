@@ -499,7 +499,7 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '028_realtime_outbox'
+                    WHERE version = '029_whiteboard_realtime_outbox'
                 ) AS has_required_migration
             `);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {

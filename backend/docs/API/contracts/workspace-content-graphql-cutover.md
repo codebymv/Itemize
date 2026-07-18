@@ -178,8 +178,9 @@ Before enabling either whiteboard flag, Canvas, Contents, Global Search, and
 the anonymous shared viewer must pass a staging rehearsal with each flag
 enabled and then disabled. The active batch-position REST path stays unchanged.
 The code-level user isolation, validation, optimistic concurrency, bounded
-refetch projection, worker delivery, and REST rollback gates pass; staging is
-the remaining whiteboard cutover gate.
+refetch projection, worker delivery, and REST rollback gates pass. The
+staging rehearsal passed on 2026-07-18; production enablement still requires a
+monitored change window and the flags remain default-off.
 
 ## Whiteboard code-level gate
 
@@ -303,6 +304,45 @@ returned `ready`, and `EXTRA_CORS_ORIGINS`,
 `VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL` are unset in staging. All workspace
 GraphQL flags remain default-off. Production was untouched.
 
+## Staging whiteboard and rollback gate
+
+The whiteboard gate passed on 2026-07-18 against GraphQL deployment
+`7eba9f77-e9e8-4f4a-bac0-3127267efc4f` through legacy backend deployment
+`3771549e-20fa-43c1-ac95-7cdbbb376d89`. A disposable verified account used
+the real Canvas UI with both whiteboard flags enabled to create a whiteboard,
+render it in Canvas and Contents, find it in Global Search, update its title,
+and open its anonymous shared viewer. The already-open viewer received the
+GraphQL title change without a reload by consuming the bounded refetch
+projection and reloading the authoritative public HTTP representation.
+
+The rehearsal exposed two cutover defects. The established whiteboard adapter
+returns `{ whiteboards, pagination }`, while Global Search accepted only a
+bare array; the consumer now normalizes both shapes and has a focused
+regression. The staging backend also runs with production startup semantics,
+which deliberately do not apply migrations. Migration `029` had therefore not
+been applied even though the source and fresh-database tests were correct. It
+was applied explicitly through the deployment environment, its schema marker
+and whiteboard outbox constraints were verified, and the production startup
+guard now requires `029_whiteboard_realtime_outbox` rather than the older
+realtime marker.
+
+With both whiteboard flags false, the same row rendered through REST in Canvas
+and Contents and remained searchable through the retained adapter. A REST
+title update reached the already-open shared viewer without a reload. REST
+deletion removed the owner row and immediately changed the viewer to its
+terminal unavailable state; the public endpoint then returned `404`. Rollback
+required no data repair.
+
+Cleanup removed the disposable user, personal organization, membership,
+category, whiteboard, and related outbox row; explicit verification returned
+zero for all six fixture classes. Temporary localhost CORS and worker
+variables were removed. Clean backend deployment
+`3f180b58-1988-42c5-87be-b187e4c4b924` and GraphQL deployment
+`6e5ea4b8-6e9a-4ed8-bc2b-296345188055` succeeded. Backend health and a public
+GraphQL schema probe return HTTP `200`; `EXTRA_CORS_ORIGINS` and
+`REALTIME_OUTBOX_WORKER_ENABLED` are absent, all frontend workspace flags
+remain default-off, and production was untouched.
+
 ## Required cutover evidence
 
 - Service tests for strict pagination/filter validation, mapping, malformed
@@ -321,5 +361,5 @@ GraphQL flags remain default-off. Production was untouched.
 - A staging browser rehearsal for the shipped Canvas and Contents pages with
   each read flag independently enabled and disabled, plus list and note writes
   with their mutation flags enabled and rolled back. **All reachable workspace
-  list/note reads and writes passed on 2026-07-18. Whiteboard read/write,
-  shared-refetch, and rollback rehearsal remains required.**
+  list, note, and whiteboard reads and writes, including shared-whiteboard
+  bounded refetch and REST rollback, passed on 2026-07-18.**
