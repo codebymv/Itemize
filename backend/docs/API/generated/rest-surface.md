@@ -225,8 +225,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/lists/:id/position` | `/api/lists/:id/position` | `backend/src/bootstrap/register-api-routes.js:46` |
 | PUT | `/api/lists/:id/position` | `/lists/:id/position` | `backend/src/routes/lists.routes.js:223` |
 | PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:458` |
-| DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:113` |
-| POST | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:90` |
+| DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:126` |
+| POST | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:103` |
 | POST | `/api/marketing-chat/ask` | `/ask` | `backend/src/routes/marketing-chat.routes.js:84` |
 | GET | `/api/marketing-chat/token` | `/token` | `backend/src/routes/marketing-chat.routes.js:80` |
 | POST | `/api/note-suggestions` | `/` | `backend/src/routes/noteSuggestions.js:14` |
@@ -236,8 +236,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/notes/:noteId` | `/notes/:noteId` | `backend/src/routes/notes.routes.js:129` |
 | PUT | `/api/notes/:noteId/category` | `/notes/:noteId/category` | `backend/src/routes/notes.routes.js:311` |
 | PUT | `/api/notes/:noteId/content` | `/notes/:noteId/content` | `backend/src/routes/notes.routes.js:239` |
-| DELETE | `/api/notes/:noteId/share` | `/notes/:noteId/share` | `backend/src/routes/sharing.routes.js:153` |
-| POST | `/api/notes/:noteId/share` | `/notes/:noteId/share` | `backend/src/routes/sharing.routes.js:130` |
+| DELETE | `/api/notes/:noteId/share` | `/notes/:noteId/share` | `backend/src/routes/sharing.routes.js:169` |
+| POST | `/api/notes/:noteId/share` | `/notes/:noteId/share` | `backend/src/routes/sharing.routes.js:146` |
 | PUT | `/api/notes/:noteId/title` | `/notes/:noteId/title` | `backend/src/routes/notes.routes.js:275` |
 | POST | `/api/onboarding/complete-step` | `/complete-step` | `backend/src/routes/onboarding.routes.js:170` |
 | POST | `/api/onboarding/dismiss` | `/dismiss` | `backend/src/routes/onboarding.routes.js:123` |
@@ -335,10 +335,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/segments/:id/contacts` | `/:id/contacts` | `backend/src/routes/segments.routes.js:368` |
 | GET | `/api/segments/filter-options` | `/filter-options` | `backend/src/routes/segments.routes.js:99` |
 | POST | `/api/segments/preview` | `/preview` | `backend/src/routes/segments.routes.js:149` |
-| GET | `/api/shared/list/:token` | `/shared/list/:token` | `backend/src/routes/sharing.routes.js:212` |
-| GET | `/api/shared/note/:token` | `/shared/note/:token` | `backend/src/routes/sharing.routes.js:257` |
+| GET | `/api/shared/list/:token` | `/shared/list/:token` | `backend/src/routes/sharing.routes.js:234` |
+| GET | `/api/shared/note/:token` | `/shared/note/:token` | `backend/src/routes/sharing.routes.js:279` |
 | GET | `/api/shared/vault/:token` | `/shared/vault/:token` | `backend/src/routes/vaults/sharing.routes.js:84` |
-| GET | `/api/shared/whiteboard/:token` | `/shared/whiteboard/:token` | `backend/src/routes/sharing.routes.js:298` |
+| GET | `/api/shared/whiteboard/:token` | `/shared/whiteboard/:token` | `backend/src/routes/sharing.routes.js:320` |
 | GET | `/api/signatures/documents` | `/signatures/documents` | `backend/src/routes/signatures.routes.js:435` |
 | POST | `/api/signatures/documents` | `/signatures/documents` | `backend/src/routes/signatures.routes.js:286` |
 | DELETE | `/api/signatures/documents/:id` | `/signatures/documents/:id` | `backend/src/routes/signatures.routes.js:421` |
@@ -415,8 +415,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/whiteboards/:id/position` | `/whiteboards/:id/position` | `backend/src/routes/whiteboards.routes.js:233` |
 | DELETE | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:270` |
 | PUT | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:146` |
-| DELETE | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:193` |
-| POST | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:170` |
+| DELETE | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:212` |
+| POST | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:189` |
 | GET | `/api/wireframes` | `/wireframes` | `backend/src/routes/wireframes.routes.js:20` |
 | POST | `/api/wireframes` | `/wireframes` | `backend/src/routes/wireframes.routes.js:85` |
 | PUT | `/api/wireframes/:id/position` | `/api/wireframes/:id/position` | `backend/src/bootstrap/register-api-routes.js:48` |

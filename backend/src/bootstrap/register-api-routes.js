@@ -274,7 +274,7 @@ function registerApiRoutes({
     logger.info('Webhooks routes initialized');
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));
     logger.info('Calendar Integrations routes initialized');
-    app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit));
+    app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit, broadcast));
     logger.info('Sharing routes initialized');
     app.use('/api/admin', adminRoutes(pool, authenticateJWT, requireAdmin));
     logger.info('Admin routes initialized');

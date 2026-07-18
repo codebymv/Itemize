@@ -7,6 +7,7 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
+import { registerSharedContentRevocation } from '../lib/sharedRealtime';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -81,7 +82,7 @@ const SharedWhiteboardPage: React.FC = () => {
     };
 
     fetchSharedWhiteboard();
-  }, [token, toast, error]);
+  }, [token, toast]);
 
   // WebSocket connection effect
   useEffect(() => {
@@ -151,11 +152,21 @@ const SharedWhiteboardPage: React.FC = () => {
         variant: "destructive",
       });
     });
+    const unregisterRevocation = registerSharedContentRevocation(
+      newSocket,
+      'whiteboard',
+      () => {
+        setIsConnected(false);
+        setError('This shared whiteboard is no longer available.');
+        setWhiteboardData(null);
+      },
+    );
 
     setSocket(newSocket);
 
     return () => {
       console.log('Cleaning up WebSocket connection');
+      unregisterRevocation();
       newSocket.disconnect();
     };
   }, [token, sharedWhiteboardId, toast]);

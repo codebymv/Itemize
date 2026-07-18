@@ -376,10 +376,25 @@ module.exports = (pool, authenticateJWT, broadcast) => {
             const { wireframeId } = req.params;
             const result = await withDbClient(pool, async (client) => {
                 return client.query(
-                    `UPDATE wireframes 
-                     SET is_public = FALSE, share_token = NULL, shared_at = NULL, updated_at = NOW()
-                     WHERE id = $1 AND user_id = $2 
-                     RETURNING id`,
+                    `WITH target AS (
+                         SELECT id, share_token
+                         FROM wireframes
+                         WHERE id = $1 AND user_id = $2
+                         FOR UPDATE
+                     ),
+                     updated AS (
+                         UPDATE wireframes AS wireframe
+                         SET is_public = FALSE,
+                             share_token = NULL,
+                             shared_at = NULL,
+                             updated_at = NOW()
+                         FROM target
+                         WHERE wireframe.id = target.id
+                         RETURNING wireframe.id
+                     )
+                     SELECT updated.id, target.share_token
+                     FROM updated
+                     JOIN target ON target.id = updated.id`,
                     [wireframeId, req.user.id]
                 );
             });
@@ -388,6 +403,9 @@ module.exports = (pool, authenticateJWT, broadcast) => {
                 return sendNotFound(res, 'Wireframe');
             }
 
+            if (result.rows[0].share_token && broadcast.revokeShared) {
+                await broadcast.revokeShared('wireframe', result.rows[0].share_token);
+            }
             sendSuccess(res, { message: 'Wireframe sharing disabled successfully' });
         } catch (error) {
             console.error('Error unsharing wireframe:', error);

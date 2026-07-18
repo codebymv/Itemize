@@ -26,6 +26,10 @@ class FakeSocket {
         this.rooms.add(room);
     }
 
+    async leave(room) {
+        this.rooms.delete(room);
+    }
+
     async trigger(event, payload) {
         return this.handlers.get(event)(payload);
     }
@@ -34,12 +38,26 @@ class FakeSocket {
 function createHarness(query = jest.fn()) {
     let connect;
     const roomEvents = [];
+    const sockets = [];
     const io = {
         on: jest.fn((event, handler) => {
-            if (event === 'connection') connect = handler;
+            if (event === 'connection') {
+                connect = socket => {
+                    sockets.push(socket);
+                    handler(socket);
+                };
+            }
         }),
         to: jest.fn(room => ({
-            emit: (event, payload) => roomEvents.push({ room, event, payload }),
+            emit: (event, payload) => {
+                roomEvents.push({ room, event, payload });
+                for (const socket of sockets.filter(candidate => candidate.rooms.has(room))) {
+                    socket.emit(event, payload);
+                }
+            },
+        })),
+        in: jest.fn(room => ({
+            fetchSockets: async () => sockets.filter(socket => socket.rooms.has(room)),
         })),
     };
     const result = initializeWebSocket(io, { query });
@@ -228,6 +246,31 @@ describe('Socket.IO authorization boundary', () => {
         expect(roomEvents.at(-1)).toMatchObject({ event: 'viewerCount', payload: 0 });
     });
 
+    test('evicts every socket in a revoked public room without exposing its capability', async () => {
+        const query = jest.fn().mockResolvedValue({ rows: [{ id: 3, title: 'Shared note' }] });
+        const { connect, result } = createHarness(query);
+        const first = new FakeSocket();
+        const second = new FakeSocket();
+        connect(first);
+        connect(second);
+        await first.trigger('joinSharedNote', SHARE_TOKEN);
+        await second.trigger('joinSharedNote', SHARE_TOKEN);
+
+        await expect(result.broadcast.revokeShared('note', SHARE_TOKEN)).resolves.toBe(true);
+
+        expect(first.rooms).not.toContain(`shared-note-${SHARE_TOKEN}`);
+        expect(second.rooms).not.toContain(`shared-note-${SHARE_TOKEN}`);
+        expect(result.viewers.note.has(SHARE_TOKEN)).toBe(false);
+        for (const socket of [first, second]) {
+            const event = emitted(socket, 'sharedContentRevoked').at(-1);
+            expect(event.payload).toMatchObject({
+                kind: 'note',
+                reason: 'sharing_revoked',
+            });
+            expect(JSON.stringify(event.payload)).not.toContain(SHARE_TOKEN);
+        }
+    });
+
     test('broadcast helpers reject malformed room keys', () => {
         const { result, roomEvents } = createHarness();
 
@@ -235,5 +278,14 @@ describe('Socket.IO authorization boundary', () => {
         result.broadcast.userListUpdate('not-an-id', 'LIST_CHANGED', {});
 
         expect(roomEvents).toEqual([]);
+    });
+
+    test('revocation helpers reject malformed room keys without adapter access', async () => {
+        const { result, io } = createHarness();
+
+        await expect(result.broadcast.revokeShared('note', '../secret')).resolves.toBe(false);
+        await expect(result.broadcast.revokeShared('unknown', SHARE_TOKEN)).resolves.toBe(false);
+
+        expect(io.in).not.toHaveBeenCalled();
     });
 });

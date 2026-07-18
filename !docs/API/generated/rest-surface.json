@@ -2043,7 +2043,7 @@
       ],
       "declaredPath": "/lists/:listId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 113,
+      "line": 126,
       "dynamic": false
     },
     {
@@ -2053,7 +2053,7 @@
       ],
       "declaredPath": "/lists/:listId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 90,
+      "line": 103,
       "dynamic": false
     },
     {
@@ -2153,7 +2153,7 @@
       ],
       "declaredPath": "/notes/:noteId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 153,
+      "line": 169,
       "dynamic": false
     },
     {
@@ -2163,7 +2163,7 @@
       ],
       "declaredPath": "/notes/:noteId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 130,
+      "line": 146,
       "dynamic": false
     },
     {
@@ -3143,7 +3143,7 @@
       ],
       "declaredPath": "/shared/list/:token",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 212,
+      "line": 234,
       "dynamic": false
     },
     {
@@ -3153,7 +3153,7 @@
       ],
       "declaredPath": "/shared/note/:token",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 257,
+      "line": 279,
       "dynamic": false
     },
     {
@@ -3173,7 +3173,7 @@
       ],
       "declaredPath": "/shared/whiteboard/:token",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 298,
+      "line": 320,
       "dynamic": false
     },
     {
@@ -3943,7 +3943,7 @@
       ],
       "declaredPath": "/whiteboards/:whiteboardId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 193,
+      "line": 212,
       "dynamic": false
     },
     {
@@ -3953,7 +3953,7 @@
       ],
       "declaredPath": "/whiteboards/:whiteboardId/share",
       "source": "backend/src/routes/sharing.routes.js",
-      "line": 170,
+      "line": 189,
       "dynamic": false
     },
     {

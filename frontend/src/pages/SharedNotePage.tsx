@@ -7,6 +7,7 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
+import { registerSharedContentRevocation } from '../lib/sharedRealtime';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -80,7 +81,7 @@ const SharedNotePage: React.FC = () => {
     };
 
     fetchSharedNote();
-  }, [token, toast, error]);
+  }, [token, toast]);
 
   // WebSocket connection effect
   useEffect(() => {
@@ -178,11 +179,21 @@ const SharedNotePage: React.FC = () => {
         variant: "destructive",
       });
     });
+    const unregisterRevocation = registerSharedContentRevocation(
+      newSocket,
+      'note',
+      () => {
+        setIsConnected(false);
+        setError('This shared note is no longer available.');
+        setNoteData(null);
+      },
+    );
 
     setSocket(newSocket);
 
     return () => {
       console.log('Cleaning up WebSocket connection');
+      unregisterRevocation();
       newSocket.disconnect();
     };
   }, [token, sharedNoteId, toast]);

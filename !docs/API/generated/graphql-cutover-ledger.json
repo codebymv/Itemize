@@ -15,7 +15,7 @@
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 3,
+    "unmatchedBackendTestCallCount": 5,
     "retainHttpCount": 37,
     "graphqlQueryCount": 128,
     "graphqlMutationCount": 246,
@@ -8711,7 +8711,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 113
+          "line": 126
         }
       ],
       "consumerCallsites": [
@@ -8748,13 +8748,13 @@
           "method": "DELETE",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 127
+          "line": 129
         },
         {
           "method": "DELETE",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 150
+          "line": 153
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8776,7 +8776,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 90
+          "line": 103
         }
       ],
       "consumerCallsites": [
@@ -8813,31 +8813,31 @@
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 102
+          "line": 104
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 103
+          "line": 105
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 122
+          "line": 124
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 139
+          "line": 142
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 149
+          "line": 152
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -9315,7 +9315,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 153
+          "line": 169
         }
       ],
       "consumerCallsites": [
@@ -9343,7 +9343,7 @@
           "method": "DELETE",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 154
+          "line": 157
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -9365,7 +9365,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 130
+          "line": 146
         }
       ],
       "consumerCallsites": [
@@ -9393,13 +9393,13 @@
           "method": "POST",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 153
+          "line": 156
         },
         {
           "method": "POST",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 221
+          "line": 253
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13200,7 +13200,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 212
+          "line": 234
         }
       ],
       "consumerCallsites": [
@@ -13209,7 +13209,7 @@
           "path": "/api/shared/list/:token",
           "rawPath": "/api/shared/list/${token}",
           "source": "frontend/src/pages/SharedListPage.tsx",
-          "line": 53,
+          "line": 56,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13219,25 +13219,25 @@
           "method": "GET",
           "path": "/api/shared/list/:oldToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 136
+          "line": 139
         },
         {
           "method": "GET",
           "path": "/api/shared/list/:oldToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 143
+          "line": 146
         },
         {
           "method": "GET",
           "path": "/api/shared/list/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 144
+          "line": 147
         },
         {
           "method": "GET",
           "path": "/api/shared/list/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 252
+          "line": 284
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13259,7 +13259,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 257
+          "line": 279
         }
       ],
       "consumerCallsites": [
@@ -13268,7 +13268,7 @@
           "path": "/api/shared/note/:token",
           "rawPath": "/api/shared/note/${token}",
           "source": "frontend/src/pages/SharedNotePage.tsx",
-          "line": 52,
+          "line": 53,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13278,13 +13278,13 @@
           "method": "GET",
           "path": "/api/shared/note/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 225
+          "line": 257
         },
         {
           "method": "GET",
           "path": "/api/shared/note/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 253
+          "line": 285
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13325,19 +13325,19 @@
           "method": "GET",
           "path": "/api/shared/vault/:oldToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 182
+          "line": 210
         },
         {
           "method": "GET",
           "path": "/api/shared/vault/:oldToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 190
+          "line": 218
         },
         {
           "method": "GET",
           "path": "/api/shared/vault/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 255
+          "line": 287
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13359,7 +13359,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 298
+          "line": 320
         }
       ],
       "consumerCallsites": [
@@ -13368,7 +13368,7 @@
           "path": "/api/shared/whiteboard/:token",
           "rawPath": "/api/shared/whiteboard/${token}",
           "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
-          "line": 53,
+          "line": 54,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13378,13 +13378,13 @@
           "method": "GET",
           "path": "/api/shared/whiteboard/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 243
+          "line": 275
         },
         {
           "method": "GET",
           "path": "/api/shared/whiteboard/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 254
+          "line": 286
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -15923,13 +15923,13 @@
           "method": "DELETE",
           "path": "/api/vaults/:vaultId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 166
+          "line": 169
         },
         {
           "method": "DELETE",
           "path": "/api/vaults/:vaultId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 188
+          "line": 216
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -15979,25 +15979,25 @@
           "method": "POST",
           "path": "/api/vaults/:vaultId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 165
+          "line": 168
         },
         {
           "method": "POST",
           "path": "/api/vaults/:vaultId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 175
+          "line": 203
         },
         {
           "method": "POST",
           "path": "/api/vaults/:vaultId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 176
+          "line": 204
         },
         {
           "method": "POST",
           "path": "/api/vaults/:vaultId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 193
+          "line": 221
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -16288,7 +16288,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 193
+          "line": 212
         }
       ],
       "consumerCallsites": [
@@ -16316,7 +16316,7 @@
           "method": "DELETE",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 158
+          "line": 161
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -16338,7 +16338,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sharing.routes.js",
-          "line": 170
+          "line": 189
         }
       ],
       "consumerCallsites": [
@@ -16366,13 +16366,13 @@
           "method": "POST",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 157
+          "line": 160
         },
         {
           "method": "POST",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 239
+          "line": 271
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -16587,13 +16587,13 @@
           "method": "DELETE",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 162
+          "line": 165
         },
         {
           "method": "DELETE",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 210
+          "line": 238
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -16634,19 +16634,19 @@
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 161
+          "line": 164
         },
         {
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 200
+          "line": 228
         },
         {
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 201
+          "line": 229
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -17824,6 +17824,18 @@
     }
   ],
   "unmatchedBackendTestCalls": [
+    {
+      "method": "POST",
+      "path": "/api/:kinds/:id/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 188
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/:kinds/:id/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 194
+    },
     {
       "method": "POST",
       "path": "/api/protected-write",

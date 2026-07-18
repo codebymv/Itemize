@@ -68,10 +68,22 @@ const enableSharing = async (pool, table, id, userId) => {
 const disableSharing = (pool, table, id, userId) => withDbClient(
     pool,
     async (client) => client.query(
-        `UPDATE ${table}
-         SET is_public = FALSE, share_token = NULL, shared_at = NULL
-         WHERE id = $1 AND user_id = $2
-         RETURNING id`,
+        `WITH target AS (
+             SELECT id, share_token
+             FROM ${table}
+             WHERE id = $1 AND user_id = $2
+             FOR UPDATE
+         ),
+         updated AS (
+             UPDATE ${table} AS item
+             SET is_public = FALSE, share_token = NULL, shared_at = NULL
+             FROM target
+             WHERE item.id = target.id
+             RETURNING item.id
+         )
+         SELECT updated.id, target.share_token
+         FROM updated
+         JOIN target ON target.id = updated.id`,
         [id, userId]
     )
 );
@@ -81,8 +93,9 @@ const disableSharing = (pool, table, id, userId) => withDbClient(
  * @param {Object} pool - Database connection pool
  * @param {Function} authenticateJWT - JWT authentication middleware
  * @param {Function} publicRateLimit - Rate limiting middleware for public endpoints
+ * @param {Object} broadcast - Realtime broadcast and revocation functions
  */
-module.exports = (pool, authenticateJWT, publicRateLimit) => {
+module.exports = (pool, authenticateJWT, publicRateLimit, broadcast = {}) => {
 
     // --- Share/Unshare Operations (Authenticated) ---
 
@@ -119,6 +132,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(404).json({ error: 'List not found or access denied' });
             }
 
+            if (result.rows[0].share_token && broadcast.revokeShared) {
+                await broadcast.revokeShared('list', result.rows[0].share_token);
+            }
             res.json({ message: 'List sharing revoked successfully' });
         } catch (error) {
             console.error('Error unsharing list:', error);
@@ -159,6 +175,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(404).json({ error: 'Note not found or access denied' });
             }
 
+            if (result.rows[0].share_token && broadcast.revokeShared) {
+                await broadcast.revokeShared('note', result.rows[0].share_token);
+            }
             res.json({ message: 'Note sharing revoked successfully' });
         } catch (error) {
             console.error('Error unsharing note:', error);
@@ -199,6 +218,9 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(404).json({ error: 'Whiteboard not found or access denied' });
             }
 
+            if (result.rows[0].share_token && broadcast.revokeShared) {
+                await broadcast.revokeShared('whiteboard', result.rows[0].share_token);
+            }
             res.json({ message: 'Whiteboard sharing revoked successfully' });
         } catch (error) {
             console.error('Error unsharing whiteboard:', error);

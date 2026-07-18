@@ -1,7 +1,7 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Phase 0 characterized and legacy boundary hardened
-**Evidence date:** 2026-07-15
+**Status:** Phase 0 characterized; legacy authorization and public-content revocation hardened
+**Evidence date:** 2026-07-17
 
 ## Transport decision
 
@@ -34,6 +34,8 @@ The generated REST ledger intentionally does not inventory Socket.IO events. Thi
 
 Public-content rooms emit `viewerCount` and one content event (`listUpdated`, `noteUpdated`, `whiteboardUpdated`, or `wireframeUpdated`). Content payloads retain the legacy envelope `{ type, data, timestamp }`. User canvas emits `userListUpdated`, `userListDeleted`, and `userWireframeUpdated` with the same envelope. Event-specific `type` values currently come from the owning mutation route and include full-update, field-change, position-change, item-change, and deletion variants.
 
+Successful list, note, whiteboard, and wireframe unshare operations emit `sharedContentRevoked { kind, reason, timestamp }` to the old room without exposing the capability, then remove every socket returned by the Socket.IO adapter from that room. The three reachable public viewers immediately discard their local projection, disconnect, and render the unavailable state. Database revocation completes before eviction begins; an outsider or missing-object response never publishes an eviction.
+
 Chat emits `newChatSession`, `newChatMessage`, `chatSessionEnded`, `agentTyping`, and `visitorTyping`. Social emits `social_message`. Chat and social have distinct organization rooms; the legacy `org-{id}`/`org_{id}` mismatch is removed.
 
 `agentTyping { sessionToken, isTyping }` requires cookie authentication plus current membership in the active session's organization. `visitorTyping { sessionToken, isTyping }` is accepted only after the same socket has joined that active session capability. `isTyping` is a strict boolean. Typing output uses camelCase and never includes the raw session capability.
@@ -49,7 +51,7 @@ Events are currently best-effort, in-process notifications emitted after legacy 
 The following block multi-instance realtime cutover, but not a single-instance GraphQL request/response migration:
 
 1. Room fan-out and viewer maps are process-local. Before running multiple API instances, add a supported Socket.IO adapter (normally Redis) and replace local viewer counting with adapter-aware or separately stored presence.
-2. Revocation prevents new joins and future route broadcasts to the old public room, but already-connected sockets are not immediately evicted. Share and chat-session revocation must publish an adapter-wide eviction/re-authorization event.
+2. Public-content revocation now uses adapter-wide `fetchSockets`, room emit, and leave operations, and live tests prove immediate eviction on the current in-memory adapter. Multi-instance proof still requires the selected shared adapter. Chat-session termination/revocation does not yet publish the equivalent eviction/re-authorization event.
 3. Route commits and realtime emits have no transactional outbox, delivery ID, replay cursor, or ordering contract.
 4. No active frontend source consumer was found for organization chat or social events. Those protocols must not be declared production-required until a reachable consumer or external client is identified.
 5. Shared pages receive viewer counts but do not render them. Browser coverage must decide whether presence is a supported feature or removable telemetry.
@@ -72,4 +74,4 @@ NestJS should expose a dedicated `RealtimeModule` that consumes authenticated co
 - two API instances provide correct fan-out, presence counts, and revocation through the selected adapter;
 - browser tests prove static fallback, reconnect/refetch, deletion, and capability rotation behavior.
 
-The current executable baseline includes 13 boundary unit cases and 5 live Socket.IO/PostgreSQL scenarios. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).
+The current executable baseline includes 15 boundary unit cases, 6 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, and a frontend revocation-handler case. The fresh run proves two connected public viewers receive the token-free event and leave the room. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).

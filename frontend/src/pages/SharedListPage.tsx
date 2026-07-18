@@ -7,6 +7,7 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
+import { registerSharedContentRevocation } from '../lib/sharedRealtime';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -42,6 +43,8 @@ const SharedListPage: React.FC = () => {
   const [originalTitle] = useState(document.title);
 
   useEffect(() => {
+    let unregisterRevocation = () => {};
+
     const fetchSharedList = async () => {
       if (!token) {
         setError('Invalid share link');
@@ -132,6 +135,15 @@ const SharedListPage: React.FC = () => {
         socket.on('realtimeError', (error) => {
           console.error('WebSocket error:', error);
         });
+        unregisterRevocation = registerSharedContentRevocation(
+          socket,
+          'list',
+          () => {
+            setIsLive(false);
+            setError('This shared list is no longer available.');
+            setListData(null);
+          },
+        );
 
       } catch (err) {
         console.error('Error fetching shared list:', err);
@@ -154,6 +166,7 @@ const SharedListPage: React.FC = () => {
 
     // Cleanup WebSocket connection on unmount
     return () => {
+      unregisterRevocation();
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;

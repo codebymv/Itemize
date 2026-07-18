@@ -19,6 +19,7 @@ function createApp(pool) {
         whiteboardUpdate: jest.fn(), wireframeUpdate: jest.fn(),
         userListUpdate: jest.fn(), userWireframeUpdate: jest.fn(),
         userListDeleted: jest.fn(),
+        revokeShared: jest.fn().mockResolvedValue(true),
     };
 
     registerApiRoutes({
@@ -30,7 +31,7 @@ function createApp(pool) {
         logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
     });
 
-    return app;
+    return { app, broadcast };
 }
 
 const auth = (user) => [`itemize_auth=${user.token}`];
@@ -38,6 +39,7 @@ const auth = (user) => [`itemize_auth=${user.token}`];
 describe('Public sharing PostgreSQL capability contract', () => {
     let dbHelper;
     let app;
+    let broadcast;
     let owner;
     let outsider;
     let listId;
@@ -49,7 +51,7 @@ describe('Public sharing PostgreSQL capability contract', () => {
     beforeAll(async () => {
         dbHelper = new TestDbHelper();
         await dbHelper.setup();
-        app = createApp(dbHelper.pool);
+        ({ app, broadcast } = createApp(dbHelper.pool));
         [owner, outsider] = await Promise.all([
             dbHelper.seedUser(`sharing-owner-${Date.now()}@test.itemize`, 'Sharing Owner'),
             dbHelper.seedUser(`sharing-outsider-${Date.now()}@test.itemize`, 'Sharing Outsider'),
@@ -127,6 +129,7 @@ describe('Public sharing PostgreSQL capability contract', () => {
             .delete(`/api/lists/${listId}/share`)
             .set('Cookie', auth(owner));
         expect(revoked.status).toBe(200);
+        expect(broadcast.revokeShared).toHaveBeenCalledWith('list', oldToken);
 
         const stored = await dbHelper.pool.query(
             'SELECT share_token, is_public, shared_at FROM lists WHERE id = $1',
@@ -166,8 +169,33 @@ describe('Public sharing PostgreSQL capability contract', () => {
             request(app).delete(`/api/vaults/${vaultId}/share`).set('Cookie', auth(outsider)),
         ]],
     ])('does not let another user alter %s sharing', async (_type, buildRequests) => {
+        broadcast.revokeShared.mockClear();
         const responses = await Promise.all(buildRequests());
         expect(responses.map(response => response.status)).toEqual([404, 404]);
+        expect(broadcast.revokeShared).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['note', () => noteId, response => response.body.shareToken],
+        ['whiteboard', () => whiteboardId, response => response.body.shareToken],
+    ])('evicts active %s viewers only after owner revocation succeeds', async (
+        kind,
+        getId,
+        getToken
+    ) => {
+        const id = getId();
+        const shared = await request(app)
+            .post(`/api/${kind}s/${id}/share`)
+            .set('Cookie', auth(owner));
+        const shareToken = getToken(shared);
+        broadcast.revokeShared.mockClear();
+
+        const revoked = await request(app)
+            .delete(`/api/${kind}s/${id}/share`)
+            .set('Cookie', auth(owner));
+
+        expect(revoked.status).toBe(200);
+        expect(broadcast.revokeShared).toHaveBeenCalledWith(kind, shareToken);
     });
 
     it('serializes vault sharing, unwraps the frontend contract, and rotates revoked links', async () => {
@@ -209,6 +237,10 @@ describe('Public sharing PostgreSQL capability contract', () => {
         expect((await request(app)
             .delete(`/api/wireframes/${wireframeId}/share`)
             .set('Cookie', auth(owner))).status).toBe(200);
+        expect(broadcast.revokeShared).toHaveBeenCalledWith(
+            'wireframe',
+            first.body.data.shareToken
+        );
         const stored = await dbHelper.pool.query(
             'SELECT share_token, is_public, shared_at FROM wireframes WHERE id = $1',
             [wireframeId]

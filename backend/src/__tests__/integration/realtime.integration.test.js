@@ -24,6 +24,7 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
     let outsider;
     let server;
     let io;
+    let realtime;
     let url;
     const clients = new Set();
 
@@ -64,7 +65,7 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
 
         server = createServer();
         io = new Server(server, { cors: { origin: true, credentials: true } });
-        initializeWebSocket(io, dbHelper.pool);
+        realtime = initializeWebSocket(io, dbHelper.pool);
         await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
         url = `http://127.0.0.1:${server.address().port}`;
     }, 30000);
@@ -140,5 +141,30 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
         const visitorTyping = once(agent, 'visitorTyping');
         visitor.emit('visitorTyping', { sessionToken: CHAT_TOKEN, isTyping: false });
         await expect(visitorTyping).resolves.toMatchObject({ isTyping: false });
+    });
+
+    it('evicts active public viewers immediately when a capability is revoked', async () => {
+        const first = await connect();
+        const second = await connect();
+        const firstJoined = once(first, 'joinedSharedNote');
+        const secondJoined = once(second, 'joinedSharedNote');
+        first.emit('joinSharedNote', SHARE_TOKEN);
+        second.emit('joinSharedNote', SHARE_TOKEN);
+        await Promise.all([firstJoined, secondJoined]);
+
+        const firstRevoked = once(first, 'sharedContentRevoked');
+        const secondRevoked = once(second, 'sharedContentRevoked');
+        await realtime.broadcast.revokeShared('note', SHARE_TOKEN);
+
+        await expect(firstRevoked).resolves.toMatchObject({
+            kind: 'note',
+            reason: 'sharing_revoked',
+        });
+        await expect(secondRevoked).resolves.toMatchObject({
+            kind: 'note',
+            reason: 'sharing_revoked',
+        });
+        const remaining = await io.in(`shared-note-${SHARE_TOKEN}`).fetchSockets();
+        expect(remaining).toHaveLength(0);
     });
 });
