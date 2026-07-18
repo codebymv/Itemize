@@ -4,15 +4,14 @@
 
 Personal lists and notes belong to the authenticated user and are independent
 of the selected organization. `WorkspaceContentModule` owns their private
-reads and eventual mutations. Public capability reads and share
+reads and note mutations. Public capability reads and share
 enable/disable operations remain owned by `PublicSharingModule` and
 `WorkspaceSharingModule`.
 
-This checkpoint moves reads only. List and note writes currently publish
-Socket.IO events to the owner's canvas and to active public-share viewers from
-the legacy process. The transactional cross-service outbox is now implemented
-and tested, but every mutation remains on REST until its repository writes the
-domain change and all required audience rows atomically.
+This checkpoint adds note create/update/delete while list writes remain on
+REST. Shared-note updates and deletes write the domain change and the required
+Socket.IO projection to the transactional cross-service outbox atomically.
+The legacy socket host delivers those rows after commit.
 
 | Legacy read | GraphQL query |
 | --- | --- |
@@ -20,14 +19,23 @@ domain change and all required audience rows atomically.
 | `GET /api/canvas/lists` | repeated bounded `workspaceLists` pages |
 | `GET /api/notes` | `workspaceNotes(filter, page)` |
 
+| Legacy note write | GraphQL mutation |
+| --- | --- |
+| `POST /api/notes` | `createWorkspaceNote(input)` |
+| `PUT /api/notes/:noteId` and the content/title/category variants | `updateWorkspaceNote(id, input)` |
+| `DELETE /api/notes/:noteId` | `deleteWorkspaceNote(id, mutationId)` |
+
 ## Authentication and transport
 
 - Both queries require the verified `itemize_auth` cookie.
 - Resolvers derive `userId` only from verified request context.
 - The active organization never changes the result.
+- All note mutations require the verified cookie and CSRF header/token pair.
 - `VITE_WORKSPACE_LIST_READS_GRAPHQL` controls both list surfaces.
 - `VITE_WORKSPACE_NOTE_READS_GRAPHQL` independently controls note reads.
-- Both flags default to false. Selected GraphQL requests never retry through
+- `VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` independently controls all six
+  existing note-write service methods.
+- All three flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
 The standalone list page now uses the shared service adapter. The legacy page
@@ -61,10 +69,10 @@ Legacy list/note rows store both a category name and an incompletely populated
 a category owned by the same user. They do not trust a foreign or stale stored
 ID and return null when the name has no canonical category.
 
-Mutation cutover must replace this compatibility read with a write invariant:
-create/update/category mutations accept a category ID, lock or verify the
-user-owned category, and write the ID and name projection together. Legacy
-rollback writes must remain compatible with rows created through GraphQL.
+Note create/update/category mutations now accept the existing category-name
+contract, resolve it case-insensitively to a category owned by the same user,
+and write the canonical ID and name projection together. Legacy rollback reads
+remain compatible with rows created through GraphQL.
 
 ## Typed list items
 
@@ -73,32 +81,42 @@ JSON entries are omitted rather than exposed as an invalid GraphQL value.
 Mutation design must add bounded item count/text limits and concurrency
 semantics before replacing whole-array REST writes.
 
-## Mutation blocker
+## Mutation status
 
-The following target mutations are characterized but blocked:
+Note create/update/delete and the existing content/title/category variants are
+implemented through the three GraphQL mutations above. Updates lock the note
+row, so concurrent disjoint partial updates compose instead of overwriting one
+another. Update/delete clients supply a UUID mutation ID that becomes part of
+the stable outbox event key.
 
-- list create/update/delete, position/title changes, and item add/remove/toggle;
-- note create/update/delete and content/title/category changes.
+The following target mutations remain characterized but blocked:
 
-Before enabling any write flag:
+- list create/update/delete, position/title changes, and item add/remove/toggle.
 
-1. mutations must enqueue owner and public-share Socket.IO projections through
-   `RealtimeOutboxService` in the domain transaction;
-2. realtime publication must occur only after a successful database commit;
-3. event keys, at-least-once duplicate delivery, dead letters, and
+Before enabling the note write flag in a deployed environment:
+
+1. the legacy realtime outbox worker must be enabled and its backlog/failed
+   rows monitored;
+2. event keys, at-least-once duplicate delivery, dead letters, and
    reconnect/refetch behavior must follow the realtime contract;
-4. category ID/name writes must be atomic and user-scoped;
-5. list-item concurrent edits must not silently overwrite one another;
-6. GraphQL and REST rollback paths must read each other's writes without
-   repair.
+3. GraphQL and REST rollback paths must read each other's writes without
+   repair;
+4. a staging browser rehearsal must pass with the write flag enabled and then
+   disabled.
+
+List mutations additionally require atomic outbox adoption and explicit
+list-item concurrent-edit semantics.
 
 ## Required cutover evidence
 
 - Service tests for strict pagination/filter validation, mapping, malformed
   item handling, and safe dependency errors.
 - Fresh PostgreSQL tests for user isolation, deterministic paging, category
-  identity repair, title/content search, and all three REST rollback reads.
+  identity repair, title/content search, all three REST rollback reads, note
+  create/update/delete, CSRF, concurrent partial updates, and outbox delivery.
 - Frontend tests for independent default-off flags, casing/envelope mapping,
-  canvas multi-page reads, and REST-default selection.
+  canvas multi-page reads, note mutation mapping, granular-update reuse, and
+  REST-default selection.
 - A staging browser rehearsal for the standalone list page and canvas with
-  each read flag independently enabled and disabled.
+  each read flag independently enabled and disabled, plus note writes with
+  their mutation flag enabled and rolled back.

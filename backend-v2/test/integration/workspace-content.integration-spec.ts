@@ -18,6 +18,8 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let memberToken: string;
   let outsiderToken: string;
   let workCategoryId: number;
+  let mutationNoteId: number;
+  const sharedNoteToken = '87a47b12-f802-4e70-97af-8cf98bff3d4d';
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -114,6 +116,20 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
 
   afterAll(async () => {
     if (pool && (memberId || outsiderId)) {
+      await pool.query(
+        `DELETE FROM realtime_event_outbox
+         WHERE aggregate_type = 'note'
+           AND (
+             aggregate_id = $2
+             OR aggregate_id IN (
+               SELECT id FROM notes WHERE user_id = ANY($1::int[])
+             )
+           )`,
+        [
+          [memberId, outsiderId].filter(Boolean),
+          mutationNoteId || 0,
+        ],
+      );
       await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
         [memberId, outsiderId].filter(Boolean),
       ]);
@@ -130,6 +146,25 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .post('/graphql')
       .set('Cookie', `itemize_auth=${token}`)
       .send({ query: document, variables });
+
+  const mutation = (
+    token: string,
+    document: string,
+    variables: Record<string, unknown> = {},
+    includeCsrf = true,
+  ) => {
+    const csrf = 'workspace-note-csrf';
+    const pending = request(app.getHttpServer())
+      .post('/graphql')
+      .set(
+        'Cookie',
+        includeCsrf
+          ? `itemize_auth=${token}; csrf-token=${csrf}`
+          : `itemize_auth=${token}`,
+      );
+    if (includeCsrf) pending.set('x-csrf-token', csrf);
+    return pending.send({ query: document, variables });
+  };
 
   const listFields = `
     id userId title category categoryId
@@ -203,6 +238,232 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       category: 'Work',
       categoryId: workCategoryId,
     });
+  });
+
+  it('creates a canonical note that remains readable through REST', async () => {
+    const result = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceNoteInput!) {
+        createWorkspaceNote(input: $input) { ${noteFields} }
+      }`,
+      {
+        input: {
+          title: ' GraphQL note ',
+          content: 'Created through Nest',
+          category: 'work',
+          colorValue: '#abcdef',
+          positionX: 90,
+          positionY: 100,
+          width: 570,
+          height: 350,
+        },
+      },
+    ).expect(200);
+
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.createWorkspaceNote).toMatchObject({
+      userId: memberId,
+      title: 'GraphQL note',
+      content: 'Created through Nest',
+      category: 'Work',
+      categoryId: workCategoryId,
+      colorValue: '#ABCDEF',
+      positionX: 90,
+      positionY: 100,
+    });
+    mutationNoteId = result.body.data.createWorkspaceNote.id;
+
+    const rest = await request(legacyApp)
+      .get('/api/notes')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .expect(200);
+    expect(rest.body.notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: mutationNoteId,
+          category: 'Work',
+        }),
+      ]),
+    );
+
+    const storedCategory = await pool.query<{
+      category: string;
+      category_id: number;
+    }>(
+      'SELECT category, category_id FROM notes WHERE id = $1',
+      [mutationNoteId],
+    );
+    expect(storedCategory.rows[0]).toEqual({
+      category: 'Work',
+      category_id: workCategoryId,
+    });
+  });
+
+  it('commits a shared update with its outbox projection and legacy delivery', async () => {
+    await pool.query(
+      `UPDATE notes
+       SET is_public = TRUE, share_token = $1, shared_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3`,
+      [sharedNoteToken, mutationNoteId, memberId],
+    );
+    const mutationId = 'd85e82f1-7745-43ec-b831-a34ebf0fe846';
+    const result = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceNoteInput!) {
+        updateWorkspaceNote(id: $id, input: $input) { ${noteFields} }
+      }`,
+      {
+        id: mutationNoteId,
+        input: { mutationId, content: 'Committed shared content' },
+      },
+    ).expect(200);
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.updateWorkspaceNote.content).toBe(
+      'Committed shared content',
+    );
+
+    const outbox = await pool.query<{
+      id: string;
+      event_type: string;
+      payload: Record<string, unknown>;
+      status: string;
+    }>(
+      `SELECT id, event_type, payload, status
+       FROM realtime_event_outbox
+       WHERE event_key = $1`,
+      [`note:${mutationNoteId}:update:${mutationId}:shared`],
+    );
+    expect(outbox.rows[0]).toMatchObject({
+      event_type: 'CONTENT_CHANGED',
+      status: 'queued',
+      payload: {
+        id: mutationNoteId,
+        content: 'Committed shared content',
+      },
+    });
+
+    const noteUpdate = jest.fn();
+    const { runRealtimeOutboxJobs } = require(
+      '../../../backend/src/jobs/realtime-outbox-jobs',
+    );
+    const delivered = await runRealtimeOutboxJobs(
+      pool,
+      { noteUpdate },
+      {
+        batchSize: 1,
+        outboxId: outbox.rows[0].id,
+        workerId: 'nestjs-note-integration',
+      },
+    );
+    expect(delivered).toMatchObject({ claimed: 1, sent: 1 });
+    expect(noteUpdate).toHaveBeenCalledWith(
+      sharedNoteToken,
+      'CONTENT_CHANGED',
+      expect.objectContaining({
+        id: mutationNoteId,
+        content: 'Committed shared content',
+      }),
+      expect.any(String),
+    );
+  });
+
+  it('serializes disjoint updates and conceals the note from another user', async () => {
+    const updateDocument = `mutation Update(
+      $id: Int!, $input: UpdateWorkspaceNoteInput!
+    ) {
+      updateWorkspaceNote(id: $id, input: $input) { id title content }
+    }`;
+    const [titleUpdate, contentUpdate] = await Promise.all([
+      mutation(memberToken, updateDocument, {
+        id: mutationNoteId,
+        input: {
+          mutationId: '30d3c419-d8ca-48ef-ac4c-6e516fd6fb46',
+          title: 'Concurrent title',
+        },
+      }),
+      mutation(memberToken, updateDocument, {
+        id: mutationNoteId,
+        input: {
+          mutationId: 'd5b54c5c-0fd2-4504-99db-c57ffc81292c',
+          content: 'Concurrent content',
+        },
+      }),
+    ]);
+    expect(titleUpdate.body.errors).toBeUndefined();
+    expect(contentUpdate.body.errors).toBeUndefined();
+
+    const stored = await pool.query<{ title: string; content: string }>(
+      'SELECT title, content FROM notes WHERE id = $1',
+      [mutationNoteId],
+    );
+    expect(stored.rows[0]).toEqual({
+      title: 'Concurrent title',
+      content: 'Concurrent content',
+    });
+
+    const outsider = await mutation(outsiderToken, updateDocument, {
+      id: mutationNoteId,
+      input: {
+        mutationId: '4d95084c-3b8c-4224-a449-59a98e56008f',
+        title: 'Hijacked',
+      },
+    }).expect(200);
+    expect(outsider.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('deletes atomically with a shared projection and enforces CSRF', async () => {
+    const noCsrf = await mutation(
+      memberToken,
+      `mutation {
+        updateWorkspaceNote(
+          id: ${mutationNoteId},
+          input: {
+            mutationId: "3f18cd51-0513-4432-9c65-f9ddf46258a9",
+            title: "Rejected"
+          }
+        ) { id }
+      }`,
+      {},
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const mutationId = '7f26e1b4-af45-46ad-9f08-20b8ce6c7c89';
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $mutationId: String!) {
+        deleteWorkspaceNote(id: $id, mutationId: $mutationId) { deletedId }
+      }`,
+      { id: mutationNoteId, mutationId },
+    ).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteWorkspaceNote.deletedId).toBe(
+      mutationNoteId,
+    );
+
+    const persisted = await pool.query<{
+      event_type: string;
+      payload: Record<string, unknown>;
+    }>(
+      `SELECT event_type, payload
+       FROM realtime_event_outbox
+       WHERE event_key = $1`,
+      [`note:${mutationNoteId}:delete:${mutationId}:shared`],
+    );
+    expect(persisted.rows[0]).toMatchObject({
+      event_type: 'noteDeleted',
+      payload: {
+        id: mutationNoteId,
+        message: 'This note has been deleted by the owner',
+      },
+    });
+
+    const rest = await request(legacyApp)
+      .put(`/api/notes/${mutationNoteId}/content`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .send({ content: 'Gone' })
+      .expect(404);
+    expect(rest.body.error).toBe('Note not found');
   });
 
   it('keeps all three characterized REST read paths available for rollback', async () => {

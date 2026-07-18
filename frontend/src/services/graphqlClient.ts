@@ -84,6 +84,9 @@ export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
 export const isWorkspaceNoteGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_NOTE_READS_GRAPHQL === 'true';
 
+export const isWorkspaceNoteGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

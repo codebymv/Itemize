@@ -233,15 +233,15 @@
 | POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/marketing-chat/token` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/note-suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/notes` | 1 | 8 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
+| GET | `/api/notes` | 1 | 9 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
 | POST | `/api/notes` | 1 | 6 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceNote |
 | DELETE | `/api/notes/:noteId` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceNote |
 | PUT | `/api/notes/:noteId` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
-| PUT | `/api/notes/:noteId/category` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / categorizeWorkspaceNote |
-| PUT | `/api/notes/:noteId/content` | 1 | 3 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNoteContent |
+| PUT | `/api/notes/:noteId/category` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
+| PUT | `/api/notes/:noteId/content` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | DELETE | `/api/notes/:noteId/share` | 2 | 1 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableNoteSharing |
 | POST | `/api/notes/:noteId/share` | 2 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableNoteSharing |
-| PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceNote |
+| PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | POST | `/api/onboarding/complete-step` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / completeOnboardingStep |
 | POST | `/api/onboarding/dismiss` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / dismissOnboarding |
 | POST | `/api/onboarding/mark-seen` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / markOnboardingSeen |

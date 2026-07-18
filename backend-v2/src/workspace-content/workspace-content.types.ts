@@ -144,3 +144,9 @@ export class WorkspaceNotePage {
   @Field(() => PageInfo)
   pageInfo: PageInfo;
 }
+
+@ObjectType()
+export class DeleteWorkspaceNoteResult {
+  @Field(() => Int)
+  deletedId: number;
+}

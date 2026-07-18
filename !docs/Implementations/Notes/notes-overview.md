@@ -112,7 +112,7 @@ Notes support rich text editing capabilities, allowing users to format their con
 - **Markdown Support**: Allow notes to be written in Markdown format.
 - **Note Sharing**: Enable sharing of notes with other users.
 
-## GraphQL read checkpoint
+## GraphQL cutover checkpoint
 
 Private note reads are available through the user-scoped
 `workspaceNotes(filter, page)` query in `WorkspaceContentModule`. The frontend
@@ -120,5 +120,14 @@ adapter is default-off and preserves the existing `{ notes, pagination }`
 shape. See
 [Workspace lists and notes GraphQL cutover contract](../../API/contracts/workspace-content-graphql-cutover.md).
 
-Note mutations remain on REST until each Nest repository writes its
-shared-viewer outbox event in the same transaction as the note change.
+`createWorkspaceNote`, `updateWorkspaceNote`, and `deleteWorkspaceNote` now
+cover the existing create, full update, granular content/title/category update,
+and delete service methods. The default-off
+`VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` flag selects the transport without
+changing the consumer response shapes.
+
+Updates lock the user-owned note and preserve omitted fields. Category names
+are resolved to the authenticated user's canonical category and its name/ID
+projection is written together. Shared-note updates and deletes enqueue the
+legacy Socket.IO projection through `RealtimeOutboxService` in the same
+transaction; the existing socket host publishes it only after commit.

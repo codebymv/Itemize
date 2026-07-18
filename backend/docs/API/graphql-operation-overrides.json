@@ -1613,28 +1613,28 @@
       "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering."
     },
     "POST /api/notes": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked until category ID/name dual-write and cross-service realtime semantics are available."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped create validates bounded fields, resolves a canonical category, and writes its ID/name projection atomically."
     },
     "PUT /api/notes/:noteId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on post-commit shared-note realtime parity."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Row-locked user-scoped update preserves omitted fields and atomically enqueues shared-viewer realtime projection."
     },
     "DELETE /api/notes/:noteId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceNote", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked until active shared viewers receive durable post-commit deletion events."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped delete atomically enqueues the shared-viewer deletion event with a stable mutation key."
     },
     "PUT /api/notes/:noteId/category": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "categorizeWorkspaceNote", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on atomic user-owned category ID/name writes and shared-viewer realtime parity."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "The shared partial-update mutation verifies the user-owned category and atomically writes ID/name plus realtime projection."
     },
     "PUT /api/notes/:noteId/content": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNoteContent", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on bounded content validation, edit concurrency, and shared-viewer realtime parity."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "The shared row-locked partial-update mutation validates bounded content and preserves granular realtime event semantics."
     },
     "PUT /api/notes/:noteId/title": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "renameWorkspaceNote", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on post-commit shared-note realtime parity."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "The shared row-locked partial-update mutation validates title and preserves granular realtime event semantics."
     },
     "POST /api/notes/:noteId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableNoteSharing", "parityStatus": "characterized", "risk": "high",

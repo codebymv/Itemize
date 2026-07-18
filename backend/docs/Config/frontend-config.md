@@ -227,11 +227,12 @@ VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 VITE_CATEGORY_READS_GRAPHQL=false
 VITE_CATEGORY_MUTATIONS_GRAPHQL=false
 
-# Personal list reads (standalone and canvas) and note reads have independent
-# rollback boundaries. Writes remain REST until their repositories atomically
-# enqueue the now-available realtime outbox projections.
+# Personal list reads (standalone and canvas), note reads, and note mutations
+# have independent rollback boundaries. Keep the note mutation flag disabled
+# until the realtime outbox worker and staging browser gate are enabled.
 VITE_WORKSPACE_LIST_READS_GRAPHQL=false
 VITE_WORKSPACE_NOTE_READS_GRAPHQL=false
+VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL=false
 
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false

@@ -12,6 +12,7 @@ import {
   isCategoryGraphqlMutationsEnabled,
   isCategoryGraphqlReadsEnabled,
   isWorkspaceListGraphqlReadsEnabled,
+  isWorkspaceNoteGraphqlMutationsEnabled,
   isWorkspaceNoteGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
@@ -19,6 +20,11 @@ import {
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
 } from './workspaceContentGraphql';
+import {
+  createWorkspaceNoteViaGraphql,
+  deleteWorkspaceNoteViaGraphql,
+  updateWorkspaceNoteViaGraphql,
+} from './workspaceNoteMutationsGraphql';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -297,6 +303,9 @@ export const getNotes = async (token?: string) => {
 };
 
 export const createNote = async (noteData: CreateNotePayload, token?: string) => {
+  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
+    return createWorkspaceNoteViaGraphql(noteData);
+  }
   const response = await api.post('/api/notes', noteData, {
     headers: getAuthHeaders(token)
   });
@@ -304,6 +313,9 @@ export const createNote = async (noteData: CreateNotePayload, token?: string) =>
 };
 
 export const updateNote = async (noteId: number, noteData: NotePayload, token?: string) => {
+  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
+    return updateWorkspaceNoteViaGraphql(noteId, noteData);
+  }
   const response = await api.put(`/api/notes/${noteId}`, noteData, {
     headers: getAuthHeaders(token)
   });
@@ -312,6 +324,9 @@ export const updateNote = async (noteId: number, noteData: NotePayload, token?: 
 
 // Granular note update functions for real-time updates
 export const updateNoteContent = async (noteId: number, content: string, token?: string) => {
+  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
+    return updateWorkspaceNoteViaGraphql(noteId, { content });
+  }
   const response = await api.put(`/api/notes/${noteId}/content`, { content }, {
     headers: getAuthHeaders(token)
   });
@@ -319,6 +334,9 @@ export const updateNoteContent = async (noteId: number, content: string, token?:
 };
 
 export const updateNoteTitle = async (noteId: number, title: string, token?: string) => {
+  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
+    return updateWorkspaceNoteViaGraphql(noteId, { title });
+  }
   const response = await api.put(`/api/notes/${noteId}/title`, { title }, {
     headers: getAuthHeaders(token)
   });
@@ -326,6 +344,9 @@ export const updateNoteTitle = async (noteId: number, title: string, token?: str
 };
 
 export const updateNoteCategory = async (noteId: number, category: string, token?: string) => {
+  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
+    return updateWorkspaceNoteViaGraphql(noteId, { category });
+  }
   const response = await api.put(`/api/notes/${noteId}/category`, { category }, {
     headers: getAuthHeaders(token)
   });
@@ -333,6 +354,9 @@ export const updateNoteCategory = async (noteId: number, category: string, token
 };
 
 export const deleteNote = async (noteId: number, token?: string) => {
+  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
+    return deleteWorkspaceNoteViaGraphql(noteId);
+  }
   logger.log(`🌐 API: Making DELETE request to /api/notes/${noteId}`);
   logger.log(`🔑 API: Auth headers:`, getAuthHeaders(token));
 

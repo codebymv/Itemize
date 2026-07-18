@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
 
 export type WorkspaceListItemRow = {
   id: string;
@@ -62,9 +63,62 @@ type QueryParts = {
   parameters: unknown[];
 };
 
+export type CreateWorkspaceNoteValues = {
+  title: string;
+  content: string;
+  category: string;
+  colorValue: string;
+  positionX: number;
+  positionY: number;
+  width: number | null;
+  height: number | null;
+  zIndex: number;
+};
+
+export type UpdateWorkspaceNoteValues = Partial<CreateWorkspaceNoteValues> & {
+  mutationId: string;
+  eventType: string;
+};
+
+export type WorkspaceNoteMutationOutcome =
+  | { kind: 'completed'; row: WorkspaceNoteRow }
+  | { kind: 'not_found' }
+  | { kind: 'category_not_found' };
+
+export type DeleteWorkspaceNoteOutcome =
+  | { kind: 'deleted'; deletedId: number }
+  | { kind: 'not_found' };
+
+type CategoryIdentity = {
+  id: number;
+  name: string;
+};
+
+const noteMutationSelection = `
+  id,
+  user_id,
+  title,
+  content,
+  category,
+  category_id,
+  color_value,
+  position_x,
+  position_y,
+  width,
+  height,
+  z_index,
+  share_token,
+  is_public,
+  shared_at,
+  created_at,
+  updated_at`;
+
 @Injectable()
 export class WorkspaceContentRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly realtimeOutbox: RealtimeOutboxService,
+  ) {}
 
   async findLists(
     criteria: WorkspaceContentCriteria,
@@ -144,6 +198,153 @@ export class WorkspaceContentRepository {
     return { rows: rows.rows, total: count.rows[0]?.total ?? 0 };
   }
 
+  async createNote(
+    userId: number,
+    values: CreateWorkspaceNoteValues,
+  ): Promise<WorkspaceNoteMutationOutcome> {
+    return this.transaction(async (client) => {
+      const category = await this.category(client, userId, values.category);
+      if (!category) return { kind: 'category_not_found' };
+
+      const result = await client.query<WorkspaceNoteRow>(
+        `INSERT INTO notes (
+           user_id, title, content, category, category_id, color_value,
+           position_x, position_y, width, height, z_index
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING ${noteMutationSelection}`,
+        [
+          userId,
+          values.title,
+          values.content,
+          category.name,
+          category.id,
+          values.colorValue,
+          values.positionX,
+          values.positionY,
+          values.width,
+          values.height,
+          values.zIndex,
+        ],
+      );
+      return { kind: 'completed', row: result.rows[0] };
+    });
+  }
+
+  async updateNote(
+    userId: number,
+    noteId: number,
+    values: UpdateWorkspaceNoteValues,
+  ): Promise<WorkspaceNoteMutationOutcome> {
+    return this.transaction(async (client) => {
+      const currentResult = await client.query<WorkspaceNoteRow>(
+        `SELECT ${noteMutationSelection}
+         FROM notes
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [noteId, userId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) return { kind: 'not_found' };
+
+      const category = await this.category(
+        client,
+        userId,
+        values.category ?? current.category ?? 'General',
+      );
+      if (!category) return { kind: 'category_not_found' };
+
+      const updatedResult = await client.query<WorkspaceNoteRow>(
+        `UPDATE notes SET
+           title = $1,
+           content = $2,
+           category = $3,
+           category_id = $4,
+           color_value = $5,
+           position_x = $6,
+           position_y = $7,
+           width = $8,
+           height = $9,
+           z_index = $10,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $11 AND user_id = $12
+         RETURNING ${noteMutationSelection}`,
+        [
+          values.title ?? current.title,
+          values.content ?? current.content,
+          category.name,
+          category.id,
+          values.colorValue ?? current.color_value,
+          values.positionX ?? current.position_x,
+          values.positionY ?? current.position_y,
+          values.width ?? current.width,
+          values.height ?? current.height,
+          values.zIndex ?? current.z_index,
+          noteId,
+          userId,
+        ],
+      );
+      const updated = updatedResult.rows[0];
+      if (updated.is_public && updated.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey: `note:${noteId}:update:${values.mutationId}:shared`,
+          aggregateType: 'note',
+          aggregateId: noteId,
+          channel: 'shared_note',
+          recipientKey: updated.share_token,
+          eventName: 'noteUpdated',
+          eventType: values.eventType,
+          payload: this.updatePayload(updated, values.eventType),
+          occurredAt: new Date(updated.updated_at),
+        });
+      }
+      return { kind: 'completed', row: updated };
+    });
+  }
+
+  async deleteNote(
+    userId: number,
+    noteId: number,
+    mutationId: string,
+  ): Promise<DeleteWorkspaceNoteOutcome> {
+    return this.transaction(async (client) => {
+      const currentResult = await client.query<
+        WorkspaceNoteRow & { mutation_occurred_at: Date }
+      >(
+        `SELECT ${noteMutationSelection},
+                CURRENT_TIMESTAMP AS mutation_occurred_at
+         FROM notes
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [noteId, userId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) return { kind: 'not_found' };
+
+      await client.query(
+        'DELETE FROM notes WHERE id = $1 AND user_id = $2',
+        [noteId, userId],
+      );
+      if (current.is_public && current.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey: `note:${noteId}:delete:${mutationId}:shared`,
+          aggregateType: 'note',
+          aggregateId: noteId,
+          channel: 'shared_note',
+          recipientKey: current.share_token,
+          eventName: 'noteUpdated',
+          eventType: 'noteDeleted',
+          payload: {
+            id: noteId,
+            message: 'This note has been deleted by the owner',
+          },
+          occurredAt: new Date(current.mutation_occurred_at),
+        });
+      }
+      return { kind: 'deleted', deletedId: noteId };
+    });
+  }
+
   private queryParts(
     table: 'lists' | 'notes',
     criteria: WorkspaceContentCriteria,
@@ -175,5 +376,63 @@ export class WorkspaceContentRepository {
       where: `WHERE ${clauses.join(' AND ')}`,
       parameters,
     };
+  }
+
+  private async category(
+    client: PoolClient,
+    userId: number,
+    name: string,
+  ): Promise<CategoryIdentity | null> {
+    const result = await client.query<CategoryIdentity>(
+      `SELECT id, name
+       FROM categories
+       WHERE user_id = $1 AND lower(name) = lower($2)
+       ORDER BY id
+       LIMIT 1
+       FOR KEY SHARE`,
+      [userId, name],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private updatePayload(
+    note: WorkspaceNoteRow,
+    eventType: string,
+  ): Record<string, unknown> {
+    const updatedAt = new Date(note.updated_at).toISOString();
+    if (eventType === 'CONTENT_CHANGED') {
+      return { id: note.id, content: note.content, updated_at: updatedAt };
+    }
+    if (eventType === 'TITLE_CHANGED') {
+      return { id: note.id, title: note.title, updated_at: updatedAt };
+    }
+    if (eventType === 'CATEGORY_CHANGED') {
+      return { id: note.id, category: note.category, updated_at: updatedAt };
+    }
+    return {
+      id: note.id,
+      title: note.title,
+      content: note.content,
+      category: note.category,
+      color_value: note.color_value,
+      updated_at: updatedAt,
+    };
+  }
+
+  private async transaction<T>(
+    operation: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await operation(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

@@ -11,10 +11,21 @@ import {
   WorkspaceNotePage,
 } from './workspace-content.types';
 import {
+  CreateWorkspaceNoteValues,
   WorkspaceContentRepository,
   WorkspaceListRow,
+  UpdateWorkspaceNoteValues,
   WorkspaceNoteRow,
 } from './workspace-content.repository';
+import {
+  CreateWorkspaceNoteInput,
+  UpdateWorkspaceNoteInput,
+} from './workspace-note.inputs';
+
+const DEFAULT_NOTE_COLOR = '#3B82F6';
+const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+const MUTATION_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class WorkspaceContentService {
@@ -69,6 +80,149 @@ export class WorkspaceContentService {
           result.total,
         ),
       };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async createNote(
+    userId: number,
+    input: CreateWorkspaceNoteInput,
+  ): Promise<WorkspaceNote> {
+    const values: CreateWorkspaceNoteValues = {
+      title: input.title === undefined
+        ? 'Untitled Note'
+        : this.title(input.title),
+      content: input.content === undefined
+        ? ''
+        : this.noteContent(input.content),
+      category: input.category === undefined
+        ? 'General'
+        : this.category(input.category),
+      colorValue: input.colorValue === undefined
+        ? DEFAULT_NOTE_COLOR
+        : this.color(input.colorValue),
+      positionX: input.positionX === undefined
+        ? 2000
+        : this.nonNegativeInteger(input.positionX, 'positionX'),
+      positionY: input.positionY === undefined
+        ? 2000
+        : this.nonNegativeInteger(input.positionY, 'positionY'),
+      width: input.width === undefined
+        ? null
+        : this.positiveInteger(input.width, 'width'),
+      height: input.height === undefined
+        ? null
+        : this.positiveInteger(input.height, 'height'),
+      zIndex: input.zIndex === undefined
+        ? 0
+        : this.integer(input.zIndex, 'zIndex'),
+    };
+    try {
+      const outcome = await this.content.createNote(userId, values);
+      if (outcome.kind === 'category_not_found') {
+        throw this.categoryNotFound();
+      }
+      if (outcome.kind !== 'completed') {
+        throw itemizeGraphqlError(
+          'Workspace note could not be created',
+          'SERVICE_UNAVAILABLE',
+        );
+      }
+      return this.mapNote(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async updateNote(
+    userId: number,
+    noteId: number,
+    input: UpdateWorkspaceNoteInput,
+  ): Promise<WorkspaceNote> {
+    this.id(noteId);
+    const mutationId = this.mutationId(input.mutationId);
+    const values: Partial<CreateWorkspaceNoteValues> = {};
+    if (input.title !== undefined) values.title = this.title(input.title);
+    if (input.content !== undefined) {
+      values.content = this.noteContent(input.content);
+    }
+    if (input.category !== undefined) {
+      values.category = this.category(input.category);
+    }
+    if (input.colorValue !== undefined) {
+      values.colorValue = this.color(input.colorValue);
+    }
+    if (input.positionX !== undefined) {
+      values.positionX = this.nonNegativeInteger(
+        input.positionX,
+        'positionX',
+      );
+    }
+    if (input.positionY !== undefined) {
+      values.positionY = this.nonNegativeInteger(
+        input.positionY,
+        'positionY',
+      );
+    }
+    if (input.width !== undefined) {
+      values.width = this.positiveInteger(input.width, 'width');
+    }
+    if (input.height !== undefined) {
+      values.height = this.positiveInteger(input.height, 'height');
+    }
+    if (input.zIndex !== undefined) {
+      values.zIndex = this.integer(input.zIndex, 'zIndex');
+    }
+    const keys = Object.keys(values);
+    if (keys.length === 0) {
+      throw itemizeGraphqlError(
+        'Workspace note update must include at least one field',
+        'BAD_USER_INPUT',
+        { reason: 'EMPTY_NOTE_UPDATE' },
+      );
+    }
+    const eventType =
+      keys.length === 1 && keys[0] === 'content'
+        ? 'CONTENT_CHANGED'
+        : keys.length === 1 && keys[0] === 'title'
+          ? 'TITLE_CHANGED'
+          : keys.length === 1 && keys[0] === 'category'
+            ? 'CATEGORY_CHANGED'
+            : 'noteUpdated';
+    const update: UpdateWorkspaceNoteValues = {
+      ...values,
+      mutationId,
+      eventType,
+    };
+
+    try {
+      const outcome = await this.content.updateNote(userId, noteId, update);
+      if (outcome.kind === 'not_found') throw this.noteNotFound();
+      if (outcome.kind === 'category_not_found') {
+        throw this.categoryNotFound();
+      }
+      return this.mapNote(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async deleteNote(
+    userId: number,
+    noteId: number,
+    mutationId: string,
+  ): Promise<number> {
+    this.id(noteId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.deleteNote(
+        userId,
+        noteId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.noteNotFound();
+      return outcome.deletedId;
     } catch (error) {
       this.rethrow(error);
     }
@@ -167,6 +321,122 @@ export class WorkspaceContentService {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
+  }
+
+  private id(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw itemizeGraphqlError(
+        'Workspace note ID must be a positive integer',
+        'BAD_USER_INPUT',
+        { field: 'id', reason: 'INVALID_NOTE_ID' },
+      );
+    }
+  }
+
+  private mutationId(value: string): string {
+    const mutationId = value?.trim();
+    if (!MUTATION_ID_PATTERN.test(mutationId)) {
+      throw itemizeGraphqlError(
+        'mutationId must be a UUID',
+        'BAD_USER_INPUT',
+        { field: 'mutationId', reason: 'INVALID_MUTATION_ID' },
+      );
+    }
+    return mutationId.toLowerCase();
+  }
+
+  private title(value: string | null): string {
+    const title = value?.trim();
+    if (!title || title.length > 200) {
+      throw itemizeGraphqlError(
+        'Note title must contain between 1 and 200 characters',
+        'BAD_USER_INPUT',
+        { field: 'title', reason: 'INVALID_NOTE_TITLE' },
+      );
+    }
+    return title;
+  }
+
+  private noteContent(value: string | null): string {
+    if (typeof value !== 'string' || value.length > 50_000) {
+      throw itemizeGraphqlError(
+        'Note content must not exceed 50000 characters',
+        'BAD_USER_INPUT',
+        { field: 'content', reason: 'INVALID_NOTE_CONTENT' },
+      );
+    }
+    return value;
+  }
+
+  private category(value: string | null): string {
+    const category = value?.trim();
+    if (!category || category.length > 50) {
+      throw itemizeGraphqlError(
+        'Note category must contain between 1 and 50 characters',
+        'BAD_USER_INPUT',
+        { field: 'category', reason: 'INVALID_NOTE_CATEGORY' },
+      );
+    }
+    return category;
+  }
+
+  private color(value: string | null): string {
+    const color = value?.trim();
+    if (!color || !COLOR_PATTERN.test(color)) {
+      throw itemizeGraphqlError(
+        'Note color must be a six-digit hex color',
+        'BAD_USER_INPUT',
+        { field: 'colorValue', reason: 'INVALID_NOTE_COLOR' },
+      );
+    }
+    return color.toUpperCase();
+  }
+
+  private nonNegativeInteger(value: number | null, field: string): number {
+    const integer = this.integer(value, field);
+    if (integer < 0) {
+      throw itemizeGraphqlError(
+        `${field} must be at least 0`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_NOTE_GEOMETRY' },
+      );
+    }
+    return integer;
+  }
+
+  private positiveInteger(value: number | null, field: string): number {
+    const integer = this.integer(value, field);
+    if (integer < 1) {
+      throw itemizeGraphqlError(
+        `${field} must be positive`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_NOTE_GEOMETRY' },
+      );
+    }
+    return integer;
+  }
+
+  private integer(value: number | null, field: string): number {
+    if (!Number.isSafeInteger(value)) {
+      throw itemizeGraphqlError(
+        `${field} must be an integer`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_NOTE_GEOMETRY' },
+      );
+    }
+    return value as number;
+  }
+
+  private noteNotFound(): GraphQLError {
+    return itemizeGraphqlError('Workspace note not found', 'NOT_FOUND');
+  }
+
+  private categoryNotFound(): GraphQLError {
+    return itemizeGraphqlError(
+      'Note category was not found',
+      'BAD_USER_INPUT',
+      { field: 'category', reason: 'NOTE_CATEGORY_NOT_FOUND' },
+    );
   }
 
   private mapItems(value: unknown): WorkspaceListItem[] {
