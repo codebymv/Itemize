@@ -1583,7 +1583,7 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 146,
+          "line": 157,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1660,7 +1660,7 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 178,
+          "line": 189,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1755,7 +1755,7 @@
           "path": "/api/bookings/:id",
           "rawPath": "/api/bookings/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 154,
+          "line": 165,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1802,7 +1802,7 @@
           "path": "/api/bookings/:id/cancel",
           "rawPath": "/api/bookings/${id}/cancel",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 189,
+          "line": 200,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1849,7 +1849,7 @@
           "path": "/api/bookings/:id/reschedule",
           "rawPath": "/api/bookings/${id}/reschedule",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 204,
+          "line": 215,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1902,7 +1902,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 215,
+          "line": 226,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1949,7 +1949,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 245,
+          "line": 256,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2008,7 +2008,7 @@
           "path": "/api/bookings/public/book/:slug/cancel/:token",
           "rawPath": "/api/bookings/public/book/${slug}/cancel/${token}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 254,
+          "line": 265,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2061,7 +2061,7 @@
           "path": "/api/bookings/public/book/:slug/slots",
           "rawPath": "/api/bookings/public/book/${slug}/slots",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 224,
+          "line": 235,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2377,12 +2377,18 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 50,
+          "line": 58,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendars",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 187
+        },
         {
           "method": "GET",
           "path": "/api/calendars",
@@ -2408,8 +2414,8 @@
       "owner": "scheduling",
       "targetOperation": "calendars",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-scoped calendar list with deterministic ordering and bounded booking aggregates.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind a default-off read flag with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, retained response mapping, and REST interoperability coverage.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -2430,7 +2436,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 64,
+          "line": 75,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2519,7 +2525,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 82,
+          "line": 93,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2572,7 +2578,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 57,
+          "line": 68,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2597,8 +2603,8 @@
       "owner": "scheduling",
       "targetOperation": "calendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-owned calendar with recurring availability and future overrides.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the calendar-read flag with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -2619,7 +2625,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 75,
+          "line": 86,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2666,7 +2672,7 @@
           "path": "/api/calendars/:id/availability",
           "rawPath": "/api/calendars/${id}/availability",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 92,
+          "line": 103,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2719,7 +2725,7 @@
           "path": "/api/calendars/:calendarId/date-override",
           "rawPath": "/api/calendars/${calendarId}/date-override",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 113,
+          "line": 124,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2772,7 +2778,7 @@
           "path": "/api/calendars/:calendarId/date-override/:overrideId",
           "rawPath": "/api/calendars/${calendarId}/date-override/${overrideId}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 124,
+          "line": 135,
           "client": "api",
           "literalInterpolation": false
         }

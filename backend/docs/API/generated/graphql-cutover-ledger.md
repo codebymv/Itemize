@@ -89,7 +89,7 @@
 | GET | `/api/calendar-integrations/google/callback` | 0 | 2 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
 | GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
 | POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
-| GET | `/api/calendars` | 1 | 3 | graphql-query | medium | scheduling / CalendarsModule / calendars |
+| GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |
 | POST | `/api/calendars` | 1 | 9 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
 | DELETE | `/api/calendars/:id` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / deleteCalendar |
 | GET | `/api/calendars/:id` | 1 | 2 | graphql-query | medium | scheduling / CalendarsModule / calendar |

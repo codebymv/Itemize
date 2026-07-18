@@ -4,6 +4,11 @@
  */
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
+import {
+    getCalendarViaGraphql,
+    getCalendarsViaGraphql,
+} from './calendarsGraphql';
+import { isCalendarGraphqlReadsEnabled } from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -47,6 +52,9 @@ export interface CalendarCreateData {
 }
 
 export const getCalendars = async (organizationId?: number): Promise<CalendarsResponse> => {
+    if (isCalendarGraphqlReadsEnabled()) {
+        return getCalendarsViaGraphql(organizationId);
+    }
     const response = await api.get('/api/calendars', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
@@ -54,6 +62,9 @@ export const getCalendars = async (organizationId?: number): Promise<CalendarsRe
 };
 
 export const getCalendar = async (id: number, organizationId?: number): Promise<Calendar> => {
+    if (isCalendarGraphqlReadsEnabled()) {
+        return getCalendarViaGraphql(id, organizationId);
+    }
     const response = await api.get(`/api/calendars/${id}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });

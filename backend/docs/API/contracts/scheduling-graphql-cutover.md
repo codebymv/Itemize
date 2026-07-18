@@ -1,8 +1,8 @@
 # Scheduling GraphQL cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Phase 1 authenticated calendar-read checkpoint implemented
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-18
 
 ## Decision
 
@@ -98,6 +98,8 @@ The legacy booking routes call dormant engine triggers named `booking_created`, 
 ## Current evidence and exit gate
 
 Fresh PostgreSQL suites cover calendar CRUD/tenancy, availability replacement, overrides, booking CRUD/tenancy, public creation, public cancellation capability binding/replay, invalid intervals, and simultaneous overlap prevention. Unit tests cover signed OAuth state, expiry, tampering, and redirect normalization.
+
+The first bounded NestJS checkpoint implements only authenticated `calendars` and `calendar` reads. Both require verified organization context, qualify every calendar lookup by organization, expose an assignee name only through a current membership, return deterministic list ordering and confirmed-booking aggregates, and project ordered recurring availability plus current/future date overrides on detail. `VITE_CALENDAR_READS_GRAPHQL` is independently default-off and preserves the existing REST response shape; all calendar writes, authenticated booking operations, anonymous booking protocols, OAuth, provider connections, and sync remain on their current transports. Three focused service cases, five frontend adapter/transport cases, and three fresh-PostgreSQL cases prove mapping, REST-default selection, REST interoperability, selected-tenant isolation, foreign-calendar concealment, availability/override projection, and confirmed-booking counts.
 
 The scheduling slice is not ready for traffic until:
 

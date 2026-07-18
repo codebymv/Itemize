@@ -1341,16 +1341,16 @@
       "notes": "Organization-scoped distinct freeform contact tag strings; decide whether this survives canonical tag normalization."
     },
     "GET /api/calendars": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendars", "parityStatus": "characterized", "risk": "medium",
-      "notes": "Organization-scoped calendar list with deterministic ordering and bounded booking aggregates."
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendars", "parityStatus": "implemented", "risk": "medium",
+      "notes": "Implemented behind a default-off read flag with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, retained response mapping, and REST interoperability coverage."
     },
     "POST /api/calendars": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "createCalendar", "parityStatus": "characterizing", "risk": "high",
       "notes": "Validate timezone, duration, buffers, assignment membership, and availability windows in one transaction."
     },
     "GET /api/calendars/:id": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendar", "parityStatus": "characterized", "risk": "medium",
-      "notes": "Organization-owned calendar with recurring availability and future overrides."
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendar", "parityStatus": "implemented", "risk": "medium",
+      "notes": "Implemented behind the calendar-read flag with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment."
     },
     "PUT /api/calendars/:id": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "updateCalendar", "parityStatus": "characterizing", "risk": "high",

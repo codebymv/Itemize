@@ -227,6 +227,10 @@ VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 VITE_ORGANIZATION_READS_GRAPHQL=false
 VITE_ORGANIZATION_MUTATIONS_GRAPHQL=false
 
+# Authenticated calendar list/detail reads have a default-off rollback boundary.
+# Calendar writes and every anonymous booking protocol remain on REST.
+VITE_CALENDAR_READS_GRAPHQL=false
+
 # Personal workspace category reads and writes have independent rollback
 # boundaries. Both remain disabled until the browser gate passes.
 VITE_CATEGORY_READS_GRAPHQL=false

@@ -84,6 +84,9 @@ export const isOrganizationGraphqlReadsEnabled = (): boolean =>
 export const isOrganizationGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_ORGANIZATION_MUTATIONS_GRAPHQL === 'true';
 
+export const isCalendarGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_CALENDAR_READS_GRAPHQL === 'true';
+
 export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_LIST_READS_GRAPHQL === 'true';
 

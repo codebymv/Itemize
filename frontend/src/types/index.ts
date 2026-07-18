@@ -446,6 +446,7 @@ export interface AvailabilityWindow {
   start_time: string; // HH:MM format
   end_time: string;
   is_active?: boolean;
+  created_at?: string;
 }
 
 // Date override (blocked dates or custom hours)
