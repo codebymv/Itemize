@@ -2414,8 +2414,8 @@
       "owner": "scheduling",
       "targetOperation": "calendars",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind a default-off read flag with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, retained response mapping, and fresh-PostgreSQL coverage. Staging proved the GraphQL empty state and a persisted-row REST rollback without data repair; a nonempty GraphQL browser reload remains open.",
+      "parityStatus": "dual-parity",
+      "notes": "Default-off GraphQL list with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, and retained response mapping. Fresh PostgreSQL and the real browser prove a nonempty GraphQL reload, retained REST write interoperability, and flag-off REST rollback without data repair.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -2603,8 +2603,8 @@
       "owner": "scheduling",
       "targetOperation": "calendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind the calendar-read flag with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment. No browser gate is claimed because getCalendar has no shipped consumer and the existing Settings action targets unregistered /calendars/:id.",
+      "parityStatus": "dual-parity",
+      "notes": "Default-off GraphQL detail with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment. The registered /calendars/:id settings consumer passed GraphQL and flag-off REST browser reloads around retained REST settings and availability writes without data repair.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
