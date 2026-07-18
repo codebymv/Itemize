@@ -22,7 +22,14 @@ import {
   isContactGraphqlContentEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
+  isOrganizationGraphqlMutationsEnabled,
+  isOrganizationGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+  ensureDefaultOrganizationViaGraphql,
+  getOrganizationsViaGraphql,
+  selectOrganizationViaGraphql,
+} from './organizationsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -36,6 +43,9 @@ const unwrapResponse = <T>(payload: unknown): T => {
 // ======================
 
 export const getOrganizations = async (): Promise<Organization[]> => {
+  if (isOrganizationGraphqlReadsEnabled()) {
+    return getOrganizationsViaGraphql();
+  }
   const response = await api.get('/api/organizations');
   return unwrapResponse<Organization[]>(response.data);
 };
@@ -60,11 +70,17 @@ export const deleteOrganization = async (id: number): Promise<void> => {
 };
 
 export const ensureDefaultOrganization = async (): Promise<Organization> => {
+  if (isOrganizationGraphqlMutationsEnabled()) {
+    return ensureDefaultOrganizationViaGraphql();
+  }
   const response = await api.post('/api/organizations/ensure-default');
   return unwrapResponse<Organization>(response.data);
 };
 
 export const selectOrganization = async (id: number): Promise<Organization> => {
+  if (isOrganizationGraphqlMutationsEnabled()) {
+    return selectOrganizationViaGraphql(id);
+  }
   const response = await api.post(`/api/organizations/${id}/select`);
   return unwrapResponse<Organization>(response.data);
 };

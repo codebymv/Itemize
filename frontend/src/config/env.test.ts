@@ -17,6 +17,8 @@ describe('Environment Validation', () => {
     expect(env.VITE_FORM_READS_GRAPHQL).toBe('false');
     expect(env.VITE_FORM_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_FORM_SUBMISSIONS_GRAPHQL).toBe('false');
+    expect(env.VITE_ORGANIZATION_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_ORGANIZATION_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_LIST_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_NOTE_READS_GRAPHQL).toBe('false');

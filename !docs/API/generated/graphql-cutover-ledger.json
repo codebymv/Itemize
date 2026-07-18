@@ -4258,7 +4258,7 @@
           "path": "/api/contacts",
           "rawPath": "/api/contacts",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 117,
+          "line": 133,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4311,7 +4311,7 @@
           "path": "/api/contacts",
           "rawPath": "/api/contacts",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 160,
+          "line": 176,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4382,7 +4382,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 180,
+          "line": 196,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4429,7 +4429,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 128,
+          "line": 144,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4482,7 +4482,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 170,
+          "line": 186,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4541,7 +4541,7 @@
           "path": "/api/contacts/:contactId/activities",
           "rawPath": "/api/contacts/${contactId}/activities",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 227,
+          "line": 243,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4582,7 +4582,7 @@
           "path": "/api/contacts/:contactId/activities",
           "rawPath": "/api/contacts/${contactId}/activities",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 247,
+          "line": 263,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4616,7 +4616,7 @@
           "path": "/api/contacts/:contactId/content",
           "rawPath": "/api/contacts/${contactId}/content",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 267,
+          "line": 283,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4706,7 +4706,7 @@
           "path": "/api/contacts/bulk-delete",
           "rawPath": "/api/contacts/bulk-delete",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 211,
+          "line": 227,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4740,7 +4740,7 @@
           "path": "/api/contacts/bulk-update",
           "rawPath": "/api/contacts/bulk-update",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 201,
+          "line": 217,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4791,7 +4791,7 @@
           "path": "/api/contacts/export/csv",
           "rawPath": "/api/contacts/export/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 308,
+          "line": 324,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4866,7 +4866,7 @@
           "path": "/api/contacts/import/csv",
           "rawPath": "/api/contacts/import/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 331,
+          "line": 347,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9841,12 +9841,18 @@
           "path": "/api/organizations",
           "rawPath": "/api/organizations",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 39,
+          "line": 49,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/organizations",
+          "source": "backend-v2/test/integration/organizations.integration-spec.ts",
+          "line": 231
+        },
         {
           "method": "GET",
           "path": "/api/organizations",
@@ -9872,8 +9878,8 @@
       "owner": "workspace",
       "targetOperation": "organizations",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "List only current database memberships and include the caller's current role for each organization.",
+      "parityStatus": "implemented",
+      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -9894,7 +9900,7 @@
           "path": "/api/organizations",
           "rawPath": "/api/organizations",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 49,
+          "line": 59,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9953,7 +9959,7 @@
           "path": "/api/organizations/:id",
           "rawPath": "/api/organizations/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 59,
+          "line": 69,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9987,7 +9993,7 @@
           "path": "/api/organizations/:id",
           "rawPath": "/api/organizations/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 44,
+          "line": 54,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10040,7 +10046,7 @@
           "path": "/api/organizations/:id",
           "rawPath": "/api/organizations/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 54,
+          "line": 64,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10087,7 +10093,7 @@
           "path": "/api/organizations/:orgId/leave",
           "rawPath": "/api/organizations/${orgId}/leave",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 93,
+          "line": 109,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10134,7 +10140,7 @@
           "path": "/api/organizations/:orgId/members",
           "rawPath": "/api/organizations/${orgId}/members",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 74,
+          "line": 90,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10187,7 +10193,7 @@
           "path": "/api/organizations/:orgId/members",
           "rawPath": "/api/organizations/${orgId}/members",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 79,
+          "line": 95,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10264,7 +10270,7 @@
           "path": "/api/organizations/:orgId/members/:memberId",
           "rawPath": "/api/organizations/${orgId}/members/${memberId}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 89,
+          "line": 105,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10311,7 +10317,7 @@
           "path": "/api/organizations/:orgId/members/:memberId",
           "rawPath": "/api/organizations/${orgId}/members/${memberId}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 84,
+          "line": 100,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10376,7 +10382,7 @@
           "path": "/api/organizations/:id/select",
           "rawPath": "/api/organizations/${id}/select",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 68,
+          "line": 84,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10407,8 +10413,8 @@
       "owner": "workspace",
       "targetOperation": "selectOrganization",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Re-read current membership, persist the selected default, clear tenant-scoped client caches, and preserve an immediate REST rollback path until the GraphQL mutation is proven.",
+      "parityStatus": "implemented",
+      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -10429,7 +10435,7 @@
           "path": "/api/organizations/ensure-default",
           "rawPath": "/api/organizations/ensure-default",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 63,
+          "line": 76,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10460,8 +10466,8 @@
       "owner": "workspace",
       "targetOperation": "ensureDefaultOrganization",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Idempotently select an existing membership or atomically create a personal organization, owner membership, and default assignment.",
+      "parityStatus": "implemented",
+      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },

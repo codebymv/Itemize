@@ -222,6 +222,11 @@ VITE_FORM_SUBMISSIONS_GRAPHQL=false
 VITE_ONBOARDING_READS_GRAPHQL=false
 VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 
+# Workspace selector membership reads and selection/default-repair writes have
+# independent rollback boundaries. Organization management remains on REST.
+VITE_ORGANIZATION_READS_GRAPHQL=false
+VITE_ORGANIZATION_MUTATIONS_GRAPHQL=false
+
 # Personal workspace category reads and writes have independent rollback
 # boundaries. Both remain disabled until the browser gate passes.
 VITE_CATEGORY_READS_GRAPHQL=false

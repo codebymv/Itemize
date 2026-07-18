@@ -78,6 +78,12 @@ export const isCategoryGraphqlReadsEnabled = (): boolean =>
 export const isCategoryGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_CATEGORY_MUTATIONS_GRAPHQL === 'true';
 
+export const isOrganizationGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_ORGANIZATION_READS_GRAPHQL === 'true';
+
+export const isOrganizationGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_ORGANIZATION_MUTATIONS_GRAPHQL === 'true';
+
 export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_LIST_READS_GRAPHQL === 'true';
 

@@ -248,7 +248,7 @@
 | GET | `/api/onboarding/progress` | 1 | 1 | graphql-query | high | onboarding / OnboardingModule / onboardingProgress |
 | GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingFeatureProgress |
 | DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / resetOnboarding |
-| GET | `/api/organizations` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organizations |
+| GET | `/api/organizations` | 1 | 4 | graphql-query | medium | workspace / OrganizationsModule / organizations |
 | POST | `/api/organizations` | 1 | 4 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
 | DELETE | `/api/organizations/:organizationId` | 1 | 0 | graphql-mutation | high | workspace / OrganizationsModule / deleteOrganization |
 | GET | `/api/organizations/:organizationId` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organization |

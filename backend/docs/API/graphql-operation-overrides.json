@@ -132,9 +132,9 @@
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "organizations",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "List only current database memberships and include the caller's current role for each organization."
+      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag."
     },
     "POST /api/organizations": {
       "disposition": "graphql-mutation",
@@ -186,9 +186,9 @@
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "selectOrganization",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Re-read current membership, persist the selected default, clear tenant-scoped client caches, and preserve an immediate REST rollback path until the GraphQL mutation is proven."
+      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag."
     },
     "GET /api/organizations/:organizationId/members": {
       "disposition": "graphql-query",
@@ -231,9 +231,9 @@
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "ensureDefaultOrganization",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Idempotently select an existing membership or atomically create a personal organization, owner membership, and default assignment."
+      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag."
     },
     "GET /api/invoices": {
       "disposition": "graphql-query",
