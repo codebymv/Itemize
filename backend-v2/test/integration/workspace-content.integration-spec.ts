@@ -20,8 +20,10 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let workCategoryId: number;
   let mutationListId: number;
   let mutationNoteId: number;
+  let mutationWhiteboardId: number;
   const sharedListToken = 'f0b7d55d-ec6b-4eb6-aaf4-165c0d82e417';
   const sharedNoteToken = '87a47b12-f802-4e70-97af-8cf98bff3d4d';
+  const sharedWhiteboardToken = '621ca66e-2b82-46a7-b2ba-e7343b6cbac2';
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -93,6 +95,18 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
          ($3, 'Outsider note', 'private', 'General', $2, 0, 0)`,
       [memberId, foreignCategoryId, outsiderId],
     );
+    await pool.query(
+      `INSERT INTO whiteboards
+         (user_id, title, category, canvas_data, position_x, position_y)
+       VALUES
+         ($1, 'Alpha whiteboard', 'Work', $2::jsonb, 90, 100),
+         ($3, 'Outsider whiteboard', 'General', '[]'::jsonb, 0, 0)`,
+      [
+        memberId,
+        JSON.stringify([{ drawMode: true, paths: [{ x: 1, y: 2 }] }]),
+        outsiderId,
+      ],
+    );
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
@@ -107,6 +121,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
 
     const createListsRouter = require('../../../backend/src/routes/lists.routes');
     const createNotesRouter = require('../../../backend/src/routes/notes.routes');
+    const createWhiteboardsRouter = require(
+      '../../../backend/src/routes/whiteboards.routes',
+    );
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const broadcast = {};
     legacyApp = express();
@@ -114,6 +131,10 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     legacyApp.use(express.json());
     legacyApp.use('/api', createListsRouter(pool, authenticateJWT, broadcast));
     legacyApp.use('/api', createNotesRouter(pool, authenticateJWT, broadcast));
+    legacyApp.use(
+      '/api',
+      createWhiteboardsRouter(pool, authenticateJWT, broadcast),
+    );
   });
 
   afterAll(async () => {
@@ -136,11 +157,20 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
                SELECT id FROM lists WHERE user_id = ANY($1::int[])
              )
            )
+         ) OR (
+           aggregate_type = 'whiteboard'
+           AND (
+             aggregate_id = $4
+             OR aggregate_id IN (
+               SELECT id FROM whiteboards WHERE user_id = ANY($1::int[])
+             )
+           )
          )`,
         [
           [memberId, outsiderId].filter(Boolean),
           mutationNoteId || 0,
           mutationListId || 0,
+          mutationWhiteboardId || 0,
         ],
       );
       await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
@@ -187,6 +217,11 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   const noteFields = `
     id userId title content category categoryId
     colorValue positionX positionY width height zIndex
+    shareToken isPublic sharedAt createdAt updatedAt`;
+  const whiteboardFields = `
+    id userId title category categoryId canvasData
+    canvasWidth canvasHeight backgroundColor
+    positionX positionY zIndex colorValue
     shareToken isPublic sharedAt createdAt updatedAt`;
 
   it('returns deterministic user-scoped list pages and repairs category identity at read time', async () => {
@@ -251,6 +286,51 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       category: 'Work',
       categoryId: workCategoryId,
     });
+  });
+
+  it('returns deterministic user-scoped whiteboard pages', async () => {
+    const result = await query(
+      memberToken,
+      `query Whiteboards(
+        $filter: WorkspaceContentFilterInput
+        $page: PageInput
+      ) {
+        workspaceWhiteboards(filter: $filter, page: $page) {
+          nodes { ${whiteboardFields} }
+          pageInfo { total totalPages }
+        }
+      }`,
+      {
+        filter: { search: 'Alpha', categoryId: workCategoryId },
+        page: { page: 1, pageSize: 10 },
+      },
+    ).expect(200);
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.workspaceWhiteboards.pageInfo).toMatchObject({
+      total: 1,
+      totalPages: 1,
+    });
+    expect(result.body.data.workspaceWhiteboards.nodes[0]).toMatchObject({
+      userId: memberId,
+      title: 'Alpha whiteboard',
+      category: 'Work',
+      categoryId: workCategoryId,
+      canvasData: expect.stringContaining('"drawMode":true'),
+    });
+
+    const outsider = await query(
+      outsiderToken,
+      `{ workspaceWhiteboards {
+        nodes { userId title }
+        pageInfo { total }
+      } }`,
+    ).expect(200);
+    expect(outsider.body.data.workspaceWhiteboards.nodes).toEqual([
+      expect.objectContaining({
+        userId: outsiderId,
+        title: 'Outsider whiteboard',
+      }),
+    ]);
   });
 
   it('creates a canonical list that remains readable through REST', async () => {
@@ -683,7 +763,190 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     expect(rest.body.error).toBe('Note not found');
   });
 
-  it('keeps all three characterized REST read paths available for rollback', async () => {
+  it('creates and updates a revision-guarded shared whiteboard', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceWhiteboardInput!) {
+        createWorkspaceWhiteboard(input: $input) { ${whiteboardFields} }
+      }`,
+      {
+        input: {
+          title: ' GraphQL whiteboard ',
+          category: 'work',
+          canvasData: JSON.stringify([{ drawMode: true, paths: [] }]),
+          canvasWidth: 800,
+          canvasHeight: 640,
+          backgroundColor: '#abcdef',
+          positionX: -25.5,
+          positionY: 125.25,
+          colorValue: '#123456',
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createWorkspaceWhiteboard).toMatchObject({
+      userId: memberId,
+      title: 'GraphQL whiteboard',
+      category: 'Work',
+      categoryId: workCategoryId,
+      canvasWidth: 800,
+      canvasHeight: 640,
+      backgroundColor: '#ABCDEF',
+      positionX: -25.5,
+      positionY: 125.25,
+    });
+    mutationWhiteboardId =
+      created.body.data.createWorkspaceWhiteboard.id;
+
+    const rest = await request(legacyApp)
+      .get('/api/whiteboards')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .expect(200);
+    expect(rest.body.data.whiteboards).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: mutationWhiteboardId,
+          category: 'Work',
+        }),
+      ]),
+    );
+
+    await pool.query(
+      `UPDATE whiteboards
+       SET is_public = TRUE, share_token = $1, shared_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3`,
+      [sharedWhiteboardToken, mutationWhiteboardId, memberId],
+    );
+    const revision = await pool.query<{ updated_at: Date }>(
+      'SELECT updated_at FROM whiteboards WHERE id = $1',
+      [mutationWhiteboardId],
+    );
+    const expectedUpdatedAt = revision.rows[0].updated_at.toISOString();
+    const mutationId = '44041b15-2c93-4bb9-a879-64faad0f87a0';
+    const document = `mutation Update(
+      $id: Int!, $input: UpdateWorkspaceWhiteboardInput!
+    ) {
+      updateWorkspaceWhiteboard(id: $id, input: $input) {
+        ${whiteboardFields}
+      }
+    }`;
+    const updated = await mutation(memberToken, document, {
+      id: mutationWhiteboardId,
+      input: {
+        mutationId,
+        expectedUpdatedAt,
+        title: 'Live whiteboard',
+        canvasData: JSON.stringify([
+          { drawMode: true, paths: [{ x: 10, y: 20 }] },
+        ]),
+      },
+    }).expect(200);
+    expect(updated.body.errors).toBeUndefined();
+    expect(updated.body.data.updateWorkspaceWhiteboard.title).toBe(
+      'Live whiteboard',
+    );
+
+    const outbox = await pool.query<{
+      id: string;
+      event_type: string;
+      payload: Record<string, unknown>;
+    }>(
+      `SELECT id, event_type, payload
+       FROM realtime_event_outbox
+       WHERE event_key = $1`,
+      [
+        `whiteboard:${mutationWhiteboardId}:update:${mutationId}:shared`,
+      ],
+    );
+    expect(outbox.rows[0]).toMatchObject({
+      event_type: 'whiteboardUpdated',
+      payload: {
+        id: mutationWhiteboardId,
+        requires_refetch: true,
+        updated_at: expect.any(String),
+      },
+    });
+
+    const whiteboardUpdate = jest.fn();
+    const { runRealtimeOutboxJobs } = require(
+      '../../../backend/src/jobs/realtime-outbox-jobs',
+    );
+    const delivered = await runRealtimeOutboxJobs(
+      pool,
+      { whiteboardUpdate },
+      {
+        batchSize: 1,
+        outboxId: outbox.rows[0].id,
+        workerId: 'nestjs-whiteboard-integration',
+      },
+    );
+    expect(delivered).toMatchObject({ claimed: 1, sent: 1 });
+    expect(whiteboardUpdate).toHaveBeenCalledWith(
+      sharedWhiteboardToken,
+      'whiteboardUpdated',
+      expect.objectContaining({
+        id: mutationWhiteboardId,
+        requires_refetch: true,
+      }),
+      expect.any(String),
+    );
+
+    const stale = await mutation(memberToken, document, {
+      id: mutationWhiteboardId,
+      input: {
+        mutationId: '7652c146-2ae7-4578-9ef2-92680874028d',
+        expectedUpdatedAt,
+        title: 'Stale overwrite',
+      },
+    }).expect(200);
+    expect(stale.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'STALE_WHITEBOARD_REVISION',
+      currentUpdatedAt: expect.any(String),
+    });
+  });
+
+  it('deletes a whiteboard with a durable shared projection', async () => {
+    const mutationId = 'fb49d077-2865-44a1-bdf0-8c43dcfc759f';
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $mutationId: String!) {
+        deleteWorkspaceWhiteboard(id: $id, mutationId: $mutationId) {
+          deletedId
+        }
+      }`,
+      { id: mutationWhiteboardId, mutationId },
+    ).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteWorkspaceWhiteboard.deletedId).toBe(
+      mutationWhiteboardId,
+    );
+    const event = await pool.query<{
+      event_type: string;
+      payload: Record<string, unknown>;
+    }>(
+      `SELECT event_type, payload
+       FROM realtime_event_outbox
+       WHERE event_key = $1`,
+      [
+        `whiteboard:${mutationWhiteboardId}:delete:${mutationId}:shared`,
+      ],
+    );
+    expect(event.rows[0]).toMatchObject({
+      event_type: 'whiteboardDeleted',
+      payload: {
+        id: mutationWhiteboardId,
+        message: 'This whiteboard has been deleted by the owner.',
+      },
+    });
+    await request(legacyApp)
+      .put(`/api/whiteboards/${mutationWhiteboardId}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .send({ title: 'Gone' })
+      .expect(404);
+  });
+
+  it('keeps all four characterized REST read paths available for rollback', async () => {
     const lists = await request(legacyApp)
       .get('/api/lists')
       .set('Cookie', `itemize_auth=${memberToken}`)
@@ -696,13 +959,19 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .get('/api/notes')
       .set('Cookie', `itemize_auth=${memberToken}`)
       .expect(200);
+    const whiteboards = await request(legacyApp)
+      .get('/api/whiteboards')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .expect(200);
 
     expect(lists.headers['cache-control']).toBe('private, no-store');
     expect(canvasLists.headers['cache-control']).toBe('private, no-store');
     expect(notes.headers['cache-control']).toBe('private, no-store');
+    expect(whiteboards.headers['cache-control']).toBe('private, no-store');
     expect(lists.headers.etag).toEqual(expect.any(String));
     expect(canvasLists.headers.etag).toEqual(expect.any(String));
     expect(notes.headers.etag).toEqual(expect.any(String));
+    expect(whiteboards.headers.etag).toEqual(expect.any(String));
 
     const conditionalLists = await request(legacyApp)
       .get('/api/lists')
@@ -719,13 +988,20 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .set('Cookie', `itemize_auth=${memberToken}`)
       .set('If-None-Match', notes.headers.etag)
       .expect(200);
+    const conditionalWhiteboards = await request(legacyApp)
+      .get('/api/whiteboards')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('If-None-Match', whiteboards.headers.etag)
+      .expect(200);
 
     expect(lists.body.lists).toHaveLength(2);
     expect(canvasLists.body).toHaveLength(2);
     expect(notes.body.notes).toHaveLength(2);
+    expect(whiteboards.body.data.whiteboards).toHaveLength(1);
     expect(conditionalLists.body.lists).toHaveLength(2);
     expect(conditionalCanvasLists.body).toHaveLength(2);
     expect(conditionalNotes.body.notes).toHaveLength(2);
+    expect(conditionalWhiteboards.body.data.whiteboards).toHaveLength(1);
   });
 
   it('rejects invalid filters and pagination without querying another user', async () => {

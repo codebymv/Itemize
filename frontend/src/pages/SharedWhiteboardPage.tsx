@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedWhiteboardCard } from '../components/SharedWhiteboardCard';
@@ -39,6 +39,7 @@ const SharedWhiteboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const realtimeRefetchVersion = useRef(0);
   const sharedWhiteboardId = whiteboardData?.id;
 
   // Store original title for cleanup
@@ -126,6 +127,27 @@ const SharedWhiteboardPage: React.FC = () => {
 
       recovery.acceptUpdate(() => {
         if (update.type === 'whiteboardUpdated' && update.data) {
+          if (update.data.requires_refetch) {
+            const version = ++realtimeRefetchVersion.current;
+            void api.get(`/api/shared/whiteboard/${token}`)
+              .then((latest) => {
+                if (version === realtimeRefetchVersion.current) {
+                  setWhiteboardData(latest.data);
+                }
+              })
+              .catch(() => {
+                if (version === realtimeRefetchVersion.current) {
+                  setIsConnected(false);
+                  toast({
+                    title: "Connection Error",
+                    description: "Could not refresh the latest whiteboard.",
+                    variant: "destructive",
+                  });
+                }
+              });
+            return;
+          }
+          realtimeRefetchVersion.current += 1;
           setWhiteboardData(prevData => {
             if (!prevData) return prevData;
 
@@ -142,6 +164,7 @@ const SharedWhiteboardPage: React.FC = () => {
             };
           });
         } else if (update.type === 'whiteboardDeleted') {
+          realtimeRefetchVersion.current += 1;
           console.log('Whiteboard was deleted by owner');
           setError('This whiteboard has been deleted by the owner.');
           setWhiteboardData(null);
@@ -168,6 +191,7 @@ const SharedWhiteboardPage: React.FC = () => {
 
     return () => {
       console.log('Cleaning up WebSocket connection');
+      realtimeRefetchVersion.current += 1;
       unregisterRevocation();
       recovery.unregister();
       newSocket.disconnect();

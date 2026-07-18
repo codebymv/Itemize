@@ -15,11 +15,14 @@ import {
   isWorkspaceListGraphqlMutationsEnabled,
   isWorkspaceNoteGraphqlMutationsEnabled,
   isWorkspaceNoteGraphqlReadsEnabled,
+  isWorkspaceWhiteboardGraphqlMutationsEnabled,
+  isWorkspaceWhiteboardGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
+  getWorkspaceWhiteboardsViaGraphql,
 } from './workspaceContentGraphql';
 import {
   createWorkspaceNoteViaGraphql,
@@ -31,6 +34,15 @@ import {
   deleteWorkspaceListViaGraphql,
   updateWorkspaceListViaGraphql,
 } from './workspaceListMutationsGraphql';
+import {
+  createWorkspaceWhiteboardViaGraphql,
+  deleteWorkspaceWhiteboardViaGraphql,
+  updateWorkspaceWhiteboardViaGraphql,
+} from './workspaceWhiteboardMutationsGraphql';
+import {
+  forgetWorkspaceWhiteboardRevision,
+  rememberWorkspaceWhiteboardRevision,
+} from './workspaceWhiteboardRevision';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -432,31 +444,62 @@ export const deleteNote = async (noteId: number, token?: string) => {
 
 // Whiteboard API functions
 export const getWhiteboards = async (token?: string) => {
-  const response = await api.get('/api/whiteboards', {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  const data = isWorkspaceWhiteboardGraphqlReadsEnabled()
+    ? await getWorkspaceWhiteboardsViaGraphql()
+    : (
+        await api.get('/api/whiteboards', {
+          headers: getAuthHeaders(token)
+        })
+      ).data;
+  const rows = Array.isArray(data) ? data : data?.whiteboards;
+  if (Array.isArray(rows)) {
+    rows.forEach((whiteboard) => {
+      rememberWorkspaceWhiteboardRevision(
+        Number(whiteboard.id),
+        whiteboard.updated_at,
+      );
+    });
+  }
+  return data;
 };
 
 export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, token?: string) => {
+  if (isWorkspaceWhiteboardGraphqlMutationsEnabled()) {
+    return createWorkspaceWhiteboardViaGraphql(whiteboardData);
+  }
   const response = await api.post('/api/whiteboards', whiteboardData, {
     headers: getAuthHeaders(token)
   });
+  rememberWorkspaceWhiteboardRevision(
+    Number(response.data.id),
+    response.data.updated_at,
+  );
   return response.data;
 };
 
 export const updateWhiteboard = async (whiteboardId: number, whiteboardData: WhiteboardPayload, token?: string) => {
   logger.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
+  if (isWorkspaceWhiteboardGraphqlMutationsEnabled()) {
+    return updateWorkspaceWhiteboardViaGraphql(
+      whiteboardId,
+      whiteboardData,
+    );
+  }
   const response = await api.put(`/api/whiteboards/${whiteboardId}`, whiteboardData, {
     headers: getAuthHeaders(token)
   });
+  rememberWorkspaceWhiteboardRevision(whiteboardId, response.data.updated_at);
   return response.data;
 };
 
 export const deleteWhiteboard = async (whiteboardId: number, token?: string) => {
+  if (isWorkspaceWhiteboardGraphqlMutationsEnabled()) {
+    return deleteWorkspaceWhiteboardViaGraphql(whiteboardId);
+  }
   const response = await api.delete(`/api/whiteboards/${whiteboardId}`, {
     headers: getAuthHeaders(token)
   });
+  forgetWorkspaceWhiteboardRevision(whiteboardId);
   return response.data;
 };
 

@@ -13,12 +13,19 @@ import {
   UpdateWorkspaceNoteInput,
 } from './workspace-note.inputs';
 import {
+  CreateWorkspaceWhiteboardInput,
+  UpdateWorkspaceWhiteboardInput,
+} from './workspace-whiteboard.inputs';
+import {
   DeleteWorkspaceListResult,
   DeleteWorkspaceNoteResult,
+  DeleteWorkspaceWhiteboardResult,
   WorkspaceList,
   WorkspaceListPage,
   WorkspaceNote,
   WorkspaceNotePage,
+  WorkspaceWhiteboard,
+  WorkspaceWhiteboardPage,
 } from './workspace-content.types';
 
 @Resolver()
@@ -42,6 +49,14 @@ export class WorkspaceContentResolver {
     @Args('page', { nullable: true }) page?: PageInput,
   ): Promise<WorkspaceNotePage> {
     return this.content.notes(this.userId(), filter, page);
+  }
+
+  @Query(() => WorkspaceWhiteboardPage)
+  workspaceWhiteboards(
+    @Args('filter', { nullable: true }) filter?: WorkspaceContentFilterInput,
+    @Args('page', { nullable: true }) page?: PageInput,
+  ): Promise<WorkspaceWhiteboardPage> {
+    return this.content.whiteboards(this.userId(), filter, page);
   }
 
   @CsrfProtected()
@@ -101,6 +116,38 @@ export class WorkspaceContentResolver {
   ): Promise<DeleteWorkspaceNoteResult> {
     return {
       deletedId: await this.content.deleteNote(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceWhiteboard)
+  createWorkspaceWhiteboard(
+    @Args('input') input: CreateWorkspaceWhiteboardInput,
+  ): Promise<WorkspaceWhiteboard> {
+    return this.content.createWhiteboard(this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceWhiteboard)
+  updateWorkspaceWhiteboard(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: UpdateWorkspaceWhiteboardInput,
+  ): Promise<WorkspaceWhiteboard> {
+    return this.content.updateWhiteboard(this.userId(), id, input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DeleteWorkspaceWhiteboardResult)
+  async deleteWorkspaceWhiteboard(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DeleteWorkspaceWhiteboardResult> {
+    return {
+      deletedId: await this.content.deleteWhiteboard(
         this.userId(),
         id,
         mutationId,

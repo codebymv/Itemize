@@ -26,6 +26,7 @@ vi.mock('./workspaceContentGraphql', () => ({
   getCanvasListsViaGraphql: vi.fn(),
   getWorkspaceListsViaGraphql: vi.fn(),
   getWorkspaceNotesViaGraphql: vi.fn(),
+  whiteboardFields: '',
 }));
 
 const list = {

@@ -7,12 +7,12 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 387
+- Static frontend callsites: 388
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 194
+- Operations referenced by backend tests: 196
 - Recommended GraphQL queries: 128
-- Recommended GraphQL mutations: 246
-- Recommended retained HTTP endpoints: 37
+- Recommended GraphQL mutations: 245
+- Recommended retained HTTP endpoints: 38
 - High-risk operations: 336
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
@@ -112,7 +112,7 @@
 | POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | GET | `/api/canvas/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
-| PUT | `/api/canvas/positions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| PUT | `/api/canvas/positions` | 1 | 0 | retain-http | high | workspace-content / CanvasPositionsModule / batchWorkspacePositions |
 | GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
 | DELETE | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / deleteCategory |
@@ -341,7 +341,7 @@
 | GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
 | GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
 | GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultSharingModule / getSharedVault |
-| GET | `/api/shared/whiteboard/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
+| GET | `/api/shared/whiteboard/:token` | 3 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
 | GET | `/api/signatures/documents` | 2 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocuments |
 | POST | `/api/signatures/documents` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / createSignatureDocument |
 | DELETE | `/api/signatures/documents/:id` | 1 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / deleteSignatureDraft |
@@ -411,11 +411,11 @@
 | POST | `/api/vaults/:vaultId/share` | 2 | 4 | graphql-mutation | high | sharing / VaultSharingModule / enableVaultSharing |
 | POST | `/api/vaults/:vaultId/unlock` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
-| GET | `/api/whiteboards` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/whiteboards/:id/position` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/whiteboards/:whiteboardId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/whiteboards/:whiteboardId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
+| POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWhiteboard |
+| PUT | `/api/whiteboards/:id/position` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceWhiteboard |
+| DELETE | `/api/whiteboards/:whiteboardId` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWhiteboard |
+| PUT | `/api/whiteboards/:whiteboardId` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWhiteboard |
 | DELETE | `/api/whiteboards/:whiteboardId/share` | 2 | 1 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableWhiteboardSharing |
 | POST | `/api/whiteboards/:whiteboardId/share` | 2 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableWhiteboardSharing |
 | GET | `/api/wireframes` | 1 | 0 | graphql-query | high | _unassigned_ |

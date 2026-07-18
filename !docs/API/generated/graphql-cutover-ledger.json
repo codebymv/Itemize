@@ -9,16 +9,16 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 387,
+    "frontendCallsiteCount": 388,
     "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 194,
+    "operationsWithBackendTests": 196,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 5,
-    "retainHttpCount": 37,
+    "retainHttpCount": 38,
     "graphqlQueryCount": 128,
-    "graphqlMutationCount": 246,
+    "graphqlMutationCount": 245,
     "highRiskCount": 336,
     "literalInterpolationRiskCount": 0
   },
@@ -3509,7 +3509,7 @@
           "path": "/api/canvas/lists",
           "rawPath": "/api/canvas/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 162,
+          "line": 174,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3519,19 +3519,19 @@
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 290
+          "line": 370
         },
         {
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 692
+          "line": 955
         },
         {
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 713
+          "line": 982
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3566,7 +3566,7 @@
           "path": "/api/canvas/positions",
           "rawPath": "/api/canvas/positions",
           "source": "frontend/src/services/api.ts",
-          "line": 345,
+          "line": 357,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3574,12 +3574,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "workspace-content",
+      "targetOperation": "batchWorkspacePositions",
+      "targetModule": "CanvasPositionsModule",
+      "parityStatus": "characterized",
+      "notes": "Active debounced Canvas drag path batches mixed list, note, whiteboard, and wireframe positions. It remains HTTP for this checkpoint; a later cutover needs bounded mixed-aggregate input, per-kind ownership checks, concurrency semantics, and publication policy.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3600,7 +3600,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 552,
+          "line": 595,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3641,7 +3641,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 562,
+          "line": 605,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3682,7 +3682,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 582,
+          "line": 625,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3723,7 +3723,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 572,
+          "line": 615,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8501,7 +8501,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 192,
+          "line": 204,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8511,13 +8511,13 @@
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 688
+          "line": 951
         },
         {
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 708
+          "line": 977
         },
         {
           "method": "GET",
@@ -8560,7 +8560,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 236,
+          "line": 248,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8601,7 +8601,7 @@
           "path": "/api/lists/:listId",
           "rawPath": "/api/lists/${listId}",
           "source": "frontend/src/services/api.ts",
-          "line": 331,
+          "line": 343,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8648,7 +8648,7 @@
           "path": "/api/lists/:id",
           "rawPath": "/api/lists/${listData.id}",
           "source": "frontend/src/services/api.ts",
-          "line": 302,
+          "line": 314,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8771,7 +8771,7 @@
           "path": "/api/lists/:listId/position",
           "rawPath": "/api/lists/${listId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 338,
+          "line": 350,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8818,7 +8818,7 @@
           "method": "PUT",
           "path": "/api/lists/:mutationListId/title",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 413
+          "line": 493
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8867,7 +8867,7 @@
           "path": "/api/lists/:listId/share",
           "rawPath": "/api/lists/${listId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 774,
+          "line": 817,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8932,7 +8932,7 @@
           "path": "/api/lists/:listId/share",
           "rawPath": "/api/lists/${listId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 766,
+          "line": 809,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9099,7 +9099,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 361,
+          "line": 373,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9109,19 +9109,19 @@
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 494
+          "line": 574
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 696
+          "line": 959
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 718
+          "line": 987
         },
         {
           "method": "GET",
@@ -9194,7 +9194,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 371,
+          "line": 383,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9265,7 +9265,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 425,
+          "line": 437,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9324,7 +9324,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 381,
+          "line": 393,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9371,7 +9371,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 412,
+          "line": 424,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9418,7 +9418,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 392,
+          "line": 404,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9428,7 +9428,7 @@
           "method": "PUT",
           "path": "/api/notes/:mutationNoteId/content",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 679
+          "line": 759
         },
         {
           "method": "PUT",
@@ -9486,7 +9486,7 @@
           "path": "/api/notes/:noteId/share",
           "rawPath": "/api/notes/${noteId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 790,
+          "line": 833,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9536,7 +9536,7 @@
           "path": "/api/notes/:noteId/share",
           "rawPath": "/api/notes/${noteId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 782,
+          "line": 825,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9583,7 +9583,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 402,
+          "line": 414,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13499,7 +13499,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 739,
+          "line": 782,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13552,7 +13552,7 @@
           "path": "/api/shared/whiteboard/:token",
           "rawPath": "/api/shared/whiteboard/${token}",
           "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
-          "line": 56,
+          "line": 57,
           "client": "api",
           "literalInterpolation": false
         },
@@ -13561,7 +13561,16 @@
           "path": "/api/shared/whiteboard/:token",
           "rawPath": "/api/shared/whiteboard/${token}",
           "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
-          "line": 110,
+          "line": 111,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/whiteboard/:token",
+          "rawPath": "/api/shared/whiteboard/${token}",
+          "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
+          "line": 132,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15691,7 +15700,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 623,
+          "line": 666,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15725,7 +15734,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 651,
+          "line": 694,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15759,7 +15768,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 675,
+          "line": 718,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15793,7 +15802,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 642,
+          "line": 685,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15827,7 +15836,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 659,
+          "line": 702,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15861,7 +15870,7 @@
           "path": "/api/vaults/:vaultId/items",
           "rawPath": "/api/vaults/${vaultId}/items",
           "source": "frontend/src/services/api.ts",
-          "line": 683,
+          "line": 726,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15895,7 +15904,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 707,
+          "line": 750,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15929,7 +15938,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 699,
+          "line": 742,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15963,7 +15972,7 @@
           "path": "/api/vaults/:vaultId/items/bulk",
           "rawPath": "/api/vaults/${vaultId}/items/bulk",
           "source": "frontend/src/services/api.ts",
-          "line": 691,
+          "line": 734,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15997,7 +16006,7 @@
           "path": "/api/vaults/:vaultId/items/reorder",
           "rawPath": "/api/vaults/${vaultId}/items/reorder",
           "source": "frontend/src/services/api.ts",
-          "line": 715,
+          "line": 758,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16031,7 +16040,7 @@
           "path": "/api/vaults/:vaultId/lock",
           "rawPath": "/api/vaults/${vaultId}/lock",
           "source": "frontend/src/services/api.ts",
-          "line": 745,
+          "line": 788,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16069,7 +16078,7 @@
           "path": "/api/vaults/:vaultId/position",
           "rawPath": "/api/vaults/${vaultId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 667,
+          "line": 710,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16112,7 +16121,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 731,
+          "line": 774,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16168,7 +16177,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 723,
+          "line": 766,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16227,7 +16236,7 @@
           "path": "/api/vaults/:vaultId/unlock",
           "rawPath": "/api/vaults/${vaultId}/unlock",
           "source": "frontend/src/services/api.ts",
-          "line": 756,
+          "line": 799,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16313,7 +16322,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 20
+          "line": 27
         }
       ],
       "consumerCallsites": [
@@ -16322,20 +16331,39 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 435,
+          "line": 450,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/whiteboards",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 802
+        },
+        {
+          "method": "GET",
+          "path": "/api/whiteboards",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 963
+        },
+        {
+          "method": "GET",
+          "path": "/api/whiteboards",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 992
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "workspaceWhiteboards",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "dual-parity",
+      "notes": "User-scoped paginated whiteboard read with title search, canonical category resolution, deterministic ordering, and JSON/casing adaptation for Canvas, Contents, and Global Search. The personalized REST rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed. Staging browser rehearsal remains required.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -16347,7 +16375,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 85
+          "line": 93
         }
       ],
       "consumerCallsites": [
@@ -16356,7 +16384,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 442,
+          "line": 470,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16365,11 +16393,11 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "createWorkspaceWhiteboard",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "dual-parity",
+      "notes": "User-scoped CSRF-protected create validates bounded canvas JSON, geometry, colors, and canonical category identity; REST can read the committed row. The independent mutation flag remains default-off pending staging.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -16385,7 +16413,7 @@
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 233
+          "line": 241
         }
       ],
       "consumerCallsites": [
@@ -16394,7 +16422,7 @@
           "path": "/api/whiteboards/:whiteboardId/position",
           "rawPath": "/api/whiteboards/${whiteboardId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 464,
+          "line": 507,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16403,11 +16431,11 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "moveWorkspaceWhiteboard",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "blocked",
+      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use retained PUT /api/canvas/positions. Do not migrate dead source without a consumer decision.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -16419,7 +16447,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 270
+          "line": 278
         }
       ],
       "consumerCallsites": [
@@ -16428,7 +16456,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 457,
+          "line": 499,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16437,11 +16465,11 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "deleteWorkspaceWhiteboard",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "dual-parity",
+      "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -16453,7 +16481,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 146
+          "line": 154
         }
       ],
       "consumerCallsites": [
@@ -16462,20 +16490,27 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 450,
+          "line": 488,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "PUT",
+          "path": "/api/whiteboards/:mutationWhiteboardId",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 943
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "workspace-content",
+      "targetOperation": "updateWorkspaceWhiteboard",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "dual-parity",
+      "notes": "Row-locked update requires the preceding updatedAt revision, rejects stale snapshots with stable conflict details, serializes rapid frontend saves, and atomically enqueues a bounded shared-viewer refetch projection rather than oversized canvas JSON.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -16505,7 +16540,7 @@
           "path": "/api/whiteboards/:whiteboardId/share",
           "rawPath": "/api/whiteboards/${whiteboardId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 806,
+          "line": 849,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16555,7 +16590,7 @@
           "path": "/api/whiteboards/:whiteboardId/share",
           "rawPath": "/api/whiteboards/${whiteboardId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 798,
+          "line": 841,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16602,7 +16637,7 @@
           "path": "/api/wireframes",
           "rawPath": "/api/wireframes",
           "source": "frontend/src/services/api.ts",
-          "line": 512,
+          "line": 555,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16636,7 +16671,7 @@
           "path": "/api/wireframes",
           "rawPath": "/api/wireframes",
           "source": "frontend/src/services/api.ts",
-          "line": 519,
+          "line": 562,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16674,7 +16709,7 @@
           "path": "/api/wireframes/:wireframeId/position",
           "rawPath": "/api/wireframes/${wireframeId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 541,
+          "line": 584,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16708,7 +16743,7 @@
           "path": "/api/wireframes/:wireframeId",
           "rawPath": "/api/wireframes/${wireframeId}",
           "source": "frontend/src/services/api.ts",
-          "line": 534,
+          "line": 577,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16742,7 +16777,7 @@
           "path": "/api/wireframes/:wireframeId",
           "rawPath": "/api/wireframes/${wireframeId}",
           "source": "frontend/src/services/api.ts",
-          "line": 527,
+          "line": 570,
           "client": "api",
           "literalInterpolation": false
         }

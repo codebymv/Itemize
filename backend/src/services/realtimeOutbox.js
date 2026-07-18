@@ -2,6 +2,7 @@ const REALTIME_EVENT_CONTRACT = Object.freeze({
   user_canvas: new Set(['userListUpdated', 'userListDeleted']),
   shared_list: new Set(['listUpdated']),
   shared_note: new Set(['noteUpdated']),
+  shared_whiteboard: new Set(['whiteboardUpdated']),
 });
 const SHARE_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const USER_ID_PATTERN = /^[1-9]\d*$/;
@@ -23,7 +24,7 @@ function validateRealtimeEvent(event) {
   if (typeof event.eventKey !== 'string' || event.eventKey.length < 1 || event.eventKey.length > 255) {
     throw new Error('Realtime event key must be between 1 and 255 characters');
   }
-  if (!['list', 'note'].includes(event.aggregateType)) {
+  if (!['list', 'note', 'whiteboard'].includes(event.aggregateType)) {
     throw new Error('Unsupported realtime aggregate type');
   }
   if (!Number.isSafeInteger(Number(event.aggregateId)) || Number(event.aggregateId) < 1) {
@@ -44,7 +45,11 @@ function validateRealtimeEvent(event) {
   }
   if (
     (event.channel === 'shared_note' && event.aggregateType !== 'note')
-    || (event.channel !== 'shared_note' && event.aggregateType !== 'list')
+    || (event.channel === 'shared_whiteboard' && event.aggregateType !== 'whiteboard')
+    || (
+      !['shared_note', 'shared_whiteboard'].includes(event.channel)
+      && event.aggregateType !== 'list'
+    )
   ) {
     throw new Error('Realtime channel does not match aggregate type');
   }

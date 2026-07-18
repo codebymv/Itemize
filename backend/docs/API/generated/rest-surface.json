@@ -3883,7 +3883,7 @@
       ],
       "declaredPath": "/whiteboards",
       "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 20,
+      "line": 27,
       "dynamic": false
     },
     {
@@ -3893,7 +3893,7 @@
       ],
       "declaredPath": "/whiteboards",
       "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 85,
+      "line": 93,
       "dynamic": false
     },
     {
@@ -3913,7 +3913,7 @@
       ],
       "declaredPath": "/whiteboards/:id/position",
       "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 233,
+      "line": 241,
       "dynamic": false
     },
     {
@@ -3923,7 +3923,7 @@
       ],
       "declaredPath": "/whiteboards/:whiteboardId",
       "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 270,
+      "line": 278,
       "dynamic": false
     },
     {
@@ -3933,7 +3933,7 @@
       ],
       "declaredPath": "/whiteboards/:whiteboardId",
       "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 146,
+      "line": 154,
       "dynamic": false
     },
     {

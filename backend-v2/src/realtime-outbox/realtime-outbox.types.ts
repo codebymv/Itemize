@@ -1,10 +1,15 @@
-export type RealtimeAggregateType = 'list' | 'note';
-export type RealtimeChannel = 'user_canvas' | 'shared_list' | 'shared_note';
+export type RealtimeAggregateType = 'list' | 'note' | 'whiteboard';
+export type RealtimeChannel =
+  | 'user_canvas'
+  | 'shared_list'
+  | 'shared_note'
+  | 'shared_whiteboard';
 export type RealtimeEventName =
   | 'userListUpdated'
   | 'userListDeleted'
   | 'listUpdated'
-  | 'noteUpdated';
+  | 'noteUpdated'
+  | 'whiteboardUpdated';
 
 export interface EnqueueRealtimeEventInput {
   eventKey: string;

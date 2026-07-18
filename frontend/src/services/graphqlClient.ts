@@ -90,6 +90,12 @@ export const isWorkspaceNoteGraphqlReadsEnabled = (): boolean =>
 export const isWorkspaceNoteGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL === 'true';
 
+export const isWorkspaceWhiteboardGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL === 'true';
+
+export const isWorkspaceWhiteboardGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

@@ -2,6 +2,7 @@ import {
   WorkspaceContentRepository,
   WorkspaceListRow,
   WorkspaceNoteRow,
+  WorkspaceWhiteboardRow,
 } from './workspace-content.repository';
 import { WorkspaceContentService } from './workspace-content.service';
 
@@ -51,6 +52,30 @@ const noteRow = (
   ...values,
 });
 
+const whiteboardRow = (
+  values: Partial<WorkspaceWhiteboardRow> = {},
+): WorkspaceWhiteboardRow => ({
+  id: 4,
+  user_id: 7,
+  title: 'Sketch',
+  category: 'General',
+  category_id: 1,
+  canvas_data: [{ drawMode: true, paths: [] }],
+  canvas_width: 750,
+  canvas_height: 620,
+  background_color: '#FFFFFF',
+  position_x: 50,
+  position_y: 60,
+  z_index: 0,
+  color_value: '#3B82F6',
+  share_token: null,
+  is_public: false,
+  shared_at: null,
+  created_at: new Date('2026-07-18T12:00:00.000Z'),
+  updated_at: new Date('2026-07-18T12:01:00.000Z'),
+  ...values,
+});
+
 describe('WorkspaceContentService', () => {
   let repository: jest.Mocked<WorkspaceContentRepository>;
   let service: WorkspaceContentService;
@@ -59,12 +84,16 @@ describe('WorkspaceContentService', () => {
     repository = {
       createList: jest.fn(),
       createNote: jest.fn(),
+      createWhiteboard: jest.fn(),
       deleteList: jest.fn(),
       deleteNote: jest.fn(),
+      deleteWhiteboard: jest.fn(),
       findLists: jest.fn(),
       findNotes: jest.fn(),
+      findWhiteboards: jest.fn(),
       updateList: jest.fn(),
       updateNote: jest.fn(),
+      updateWhiteboard: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceContentRepository>;
     service = new WorkspaceContentService(repository);
   });
@@ -117,6 +146,28 @@ describe('WorkspaceContentService', () => {
       content: '',
       category: 'General',
       positionX: 0,
+    });
+  });
+
+  it('maps whiteboard pages to bounded serialized canvas data', async () => {
+    repository.findWhiteboards.mockResolvedValue({
+      rows: [whiteboardRow()],
+      total: 1,
+    });
+
+    const result = await service.whiteboards(7);
+    expect(repository.findWhiteboards).toHaveBeenCalledWith({
+      userId: 7,
+      pageSize: 50,
+      offset: 0,
+    });
+    expect(result.nodes[0]).toMatchObject({
+      id: 4,
+      userId: 7,
+      categoryId: 1,
+      canvasData: '[{"drawMode":true,"paths":[]}]',
+      canvasWidth: 750,
+      canvasHeight: 620,
     });
   });
 
@@ -292,6 +343,70 @@ describe('WorkspaceContentService', () => {
         positionY: 1987.125,
       }),
     );
+  });
+
+  it('normalizes whiteboard creation and rejects invalid canvas JSON', async () => {
+    repository.createWhiteboard.mockResolvedValue({
+      kind: 'completed',
+      row: whiteboardRow(),
+    });
+    await service.createWhiteboard(7, {
+      title: ' Sketch ',
+      category: ' general ',
+      canvasData: ' [ { "paths": [] } ] ',
+      backgroundColor: '#abcdef',
+      positionX: -12.5,
+    });
+    expect(repository.createWhiteboard).toHaveBeenCalledWith(7, {
+      title: 'Sketch',
+      category: 'general',
+      canvasData: '[{"paths":[]}]',
+      canvasWidth: 750,
+      canvasHeight: 620,
+      backgroundColor: '#ABCDEF',
+      positionX: -12.5,
+      positionY: 2000,
+      zIndex: 0,
+      colorValue: '#3B82F6',
+    });
+
+    await expect(
+      service.createWhiteboard(7, {
+        title: 'Bad',
+        canvasData: '"primitive"',
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_WHITEBOARD_CANVAS',
+      },
+    });
+  });
+
+  it('requires a whiteboard revision and surfaces stale updates', async () => {
+    const expectedUpdatedAt = new Date('2026-07-18T12:01:00.000Z');
+    repository.updateWhiteboard.mockResolvedValue({
+      kind: 'conflict',
+      currentUpdatedAt: new Date('2026-07-18T12:02:00.000Z'),
+    });
+    await expect(
+      service.updateWhiteboard(7, 4, {
+        mutationId: 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+        expectedUpdatedAt,
+        title: 'Changed',
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'STALE_WHITEBOARD_REVISION',
+        currentUpdatedAt: '2026-07-18T12:02:00.000Z',
+      },
+    });
+    expect(repository.updateWhiteboard).toHaveBeenCalledWith(7, 4, {
+      mutationId: 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+      expectedUpdatedAt,
+      title: 'Changed',
+    });
   });
 
   it('classifies granular note updates for realtime parity', async () => {

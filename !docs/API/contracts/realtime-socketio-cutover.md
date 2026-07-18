@@ -1,6 +1,6 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, chat termination, and workspace-note staging delivery verified
+**Status:** Durable single-socket-host handoff implemented; legacy authorization, revocation, reconnect recovery, chat termination, and workspace list/note staging delivery verified; whiteboard handoff code-complete
 **Evidence date:** 2026-07-18
 
 ## Transport decision
@@ -32,7 +32,7 @@ The generated REST ledger intentionally does not inventory Socket.IO events. Thi
 | `joinOrgChat` | Cookie plus organization membership | `org-chat-{organizationId}` | `joinedOrgChat { organizationId }` |
 | `joinOrgSocial` | Cookie plus organization membership | `org-social-{organizationId}` | `joinedOrgSocial { organizationId }` |
 
-Public-content rooms emit `viewerCount` and one content event (`listUpdated`, `noteUpdated`, `whiteboardUpdated`, or `wireframeUpdated`). Viewer count remains protocol telemetry for server-side presence validation; it is not a supported shared-page UI feature and the shipped pages do not subscribe to it. Content payloads retain the legacy envelope `{ type, data, timestamp }`. User canvas emits `userListUpdated`, `userListDeleted`, and `userWireframeUpdated` with the same envelope. Event-specific `type` values currently come from the owning mutation route and include full-update, field-change, position-change, item-change, and deletion variants. Deleting a public list now emits `listUpdated { type: "listDeleted", data, timestamp }`; the list viewer clears its projection and disconnects, matching the existing note and whiteboard deletion behavior.
+Public-content rooms emit `viewerCount` and one content event (`listUpdated`, `noteUpdated`, `whiteboardUpdated`, or `wireframeUpdated`). Viewer count remains protocol telemetry for server-side presence validation; it is not a supported shared-page UI feature and the shipped pages do not subscribe to it. Content payloads retain the legacy envelope `{ type, data, timestamp }`. User canvas emits `userListUpdated`, `userListDeleted`, and `userWireframeUpdated` with the same envelope. Event-specific `type` values currently come from the owning mutation route and include full-update, field-change, position-change, item-change, and deletion variants. Deleting a public list now emits `listUpdated { type: "listDeleted", data, timestamp }`; the list viewer clears its projection and disconnects, matching the existing note and whiteboard deletion behavior. Whiteboard updates may contain up to 1 MiB of canvas JSON and therefore publish a bounded `{ id, requires_refetch: true, updated_at }` projection; the shipped public viewer reloads the authoritative retained HTTP projection before rendering the change.
 
 Successful list, note, whiteboard, and wireframe unshare operations emit `sharedContentRevoked { kind, reason, timestamp }` to the old room without exposing the capability, then remove every socket returned by the Socket.IO adapter from that room. The three reachable public viewers immediately discard their local projection, disconnect, and render the unavailable state. Database revocation completes before eviction begins; an outsider or missing-object response never publishes an eviction.
 
@@ -50,8 +50,10 @@ Legacy HTTP mutations still emit best-effort in process. Nest mutations must
 instead use `RealtimeOutboxService` with their existing PostgreSQL transaction.
 One `realtime_event_outbox` row represents one audience. The event key is
 idempotent, the payload is capped at 64 KiB, and database constraints bind
-list/note aggregates to the allowed private or shared channel and recipient
-format.
+list/note/whiteboard aggregates to the allowed private or shared channel and
+recipient format. Migration `029_whiteboard_realtime_outbox` extends the
+original migration-028 vocabulary with `whiteboard`, `shared_whiteboard`,
+`whiteboardUpdated`, and `whiteboardDeleted`.
 
 The legacy Socket.IO host owns the opt-in worker. It claims rows using
 `FOR UPDATE SKIP LOCKED`, attempt fencing, a named worker, and an expiring
@@ -63,9 +65,10 @@ observation. Every event payload is an idempotent projection and reconnect
 still performs an authoritative refetch.
 
 `REALTIME_OUTBOX_WORKER_ENABLED` defaults to false. Migration
-`028_realtime_outbox` and the matching Nest mutation enqueue must be deployed
-before enabling it. The worker uses the committed `occurred_at` value for the
-legacy `{ type, data, timestamp }` envelope.
+`028_realtime_outbox`, the whiteboard extension migration when applicable, and
+the matching Nest mutation enqueue must be deployed before enabling it. The
+worker uses the committed `occurred_at` value for the legacy
+`{ type, data, timestamp }` envelope.
 
 ## Scaling and revocation blockers
 

@@ -227,13 +227,16 @@ VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 VITE_CATEGORY_READS_GRAPHQL=false
 VITE_CATEGORY_MUTATIONS_GRAPHQL=false
 
-# Personal list and note reads/writes have independent rollback boundaries.
+# Personal list, note, and whiteboard reads/writes have independent rollback
+# boundaries.
 # Keep mutation flags disabled until the realtime outbox worker and each
 # staging browser gate are enabled.
 VITE_WORKSPACE_LIST_READS_GRAPHQL=false
 VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL=false
 VITE_WORKSPACE_NOTE_READS_GRAPHQL=false
 VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL=false
+VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL=false
+VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL=false
 
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false

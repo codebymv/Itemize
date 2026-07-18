@@ -245,6 +245,21 @@ describe('test database schema contract', () => {
         expect(sql).toContain("CHECK (jsonb_typeof(payload) = 'object')");
     });
 
+    test('production migration stream extends realtime delivery to whiteboards', async () => {
+        const migration = require('../../../scripts/migrations/029_whiteboard_realtime_outbox');
+        const {
+            runWhiteboardRealtimeOutboxMigration,
+        } = require('../../db_realtime_outbox_migrations');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        expect(migration.up).toBe(runWhiteboardRealtimeOutboxMigration);
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain("'whiteboard'");
+        expect(sql).toContain("'shared_whiteboard'");
+        expect(sql).toContain("'whiteboardUpdated'");
+    });
+
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {
         const migration = require('../../../scripts/migrations/024_workflow_sms_reconciliation');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };

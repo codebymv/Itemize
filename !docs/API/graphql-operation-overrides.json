@@ -1560,6 +1560,10 @@
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
       "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed."
     },
+    "PUT /api/canvas/positions": {
+      "disposition": "retain-http", "owner": "workspace-content", "targetModule": "CanvasPositionsModule", "targetOperation": "batchWorkspacePositions", "parityStatus": "characterized", "risk": "high",
+      "notes": "Active debounced Canvas drag path batches mixed list, note, whiteboard, and wireframe positions. It remains HTTP for this checkpoint; a later cutover needs bounded mixed-aggregate input, per-kind ownership checks, concurrency semantics, and publication policy."
+    },
     "GET /api/lists": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
       "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. Its personalized rollback response is private/no-store and ignores conditional validators. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead."
@@ -1647,6 +1651,26 @@
     "GET /api/shared/note/:token": {
       "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedNote", "parityStatus": "characterized", "risk": "high",
       "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed."
+    },
+    "GET /api/whiteboards": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWhiteboards", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped paginated whiteboard read with title search, canonical category resolution, deterministic ordering, and JSON/casing adaptation for Canvas, Contents, and Global Search. The personalized REST rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed. Staging browser rehearsal remains required."
+    },
+    "POST /api/whiteboards": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceWhiteboard", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped CSRF-protected create validates bounded canvas JSON, geometry, colors, and canonical category identity; REST can read the committed row. The independent mutation flag remains default-off pending staging."
+    },
+    "PUT /api/whiteboards/:whiteboardId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceWhiteboard", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Row-locked update requires the preceding updatedAt revision, rejects stale snapshots with stable conflict details, serializes rapid frontend saves, and atomically enqueues a bounded shared-viewer refetch projection rather than oversized canvas JSON."
+    },
+    "DELETE /api/whiteboards/:whiteboardId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceWhiteboard", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required."
+    },
+    "PUT /api/whiteboards/:id/position": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "moveWorkspaceWhiteboard", "parityStatus": "blocked", "risk": "high",
+      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use retained PUT /api/canvas/positions. Do not migrate dead source without a consumer decision."
     },
     "POST /api/whiteboards/:whiteboardId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "characterized", "risk": "high",

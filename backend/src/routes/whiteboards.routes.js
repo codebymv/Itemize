@@ -5,7 +5,14 @@
 const express = require('express');
 const router = express.Router();
 const { withDbClient } = require('../utils/db');
-const { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendError } = require('../utils/response');
+const {
+    disableConditionalCaching,
+    sendSuccess,
+    sendCreated,
+    sendBadRequest,
+    sendNotFound,
+    sendError
+} = require('../utils/response');
 const { whiteboardColumns } = require('./workspace-object-columns');
 
 /**
@@ -18,6 +25,7 @@ module.exports = (pool, authenticateJWT, broadcast) => {
 
     // Get all whiteboards for the current user with pagination
     router.get('/whiteboards', authenticateJWT, async (req, res) => {
+        disableConditionalCaching(req, res);
         try {
             const { 
                 page = 1, 

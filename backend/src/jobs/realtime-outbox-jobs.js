@@ -125,6 +125,17 @@ async function dispatchRealtimeEvent(claim, broadcast) {
       occurredAt
     );
   }
+  if (claim.channel === 'shared_whiteboard' && claim.event_name === 'whiteboardUpdated') {
+    if (typeof broadcast.whiteboardUpdate !== 'function') {
+      throw new Error('whiteboardUpdate broadcast adapter is unavailable');
+    }
+    return broadcast.whiteboardUpdate(
+      claim.recipient_key,
+      claim.event_type,
+      claim.payload,
+      occurredAt
+    );
+  }
 
   const error = new Error('Unsupported realtime outbox channel/event combination');
   error.retryable = false;

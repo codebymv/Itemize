@@ -409,12 +409,12 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:17` |
 | POST | `/api/vaults/:vaultId/unlock` | `/vaults/:vaultId/unlock` | `backend/src/routes/vaults/password.routes.js:78` |
 | POST | `/api/webhooks/:workflowId` | `/:workflowId` | `backend/src/routes/webhooks.routes.js:54` |
-| GET | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:20` |
-| POST | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:85` |
+| GET | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:27` |
+| POST | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:93` |
 | PUT | `/api/whiteboards/:id/position` | `/api/whiteboards/:id/position` | `backend/src/bootstrap/register-api-routes.js:47` |
-| PUT | `/api/whiteboards/:id/position` | `/whiteboards/:id/position` | `backend/src/routes/whiteboards.routes.js:233` |
-| DELETE | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:270` |
-| PUT | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:146` |
+| PUT | `/api/whiteboards/:id/position` | `/whiteboards/:id/position` | `backend/src/routes/whiteboards.routes.js:241` |
+| DELETE | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:278` |
+| PUT | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:154` |
 | DELETE | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:212` |
 | POST | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:189` |
 | GET | `/api/wireframes` | `/wireframes` | `backend/src/routes/wireframes.routes.js:20` |

@@ -156,3 +156,75 @@ export class DeleteWorkspaceListResult {
   @Field(() => Int)
   deletedId: number;
 }
+
+@ObjectType()
+export class WorkspaceWhiteboard {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => Int)
+  userId: number;
+
+  @Field()
+  title: string;
+
+  @Field()
+  category: string;
+
+  @Field(() => Int, { nullable: true })
+  categoryId: number | null;
+
+  @Field()
+  canvasData: string;
+
+  @Field(() => Int)
+  canvasWidth: number;
+
+  @Field(() => Int)
+  canvasHeight: number;
+
+  @Field()
+  backgroundColor: string;
+
+  @Field(() => Float)
+  positionX: number;
+
+  @Field(() => Float)
+  positionY: number;
+
+  @Field(() => Int)
+  zIndex: number;
+
+  @Field(() => String, { nullable: true })
+  colorValue: string | null;
+
+  @Field(() => String, { nullable: true })
+  shareToken: string | null;
+
+  @Field()
+  isPublic: boolean;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  sharedAt: Date | null;
+
+  @Field(() => GraphQLISODateTime)
+  createdAt: Date;
+
+  @Field(() => GraphQLISODateTime)
+  updatedAt: Date;
+}
+
+@ObjectType()
+export class WorkspaceWhiteboardPage {
+  @Field(() => [WorkspaceWhiteboard])
+  nodes: WorkspaceWhiteboard[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+}
+
+@ObjectType()
+export class DeleteWorkspaceWhiteboardResult {
+  @Field(() => Int)
+  deletedId: number;
+}

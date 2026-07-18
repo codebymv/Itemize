@@ -11,6 +11,7 @@ const CHANNEL_EVENTS: Record<string, ReadonlySet<RealtimeEventName>> = {
   user_canvas: new Set(['userListUpdated', 'userListDeleted']),
   shared_list: new Set(['listUpdated']),
   shared_note: new Set(['noteUpdated']),
+  shared_whiteboard: new Set(['whiteboardUpdated']),
 };
 const SHARE_TOKEN_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -101,7 +102,7 @@ export class RealtimeOutboxService {
         'Realtime event key must be between 1 and 255 characters',
       );
     }
-    if (!['list', 'note'].includes(input.aggregateType)) {
+    if (!['list', 'note', 'whiteboard'].includes(input.aggregateType)) {
       throw new Error('Unsupported realtime aggregate type');
     }
     if (!Number.isSafeInteger(input.aggregateId) || input.aggregateId < 1) {
@@ -133,7 +134,14 @@ export class RealtimeOutboxService {
     }
     if (
       (input.channel === 'shared_note' && input.aggregateType !== 'note') ||
-      (input.channel !== 'shared_note' && input.aggregateType !== 'list')
+      (
+        input.channel === 'shared_whiteboard' &&
+        input.aggregateType !== 'whiteboard'
+      ) ||
+      (
+        !['shared_note', 'shared_whiteboard'].includes(input.channel) &&
+        input.aggregateType !== 'list'
+      )
     ) {
       throw new Error('Realtime channel does not match aggregate type');
     }

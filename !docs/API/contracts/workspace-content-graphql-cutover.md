@@ -1,29 +1,36 @@
-# Workspace lists and notes GraphQL cutover contract
+# Workspace lists, notes, and whiteboards GraphQL cutover contract
 
 ## Scope and ownership
 
-Personal lists and notes belong to the authenticated user and are independent
-of the selected organization. `WorkspaceContentModule` owns their private
-reads and reachable list/note mutations. Public capability reads and share
-enable/disable operations remain owned by `PublicSharingModule` and
+Personal lists, notes, and whiteboards belong to the authenticated user and
+are independent of the selected organization. `WorkspaceContentModule` owns
+their private reads and reachable CRUD mutations. Public capability reads and
+share enable/disable operations remain owned by `PublicSharingModule` and
 `WorkspaceSharingModule`.
 
-List and note writes use separate default-off GraphQL flags. Shared-content
-updates/deletes and private list-canvas events write the domain change and the
-required Socket.IO projections to the transactional cross-service outbox
-atomically. The legacy socket host delivers those rows after commit.
+Each content type has independent default-off read and mutation flags.
+Shared-content updates/deletes and private list-canvas events write the domain
+change and required Socket.IO projections to the transactional cross-service
+outbox atomically. The legacy socket host delivers those rows after commit.
 
 | Legacy read | GraphQL query |
 | --- | --- |
 | `GET /api/lists` (retained adapter; no active routed page) | `workspaceLists(filter, page)` |
 | `GET /api/canvas/lists` | repeated bounded `workspaceLists` pages |
 | `GET /api/notes` | `workspaceNotes(filter, page)` |
+| `GET /api/whiteboards` | `workspaceWhiteboards(filter, page)` |
 
 | Legacy note write | GraphQL mutation |
 | --- | --- |
 | `POST /api/notes` | `createWorkspaceNote(input)` |
 | `PUT /api/notes/:noteId` and the content/title/category variants | `updateWorkspaceNote(id, input)` |
 | `DELETE /api/notes/:noteId` | `deleteWorkspaceNote(id, mutationId)` |
+
+| Legacy whiteboard write | GraphQL mutation |
+| --- | --- |
+| `POST /api/whiteboards` | `createWorkspaceWhiteboard(input)` |
+| `PUT /api/whiteboards/:whiteboardId` | `updateWorkspaceWhiteboard(id, input)` |
+| `DELETE /api/whiteboards/:whiteboardId` | `deleteWorkspaceWhiteboard(id, mutationId)` |
 
 | Reachable legacy list write | GraphQL mutation |
 | --- | --- |
@@ -33,17 +40,20 @@ atomically. The legacy socket host delivers those rows after commit.
 
 ## Authentication and transport
 
-- Both queries require the verified `itemize_auth` cookie.
+- All three queries require the verified `itemize_auth` cookie.
 - Resolvers derive `userId` only from verified request context.
 - The active organization never changes the result.
-- All list and note mutations require the verified cookie and CSRF header/token pair.
+- All content mutations require the verified cookie and CSRF header/token pair.
 - `VITE_WORKSPACE_LIST_READS_GRAPHQL` controls both list surfaces.
 - `VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL` independently controls the three
   reachable list-write service methods.
 - `VITE_WORKSPACE_NOTE_READS_GRAPHQL` independently controls note reads.
 - `VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` independently controls all six
   existing note-write service methods.
-- All four flags default to false. Selected GraphQL requests never retry through
+- `VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL` controls whiteboard reads.
+- `VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL` independently controls
+  whiteboard create/update/delete.
+- All six flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
 The retained `UserHome` source uses the shared service adapter and correctly
@@ -51,11 +61,15 @@ handles the `{ lists, pagination }` REST envelope. The active `App` router no
 longer mounts its legacy `/lists` route, so it is not a shipped browser
 consumer. The current Canvas and Contents pages both use the canvas-list
 adapter: `GET /api/canvas/lists` on REST or repeated bounded
-`workspaceLists` pages on GraphQL.
+`workspaceLists` pages on GraphQL. Canvas, Contents, and Global Search load
+whiteboards through the shared adapter. Canvas and Contents own the reachable
+whiteboard CRUD calls. The active debounced drag path remains the retained
+mixed-aggregate `PUT /api/canvas/positions`; the dedicated whiteboard-position
+adapter is not a shipped call path.
 
 ## Query contract
 
-Both queries return `nodes` plus the shared strict `PageInfo`. Page numbers are
+All three queries return `nodes` plus the shared strict `PageInfo`. Page numbers are
 one-indexed, page size is 1-100, and ordering is deterministic:
 `updatedAt DESC, id DESC`.
 
@@ -64,35 +78,43 @@ one-indexed, page size is 1-100, and ordering is deterministic:
 - `search`, trimmed and limited to 200 characters;
 - `categoryId`, a positive user-owned category ID.
 
-List search matches titles. Note search matches title or content. A category
-filter is resolved through the authenticated user's category rows and cannot
-use another user's identifier.
+List and whiteboard search match titles. Note search matches title or content.
+A category filter is resolved through the authenticated user's category rows
+and cannot use another user's identifier.
 
 The GraphQL types expose the private fields used by current consumers:
-identity, title/content, category identity, typed list items, color, canvas
-geometry, z-index, sharing state, and timestamps. The frontend adapter maps
-camel-case GraphQL fields back to the existing REST-shaped objects.
+identity, title/content or canvas JSON, category identity, typed list items,
+color, canvas geometry, z-index, sharing state, and timestamps. The frontend
+adapter maps camel-case GraphQL fields back to the existing REST-shaped
+objects.
 
 ## Category identity
 
 Legacy list/note rows store both a category name and an incompletely populated
-`category_id`. Reads resolve `categoryId` by joining the row's category name to
-a category owned by the same user. They do not trust a foreign or stale stored
-ID and return null when the name has no canonical category.
+`category_id`; whiteboards store only the category name. Reads resolve
+`categoryId` by joining the row's category name to a category owned by the same
+user. They do not trust a foreign or stale stored ID and return null when the
+name has no canonical category.
 
-List and note create/update/category mutations accept the existing category-name
-contract, resolve it case-insensitively to a category owned by the same user,
-and write the canonical ID and name projection together. Legacy rollback reads
-remain compatible with rows created through GraphQL. A create that resolves to
-the default `General` category transactionally creates that canonical category
-when a brand-new account has no category rows; concurrent creates converge on
-the same row. Other unknown category names still fail closed.
+List, note, and whiteboard create/update mutations accept the existing
+category-name contract and resolve it case-insensitively to a category owned by
+the same user. Lists and notes write the canonical ID/name projection together;
+whiteboards write the canonical name and return the resolved ID. Legacy
+rollback reads remain compatible with rows created through GraphQL. A create
+that resolves to the default `General` category transactionally creates that
+canonical category when a brand-new account has no category rows; concurrent
+creates converge on the same row. Other unknown category names fail closed.
 
 Canvas `positionX` and `positionY` are finite GraphQL `Float` values.
 Fractional coordinates are preserved through validation, PostgreSQL, GraphQL
 responses, and retained REST reads. Lists preserve valid negative canvas
 coordinates; note coordinates retain their existing non-negative contract.
 Width, height, and z-index retain their integer contracts.
+
+Whiteboard canvas data must be valid JSON with an object or array root and a
+serialized size no larger than 1 MiB. Dimensions are 1-10,000, positions are
+finite floats, z-index is a safe integer, and colors are normalized six-digit
+hex values.
 
 ## Typed list items
 
@@ -112,13 +134,23 @@ overwrite a newer item edit.
 
 ## Mutation status
 
-List and note create/update/delete are implemented through the mutations above.
+List, note, and whiteboard create/update/delete are implemented through the
+mutations above.
 Note updates lock the row, so concurrent disjoint partial updates compose.
 List updates combine row locking with the required optimistic revision because
 the current consumer replaces the item array. Update/delete clients supply a
 UUID mutation ID that becomes part of each stable outbox event key. List
 updates atomically enqueue the owner-canvas projection and, when public, the
 shared-viewer projection; deletes do the same for both audiences.
+
+Whiteboard updates also require the preceding `updatedAt` revision and
+serialize rapid same-whiteboard frontend writes. A stale revision fails with
+`CONFLICT`, `reason: STALE_WHITEBOARD_REVISION`, and `currentUpdatedAt`.
+Whiteboard drawings may exceed the outbox payload limit, so a shared update
+enqueues only `{ id, requires_refetch: true, updated_at }`. The public viewer
+then reloads the authoritative retained HTTP projection. Deletes enqueue the
+small terminal projection. Migration `029_whiteboard_realtime_outbox` extends
+the constrained outbox vocabulary without changing the single socket host.
 
 The following target mutations remain characterized but blocked because no
 shipped consumer needs them for this checkpoint:
@@ -141,6 +173,24 @@ requirements apply. The code-level atomic outbox and concurrent-edit gates and
 the Canvas/Contents staging write-and-rollback rehearsal have passed. A
 production enablement still requires a monitored change window with the
 realtime outbox worker enabled; the flag remains default-off.
+
+Before enabling either whiteboard flag, Canvas, Contents, Global Search, and
+the anonymous shared viewer must pass a staging rehearsal with each flag
+enabled and then disabled. The active batch-position REST path stays unchanged.
+The code-level user isolation, validation, optimistic concurrency, bounded
+refetch projection, worker delivery, and REST rollback gates pass; staging is
+the remaining whiteboard cutover gate.
+
+## Whiteboard code-level gate
+
+The whiteboard slice passed locally on 2026-07-18. A database built from zero
+verified migration `029`, then proved deterministic user-scoped reads,
+GraphQL create/update/delete visibility through REST, stale-revision rejection,
+shared update/delete projections, delivery through the legacy socket worker,
+and complete private `200` rollback bodies when a returned ETag is replayed.
+The frontend full suite proves independent default-off selection, JSON/casing
+mapping, revision preservation, serialized updates, and REST-default behavior.
+No deployed environment or production resource was changed.
 
 ## Staging read and rollback gate
 
@@ -258,14 +308,18 @@ GraphQL flags remain default-off. Production was untouched.
 - Service tests for strict pagination/filter validation, mapping, malformed
   item handling, and safe dependency errors.
 - Fresh PostgreSQL tests for user isolation, deterministic paging, category
-  identity repair, title/content search, all three REST rollback reads, note
+  identity repair, title/content search, all four REST rollback reads, note
   create/update/delete, fractional geometry, default-category self-healing,
   CSRF, concurrent partial updates, list create/update/delete, stale list
-  revision rejection, owner/shared list projections, and outbox delivery.
+  revision rejection, whiteboard create/update/delete, stale whiteboard
+  revision rejection, bounded shared refetch projection, owner/shared list
+  projections, and outbox delivery.
 - Frontend tests for independent default-off flags, casing/envelope mapping,
-  canvas multi-page reads, list/note mutation mapping, granular-update reuse,
-  revision preservation, and REST-default selection.
+  canvas multi-page reads, list/note/whiteboard mutation mapping,
+  granular-update reuse, revision preservation/serialization, and REST-default
+  selection.
 - A staging browser rehearsal for the shipped Canvas and Contents pages with
   each read flag independently enabled and disabled, plus list and note writes
   with their mutation flags enabled and rolled back. **All reachable workspace
-  reads, list writes, and note writes passed on 2026-07-18.**
+  list/note reads and writes passed on 2026-07-18. Whiteboard read/write,
+  shared-refetch, and rollback rehearsal remains required.**

@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isWorkspaceListGraphqlReadsEnabled,
   isWorkspaceNoteGraphqlReadsEnabled,
+  isWorkspaceWhiteboardGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
+  getWorkspaceWhiteboardsViaGraphql,
 } from './workspaceContentGraphql';
 
 vi.mock('@/lib/api', () => ({
@@ -55,6 +57,27 @@ const note = {
   updatedAt: '2026-07-18T12:01:00.000Z',
 };
 
+const whiteboard = {
+  id: 6,
+  userId: 7,
+  title: 'Sketch',
+  category: 'Work',
+  categoryId: 2,
+  canvasData: '[{"drawMode":true,"paths":[]}]',
+  canvasWidth: 750,
+  canvasHeight: 620,
+  backgroundColor: '#FFFFFF',
+  positionX: 50,
+  positionY: 60,
+  zIndex: 3,
+  colorValue: '#3B82F6',
+  shareToken: null,
+  isPublic: false,
+  sharedAt: null,
+  createdAt: '2026-07-18T12:00:00.000Z',
+  updatedAt: '2026-07-18T12:01:00.000Z',
+};
+
 const response = (payload: unknown): Response =>
   ({
     ok: true,
@@ -76,6 +99,7 @@ describe('workspace content GraphQL consumer', () => {
   it('keeps list and note reads independently default-off', () => {
     expect(isWorkspaceListGraphqlReadsEnabled()).toBe(false);
     expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(false);
+    expect(isWorkspaceWhiteboardGraphqlReadsEnabled()).toBe(false);
 
     vi.stubEnv('VITE_WORKSPACE_LIST_READS_GRAPHQL', 'true');
     expect(isWorkspaceListGraphqlReadsEnabled()).toBe(true);
@@ -83,6 +107,39 @@ describe('workspace content GraphQL consumer', () => {
 
     vi.stubEnv('VITE_WORKSPACE_NOTE_READS_GRAPHQL', 'true');
     expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(true);
+    vi.stubEnv('VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL', 'true');
+    expect(isWorkspaceWhiteboardGraphqlReadsEnabled()).toBe(true);
+  });
+
+  it('maps whiteboard JSON and casing into the REST envelope', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          workspaceWhiteboards: {
+            nodes: [whiteboard],
+            pageInfo: {
+              page: 1,
+              pageSize: 50,
+              total: 1,
+              totalPages: 1,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
+          },
+        },
+      }),
+    );
+    await expect(getWorkspaceWhiteboardsViaGraphql()).resolves.toMatchObject({
+      whiteboards: [{
+        id: 6,
+        user_id: 7,
+        canvas_data: [{ drawMode: true, paths: [] }],
+        canvas_width: 750,
+        background_color: '#FFFFFF',
+        updated_at: whiteboard.updatedAt,
+      }],
+      pagination: { page: 1, limit: 50, total: 1 },
+    });
   });
 
   it('maps list and note pages into the existing REST envelopes', async () => {

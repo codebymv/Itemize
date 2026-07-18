@@ -70,6 +70,38 @@ describe('RealtimeOutboxService', () => {
     ).rejects.toMatchObject({ code: 'REALTIME_EVENT_KEY_CONFLICT' });
   });
 
+  it('accepts the bounded shared-whiteboard refetch projection', async () => {
+    const whiteboardInput: EnqueueRealtimeEventInput = {
+      eventKey: 'whiteboard:9:update:request-2:shared',
+      aggregateType: 'whiteboard',
+      aggregateId: 9,
+      channel: 'shared_whiteboard',
+      recipientKey: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+      eventName: 'whiteboardUpdated',
+      eventType: 'whiteboardUpdated',
+      payload: { id: 9, requires_refetch: true },
+    };
+    const query = jest.fn().mockResolvedValue({
+      rows: [{
+        ...row,
+        event_key: whiteboardInput.eventKey,
+        aggregate_type: 'whiteboard',
+        aggregate_id: 9,
+        channel: 'shared_whiteboard',
+        recipient_key: whiteboardInput.recipientKey,
+        event_name: 'whiteboardUpdated',
+        event_type: 'whiteboardUpdated',
+        payload: whiteboardInput.payload,
+      }],
+    });
+    await expect(
+      service.enqueue(
+        { query } as unknown as PoolClient,
+        whiteboardInput,
+      ),
+    ).resolves.toMatchObject({ inserted: true });
+  });
+
   it('rejects unsupported channel/event combinations before querying', async () => {
     const query = jest.fn();
     await expect(
