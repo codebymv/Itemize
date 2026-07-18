@@ -7,7 +7,10 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
-import { registerSharedContentRevocation } from '../lib/sharedRealtime';
+import {
+  registerSharedContentRevocation,
+  registerSharedRealtimeRecovery,
+} from '../lib/sharedRealtime';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -44,6 +47,7 @@ const SharedListPage: React.FC = () => {
 
   useEffect(() => {
     let unregisterRevocation = () => {};
+    let unregisterRecovery = () => {};
 
     const fetchSharedList = async () => {
       if (!token) {
@@ -75,36 +79,52 @@ const SharedListPage: React.FC = () => {
           transports: ['websocket', 'polling'], // Allow fallback to polling
           timeout: 5000,
           forceNew: true,
-          withCredentials: true
+          withCredentials: true,
+          autoConnect: false,
         });
         socketRef.current = socket;
 
-        // Join the shared list room after connection is established
-        socket.on('connect', () => {
-          console.log('WebSocket connected, joining shared list');
-          socket.emit('joinSharedList', token);
+        const markUnavailable = () => {
+          setIsLive(false);
+          setError('This shared list is no longer available.');
+          setListData(null);
+        };
+        const recovery = registerSharedRealtimeRecovery(socket, 'list', token, {
+          refetch: async () => {
+            const latest = await api.get(`/api/shared/list/${token}`);
+            setListData(latest.data);
+          },
+          onLiveChange: (live) => {
+            setIsLive(live);
+            if (!live) setViewerCount(0);
+          },
+          onUnavailable: markUnavailable,
+          onRecoveryError: () => {
+            toast({
+              title: "Connection Error",
+              description: "Live updates unavailable. Showing last loaded content.",
+              variant: "destructive"
+            });
+          },
         });
-
-        // Handle successful join
-        socket.on('joinedSharedList', (data) => {
-          console.log('Successfully joined shared list:', data);
-          setIsLive(true);
-        });
+        unregisterRecovery = recovery.unregister;
 
         // Listen for real-time updates
         socket.on('listUpdated', (update) => {
           console.log('Received list update:', update);
-          setListData(prevData => {
-            if (!prevData) return prevData;
+          recovery.acceptUpdate(() => {
+            setListData(prevData => {
+              if (!prevData) return prevData;
 
-            // Update the list data while preserving creator info
-            return {
-              ...prevData,
-              ...update.data,
-              creator_name: prevData.creator_name,
-              created_at: prevData.created_at,
-              type: 'list' as const
-            };
+              // Update the list data while preserving creator info
+              return {
+                ...prevData,
+                ...update.data,
+                creator_name: prevData.creator_name,
+                created_at: prevData.created_at,
+                type: 'list' as const
+              };
+            });
           });
         });
 
@@ -112,12 +132,6 @@ const SharedListPage: React.FC = () => {
         socket.on('viewerCount', (count: number) => {
           console.log('Viewer count updated:', count);
           setViewerCount(count);
-        });
-
-        // Handle disconnection
-        socket.on('disconnect', (reason) => {
-          console.log('WebSocket disconnected:', reason);
-          setIsLive(false);
         });
 
         // Handle connection errors
@@ -138,12 +152,9 @@ const SharedListPage: React.FC = () => {
         unregisterRevocation = registerSharedContentRevocation(
           socket,
           'list',
-          () => {
-            setIsLive(false);
-            setError('This shared list is no longer available.');
-            setListData(null);
-          },
+          markUnavailable,
         );
+        socket.connect();
 
       } catch (err) {
         console.error('Error fetching shared list:', err);
@@ -167,6 +178,7 @@ const SharedListPage: React.FC = () => {
     // Cleanup WebSocket connection on unmount
     return () => {
       unregisterRevocation();
+      unregisterRecovery();
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;

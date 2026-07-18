@@ -7,7 +7,10 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
-import { registerSharedContentRevocation } from '../lib/sharedRealtime';
+import {
+  registerSharedContentRevocation,
+  registerSharedRealtimeRecovery,
+} from '../lib/sharedRealtime';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -95,22 +98,31 @@ const SharedWhiteboardPage: React.FC = () => {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       withCredentials: true,
+      autoConnect: false,
     });
 
-    newSocket.on('connect', () => {
-      console.log('WebSocket connected, joining shared whiteboard');
-      setIsConnected(true);
-      newSocket.emit('joinSharedWhiteboard', token);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
+    const markUnavailable = () => {
       setIsConnected(false);
-      setViewerCount(0);
-    });
-
-    newSocket.on('joinedSharedWhiteboard', (data) => {
-      console.log('Successfully joined shared whiteboard:', data);
+      setError('This shared whiteboard is no longer available.');
+      setWhiteboardData(null);
+    };
+    const recovery = registerSharedRealtimeRecovery(newSocket, 'whiteboard', token, {
+      refetch: async () => {
+        const latest = await api.get(`/api/shared/whiteboard/${token}`);
+        setWhiteboardData(latest.data);
+      },
+      onLiveChange: (live) => {
+        setIsConnected(live);
+        if (!live) setViewerCount(0);
+      },
+      onUnavailable: markUnavailable,
+      onRecoveryError: () => {
+        toast({
+          title: "Connection Error",
+          description: "Live updates unavailable. Showing last loaded content.",
+          variant: "destructive",
+        });
+      },
     });
 
     newSocket.on('viewerCount', (count) => {
@@ -121,27 +133,29 @@ const SharedWhiteboardPage: React.FC = () => {
     newSocket.on('whiteboardUpdated', (update) => {
       console.log('Whiteboard updated:', update);
 
-      if (update.type === 'whiteboardUpdated' && update.data) {
-        setWhiteboardData(prevData => {
-          if (!prevData) return prevData;
+      recovery.acceptUpdate(() => {
+        if (update.type === 'whiteboardUpdated' && update.data) {
+          setWhiteboardData(prevData => {
+            if (!prevData) return prevData;
 
-          return {
-            ...prevData,
-            title: update.data.title || prevData.title,
-            category: update.data.category || prevData.category,
-            canvas_data: update.data.canvas_data || prevData.canvas_data,
-            canvas_width: update.data.canvas_width || prevData.canvas_width,
-            canvas_height: update.data.canvas_height || prevData.canvas_height,
-            background_color: update.data.background_color || prevData.background_color,
-            color_value: update.data.color_value || prevData.color_value,
-            updated_at: update.data.updated_at || prevData.updated_at
-          };
-        });
-      } else if (update.type === 'whiteboardDeleted') {
-        console.log('Whiteboard was deleted by owner');
-        setError('This whiteboard has been deleted by the owner.');
-        setWhiteboardData(null);
-      }
+            return {
+              ...prevData,
+              title: update.data.title || prevData.title,
+              category: update.data.category || prevData.category,
+              canvas_data: update.data.canvas_data || prevData.canvas_data,
+              canvas_width: update.data.canvas_width || prevData.canvas_width,
+              canvas_height: update.data.canvas_height || prevData.canvas_height,
+              background_color: update.data.background_color || prevData.background_color,
+              color_value: update.data.color_value || prevData.color_value,
+              updated_at: update.data.updated_at || prevData.updated_at
+            };
+          });
+        } else if (update.type === 'whiteboardDeleted') {
+          console.log('Whiteboard was deleted by owner');
+          setError('This whiteboard has been deleted by the owner.');
+          setWhiteboardData(null);
+        }
+      });
     });
 
     newSocket.on('realtimeError', (error) => {
@@ -155,18 +169,16 @@ const SharedWhiteboardPage: React.FC = () => {
     const unregisterRevocation = registerSharedContentRevocation(
       newSocket,
       'whiteboard',
-      () => {
-        setIsConnected(false);
-        setError('This shared whiteboard is no longer available.');
-        setWhiteboardData(null);
-      },
+      markUnavailable,
     );
 
     setSocket(newSocket);
+    newSocket.connect();
 
     return () => {
       console.log('Cleaning up WebSocket connection');
       unregisterRevocation();
+      recovery.unregister();
       newSocket.disconnect();
     };
   }, [token, sharedWhiteboardId, toast]);

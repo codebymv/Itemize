@@ -7,7 +7,10 @@ import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import api, { getApiUrl } from '../lib/api';
 import { io, Socket } from 'socket.io-client';
-import { registerSharedContentRevocation } from '../lib/sharedRealtime';
+import {
+  registerSharedContentRevocation,
+  registerSharedRealtimeRecovery,
+} from '../lib/sharedRealtime';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -94,22 +97,31 @@ const SharedNotePage: React.FC = () => {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       withCredentials: true,
+      autoConnect: false,
     });
 
-    newSocket.on('connect', () => {
-      console.log('WebSocket connected, joining shared note');
-      setIsConnected(true);
-      newSocket.emit('joinSharedNote', token);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
+    const markUnavailable = () => {
       setIsConnected(false);
-      setViewerCount(0);
-    });
-
-    newSocket.on('joinedSharedNote', (data) => {
-      console.log('Successfully joined shared note:', data);
+      setError('This shared note is no longer available.');
+      setNoteData(null);
+    };
+    const recovery = registerSharedRealtimeRecovery(newSocket, 'note', token, {
+      refetch: async () => {
+        const latest = await api.get(`/api/shared/note/${token}`);
+        setNoteData(latest.data);
+      },
+      onLiveChange: (live) => {
+        setIsConnected(live);
+        if (!live) setViewerCount(0);
+      },
+      onUnavailable: markUnavailable,
+      onRecoveryError: () => {
+        toast({
+          title: "Connection Error",
+          description: "Live updates unavailable. Showing last loaded content.",
+          variant: "destructive",
+        });
+      },
     });
 
     newSocket.on('viewerCount', (count) => {
@@ -120,55 +132,57 @@ const SharedNotePage: React.FC = () => {
     newSocket.on('noteUpdated', (update) => {
       console.log('Note updated:', update);
 
-      if (update.type === 'noteUpdated' && update.data) {
-        // Handle full note updates (legacy)
-        setNoteData(prevData => {
-          if (!prevData) return prevData;
+      recovery.acceptUpdate(() => {
+        if (update.type === 'noteUpdated' && update.data) {
+          // Handle full note updates (legacy)
+          setNoteData(prevData => {
+            if (!prevData) return prevData;
 
-          return {
-            ...prevData,
-            title: update.data.title || prevData.title,
-            content: update.data.content || prevData.content,
-            category: update.data.category || prevData.category,
-            color_value: update.data.color_value || prevData.color_value,
-            updated_at: update.data.updated_at || prevData.updated_at
-          };
-        });
-      } else if (update.type === 'CONTENT_CHANGED' && update.data) {
-        // Handle granular content updates
-        setNoteData(prevData => {
-          if (!prevData) return prevData;
-          return {
-            ...prevData,
-            content: update.data.content,
-            updated_at: update.data.updated_at
-          };
-        });
-      } else if (update.type === 'TITLE_CHANGED' && update.data) {
-        // Handle granular title updates
-        setNoteData(prevData => {
-          if (!prevData) return prevData;
-          return {
-            ...prevData,
-            title: update.data.title,
-            updated_at: update.data.updated_at
-          };
-        });
-      } else if (update.type === 'CATEGORY_CHANGED' && update.data) {
-        // Handle granular category updates
-        setNoteData(prevData => {
-          if (!prevData) return prevData;
-          return {
-            ...prevData,
-            category: update.data.category,
-            updated_at: update.data.updated_at
-          };
-        });
-      } else if (update.type === 'noteDeleted') {
-        console.log('Note was deleted by owner');
-        setError('This note has been deleted by the owner.');
-        setNoteData(null);
-      }
+            return {
+              ...prevData,
+              title: update.data.title || prevData.title,
+              content: update.data.content || prevData.content,
+              category: update.data.category || prevData.category,
+              color_value: update.data.color_value || prevData.color_value,
+              updated_at: update.data.updated_at || prevData.updated_at
+            };
+          });
+        } else if (update.type === 'CONTENT_CHANGED' && update.data) {
+          // Handle granular content updates
+          setNoteData(prevData => {
+            if (!prevData) return prevData;
+            return {
+              ...prevData,
+              content: update.data.content,
+              updated_at: update.data.updated_at
+            };
+          });
+        } else if (update.type === 'TITLE_CHANGED' && update.data) {
+          // Handle granular title updates
+          setNoteData(prevData => {
+            if (!prevData) return prevData;
+            return {
+              ...prevData,
+              title: update.data.title,
+              updated_at: update.data.updated_at
+            };
+          });
+        } else if (update.type === 'CATEGORY_CHANGED' && update.data) {
+          // Handle granular category updates
+          setNoteData(prevData => {
+            if (!prevData) return prevData;
+            return {
+              ...prevData,
+              category: update.data.category,
+              updated_at: update.data.updated_at
+            };
+          });
+        } else if (update.type === 'noteDeleted') {
+          console.log('Note was deleted by owner');
+          setError('This note has been deleted by the owner.');
+          setNoteData(null);
+        }
+      });
     });
 
     newSocket.on('realtimeError', (error) => {
@@ -182,18 +196,16 @@ const SharedNotePage: React.FC = () => {
     const unregisterRevocation = registerSharedContentRevocation(
       newSocket,
       'note',
-      () => {
-        setIsConnected(false);
-        setError('This shared note is no longer available.');
-        setNoteData(null);
-      },
+      markUnavailable,
     );
 
     setSocket(newSocket);
+    newSocket.connect();
 
     return () => {
       console.log('Cleaning up WebSocket connection');
       unregisterRevocation();
+      recovery.unregister();
       newSocket.disconnect();
     };
   }, [token, sharedNoteId, toast]);

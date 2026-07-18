@@ -62,7 +62,7 @@ Before traffic cutover, product/security must choose one of:
 
 ## Realtime behavior
 
-Legacy Socket.IO rooms are keyed by raw share token. New joins verify that the object is still public, while content mutations broadcast only when the object remains public. Successful list, note, whiteboard, and wireframe unshare operations now emit the token-free `sharedContentRevoked` event and use adapter-wide Socket.IO room operations to remove every connected viewer. The three reachable public pages discard their local projection and render the unavailable state; the nonexistent wireframe viewer remains a separate product gap.
+Legacy Socket.IO rooms are keyed by raw share token. New joins verify that the object is still public, while content mutations broadcast only when the object remains public. Successful list, note, whiteboard, and wireframe unshare operations now emit the token-free `sharedContentRevoked` event and use adapter-wide Socket.IO room operations to remove every connected viewer. The three reachable public pages discard their local projection and render the unavailable state. They also reauthorize and refetch before accepting queued updates after reconnect, so a capability revoked while offline clears stale content instead of silently restoring a live session. The nonexistent wireframe viewer remains a separate product gap.
 
 The target freezes room authorization, event names, payload projections, reconnect behavior, rate limits, and revocation semantics in the separate realtime contract. GraphQL subscriptions do not inherit authorization merely because the initial HTTP query was authorized. Active subscribers must be disconnected or denied on their next event immediately after revoke.
 
@@ -89,7 +89,7 @@ Do not expose `enableWireframeSharing` in the new schema until the product eithe
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL coverage proves stable concurrent list, vault, and wireframe issuance; owner-only mutation across all five object types; immediate list, note, whiteboard, wireframe, and vault revocation; token clearing and rotation; malformed-token handling; nested whiteboard sanitization; note markup sanitization; and no-store privacy headers. Live Socket.IO coverage proves two active viewers receive a redacted revocation event and are evicted, while the frontend contract proves the public viewers discard revoked content and the three vault sharing wrappers expose the domain payload rather than the REST envelope.
+Fresh PostgreSQL coverage proves stable concurrent list, vault, and wireframe issuance; owner-only mutation across all five object types; immediate list, note, whiteboard, wireframe, and vault revocation; token clearing and rotation; malformed-token handling; nested whiteboard sanitization; note markup sanitization; and no-store privacy headers. Live Socket.IO coverage proves two active viewers receive a redacted revocation event and are evicted. Four focused frontend realtime cases prove active revocation removal, reconnect/refetch ordering, revoked-while-offline denial, and static offline fallback after a failed recovery read; the vault contract test separately proves all three sharing wrappers expose the domain payload rather than the REST envelope.
 
 This slice is not ready for traffic until:
 

@@ -9,7 +9,7 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 387,
+    "frontendCallsiteCount": 390,
     "operationsWithFrontendConsumers": 365,
     "operationsWithBackendTests": 181,
     "unmatchedFrontendCallCount": 0,
@@ -13209,7 +13209,16 @@
           "path": "/api/shared/list/:token",
           "rawPath": "/api/shared/list/${token}",
           "source": "frontend/src/pages/SharedListPage.tsx",
-          "line": 56,
+          "line": 60,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "rawPath": "/api/shared/list/${token}",
+          "source": "frontend/src/pages/SharedListPage.tsx",
+          "line": 94,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13268,7 +13277,16 @@
           "path": "/api/shared/note/:token",
           "rawPath": "/api/shared/note/${token}",
           "source": "frontend/src/pages/SharedNotePage.tsx",
-          "line": 53,
+          "line": 56,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/note/:token",
+          "rawPath": "/api/shared/note/${token}",
+          "source": "frontend/src/pages/SharedNotePage.tsx",
+          "line": 110,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13368,7 +13386,16 @@
           "path": "/api/shared/whiteboard/:token",
           "rawPath": "/api/shared/whiteboard/${token}",
           "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
-          "line": 54,
+          "line": 57,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/whiteboard/:token",
+          "rawPath": "/api/shared/whiteboard/${token}",
+          "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
+          "line": 111,
           "client": "api",
           "literalInterpolation": false
         }

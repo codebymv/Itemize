@@ -7,7 +7,7 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 387
+- Static frontend callsites: 390
 - Operations with frontend consumers: 365
 - Operations referenced by backend tests: 181
 - Recommended GraphQL queries: 128
@@ -338,10 +338,10 @@
 | GET | `/api/segments/:id/contacts` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segmentContacts |
 | GET | `/api/segments/filter-options` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segmentFilterOptions |
 | POST | `/api/segments/preview` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / previewSegment |
-| GET | `/api/shared/list/:token` | 1 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
-| GET | `/api/shared/note/:token` | 1 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
+| GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
+| GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
 | GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultSharingModule / getSharedVault |
-| GET | `/api/shared/whiteboard/:token` | 1 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
+| GET | `/api/shared/whiteboard/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
 | GET | `/api/signatures/documents` | 2 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocuments |
 | POST | `/api/signatures/documents` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / createSignatureDocument |
 | DELETE | `/api/signatures/documents/:id` | 1 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / deleteSignatureDraft |

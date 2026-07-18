@@ -1,6 +1,6 @@
 # Realtime and Socket.IO cutover contract
 
-**Status:** Phase 0 characterized; legacy authorization and public-content revocation hardened
+**Status:** Phase 0 characterized; legacy authorization, public-content revocation, and shared-viewer reconnect recovery hardened
 **Evidence date:** 2026-07-17
 
 ## Transport decision
@@ -44,7 +44,9 @@ Chat emits `newChatSession`, `newChatMessage`, `chatSessionEnded`, `agentTyping`
 
 Socket.IO reconnection creates a new socket and loses all room membership. Every browser consumer emits its join again from the `connect` handler. Joins are idempotent for tracking and are reauthorized on every connection. Clients set `withCredentials: true`; server CORS also permits credentials for the configured origins.
 
-Events are currently best-effort, in-process notifications emitted after legacy HTTP mutations. They are not a durable business-event log: a process failure between commit and emit can lose a notification, and clients must refetch authoritative state after reconnect. Any notification that becomes must-deliver needs a transactional outbox and replay cursor rather than stronger promises layered onto the current emitter.
+The shipped list, note, and whiteboard viewers register their handlers before connecting and do not become live merely because the transport connected. The first authorized `joined` acknowledgement establishes the live session without a redundant read. After a disconnect, a new authorized `joined` acknowledgement gates an authoritative HTTP refetch; updates received during recovery are queued and applied only after that refetch succeeds. An `INVALID_CAPABILITY` response clears the stale projection and disconnects. A failed recovery read leaves the last-loaded static projection visible but offline, discards queued updates, and reports the failure.
+
+Events are currently best-effort, in-process notifications emitted after legacy HTTP mutations. They are not a durable business-event log: a process failure between commit and emit can lose a notification, so reconnect recovery depends on the authoritative refetch rather than event replay. Any notification that becomes must-deliver needs a transactional outbox and replay cursor rather than stronger promises layered onto the current emitter.
 
 ## Scaling and revocation blockers
 
@@ -68,10 +70,10 @@ NestJS should expose a dedicated `RealtimeModule` that consumes authenticated co
 - anonymous `agentTyping` spoofing fails before broadcast;
 - visitor typing requires a prior verified join on the same socket;
 - repeated joins do not inflate viewer counts and disconnect removes tracking;
-- reconnect reauthorizes and rejoins before accepting events;
+- reconnect reauthorizes, refetches authoritative state, and rejoins before accepting queued events;
 - database failures fail closed without leaking query details or capabilities;
 - public revocation evicts existing sockets before multi-instance production rollout;
 - two API instances provide correct fan-out, presence counts, and revocation through the selected adapter;
 - browser tests prove static fallback, reconnect/refetch, deletion, and capability rotation behavior.
 
-The current executable baseline includes 15 boundary unit cases, 6 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, and a frontend revocation-handler case. The fresh run proves two connected public viewers receive the token-free event and leave the room. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).
+The current executable baseline includes 15 boundary unit cases, 6 live Socket.IO/PostgreSQL scenarios, route-level PostgreSQL proof for all four public-content revocation paths, and 4 focused frontend realtime cases covering active revocation, reconnect/refetch ordering, capability denial, and failed-refetch fallback. The fresh run proves two connected public viewers receive the token-free event and leave the room. The frontend contract proves the shipped viewers do not accept queued events until recovery completes, but a real browser/network-disruption journey is still required. The complete fresh-database baseline is maintained in [GraphQL + NestJS cutover readiness](../graphql-nestjs-cutover-readiness.md).
