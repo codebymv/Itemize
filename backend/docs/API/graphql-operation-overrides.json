@@ -1345,16 +1345,16 @@
       "notes": "Default-off GraphQL list with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, and retained response mapping. Fresh PostgreSQL and the real browser prove a nonempty GraphQL reload, retained REST write interoperability, and flag-off REST rollback without data repair."
     },
     "POST /api/calendars": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "createCalendar", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Validate timezone, duration, buffers, assignment membership, and availability windows in one transaction."
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "createCalendar", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Default-off GraphQL create validates timezone, duration, buffers, plan limits, assignment membership, and availability windows in one transaction. Fresh PostgreSQL plus the real browser prove GraphQL creation, GraphQL readback, and independent flag-off REST rollback without data repair."
     },
     "GET /api/calendars/:id": {
       "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendar", "parityStatus": "dual-parity", "risk": "medium",
       "notes": "Default-off GraphQL detail with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment. The registered /calendars/:id settings consumer passed GraphQL and flag-off REST browser reloads around retained REST settings and availability writes without data repair."
     },
     "PUT /api/calendars/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "updateCalendar", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated."
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "updateCalendar", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated. The same staged calendar passed GraphQL update followed by independent flag-off REST update and GraphQL readback without data repair."
     },
     "DELETE /api/calendars/:id": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendar", "parityStatus": "characterized", "risk": "high",

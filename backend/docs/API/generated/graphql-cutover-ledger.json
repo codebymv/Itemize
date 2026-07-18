@@ -1583,7 +1583,7 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 157,
+          "line": 168,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1660,7 +1660,7 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 189,
+          "line": 200,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1755,7 +1755,7 @@
           "path": "/api/bookings/:id",
           "rawPath": "/api/bookings/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 165,
+          "line": 176,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1802,7 +1802,7 @@
           "path": "/api/bookings/:id/cancel",
           "rawPath": "/api/bookings/${id}/cancel",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 200,
+          "line": 211,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1849,7 +1849,7 @@
           "path": "/api/bookings/:id/reschedule",
           "rawPath": "/api/bookings/${id}/reschedule",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 215,
+          "line": 226,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1902,7 +1902,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 226,
+          "line": 237,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1949,7 +1949,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 256,
+          "line": 267,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2008,7 +2008,7 @@
           "path": "/api/bookings/public/book/:slug/cancel/:token",
           "rawPath": "/api/bookings/public/book/${slug}/cancel/${token}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 265,
+          "line": 276,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2061,7 +2061,7 @@
           "path": "/api/bookings/public/book/:slug/slots",
           "rawPath": "/api/bookings/public/book/${slug}/slots",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 235,
+          "line": 246,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2377,7 +2377,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 58,
+          "line": 63,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2387,7 +2387,7 @@
           "method": "GET",
           "path": "/api/calendars",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 187
+          "line": 215
         },
         {
           "method": "GET",
@@ -2436,7 +2436,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 75,
+          "line": 83,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2503,8 +2503,8 @@
       "owner": "scheduling",
       "targetOperation": "createCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterizing",
-      "notes": "Validate timezone, duration, buffers, assignment membership, and availability windows in one transaction.",
+      "parityStatus": "dual-parity",
+      "notes": "Default-off GraphQL create validates timezone, duration, buffers, plan limits, assignment membership, and availability windows in one transaction. Fresh PostgreSQL plus the real browser prove GraphQL creation, GraphQL readback, and independent flag-off REST rollback without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2525,7 +2525,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 93,
+          "line": 104,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2578,12 +2578,24 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 68,
+          "line": 73,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendars/:createdId",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 378
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendars/:calendarId",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 422
+        },
         {
           "method": "GET",
           "path": "/api/calendars/:calendarId",
@@ -2625,7 +2637,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 86,
+          "line": 97,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2650,8 +2662,8 @@
       "owner": "scheduling",
       "targetOperation": "updateCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterizing",
-      "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated.",
+      "parityStatus": "dual-parity",
+      "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated. The same staged calendar passed GraphQL update followed by independent flag-off REST update and GraphQL readback without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2672,7 +2684,7 @@
           "path": "/api/calendars/:id/availability",
           "rawPath": "/api/calendars/${id}/availability",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 103,
+          "line": 114,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2725,7 +2737,7 @@
           "path": "/api/calendars/:calendarId/date-override",
           "rawPath": "/api/calendars/${calendarId}/date-override",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 124,
+          "line": 135,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2778,7 +2790,7 @@
           "path": "/api/calendars/:calendarId/date-override/:overrideId",
           "rawPath": "/api/calendars/${calendarId}/date-override/${overrideId}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 135,
+          "line": 146,
           "client": "api",
           "literalInterpolation": false
         }
