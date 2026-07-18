@@ -7,8 +7,13 @@ import { CreateItemModal } from "@/components/CreateItemModal";
 import { ListCard } from "@/components/ListCard";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 
-import api from "@/lib/api";
 import { useAuthState } from "@/contexts/AuthContext";
+import {
+  createList as createListRequest,
+  deleteList as deleteListRequest,
+  getLists,
+  updateList as updateListRequest,
+} from '@/services/api';
 
 interface ListItem {
   id: string;
@@ -26,11 +31,12 @@ interface List {
 }
 
 interface BackendList {
-  id: string;
+  id: string | number;
   title: string;
   category?: string;
   items?: ListItem[];
-  createdAt: string;
+  createdAt?: string;
+  created_at?: string;
   color_value?: string | null;
 }
 
@@ -54,15 +60,16 @@ const UserHome = () => {
   const fetchLists = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/lists');
+      const response = await getLists();
+      const rows = Array.isArray(response) ? response : response.lists;
       
       // Map response data to our List type, ensuring correct category mapping and defaults
-      const listsWithDataMapped = (response.data as BackendList[]).map((listFromBackend) => ({
-        id: listFromBackend.id,
+      const listsWithDataMapped = (rows as BackendList[]).map((listFromBackend) => ({
+        id: String(listFromBackend.id),
         title: listFromBackend.title,
         type: listFromBackend.category || 'General', // Map backend 'category' to frontend 'type'
         items: listFromBackend.items || [], // Ensure items is an array
-        createdAt: new Date(listFromBackend.createdAt),
+        createdAt: new Date(listFromBackend.created_at || listFromBackend.createdAt || 0),
         color_value: listFromBackend.color_value || '#808080' // Use color_value, default to grey
       }));
       
@@ -81,18 +88,19 @@ const UserHome = () => {
 
   const createList = async (title: string, type: string) => {
     try {
-      const response = await api.post('/api/lists', {
+      const response = await createListRequest({
         title,
-        category: type,
+        type,
         items: []
       });
       
       const newList: List = {
-        ...response.data,
-        type: response.data.category, // Ensure backend returns category as type
-        items: response.data.items || [], // Ensure items is an array
-        createdAt: new Date(response.data.createdAt),
-        color_value: response.data.color_value || '#808080' // Use color_value from response or default
+        ...response,
+        id: String(response.id),
+        type: response.type || 'General',
+        items: response.items || [],
+        createdAt: response.createdAt || new Date(),
+        color_value: response.color_value || '#808080'
       };
       
       setLists(prev => [newList, ...prev]);
@@ -128,7 +136,7 @@ const UserHome = () => {
  
   const deleteList = async (listId: string): Promise<boolean> => {
     try {
-      await api.delete(`/api/lists/${listId}`);
+      await deleteListRequest(listId);
       
       setLists(prev => prev.filter(list => list.id !== listId));
       toast({
@@ -157,7 +165,7 @@ const UserHome = () => {
         color_value: updatedList.color_value // Add color_value to the payload
       };
       
-      await api.put(`/api/lists/${updatedList.id}`, listData);
+      await updateListRequest({ id: updatedList.id, ...listData });
       
       const newCategory = updatedList.type;
       const oldList = lists.find(list => list.id === updatedList.id);

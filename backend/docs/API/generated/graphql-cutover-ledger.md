@@ -7,13 +7,13 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 390
+- Static frontend callsites: 387
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 192
+- Operations referenced by backend tests: 193
 - Recommended GraphQL queries: 128
 - Recommended GraphQL mutations: 246
 - Recommended retained HTTP endpoints: 37
-- High-risk operations: 324
+- High-risk operations: 336
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -111,7 +111,7 @@
 | POST | `/api/campaigns/:id/send` | 1 | 2 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
 | POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
-| GET | `/api/canvas/lists` | 1 | 0 | graphql-query | high | _unassigned_ |
+| GET | `/api/canvas/lists` | 1 | 1 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | PUT | `/api/canvas/positions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
@@ -219,29 +219,29 @@
 | DELETE | `/api/invoices/settings/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceSettingsModule / removeInvoiceSettingsLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 4 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
-| GET | `/api/lists` | 1 | 2 | graphql-query | medium | _unassigned_ |
-| POST | `/api/lists` | 2 | 1 | graphql-mutation | medium | _unassigned_ |
-| DELETE | `/api/lists/:id` | 2 | 2 | graphql-mutation | medium | _unassigned_ |
-| PUT | `/api/lists/:id` | 2 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/lists/:id/items` | 0 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/lists/:id/items/:itemId` | 0 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/lists/:id/items/:itemId/toggle` | 0 | 2 | graphql-mutation | medium | _unassigned_ |
-| PUT | `/api/lists/:id/position` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
-| PUT | `/api/lists/:id/title` | 0 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
+| POST | `/api/lists` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceList |
+| DELETE | `/api/lists/:id` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceList |
+| PUT | `/api/lists/:id` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceList |
+| POST | `/api/lists/:id/items` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / addWorkspaceListItem |
+| DELETE | `/api/lists/:id/items/:itemId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / removeWorkspaceListItem |
+| PUT | `/api/lists/:id/items/:itemId/toggle` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / toggleWorkspaceListItem |
+| PUT | `/api/lists/:id/position` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceList |
+| PUT | `/api/lists/:id/title` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceList |
 | DELETE | `/api/lists/:listId/share` | 3 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableListSharing |
 | POST | `/api/lists/:listId/share` | 3 | 5 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableListSharing |
 | POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/marketing-chat/token` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/note-suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/notes` | 1 | 7 | graphql-query | medium | _unassigned_ |
-| POST | `/api/notes` | 1 | 6 | graphql-mutation | medium | _unassigned_ |
-| DELETE | `/api/notes/:noteId` | 1 | 4 | graphql-mutation | medium | _unassigned_ |
-| PUT | `/api/notes/:noteId` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
-| PUT | `/api/notes/:noteId/category` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
-| PUT | `/api/notes/:noteId/content` | 1 | 3 | graphql-mutation | medium | _unassigned_ |
+| GET | `/api/notes` | 1 | 8 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
+| POST | `/api/notes` | 1 | 6 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceNote |
+| DELETE | `/api/notes/:noteId` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceNote |
+| PUT | `/api/notes/:noteId` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
+| PUT | `/api/notes/:noteId/category` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / categorizeWorkspaceNote |
+| PUT | `/api/notes/:noteId/content` | 1 | 3 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNoteContent |
 | DELETE | `/api/notes/:noteId/share` | 2 | 1 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableNoteSharing |
 | POST | `/api/notes/:noteId/share` | 2 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableNoteSharing |
-| PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
+| PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceNote |
 | POST | `/api/onboarding/complete-step` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / completeOnboardingStep |
 | POST | `/api/onboarding/dismiss` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / dismissOnboarding |
 | POST | `/api/onboarding/mark-seen` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / markOnboardingSeen |

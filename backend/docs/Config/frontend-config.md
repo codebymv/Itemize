@@ -227,6 +227,11 @@ VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 VITE_CATEGORY_READS_GRAPHQL=false
 VITE_CATEGORY_MUTATIONS_GRAPHQL=false
 
+# Personal list reads (standalone and canvas) and note reads have independent
+# rollback boundaries. Writes remain REST pending the realtime bridge.
+VITE_WORKSPACE_LIST_READS_GRAPHQL=false
+VITE_WORKSPACE_NOTE_READS_GRAPHQL=false
+
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
 

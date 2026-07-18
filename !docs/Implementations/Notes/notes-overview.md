@@ -111,3 +111,14 @@ Notes support rich text editing capabilities, allowing users to format their con
 - **Rich Text Editor**: Integrate a full-featured rich text editor for note content.
 - **Markdown Support**: Allow notes to be written in Markdown format.
 - **Note Sharing**: Enable sharing of notes with other users.
+
+## GraphQL read checkpoint
+
+Private note reads are available through the user-scoped
+`workspaceNotes(filter, page)` query in `WorkspaceContentModule`. The frontend
+adapter is default-off and preserves the existing `{ notes, pagination }`
+shape. See
+[Workspace lists and notes GraphQL cutover contract](../../API/contracts/workspace-content-graphql-cutover.md).
+
+Note mutations remain on REST until their shared-viewer Socket.IO events can
+be published after commit across the separate legacy and NestJS services.

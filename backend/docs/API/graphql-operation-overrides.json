@@ -1556,6 +1556,46 @@
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadSigningPdf", "parityStatus": "characterized", "risk": "high",
       "notes": "Active signing capabilities receive the source PDF as a private attachment; completed-artifact delivery remains a separate product/lifecycle decision."
     },
+    "GET /api/canvas/lists": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering and REST rollback."
+    },
+    "GET /api/lists": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering."
+    },
+    "POST /api/lists": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked until category ID/name dual-write and post-commit cross-service owner/public realtime publication are durable."
+    },
+    "PUT /api/lists/:id": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceList", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on durable realtime parity and explicit whole-item-array concurrency semantics."
+    },
+    "DELETE /api/lists/:id": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked until owner-canvas and active public-viewer deletion events can publish after commit across services."
+    },
+    "POST /api/lists/:id/items": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "addWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on bounded item schema, serialized item mutation, and durable realtime parity."
+    },
+    "DELETE /api/lists/:id/items/:itemId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "removeWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on serialized item mutation and durable realtime parity."
+    },
+    "PUT /api/lists/:id/items/:itemId/toggle": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "toggleWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on atomic JSON item update semantics and durable realtime parity."
+    },
+    "PUT /api/lists/:id/position": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "moveWorkspaceList", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked until high-frequency position writes and shared-viewer publication have a cross-service contract."
+    },
+    "PUT /api/lists/:id/title": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "renameWorkspaceList", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on post-commit public-share realtime parity."
+    },
     "POST /api/lists/:listId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableListSharing", "parityStatus": "characterized", "risk": "high",
       "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token."
@@ -1567,6 +1607,34 @@
     "GET /api/shared/list/:token": {
       "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedList", "parityStatus": "characterized", "risk": "high",
       "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers."
+    },
+    "GET /api/notes": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceNotes", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering."
+    },
+    "POST /api/notes": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked until category ID/name dual-write and cross-service realtime semantics are available."
+    },
+    "PUT /api/notes/:noteId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on post-commit shared-note realtime parity."
+    },
+    "DELETE /api/notes/:noteId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceNote", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked until active shared viewers receive durable post-commit deletion events."
+    },
+    "PUT /api/notes/:noteId/category": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "categorizeWorkspaceNote", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on atomic user-owned category ID/name writes and shared-viewer realtime parity."
+    },
+    "PUT /api/notes/:noteId/content": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNoteContent", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on bounded content validation, edit concurrency, and shared-viewer realtime parity."
+    },
+    "PUT /api/notes/:noteId/title": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "renameWorkspaceNote", "parityStatus": "blocked", "risk": "high",
+      "notes": "Blocked on post-commit shared-note realtime parity."
     },
     "POST /api/notes/:noteId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableNoteSharing", "parityStatus": "characterized", "risk": "high",

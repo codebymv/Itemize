@@ -164,3 +164,16 @@ Item updates are handled by updating the entire `items` JSONB array for a given 
 - **Real-time Collaboration**: Implement WebSocket for real-time updates on lists and canvas.
 - **List Sharing**: Allow users to share lists with other users.
 - **Templates**: Provide pre-defined list templates.
+
+## GraphQL read checkpoint
+
+Private list reads are available through the user-scoped
+`workspaceLists(filter, page)` query in `WorkspaceContentModule`. The
+standalone and canvas frontend adapters have one default-off read flag and
+preserve the REST shapes. See
+[Workspace lists and notes GraphQL cutover contract](../../API/contracts/workspace-content-graphql-cutover.md).
+
+List mutations remain on REST because they currently publish owner-canvas and
+public-share Socket.IO events from the legacy process. Write cutover requires
+a post-commit cross-service realtime bridge and explicit concurrent item-edit
+semantics.

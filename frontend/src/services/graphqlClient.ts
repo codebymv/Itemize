@@ -78,6 +78,12 @@ export const isCategoryGraphqlReadsEnabled = (): boolean =>
 export const isCategoryGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_CATEGORY_MUTATIONS_GRAPHQL === 'true';
 
+export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_WORKSPACE_LIST_READS_GRAPHQL === 'true';
+
+export const isWorkspaceNoteGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_WORKSPACE_NOTE_READS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

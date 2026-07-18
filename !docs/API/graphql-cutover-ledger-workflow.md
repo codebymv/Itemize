@@ -24,15 +24,15 @@ Generated artifacts:
 | --- | ---: |
 | Registered method/path operations | 419 |
 | API operations under `/api` | 412 |
-| Frontend API callsites | 390 |
+| Frontend API callsites | 387 |
 | Operations with frontend consumers | 365 |
-| Operations referenced by backend tests | 192 |
+| Operations referenced by backend tests | 193 |
 | Unmatched frontend callsites | 0 |
 | Runtime URL expressions requiring review | 0 |
 | Acknowledged generic runtime URL helpers | 2 |
 | Literal `${...}` inside a non-template string | 0 |
 | Recommended retained HTTP operations | 37 |
-| High-risk operations | 324 |
+| High-risk operations | 336 |
 
 These are static matches, not production-traffic measurements. An operation with no frontend match may still serve integrations, webhooks, automation, old clients, or manually entered URLs.
 

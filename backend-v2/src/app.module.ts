@@ -22,6 +22,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
 import { RequestContextModule } from './request-context/request-context.module';
 import { TagsModule } from './tags/tags.module';
+import { WorkspaceContentModule } from './workspace-content/workspace-content.module';
 
 // Apollo's conditional exports expose distinct ESM/CJS private HeaderMap types to
 // ts-jest even though the plugin is runtime-compatible with Nest's Apollo driver.
@@ -36,6 +37,7 @@ const observabilityPlugins = [
     AuthModule,
     OrganizationsModule,
     CategoriesModule,
+    WorkspaceContentModule,
     ContactsModule,
     ContactTransfersModule,
     DealsModule,

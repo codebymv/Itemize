@@ -11,7 +11,14 @@ import {
 import {
   isCategoryGraphqlMutationsEnabled,
   isCategoryGraphqlReadsEnabled,
+  isWorkspaceListGraphqlReadsEnabled,
+  isWorkspaceNoteGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+  getCanvasListsViaGraphql,
+  getWorkspaceListsViaGraphql,
+  getWorkspaceNotesViaGraphql,
+} from './workspaceContentGraphql';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -101,7 +108,7 @@ export interface WhiteboardPayload {
 }
 
 // Backend response types
-interface BackendListResponse {
+export interface BackendListResponse {
   id: string | number;
   title: string;
   category?: string;
@@ -136,12 +143,16 @@ const getAuthHeaders = (_token?: string) => ({});
 
 // List API functions
 export const fetchCanvasLists = async (token?: string) => {
-  const response = await api.get('/api/canvas/lists', {
-    headers: getAuthHeaders(token)
-  });
+  const responseData = isWorkspaceListGraphqlReadsEnabled()
+    ? await getCanvasListsViaGraphql()
+    : (
+        await api.get('/api/canvas/lists', {
+          headers: getAuthHeaders(token)
+        })
+      ).data;
   
   // Transform backend response to match frontend List interface
-  const transformedLists = response.data.map((listFromBackend: BackendListResponse) => ({
+  const transformedLists = responseData.map((listFromBackend: BackendListResponse) => ({
     id: listFromBackend.id,
     title: listFromBackend.title,
     type: listFromBackend.category || listFromBackend.type || 'General',
@@ -158,6 +169,16 @@ export const fetchCanvasLists = async (token?: string) => {
   }));
   
   return transformedLists;
+};
+
+export const getLists = async (token?: string) => {
+  if (isWorkspaceListGraphqlReadsEnabled()) {
+    return getWorkspaceListsViaGraphql();
+  }
+  const response = await api.get('/api/lists', {
+    headers: getAuthHeaders(token)
+  });
+  return response.data;
 };
 
 export const createList = async (listData: ListPayload, token?: string) => {
@@ -266,6 +287,9 @@ export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], tok
 
 // Note API functions
 export const getNotes = async (token?: string) => {
+  if (isWorkspaceNoteGraphqlReadsEnabled()) {
+    return getWorkspaceNotesViaGraphql();
+  }
   const response = await api.get('/api/notes', {
     headers: getAuthHeaders(token)
   });
