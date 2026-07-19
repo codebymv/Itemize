@@ -1644,8 +1644,8 @@
       "owner": "scheduling",
       "targetOperation": "bookings",
       "targetModule": "BookingsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, and fresh-PostgreSQL REST interoperability. Staging browser parity remains open.",
+      "parityStatus": "dual-parity",
+      "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1792,8 +1792,8 @@
       "owner": "scheduling",
       "targetOperation": "booking",
       "targetModule": "BookingsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, and fresh-PostgreSQL REST interoperability. Staging parity remains open.",
+      "parityStatus": "dual-parity",
+      "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

@@ -1373,16 +1373,16 @@
       "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary. The shipped settings page currently has no active override writer control, so browser parity is not claimed."
     },
     "GET /api/bookings": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "bookings", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, and fresh-PostgreSQL REST interoperability. Staging browser parity remains open."
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "bookings", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback."
     },
     "POST /api/bookings": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "createBooking", "parityStatus": "characterized", "risk": "high",
       "notes": "Calendar-scoped transaction lock makes overlap check plus insert atomic; validate all tenant references and availability policy."
     },
     "GET /api/bookings/:id": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "booking", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, and fresh-PostgreSQL REST interoperability. Staging parity remains open."
+      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "booking", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route."
     },
     "PATCH /api/bookings/:id/cancel": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "cancelBooking", "parityStatus": "characterizing", "risk": "high",
