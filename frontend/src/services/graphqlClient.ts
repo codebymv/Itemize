@@ -117,6 +117,9 @@ export const isInvoiceBusinessGraphqlReadsEnabled = (): boolean =>
 export const isInvoiceBusinessGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_BUSINESS_MUTATIONS_GRAPHQL === 'true';
 
+export const isPaymentGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_PAYMENT_READS_GRAPHQL === 'true';
+
 export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_LIST_READS_GRAPHQL === 'true';
 

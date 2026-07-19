@@ -7882,8 +7882,8 @@
           "method": "GET",
           "path": "/api/invoices/payments",
           "rawPath": "/api/invoices/payments",
-          "source": "frontend/src/pages/invoices/PaymentsPage.tsx",
-          "line": 209,
+          "source": "frontend/src/services/invoicePaymentsApi.ts",
+          "line": 96,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7895,8 +7895,8 @@
       "owner": "billing",
       "targetOperation": "payments",
       "targetModule": "PaymentsModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL payment history preserves bounded paging, typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. Manual payment writes remain on the retained transactional REST route.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7916,8 +7916,8 @@
           "method": "POST",
           "path": "/api/invoices/payments",
           "rawPath": "/api/invoices/payments",
-          "source": "frontend/src/pages/invoices/PaymentsPage.tsx",
-          "line": 333,
+          "source": "frontend/src/services/invoicePaymentsApi.ts",
+          "line": 136,
           "client": "api",
           "literalInterpolation": false
         }

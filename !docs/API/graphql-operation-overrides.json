@@ -447,8 +447,9 @@
       "owner": "billing",
       "targetModule": "PaymentsModule",
       "targetOperation": "payments",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Default-off GraphQL payment history preserves bounded paging, typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. Manual payment writes remain on the retained transactional REST route."
     },
     "POST /api/invoices/payments": {
       "disposition": "graphql-mutation",

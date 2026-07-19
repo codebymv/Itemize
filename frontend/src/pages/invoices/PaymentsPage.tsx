@@ -38,7 +38,11 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import api from '@/lib/api';
+import {
+    createInvoicePayment,
+    getInvoicePayments,
+    type InvoicePayment,
+} from '@/services/invoicePaymentsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
@@ -54,27 +58,7 @@ import {
 import { CreatePaymentModal } from './components/CreatePaymentModal';
 import type { PaymentData } from './components/CreatePaymentModal';
 
-interface Payment {
-    id: number;
-    invoice_id?: number;
-    invoice_number?: string;
-    contact_id?: number;
-    contact_name?: string;
-    first_name?: string;
-    last_name?: string;
-    amount: number;
-    currency: string;
-    payment_method: 'card' | 'bank_transfer' | 'cash' | 'check' | 'other' | 'stripe';
-    status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'refunded' | 'cancelled';
-    card_last4?: string;
-    card_brand?: string;
-    description?: string;
-    notes?: string;
-    receipt_url?: string;
-    stripe_payment_intent_id?: string;
-    paid_at?: string;
-    created_at: string;
-}
+type Payment = InvoicePayment;
 
 const PAYMENT_METHOD_ICONS: Record<string, React.ReactNode> = {
     card: <CreditCard className="h-4 w-4" />,
@@ -206,14 +190,13 @@ const [payments, setPayments] = useState<Payment[]>([]);
         if (!organizationId) return;
         setLoading(true);
         try {
-            const response = await api.get('/api/invoices/payments', {
-                params: {
+            const data = await getInvoicePayments(
+                organizationId,
+                {
                     status: statusFilter !== 'all' ? statusFilter : undefined,
                     payment_method: methodFilter !== 'all' ? methodFilter : undefined,
                 },
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
-            const data = response.data.payments || response.data || [];
+            );
             setPayments(Array.isArray(data) ? data : []);
 
             // Calculate stats
@@ -330,11 +313,9 @@ const filteredPayments = payments.filter(p => {
         
         try {
             setCreating(true);
-            await api.post('/api/invoices/payments', {
+            await createInvoicePayment(organizationId, {
                 ...paymentData,
                 status: 'succeeded',
-            }, {
-                headers: { 'x-organization-id': organizationId.toString() }
             });
             toast({ title: 'Payment recorded' });
             setShowCreateModal(false);
