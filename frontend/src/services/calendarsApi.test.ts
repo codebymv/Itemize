@@ -4,6 +4,8 @@ import {
   addDateOverride,
   createCalendar,
   deleteCalendar,
+  getBooking,
+  getBookings,
   getCalendar,
   getCalendars,
   removeDateOverride,
@@ -21,6 +23,11 @@ import {
   updateCalendarViaGraphql,
 } from './calendarsGraphql';
 import {
+  getBookingViaGraphql,
+  getBookingsViaGraphql,
+} from './bookingsGraphql';
+import {
+  isBookingGraphqlReadsEnabled,
   isCalendarGraphqlAvailabilityMutationsEnabled,
   isCalendarGraphqlMutationsEnabled,
   isCalendarGraphqlReadsEnabled,
@@ -36,9 +43,15 @@ vi.mock('@/lib/api', () => ({
 }));
 
 vi.mock('./graphqlClient', () => ({
+  isBookingGraphqlReadsEnabled: vi.fn(),
   isCalendarGraphqlReadsEnabled: vi.fn(),
   isCalendarGraphqlMutationsEnabled: vi.fn(),
   isCalendarGraphqlAvailabilityMutationsEnabled: vi.fn(),
+}));
+
+vi.mock('./bookingsGraphql', () => ({
+  getBookingViaGraphql: vi.fn(),
+  getBookingsViaGraphql: vi.fn(),
 }));
 
 vi.mock('./calendarsGraphql', () => ({
@@ -73,12 +86,27 @@ const calendar = {
   updated_at: '2026-07-18T12:01:00.000Z',
 };
 
+const booking = {
+  id: 9,
+  organization_id: 3,
+  calendar_id: 4,
+  start_time: '2026-08-01T17:00:00.000Z',
+  end_time: '2026-08-01T17:30:00.000Z',
+  timezone: 'America/Phoenix',
+  status: 'confirmed' as const,
+  custom_fields: {},
+  source: 'manual' as const,
+  created_at: '2026-07-18T12:00:00.000Z',
+  updated_at: '2026-07-18T12:01:00.000Z',
+};
+
 describe('calendar API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isCalendarGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isCalendarGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isBookingGraphqlReadsEnabled).mockReturnValue(false);
   });
 
   it('keeps list and detail reads on REST by default', async () => {
@@ -206,5 +234,46 @@ describe('calendar API transport selection', () => {
     expect(api.delete).toHaveBeenCalledWith('/api/calendars/4', {
       headers: { 'x-organization-id': '3' },
     });
+  });
+
+  it('keeps authenticated booking reads on REST by default', async () => {
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({
+        data: {
+          bookings: [booking],
+          pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        },
+      })
+      .mockResolvedValueOnce({ data: booking });
+
+    await getBookings({ organization_id: 3, status: 'confirmed' });
+    await getBooking(9, 3);
+
+    expect(api.get).toHaveBeenNthCalledWith(1, '/api/bookings', {
+      params: { organization_id: 3, status: 'confirmed' },
+      headers: { 'x-organization-id': '3' },
+    });
+    expect(api.get).toHaveBeenNthCalledWith(2, '/api/bookings/9', {
+      headers: { 'x-organization-id': '3' },
+    });
+    expect(getBookingsViaGraphql).not.toHaveBeenCalled();
+    expect(getBookingViaGraphql).not.toHaveBeenCalled();
+  });
+
+  it('routes only booking reads through GraphQL when enabled', async () => {
+    vi.mocked(isBookingGraphqlReadsEnabled).mockReturnValue(true);
+    vi.mocked(getBookingsViaGraphql).mockResolvedValue({
+      bookings: [booking],
+      pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+    });
+    vi.mocked(getBookingViaGraphql).mockResolvedValue(booking);
+
+    const params = { organization_id: 3, status: 'confirmed' as const };
+    await getBookings(params);
+    await getBooking(9, 3);
+
+    expect(getBookingsViaGraphql).toHaveBeenCalledWith(params);
+    expect(getBookingViaGraphql).toHaveBeenCalledWith(9, 3);
+    expect(api.get).not.toHaveBeenCalled();
   });
 });

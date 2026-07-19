@@ -72,7 +72,7 @@
 | POST | `/api/billing/portal` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/billing/usage` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/billing/webhook` | 0 | 1 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
-| GET | `/api/bookings` | 1 | 7 | graphql-query | high | scheduling / BookingsModule / bookings |
+| GET | `/api/bookings` | 1 | 8 | graphql-query | high | scheduling / BookingsModule / bookings |
 | POST | `/api/bookings` | 1 | 11 | graphql-mutation | high | scheduling / BookingsModule / createBooking |
 | GET | `/api/bookings/:id` | 1 | 2 | graphql-query | high | scheduling / BookingsModule / booking |
 | PATCH | `/api/bookings/:id/cancel` | 1 | 2 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |

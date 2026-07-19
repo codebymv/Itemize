@@ -18,7 +18,12 @@ import {
     isCalendarGraphqlAvailabilityMutationsEnabled,
     isCalendarGraphqlMutationsEnabled,
     isCalendarGraphqlReadsEnabled,
+    isBookingGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+    getBookingViaGraphql,
+    getBookingsViaGraphql,
+} from './bookingsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -182,6 +187,9 @@ export interface BookingsQueryParams {
 }
 
 export const getBookings = async (params: BookingsQueryParams = {}): Promise<BookingsResponse> => {
+    if (isBookingGraphqlReadsEnabled()) {
+        return getBookingsViaGraphql(params);
+    }
     const response = await api.get('/api/bookings', {
         params,
         headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {},
@@ -190,6 +198,9 @@ export const getBookings = async (params: BookingsQueryParams = {}): Promise<Boo
 };
 
 export const getBooking = async (id: number, organizationId?: number): Promise<Booking> => {
+    if (isBookingGraphqlReadsEnabled()) {
+        return getBookingViaGraphql(id, organizationId);
+    }
     const response = await api.get(`/api/bookings/${id}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });
