@@ -7,10 +7,14 @@ const router = express.Router();
 const googleCalendarService = require('../services/googleCalendarService');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
-const { bookingColumns } = require('./calendar-columns');
 const { createCalendarOAuthState, verifyCalendarOAuthState } = require('../services/calendarOAuthState');
 const { encryptCalendarToken } = require('../utils/calendarTokenEncryption');
 const { loadGoogleCalendarConnection } = require('../services/calendarConnectionCredentials');
+const {
+    enqueueCalendarSyncJob,
+    normalizeSelectedCalendars,
+    publicCalendarSyncJob,
+} = require('../services/calendarSyncJobs');
 const { logger } = require('../utils/logger');
 
 const logCalendarIntegrationError = (operation, error) => {
@@ -87,6 +91,24 @@ module.exports = (pool, authenticateJWT) => {
     router.patch('/connections/:id', authenticateJWT, requireOrganization, async (req, res) => {
         try {
             const { sync_enabled, sync_direction, selected_calendars } = req.body;
+            if (sync_enabled !== undefined && typeof sync_enabled !== 'boolean') {
+                return res.status(400).json({ error: 'sync_enabled must be a boolean' });
+            }
+            if (sync_direction !== undefined
+                && !['push', 'pull', 'both'].includes(sync_direction)) {
+                return res.status(400).json({ error: 'sync_direction must be push, pull, or both' });
+            }
+            let normalizedCalendars;
+            if (selected_calendars !== undefined) {
+                normalizedCalendars = normalizeSelectedCalendars(selected_calendars);
+                if (!Array.isArray(selected_calendars)
+                    || selected_calendars.length > 100
+                    || normalizedCalendars.length !== selected_calendars.length) {
+                    return res.status(400).json({
+                        error: 'selected_calendars must contain up to 100 unique non-empty calendar IDs',
+                    });
+                }
+            }
 
             const result = await withDbClient(pool, async (client) => client.query(`
                 UPDATE calendar_connections
@@ -100,7 +122,7 @@ module.exports = (pool, authenticateJWT) => {
             `, [
                 sync_enabled,
                 sync_direction,
-                selected_calendars ? JSON.stringify(selected_calendars) : null,
+                normalizedCalendars === undefined ? null : JSON.stringify(normalizedCalendars),
                 req.params.id,
                 req.user.id,
                 req.organizationId
@@ -285,50 +307,26 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.post('/sync/:connectionId', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const connection = await loadGoogleCalendarConnection(pool, {
+            const queued = await enqueueCalendarSyncJob(pool, {
                 connectionId: req.params.connectionId,
                 userId: req.user.id,
                 organizationId: req.organizationId,
-                requireActive: true,
+                idempotencyKey: req.get('Idempotency-Key'),
             });
-            if (!connection) {
-                return res.status(404).json({ error: 'Connection not found or inactive' });
+            if (!queued) {
+                return res.status(404).json({ error: 'Connection not found' });
             }
-
-            const bookings = await withDbClient(pool, async (client) => {
-                // Get upcoming bookings that need syncing
-                const bookingsResult = await client.query(`
-                SELECT ${bookingColumns('b')} FROM bookings b
-                LEFT JOIN calendar_sync_events cse ON cse.booking_id = b.id AND cse.connection_id = $1
-                WHERE b.organization_id = $2
-                  AND b.status IN ('confirmed', 'pending')
-                  AND b.start_time >= NOW()
-                  AND (cse.id IS NULL OR cse.last_synced_at < b.updated_at)
-                ORDER BY b.start_time ASC
-                LIMIT 100
-            `, [connection.id, req.organizationId]);
-                return bookingsResult.rows;
-            });
-
-            if (bookings.length === 0) {
-                return res.json({
-                    message: 'No bookings to sync',
-                    results: { created: 0, updated: 0, failed: 0 }
-                });
-            }
-
-            // Sync bookings to Google
-            const results = await googleCalendarService.syncBookingsToGoogle(
-                pool,
-                connection,
-                bookings
-            );
-
-            res.json({
-                message: 'Sync completed',
-                results
+            return res.status(202).json({
+                message: queued.created ? 'Sync queued' : 'Sync already queued',
+                job: publicCalendarSyncJob(queued.job),
             });
         } catch (error) {
+            if (error.code === 'INVALID_IDEMPOTENCY_KEY') {
+                return res.status(400).json({ error: error.message });
+            }
+            if (error.code === 'CALENDAR_SYNC_DISABLED') {
+                return res.status(409).json({ error: error.message });
+            }
             logCalendarIntegrationError('syncCalendar', error);
             return sendError(res, 'Sync failed');
         }
@@ -350,7 +348,7 @@ module.exports = (pool, authenticateJWT) => {
                 );
 
                 if (connectionResult.rows.length === 0) {
-                    return { connection: null, stats: null };
+                    return { connection: null, stats: null, jobs: [] };
                 }
 
                 // Get sync stats
@@ -363,10 +361,20 @@ module.exports = (pool, authenticateJWT) => {
                 FROM calendar_sync_events
                 WHERE connection_id = $1
             `, [req.params.connectionId]);
+                const jobsResult = await client.query(`
+                    SELECT id, connection_id, direction, status, attempt_count,
+                           next_attempt_at, result, last_error, completed_at,
+                           created_at, updated_at
+                    FROM calendar_sync_jobs
+                    WHERE connection_id = $1 AND organization_id = $2
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT 10
+                `, [req.params.connectionId, req.organizationId]);
 
                 return {
                     connection: connectionResult.rows[0],
                     stats: statsResult.rows[0],
+                    jobs: jobsResult.rows.map(publicCalendarSyncJob),
                 };
             });
 
@@ -376,7 +384,8 @@ module.exports = (pool, authenticateJWT) => {
 
             res.json({
                 connection: data.connection,
-                stats: data.stats
+                stats: data.stats,
+                jobs: data.jobs,
             });
         } catch (error) {
             logCalendarIntegrationError('getSyncStatus', error);

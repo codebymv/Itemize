@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 388,
     "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 197,
+    "operationsWithBackendTests": 198,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -2183,7 +2183,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 41
+          "line": 45
         }
       ],
       "consumerCallsites": [
@@ -2217,7 +2217,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 64
+          "line": 68
         }
       ],
       "consumerCallsites": [
@@ -2251,7 +2251,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 87
+          "line": 91
         }
       ],
       "consumerCallsites": [
@@ -2272,8 +2272,8 @@
       "owner": "scheduling-integrations",
       "targetOperation": "updateCalendarConnection",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Validate sync direction and provider calendar selections before updating the scoped connection.",
+      "parityStatus": "characterized",
+      "notes": "The retained boundary explicitly validates booleans, push/pull/both direction, and at most 100 unique non-empty provider calendar IDs before updating the user-and-organization scoped connection.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2285,7 +2285,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 128
+          "line": 150
         }
       ],
       "consumerCallsites": [
@@ -2304,7 +2304,7 @@
           "method": "GET",
           "path": "/api/calendar-integrations/google/auth",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 47
+          "line": 56
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2326,7 +2326,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 255
+          "line": 277
         }
       ],
       "consumerCallsites": [
@@ -2360,7 +2360,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 148
+          "line": 170
         }
       ],
       "consumerCallsites": [],
@@ -2369,19 +2369,19 @@
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 61
+          "line": 70
         },
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 74
+          "line": 83
         },
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 113
+          "line": 122
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -2403,7 +2403,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 341
+          "line": 339
         }
       ],
       "consumerCallsites": [
@@ -2425,7 +2425,7 @@
       "targetOperation": "calendarSyncStatus",
       "targetModule": "CalendarIntegrationsModule",
       "parityStatus": "characterized",
-      "notes": "User-and-organization scoped connection status and bounded sync aggregates.",
+      "notes": "User-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2437,7 +2437,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 286
+          "line": 308
         }
       ],
       "consumerCallsites": [
@@ -2451,15 +2451,22 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/calendar-integrations/sync/22",
+          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
+          "line": 143
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
       "owner": "scheduling-integrations",
       "targetOperation": "requestCalendarSync",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Retained manual sync now uses the same row-locked encrypted credential loader, but the target still queues an idempotent durable sync job rather than performing provider calls inside the resolver.",
+      "parityStatus": "characterized",
+      "notes": "Returns 202 after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

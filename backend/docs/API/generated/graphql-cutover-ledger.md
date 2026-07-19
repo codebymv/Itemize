@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 388
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 197
+- Operations referenced by backend tests: 198
 - Recommended GraphQL queries: 128
 - Recommended GraphQL mutations: 245
 - Recommended retained HTTP endpoints: 38
@@ -88,7 +88,7 @@
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
 | GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
-| POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
+| POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 1 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
 | GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |
 | POST | `/api/calendars` | 1 | 10 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
 | DELETE | `/api/calendars/:id` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / deleteCalendar |

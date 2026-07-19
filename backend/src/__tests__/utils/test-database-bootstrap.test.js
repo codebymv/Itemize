@@ -75,6 +75,7 @@ describe('test database schema contract', () => {
             'booking_availability_policy',
             'booking_public_capabilities',
             'calendar_token_encryption',
+            'calendar_sync_jobs',
             'module_estimates_recurring',
             'estimates_business_column',
             'module_subscriptions',
@@ -308,14 +309,27 @@ describe('test database schema contract', () => {
         expect(sql).toContain('calendar_connections_provider_account_identity');
     });
 
-    test('production startup requires the latest calendar-token migration marker', () => {
+    test('production migration stream creates durable calendar sync jobs', async () => {
+        const migration = require('../../../scripts/migrations/033_calendar_sync_jobs');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS calendar_sync_jobs');
+        expect(sql).toContain('lease_expires_at');
+        expect(sql).toContain('idx_calendar_sync_jobs_active_connection');
+        expect(sql).toContain('calendar_sync_job_tenant');
+        expect(sql).toContain('idx_calendar_sync_events_booking');
+    });
+
+    test('production startup requires the latest calendar-sync migration marker', () => {
         const startupSource = fs.readFileSync(
             path.resolve(__dirname, '../../index.js'),
             'utf8'
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '032_calendar_token_encryption'"
+            "WHERE version = '033_calendar_sync_jobs'"
         );
     });
 

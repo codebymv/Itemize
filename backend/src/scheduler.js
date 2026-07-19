@@ -22,6 +22,7 @@ const {
 } = require('./jobs/workflow-rollout-jobs');
 const { scheduleTrialReminderCron } = require('./jobs/trialReminderCron');
 const { startRealtimeOutboxWorker } = require('./jobs/realtime-outbox-jobs');
+const { runCalendarSyncJobs } = require('./jobs/calendar-sync-jobs');
 const { logger } = require('./utils/logger');
 
 let schedulerInitialized = false;
@@ -76,6 +77,26 @@ function initScheduler(pool, io, broadcast) {
             pollIntervalMs: process.env.REALTIME_OUTBOX_POLL_INTERVAL_MS,
         });
         logger.info('Realtime outbox worker initialized');
+    }
+
+    if (process.env.CALENDAR_SYNC_JOBS_ENABLED === 'true') {
+        cron.schedule('* * * * *', async () => {
+            try {
+                const summary = await runCalendarSyncJobs(pool, {
+                    batchSize: process.env.CALENDAR_SYNC_JOB_BATCH_SIZE,
+                    leaseSeconds: process.env.CALENDAR_SYNC_JOB_LEASE_SECONDS,
+                    maxAttempts: process.env.CALENDAR_SYNC_JOB_MAX_ATTEMPTS,
+                });
+                if (summary.claimed > 0) {
+                    logger.info('Calendar sync jobs completed', summary);
+                }
+            } catch (error) {
+                logger.error('Error in calendar sync jobs', { error: error.message });
+            }
+        }, {
+            timezone: process.env.TZ || 'America/New_York'
+        });
+        logger.info('Calendar sync job worker initialized');
     }
 
     if (process.env.SUBSCRIPTION_WEBHOOK_JOBS_ENABLED !== 'false') {

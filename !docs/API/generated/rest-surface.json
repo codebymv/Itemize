@@ -533,7 +533,7 @@
       ],
       "declaredPath": "/connections",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 41,
+      "line": 45,
       "dynamic": false
     },
     {
@@ -543,7 +543,7 @@
       ],
       "declaredPath": "/connections/:id",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 64,
+      "line": 68,
       "dynamic": false
     },
     {
@@ -553,7 +553,7 @@
       ],
       "declaredPath": "/connections/:id",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 87,
+      "line": 91,
       "dynamic": false
     },
     {
@@ -563,7 +563,7 @@
       ],
       "declaredPath": "/google/auth",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 128,
+      "line": 150,
       "dynamic": false
     },
     {
@@ -573,7 +573,7 @@
       ],
       "declaredPath": "/google/calendars/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 255,
+      "line": 277,
       "dynamic": false
     },
     {
@@ -583,7 +583,7 @@
       ],
       "declaredPath": "/google/callback",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 148,
+      "line": 170,
       "dynamic": false
     },
     {
@@ -593,7 +593,7 @@
       ],
       "declaredPath": "/sync-status/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 341,
+      "line": 339,
       "dynamic": false
     },
     {
@@ -603,7 +603,7 @@
       ],
       "declaredPath": "/sync/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 286,
+      "line": 308,
       "dynamic": false
     },
     {

@@ -3,6 +3,7 @@
  * Handles OAuth flow and two-way sync between Itemize bookings and Google Calendar
  * Extended with retry logic and better error handling (Phase 6)
  */
+const crypto = require('crypto');
 const { google } = require('googleapis');
 const { logger } = require('../utils/logger');
 const { calendarSyncEventColumns } = require('../routes/calendar-columns');
@@ -10,6 +11,50 @@ const { calendarSyncEventColumns } = require('../routes/calendar-columns');
 // Retry configuration
 const MAX_RETRIES = 3;
 const BASE_DELAY = 1000;
+
+const deterministicGoogleEventId = (connectionId, bookingId) => crypto
+    .createHash('sha256')
+    .update(`itemize:${connectionId}:${bookingId}`)
+    .digest('hex');
+
+const safeProviderError = error => String(error?.message || error || 'Provider operation failed')
+    .replace(/\bBearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/\bya29\.[A-Za-z0-9._-]+\b/g, '[redacted-token]')
+    .slice(0, 300);
+
+const zonedDateStart = (dateValue, timeZone) => {
+    const match = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return dateValue;
+    const target = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    let instant = target;
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timeZone || 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+    });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const parts = Object.fromEntries(
+            formatter.formatToParts(new Date(instant))
+                .filter(part => part.type !== 'literal')
+                .map(part => [part.type, Number(part.value)])
+        );
+        const represented = Date.UTC(
+            parts.year,
+            parts.month - 1,
+            parts.day,
+            parts.hour,
+            parts.minute,
+            parts.second
+        );
+        instant += target - represented;
+    }
+    return new Date(instant).toISOString();
+};
 
 /**
  * Execute an operation with retry logic
@@ -151,6 +196,7 @@ const createEventFromBooking = async (connection, booking, calendarId = 'primary
     const calendar = getCalendarClient(connection.access_token, connection.refresh_token);
 
     const event = {
+        id: deterministicGoogleEventId(connection.id, booking.id),
         summary: booking.title || `Booking with ${booking.attendee_name}`,
         description: booking.notes || `Booking via Itemize.cloud`,
         start: {
@@ -236,27 +282,39 @@ const deleteEvent = async (connection, eventId, calendarId = 'primary') => {
  */
 const listEvents = async (connection, calendarId, timeMin, timeMax) => {
     const calendar = getCalendarClient(connection.access_token, connection.refresh_token);
-
-    const { data } = await calendar.events.list({
-        calendarId,
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
-        singleEvents: true,
-        orderBy: 'startTime',
-    });
-
-    return data.items.map(event => ({
-        id: event.id,
-        summary: event.summary,
-        description: event.description,
-        start: event.start.dateTime || event.start.date,
-        end: event.end.dateTime || event.end.date,
-        timezone: event.start.timeZone,
-        attendees: event.attendees || [],
-        htmlLink: event.htmlLink,
-        status: event.status,
-        extendedProperties: event.extendedProperties,
-    }));
+    const events = [];
+    let pageToken;
+    for (let page = 0; page < 10; page += 1) {
+        const { data } = await calendar.events.list({
+            calendarId,
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            singleEvents: true,
+            orderBy: 'startTime',
+            maxResults: 250,
+            pageToken,
+        });
+        for (const event of data.items || []) {
+            const timeZone = event.start?.timeZone || data.timeZone || 'UTC';
+            events.push({
+                id: event.id,
+                summary: event.summary,
+                description: event.description,
+                start: event.start?.dateTime || zonedDateStart(event.start?.date, timeZone),
+                end: event.end?.dateTime || zonedDateStart(event.end?.date, timeZone),
+                timezone: timeZone,
+                attendees: event.attendees || [],
+                htmlLink: event.htmlLink,
+                status: event.status,
+                extendedProperties: event.extendedProperties,
+            });
+        }
+        pageToken = data.nextPageToken;
+        if (!pageToken) return events;
+    }
+    const error = new Error('Calendar event page limit exceeded');
+    error.code = 'CALENDAR_EVENT_PAGE_LIMIT';
+    throw error;
 };
 
 /**
@@ -277,6 +335,7 @@ const syncBookingsToGoogle = async (pool, connection, bookings) => {
     const results = {
         created: 0,
         updated: 0,
+        deleted: 0,
         failed: 0,
         errors: [],
     };
@@ -290,24 +349,56 @@ const syncBookingsToGoogle = async (pool, connection, bookings) => {
             );
 
             if (existingSync.rows.length > 0) {
-                // Update existing event
                 const syncEvent = existingSync.rows[0];
-                await updateEvent(connection, syncEvent.external_event_id, booking, syncEvent.external_calendar_id);
+                if (booking.status === 'cancelled') {
+                    try {
+                        await deleteEvent(
+                            connection,
+                            syncEvent.external_event_id,
+                            syncEvent.external_calendar_id
+                        );
+                    } catch (error) {
+                        const status = error?.response?.status || error?.code;
+                        if (Number(status) !== 404) throw error;
+                    }
+                    await pool.query(
+                        'DELETE FROM calendar_sync_events WHERE id = $1 AND connection_id = $2',
+                        [syncEvent.id, connection.id]
+                    );
+                    results.deleted++;
+                    continue;
+                }
 
+                await updateEvent(connection, syncEvent.external_event_id, booking, syncEvent.external_calendar_id);
                 await pool.query(
                     'UPDATE calendar_sync_events SET last_synced_at = NOW(), updated_at = NOW() WHERE id = $1',
                     [syncEvent.id]
                 );
                 results.updated++;
             } else {
-                // Create new event
+                if (booking.status === 'cancelled') continue;
                 const calendarId = connection.selected_calendars?.[0] || 'primary';
-                const { eventId } = await createEventFromBooking(connection, booking, calendarId);
+                const eventId = deterministicGoogleEventId(connection.id, booking.id);
+                try {
+                    await createEventFromBooking(connection, booking, calendarId);
+                } catch (error) {
+                    const status = error?.response?.status || error?.code;
+                    if (Number(status) !== 409) throw error;
+                    await updateEvent(connection, eventId, booking, calendarId);
+                }
 
                 await pool.query(`
                     INSERT INTO calendar_sync_events 
                     (connection_id, booking_id, external_event_id, external_calendar_id, sync_direction)
                     VALUES ($1, $2, $3, $4, 'push')
+                    ON CONFLICT (connection_id, booking_id)
+                    WHERE booking_id IS NOT NULL
+                    DO UPDATE SET
+                        external_event_id = EXCLUDED.external_event_id,
+                        external_calendar_id = EXCLUDED.external_calendar_id,
+                        sync_direction = 'push',
+                        last_synced_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
                 `, [connection.id, booking.id, eventId, calendarId]);
 
                 results.created++;
@@ -316,16 +407,10 @@ const syncBookingsToGoogle = async (pool, connection, bookings) => {
             results.failed++;
             results.errors.push({
                 bookingId: booking.id,
-                error: error.message,
+                error: safeProviderError(error),
             });
         }
     }
-
-    // Update last sync timestamp
-    await pool.query(
-        'UPDATE calendar_connections SET last_sync_at = NOW(), updated_at = NOW() WHERE id = $1',
-        [connection.id]
-    );
 
     return results;
 };
@@ -343,5 +428,6 @@ module.exports = {
     deleteEvent,
     listEvents,
     needsTokenRefresh,
+    deterministicGoogleEventId,
     syncBookingsToGoogle,
 };
