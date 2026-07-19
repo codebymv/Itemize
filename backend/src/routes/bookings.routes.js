@@ -220,6 +220,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             const data = await withTransaction(pool, async (client) => {
+                await lockCalendarBookings(client, calendar_id);
+
                 // Verify calendar exists
                 const calendarCheck = await client.query(
                     'SELECT id, assigned_to FROM calendars WHERE id = $1 AND organization_id = $2',
@@ -229,8 +231,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 if (calendarCheck.rows.length === 0) {
                     return { error: 'Calendar not found', status: 404, result: null };
                 }
-
-                await lockCalendarBookings(client, calendar_id);
 
                 // Check slot availability
                 const available = await isSlotAvailable(client, calendar_id, start_time, end_time);
@@ -596,7 +596,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
                 }
 
-                const calendar = calendarResult.rows[0];
+                let calendar = calendarResult.rows[0];
 
                 // Calculate end_time if not provided
                 const bookingEndTime = end_time || new Date(
@@ -608,6 +608,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
 
                 await lockCalendarBookings(client, calendar.id);
+
+                const currentCalendar = await client.query(`
+        SELECT id, organization_id, duration_minutes, assigned_to, min_notice_hours, timezone
+        FROM calendars
+        WHERE id = $1 AND slug = $2 AND is_active = TRUE
+      `, [calendar.id, slug]);
+                if (currentCalendar.rows.length === 0) {
+                    return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
+                }
+                calendar = currentCalendar.rows[0];
 
                 // Check slot availability
                 const available = await isSlotAvailable(client, calendar.id, start_time, bookingEndTime);

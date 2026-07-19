@@ -278,6 +278,22 @@ export class CalendarsService {
     );
   }
 
+  async delete(organizationId: number, calendarId: number): Promise<boolean> {
+    this.id(calendarId);
+    const outcome = await this.calendars.delete(organizationId, calendarId);
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Calendar not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'upcoming_bookings') {
+      throw itemizeGraphqlError(
+        'Cannot delete calendar with upcoming bookings. Cancel bookings first.',
+        'BAD_USER_INPUT',
+        { reason: 'UPCOMING_BOOKINGS' },
+      );
+    }
+    return true;
+  }
+
   async replaceAvailability(
     organizationId: number,
     calendarId: number,

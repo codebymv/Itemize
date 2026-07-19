@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
     createCalendarViaGraphql,
+    deleteCalendarViaGraphql,
     deleteCalendarDateOverrideViaGraphql,
     getCalendarViaGraphql,
     getCalendarsViaGraphql,
@@ -105,6 +106,9 @@ export const updateCalendar = async (
 };
 
 export const deleteCalendar = async (id: number, organizationId?: number): Promise<void> => {
+    if (isCalendarGraphqlMutationsEnabled()) {
+        return deleteCalendarViaGraphql(id, organizationId);
+    }
     await api.delete(`/api/calendars/${id}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });

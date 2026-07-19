@@ -304,6 +304,11 @@ module.exports = (pool, authenticateJWT) => {
         try {
             const { id } = req.params;
             const data = await withTransaction(pool, async (client) => {
+                await client.query(
+                    "SELECT pg_advisory_xact_lock(hashtext('calendar_booking'), $1::integer)",
+                    [id]
+                );
+
                 const calendar = await client.query(
                     'SELECT id FROM calendars WHERE id = $1 AND organization_id = $2 FOR UPDATE',
                     [id, req.organizationId]
@@ -311,11 +316,6 @@ module.exports = (pool, authenticateJWT) => {
                 if (calendar.rows.length === 0) {
                     return { found: false, error: null, result: null };
                 }
-
-                await client.query(
-                    "SELECT pg_advisory_xact_lock(hashtext('calendar_booking'), $1::integer)",
-                    [id]
-                );
 
                 // Check for upcoming bookings while creation for this calendar is locked.
                 const bookingsCheck = await client.query(

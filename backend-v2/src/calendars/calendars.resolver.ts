@@ -52,6 +52,15 @@ export class CalendarsResolver {
 
   @CsrfProtected()
   @OrganizationScoped()
+  @Mutation(() => Boolean)
+  deleteCalendar(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<boolean> {
+    return this.calendars.delete(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
   @Mutation(() => [CalendarAvailabilityWindow])
   replaceCalendarAvailability(
     @Args('calendarId', { type: () => Int }) calendarId: number,

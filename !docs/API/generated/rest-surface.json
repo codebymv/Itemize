@@ -513,7 +513,7 @@
       ],
       "declaredPath": "/public/book/:slug/cancel/:token",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 719,
+      "line": 729,
       "dynamic": false
     },
     {

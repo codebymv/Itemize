@@ -143,6 +143,7 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     await app.init();
 
     const createCalendarsRouter = require('../../../backend/src/routes/calendars.routes');
+    const createBookingsRouter = require('../../../backend/src/routes/bookings.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     legacyApp = express();
     legacyApp.use(cookieParser());
@@ -150,6 +151,14 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     legacyApp.use(
       '/api/calendars',
       createCalendarsRouter(pool, authenticateJWT),
+    );
+    legacyApp.use(
+      '/api/bookings',
+      createBookingsRouter(
+        pool,
+        authenticateJWT,
+        (_request: unknown, _response: unknown, next: () => void) => next(),
+      ),
     );
   });
 
@@ -716,6 +725,117 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     expect(deleted.body).toEqual({
       data: { deleteCalendarDateOverride: true },
     });
+  });
+
+  it('deletes only an owned calendar without active future bookings', async () => {
+    const deletable = await pool.query<{ id: number }>(
+      `INSERT INTO calendars (
+         organization_id, name, slug, timezone, assigned_to, created_by
+       ) VALUES ($1, 'Deletable calendar', $2, 'America/Phoenix', $3, $3)
+       RETURNING id`,
+      [organizationId, `deletable-${Date.now()}-${process.pid}`, userId],
+    );
+    const deletableId = Number(deletable.rows[0].id);
+    await pool.query(
+      `INSERT INTO bookings (
+         organization_id, calendar_id, title, start_time, end_time,
+         timezone, status, source
+       ) VALUES (
+         $1, $2, 'Cancelled future booking',
+         '2099-03-01T17:00:00Z', '2099-03-01T17:30:00Z',
+         'America/Phoenix', 'cancelled', 'manual'
+       )`,
+      [organizationId, deletableId],
+    );
+
+    const foreign = await mutation(
+      otherOrganizationId,
+      `mutation { deleteCalendar(id: ${deletableId}) }`,
+    ).expect(200);
+    expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const blocked = await mutation(
+      organizationId,
+      `mutation { deleteCalendar(id: ${calendarId}) }`,
+    ).expect(200);
+    expect(blocked.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'UPCOMING_BOOKINGS',
+    });
+
+    const noCsrf = await query(
+      organizationId,
+      `mutation { deleteCalendar(id: ${deletableId}) }`,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const deleted = await mutation(
+      organizationId,
+      `mutation { deleteCalendar(id: ${deletableId}) }`,
+    ).expect(200);
+    expect(deleted.body).toEqual({ data: { deleteCalendar: true } });
+
+    await request(legacyApp)
+      .get(`/api/calendars/${deletableId}`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(404);
+    const remaining = await pool.query(
+      'SELECT id FROM bookings WHERE calendar_id = $1',
+      [deletableId],
+    );
+    expect(remaining.rows).toHaveLength(0);
+  });
+
+  it('serializes retained booking creation against GraphQL calendar deletion', async () => {
+    const calendar = await pool.query<{ id: number }>(
+      `INSERT INTO calendars (
+         organization_id, name, slug, timezone, assigned_to, created_by
+       ) VALUES ($1, 'Calendar delete race', $2, 'America/Phoenix', $3, $3)
+       RETURNING id`,
+      [organizationId, `delete-race-${Date.now()}-${process.pid}`, userId],
+    );
+    const raceCalendarId = Number(calendar.rows[0].id);
+
+    const [booking, deletion] = await Promise.all([
+      request(legacyApp)
+        .post('/api/bookings')
+        .set('Cookie', `itemize_auth=${token}`)
+        .set('x-organization-id', String(organizationId))
+        .send({
+          calendar_id: raceCalendarId,
+          title: 'Concurrent booking',
+          start_time: '2099-04-01T17:00:00Z',
+          end_time: '2099-04-01T17:30:00Z',
+          timezone: 'America/Phoenix',
+        }),
+      mutation(
+        organizationId,
+        `mutation { deleteCalendar(id: ${raceCalendarId}) }`,
+      ),
+    ]);
+
+    expect([201, 404]).toContain(booking.status);
+    expect(deletion.status).toBe(200);
+    if (booking.status === 201) {
+      expect(deletion.body.errors[0].extensions).toMatchObject({
+        code: 'BAD_USER_INPUT',
+        reason: 'UPCOMING_BOOKINGS',
+      });
+      await pool.query('DELETE FROM calendars WHERE id = $1', [raceCalendarId]);
+    } else {
+      expect(deletion.body).toEqual({ data: { deleteCalendar: true } });
+    }
+    const counts = await pool.query<{
+      calendars: number;
+      bookings: number;
+    }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM calendars WHERE id = $1) AS calendars,
+         (SELECT COUNT(*)::int FROM bookings WHERE calendar_id = $1) AS bookings`,
+      [raceCalendarId],
+    );
+    expect(counts.rows[0]).toEqual({ calendars: 0, bookings: 0 });
   });
 
   it('enforces mutation CSRF, window validation, and the organization calendar limit', async () => {

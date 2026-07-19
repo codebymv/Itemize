@@ -150,6 +150,12 @@ const updateCalendarMutation = `
   }
 `;
 
+const deleteCalendarMutation = `
+  mutation DeleteCalendar($id: Int!) {
+    deleteCalendar(id: $id)
+  }
+`;
+
 const replaceCalendarAvailabilityMutation = `
   mutation ReplaceCalendarAvailability(
     $calendarId: Int!,
@@ -386,6 +392,16 @@ export const updateCalendarViaGraphql = async (
     organizationId,
   );
   return mapCalendar(response.updateCalendar);
+};
+
+export const deleteCalendarViaGraphql = async (
+  id: number,
+  organizationId?: number,
+): Promise<void> => {
+  await graphqlMutationRequest<
+    { deleteCalendar: boolean },
+    { id: number }
+  >(deleteCalendarMutation, { id }, organizationId);
 };
 
 export const replaceCalendarAvailabilityViaGraphql = async (

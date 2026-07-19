@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createCalendarViaGraphql,
+  deleteCalendarViaGraphql,
   deleteCalendarDateOverrideViaGraphql,
   getCalendarViaGraphql,
   getCalendarsViaGraphql,
@@ -407,5 +408,21 @@ describe('calendar GraphQL consumer', () => {
       String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body),
     );
     expect(deleteBody.variables).toEqual({ calendarId: 4, overrideId: 9 });
+  });
+
+  it('deletes a calendar through the CSRF-protected retained-shape adapter', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({ data: { deleteCalendar: true } }),
+    );
+
+    await expect(deleteCalendarViaGraphql(4, 3)).resolves.toBeUndefined();
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      'x-organization-id': '3',
+      'x-csrf-token': 'calendar-csrf',
+    });
+    const body = JSON.parse(String(request.body));
+    expect(body.query).toContain('mutation DeleteCalendar');
+    expect(body.variables).toEqual({ id: 4 });
   });
 });

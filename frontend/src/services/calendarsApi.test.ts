@@ -12,6 +12,7 @@ import {
 } from './calendarsApi';
 import {
   createCalendarViaGraphql,
+  deleteCalendarViaGraphql,
   deleteCalendarDateOverrideViaGraphql,
   getCalendarViaGraphql,
   getCalendarsViaGraphql,
@@ -42,6 +43,7 @@ vi.mock('./graphqlClient', () => ({
 
 vi.mock('./calendarsGraphql', () => ({
   createCalendarViaGraphql: vi.fn(),
+  deleteCalendarViaGraphql: vi.fn(),
   deleteCalendarDateOverrideViaGraphql: vi.fn(),
   getCalendarViaGraphql: vi.fn(),
   getCalendarsViaGraphql: vi.fn(),
@@ -133,7 +135,7 @@ describe('calendar API transport selection', () => {
     expect(updateCalendarViaGraphql).not.toHaveBeenCalled();
   });
 
-  it('routes definition writes through GraphQL while other calendar writes remain REST', async () => {
+  it('routes definition writes through GraphQL while availability remains REST', async () => {
     vi.mocked(isCalendarGraphqlMutationsEnabled).mockReturnValue(true);
     vi.mocked(createCalendarViaGraphql).mockResolvedValue(calendar);
     vi.mocked(updateCalendarViaGraphql).mockResolvedValue(calendar);
@@ -150,14 +152,13 @@ describe('calendar API transport selection', () => {
 
     expect(createCalendarViaGraphql).toHaveBeenCalledWith(createInput);
     expect(updateCalendarViaGraphql).toHaveBeenCalledWith(4, updateInput, 3);
+    expect(deleteCalendarViaGraphql).toHaveBeenCalledWith(4, 3);
     expect(api.put).toHaveBeenCalledWith(
       '/api/calendars/4/availability',
       { availability_windows: [] },
       { headers: { 'x-organization-id': '3' } },
     );
-    expect(api.delete).toHaveBeenCalledWith('/api/calendars/4', {
-      headers: { 'x-organization-id': '3' },
-    });
+    expect(api.delete).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
 

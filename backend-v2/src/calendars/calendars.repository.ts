@@ -105,6 +105,10 @@ export type UpdateCalendarOutcome =
   | { kind: 'not_found' }
   | { kind: 'invalid_assignee' }
   | { kind: 'assignee_required' };
+export type DeleteCalendarOutcome =
+  | { kind: 'deleted' }
+  | { kind: 'not_found' }
+  | { kind: 'upcoming_bookings' };
 export type ReplaceCalendarAvailabilityOutcome =
   { kind: 'updated'; value: AvailabilityWindowRow[] } | { kind: 'not_found' };
 export type UpsertCalendarDateOverrideOutcome =
@@ -329,6 +333,47 @@ export class CalendarsRepository {
       const updated = await this.selectById(client, organizationId, calendarId);
       if (!updated) throw new Error('Updated calendar could not be reloaded');
       return { kind: 'updated', value: updated };
+    });
+  }
+
+  async delete(
+    organizationId: number,
+    calendarId: number,
+  ): Promise<DeleteCalendarOutcome> {
+    return this.transaction(async (client) => {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('calendar_booking'), $1::integer)",
+        [calendarId],
+      );
+      const calendar = await client.query(
+        `SELECT id
+         FROM calendars
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [calendarId, organizationId],
+      );
+      if (!calendar.rows[0]) return { kind: 'not_found' };
+
+      const bookings = await client.query<{ count: number }>(
+        `SELECT COUNT(*)::int AS count
+         FROM bookings
+         WHERE calendar_id = $1
+           AND organization_id = $2
+           AND status IN ('pending', 'confirmed')
+           AND start_time > NOW()`,
+        [calendarId, organizationId],
+      );
+      if (bookings.rows[0].count > 0) {
+        return { kind: 'upcoming_bookings' };
+      }
+
+      const deleted = await client.query(
+        `DELETE FROM calendars
+         WHERE id = $1 AND organization_id = $2
+         RETURNING id`,
+        [calendarId, organizationId],
+      );
+      return deleted.rows[0] ? { kind: 'deleted' } : { kind: 'not_found' };
     });
   }
 

@@ -67,6 +67,7 @@ describe('CalendarsService', () => {
   beforeEach(() => {
     repository = {
       create: jest.fn(),
+      delete: jest.fn(),
       deleteDateOverride: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
@@ -238,6 +239,25 @@ describe('CalendarsService', () => {
       extensions: {
         code: 'BAD_USER_INPUT',
         reason: 'INVALID_ASSIGNEE',
+      },
+    });
+  });
+
+  it('deletes an owned calendar and returns stable concealment and booking errors', async () => {
+    repository.delete.mockResolvedValueOnce({ kind: 'deleted' });
+    await expect(service.delete(3, 4)).resolves.toBe(true);
+    expect(repository.delete).toHaveBeenCalledWith(3, 4);
+
+    repository.delete.mockResolvedValueOnce({ kind: 'not_found' });
+    await expect(service.delete(3, 999)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
+
+    repository.delete.mockResolvedValueOnce({ kind: 'upcoming_bookings' });
+    await expect(service.delete(3, 4)).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'UPCOMING_BOOKINGS',
       },
     });
   });
