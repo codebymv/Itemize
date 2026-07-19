@@ -25,6 +25,7 @@ describe('test database schema contract', () => {
         expect(tables).toEqual(expect.arrayContaining([
             '_migrations',
             'bookings',
+            'calendar_external_busy_intervals',
             'contacts',
             'deal_activities',
             'email_webhook_events',
@@ -71,6 +72,7 @@ describe('test database schema contract', () => {
             'subscription_webhook_notification_outbox',
             'subscription_webhook_reconciliation',
             'module_invoicing',
+            'booking_availability_policy',
             'module_estimates_recurring',
             'estimates_business_column',
             'module_subscriptions',
@@ -260,14 +262,28 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'whiteboardUpdated'");
     });
 
-    test('production startup requires the latest whiteboard migration marker', () => {
+    test('production migration stream installs authoritative booking availability', async () => {
+        const migration = require('../../../scripts/migrations/030_booking_availability_policy');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS calendar_external_busy_intervals');
+        expect(sql).toContain('calendar_external_busy_interval_tenant');
+        expect(sql).toContain('CREATE OR REPLACE FUNCTION booking_slot_policy_reason');
+        expect(sql).toContain('CREATE OR REPLACE FUNCTION booking_available_slots');
+        expect(sql).toContain("'DST_TRANSITION'");
+        expect(sql).toContain("'EXTERNAL_BUSY'");
+    });
+
+    test('production startup requires the latest availability-policy migration marker', () => {
         const startupSource = fs.readFileSync(
             path.resolve(__dirname, '../../index.js'),
             'utf8'
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '029_whiteboard_realtime_outbox'"
+            "WHERE version = '030_booking_availability_policy'"
         );
     });
 

@@ -30,26 +30,41 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     const generateCancellationToken = () => crypto.randomBytes(32).toString('hex');
 
-    /**
-     * Check if a time slot is available
-     */
-    const isSlotAvailable = async (client, calendarId, startTime, endTime, excludeBookingId = null) => {
-        const result = await client.query(`
-      SELECT COUNT(*) FROM bookings
-      WHERE calendar_id = $1
-        AND status IN ('pending', 'confirmed')
-        AND start_time < $3
-        AND end_time > $2
-        AND ($4::integer IS NULL OR id <> $4)
-    `, [calendarId, startTime, endTime, excludeBookingId]);
-
-        return parseInt(result.rows[0].count) === 0;
-    };
-
     const validateTimeRange = (startTime, endTime) => {
         const start = new Date(startTime);
         const end = new Date(endTime);
         return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start;
+    };
+
+    const validateDate = (value) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
+        const parsed = new Date(`${value}T00:00:00.000Z`);
+        return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+            ? parsed
+            : null;
+    };
+
+    const slotPolicyReason = async (
+        client,
+        calendarId,
+        startTime,
+        endTime,
+        excludeBookingId = null,
+        requireCalendarDuration = false
+    ) => {
+        const result = await client.query(
+            `SELECT booking_slot_policy_reason(
+               $1, $2, $3, $4, $5, CURRENT_TIMESTAMP
+             ) AS reason`,
+            [
+                calendarId,
+                startTime,
+                endTime,
+                excludeBookingId,
+                requireCalendarDuration,
+            ]
+        );
+        return result.rows[0]?.reason || null;
     };
 
     const lockCalendarBookings = (client, calendarId) => client.query(
@@ -224,7 +239,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 // Verify calendar exists
                 const calendarCheck = await client.query(
-                    'SELECT id, assigned_to FROM calendars WHERE id = $1 AND organization_id = $2',
+                    `SELECT id, assigned_to
+                     FROM calendars
+                     WHERE id = $1 AND organization_id = $2
+                     FOR UPDATE`,
                     [calendar_id, req.organizationId]
                 );
 
@@ -232,10 +250,19 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     return { error: 'Calendar not found', status: 404, result: null };
                 }
 
-                // Check slot availability
-                const available = await isSlotAvailable(client, calendar_id, start_time, end_time);
-                if (!available) {
-                    return { error: 'Time slot is not available', status: 409, result: null };
+                const policyReason = await slotPolicyReason(
+                    client,
+                    calendar_id,
+                    start_time,
+                    end_time
+                );
+                if (policyReason) {
+                    return {
+                        error: 'Time slot is not available',
+                        reason: policyReason,
+                        status: 409,
+                        result: null,
+                    };
                 }
 
                 const cancellationToken = generateCancellationToken();
@@ -284,7 +311,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
 
             if (data.error) {
-                return res.status(data.status).json({ error: data.error });
+                return res.status(data.status).json({
+                    error: data.error,
+                    ...(data.reason ? { reason: data.reason } : {}),
+                });
             }
 
             res.status(201).json(data.result.rows[0]);
@@ -359,28 +389,63 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             const data = await withTransaction(pool, async (client) => {
-                // Get current booking
-                const currentBooking = await client.query(
-                    `SELECT ${bookingColumns()} FROM bookings WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+                const targetBooking = await client.query(
+                    `SELECT calendar_id
+                     FROM bookings
+                     WHERE id = $1 AND organization_id = $2`,
                     [id, req.organizationId]
                 );
 
-                if (currentBooking.rows.length === 0) {
+                if (targetBooking.rows.length === 0) {
                     return { error: 'Booking not found', status: 404, result: null, oldBooking: null };
                 }
 
+                await lockCalendarBookings(client, targetBooking.rows[0].calendar_id);
+
+                const calendar = await client.query(
+                    `SELECT id
+                     FROM calendars
+                     WHERE id = $1 AND organization_id = $2
+                     FOR UPDATE`,
+                    [targetBooking.rows[0].calendar_id, req.organizationId]
+                );
+                if (calendar.rows.length === 0) {
+                    return { error: 'Booking not found', status: 404, result: null, oldBooking: null };
+                }
+
+                const currentBooking = await client.query(
+                    `SELECT ${bookingColumns()}
+                     FROM bookings
+                     WHERE id = $1
+                       AND organization_id = $2
+                       AND calendar_id = $3
+                     FOR UPDATE`,
+                    [id, req.organizationId, targetBooking.rows[0].calendar_id]
+                );
+                if (currentBooking.rows.length === 0) {
+                    return { error: 'Booking not found', status: 404, result: null, oldBooking: null };
+                }
                 const oldBooking = currentBooking.rows[0];
 
                 if (!['pending', 'confirmed'].includes(oldBooking.status)) {
                     return { error: 'Only active bookings can be rescheduled', status: 409, result: null, oldBooking: null };
                 }
 
-                await lockCalendarBookings(client, oldBooking.calendar_id);
-
-                // Check new slot availability
-                const available = await isSlotAvailable(client, oldBooking.calendar_id, start_time, end_time, oldBooking.id);
-                if (!available) {
-                    return { error: 'New time slot is not available', status: 409, result: null, oldBooking: null };
+                const policyReason = await slotPolicyReason(
+                    client,
+                    oldBooking.calendar_id,
+                    start_time,
+                    end_time,
+                    oldBooking.id
+                );
+                if (policyReason) {
+                    return {
+                        error: 'New time slot is not available',
+                        reason: policyReason,
+                        status: 409,
+                        result: null,
+                        oldBooking: null,
+                    };
                 }
 
                 const result = await client.query(`
@@ -412,7 +477,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
 
             if (data.error) {
-                return res.status(data.status).json({ error: data.error });
+                return res.status(data.status).json({
+                    error: data.error,
+                    ...(data.reason ? { reason: data.reason } : {}),
+                });
             }
 
             res.json(data.result.rows[0]);
@@ -445,7 +513,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         WHERE c.slug = $1 AND c.is_active = TRUE
       `, [slug]);
 
-                if (result.rows.length === 0) {
+                if (result.rows.length !== 1) {
                     return { calendar: null, availability: [] };
                 }
 
@@ -482,53 +550,42 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             const { slug } = req.params;
             const { start_date, end_date } = req.query;
 
-            if (!start_date) {
-                return res.status(400).json({ error: 'start_date is required' });
+            const parsedStart = validateDate(start_date);
+            const resolvedEnd = end_date || start_date;
+            const parsedEnd = validateDate(resolvedEnd);
+            if (!parsedStart || !parsedEnd || parsedEnd < parsedStart) {
+                return res.status(400).json({
+                    error: 'start_date and end_date must form a valid ISO date range',
+                });
+            }
+            const dayRange = Math.round(
+                (parsedEnd.getTime() - parsedStart.getTime()) / 86400000
+            );
+            if (dayRange > 30) {
+                return res.status(400).json({
+                    error: 'Slot queries are limited to 31 calendar days',
+                });
             }
 
             const data = await withDbClient(pool, async (client) => {
-                // Get calendar
                 const calendarResult = await client.query(`
-        SELECT id, duration_minutes, buffer_before_minutes, buffer_after_minutes,
-               min_notice_hours, timezone
+        SELECT id, duration_minutes, min_notice_hours, max_future_days, timezone
         FROM calendars
         WHERE slug = $1 AND is_active = TRUE
       `, [slug]);
 
-                if (calendarResult.rows.length === 0) {
-                    return { calendar: null, availability: [], overrides: [], bookings: [] };
+                if (calendarResult.rows.length !== 1) {
+                    return { calendar: null, slots: [] };
                 }
 
                 const calendar = calendarResult.rows[0];
-
-                // Get availability windows
-                const availabilityResult = await client.query(`
-        SELECT day_of_week, start_time, end_time
-        FROM availability_windows
-        WHERE calendar_id = $1 AND is_active = TRUE
-      `, [calendar.id]);
-
-                // Get date overrides
-                const overridesResult = await client.query(`
-        SELECT override_date, is_available, start_time, end_time
-        FROM calendar_date_overrides
-        WHERE calendar_id = $1 AND override_date >= $2 AND override_date <= COALESCE($3, $2 + INTERVAL '30 days')
-      `, [calendar.id, start_date, end_date]);
-
-                // Get existing bookings
-                const bookingsResult = await client.query(`
+                const slotsResult = await client.query(`
         SELECT start_time, end_time
-        FROM bookings
-        WHERE calendar_id = $1 
-          AND status IN ('pending', 'confirmed')
-          AND start_time >= $2
-          AND start_time <= COALESCE($3, $2::date + INTERVAL '30 days')
-      `, [calendar.id, start_date, end_date]);
+        FROM booking_available_slots($1, $2::date, $3::date, CURRENT_TIMESTAMP)
+      `, [calendar.id, start_date, resolvedEnd]);
                 return {
                     calendar,
-                    availability: availabilityResult.rows,
-                    overrides: overridesResult.rows,
-                    bookings: bookingsResult.rows
+                    slots: slotsResult.rows,
                 };
             });
 
@@ -536,19 +593,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 return res.status(404).json({ error: 'Calendar not found' });
             }
 
-            // Return raw data for frontend to compute slots
             res.json({
                 calendar: {
                     id: data.calendar.id,
                     duration_minutes: data.calendar.duration_minutes,
-                    buffer_before: data.calendar.buffer_before_minutes,
-                    buffer_after: data.calendar.buffer_after_minutes,
                     min_notice_hours: data.calendar.min_notice_hours,
+                    max_future_days: data.calendar.max_future_days,
                     timezone: data.calendar.timezone
                 },
-                availability: data.availability,
-                overrides: data.overrides,
-                booked_slots: data.bookings
+                slots: data.slots
             });
         } catch (error) {
             console.error('Error fetching available slots:', error);
@@ -592,7 +645,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         WHERE slug = $1 AND is_active = TRUE
       `, [slug]);
 
-                if (calendarResult.rows.length === 0) {
+                if (calendarResult.rows.length !== 1) {
                     return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
                 }
 
@@ -619,10 +672,23 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
                 calendar = currentCalendar.rows[0];
 
-                // Check slot availability
-                const available = await isSlotAvailable(client, calendar.id, start_time, bookingEndTime);
-                if (!available) {
-                    return { error: 'This time slot is no longer available', status: 409, booking: null, calendar: null, contactId: null };
+                const policyReason = await slotPolicyReason(
+                    client,
+                    calendar.id,
+                    start_time,
+                    bookingEndTime,
+                    null,
+                    true
+                );
+                if (policyReason) {
+                    return {
+                        error: 'This time slot is no longer available',
+                        reason: policyReason,
+                        status: 409,
+                        booking: null,
+                        calendar: null,
+                        contactId: null,
+                    };
                 }
 
                 const cancellationToken = generateCancellationToken();
@@ -708,7 +774,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             });
 
             if (data.error) {
-                return res.status(data.status).json({ error: data.error });
+                return res.status(data.status).json({
+                    error: data.error,
+                    ...(data.reason ? { reason: data.reason } : {}),
+                });
             }
 
             res.status(201).json({

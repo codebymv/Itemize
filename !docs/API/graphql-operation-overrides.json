@@ -1378,7 +1378,7 @@
     },
     "POST /api/bookings": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "createBooking", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first collision serialization, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed; full availability policy remains a cutover blocker."
+      "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first serialization, shared authoritative windows/override/buffer/notice/horizon/activity/DST/external-busy policy, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed."
     },
     "GET /api/bookings/:id": {
       "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "booking", "parityStatus": "dual-parity", "risk": "high",
@@ -1390,19 +1390,19 @@
     },
     "PATCH /api/bookings/:id/reschedule": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "rescheduleBooking", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first collision checks excluding itself, optional timezone preservation, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed."
+      "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first authoritative policy checks excluding itself, optional timezone preservation, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed."
     },
     "GET /api/bookings/public/book/:slug": {
-      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingPage", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Anonymous rate-limited embed protocol; target needs globally unambiguous public identity and bounded response data."
+      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingPage", "parityStatus": "characterized", "risk": "high",
+      "notes": "Anonymous rate-limited embed protocol now fails closed unless its slug resolves to exactly one active calendar. A globally stable unique public identity remains required before traffic cutover."
     },
     "GET /api/bookings/public/book/:slug/slots": {
-      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingSlots", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Server must return authoritative timezone-aware slots; legacy endpoint exposes raw inputs for browser-side calculation."
+      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingSlots", "parityStatus": "characterized", "risk": "high",
+      "notes": "Returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals."
     },
     "POST /api/bookings/public/book/:slug": {
       "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "createPublicBooking", "parityStatus": "characterized", "risk": "high",
-      "notes": "Anonymous rate-limited booking; collision check and insert now serialize per calendar, with case-insensitive contact reuse."
+      "notes": "Anonymous rate-limited booking; lock-first creation transactionally rechecks the shared authoritative slot policy before insert, fails closed on ambiguous slugs, and serializes case-insensitive contact reuse."
     },
     "POST /api/bookings/public/book/:slug/cancel/:token": {
       "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "cancelPublicBooking", "parityStatus": "characterized", "risk": "high",

@@ -92,6 +92,23 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     );
     calendarId = Number(calendars.rows[0].id);
     otherCalendarId = Number(calendars.rows[1].id);
+    await pool.query(
+      `UPDATE calendars
+       SET min_notice_hours = 0,
+           max_future_days = 50000,
+           is_active = TRUE
+       WHERE id = ANY($1::int[])`,
+      [[calendarId, otherCalendarId]],
+    );
+    await pool.query(
+      `INSERT INTO availability_windows (
+         calendar_id, day_of_week, start_time, end_time, is_active
+       )
+       SELECT calendar_id, day, '00:00:00', '23:59:59', TRUE
+       FROM unnest($1::int[]) calendar_id
+       CROSS JOIN generate_series(0, 6) day`,
+      [[calendarId, otherCalendarId]],
+    );
     const contacts = await pool.query<{ id: number }>(
       `INSERT INTO contacts (
          organization_id, first_name, last_name, email, created_by

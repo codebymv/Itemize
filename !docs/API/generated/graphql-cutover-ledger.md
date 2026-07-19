@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 388
 - Operations with frontend consumers: 365
-- Operations referenced by backend tests: 196
+- Operations referenced by backend tests: 197
 - Recommended GraphQL queries: 128
 - Recommended GraphQL mutations: 245
 - Recommended retained HTTP endpoints: 38
@@ -77,10 +77,10 @@
 | GET | `/api/bookings/:id` | 1 | 3 | graphql-query | high | scheduling / BookingsModule / booking |
 | PATCH | `/api/bookings/:id/cancel` | 1 | 2 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |
 | PATCH | `/api/bookings/:id/reschedule` | 1 | 3 | graphql-mutation | high | scheduling / BookingsModule / rescheduleBooking |
-| GET | `/api/bookings/public/book/:slug` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
-| POST | `/api/bookings/public/book/:slug` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
+| GET | `/api/bookings/public/book/:slug` | 1 | 3 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
+| POST | `/api/bookings/public/book/:slug` | 1 | 6 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 3 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
-| GET | `/api/bookings/public/book/:slug/slots` | 1 | 0 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
+| GET | `/api/bookings/public/book/:slug/slots` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
 | GET | `/api/calendar-integrations/connections` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarConnections |
 | DELETE | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / disconnectCalendar |
 | PATCH | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / updateCalendarConnection |
@@ -90,7 +90,7 @@
 | GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
 | POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
 | GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |
-| POST | `/api/calendars` | 1 | 9 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
+| POST | `/api/calendars` | 1 | 10 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
 | DELETE | `/api/calendars/:id` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / deleteCalendar |
 | GET | `/api/calendars/:id` | 1 | 7 | graphql-query | medium | scheduling / CalendarsModule / calendar |
 | PUT | `/api/calendars/:id` | 1 | 2 | graphql-mutation | high | scheduling / CalendarsModule / updateCalendar |

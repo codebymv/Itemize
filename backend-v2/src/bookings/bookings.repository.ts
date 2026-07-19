@@ -225,13 +225,12 @@ export class BookingsRepository {
       }
 
       if (
-        !(await this.slotAvailable(
+        (await this.slotPolicyReason(
           client,
-          organizationId,
           values.calendarId,
           values.startTime,
           values.endTime,
-        ))
+        )) !== null
       ) {
         return { kind: 'slot_unavailable' };
       }
@@ -404,14 +403,13 @@ export class BookingsRepository {
       }
 
       if (
-        !(await this.slotAvailable(
+        (await this.slotPolicyReason(
           client,
-          organizationId,
           calendarId,
           startTime,
           endTime,
           bookingId,
-        ))
+        )) !== null
       ) {
         return { kind: 'slot_unavailable' };
       }
@@ -484,32 +482,25 @@ export class BookingsRepository {
     );
   }
 
-  private async slotAvailable(
+  private async slotPolicyReason(
     client: PoolClient,
-    organizationId: number,
     calendarId: number,
     startTime: Date,
     endTime: Date,
     excludeBookingId: number | null = null,
-  ): Promise<boolean> {
-    const result = await client.query<{ total: number }>(
-      `SELECT COUNT(*)::int AS total
-       FROM bookings
-       WHERE organization_id = $1
-         AND calendar_id = $2
-         AND status IN ('pending', 'confirmed')
-         AND start_time < $4
-         AND end_time > $3
-         AND ($5::integer IS NULL OR id <> $5)`,
+  ): Promise<string | null> {
+    const result = await client.query<{ reason: string | null }>(
+      `SELECT booking_slot_policy_reason(
+         $1, $2, $3, $4, FALSE, CURRENT_TIMESTAMP
+       ) AS reason`,
       [
-        organizationId,
         calendarId,
         startTime,
         endTime,
         excludeBookingId,
       ],
     );
-    return Number(result.rows[0]?.total ?? 0) === 0;
+    return result.rows[0]?.reason ?? null;
   }
 
   private async transaction<T>(

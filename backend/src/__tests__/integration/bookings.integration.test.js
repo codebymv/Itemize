@@ -40,7 +40,40 @@ async function seedCalendar(app, user) {
         .set('Cookie', [`itemize_auth=${user.token}`])
         .set('x-organization-id', String(user.org.id))
         .send({ name: `Booking Test Calendar ${Date.now()}`, duration_minutes: 60 });
+    await configureCalendarPolicy(app.locals.testPool, res.body.id);
     return res.body.id;
+}
+
+async function configureCalendarPolicy(pool, calendarId, settings = {}) {
+    await pool.query(
+        `UPDATE calendars
+         SET timezone = $2,
+             min_notice_hours = $3,
+             max_future_days = $4,
+             buffer_before_minutes = $5,
+             buffer_after_minutes = $6,
+             duration_minutes = COALESCE($7, duration_minutes),
+             is_active = TRUE
+         WHERE id = $1`,
+        [
+            calendarId,
+            settings.timezone || 'UTC',
+            settings.minNoticeHours ?? 0,
+            settings.maxFutureDays ?? 365,
+            settings.bufferBeforeMinutes ?? 0,
+            settings.bufferAfterMinutes ?? 0,
+            settings.durationMinutes ?? null,
+        ]
+    );
+    await pool.query('DELETE FROM availability_windows WHERE calendar_id = $1', [calendarId]);
+    await pool.query(
+        `INSERT INTO availability_windows (
+           calendar_id, day_of_week, start_time, end_time, is_active
+         )
+         SELECT $1, day, '00:00:00', '23:59:59', TRUE
+         FROM generate_series(0, 6) day`,
+        [calendarId]
+    );
 }
 
 /** Future timestamps 1 and 2 hours from now */
@@ -60,6 +93,7 @@ describe('Bookings Integration Tests', () => {
         dbHelper = new TestDbHelper();
         await dbHelper.setup();
         app = createApp(dbHelper.pool);
+        app.locals.testPool = dbHelper.pool;
 
         [userA, userB] = await Promise.all([
             dbHelper.seedUser(`book-a-${Date.now()}@test.itemize`, 'Booking User A'),
@@ -388,6 +422,9 @@ describe('Bookings Integration Tests', () => {
                 'UPDATE calendars SET is_active = TRUE WHERE id = $1',
                 [calendarId]
             );
+            await configureCalendarPolicy(dbHelper.pool, calendarId, {
+                durationMinutes: 60,
+            });
         });
 
         afterAll(async () => {
@@ -480,6 +517,7 @@ describe('Bookings Integration Tests', () => {
                 .send({ name: `Booking Invariants ${Date.now()}`, duration_minutes: 60 });
             calendarId = calendar.body.id;
             calendarSlug = calendar.body.slug;
+            await configureCalendarPolicy(dbHelper.pool, calendarId);
         });
 
         afterAll(async () => {
@@ -539,6 +577,239 @@ describe('Bookings Integration Tests', () => {
                 .post(`/api/bookings/public/book/${calendarSlug}/cancel/${token}`)
                 .send({});
             expect(replay.status).toBe(404);
+        });
+    });
+
+    describe('Server-authoritative availability policy', () => {
+        let calendarId;
+        let calendarSlug;
+        let connectionId;
+        const overrideDate = '2027-03-10';
+
+        beforeAll(async () => {
+            const calendar = await request(app)
+                .post('/api/calendars')
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({
+                    name: `Availability Policy ${Date.now()}`,
+                    duration_minutes: 30,
+                });
+            calendarId = calendar.body.id;
+            calendarSlug = calendar.body.slug;
+            await configureCalendarPolicy(dbHelper.pool, calendarId, {
+                maxFutureDays: 1000,
+                timezone: 'UTC',
+            });
+            await dbHelper.pool.query(
+                `INSERT INTO calendar_date_overrides (
+                   calendar_id, override_date, is_available, start_time, end_time
+                 ) VALUES ($1, $2, TRUE, '09:00:00', '10:00:00')`,
+                [calendarId, overrideDate]
+            );
+            const connection = await dbHelper.pool.query(
+                `INSERT INTO calendar_connections (
+                   user_id, organization_id, provider, provider_account_id,
+                   access_token, sync_enabled
+                 ) VALUES ($1, $2, 'google', $3, 'test-token', TRUE)
+                 RETURNING id`,
+                [userA.user.id, userA.org.id, `availability-${Date.now()}`]
+            );
+            connectionId = connection.rows[0].id;
+        });
+
+        afterAll(async () => {
+            await dbHelper.pool.query('DELETE FROM calendar_connections WHERE id = $1', [connectionId]);
+            await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
+        });
+
+        it('returns bounded authoritative slots rather than raw scheduling inputs', async () => {
+            const response = await request(app)
+                .get(`/api/bookings/public/book/${calendarSlug}/slots`)
+                .query({ start_date: overrideDate, end_date: overrideDate });
+
+            expect(response.status).toBe(200);
+            expect(response.body).not.toHaveProperty('availability');
+            expect(response.body).not.toHaveProperty('overrides');
+            expect(response.body).not.toHaveProperty('booked_slots');
+            expect(response.body.slots).toEqual([
+                {
+                    start_time: `${overrideDate}T09:00:00.000Z`,
+                    end_time: `${overrideDate}T09:30:00.000Z`,
+                },
+                {
+                    start_time: `${overrideDate}T09:30:00.000Z`,
+                    end_time: `${overrideDate}T10:00:00.000Z`,
+                },
+            ]);
+
+            const excessive = await request(app)
+                .get(`/api/bookings/public/book/${calendarSlug}/slots`)
+                .query({ start_date: overrideDate, end_date: '2027-04-10' });
+            expect(excessive.status).toBe(400);
+        });
+
+        it('revalidates a selected public slot and applies calendar buffers', async () => {
+            await dbHelper.pool.query(
+                `UPDATE calendars
+                 SET buffer_before_minutes = 10,
+                     buffer_after_minutes = 5
+                 WHERE id = $1`,
+                [calendarId]
+            );
+            const first = await request(app)
+                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .send({
+                    attendee_name: 'Authoritative Slot',
+                    attendee_email: 'authoritative-slot@test.com',
+                    start_time: `${overrideDate}T09:00:00.000Z`,
+                    end_time: `${overrideDate}T09:30:00.000Z`,
+                    timezone: 'UTC',
+                });
+            expect(first.status).toBe(201);
+
+            const adjacent = await request(app)
+                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .send({
+                    attendee_name: 'Buffered Slot',
+                    attendee_email: 'buffered-slot@test.com',
+                    start_time: `${overrideDate}T09:30:00.000Z`,
+                    end_time: `${overrideDate}T10:00:00.000Z`,
+                    timezone: 'UTC',
+                });
+            expect(adjacent.status).toBe(409);
+            expect(adjacent.body.reason).toBe('BOOKING_CONFLICT');
+        });
+
+        it('enforces notice, horizon, overrides, and normalized external busy intervals', async () => {
+            await dbHelper.pool.query(
+                `UPDATE calendars
+                 SET min_notice_hours = 1,
+                     max_future_days = 30,
+                     buffer_before_minutes = 0,
+                     buffer_after_minutes = 0
+                 WHERE id = $1`,
+                [calendarId]
+            );
+            const boundedReasons = await dbHelper.pool.query(
+                `SELECT
+                   booking_slot_policy_reason(
+                     $1, '2027-03-10T09:00:00Z', '2027-03-10T09:30:00Z',
+                     NULL, TRUE, '2027-03-10T08:30:01Z'
+                   ) AS notice,
+                   booking_slot_policy_reason(
+                     $1, '2027-03-10T09:00:00Z', '2027-03-10T09:30:00Z',
+                     NULL, TRUE, '2027-01-01T00:00:00Z'
+                   ) AS horizon`,
+                [calendarId]
+            );
+            expect(boundedReasons.rows[0]).toEqual({
+                notice: 'MIN_NOTICE',
+                horizon: 'MAX_FUTURE',
+            });
+
+            await dbHelper.pool.query(
+                `UPDATE calendars
+                 SET min_notice_hours = 0, max_future_days = 1000
+                 WHERE id = $1`,
+                [calendarId]
+            );
+            await dbHelper.pool.query(
+                `INSERT INTO calendar_external_busy_intervals (
+                   organization_id, calendar_id, connection_id, external_calendar_id,
+                   external_event_id, start_time, end_time
+                 ) VALUES (
+                   $1, $2, $3, 'primary', 'busy-1',
+                   '2027-03-11T12:00:00Z', '2027-03-11T13:00:00Z'
+                 )`,
+                [userA.org.id, calendarId, connectionId]
+            );
+            const busy = await dbHelper.pool.query(
+                `SELECT booking_slot_policy_reason(
+                   $1, '2027-03-11T12:15:00Z', '2027-03-11T12:45:00Z',
+                   NULL, TRUE, '2027-01-01T00:00:00Z'
+                 ) AS reason`,
+                [calendarId]
+            );
+            expect(busy.rows[0].reason).toBe('EXTERNAL_BUSY');
+
+            await expect(
+                dbHelper.pool.query(
+                    `INSERT INTO calendar_external_busy_intervals (
+                       organization_id, calendar_id, connection_id,
+                       external_calendar_id, external_event_id, start_time, end_time
+                     ) VALUES (
+                       $1, $2, $3, 'primary', 'cross-tenant',
+                       '2027-03-12T12:00:00Z', '2027-03-12T13:00:00Z'
+                     )`,
+                    [userB.org.id, calendarId, connectionId]
+                )
+            ).rejects.toMatchObject({
+                constraint: 'calendar_external_busy_interval_tenant',
+            });
+        });
+
+        it('omits nonexistent DST times and resolves repeated wall times once', async () => {
+            await dbHelper.pool.query(
+                `UPDATE calendars
+                 SET timezone = 'America/New_York',
+                     min_notice_hours = 0,
+                     max_future_days = 1000,
+                     duration_minutes = 30
+                 WHERE id = $1`,
+                [calendarId]
+            );
+            await dbHelper.pool.query('DELETE FROM calendar_date_overrides WHERE calendar_id = $1', [calendarId]);
+            await dbHelper.pool.query('DELETE FROM availability_windows WHERE calendar_id = $1', [calendarId]);
+            await dbHelper.pool.query(
+                `INSERT INTO availability_windows (
+                   calendar_id, day_of_week, start_time, end_time, is_active
+                 ) VALUES ($1, 0, '00:00:00', '04:00:00', TRUE)`,
+                [calendarId]
+            );
+
+            const spring = await dbHelper.pool.query(
+                `SELECT start_time
+                 FROM booking_available_slots(
+                   $1, '2027-03-14', '2027-03-14', '2027-03-13T00:00:00Z'
+                 )`,
+                [calendarId]
+            );
+            const fall = await dbHelper.pool.query(
+                `SELECT start_time
+                 FROM booking_available_slots(
+                   $1, '2027-11-07', '2027-11-07', '2027-11-06T00:00:00Z'
+                 )`,
+                [calendarId]
+            );
+            const localLabels = (rows) => rows.map((row) =>
+                new Intl.DateTimeFormat('en-CA', {
+                    hour: '2-digit',
+                    hour12: false,
+                    minute: '2-digit',
+                    timeZone: 'America/New_York',
+                }).format(row.start_time)
+            );
+            expect(localLabels(spring.rows)).not.toContain('02:00');
+            expect(new Set(localLabels(fall.rows)).size).toBe(fall.rows.length);
+            expect(localLabels(fall.rows).filter((value) => value === '01:00')).toHaveLength(1);
+        });
+
+        it('fails closed when a public slug is ambiguous across organizations', async () => {
+            const duplicate = await dbHelper.pool.query(
+                `INSERT INTO calendars (
+                   organization_id, name, slug, timezone, duration_minutes,
+                   min_notice_hours, max_future_days, is_active
+                 ) VALUES ($1, 'Ambiguous Calendar', $2, 'UTC', 30, 0, 365, TRUE)
+                 RETURNING id`,
+                [userB.org.id, calendarSlug]
+            );
+            const response = await request(app)
+                .get(`/api/bookings/public/book/${calendarSlug}`);
+            expect(response.status).toBe(404);
+            await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [
+                duplicate.rows[0].id,
+            ]);
         });
     });
 

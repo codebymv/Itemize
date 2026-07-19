@@ -566,14 +566,11 @@ export interface AvailableSlotsResponse {
   calendar: {
     id: number;
     duration_minutes: number;
-    buffer_before: number;
-    buffer_after: number;
     min_notice_hours: number;
+    max_future_days: number;
     timezone: string;
   };
-  availability: AvailabilityWindow[];
-  overrides: CalendarDateOverride[];
-  booked_slots: Array<{ start_time: string; end_time: string }>;
+  slots: Array<{ start_time: string; end_time: string }>;
 }
 
 // ======================
