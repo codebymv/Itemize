@@ -1583,12 +1583,18 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 181,
+          "line": 198,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/bookings",
+          "source": "backend-v2/test/integration/bookings.integration-spec.ts",
+          "line": 239
+        },
         {
           "method": "GET",
           "path": "/api/bookings",
@@ -1638,8 +1644,8 @@
       "owner": "scheduling",
       "targetOperation": "bookings",
       "targetModule": "BookingsModule",
-      "parityStatus": "characterizing",
-      "notes": "Strict organization-scoped filters, bounded pagination, timestamp validation, and stable ordering.",
+      "parityStatus": "dual-parity",
+      "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1660,12 +1666,24 @@
           "path": "/api/bookings",
           "rawPath": "/api/bookings",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 213,
+          "line": 236,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings",
+          "source": "backend-v2/test/integration/bookings.integration-spec.ts",
+          "line": 497
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 802
+        },
         {
           "method": "POST",
           "path": "/api/bookings",
@@ -1733,8 +1751,8 @@
       "owner": "scheduling",
       "targetOperation": "createBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Calendar-scoped transaction lock makes overlap check plus insert atomic; validate all tenant references and availability policy.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first collision serialization, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed; full availability policy remains a cutover blocker.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1755,12 +1773,18 @@
           "path": "/api/bookings/:id",
           "rawPath": "/api/bookings/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 189,
+          "line": 209,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/bookings/:bookingId",
+          "source": "backend-v2/test/integration/bookings.integration-spec.ts",
+          "line": 387
+        },
         {
           "method": "GET",
           "path": "/api/bookings/:bookingId",
@@ -1780,8 +1804,8 @@
       "owner": "scheduling",
       "targetOperation": "booking",
       "targetModule": "BookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-owned detail with tenant-safe contact, calendar, and assignee projections.",
+      "parityStatus": "dual-parity",
+      "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1802,7 +1826,7 @@
           "path": "/api/bookings/:id/cancel",
           "rawPath": "/api/bookings/${id}/cancel",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 224,
+          "line": 250,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1827,8 +1851,8 @@
       "owner": "scheduling",
       "targetOperation": "cancelBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "characterizing",
-      "notes": "Explicit active-to-cancelled transition with one durable booking-cancelled event committed transactionally.",
+      "parityStatus": "dual-parity",
+      "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1849,7 +1873,7 @@
           "path": "/api/bookings/:id/reschedule",
           "rawPath": "/api/bookings/${id}/reschedule",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 239,
+          "line": 268,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1880,8 +1904,8 @@
       "owner": "scheduling",
       "targetOperation": "rescheduleBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Locks the booking and calendar namespace; atomically checks collision excluding itself before update.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first collision checks excluding itself, optional timezone preservation, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1902,7 +1926,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 250,
+          "line": 279,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1949,7 +1973,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 280,
+          "line": 309,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1999,7 +2023,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 719
+          "line": 729
         }
       ],
       "consumerCallsites": [
@@ -2008,7 +2032,7 @@
           "path": "/api/bookings/public/book/:slug/cancel/:token",
           "rawPath": "/api/bookings/public/book/${slug}/cancel/${token}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 289,
+          "line": 318,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2061,7 +2085,7 @@
           "path": "/api/bookings/public/book/:slug/slots",
           "rawPath": "/api/bookings/public/book/${slug}/slots",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 259,
+          "line": 288,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2377,7 +2401,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 67,
+          "line": 78,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2387,7 +2411,7 @@
           "method": "GET",
           "path": "/api/calendars",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 215
+          "line": 224
         },
         {
           "method": "GET",
@@ -2436,7 +2460,7 @@
           "path": "/api/calendars",
           "rawPath": "/api/calendars",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 87,
+          "line": 98,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2525,7 +2549,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 108,
+          "line": 122,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2556,8 +2580,8 @@
       "owner": "scheduling",
       "targetOperation": "deleteCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "characterized",
-      "notes": "Locks the owned calendar and booking namespace; rejects deletion while pending or confirmed future bookings exist.",
+      "parityStatus": "dual-parity",
+      "notes": "Behind the default-off calendar definition-mutation flag, delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases. The real browser passed a successful GraphQL delete, stable upcoming-booking rejection, and independent flag-off REST delete without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2578,7 +2602,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 77,
+          "line": 88,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2588,25 +2612,31 @@
           "method": "GET",
           "path": "/api/calendars/:createdId",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 378
+          "line": 387
         },
         {
           "method": "GET",
           "path": "/api/calendars/:calendarId",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 422
+          "line": 431
         },
         {
           "method": "GET",
           "path": "/api/calendars/:calendarId",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 503
+          "line": 512
         },
         {
           "method": "GET",
           "path": "/api/calendars/:calendarId",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 649
+          "line": 658
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendars/:deletableId",
+          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
+          "line": 779
         },
         {
           "method": "GET",
@@ -2649,7 +2679,7 @@
           "path": "/api/calendars/:id",
           "rawPath": "/api/calendars/${id}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 101,
+          "line": 112,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2696,7 +2726,7 @@
           "path": "/api/calendars/:id/availability",
           "rawPath": "/api/calendars/${id}/availability",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 121,
+          "line": 135,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2706,7 +2736,7 @@
           "method": "PUT",
           "path": "/api/calendars/:calendarId/availability",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 521
+          "line": 530
         },
         {
           "method": "PUT",
@@ -2733,8 +2763,8 @@
       "owner": "scheduling",
       "targetOperation": "replaceCalendarAvailability",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind an independent default-off frontend flag as an atomic full replacement with bounded weekdays/windows, overlap rejection, start-before-end validation, tenant concealment, CSRF, and GraphQL-to-REST interoperability coverage.",
+      "parityStatus": "dual-parity",
+      "notes": "The active settings writer passed a real-browser GraphQL replacement, persisted GraphQL readback, and independent flag-off REST replacement on the same staged calendar without repair. Atomic replacement, bounded weekdays/windows, overlap rejection, tenant concealment, and CSRF remain covered in fresh PostgreSQL.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2755,7 +2785,7 @@
           "path": "/api/calendars/:calendarId/date-override",
           "rawPath": "/api/calendars/${calendarId}/date-override",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 145,
+          "line": 159,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2765,7 +2795,7 @@
           "method": "POST",
           "path": "/api/calendars/:calendarId/date-override",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 667
+          "line": 676
         },
         {
           "method": "POST",
@@ -2793,7 +2823,7 @@
       "targetOperation": "upsertCalendarDateOverride",
       "targetModule": "CalendarsModule",
       "parityStatus": "implemented",
-      "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage.",
+      "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage. The shipped settings page currently has no active override writer control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2814,7 +2844,7 @@
           "path": "/api/calendars/:calendarId/date-override/:overrideId",
           "rawPath": "/api/calendars/${calendarId}/date-override/${overrideId}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 159,
+          "line": 173,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2840,7 +2870,7 @@
       "targetOperation": "deleteCalendarDateOverride",
       "targetModule": "CalendarsModule",
       "parityStatus": "implemented",
-      "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary.",
+      "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary. The shipped settings page currently has no active override writer control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },

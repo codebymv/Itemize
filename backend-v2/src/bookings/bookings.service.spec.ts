@@ -45,7 +45,9 @@ describe('BookingsService', () => {
     repository = {
       findPage: jest.fn(),
       findById: jest.fn(),
+      create: jest.fn(),
       cancel: jest.fn(),
+      reschedule: jest.fn(),
     } as unknown as jest.Mocked<BookingsRepository>;
     service = new BookingsService(repository);
   });
@@ -119,6 +121,87 @@ describe('BookingsService', () => {
     });
   });
 
+  it('normalizes and creates a tenant-owned manual booking', async () => {
+    repository.create.mockResolvedValue({ kind: 'created', row: row() });
+    const startTime = new Date('2026-08-01T17:00:00.000Z');
+    const endTime = new Date('2026-08-01T17:30:00.000Z');
+
+    await expect(
+      service.create(3, {
+        calendarId: 4,
+        contactId: 5,
+        title: '  Consultation  ',
+        startTime,
+        endTime,
+        timezone: ' America/Phoenix ',
+        attendeeName: ' Ada Lovelace ',
+        attendeeEmail: ' ada@example.com ',
+        assignedToId: 7,
+        customFields: { channel: 'partner' },
+      }),
+    ).resolves.toMatchObject({
+      id: 9,
+      source: 'manual',
+      calendarName: 'Consultations',
+    });
+    expect(repository.create).toHaveBeenCalledWith(3, {
+      calendarId: 4,
+      contactId: 5,
+      title: 'Consultation',
+      startTime,
+      endTime,
+      timezone: 'America/Phoenix',
+      attendeeName: 'Ada Lovelace',
+      attendeeEmail: 'ada@example.com',
+      attendeePhone: null,
+      assignedToId: 7,
+      notes: null,
+      internalNotes: null,
+      customFields: { channel: 'partner' },
+    });
+  });
+
+  it.each([
+    ['calendar_not_found', 'NOT_FOUND', undefined],
+    ['invalid_contact', 'BAD_USER_INPUT', 'INVALID_CONTACT'],
+    ['invalid_assignee', 'BAD_USER_INPUT', 'INVALID_ASSIGNEE'],
+    ['slot_unavailable', 'CONFLICT', 'SLOT_UNAVAILABLE'],
+  ] as const)(
+    'maps create outcome %s without returning persistence details',
+    async (kind, code, reason) => {
+      repository.create.mockResolvedValue({ kind } as never);
+      await expect(
+        service.create(3, {
+          calendarId: 4,
+          startTime: new Date('2026-08-01T17:00:00.000Z'),
+          endTime: new Date('2026-08-01T17:30:00.000Z'),
+        }),
+      ).rejects.toMatchObject({
+        extensions: expect.objectContaining({
+          code,
+          ...(reason ? { reason } : {}),
+        }),
+      });
+    },
+  );
+
+  it('rejects invalid create input before opening a transaction', async () => {
+    await expect(
+      service.create(3, {
+        calendarId: 4,
+        startTime: new Date('2026-08-01T17:30:00.000Z'),
+        endTime: new Date('2026-08-01T17:00:00.000Z'),
+        attendeeEmail: 'not-an-email',
+      }),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        field: 'attendeeEmail',
+      }),
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
   it('cancels an active booking and normalizes its reason', async () => {
     repository.cancel.mockResolvedValue({
       kind: 'cancelled',
@@ -159,4 +242,48 @@ describe('BookingsService', () => {
     });
     expect(repository.cancel).not.toHaveBeenCalled();
   });
+
+  it('reschedules an active booking and preserves omitted timezone', async () => {
+    repository.reschedule.mockResolvedValue({
+      kind: 'rescheduled',
+      row: row({
+        start_time: new Date('2026-08-02T17:00:00.000Z'),
+        end_time: new Date('2026-08-02T17:30:00.000Z'),
+      }),
+    });
+    const startTime = new Date('2026-08-02T17:00:00.000Z');
+    const endTime = new Date('2026-08-02T17:30:00.000Z');
+    await expect(
+      service.reschedule(3, 9, { startTime, endTime }),
+    ).resolves.toMatchObject({ id: 9, startTime, endTime });
+    expect(repository.reschedule).toHaveBeenCalledWith(
+      3,
+      9,
+      startTime,
+      endTime,
+      null,
+    );
+  });
+
+  it.each([
+    ['not_found', 'NOT_FOUND', undefined],
+    ['invalid_status', 'BAD_USER_INPUT', 'INVALID_BOOKING_STATUS'],
+    ['slot_unavailable', 'CONFLICT', 'SLOT_UNAVAILABLE'],
+  ] as const)(
+    'maps reschedule outcome %s',
+    async (kind, code, reason) => {
+      repository.reschedule.mockResolvedValue({ kind } as never);
+      await expect(
+        service.reschedule(3, 9, {
+          startTime: new Date('2026-08-02T17:00:00.000Z'),
+          endTime: new Date('2026-08-02T17:30:00.000Z'),
+        }),
+      ).rejects.toMatchObject({
+        extensions: expect.objectContaining({
+          code,
+          ...(reason ? { reason } : {}),
+        }),
+      });
+    },
+  );
 });

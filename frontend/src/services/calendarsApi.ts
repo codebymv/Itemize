@@ -20,11 +20,14 @@ import {
     isCalendarGraphqlReadsEnabled,
     isBookingGraphqlMutationsEnabled,
     isBookingGraphqlReadsEnabled,
+    isBookingSchedulingGraphqlMutationsEnabled,
 } from './graphqlClient';
 import {
     cancelBookingViaGraphql,
+    createBookingViaGraphql,
     getBookingViaGraphql,
     getBookingsViaGraphql,
+    rescheduleBookingViaGraphql,
 } from './bookingsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
@@ -227,6 +230,9 @@ export interface BookingCreateData {
 }
 
 export const createBooking = async (data: BookingCreateData): Promise<Booking> => {
+    if (isBookingSchedulingGraphqlMutationsEnabled()) {
+        return createBookingViaGraphql(data);
+    }
     const response = await api.post('/api/bookings', data, {
         headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {},
     });
@@ -256,6 +262,9 @@ export const rescheduleBooking = async (
     data: { start_time: string; end_time: string; timezone?: string },
     organizationId?: number
 ): Promise<Booking> => {
+    if (isBookingSchedulingGraphqlMutationsEnabled()) {
+        return rescheduleBookingViaGraphql(id, data, organizationId);
+    }
     const response = await api.patch(`/api/bookings/${id}/reschedule`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
     });

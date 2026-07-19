@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { BookingStatus } from './booking.enums';
@@ -52,6 +53,35 @@ export type CancelBookingOutcome =
   | { kind: 'cancelled'; row: BookingRow }
   | { kind: 'not_found' }
   | { kind: 'invalid_status' };
+
+export type CreateBookingValues = {
+  calendarId: number;
+  contactId: number | null;
+  title: string | null;
+  startTime: Date;
+  endTime: Date;
+  timezone: string;
+  attendeeName: string | null;
+  attendeeEmail: string | null;
+  attendeePhone: string | null;
+  assignedToId: number | null;
+  notes: string | null;
+  internalNotes: string | null;
+  customFields: Record<string, unknown>;
+};
+
+export type CreateBookingOutcome =
+  | { kind: 'created'; row: BookingRow }
+  | { kind: 'calendar_not_found' }
+  | { kind: 'invalid_contact' }
+  | { kind: 'invalid_assignee' }
+  | { kind: 'slot_unavailable' };
+
+export type RescheduleBookingOutcome =
+  | { kind: 'rescheduled'; row: BookingRow }
+  | { kind: 'not_found' }
+  | { kind: 'invalid_status' }
+  | { kind: 'slot_unavailable' };
 
 const bookingSelection = `
   b.id,
@@ -153,6 +183,122 @@ export class BookingsRepository {
     return result.rows[0] ?? null;
   }
 
+  async create(
+    organizationId: number,
+    values: CreateBookingValues,
+  ): Promise<CreateBookingOutcome> {
+    return this.transaction(async (client) => {
+      await this.lockCalendarBookings(client, values.calendarId);
+      const calendar = await client.query<{
+        assigned_to: number | null;
+      }>(
+        `SELECT assigned_to
+         FROM calendars
+         WHERE organization_id = $1 AND id = $2
+         FOR UPDATE`,
+        [organizationId, values.calendarId],
+      );
+      if (!calendar.rows[0]) return { kind: 'calendar_not_found' };
+
+      if (values.contactId !== null) {
+        const contact = await client.query(
+          `SELECT id
+           FROM contacts
+           WHERE organization_id = $1 AND id = $2
+           FOR KEY SHARE`,
+          [organizationId, values.contactId],
+        );
+        if (!contact.rows[0]) return { kind: 'invalid_contact' };
+      }
+
+      const assignedToId =
+        values.assignedToId ?? calendar.rows[0].assigned_to ?? null;
+      if (assignedToId !== null) {
+        const assignee = await client.query(
+          `SELECT user_id
+           FROM organization_members
+           WHERE organization_id = $1 AND user_id = $2
+           FOR KEY SHARE`,
+          [organizationId, assignedToId],
+        );
+        if (!assignee.rows[0]) return { kind: 'invalid_assignee' };
+      }
+
+      if (
+        !(await this.slotAvailable(
+          client,
+          organizationId,
+          values.calendarId,
+          values.startTime,
+          values.endTime,
+        ))
+      ) {
+        return { kind: 'slot_unavailable' };
+      }
+
+      const inserted = await client.query<BookingRow>(
+        `INSERT INTO bookings (
+           organization_id, calendar_id, contact_id, title,
+           start_time, end_time, timezone,
+           attendee_name, attendee_email, attendee_phone,
+           assigned_to, notes, internal_notes, custom_fields,
+           cancellation_token, source
+         ) VALUES (
+           $1, $2, $3, $4,
+           $5, $6, $7,
+           $8, $9, $10,
+           $11, $12, $13, $14::jsonb,
+           $15, 'manual'
+         )
+         RETURNING *`,
+        [
+          organizationId,
+          values.calendarId,
+          values.contactId,
+          values.title,
+          values.startTime,
+          values.endTime,
+          values.timezone,
+          values.attendeeName,
+          values.attendeeEmail,
+          values.attendeePhone,
+          assignedToId,
+          values.notes,
+          values.internalNotes,
+          JSON.stringify(values.customFields),
+          randomBytes(32).toString('hex'),
+        ],
+      );
+      const booking = inserted.rows[0];
+      await client.query(
+        `INSERT INTO workflow_triggers (
+           workflow_id, organization_id, contact_id, trigger_type,
+           entity_type, entity_id, payload, status, event_key,
+           source, occurred_at, next_attempt_at
+         ) VALUES (
+           NULL, $1, $2, 'booking_created',
+           'booking', $3, $4::jsonb, 'queued', $5,
+           'domain', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         )
+         ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
+        [
+          organizationId,
+          booking.contact_id,
+          booking.id,
+          JSON.stringify({
+            booking_id: booking.id,
+            calendar_id: values.calendarId,
+            version: 1,
+          }),
+          `domain:booking_created:${booking.id}`,
+        ],
+      );
+      const row = await this.findByIdWith(client, organizationId, booking.id);
+      if (!row) throw new Error('Booking disappeared inside creation');
+      return { kind: 'created', row };
+    });
+  }
+
   async cancel(
     organizationId: number,
     bookingId: number,
@@ -214,6 +360,105 @@ export class BookingsRepository {
     });
   }
 
+  async reschedule(
+    organizationId: number,
+    bookingId: number,
+    startTime: Date,
+    endTime: Date,
+    timezone: string | null,
+  ): Promise<RescheduleBookingOutcome> {
+    return this.transaction(async (client) => {
+      const target = await client.query<{ calendar_id: number }>(
+        `SELECT calendar_id
+         FROM bookings
+         WHERE organization_id = $1 AND id = $2`,
+        [organizationId, bookingId],
+      );
+      if (!target.rows[0]) return { kind: 'not_found' };
+      const calendarId = Number(target.rows[0].calendar_id);
+
+      await this.lockCalendarBookings(client, calendarId);
+      const calendar = await client.query(
+        `SELECT id
+         FROM calendars
+         WHERE organization_id = $1 AND id = $2
+         FOR UPDATE`,
+        [organizationId, calendarId],
+      );
+      if (!calendar.rows[0]) return { kind: 'not_found' };
+
+      const current = await client.query<BookingRow>(
+        `SELECT *
+         FROM bookings
+         WHERE organization_id = $1 AND id = $2 AND calendar_id = $3
+         FOR UPDATE`,
+        [organizationId, bookingId, calendarId],
+      );
+      const previous = current.rows[0];
+      if (!previous) return { kind: 'not_found' };
+      if (
+        previous.status !== BookingStatus.PENDING &&
+        previous.status !== BookingStatus.CONFIRMED
+      ) {
+        return { kind: 'invalid_status' };
+      }
+
+      if (
+        !(await this.slotAvailable(
+          client,
+          organizationId,
+          calendarId,
+          startTime,
+          endTime,
+          bookingId,
+        ))
+      ) {
+        return { kind: 'slot_unavailable' };
+      }
+
+      const updated = await client.query<BookingRow>(
+        `UPDATE bookings
+         SET start_time = $3,
+             end_time = $4,
+             timezone = COALESCE($5, timezone),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE organization_id = $1 AND id = $2
+         RETURNING *`,
+        [organizationId, bookingId, startTime, endTime, timezone],
+      );
+      const booking = updated.rows[0];
+      await client.query(
+        `INSERT INTO workflow_triggers (
+           workflow_id, organization_id, contact_id, trigger_type,
+           entity_type, entity_id, payload, status, event_key,
+           source, occurred_at, next_attempt_at
+         ) VALUES (
+           NULL, $1, $2, 'booking_rescheduled',
+           'booking', $3, $4::jsonb, 'queued', $5,
+           'domain', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         )`,
+        [
+          organizationId,
+          booking.contact_id,
+          bookingId,
+          JSON.stringify({
+            booking_id: bookingId,
+            newTime: { end: endTime, start: startTime },
+            oldTime: {
+              end: previous.end_time,
+              start: previous.start_time,
+            },
+            version: 1,
+          }),
+          `domain:booking_rescheduled:${bookingId}:${randomUUID()}`,
+        ],
+      );
+      const row = await this.findByIdWith(client, organizationId, bookingId);
+      if (!row) throw new Error('Booking disappeared inside rescheduling');
+      return { kind: 'rescheduled', row };
+    });
+  }
+
   private async findByIdWith(
     client: PoolClient,
     organizationId: number,
@@ -227,6 +472,44 @@ export class BookingsRepository {
       [organizationId, bookingId],
     );
     return result.rows[0] ?? null;
+  }
+
+  private lockCalendarBookings(
+    client: PoolClient,
+    calendarId: number,
+  ): Promise<unknown> {
+    return client.query(
+      "SELECT pg_advisory_xact_lock(hashtext('calendar_booking'), $1::integer)",
+      [calendarId],
+    );
+  }
+
+  private async slotAvailable(
+    client: PoolClient,
+    organizationId: number,
+    calendarId: number,
+    startTime: Date,
+    endTime: Date,
+    excludeBookingId: number | null = null,
+  ): Promise<boolean> {
+    const result = await client.query<{ total: number }>(
+      `SELECT COUNT(*)::int AS total
+       FROM bookings
+       WHERE organization_id = $1
+         AND calendar_id = $2
+         AND status IN ('pending', 'confirmed')
+         AND start_time < $4
+         AND end_time > $3
+         AND ($5::integer IS NULL OR id <> $5)`,
+      [
+        organizationId,
+        calendarId,
+        startTime,
+        endTime,
+        excludeBookingId,
+      ],
+    );
+    return Number(result.rows[0]?.total ?? 0) === 0;
   }
 
   private async transaction<T>(

@@ -234,10 +234,11 @@ VITE_CALENDAR_READS_GRAPHQL=false
 VITE_CALENDAR_MUTATIONS_GRAPHQL=false
 VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL=false
 
-# Authenticated booking list/detail reads and cancellation have independent
-# default-off boundaries. Other writes and anonymous protocols remain on REST.
+# Authenticated booking reads, cancellation, and create/reschedule have three
+# independent default-off boundaries. Anonymous protocols remain on REST.
 VITE_BOOKING_READS_GRAPHQL=false
 VITE_BOOKING_MUTATIONS_GRAPHQL=false
+VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL=false
 
 # Personal workspace category reads and writes have independent rollback
 # boundaries. Both remain disabled until the browser gate passes.

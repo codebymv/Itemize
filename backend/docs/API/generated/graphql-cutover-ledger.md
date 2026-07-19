@@ -72,9 +72,9 @@
 | POST | `/api/billing/portal` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/billing/usage` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/billing/webhook` | 0 | 1 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
-| GET | `/api/bookings` | 1 | 7 | graphql-query | high | scheduling / BookingsModule / bookings |
-| POST | `/api/bookings` | 1 | 10 | graphql-mutation | high | scheduling / BookingsModule / createBooking |
-| GET | `/api/bookings/:id` | 1 | 2 | graphql-query | high | scheduling / BookingsModule / booking |
+| GET | `/api/bookings` | 1 | 8 | graphql-query | high | scheduling / BookingsModule / bookings |
+| POST | `/api/bookings` | 1 | 12 | graphql-mutation | high | scheduling / BookingsModule / createBooking |
+| GET | `/api/bookings/:id` | 1 | 3 | graphql-query | high | scheduling / BookingsModule / booking |
 | PATCH | `/api/bookings/:id/cancel` | 1 | 2 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |
 | PATCH | `/api/bookings/:id/reschedule` | 1 | 3 | graphql-mutation | high | scheduling / BookingsModule / rescheduleBooking |
 | GET | `/api/bookings/public/book/:slug` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
@@ -92,7 +92,7 @@
 | GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |
 | POST | `/api/calendars` | 1 | 9 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
 | DELETE | `/api/calendars/:id` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / deleteCalendar |
-| GET | `/api/calendars/:id` | 1 | 6 | graphql-query | medium | scheduling / CalendarsModule / calendar |
+| GET | `/api/calendars/:id` | 1 | 7 | graphql-query | medium | scheduling / CalendarsModule / calendar |
 | PUT | `/api/calendars/:id` | 1 | 2 | graphql-mutation | high | scheduling / CalendarsModule / updateCalendar |
 | PUT | `/api/calendars/:id/availability` | 1 | 4 | graphql-mutation | high | scheduling / CalendarsModule / replaceCalendarAvailability |
 | POST | `/api/calendars/:id/date-override` | 1 | 4 | graphql-mutation | high | scheduling / CalendarsModule / upsertCalendarDateOverride |

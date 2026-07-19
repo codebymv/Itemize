@@ -72,7 +72,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PATCH | `/api/bookings/:id/reschedule` | `/:id/reschedule` | `backend/src/routes/bookings.routes.js:349` |
 | GET | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:433` |
 | POST | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:563` |
-| POST | `/api/bookings/public/book/:slug/cancel/:token` | `/public/book/:slug/cancel/:token` | `backend/src/routes/bookings.routes.js:719` |
+| POST | `/api/bookings/public/book/:slug/cancel/:token` | `/public/book/:slug/cancel/:token` | `backend/src/routes/bookings.routes.js:729` |
 | GET | `/api/bookings/public/book/:slug/slots` | `/public/book/:slug/slots` | `backend/src/routes/bookings.routes.js:480` |
 | GET | `/api/calendar-integrations/connections` | `/connections` | `backend/src/routes/calendar-integrations.routes.js:29` |
 | DELETE | `/api/calendar-integrations/connections/:id` | `/connections/:id` | `backend/src/routes/calendar-integrations.routes.js:52` |

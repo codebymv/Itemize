@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   cancelBookingViaGraphql,
+  createBookingViaGraphql,
   getBookingViaGraphql,
   getBookingsViaGraphql,
+  rescheduleBookingViaGraphql,
 } from './bookingsGraphql';
 import {
   isBookingGraphqlMutationsEnabled,
   isBookingGraphqlReadsEnabled,
+  isBookingSchedulingGraphqlMutationsEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -80,6 +83,13 @@ describe('booking GraphQL consumer', () => {
     expect(isBookingGraphqlMutationsEnabled()).toBe(false);
     vi.stubEnv('VITE_BOOKING_MUTATIONS_GRAPHQL', 'true');
     expect(isBookingGraphqlMutationsEnabled()).toBe(true);
+  });
+
+  it('keeps authenticated booking scheduling mutations independently disabled by default', () => {
+    vi.stubEnv('VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL', 'false');
+    expect(isBookingSchedulingGraphqlMutationsEnabled()).toBe(false);
+    vi.stubEnv('VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL', 'true');
+    expect(isBookingSchedulingGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps filters, stable paging, joined fields, and retained shape', async () => {
@@ -180,6 +190,95 @@ describe('booking GraphQL consumer', () => {
     });
     expect(JSON.parse(String(request.body))).toMatchObject({
       variables: { id: 91, reason: 'Admin request' },
+    });
+  });
+
+  it('creates through a CSRF-protected mutation with retained input mapping', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      response({ data: { createBooking: booking } }),
+    );
+    const input = {
+      calendar_id: 17,
+      contact_id: 11,
+      title: 'Consultation',
+      start_time: '2026-08-01T17:00:00.000Z',
+      end_time: '2026-08-01T17:30:00.000Z',
+      timezone: 'America/Phoenix',
+      attendee_name: 'Ada Lovelace',
+      attendee_email: 'ada@example.com',
+      attendee_phone: '520-555-0100',
+      assigned_to: 7,
+      notes: 'Client note',
+      internal_notes: 'Prepared',
+      custom_fields: { channel: 'partner' },
+      organization_id: 42,
+    };
+
+    await expect(createBookingViaGraphql(input)).resolves.toMatchObject({
+      id: 91,
+      organization_id: 42,
+      source: 'manual',
+    });
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      'x-csrf-token': 'booking-csrf',
+      'x-organization-id': '42',
+    });
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      variables: {
+        input: {
+          calendarId: 17,
+          contactId: 11,
+          title: 'Consultation',
+          startTime: '2026-08-01T17:00:00.000Z',
+          endTime: '2026-08-01T17:30:00.000Z',
+          timezone: 'America/Phoenix',
+          attendeeName: 'Ada Lovelace',
+          attendeeEmail: 'ada@example.com',
+          attendeePhone: '520-555-0100',
+          assignedToId: 7,
+          notes: 'Client note',
+          internalNotes: 'Prepared',
+          customFields: { channel: 'partner' },
+        },
+      },
+    });
+  });
+
+  it('reschedules through a CSRF-protected mutation and omits absent timezone', async () => {
+    const rescheduled = {
+      ...booking,
+      startTime: '2026-08-02T17:00:00.000Z',
+      endTime: '2026-08-02T17:30:00.000Z',
+    };
+    vi.mocked(fetch).mockResolvedValue(
+      response({ data: { rescheduleBooking: rescheduled } }),
+    );
+
+    await expect(
+      rescheduleBookingViaGraphql(
+        91,
+        {
+          start_time: '2026-08-02T17:00:00.000Z',
+          end_time: '2026-08-02T17:30:00.000Z',
+        },
+        42,
+      ),
+    ).resolves.toMatchObject({
+      id: 91,
+      start_time: '2026-08-02T17:00:00.000Z',
+      end_time: '2026-08-02T17:30:00.000Z',
+    });
+    expect(
+      JSON.parse(
+        String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+      ).variables,
+    ).toEqual({
+      id: 91,
+      input: {
+        startTime: '2026-08-02T17:00:00.000Z',
+        endTime: '2026-08-02T17:30:00.000Z',
+      },
     });
   });
 });

@@ -1377,8 +1377,8 @@
       "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback."
     },
     "POST /api/bookings": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "createBooking", "parityStatus": "characterized", "risk": "high",
-      "notes": "Calendar-scoped transaction lock makes overlap check plus insert atomic; validate all tenant references and availability policy."
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "createBooking", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first collision serialization, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed; full availability policy remains a cutover blocker."
     },
     "GET /api/bookings/:id": {
       "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "booking", "parityStatus": "dual-parity", "risk": "high",
@@ -1389,8 +1389,8 @@
       "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event."
     },
     "PATCH /api/bookings/:id/reschedule": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "rescheduleBooking", "parityStatus": "characterized", "risk": "high",
-      "notes": "Locks the booking and calendar namespace; atomically checks collision excluding itself before update."
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "rescheduleBooking", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first collision checks excluding itself, optional timezone preservation, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed."
     },
     "GET /api/bookings/public/book/:slug": {
       "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingPage", "parityStatus": "characterizing", "risk": "high",

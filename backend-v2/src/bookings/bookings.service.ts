@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
-import { BookingFilterInput } from './booking.inputs';
+import {
+  BookingFilterInput,
+  CreateBookingInput,
+  RescheduleBookingInput,
+} from './booking.inputs';
 import { Booking, BookingPage } from './booking.types';
 import { BookingRow, BookingsRepository } from './bookings.repository';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_CUSTOM_FIELDS_BYTES = 64 * 1024;
 
 @Injectable()
 export class BookingsService {
@@ -56,6 +63,83 @@ export class BookingsService {
     return this.map(row);
   }
 
+  async create(
+    organizationId: number,
+    input: CreateBookingInput,
+  ): Promise<Booking> {
+    const calendarId = this.id(input.calendarId, 'calendarId');
+    const contactId = this.optionalId(input.contactId, 'contactId');
+    const assignedToId = this.optionalId(input.assignedToId, 'assignedToId');
+    const attendeeEmail = this.optionalText(
+      input.attendeeEmail,
+      'attendeeEmail',
+      255,
+    );
+    if (attendeeEmail && !EMAIL_PATTERN.test(attendeeEmail)) {
+      throw itemizeGraphqlError(
+        'attendeeEmail must be a valid email address',
+        'BAD_USER_INPUT',
+        { field: 'attendeeEmail', reason: 'INVALID_EMAIL' },
+      );
+    }
+    this.timeRange(input.startTime, input.endTime);
+    const outcome = await this.bookings.create(organizationId, {
+      calendarId,
+      contactId,
+      title: this.optionalText(input.title, 'title', 255),
+      startTime: input.startTime,
+      endTime: input.endTime,
+      timezone:
+        input.timezone === null || input.timezone === undefined
+          ? 'America/New_York'
+          : this.timezone(input.timezone),
+      attendeeName: this.optionalText(
+        input.attendeeName,
+        'attendeeName',
+        255,
+      ),
+      attendeeEmail,
+      attendeePhone: this.optionalText(
+        input.attendeePhone,
+        'attendeePhone',
+        50,
+      ),
+      assignedToId,
+      notes: this.optionalText(input.notes, 'notes', 10_000),
+      internalNotes: this.optionalText(
+        input.internalNotes,
+        'internalNotes',
+        10_000,
+      ),
+      customFields: this.record(input.customFields, 'customFields'),
+    });
+    if (outcome.kind === 'calendar_not_found') {
+      throw itemizeGraphqlError('Calendar not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'invalid_contact') {
+      throw itemizeGraphqlError(
+        'contactId must identify a contact in this organization',
+        'BAD_USER_INPUT',
+        { field: 'contactId', reason: 'INVALID_CONTACT' },
+      );
+    }
+    if (outcome.kind === 'invalid_assignee') {
+      throw itemizeGraphqlError(
+        'assignedToId must identify a member of this organization',
+        'BAD_USER_INPUT',
+        { field: 'assignedToId', reason: 'INVALID_ASSIGNEE' },
+      );
+    }
+    if (outcome.kind === 'slot_unavailable') {
+      throw itemizeGraphqlError(
+        'Time slot is not available',
+        'CONFLICT',
+        { field: 'startTime', reason: 'SLOT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row);
+  }
+
   async cancel(
     organizationId: number,
     bookingId: number,
@@ -91,6 +175,44 @@ export class BookingsService {
     return this.map(outcome.row);
   }
 
+  async reschedule(
+    organizationId: number,
+    bookingId: number,
+    input: RescheduleBookingInput,
+  ): Promise<Booking> {
+    this.id(bookingId, 'id');
+    this.timeRange(input.startTime, input.endTime);
+    const timezone =
+      input.timezone === null || input.timezone === undefined
+        ? null
+        : this.timezone(input.timezone);
+    const outcome = await this.bookings.reschedule(
+      organizationId,
+      bookingId,
+      input.startTime,
+      input.endTime,
+      timezone,
+    );
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Booking not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'invalid_status') {
+      throw itemizeGraphqlError(
+        'Only pending or confirmed bookings can be rescheduled',
+        'BAD_USER_INPUT',
+        { field: 'id', reason: 'INVALID_BOOKING_STATUS' },
+      );
+    }
+    if (outcome.kind === 'slot_unavailable') {
+      throw itemizeGraphqlError(
+        'New time slot is not available',
+        'CONFLICT',
+        { field: 'startTime', reason: 'SLOT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row);
+  }
+
   private page(input: PageInput): {
     page: number;
     pageSize: number;
@@ -120,6 +242,106 @@ export class BookingsService {
         field,
         reason: 'INVALID_ID',
       });
+    }
+    return value;
+  }
+
+  private optionalId(
+    value: number | null | undefined,
+    field: string,
+  ): number | null {
+    if (value === null || value === undefined) return null;
+    return this.id(value, field);
+  }
+
+  private optionalText(
+    value: string | null | undefined,
+    field: string,
+    max: number,
+  ): string | null {
+    if (value === null || value === undefined || value.trim() === '') {
+      return null;
+    }
+    const normalized = value.trim();
+    if (normalized.length > max) {
+      throw itemizeGraphqlError(
+        `${field} must contain no more than ${max} characters`,
+        'BAD_USER_INPUT',
+        { field, reason: 'TOO_LONG' },
+      );
+    }
+    return normalized;
+  }
+
+  private timeRange(startTime: Date, endTime: Date): void {
+    if (
+      !(startTime instanceof Date) ||
+      !(endTime instanceof Date) ||
+      !Number.isFinite(startTime.getTime()) ||
+      !Number.isFinite(endTime.getTime()) ||
+      endTime <= startTime
+    ) {
+      throw itemizeGraphqlError(
+        'endTime must be after startTime',
+        'BAD_USER_INPUT',
+        { field: 'endTime', reason: 'INVALID_TIME_RANGE' },
+      );
+    }
+  }
+
+  private timezone(value: string): string {
+    const normalized = value.trim();
+    if (!normalized || normalized.length > 100) {
+      throw itemizeGraphqlError(
+        'timezone must contain between 1 and 100 characters',
+        'BAD_USER_INPUT',
+        { field: 'timezone', reason: 'INVALID_TIMEZONE' },
+      );
+    }
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: normalized }).format();
+    } catch {
+      throw itemizeGraphqlError(
+        'timezone must be a valid IANA timezone',
+        'BAD_USER_INPUT',
+        { field: 'timezone', reason: 'INVALID_TIMEZONE' },
+      );
+    }
+    return normalized;
+  }
+
+  private record(
+    value: Record<string, unknown> | null | undefined,
+    field: string,
+  ): Record<string, unknown> {
+    if (value === null || value === undefined) return {};
+    if (
+      typeof value !== 'object' ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype
+    ) {
+      throw itemizeGraphqlError(
+        `${field} must be an object`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_JSON_OBJECT' },
+      );
+    }
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(value);
+    } catch {
+      throw itemizeGraphqlError(
+        `${field} must be JSON serializable`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_JSON_OBJECT' },
+      );
+    }
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_CUSTOM_FIELDS_BYTES) {
+      throw itemizeGraphqlError(
+        `${field} must be at most ${MAX_CUSTOM_FIELDS_BYTES} bytes`,
+        'BAD_USER_INPUT',
+        { field, reason: 'TOO_LARGE' },
+      );
     }
     return value;
   }

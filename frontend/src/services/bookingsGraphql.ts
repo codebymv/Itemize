@@ -1,5 +1,5 @@
 import type { Booking, BookingsResponse, JsonRecord } from '@/types';
-import type { BookingsQueryParams } from './calendarsApi';
+import type { BookingCreateData, BookingsQueryParams } from './calendarsApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlBooking = {
@@ -61,6 +61,18 @@ const bookingQuery = `
 const cancelBookingMutation = `
   mutation CancelBooking($id: Int!, $reason: String) {
     cancelBooking(id: $id, reason: $reason) { ${fields} }
+  }
+`;
+
+const createBookingMutation = `
+  mutation CreateBooking($input: CreateBookingInput!) {
+    createBooking(input: $input) { ${fields} }
+  }
+`;
+
+const rescheduleBookingMutation = `
+  mutation RescheduleBooking($id: Int!, $input: RescheduleBookingInput!) {
+    rescheduleBooking(id: $id, input: $input) { ${fields} }
   }
 `;
 
@@ -167,4 +179,65 @@ export const cancelBookingViaGraphql = async (
     typeof variables
   >(cancelBookingMutation, variables, organizationId);
   return mapBooking(data.cancelBooking);
+};
+
+export const createBookingViaGraphql = async (
+  input: BookingCreateData,
+): Promise<Booking> => {
+  const variables = {
+    input: {
+      calendarId: input.calendar_id,
+      ...(input.contact_id === undefined
+        ? {}
+        : { contactId: input.contact_id }),
+      ...(input.title === undefined ? {} : { title: input.title }),
+      startTime: input.start_time,
+      endTime: input.end_time,
+      ...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+      ...(input.attendee_name === undefined
+        ? {}
+        : { attendeeName: input.attendee_name }),
+      ...(input.attendee_email === undefined
+        ? {}
+        : { attendeeEmail: input.attendee_email }),
+      ...(input.attendee_phone === undefined
+        ? {}
+        : { attendeePhone: input.attendee_phone }),
+      ...(input.assigned_to === undefined
+        ? {}
+        : { assignedToId: input.assigned_to }),
+      ...(input.notes === undefined ? {} : { notes: input.notes }),
+      ...(input.internal_notes === undefined
+        ? {}
+        : { internalNotes: input.internal_notes }),
+      ...(input.custom_fields === undefined
+        ? {}
+        : { customFields: input.custom_fields }),
+    },
+  };
+  const data = await graphqlMutationRequest<
+    { createBooking: GraphqlBooking },
+    typeof variables
+  >(createBookingMutation, variables, input.organization_id);
+  return mapBooking(data.createBooking);
+};
+
+export const rescheduleBookingViaGraphql = async (
+  id: number,
+  input: { start_time: string; end_time: string; timezone?: string },
+  organizationId?: number,
+): Promise<Booking> => {
+  const variables = {
+    id,
+    input: {
+      startTime: input.start_time,
+      endTime: input.end_time,
+      ...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+    },
+  };
+  const data = await graphqlMutationRequest<
+    { rescheduleBooking: GraphqlBooking },
+    typeof variables
+  >(rescheduleBookingMutation, variables, organizationId);
+  return mapBooking(data.rescheduleBooking);
 };

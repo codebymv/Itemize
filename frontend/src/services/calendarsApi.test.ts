@@ -3,6 +3,7 @@ import api from '@/lib/api';
 import {
   addDateOverride,
   cancelBooking,
+  createBooking,
   createCalendar,
   deleteCalendar,
   getBooking,
@@ -10,6 +11,7 @@ import {
   getCalendar,
   getCalendars,
   removeDateOverride,
+  rescheduleBooking,
   updateCalendar,
   updateCalendarAvailability,
 } from './calendarsApi';
@@ -25,12 +27,15 @@ import {
 } from './calendarsGraphql';
 import {
   cancelBookingViaGraphql,
+  createBookingViaGraphql,
   getBookingViaGraphql,
   getBookingsViaGraphql,
+  rescheduleBookingViaGraphql,
 } from './bookingsGraphql';
 import {
   isBookingGraphqlMutationsEnabled,
   isBookingGraphqlReadsEnabled,
+  isBookingSchedulingGraphqlMutationsEnabled,
   isCalendarGraphqlAvailabilityMutationsEnabled,
   isCalendarGraphqlMutationsEnabled,
   isCalendarGraphqlReadsEnabled,
@@ -49,6 +54,7 @@ vi.mock('@/lib/api', () => ({
 vi.mock('./graphqlClient', () => ({
   isBookingGraphqlMutationsEnabled: vi.fn(),
   isBookingGraphqlReadsEnabled: vi.fn(),
+  isBookingSchedulingGraphqlMutationsEnabled: vi.fn(),
   isCalendarGraphqlReadsEnabled: vi.fn(),
   isCalendarGraphqlMutationsEnabled: vi.fn(),
   isCalendarGraphqlAvailabilityMutationsEnabled: vi.fn(),
@@ -56,8 +62,10 @@ vi.mock('./graphqlClient', () => ({
 
 vi.mock('./bookingsGraphql', () => ({
   cancelBookingViaGraphql: vi.fn(),
+  createBookingViaGraphql: vi.fn(),
   getBookingViaGraphql: vi.fn(),
   getBookingsViaGraphql: vi.fn(),
+  rescheduleBookingViaGraphql: vi.fn(),
 }));
 
 vi.mock('./calendarsGraphql', () => ({
@@ -114,6 +122,7 @@ describe('calendar API transport selection', () => {
     vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(false);
     vi.mocked(isBookingGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isBookingGraphqlReadsEnabled).mockReturnValue(false);
+    vi.mocked(isBookingSchedulingGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
   it('keeps list and detail reads on REST by default', async () => {
@@ -305,5 +314,49 @@ describe('calendar API transport selection', () => {
       3,
     );
     expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps create and reschedule on REST by default and switches them independently', async () => {
+    const createInput = {
+      calendar_id: 4,
+      start_time: '2026-08-01T17:00:00.000Z',
+      end_time: '2026-08-01T17:30:00.000Z',
+      organization_id: 3,
+    };
+    const rescheduleInput = {
+      start_time: '2026-08-02T17:00:00.000Z',
+      end_time: '2026-08-02T17:30:00.000Z',
+    };
+    vi.mocked(api.post).mockResolvedValueOnce({ data: booking });
+    vi.mocked(api.patch).mockResolvedValueOnce({ data: booking });
+
+    await createBooking(createInput);
+    await rescheduleBooking(9, rescheduleInput, 3);
+    expect(api.post).toHaveBeenCalledWith('/api/bookings', createInput, {
+      headers: { 'x-organization-id': '3' },
+    });
+    expect(api.patch).toHaveBeenCalledWith(
+      '/api/bookings/9/reschedule',
+      rescheduleInput,
+      { headers: { 'x-organization-id': '3' } },
+    );
+    expect(createBookingViaGraphql).not.toHaveBeenCalled();
+    expect(rescheduleBookingViaGraphql).not.toHaveBeenCalled();
+
+    vi.mocked(isBookingSchedulingGraphqlMutationsEnabled).mockReturnValue(true);
+    vi.mocked(createBookingViaGraphql).mockResolvedValue(booking);
+    vi.mocked(rescheduleBookingViaGraphql).mockResolvedValue(booking);
+    await createBooking(createInput);
+    await rescheduleBooking(9, rescheduleInput, 3);
+
+    expect(createBookingViaGraphql).toHaveBeenCalledWith(createInput);
+    expect(rescheduleBookingViaGraphql).toHaveBeenCalledWith(
+      9,
+      rescheduleInput,
+      3,
+    );
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    expect(cancelBookingViaGraphql).not.toHaveBeenCalled();
   });
 });

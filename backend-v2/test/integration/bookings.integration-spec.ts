@@ -14,9 +14,13 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
   let legacyApp: Express;
   let pool: Pool;
   let userId: number;
+  let otherUserId: number;
   let organizationId: number;
   let otherOrganizationId: number;
   let calendarId: number;
+  let otherCalendarId: number;
+  let contactId: number;
+  let otherContactId: number;
   let otherBookingId: number;
   let bookingIds: number[];
   let token: string;
@@ -42,6 +46,13 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       [`booking-member-${suffix}@test.itemize`],
     );
     userId = Number(user.rows[0].id);
+    const otherUser = await pool.query<{ id: number }>(
+      `INSERT INTO users (email, name, provider, email_verified)
+       VALUES ($1, 'Foreign Booking Member', 'email', true)
+       RETURNING id`,
+      [`booking-foreign-member-${suffix}@test.itemize`],
+    );
+    otherUserId = Number(otherUser.rows[0].id);
     const organizations = await pool.query<{ id: number }>(
       `INSERT INTO organizations (name, slug)
        VALUES ('Booking Primary', $1), ('Booking Other', $2)
@@ -53,8 +64,11 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     );
     await pool.query(
       `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
-       VALUES ($1, $3, 'owner', NOW()), ($2, $3, 'owner', NOW())`,
-      [organizationId, otherOrganizationId, userId],
+       VALUES
+         ($1, $3, 'owner', NOW()),
+         ($2, $3, 'owner', NOW()),
+         ($2, $4, 'member', NOW())`,
+      [organizationId, otherOrganizationId, userId, otherUserId],
     );
     await pool.query(
       'UPDATE users SET default_organization_id = $1 WHERE id = $2',
@@ -77,7 +91,7 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       ],
     );
     calendarId = Number(calendars.rows[0].id);
-    const otherCalendarId = Number(calendars.rows[1].id);
+    otherCalendarId = Number(calendars.rows[1].id);
     const contacts = await pool.query<{ id: number }>(
       `INSERT INTO contacts (
          organization_id, first_name, last_name, email, created_by
@@ -93,8 +107,8 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
         userId,
       ],
     );
-    const contactId = Number(contacts.rows[0].id);
-    const otherContactId = Number(contacts.rows[1].id);
+    contactId = Number(contacts.rows[0].id);
+    otherContactId = Number(contacts.rows[1].id);
 
     const bookings = await pool.query<{ id: number }>(
       `INSERT INTO bookings (
@@ -164,8 +178,10 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
         [organizationId, otherOrganizationId].filter(Boolean),
       ]);
     }
-    if (pool && userId) {
-      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    if (pool && (userId || otherUserId)) {
+      await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
+        [userId, otherUserId].filter(Boolean),
+      ]);
     }
     if (app) await app.close();
   });
@@ -187,7 +203,7 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     variables: Record<string, unknown> = {},
     includeCsrf = true,
   ) => {
-    const csrf = 'booking-cancel-csrf';
+    const csrf = 'booking-mutation-csrf';
     const pending = request(app.getHttpServer())
       .post('/graphql')
       .set(
@@ -325,6 +341,272 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(response.body.data).toBeNull();
     expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+  });
+
+  it('creates a tenant-validated manual booking with REST parity and one versioned event', async () => {
+    const response = await mutate(
+      organizationId,
+      `mutation CreateBooking($input: CreateBookingInput!) {
+        createBooking(input: $input) {
+          ${fields}
+          cancellationReason
+        }
+      }`,
+      {
+        input: {
+          calendarId,
+          contactId,
+          title: '  GraphQL manual booking  ',
+          startTime: '2099-09-01T17:00:00.000Z',
+          endTime: '2099-09-01T17:30:00.000Z',
+          timezone: 'America/Phoenix',
+          attendeeName: '  Ada Lovelace  ',
+          attendeeEmail: 'ada@example.com',
+          assignedToId: userId,
+          internalNotes: '  Prepared  ',
+          customFields: { channel: 'graphql' },
+        },
+      },
+    ).expect(200);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.createBooking).toMatchObject({
+      organizationId,
+      calendarId,
+      contactId,
+      title: 'GraphQL manual booking',
+      attendeeName: 'Ada Lovelace',
+      assignedToId: userId,
+      assignedToName: 'Booking Member',
+      status: 'CONFIRMED',
+      source: 'manual',
+      customFields: { channel: 'graphql' },
+    });
+    const bookingId = Number(response.body.data.createBooking.id);
+    const legacy = await request(legacyApp)
+      .get(`/api/bookings/${bookingId}`)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(legacy.body).toMatchObject({
+      id: bookingId,
+      title: 'GraphQL manual booking',
+      attendee_name: 'Ada Lovelace',
+      assigned_to: userId,
+      internal_notes: 'Prepared',
+      source: 'manual',
+    });
+    expect(typeof legacy.body.cancellation_token).toBe('string');
+    expect(response.body.data.createBooking).not.toHaveProperty(
+      'cancellationToken',
+    );
+
+    const events = await pool.query<{
+      total: number;
+      version: number;
+      calendar_id: number;
+    }>(
+      `SELECT
+         COUNT(*)::int AS total,
+         MAX((payload ->> 'version')::int)::int AS version,
+         MAX((payload ->> 'calendar_id')::int)::int AS calendar_id
+       FROM workflow_triggers
+       WHERE organization_id = $1
+         AND trigger_type = 'booking_created'
+         AND entity_id = $2`,
+      [organizationId, bookingId],
+    );
+    expect(events.rows[0]).toEqual({
+      total: 1,
+      version: 1,
+      calendar_id: calendarId,
+    });
+  });
+
+  it('conceals foreign create references and rejects foreign assignees', async () => {
+    const document = `mutation CreateBooking($input: CreateBookingInput!) {
+      createBooking(input: $input) { id }
+    }`;
+    const base = {
+      calendarId,
+      startTime: '2099-09-02T17:00:00.000Z',
+      endTime: '2099-09-02T17:30:00.000Z',
+    };
+    const foreignCalendar = await mutate(organizationId, document, {
+      input: { ...base, calendarId: otherCalendarId },
+    }).expect(200);
+    expect(foreignCalendar.body.data).toBeNull();
+    expect(foreignCalendar.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const foreignContact = await mutate(organizationId, document, {
+      input: { ...base, contactId: otherContactId },
+    }).expect(200);
+    expect(foreignContact.body.data).toBeNull();
+    expect(foreignContact.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_CONTACT',
+    });
+
+    const foreignAssignee = await mutate(organizationId, document, {
+      input: { ...base, assignedToId: otherUserId },
+    }).expect(200);
+    expect(foreignAssignee.body.data).toBeNull();
+    expect(foreignAssignee.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_ASSIGNEE',
+    });
+  });
+
+  it('serializes simultaneous creates so only one booking claims a slot', async () => {
+    const document = `mutation CreateBooking($input: CreateBookingInput!) {
+      createBooking(input: $input) { id startTime endTime }
+    }`;
+    const variables = {
+      input: {
+        calendarId,
+        startTime: '2099-09-03T17:00:00.000Z',
+        endTime: '2099-09-03T17:30:00.000Z',
+      },
+    };
+    const responses = await Promise.all([
+      mutate(organizationId, document, variables).expect(200),
+      mutate(organizationId, document, variables).expect(200),
+    ]);
+    expect(
+      responses.filter((response) => response.body.data?.createBooking),
+    ).toHaveLength(1);
+    expect(
+      responses.filter(
+        (response) =>
+          response.body.errors?.[0]?.extensions?.reason === 'SLOT_UNAVAILABLE',
+      ),
+    ).toHaveLength(1);
+    const persisted = await pool.query<{ total: number }>(
+      `SELECT COUNT(*)::int AS total
+       FROM bookings
+       WHERE organization_id = $1
+         AND calendar_id = $2
+         AND start_time = $3`,
+      [organizationId, calendarId, variables.input.startTime],
+    );
+    expect(persisted.rows[0].total).toBe(1);
+  });
+
+  it('reschedules a retained booking with one versioned event and rejects overlap', async () => {
+    const retained = await request(legacyApp)
+      .post('/api/bookings')
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(organizationId))
+      .send({
+        calendar_id: calendarId,
+        start_time: '2099-09-04T17:00:00.000Z',
+        end_time: '2099-09-04T17:30:00.000Z',
+        timezone: 'America/Phoenix',
+      })
+      .expect(201);
+    const bookingId = Number(retained.body.id);
+    const document = `mutation RescheduleBooking(
+      $id: Int!,
+      $input: RescheduleBookingInput!
+    ) {
+      rescheduleBooking(id: $id, input: $input) {
+        id startTime endTime timezone status calendarName
+      }
+    }`;
+    const rescheduled = await mutate(organizationId, document, {
+      id: bookingId,
+      input: {
+        startTime: '2099-09-05T18:00:00.000Z',
+        endTime: '2099-09-05T18:30:00.000Z',
+        timezone: 'America/Chicago',
+      },
+    }).expect(200);
+    expect(rescheduled.body.errors).toBeUndefined();
+    expect(rescheduled.body.data.rescheduleBooking).toMatchObject({
+      id: bookingId,
+      startTime: '2099-09-05T18:00:00.000Z',
+      endTime: '2099-09-05T18:30:00.000Z',
+      timezone: 'America/Chicago',
+      status: 'CONFIRMED',
+      calendarName: 'Primary Calendar',
+    });
+
+    const events = await pool.query<{
+      total: number;
+      version: number;
+      old_start: string;
+      new_start: string;
+    }>(
+      `SELECT
+         COUNT(*)::int AS total,
+         MAX((payload ->> 'version')::int)::int AS version,
+         MAX(payload #>> '{oldTime,start}') AS old_start,
+         MAX(payload #>> '{newTime,start}') AS new_start
+       FROM workflow_triggers
+       WHERE organization_id = $1
+         AND trigger_type = 'booking_rescheduled'
+         AND entity_id = $2`,
+      [organizationId, bookingId],
+    );
+    expect(events.rows[0]).toMatchObject({ total: 1, version: 1 });
+    expect(new Date(events.rows[0].old_start).toISOString()).toBe(
+      '2099-09-04T17:00:00.000Z',
+    );
+    expect(new Date(events.rows[0].new_start).toISOString()).toBe(
+      '2099-09-05T18:00:00.000Z',
+    );
+
+    const overlap = await mutate(organizationId, document, {
+      id: bookingId,
+      input: {
+        startTime: '2099-08-02T17:00:00.000Z',
+        endTime: '2099-08-02T17:30:00.000Z',
+      },
+    }).expect(200);
+    expect(overlap.body.data).toBeNull();
+    expect(overlap.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'SLOT_UNAVAILABLE',
+    });
+  });
+
+  it('requires CSRF before create and reschedule writes', async () => {
+    const create = await mutate(
+      organizationId,
+      `mutation CreateBooking($input: CreateBookingInput!) {
+        createBooking(input: $input) { id }
+      }`,
+      {
+        input: {
+          calendarId,
+          startTime: '2099-09-06T17:00:00.000Z',
+          endTime: '2099-09-06T17:30:00.000Z',
+        },
+      },
+      false,
+    ).expect(200);
+    expect(create.body.data).toBeNull();
+    expect(create.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const reschedule = await mutate(
+      organizationId,
+      `mutation RescheduleBooking(
+        $id: Int!,
+        $input: RescheduleBookingInput!
+      ) {
+        rescheduleBooking(id: $id, input: $input) { id }
+      }`,
+      {
+        id: bookingIds[1],
+        input: {
+          startTime: '2099-09-07T17:00:00.000Z',
+          endTime: '2099-09-07T17:30:00.000Z',
+        },
+      },
+      false,
+    ).expect(200);
+    expect(reschedule.body.data).toBeNull();
+    expect(reschedule.body.errors[0].extensions.code).toBe('FORBIDDEN');
   });
 
   it('requires CSRF before cancellation', async () => {
