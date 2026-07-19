@@ -195,16 +195,26 @@ export const recordInvoicePaymentViaGraphql = async (
   payment: InvoicePayment;
   invoice: { amount_paid: number; amount_due: number; status: string };
 }> => {
-  const data = await graphqlMutationRequest<{
-    recordInvoicePayment: {
-      payment: GraphqlPayment;
-      invoice: {
-        amountPaid: string;
-        amountDue: string;
-        status: string;
+  const data = await graphqlMutationRequest<
+    {
+      recordInvoicePayment: {
+        payment: GraphqlPayment;
+        invoice: {
+          amountPaid: string;
+          amountDue: string;
+          status: string;
+        };
       };
-    };
-  }>(
+    },
+    {
+      invoiceId: number;
+      input: {
+        amount: string;
+        paymentMethod?: string;
+        notes?: string;
+      };
+    }
+  >(
     `mutation RecordInvoicePayment(
       $invoiceId: Int!,
       $input: RecordInvoicePaymentInput!

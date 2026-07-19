@@ -9,6 +9,8 @@ import {
     isProductGraphqlReadsEnabled,
     isInvoiceBusinessGraphqlMutationsEnabled,
     isInvoiceBusinessGraphqlReadsEnabled,
+    isInvoiceGraphqlMutationsEnabled,
+    isInvoiceGraphqlReadsEnabled,
     isPaymentGraphqlMutationsEnabled,
 } from './graphqlClient';
 import {
@@ -25,6 +27,13 @@ import {
     updateProductViaGraphql,
 } from './productsGraphql';
 import { recordInvoicePaymentViaGraphql } from './invoicePaymentsApi';
+import {
+    createInvoiceViaGraphql,
+    deleteInvoiceViaGraphql,
+    getInvoiceViaGraphql,
+    getInvoicesViaGraphql,
+    updateInvoiceViaGraphql,
+} from './invoicesGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -259,6 +268,9 @@ export const getInvoices = async (
     } = {},
     organizationId?: number
 ): Promise<{ invoices: Invoice[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    if (isInvoiceGraphqlReadsEnabled()) {
+        return getInvoicesViaGraphql(params, organizationId);
+    }
     const response = await api.get('/api/invoices', {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -285,6 +297,9 @@ export const getInvoice = async (
     invoiceId: number,
     organizationId?: number
 ): Promise<Invoice> => {
+    if (isInvoiceGraphqlReadsEnabled()) {
+        return getInvoiceViaGraphql(invoiceId, organizationId);
+    }
     const response = await api.get(`/api/invoices/${invoiceId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -311,6 +326,9 @@ export const createInvoice = async (
     },
     organizationId?: number
 ): Promise<Invoice> => {
+    if (isInvoiceGraphqlMutationsEnabled()) {
+        return createInvoiceViaGraphql(invoice, organizationId);
+    }
     const response = await api.post('/api/invoices', invoice, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -322,6 +340,9 @@ export const updateInvoice = async (
     invoice: Partial<Omit<Invoice, 'payment_terms'>> & { payment_terms?: number | string; items?: InvoiceItem[] },
     organizationId?: number
 ): Promise<Invoice> => {
+    if (isInvoiceGraphqlMutationsEnabled()) {
+        return updateInvoiceViaGraphql(invoiceId, invoice, organizationId);
+    }
     const response = await api.put(`/api/invoices/${invoiceId}`, invoice, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -332,6 +353,9 @@ export const deleteInvoice = async (
     invoiceId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isInvoiceGraphqlMutationsEnabled()) {
+        return deleteInvoiceViaGraphql(invoiceId, organizationId);
+    }
     const response = await api.delete(`/api/invoices/${invoiceId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -397,7 +421,19 @@ export const recordPayment = async (
     organizationId?: number
 ): Promise<{ payment: Payment; invoice: { amount_paid: number; amount_due: number; status: string } }> => {
     if (isPaymentGraphqlMutationsEnabled()) {
-        return recordInvoicePaymentViaGraphql(invoiceId, payment, organizationId);
+        const result = await recordInvoicePaymentViaGraphql(
+            invoiceId,
+            payment,
+            organizationId
+        );
+        return {
+            payment: {
+                ...result.payment,
+                refund_amount: 0,
+                updated_at: result.payment.updated_at ?? result.payment.created_at
+            },
+            invoice: result.invoice
+        };
     }
     const response = await api.post(`/api/invoices/${invoiceId}/record-payment`, payment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}

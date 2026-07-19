@@ -240,43 +240,45 @@
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "invoices",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Use the shared page contract; preserve organization scope, filters, deterministic ordering, totals, and decimal strings."
+      "notes": "Organization-scoped status/contact/search filters use the shared page contract, literal search, deterministic created/id ordering, cross-tenant-safe counts, and decimal strings. A default-off frontend read flag preserves REST rollback."
     },
     "POST /api/invoices": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "createInvoice",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Create header, line items, numbering, totals, and contact/business references atomically."
+      "notes": "CSRF-protected creation validates tenant-owned contact, business, and product references; allocates the invoice number atomically; and commits line items plus PostgreSQL-calculated totals in one transaction. A default-off frontend mutation flag preserves REST rollback."
     },
     "DELETE /api/invoices/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "deleteInvoice",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "CSRF-protected organization-scoped deletion returns a stable deleted ID and number, conceals foreign rows, and retains the REST path behind the default-off mutation flag."
     },
     "GET /api/invoices/:id": {
       "disposition": "graphql-query",
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "invoice",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "Organization-qualified detail reads return line items, payments, contact, and business projections with decimal strings and conceal foreign invoice IDs. A default-off frontend read flag preserves REST rollback."
     },
     "PUT /api/invoices/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "updateInvoice",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Lock and replace invoice/line-item state atomically while enforcing editable statuses and decimal recalculation."
+      "notes": "CSRF-protected updates lock the tenant-owned invoice, allow only draft/sent edits, validate effective references and dates, and atomically replace line items with PostgreSQL decimal recalculation. A default-off frontend mutation flag preserves REST rollback."
     },
     "POST /api/invoices/:id/create-payment-link": {
       "disposition": "graphql-mutation",
