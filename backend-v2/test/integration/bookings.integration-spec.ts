@@ -181,6 +181,26 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       .set('x-organization-id', String(organization))
       .send({ query: document, variables });
 
+  const mutate = (
+    organization: number,
+    document: string,
+    variables: Record<string, unknown> = {},
+    includeCsrf = true,
+  ) => {
+    const csrf = 'booking-cancel-csrf';
+    const pending = request(app.getHttpServer())
+      .post('/graphql')
+      .set(
+        'Cookie',
+        includeCsrf
+          ? `itemize_auth=${token}; csrf-token=${csrf}`
+          : `itemize_auth=${token}`,
+      )
+      .set('x-organization-id', String(organization));
+    if (includeCsrf) pending.set('x-csrf-token', csrf);
+    return pending.send({ query: document, variables });
+  };
+
   const fields = `
     id organizationId calendarId contactId title startTime endTime timezone
     attendeeName attendeeEmail assignedToId assignedToName status customFields
@@ -305,5 +325,62 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(response.body.data).toBeNull();
     expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+  });
+
+  it('requires CSRF before cancellation', async () => {
+    const response = await mutate(
+      organizationId,
+      `mutation CancelBooking($id: Int!) {
+        cancelBooking(id: $id) { id status }
+      }`,
+      { id: bookingIds[0] },
+      false,
+    ).expect(200);
+    expect(response.body.data).toBeNull();
+    expect(response.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const status = await pool.query<{ status: string }>(
+      'SELECT status FROM bookings WHERE id = $1',
+      [bookingIds[0]],
+    );
+    expect(status.rows[0].status).toBe('confirmed');
+  });
+
+  it('cancels once with one durable workflow event and rejects replay', async () => {
+    const document = `mutation CancelBooking($id: Int!, $reason: String) {
+      cancelBooking(id: $id, reason: $reason) {
+        id status cancellationReason cancelledAt calendarName contactEmail
+      }
+    }`;
+    const first = await mutate(organizationId, document, {
+      id: bookingIds[0],
+      reason: '  Integration gate  ',
+    }).expect(200);
+    expect(first.body.errors).toBeUndefined();
+    expect(first.body.data.cancelBooking).toMatchObject({
+      id: bookingIds[0],
+      status: 'CANCELLED',
+      cancellationReason: 'Integration gate',
+      calendarName: 'Primary Calendar',
+    });
+    expect(first.body.data.cancelBooking.cancelledAt).toBeTruthy();
+
+    const replay = await mutate(organizationId, document, {
+      id: bookingIds[0],
+      reason: 'Again',
+    }).expect(200);
+    expect(replay.body.data).toBeNull();
+    expect(replay.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_BOOKING_STATUS',
+    });
+    const events = await pool.query<{ total: number }>(
+      `SELECT COUNT(*)::int AS total
+       FROM workflow_triggers
+       WHERE organization_id = $1
+         AND trigger_type = 'booking_cancelled'
+         AND entity_id = $2`,
+      [organizationId, bookingIds[0]],
+    );
+    expect(events.rows[0].total).toBe(1);
   });
 });

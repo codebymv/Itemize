@@ -1,6 +1,6 @@
 import type { Booking, BookingsResponse, JsonRecord } from '@/types';
 import type { BookingsQueryParams } from './calendarsApi';
-import { graphqlRequest } from './graphqlClient';
+import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlBooking = {
   id: number;
@@ -55,6 +55,12 @@ const bookingsQuery = `
 const bookingQuery = `
   query BookingRead($id: Int!) {
     booking(id: $id) { ${fields} }
+  }
+`;
+
+const cancelBookingMutation = `
+  mutation CancelBooking($id: Int!, $reason: String) {
+    cancelBooking(id: $id, reason: $reason) { ${fields} }
   }
 `;
 
@@ -148,4 +154,17 @@ export const getBookingViaGraphql = async (
     { id: number }
   >(bookingQuery, { id }, organizationId);
   return mapBooking(data.booking);
+};
+
+export const cancelBookingViaGraphql = async (
+  id: number,
+  reason?: string,
+  organizationId?: number,
+): Promise<Booking> => {
+  const variables = { id, reason: reason ?? null };
+  const data = await graphqlMutationRequest<
+    { cancelBooking: GraphqlBooking },
+    typeof variables
+  >(cancelBookingMutation, variables, organizationId);
+  return mapBooking(data.cancelBooking);
 };

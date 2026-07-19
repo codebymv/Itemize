@@ -56,6 +56,41 @@ export class BookingsService {
     return this.map(row);
   }
 
+  async cancel(
+    organizationId: number,
+    bookingId: number,
+    reason?: string | null,
+  ): Promise<Booking> {
+    this.id(bookingId, 'id');
+    const normalizedReason = reason?.trim() || null;
+    if (normalizedReason && normalizedReason.length > 2000) {
+      throw itemizeGraphqlError(
+        'reason must be at most 2000 characters',
+        'BAD_USER_INPUT',
+        { field: 'reason', reason: 'TOO_LONG' },
+      );
+    }
+    const outcome = await this.bookings.cancel(
+      organizationId,
+      bookingId,
+      normalizedReason,
+    );
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Booking not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'invalid_status') {
+      throw itemizeGraphqlError(
+        'Only pending or confirmed bookings can be cancelled',
+        'BAD_USER_INPUT',
+        {
+          field: 'id',
+          reason: 'INVALID_BOOKING_STATUS',
+        },
+      );
+    }
+    return this.map(outcome.row);
+  }
+
   private page(input: PageInput): {
     page: number;
     pageSize: number;

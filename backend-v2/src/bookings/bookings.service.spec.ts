@@ -45,6 +45,7 @@ describe('BookingsService', () => {
     repository = {
       findPage: jest.fn(),
       findById: jest.fn(),
+      cancel: jest.fn(),
     } as unknown as jest.Mocked<BookingsRepository>;
     service = new BookingsService(repository);
   });
@@ -116,5 +117,46 @@ describe('BookingsService', () => {
     await expect(service.get(3, 99)).rejects.toMatchObject({
       extensions: expect.objectContaining({ code: 'NOT_FOUND' }),
     });
+  });
+
+  it('cancels an active booking and normalizes its reason', async () => {
+    repository.cancel.mockResolvedValue({
+      kind: 'cancelled',
+      row: row({
+        status: BookingStatus.CANCELLED,
+        cancellation_reason: 'Admin request',
+      }),
+    });
+    await expect(
+      service.cancel(3, 9, '  Admin request  '),
+    ).resolves.toMatchObject({
+      id: 9,
+      status: BookingStatus.CANCELLED,
+      cancellationReason: 'Admin request',
+    });
+    expect(repository.cancel).toHaveBeenCalledWith(3, 9, 'Admin request');
+  });
+
+  it('rejects repeated or terminal cancellation without another write', async () => {
+    repository.cancel.mockResolvedValue({
+      kind: 'invalid_status',
+    });
+    await expect(service.cancel(3, 9)).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_BOOKING_STATUS',
+      }),
+    });
+  });
+
+  it('rejects an oversized cancellation reason before the transaction', async () => {
+    await expect(service.cancel(3, 9, 'x'.repeat(2001))).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        field: 'reason',
+        reason: 'TOO_LONG',
+      }),
+    });
+    expect(repository.cancel).not.toHaveBeenCalled();
   });
 });

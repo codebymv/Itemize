@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getBookingViaGraphql, getBookingsViaGraphql } from './bookingsGraphql';
-import { isBookingGraphqlReadsEnabled } from './graphqlClient';
+import { fetchCsrfToken } from '@/lib/api';
+import {
+  cancelBookingViaGraphql,
+  getBookingViaGraphql,
+  getBookingsViaGraphql,
+} from './bookingsGraphql';
+import {
+  isBookingGraphqlMutationsEnabled,
+  isBookingGraphqlReadsEnabled,
+} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -52,6 +60,7 @@ describe('booking GraphQL consumer', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
+    vi.mocked(fetchCsrfToken).mockResolvedValue('booking-csrf');
   });
 
   afterEach(() => {
@@ -64,6 +73,13 @@ describe('booking GraphQL consumer', () => {
     expect(isBookingGraphqlReadsEnabled()).toBe(false);
     vi.stubEnv('VITE_BOOKING_READS_GRAPHQL', 'true');
     expect(isBookingGraphqlReadsEnabled()).toBe(true);
+  });
+
+  it('keeps authenticated booking cancellation independently disabled by default', () => {
+    vi.stubEnv('VITE_BOOKING_MUTATIONS_GRAPHQL', 'false');
+    expect(isBookingGraphqlMutationsEnabled()).toBe(false);
+    vi.stubEnv('VITE_BOOKING_MUTATIONS_GRAPHQL', 'true');
+    expect(isBookingGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps filters, stable paging, joined fields, and retained shape', async () => {
@@ -135,5 +151,35 @@ describe('booking GraphQL consumer', () => {
       String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
     );
     expect(request.variables).toEqual({ id: 91 });
+  });
+
+  it('cancels through the CSRF-protected mutation and retains the booking shape', async () => {
+    const cancelled = {
+      ...booking,
+      status: 'CANCELLED',
+      cancelledAt: '2026-07-19T01:00:00.000Z',
+      cancellationReason: 'Admin request',
+    };
+    vi.mocked(fetch).mockResolvedValue(
+      response({ data: { cancelBooking: cancelled } }),
+    );
+
+    await expect(
+      cancelBookingViaGraphql(91, 'Admin request', 42),
+    ).resolves.toMatchObject({
+      id: 91,
+      status: 'cancelled',
+      cancelled_at: '2026-07-19T01:00:00.000Z',
+      cancellation_reason: 'Admin request',
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledOnce();
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      'x-csrf-token': 'booking-csrf',
+      'x-organization-id': '42',
+    });
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      variables: { id: 91, reason: 'Admin request' },
+    });
   });
 });

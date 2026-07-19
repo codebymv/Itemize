@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
   addDateOverride,
+  cancelBooking,
   createCalendar,
   deleteCalendar,
   getBooking,
@@ -23,10 +24,12 @@ import {
   updateCalendarViaGraphql,
 } from './calendarsGraphql';
 import {
+  cancelBookingViaGraphql,
   getBookingViaGraphql,
   getBookingsViaGraphql,
 } from './bookingsGraphql';
 import {
+  isBookingGraphqlMutationsEnabled,
   isBookingGraphqlReadsEnabled,
   isCalendarGraphqlAvailabilityMutationsEnabled,
   isCalendarGraphqlMutationsEnabled,
@@ -38,11 +41,13 @@ vi.mock('@/lib/api', () => ({
     delete: vi.fn(),
     get: vi.fn(),
     post: vi.fn(),
+    patch: vi.fn(),
     put: vi.fn(),
   },
 }));
 
 vi.mock('./graphqlClient', () => ({
+  isBookingGraphqlMutationsEnabled: vi.fn(),
   isBookingGraphqlReadsEnabled: vi.fn(),
   isCalendarGraphqlReadsEnabled: vi.fn(),
   isCalendarGraphqlMutationsEnabled: vi.fn(),
@@ -50,6 +55,7 @@ vi.mock('./graphqlClient', () => ({
 }));
 
 vi.mock('./bookingsGraphql', () => ({
+  cancelBookingViaGraphql: vi.fn(),
   getBookingViaGraphql: vi.fn(),
   getBookingsViaGraphql: vi.fn(),
 }));
@@ -106,6 +112,7 @@ describe('calendar API transport selection', () => {
     vi.mocked(isCalendarGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isCalendarGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isBookingGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isBookingGraphqlReadsEnabled).mockReturnValue(false);
   });
 
@@ -275,5 +282,28 @@ describe('calendar API transport selection', () => {
     expect(getBookingsViaGraphql).toHaveBeenCalledWith(params);
     expect(getBookingViaGraphql).toHaveBeenCalledWith(9, 3);
     expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('keeps cancellation on REST by default and switches only that write when enabled', async () => {
+    const cancelled = { ...booking, status: 'cancelled' as const };
+    vi.mocked(api.patch).mockResolvedValueOnce({ data: cancelled });
+
+    await expect(cancelBooking(9, 'Admin request', 3)).resolves.toEqual(cancelled);
+    expect(api.patch).toHaveBeenCalledWith(
+      '/api/bookings/9/cancel',
+      { reason: 'Admin request' },
+      { headers: { 'x-organization-id': '3' } },
+    );
+    expect(cancelBookingViaGraphql).not.toHaveBeenCalled();
+
+    vi.mocked(isBookingGraphqlMutationsEnabled).mockReturnValue(true);
+    vi.mocked(cancelBookingViaGraphql).mockResolvedValue(cancelled);
+    await expect(cancelBooking(9, 'GraphQL request', 3)).resolves.toEqual(cancelled);
+    expect(cancelBookingViaGraphql).toHaveBeenCalledWith(
+      9,
+      'GraphQL request',
+      3,
+    );
+    expect(api.patch).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,5 @@
-import { Args, Int, Query, Resolver } from '@nestjs/graphql';
-import { OrganizationScoped } from '../common/metadata';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import { BookingFilterInput } from './booking.inputs';
@@ -26,6 +26,17 @@ export class BookingsResolver {
   @Query(() => Booking)
   booking(@Args('id', { type: () => Int }) id: number): Promise<Booking> {
     return this.bookings.get(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => Booking)
+  cancelBooking(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('reason', { type: () => String, nullable: true })
+    reason?: string,
+  ): Promise<Booking> {
+    return this.bookings.cancel(this.organizationId(), id, reason);
   }
 
   private organizationId(): number {

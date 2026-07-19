@@ -18,9 +18,11 @@ import {
     isCalendarGraphqlAvailabilityMutationsEnabled,
     isCalendarGraphqlMutationsEnabled,
     isCalendarGraphqlReadsEnabled,
+    isBookingGraphqlMutationsEnabled,
     isBookingGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
+    cancelBookingViaGraphql,
     getBookingViaGraphql,
     getBookingsViaGraphql,
 } from './bookingsGraphql';
@@ -236,6 +238,9 @@ export const cancelBooking = async (
     reason?: string,
     organizationId?: number
 ): Promise<Booking> => {
+    if (isBookingGraphqlMutationsEnabled()) {
+        return cancelBookingViaGraphql(id, reason, organizationId);
+    }
     const response = await api.patch(
         `/api/bookings/${id}/cancel`,
         { reason },

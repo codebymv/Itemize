@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { BookingStatus } from './booking.enums';
 
@@ -47,6 +47,11 @@ export type BookingCriteria = {
   pageSize: number;
   offset: number;
 };
+
+export type CancelBookingOutcome =
+  | { kind: 'cancelled'; row: BookingRow }
+  | { kind: 'not_found' }
+  | { kind: 'invalid_status' };
 
 const bookingSelection = `
   b.id,
@@ -146,5 +151,98 @@ export class BookingsRepository {
       [organizationId, bookingId],
     );
     return result.rows[0] ?? null;
+  }
+
+  async cancel(
+    organizationId: number,
+    bookingId: number,
+    reason: string | null,
+  ): Promise<CancelBookingOutcome> {
+    return this.transaction(async (client) => {
+      const current = await client.query<{ status: BookingStatus }>(
+        `SELECT status
+         FROM bookings
+         WHERE organization_id = $1 AND id = $2
+         FOR UPDATE`,
+        [organizationId, bookingId],
+      );
+      if (!current.rows[0]) return { kind: 'not_found' };
+      if (
+        current.rows[0].status !== BookingStatus.PENDING &&
+        current.rows[0].status !== BookingStatus.CONFIRMED
+      ) {
+        return { kind: 'invalid_status' };
+      }
+
+      const updated = await client.query<BookingRow>(
+        `UPDATE bookings
+         SET status = 'cancelled',
+             cancelled_at = CURRENT_TIMESTAMP,
+             cancellation_reason = $3,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE organization_id = $1 AND id = $2
+         RETURNING *`,
+        [organizationId, bookingId, reason],
+      );
+      const booking = updated.rows[0];
+      await client.query(
+        `INSERT INTO workflow_triggers (
+           workflow_id, organization_id, contact_id, trigger_type,
+           entity_type, entity_id, payload, status, event_key,
+           source, occurred_at, next_attempt_at
+         ) VALUES (
+           NULL, $1, $2, 'booking_cancelled',
+           'booking', $3, $4::jsonb, 'queued', $5,
+           'domain', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         )
+         ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
+        [
+          organizationId,
+          booking.contact_id,
+          bookingId,
+          JSON.stringify({
+            booking_id: bookingId,
+            reason: reason ?? 'No reason provided',
+            version: 1,
+          }),
+          `domain:booking_cancelled:${bookingId}`,
+        ],
+      );
+      const row = await this.findByIdWith(client, organizationId, bookingId);
+      if (!row) throw new Error('Booking disappeared inside cancellation');
+      return { kind: 'cancelled', row };
+    });
+  }
+
+  private async findByIdWith(
+    client: PoolClient,
+    organizationId: number,
+    bookingId: number,
+  ): Promise<BookingRow | null> {
+    const result = await client.query<BookingRow>(
+      `SELECT ${bookingSelection}
+       FROM bookings b
+       ${bookingJoins}
+       WHERE b.organization_id = $1 AND b.id = $2`,
+      [organizationId, bookingId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private async transaction<T>(
+    operation: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await operation(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
