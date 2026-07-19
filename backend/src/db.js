@@ -53,6 +53,9 @@ const {
 const {
   runBookingPublicCapabilityMigration,
 } = require('./db_booking_public_capability_migrations');
+const {
+  runCalendarTokenEncryptionMigration,
+} = require('./db_calendar_token_encryption_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -459,6 +462,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
     await runMigrationOnce(pool, 'booking_availability_policy', runBookingAvailabilityPolicyMigration);
     await runMigrationOnce(pool, 'booking_public_capabilities', runBookingPublicCapabilityMigration);
+    await runMigrationOnce(pool, 'calendar_token_encryption', runCalendarTokenEncryptionMigration);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);

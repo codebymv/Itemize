@@ -7,8 +7,20 @@ const router = express.Router();
 const googleCalendarService = require('../services/googleCalendarService');
 const { withDbClient } = require('../utils/db');
 const { sendError } = require('../utils/response');
-const { bookingColumns, calendarConnectionColumns } = require('./calendar-columns');
+const { bookingColumns } = require('./calendar-columns');
 const { createCalendarOAuthState, verifyCalendarOAuthState } = require('../services/calendarOAuthState');
+const { encryptCalendarToken } = require('../utils/calendarTokenEncryption');
+const { loadGoogleCalendarConnection } = require('../services/calendarConnectionCredentials');
+const { logger } = require('../utils/logger');
+
+const logCalendarIntegrationError = (operation, error) => {
+    logger.error('Calendar integration request failed', {
+        operation,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: error?.code,
+        status: error?.response?.status,
+    });
+};
 
 /**
  * Create calendar integrations routes with injected dependencies
@@ -40,7 +52,7 @@ module.exports = (pool, authenticateJWT) => {
 
             res.json(result.rows);
         } catch (error) {
-            console.error('Error fetching calendar connections:', error);
+            logCalendarIntegrationError('listConnections', error);
             return sendError(res, 'Internal server error');
         }
     });
@@ -63,7 +75,7 @@ module.exports = (pool, authenticateJWT) => {
 
             res.json({ message: 'Calendar disconnected successfully' });
         } catch (error) {
-            console.error('Error disconnecting calendar:', error);
+            logCalendarIntegrationError('disconnectConnection', error);
             return sendError(res, 'Internal server error');
         }
     });
@@ -100,7 +112,7 @@ module.exports = (pool, authenticateJWT) => {
 
             res.json(result.rows[0]);
         } catch (error) {
-            console.error('Error updating connection:', error);
+            logCalendarIntegrationError('updateConnection', error);
             return sendError(res, 'Internal server error');
         }
     });
@@ -124,7 +136,7 @@ module.exports = (pool, authenticateJWT) => {
             const authUrl = googleCalendarService.getAuthUrl(state);
             res.json({ authUrl });
         } catch (error) {
-            console.error('Error generating Google auth URL:', error);
+            logCalendarIntegrationError('beginGoogleOAuth', error);
             return sendError(res, 'Failed to initiate Google authentication');
         }
     });
@@ -174,9 +186,15 @@ module.exports = (pool, authenticateJWT) => {
                 // Check for existing connection
                 const existingResult = await client.query(
                     `SELECT id FROM calendar_connections 
-                 WHERE user_id = $1 AND provider = 'google' AND provider_account_id = $2`,
-                    [userId, userInfo.id]
+                 WHERE user_id = $1 AND organization_id = $2
+                   AND provider = 'google' AND provider_account_id = $3`,
+                    [userId, organizationId, userInfo.id]
                 );
+
+                const encryptedAccessToken = encryptCalendarToken(tokens.access_token, 'access');
+                const encryptedRefreshToken = tokens.refresh_token
+                    ? encryptCalendarToken(tokens.refresh_token, 'refresh')
+                    : null;
 
                 if (existingResult.rows.length > 0) {
                     // Update existing connection
@@ -190,11 +208,12 @@ module.exports = (pool, authenticateJWT) => {
                         is_active = TRUE,
                         error_message = NULL,
                         error_count = 0,
+                        token_generation = token_generation + 1,
                         updated_at = NOW()
                     WHERE id = $5
                 `, [
-                        tokens.access_token,
-                        tokens.refresh_token,
+                        encryptedAccessToken,
+                        encryptedRefreshToken,
                         tokenExpiresAt,
                         userInfo.email,
                         existingResult.rows[0].id
@@ -211,8 +230,8 @@ module.exports = (pool, authenticateJWT) => {
                         organizationId,
                         userInfo.id,
                         userInfo.email,
-                        tokens.access_token,
-                        tokens.refresh_token,
+                        encryptedAccessToken,
+                        encryptedRefreshToken,
                         tokenExpiresAt
                     ]);
                 }
@@ -223,7 +242,7 @@ module.exports = (pool, authenticateJWT) => {
             const separator = returnPath.includes('?') ? '&' : '?';
             res.redirect(`${frontendUrl}${returnPath}${separator}google_connected=true`);
         } catch (error) {
-            console.error('Error in Google OAuth callback:', error);
+            logCalendarIntegrationError('googleOAuthCallback', error);
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
             res.redirect(`${frontendUrl}/calendars?error=oauth_failed`);
         }
@@ -235,29 +254,13 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.get('/google/calendars/:connectionId', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const connectionResult = await withDbClient(pool, async (client) => client.query(
-                `SELECT ${calendarConnectionColumns()} FROM calendar_connections
-                 WHERE id = $1 AND user_id = $2 AND organization_id = $3`,
-                [req.params.connectionId, req.user.id, req.organizationId]
-            ));
-
-            if (connectionResult.rows.length === 0) {
+            const connection = await loadGoogleCalendarConnection(pool, {
+                connectionId: req.params.connectionId,
+                userId: req.user.id,
+                organizationId: req.organizationId,
+            });
+            if (!connection) {
                 return res.status(404).json({ error: 'Connection not found' });
-            }
-
-            const connection = connectionResult.rows[0];
-
-            // Check if tokens need refresh
-            if (googleCalendarService.needsTokenRefresh(connection.token_expires_at)) {
-                const newTokens = await googleCalendarService.refreshAccessToken(connection.refresh_token);
-                connection.access_token = newTokens.access_token;
-
-                // Update tokens in database
-                await withDbClient(pool, async (client) => client.query(`
-                    UPDATE calendar_connections
-                    SET access_token = $1, token_expires_at = $2, updated_at = NOW()
-                    WHERE id = $3
-                `, [newTokens.access_token, new Date(newTokens.expiry_date), connection.id]));
             }
 
             const calendars = await googleCalendarService.listCalendars(
@@ -267,7 +270,7 @@ module.exports = (pool, authenticateJWT) => {
 
             res.json(calendars);
         } catch (error) {
-            console.error('Error listing Google calendars:', error);
+            logCalendarIntegrationError('listGoogleCalendars', error);
             return sendError(res, 'Failed to fetch calendars');
         }
     });
@@ -282,31 +285,17 @@ module.exports = (pool, authenticateJWT) => {
      */
     router.post('/sync/:connectionId', authenticateJWT, requireOrganization, async (req, res) => {
         try {
-            const data = await withDbClient(pool, async (client) => {
-                const connectionResult = await client.query(
-                    `SELECT ${calendarConnectionColumns()} FROM calendar_connections
-                 WHERE id = $1 AND user_id = $2 AND organization_id = $3 AND is_active = TRUE`,
-                    [req.params.connectionId, req.user.id, req.organizationId]
-                );
+            const connection = await loadGoogleCalendarConnection(pool, {
+                connectionId: req.params.connectionId,
+                userId: req.user.id,
+                organizationId: req.organizationId,
+                requireActive: true,
+            });
+            if (!connection) {
+                return res.status(404).json({ error: 'Connection not found or inactive' });
+            }
 
-                if (connectionResult.rows.length === 0) {
-                    return { connection: null, bookings: [] };
-                }
-
-                const connection = connectionResult.rows[0];
-
-                // Check if tokens need refresh
-                if (googleCalendarService.needsTokenRefresh(connection.token_expires_at)) {
-                    const newTokens = await googleCalendarService.refreshAccessToken(connection.refresh_token);
-                    connection.access_token = newTokens.access_token;
-
-                    await client.query(`
-                    UPDATE calendar_connections
-                    SET access_token = $1, token_expires_at = $2, updated_at = NOW()
-                    WHERE id = $3
-                `, [newTokens.access_token, new Date(newTokens.expiry_date), connection.id]);
-                }
-
+            const bookings = await withDbClient(pool, async (client) => {
                 // Get upcoming bookings that need syncing
                 const bookingsResult = await client.query(`
                 SELECT ${bookingColumns('b')} FROM bookings b
@@ -318,15 +307,8 @@ module.exports = (pool, authenticateJWT) => {
                 ORDER BY b.start_time ASC
                 LIMIT 100
             `, [connection.id, req.organizationId]);
-
-                return { connection, bookings: bookingsResult.rows };
+                return bookingsResult.rows;
             });
-
-            if (!data.connection) {
-                return res.status(404).json({ error: 'Connection not found or inactive' });
-            }
-
-            const { connection, bookings } = data;
 
             if (bookings.length === 0) {
                 return res.json({
@@ -347,7 +329,7 @@ module.exports = (pool, authenticateJWT) => {
                 results
             });
         } catch (error) {
-            console.error('Error syncing calendar:', error);
+            logCalendarIntegrationError('syncCalendar', error);
             return sendError(res, 'Sync failed');
         }
     });
@@ -397,7 +379,7 @@ module.exports = (pool, authenticateJWT) => {
                 stats: data.stats
             });
         } catch (error) {
-            console.error('Error getting sync status:', error);
+            logCalendarIntegrationError('getSyncStatus', error);
             return sendError(res, 'Internal server error');
         }
     });

@@ -1599,13 +1599,13 @@
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 202
+          "line": 203
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 213
+          "line": 214
         },
         {
           "method": "GET",
@@ -1635,7 +1635,7 @@
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 993
+          "line": 998
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1688,49 +1688,49 @@
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 129
+          "line": 130
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 166
+          "line": 167
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 176
+          "line": 177
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 187
+          "line": 188
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 254
+          "line": 255
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 324
+          "line": 325
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 351
+          "line": 352
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 356
+          "line": 357
         },
         {
           "method": "POST",
@@ -1789,13 +1789,13 @@
           "method": "GET",
           "path": "/api/bookings/:bookingId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 224
+          "line": 225
         },
         {
           "method": "GET",
           "path": "/api/bookings/:bookingId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 235
+          "line": 236
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1836,13 +1836,13 @@
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/cancel",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 310
+          "line": 311
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:freshId/cancel",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 331
+          "line": 332
         },
         {
           "method": "PATCH",
@@ -1889,19 +1889,19 @@
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 275
+          "line": 276
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 290
+          "line": 291
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 300
+          "line": 301
         },
         {
           "method": "PATCH",
@@ -1966,13 +1966,13 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 980
+          "line": 985
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 983
+          "line": 988
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2049,13 +2049,13 @@
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 833
+          "line": 838
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 844
+          "line": 849
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2155,13 +2155,13 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 800
+          "line": 805
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 819
+          "line": 824
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2183,7 +2183,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 29
+          "line": 41
         }
       ],
       "consumerCallsites": [
@@ -2217,7 +2217,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 52
+          "line": 64
         }
       ],
       "consumerCallsites": [
@@ -2251,7 +2251,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 75
+          "line": 87
         }
       ],
       "consumerCallsites": [
@@ -2285,7 +2285,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 116
+          "line": 128
         }
       ],
       "consumerCallsites": [
@@ -2304,7 +2304,7 @@
           "method": "GET",
           "path": "/api/calendar-integrations/google/auth",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 46
+          "line": 47
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2326,7 +2326,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 236
+          "line": 255
         }
       ],
       "consumerCallsites": [
@@ -2348,7 +2348,7 @@
       "targetOperation": "providerCalendars",
       "targetModule": "CalendarIntegrationsModule",
       "parityStatus": "characterizing",
-      "notes": "User-and-organization scoped provider read with serialized token refresh and redacted provider errors.",
+      "notes": "User-and-organization scoped provider read with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2360,7 +2360,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 136
+          "line": 148
         }
       ],
       "consumerCallsites": [],
@@ -2369,13 +2369,19 @@
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 60
+          "line": 61
         },
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 73
+          "line": 74
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
+          "line": 113
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -2385,7 +2391,7 @@
       "targetOperation": "googleCalendarCallback",
       "targetModule": "CalendarOAuthModule",
       "parityStatus": "characterized",
-      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange/storage.",
+      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2397,7 +2403,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 359
+          "line": 341
         }
       ],
       "consumerCallsites": [
@@ -2431,7 +2437,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 283
+          "line": 286
         }
       ],
       "consumerCallsites": [
@@ -2453,7 +2459,7 @@
       "targetOperation": "requestCalendarSync",
       "targetModule": "CalendarIntegrationsModule",
       "parityStatus": "characterizing",
-      "notes": "Target queues an idempotent durable sync job rather than performing provider calls inside the resolver.",
+      "notes": "Retained manual sync now uses the same row-locked encrypted credential loader, but the target still queues an idempotent durable sync job rather than performing provider calls inside the resolver.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2490,19 +2496,19 @@
           "method": "GET",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 122
+          "line": 114
         },
         {
           "method": "GET",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 133
+          "line": 125
         },
         {
           "method": "GET",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 392
+          "line": 384
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2543,7 +2549,7 @@
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 43
+          "line": 44
         },
         {
           "method": "POST",
@@ -2567,37 +2573,37 @@
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 70
+          "line": 62
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 92
+          "line": 84
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 112
+          "line": 104
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 215
+          "line": 207
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 255
+          "line": 247
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 316
+          "line": 308
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2638,19 +2644,19 @@
           "method": "DELETE",
           "path": "/api/calendars/:calendarId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 190
+          "line": 182
         },
         {
           "method": "DELETE",
           "path": "/api/calendars/:calendarId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 200
+          "line": 192
         },
         {
           "method": "DELETE",
           "path": "/api/calendars/:protectedCalId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 239
+          "line": 231
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2721,13 +2727,13 @@
           "method": "GET",
           "path": "/api/calendars/:calendarId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 144
+          "line": 136
         },
         {
           "method": "GET",
           "path": "/api/calendars/:calendarId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 158
+          "line": 150
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2768,13 +2774,13 @@
           "method": "PUT",
           "path": "/api/calendars/:calendarId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 167
+          "line": 159
         },
         {
           "method": "PUT",
           "path": "/api/calendars/:calendarId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 180
+          "line": 172
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2821,19 +2827,19 @@
           "method": "PUT",
           "path": "/api/calendars/:calendarId/availability",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 274
+          "line": 266
         },
         {
           "method": "PUT",
           "path": "/api/calendars/:calendarId/availability",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 288
+          "line": 280
         },
         {
           "method": "PUT",
           "path": "/api/calendars/:calendarId/availability",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 298
+          "line": 290
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2880,19 +2886,19 @@
           "method": "POST",
           "path": "/api/calendars/:calendarId/date-override",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 331
+          "line": 323
         },
         {
           "method": "POST",
           "path": "/api/calendars/:calendarId/date-override",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 344
+          "line": 336
         },
         {
           "method": "POST",
           "path": "/api/calendars/:calendarId/date-override",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 360
+          "line": 352
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2933,13 +2939,13 @@
           "method": "DELETE",
           "path": "/api/calendars/:calendarId/date-override/:overrideId",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 371
+          "line": 363
         },
         {
           "method": "DELETE",
           "path": "/api/calendars/:calendarId/date-override/999999",
           "source": "backend/src/__tests__/integration/calendars.integration.test.js",
-          "line": 380
+          "line": 372
         }
       ],
       "recommendedDisposition": "graphql-mutation",

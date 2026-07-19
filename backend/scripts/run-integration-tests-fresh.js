@@ -27,6 +27,8 @@ function buildTestEnvironment(environment = process.env) {
         FACEBOOK_WEBHOOK_VERIFY_TOKEN: '',
         GEMINI_API_KEY: '',
         GOOGLE_CLIENT_SECRET: '',
+        CALENDAR_TOKEN_ENCRYPTION_KEYS: '',
+        CALENDAR_TOKEN_ACTIVE_KEY_ID: '',
         MARKETING_CHAT_AI_ENABLED: 'false',
         RESEND_API_KEY: '',
         RESEND_WEBHOOK_SECRET: '',

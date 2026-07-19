@@ -92,6 +92,8 @@ const OPTIONAL_ENV_VARS = [
     { var: 'TWILIO_AUTH_TOKEN', name: 'Twilio Auth Token' },
     { var: 'GOOGLE_CLIENT_ID', name: 'Google Client ID' },
     { var: 'GOOGLE_CLIENT_SECRET', name: 'Google Client Secret' },
+    { var: 'CALENDAR_TOKEN_ENCRYPTION_KEYS', name: 'Calendar token encryption keyring' },
+    { var: 'CALENDAR_TOKEN_ACTIVE_KEY_ID', name: 'Calendar token active key ID' },
     { var: 'STRIPE_SECRET_KEY', name: 'Stripe Secret Key' },
     { var: 'STRIPE_WEBHOOK_SECRET', name: 'Stripe Webhook Secret' },
     { var: 'AWS_ACCESS_KEY_ID', name: 'AWS Access Key ID' },
@@ -157,6 +159,25 @@ module.exports.validateEnv = () => {
     
     if (hasGoogleClientId && !hasGoogleClientSecret) {
         warnings.push('GOOGLE_CLIENT_SECRET is recommended for full OAuth flow support');
+    }
+
+    const hasCalendarTokenKeys = !!process.env.CALENDAR_TOKEN_ENCRYPTION_KEYS;
+    const hasCalendarTokenKeyId = !!process.env.CALENDAR_TOKEN_ACTIVE_KEY_ID;
+    if (hasCalendarTokenKeys !== hasCalendarTokenKeyId) {
+        errors.push(
+            'CALENDAR_TOKEN_ENCRYPTION_KEYS and CALENDAR_TOKEN_ACTIVE_KEY_ID must be configured together'
+        );
+    } else if (hasCalendarTokenKeys) {
+        try {
+            const { parseCalendarTokenKeyring } = require('../utils/calendarTokenEncryption');
+            parseCalendarTokenKeyring(process.env, { allowDevelopmentFallback: false });
+        } catch (error) {
+            errors.push(error.message);
+        }
+    } else if (process.env.NODE_ENV === 'production' && (hasGoogleClientId || hasGoogleClientSecret)) {
+        errors.push(
+            'Calendar token encryption keys are required when Google OAuth is configured in production'
+        );
     }
     
     // Log errors and exit if critical

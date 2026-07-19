@@ -74,6 +74,7 @@ describe('test database schema contract', () => {
             'module_invoicing',
             'booking_availability_policy',
             'booking_public_capabilities',
+            'calendar_token_encryption',
             'module_estimates_recurring',
             'estimates_business_column',
             'module_subscriptions',
@@ -88,6 +89,8 @@ describe('test database schema contract', () => {
             GEMINI_API_KEY: 'live-ai',
             FACEBOOK_APP_SECRET: 'live-meta',
             FACEBOOK_WEBHOOK_VERIFY_TOKEN: 'live-meta-verify',
+            CALENDAR_TOKEN_ENCRYPTION_KEYS: '{"live":"secret"}',
+            CALENDAR_TOKEN_ACTIVE_KEY_ID: 'live',
             RESEND_API_KEY: 'live-email',
             RESEND_WEBHOOK_SECRET: 'live-email-webhook',
             STRIPE_SECRET_KEY: 'live-stripe',
@@ -98,6 +101,8 @@ describe('test database schema contract', () => {
             AWS_ACCESS_KEY_ID: '',
             FACEBOOK_APP_SECRET: '',
             FACEBOOK_WEBHOOK_VERIFY_TOKEN: '',
+            CALENDAR_TOKEN_ENCRYPTION_KEYS: '',
+            CALENDAR_TOKEN_ACTIVE_KEY_ID: '',
             GEMINI_API_KEY: '',
             MARKETING_CHAT_AI_ENABLED: 'false',
             RESEND_API_KEY: '',
@@ -291,14 +296,26 @@ describe('test database schema contract', () => {
         expect(sql).toContain('bookings_raw_cancellation_token_forbidden');
     });
 
-    test('production startup requires the latest public-capability migration marker', () => {
+    test('production migration stream encrypts calendar provider credentials', async () => {
+        const migration = require('../../../scripts/migrations/032_calendar_token_encryption');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('token_generation');
+        expect(sql).toContain('calendar_connections_access_token_encrypted');
+        expect(sql).toContain('calendar_connections_refresh_token_encrypted');
+        expect(sql).toContain('calendar_connections_provider_account_identity');
+    });
+
+    test('production startup requires the latest calendar-token migration marker', () => {
         const startupSource = fs.readFileSync(
             path.resolve(__dirname, '../../index.js'),
             'utf8'
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '031_booking_public_capabilities'"
+            "WHERE version = '032_calendar_token_encryption'"
         );
     });
 

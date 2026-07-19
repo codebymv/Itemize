@@ -9,6 +9,7 @@ const { authenticateJWT, requireAdmin } = require('../../auth');
 const {
     runBookingPublicCapabilityMigration,
 } = require('../../db_booking_public_capability_migrations');
+const { encryptCalendarToken } = require('../../utils/calendarTokenEncryption');
 
 function createApp(pool) {
     const app = express();
@@ -782,9 +783,14 @@ describe('Bookings Integration Tests', () => {
                 `INSERT INTO calendar_connections (
                    user_id, organization_id, provider, provider_account_id,
                    access_token, sync_enabled
-                 ) VALUES ($1, $2, 'google', $3, 'test-token', TRUE)
+                 ) VALUES ($1, $2, 'google', $3, $4, TRUE)
                  RETURNING id`,
-                [userA.user.id, userA.org.id, `availability-${Date.now()}`]
+                [
+                    userA.user.id,
+                    userA.org.id,
+                    `availability-${Date.now()}`,
+                    encryptCalendarToken('test-token', 'access'),
+                ]
             );
             connectionId = connection.rows[0].id;
         });

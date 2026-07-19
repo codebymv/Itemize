@@ -86,7 +86,7 @@
 | PATCH | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / updateCalendarConnection |
 | GET | `/api/calendar-integrations/google/auth` | 1 | 1 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / beginGoogleCalendarConnection |
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / providerCalendars |
-| GET | `/api/calendar-integrations/google/callback` | 0 | 2 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
+| GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
 | GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
 | POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
 | GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |

@@ -1426,15 +1426,15 @@
     },
     "GET /api/calendar-integrations/google/callback": {
       "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "googleCalendarCallback", "parityStatus": "characterized", "risk": "high",
-      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange/storage."
+      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key."
     },
     "GET /api/calendar-integrations/google/calendars/:connectionId": {
       "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "providerCalendars", "parityStatus": "characterizing", "risk": "high",
-      "notes": "User-and-organization scoped provider read with serialized token refresh and redacted provider errors."
+      "notes": "User-and-organization scoped provider read with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh."
     },
     "POST /api/calendar-integrations/sync/:connectionId": {
       "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "requestCalendarSync", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Target queues an idempotent durable sync job rather than performing provider calls inside the resolver."
+      "notes": "Retained manual sync now uses the same row-locked encrypted credential loader, but the target still queues an idempotent durable sync job rather than performing provider calls inside the resolver."
     },
     "GET /api/calendar-integrations/sync-status/:connectionId": {
       "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarSyncStatus", "parityStatus": "characterized", "risk": "high",

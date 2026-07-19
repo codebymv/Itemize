@@ -20,6 +20,7 @@ jest.mock('../../services/googleCalendarService', () => ({
 
 const googleCalendarService = require('../../services/googleCalendarService');
 const { createCalendarOAuthState, verifyCalendarOAuthState } = require('../../services/calendarOAuthState');
+const { decryptCalendarToken } = require('../../utils/calendarTokenEncryption');
 const createCalendarIntegrationRoutes = require('../../routes/calendar-integrations.routes');
 
 function createApp(pool) {
@@ -77,5 +78,49 @@ describe('calendar integration OAuth route contract', () => {
         expect(client.query).toHaveBeenCalledWith(expect.stringContaining('organization_members'), [42, 17]);
         expect(client.release).toHaveBeenCalled();
         expect(googleCalendarService.exchangeCodeForTokens).not.toHaveBeenCalled();
+    });
+
+    it('stores OAuth credentials only as authenticated encryption envelopes', async () => {
+        const membershipClient = {
+            query: jest.fn().mockResolvedValue({ rows: [{ member: true }] }),
+            release: jest.fn(),
+        };
+        const storageClient = {
+            query: jest.fn()
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] }),
+            release: jest.fn(),
+        };
+        pool.connect
+            .mockResolvedValueOnce(membershipClient)
+            .mockResolvedValueOnce(storageClient);
+        googleCalendarService.exchangeCodeForTokens.mockResolvedValue({
+            access_token: 'provider-access',
+            refresh_token: 'provider-refresh',
+            expiry_date: Date.now() + 60 * 60 * 1000,
+        });
+        googleCalendarService.getUserInfo.mockResolvedValue({
+            id: 'provider-account',
+            email: 'provider@example.com',
+        });
+        const state = createCalendarOAuthState({
+            userId: 42,
+            organizationId: 17,
+            returnUrl: '/calendars',
+        });
+
+        const response = await request(app)
+            .get(`/api/calendar-integrations/google/callback?code=provider-code&state=${encodeURIComponent(state)}`);
+
+        expect(response.status).toBe(302);
+        expect(response.headers.location).toContain('google_connected=true');
+        const insertCall = storageClient.query.mock.calls.find(([sql]) =>
+            sql.includes('INSERT INTO calendar_connections')
+        );
+        expect(insertCall).toBeDefined();
+        expect(insertCall[1][4]).not.toContain('provider-access');
+        expect(insertCall[1][5]).not.toContain('provider-refresh');
+        expect(decryptCalendarToken(insertCall[1][4], 'access')).toBe('provider-access');
+        expect(decryptCalendarToken(insertCall[1][5], 'refresh')).toBe('provider-refresh');
     });
 });
