@@ -26,18 +26,9 @@ import {
     getCalendarConnections, 
     disconnectCalendar, 
     syncCalendar, 
-    initiateGoogleAuth 
+    initiateGoogleAuth,
+    type CalendarConnection,
 } from '@/services/calendarIntegrationsApi';
-
-interface CalendarConnection {
-    id: number;
-    provider: string;
-    email?: string;
-    is_active: boolean;
-    sync_enabled: boolean;
-    last_synced_at?: string;
-    created_at: string;
-}
 
 export function CalendarIntegrationsPage() {
     const { toast } = useToast();
@@ -124,7 +115,7 @@ export function CalendarIntegrationsPage() {
         setSyncing(id);
         try {
             await syncCalendar(id, organizationId);
-            toast({ title: 'Sync Complete', description: 'Calendar synced successfully' });
+            toast({ title: 'Sync Queued', description: 'Calendar sync will continue in the background.' });
             fetchConnections();
         } catch (error) {
             toast({ title: 'Error', description: 'Sync failed', variant: 'destructive' });
@@ -201,7 +192,7 @@ export function CalendarIntegrationsPage() {
                                             <img src="/google-calendar.svg" alt="Google" className="w-6 h-6" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                                         </div>
                                         <div>
-                                            <p className="font-medium">{connection.email}</p>
+                                            <p className="font-medium">{connection.provider_email}</p>
                                             <p className="text-sm text-muted-foreground capitalize">{connection.provider}</p>
                                         </div>
                                     </div>

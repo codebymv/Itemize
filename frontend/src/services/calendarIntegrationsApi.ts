@@ -3,6 +3,14 @@
  * Handles external calendar connections (Google, Outlook) on the frontend
  */
 import api from '@/lib/api';
+import {
+    disconnectCalendarViaGraphql,
+    getCalendarConnectionsViaGraphql,
+    getCalendarSyncStatusViaGraphql,
+    requestCalendarSyncViaGraphql,
+    updateCalendarConnectionViaGraphql,
+} from './calendarIntegrationsGraphql';
+import { isCalendarIntegrationsGraphqlEnabled } from './graphqlClient';
 
 // ======================
 // Types
@@ -11,12 +19,13 @@ import api from '@/lib/api';
 export interface CalendarConnection {
     id: number;
     provider: 'google' | 'outlook' | 'apple';
-    provider_email: string;
+    provider_email: string | null;
     sync_enabled: boolean;
     sync_direction: 'push' | 'pull' | 'both';
     last_sync_at: string | null;
     is_active: boolean;
     error_message: string | null;
+    error_count: number;
     selected_calendars: string[];
     created_at: string;
     updated_at: string;
@@ -33,28 +42,33 @@ export interface ExternalCalendar {
 
 export interface SyncResult {
     message: string;
-    results: {
-        created: number;
-        updated: number;
-        failed: number;
-        errors?: { bookingId: number; error: string }[];
-    };
+    created: boolean;
+    job: CalendarSyncJob;
+}
+
+export interface CalendarSyncJob {
+    id: number;
+    connection_id: number;
+    direction: 'push' | 'pull' | 'both';
+    status: 'queued' | 'processing' | 'retry' | 'succeeded' | 'dead_letter';
+    attempt_count: number;
+    next_attempt_at: string;
+    result: Record<string, unknown> | null;
+    last_error: string | null;
+    completed_at: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface SyncStatus {
-    connection: {
-        id: number;
-        last_sync_at: string | null;
-        error_message: string | null;
-        error_count: number;
-        sync_enabled: boolean;
-    };
+    connection: CalendarConnection;
     stats: {
         total_synced: number;
         pushed: number;
         pulled: number;
         last_event_sync: string | null;
     };
+    jobs: CalendarSyncJob[];
 }
 
 // ======================
@@ -65,6 +79,9 @@ export interface SyncStatus {
  * Get all calendar connections for the current user
  */
 export const getCalendarConnections = async (organizationId?: number): Promise<CalendarConnection[]> => {
+    if (isCalendarIntegrationsGraphqlEnabled()) {
+        return getCalendarConnectionsViaGraphql(organizationId);
+    }
     const response = await api.get('/api/calendar-integrations/connections', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -75,6 +92,9 @@ export const getCalendarConnections = async (organizationId?: number): Promise<C
  * Disconnect a calendar integration
  */
 export const disconnectCalendar = async (connectionId: number, organizationId?: number): Promise<void> => {
+    if (isCalendarIntegrationsGraphqlEnabled()) {
+        return disconnectCalendarViaGraphql(connectionId, organizationId);
+    }
     await api.delete(`/api/calendar-integrations/connections/${connectionId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -92,6 +112,9 @@ export const updateCalendarConnection = async (
     },
     organizationId?: number
 ): Promise<CalendarConnection> => {
+    if (isCalendarIntegrationsGraphqlEnabled()) {
+        return updateCalendarConnectionViaGraphql(connectionId, updates, organizationId);
+    }
     const response = await api.patch(
         `/api/calendar-integrations/connections/${connectionId}`,
         updates,
@@ -145,12 +168,18 @@ export const syncCalendar = async (
     connectionId: number,
     organizationId?: number
 ): Promise<SyncResult> => {
+    if (isCalendarIntegrationsGraphqlEnabled()) {
+        return requestCalendarSyncViaGraphql(connectionId, organizationId);
+    }
     const response = await api.post(
         `/api/calendar-integrations/sync/${connectionId}`,
         {},
         { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
     );
-    return response.data;
+    return {
+        ...response.data,
+        created: response.data.message === 'Sync queued',
+    };
 };
 
 /**
@@ -160,6 +189,9 @@ export const getSyncStatus = async (
     connectionId: number,
     organizationId?: number
 ): Promise<SyncStatus> => {
+    if (isCalendarIntegrationsGraphqlEnabled()) {
+        return getCalendarSyncStatusViaGraphql(connectionId, organizationId);
+    }
     const response = await api.get(
         `/api/calendar-integrations/sync-status/${connectionId}`,
         { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }

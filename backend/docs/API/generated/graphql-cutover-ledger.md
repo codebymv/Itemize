@@ -10,9 +10,9 @@
 - Static frontend callsites: 388
 - Operations with frontend consumers: 365
 - Operations referenced by backend tests: 198
-- Recommended GraphQL queries: 128
-- Recommended GraphQL mutations: 245
-- Recommended retained HTTP endpoints: 38
+- Recommended GraphQL queries: 127
+- Recommended GraphQL mutations: 244
+- Recommended retained HTTP endpoints: 40
 - High-risk operations: 336
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
@@ -84,8 +84,8 @@
 | GET | `/api/calendar-integrations/connections` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarConnections |
 | DELETE | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / disconnectCalendar |
 | PATCH | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / updateCalendarConnection |
-| GET | `/api/calendar-integrations/google/auth` | 1 | 1 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / beginGoogleCalendarConnection |
-| GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / providerCalendars |
+| GET | `/api/calendar-integrations/google/auth` | 1 | 1 | retain-http | high | scheduling-integrations / CalendarOAuthModule / beginGoogleCalendarConnection |
+| GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | retain-http | high | scheduling-integrations / CalendarProviderHttpModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
 | GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
 | POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 1 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |

@@ -16,9 +16,9 @@
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 5,
-    "retainHttpCount": 38,
-    "graphqlQueryCount": 128,
-    "graphqlMutationCount": 245,
+    "retainHttpCount": 40,
+    "graphqlQueryCount": 127,
+    "graphqlMutationCount": 244,
     "highRiskCount": 336,
     "literalInterpolationRiskCount": 0
   },
@@ -2192,7 +2192,7 @@
           "path": "/api/calendar-integrations/connections",
           "rawPath": "/api/calendar-integrations/connections",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 68,
+          "line": 85,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2204,8 +2204,8 @@
       "owner": "scheduling-integrations",
       "targetOperation": "calendarConnections",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterized",
-      "notes": "Returns only the active user's connections in the verified organization and never exposes provider tokens.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind VITE_CALENDAR_INTEGRATIONS_GRAPHQL. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2226,7 +2226,7 @@
           "path": "/api/calendar-integrations/connections/:connectionId",
           "rawPath": "/api/calendar-integrations/connections/${connectionId}",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 78,
+          "line": 98,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2238,8 +2238,8 @@
       "owner": "scheduling-integrations",
       "targetOperation": "disconnectCalendar",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterized",
-      "notes": "User-and-organization scoped disconnect with provider cleanup policy made explicit.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected user-and-organization scoped disconnect behind the default-off integration flag. Remote provider events are retained, matching the shipped UI warning; foreign and peer-user IDs return NOT_FOUND.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2260,7 +2260,7 @@
           "path": "/api/calendar-integrations/connections/:connectionId",
           "rawPath": "/api/calendar-integrations/connections/${connectionId}",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 95,
+          "line": 118,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2272,8 +2272,8 @@
       "owner": "scheduling-integrations",
       "targetOperation": "updateCalendarConnection",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterized",
-      "notes": "The retained boundary explicitly validates booleans, push/pull/both direction, and at most 100 unique non-empty provider calendar IDs before updating the user-and-organization scoped connection.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected and implemented behind the default-off integration flag. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2294,7 +2294,7 @@
           "path": "/api/calendar-integrations/google/auth",
           "rawPath": "/api/calendar-integrations/google/auth",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 110,
+          "line": 133,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2309,12 +2309,12 @@
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-mutation",
+      "disposition": "retain-http",
       "owner": "scheduling-integrations",
       "targetOperation": "beginGoogleCalendarConnection",
-      "targetModule": "CalendarIntegrationsModule",
+      "targetModule": "CalendarOAuthModule",
       "parityStatus": "characterized",
-      "notes": "Returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state.",
+      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2335,7 +2335,7 @@
           "path": "/api/calendar-integrations/google/calendars/:connectionId",
           "rawPath": "/api/calendar-integrations/google/calendars/${connectionId}",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 134,
+          "line": 157,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2343,12 +2343,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
+      "disposition": "retain-http",
       "owner": "scheduling-integrations",
       "targetOperation": "providerCalendars",
-      "targetModule": "CalendarIntegrationsModule",
+      "targetModule": "CalendarProviderHttpModule",
       "parityStatus": "characterizing",
-      "notes": "User-and-organization scoped provider read with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh.",
+      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2412,7 +2412,7 @@
           "path": "/api/calendar-integrations/sync-status/:connectionId",
           "rawPath": "/api/calendar-integrations/sync-status/${connectionId}",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 163,
+          "line": 195,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2424,8 +2424,8 @@
       "owner": "scheduling-integrations",
       "targetOperation": "calendarSyncStatus",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterized",
-      "notes": "User-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the default-off integration flag with user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2446,7 +2446,7 @@
           "path": "/api/calendar-integrations/sync/:connectionId",
           "rawPath": "/api/calendar-integrations/sync/${connectionId}",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 148,
+          "line": 174,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2465,8 +2465,8 @@
       "owner": "scheduling-integrations",
       "targetOperation": "requestCalendarSync",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "characterized",
-      "notes": "Returns 202 after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected and implemented behind the default-off integration flag. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

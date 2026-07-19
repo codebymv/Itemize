@@ -93,6 +93,9 @@ export const isCalendarGraphqlMutationsEnabled = (): boolean =>
 export const isCalendarGraphqlAvailabilityMutationsEnabled = (): boolean =>
   import.meta.env.VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL === 'true';
 
+export const isCalendarIntegrationsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_CALENDAR_INTEGRATIONS_GRAPHQL === 'true';
+
 export const isBookingGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_BOOKING_READS_GRAPHQL === 'true';
 

@@ -1409,36 +1409,36 @@
       "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections."
     },
     "GET /api/calendar-integrations/connections": {
-      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarConnections", "parityStatus": "characterized", "risk": "high",
-      "notes": "Returns only the active user's connections in the verified organization and never exposes provider tokens."
+      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarConnections", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind VITE_CALENDAR_INTEGRATIONS_GRAPHQL. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema."
     },
     "DELETE /api/calendar-integrations/connections/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "disconnectCalendar", "parityStatus": "characterized", "risk": "high",
-      "notes": "User-and-organization scoped disconnect with provider cleanup policy made explicit."
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "disconnectCalendar", "parityStatus": "implemented", "risk": "high",
+      "notes": "CSRF-protected user-and-organization scoped disconnect behind the default-off integration flag. Remote provider events are retained, matching the shipped UI warning; foreign and peer-user IDs return NOT_FOUND."
     },
     "PATCH /api/calendar-integrations/connections/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "updateCalendarConnection", "parityStatus": "characterized", "risk": "high",
-      "notes": "The retained boundary explicitly validates booleans, push/pull/both direction, and at most 100 unique non-empty provider calendar IDs before updating the user-and-organization scoped connection."
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "updateCalendarConnection", "parityStatus": "implemented", "risk": "high",
+      "notes": "CSRF-protected and implemented behind the default-off integration flag. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection."
     },
     "GET /api/calendar-integrations/google/auth": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "beginGoogleCalendarConnection", "parityStatus": "characterized", "risk": "high",
-      "notes": "Returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state."
+      "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "beginGoogleCalendarConnection", "parityStatus": "characterized", "risk": "high",
+      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state."
     },
     "GET /api/calendar-integrations/google/callback": {
       "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "googleCalendarCallback", "parityStatus": "characterized", "risk": "high",
       "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key."
     },
     "GET /api/calendar-integrations/google/calendars/:connectionId": {
-      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "providerCalendars", "parityStatus": "characterizing", "risk": "high",
-      "notes": "User-and-organization scoped provider read with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh."
+      "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarProviderHttpModule", "targetOperation": "providerCalendars", "parityStatus": "characterizing", "risk": "high",
+      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh."
     },
     "POST /api/calendar-integrations/sync/:connectionId": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "requestCalendarSync", "parityStatus": "characterized", "risk": "high",
-      "notes": "Returns 202 after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy."
+      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "requestCalendarSync", "parityStatus": "implemented", "risk": "high",
+      "notes": "CSRF-protected and implemented behind the default-off integration flag. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy."
     },
     "GET /api/calendar-integrations/sync-status/:connectionId": {
-      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarSyncStatus", "parityStatus": "characterized", "risk": "high",
-      "notes": "User-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics."
+      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarSyncStatus", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the default-off integration flag with user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics."
     },
     "GET /api/signatures/documents": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocuments", "parityStatus": "characterizing", "risk": "high",

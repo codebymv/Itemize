@@ -139,9 +139,8 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['calendarConnections'] });
             toast({
-                title: 'Sync Complete',
-                description: `Created: ${data.results.created}, Updated: ${data.results.updated}${data.results.failed > 0 ? `, Failed: ${data.results.failed}` : ''
-                    }`,
+                title: data.created ? 'Sync Queued' : 'Sync Already Queued',
+                description: 'Calendar sync will continue in the background.',
             });
             setSyncingId(null);
         },
