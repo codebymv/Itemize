@@ -459,32 +459,36 @@
       "owner": "billing",
       "targetModule": "ProductsModule",
       "targetOperation": "products",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Default-off GraphQL consumer pages deterministic organization-scoped reads; fresh PostgreSQL proves active/search filters, REST interoperability, tenant isolation, and decimal-string output."
     },
     "POST /api/invoices/products": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "ProductsModule",
       "targetOperation": "createProduct",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "NestJS validates product type, recurring period, currency, bounded decimal strings, and normalized optional fields; CSRF and REST rollback remain independently tested."
     },
     "DELETE /api/invoices/products/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "ProductsModule",
       "targetOperation": "deleteProduct",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Organization-scoped delete returns a stable deleted identity; foreign and absent rows are indistinguishable and the retained REST path remains available."
     },
     "PUT /api/invoices/products/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "ProductsModule",
       "targetOperation": "updateProduct",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Partial updates preserve omitted fields, clear nullable text explicitly, enforce recurring-period invariants from stored state, and keep one-time billing periods null."
     },
     "GET /api/invoices/recurring": {
       "disposition": "graphql-query",

@@ -105,6 +105,12 @@ export const isBookingGraphqlMutationsEnabled = (): boolean =>
 export const isBookingSchedulingGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL === 'true';
 
+export const isProductGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_PRODUCT_READS_GRAPHQL === 'true';
+
+export const isProductGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_PRODUCT_MUTATIONS_GRAPHQL === 'true';
+
 export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_LIST_READS_GRAPHQL === 'true';
 

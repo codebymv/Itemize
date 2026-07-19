@@ -22,6 +22,7 @@ import { OrganizationContextGuard } from './organizations/organization-context.g
 import { OrganizationsModule } from './organizations/organizations.module';
 import { createGraphqlObservabilityPlugin } from './observability/graphql-observability.plugin';
 import { PipelinesModule } from './pipelines/pipelines.module';
+import { ProductsModule } from './products/products.module';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
 import { RequestContextModule } from './request-context/request-context.module';
 import { TagsModule } from './tags/tags.module';
@@ -50,6 +51,7 @@ const observabilityPlugins = [
     ContactTransfersModule,
     DealsModule,
     PipelinesModule,
+    ProductsModule,
     TagsModule,
     FormsModule,
     OnboardingModule,

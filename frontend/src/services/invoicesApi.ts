@@ -4,6 +4,16 @@
  */
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
+import {
+    isProductGraphqlMutationsEnabled,
+    isProductGraphqlReadsEnabled,
+} from './graphqlClient';
+import {
+    createProductViaGraphql,
+    deleteProductViaGraphql,
+    getProductsViaGraphql,
+    updateProductViaGraphql,
+} from './productsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -174,6 +184,9 @@ export const getProducts = async (
     params: { is_active?: boolean; search?: string } = {},
     organizationId?: number
 ): Promise<Product[]> => {
+    if (isProductGraphqlReadsEnabled()) {
+        return getProductsViaGraphql(params, organizationId);
+    }
     const response = await api.get('/api/invoices/products', {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -185,6 +198,9 @@ export const createProduct = async (
     product: Partial<Product>,
     organizationId?: number
 ): Promise<Product> => {
+    if (isProductGraphqlMutationsEnabled()) {
+        return createProductViaGraphql(product, organizationId);
+    }
     const response = await api.post('/api/invoices/products', product, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -196,6 +212,9 @@ export const updateProduct = async (
     product: Partial<Product>,
     organizationId?: number
 ): Promise<Product> => {
+    if (isProductGraphqlMutationsEnabled()) {
+        return updateProductViaGraphql(productId, product, organizationId);
+    }
     const response = await api.put(`/api/invoices/products/${productId}`, product, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -206,6 +225,9 @@ export const deleteProduct = async (
     productId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isProductGraphqlMutationsEnabled()) {
+        return deleteProductViaGraphql(productId, organizationId);
+    }
     const response = await api.delete(`/api/invoices/products/${productId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
