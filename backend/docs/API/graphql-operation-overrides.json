@@ -319,40 +319,45 @@
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "invoiceBusinesses",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Default-off GraphQL consumer pages active profiles in last-used/newest order; fresh PostgreSQL proves REST parity and tenant-scoped counts."
     },
     "POST /api/invoices/businesses": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "createInvoiceBusiness",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "GraphQL accepts bounded profile fields but never accepts a client-selected logo URL; multipart logo ownership remains on retained HTTP."
     },
     "DELETE /api/invoices/businesses/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "deleteInvoiceBusiness",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Organization-scoped soft deletion preserves historical invoice references while removing the profile from active lists."
     },
     "GET /api/invoices/businesses/:id": {
       "disposition": "graphql-query",
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "invoiceBusiness",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Detail reads include inactive historical profiles and return the same NOT_FOUND outcome for absent and foreign rows."
     },
     "PUT /api/invoices/businesses/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "updateInvoiceBusiness",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Partial writes preserve omitted fields, normalize blank optional values to null, retain server-owned logo URLs, and require CSRF."
     },
     "DELETE /api/invoices/businesses/:id/logo": {
       "disposition": "graphql-mutation",

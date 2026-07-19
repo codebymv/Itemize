@@ -7,7 +7,16 @@ import type { JsonRecord } from '@/types';
 import {
     isProductGraphqlMutationsEnabled,
     isProductGraphqlReadsEnabled,
+    isInvoiceBusinessGraphqlMutationsEnabled,
+    isInvoiceBusinessGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+    createInvoiceBusinessViaGraphql,
+    deleteInvoiceBusinessViaGraphql,
+    getInvoiceBusinessesViaGraphql,
+    getInvoiceBusinessViaGraphql,
+    updateInvoiceBusinessViaGraphql,
+} from './invoiceBusinessesGraphql';
 import {
     createProductViaGraphql,
     deleteProductViaGraphql,
@@ -465,6 +474,9 @@ export const deleteLogo = async (organizationId?: number): Promise<{ success: bo
 // ======================
 
 export const getBusinesses = async (organizationId?: number): Promise<Business[]> => {
+    if (isInvoiceBusinessGraphqlReadsEnabled()) {
+        return getInvoiceBusinessesViaGraphql(organizationId);
+    }
     const response = await api.get('/api/invoices/businesses', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -482,6 +494,9 @@ export const getBusiness = async (
     businessId: number,
     organizationId?: number
 ): Promise<Business> => {
+    if (isInvoiceBusinessGraphqlReadsEnabled()) {
+        return getInvoiceBusinessViaGraphql(businessId, organizationId);
+    }
     const response = await api.get(`/api/invoices/businesses/${businessId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -492,6 +507,9 @@ export const createBusiness = async (
     business: Partial<Business>,
     organizationId?: number
 ): Promise<Business> => {
+    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
+        return createInvoiceBusinessViaGraphql(business, organizationId);
+    }
     const response = await api.post('/api/invoices/businesses', business, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -503,6 +521,9 @@ export const updateBusiness = async (
     business: Partial<Business>,
     organizationId?: number
 ): Promise<Business> => {
+    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
+        return updateInvoiceBusinessViaGraphql(businessId, business, organizationId);
+    }
     const response = await api.put(`/api/invoices/businesses/${businessId}`, business, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -513,6 +534,9 @@ export const deleteBusiness = async (
     businessId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
+        return deleteInvoiceBusinessViaGraphql(businessId, organizationId);
+    }
     const response = await api.delete(`/api/invoices/businesses/${businessId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

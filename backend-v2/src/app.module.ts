@@ -17,6 +17,7 @@ import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
+import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
@@ -54,6 +55,7 @@ const observabilityPlugins = [
     ProductsModule,
     TagsModule,
     FormsModule,
+    InvoiceBusinessesModule,
     OnboardingModule,
     FoundationModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
