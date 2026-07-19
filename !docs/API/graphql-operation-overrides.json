@@ -301,9 +301,9 @@
       "owner": "billing",
       "targetModule": "PaymentsModule",
       "targetOperation": "recordInvoicePayment",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Payment insert and invoice paid/due/status transition share one locked transaction."
+      "notes": "Default-off GraphQL mutation inserts the payment, locks the tenant-owned invoice, performs decimal balance/status arithmetic in PostgreSQL, and enqueues invoice_paid exactly once in the same transaction. Concurrent final payments, CSRF, validation, and tenant-hidden misses pass fresh PostgreSQL."
     },
     "POST /api/invoices/:id/send": {
       "disposition": "graphql-mutation",
@@ -456,9 +456,9 @@
       "owner": "billing",
       "targetModule": "PaymentsModule",
       "targetOperation": "recordPayment",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Preserve organization/contact/invoice validation and locked invoice state updates from the new transactional route."
+      "notes": "Default-off GraphQL mutation validates bounded decimal/currency/method/status/date inputs, organization-qualifies optional contact/invoice references, and shares the locked invoice balance/event transaction. Pending/failed payments do not mutate invoice balances."
     },
     "GET /api/invoices/products": {
       "disposition": "graphql-query",

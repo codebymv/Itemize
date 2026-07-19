@@ -31,6 +31,7 @@ describe('PaymentsService', () => {
   beforeEach(() => {
     repository = {
       findPage: jest.fn(),
+      record: jest.fn(),
     } as unknown as jest.Mocked<PaymentsRepository>;
     service = new PaymentsService(repository);
   });
@@ -70,5 +71,94 @@ describe('PaymentsService', () => {
       extensions: { reason: 'INVALID_PAGE' },
     });
     expect(repository.findPage).not.toHaveBeenCalled();
+  });
+
+  it('normalizes an organization payment and preserves a pending invoice', async () => {
+    repository.record.mockResolvedValue({
+      kind: 'recorded',
+      payment: {
+        ...payment,
+        invoice_id: null,
+        invoice_number: null,
+        contact_id: null,
+        contact_name: null,
+        amount: '25.00',
+        payment_method: PaymentMethod.CASH,
+        status: PaymentStatus.PENDING,
+        paid_at: null,
+      },
+      invoice: null,
+    });
+    await expect(service.record(3, {
+      amount: '25.00',
+      currency: 'usd',
+      paymentMethod: PaymentMethod.CASH,
+      status: PaymentStatus.PENDING,
+      paymentDate: '2026-07-18',
+      notes: ' Check 42 ',
+    })).resolves.toMatchObject({
+      payment: { amount: '25.00', status: PaymentStatus.PENDING },
+      invoice: null,
+    });
+    expect(repository.record).toHaveBeenCalledWith(3, {
+      invoiceId: null,
+      contactId: null,
+      amount: '25.00',
+      currency: 'USD',
+      paymentMethod: PaymentMethod.CASH,
+      status: PaymentStatus.PENDING,
+      paymentDate: '2026-07-18',
+      notes: 'Check 42',
+    });
+  });
+
+  it('records a successful invoice payment and returns decimal balances', async () => {
+    repository.record.mockResolvedValue({
+      kind: 'recorded',
+      payment,
+      invoice: {
+        amount_paid: '125.50',
+        amount_due: '0.00',
+        status: 'paid',
+      },
+    });
+    await expect(service.recordInvoice(3, 9, {
+      amount: '125.50',
+      paymentMethod: PaymentMethod.CARD,
+      notes: null,
+    })).resolves.toMatchObject({
+      payment: { id: 7 },
+      invoice: {
+        amountPaid: '125.50',
+        amountDue: '0.00',
+        status: 'paid',
+      },
+    });
+  });
+
+  it('rejects malformed writes and tenant-hidden references', async () => {
+    await expect(service.record(3, {
+      amount: '0',
+      currency: 'USD',
+      paymentMethod: PaymentMethod.OTHER,
+      status: PaymentStatus.SUCCEEDED,
+    })).rejects.toMatchObject({
+      extensions: { reason: 'INVALID_PAYMENT_AMOUNT' },
+    });
+    await expect(service.record(3, {
+      amount: '1.00',
+      currency: 'USD',
+      paymentMethod: PaymentMethod.STRIPE,
+      status: PaymentStatus.SUCCEEDED,
+    })).rejects.toMatchObject({
+      extensions: { reason: 'INVALID_PAYMENT_METHOD' },
+    });
+    repository.record.mockResolvedValue({ kind: 'invoice-not-found' });
+    await expect(service.recordInvoice(3, 999, {
+      amount: '1.00',
+      paymentMethod: PaymentMethod.OTHER,
+    })).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
   });
 });

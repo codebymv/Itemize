@@ -9,6 +9,7 @@ import {
     isProductGraphqlReadsEnabled,
     isInvoiceBusinessGraphqlMutationsEnabled,
     isInvoiceBusinessGraphqlReadsEnabled,
+    isPaymentGraphqlMutationsEnabled,
 } from './graphqlClient';
 import {
     createInvoiceBusinessViaGraphql,
@@ -23,6 +24,7 @@ import {
     getProductsViaGraphql,
     updateProductViaGraphql,
 } from './productsGraphql';
+import { recordInvoicePaymentViaGraphql } from './invoicePaymentsApi';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -394,6 +396,9 @@ export const recordPayment = async (
     },
     organizationId?: number
 ): Promise<{ payment: Payment; invoice: { amount_paid: number; amount_due: number; status: string } }> => {
+    if (isPaymentGraphqlMutationsEnabled()) {
+        return recordInvoicePaymentViaGraphql(invoiceId, payment, organizationId);
+    }
     const response = await api.post(`/api/invoices/${invoiceId}/record-payment`, payment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

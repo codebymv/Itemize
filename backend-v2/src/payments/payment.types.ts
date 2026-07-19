@@ -96,3 +96,24 @@ export class PaymentPage {
   @Field(() => PageInfo)
   pageInfo: PageInfo;
 }
+
+@ObjectType()
+export class InvoicePaymentBalance {
+  @Field(() => String)
+  amountPaid: string;
+
+  @Field(() => String)
+  amountDue: string;
+
+  @Field(() => String)
+  status: string;
+}
+
+@ObjectType()
+export class RecordPaymentResult {
+  @Field(() => Payment)
+  payment: Payment;
+
+  @Field(() => InvoicePaymentBalance, { nullable: true })
+  invoice: InvoicePaymentBalance | null;
+}

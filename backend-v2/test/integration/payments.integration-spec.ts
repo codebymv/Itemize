@@ -16,6 +16,8 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
   let outsiderOrganizationId: number;
   let memberToken: string;
   let outsiderToken: string;
+  let contactId: number;
+  let invoiceId: number;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -66,6 +68,7 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
        VALUES ($1, 'Ada', 'Lovelace', $2) RETURNING id`,
       [organizationId, `ada-${suffix}@test.itemize`],
     );
+    contactId = Number(contact.rows[0].id);
     const invoice = await pool.query<{ id: number }>(
       `INSERT INTO invoices (
          organization_id, invoice_number, customer_name, contact_id,
@@ -75,8 +78,9 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
          100, 100, 100, 'USD', 'sent'
        )
        RETURNING id`,
-      [organizationId, `INV-${suffix}`, contact.rows[0].id],
+      [organizationId, `INV-${suffix}`, contactId],
     );
+    invoiceId = Number(invoice.rows[0].id);
     await pool.query(
       `INSERT INTO payments (
          organization_id, invoice_id, contact_id, amount, currency,
@@ -84,7 +88,7 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
        ) VALUES
          ($1, $2, $3, 10.50, 'USD', 'card', 'succeeded', NOW(), NOW() - INTERVAL '1 minute'),
          ($1, $2, $3, 20.25, 'USD', 'bank_transfer', 'pending', NULL, NOW())`,
-      [organizationId, invoice.rows[0].id, contact.rows[0].id],
+      [organizationId, invoiceId, contactId],
     );
     await pool.query(
       `INSERT INTO payments (
@@ -148,6 +152,34 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
         variables,
       });
 
+  const mutate = (
+    token: string,
+    orgId: number,
+    document: string,
+    variables: Record<string, unknown>,
+    csrf = true,
+  ) => {
+    const call = request(app.getHttpServer())
+      .post('/graphql')
+      .set(
+        'Cookie',
+        csrf
+          ? `itemize_auth=${token}; csrf-token=payment-csrf`
+          : `itemize_auth=${token}`,
+      )
+      .set('x-organization-id', String(orgId));
+    if (csrf) call.set('x-csrf-token', 'payment-csrf');
+    return call.send({ query: document, variables });
+  };
+
+  const paymentFields = `
+    payment {
+      id organizationId invoiceId contactId amount currency
+      paymentMethod status notes paidAt
+    }
+    invoice { amountPaid amountDue status }
+  `;
+
   it('returns deterministic tenant-scoped history and joined display fields', async () => {
     const response = await query(memberToken, organizationId, {
       page: { page: 1, pageSize: 10 },
@@ -189,5 +221,179 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(outsider.body.data.payments.pageInfo.total).toBe(1);
     expect(outsider.body.data.payments.nodes[0].amount).toBe('999.00');
+  });
+
+  it('records standalone and linked payments with validation and CSRF', async () => {
+    const standalone = await mutate(
+      memberToken,
+      organizationId,
+      `mutation Record($input: RecordPaymentInput!) {
+        recordPayment(input: $input) { ${paymentFields} }
+      }`,
+      {
+        input: {
+          contactId,
+          amount: '12.34',
+          currency: 'usd',
+          paymentMethod: 'CHECK',
+          status: 'PENDING',
+          paymentDate: '2026-07-18',
+          notes: ' Check 42 ',
+        },
+      },
+    ).expect(200);
+    expect(standalone.body.errors).toBeUndefined();
+    expect(standalone.body.data.recordPayment).toMatchObject({
+      payment: {
+        organizationId,
+        invoiceId: null,
+        contactId,
+        amount: '12.34',
+        currency: 'USD',
+        paymentMethod: 'CHECK',
+        status: 'PENDING',
+        notes: 'Check 42',
+        paidAt: null,
+      },
+      invoice: null,
+    });
+
+    const failedLinked = await mutate(
+      memberToken,
+      organizationId,
+      `mutation Record($input: RecordPaymentInput!) {
+        recordPayment(input: $input) { ${paymentFields} }
+      }`,
+      {
+        input: {
+          invoiceId,
+          amount: '5.00',
+          paymentMethod: 'OTHER',
+          status: 'FAILED',
+        },
+      },
+    ).expect(200);
+    expect(failedLinked.body.data.recordPayment.invoice).toBeNull();
+    const unchanged = await pool.query<{
+      amount_paid: string;
+      amount_due: string;
+      status: string;
+    }>(
+      `SELECT amount_paid, amount_due, status FROM invoices
+       WHERE id = $1 AND organization_id = $2`,
+      [invoiceId, organizationId],
+    );
+    expect(unchanged.rows[0]).toMatchObject({
+      amount_paid: '0.00',
+      amount_due: '100.00',
+      status: 'sent',
+    });
+
+    const noCsrf = await mutate(
+      memberToken,
+      organizationId,
+      `mutation Record($input: RecordPaymentInput!) {
+        recordPayment(input: $input) { payment { id } }
+      }`,
+      { input: { amount: '1.00' } },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const foreignContact = await mutate(
+      outsiderToken,
+      outsiderOrganizationId,
+      `mutation Record($input: RecordPaymentInput!) {
+        recordPayment(input: $input) { payment { id } }
+      }`,
+      { input: { contactId, amount: '1.00' } },
+    ).expect(200);
+    expect(foreignContact.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('serializes invoice balances and emits invoice_paid exactly once', async () => {
+    const document = `mutation Pay(
+      $invoiceId: Int!,
+      $input: RecordInvoicePaymentInput!
+    ) {
+      recordInvoicePayment(invoiceId: $invoiceId, input: $input) {
+        ${paymentFields}
+      }
+    }`;
+    const first = await mutate(
+      memberToken,
+      organizationId,
+      document,
+      {
+        invoiceId,
+        input: {
+          amount: '40.00',
+          paymentMethod: 'CASH',
+          notes: 'Deposit',
+        },
+      },
+    ).expect(200);
+    expect(first.body.errors).toBeUndefined();
+    expect(first.body.data.recordInvoicePayment).toMatchObject({
+      payment: {
+        invoiceId,
+        contactId,
+        amount: '40.00',
+        status: 'SUCCEEDED',
+      },
+      invoice: {
+        amountPaid: '40.00',
+        amountDue: '60.00',
+        status: 'partial',
+      },
+    });
+
+    const [second, third] = await Promise.all([
+      mutate(memberToken, organizationId, document, {
+        invoiceId,
+        input: { amount: '30.00', paymentMethod: 'CARD' },
+      }),
+      mutate(memberToken, organizationId, document, {
+        invoiceId,
+        input: { amount: '30.00', paymentMethod: 'BANK_TRANSFER' },
+      }),
+    ]);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(200);
+    expect(second.body.errors).toBeUndefined();
+    expect(third.body.errors).toBeUndefined();
+    const final = await pool.query<{
+      amount_paid: string;
+      amount_due: string;
+      status: string;
+    }>(
+      `SELECT amount_paid, amount_due, status FROM invoices
+       WHERE id = $1 AND organization_id = $2`,
+      [invoiceId, organizationId],
+    );
+    expect(final.rows[0]).toEqual({
+      amount_paid: '100.00',
+      amount_due: '0.00',
+      status: 'paid',
+    });
+    const events = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM workflow_triggers
+       WHERE organization_id = $1
+         AND event_key = $2
+         AND trigger_type = 'invoice_paid'`,
+      [organizationId, `domain:invoice_paid:${invoiceId}`],
+    );
+    expect(Number(events.rows[0].count)).toBe(1);
+
+    const foreignInvoice = await mutate(
+      outsiderToken,
+      outsiderOrganizationId,
+      document,
+      {
+        invoiceId,
+        input: { amount: '1.00', paymentMethod: 'OTHER' },
+      },
+    ).expect(200);
+    expect(foreignInvoice.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 });

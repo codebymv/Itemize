@@ -31,6 +31,7 @@ describe('Environment Validation', () => {
     expect(env.VITE_INVOICE_BUSINESS_READS_GRAPHQL).toBe('false');
     expect(env.VITE_INVOICE_BUSINESS_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_PAYMENT_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_PAYMENT_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_LIST_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_NOTE_READS_GRAPHQL).toBe('false');

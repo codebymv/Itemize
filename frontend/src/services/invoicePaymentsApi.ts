@@ -1,6 +1,8 @@
 import api from '@/lib/api';
 import {
+  graphqlMutationRequest,
   graphqlRequest,
+  isPaymentGraphqlMutationsEnabled,
   isPaymentGraphqlReadsEnabled,
 } from './graphqlClient';
 
@@ -33,6 +35,17 @@ type PaymentFilters = {
   payment_method?: string;
 };
 
+type ManualPaymentInput = {
+  invoice_id?: number;
+  contact_id?: number;
+  amount: number;
+  currency?: string;
+  payment_method?: InvoicePayment['payment_method'];
+  status?: InvoicePayment['status'];
+  payment_date?: string;
+  notes?: string;
+};
+
 type GraphqlPayment = {
   id: number;
   organizationId: number;
@@ -42,8 +55,8 @@ type GraphqlPayment = {
   contactName: string | null;
   amount: string;
   currency: string;
-  paymentMethod: InvoicePayment['payment_method'];
-  status: InvoicePayment['status'];
+  paymentMethod: string;
+  status: string;
   stripePaymentIntentId: string | null;
   cardLast4: string | null;
   cardBrand: string | null;
@@ -70,8 +83,8 @@ const mapPayment = (payment: GraphqlPayment): InvoicePayment => ({
   ...(payment.contactName === null ? {} : { contact_name: payment.contactName }),
   amount: Number(payment.amount),
   currency: payment.currency,
-  payment_method: payment.paymentMethod,
-  status: payment.status,
+  payment_method: payment.paymentMethod.toLowerCase() as InvoicePayment['payment_method'],
+  status: payment.status.toLowerCase() as InvoicePayment['status'],
   ...(payment.stripePaymentIntentId === null
     ? {}
     : { stripe_payment_intent_id: payment.stripePaymentIntentId }),
@@ -131,11 +144,92 @@ export const getInvoicePayments = async (
 
 export const createInvoicePayment = async (
   organizationId: number,
-  payment: Record<string, unknown>,
+  payment: ManualPaymentInput,
 ): Promise<void> => {
+  if (isPaymentGraphqlMutationsEnabled()) {
+    await graphqlMutationRequest(
+      `mutation RecordPayment($input: RecordPaymentInput!) {
+        recordPayment(input: $input) {
+          payment { id }
+          invoice { amountPaid amountDue status }
+        }
+      }`,
+      {
+        input: {
+          ...(payment.invoice_id === undefined
+            ? {}
+            : { invoiceId: payment.invoice_id }),
+          ...(payment.contact_id === undefined
+            ? {}
+            : { contactId: payment.contact_id }),
+          amount: String(payment.amount),
+          currency: payment.currency ?? 'USD',
+          paymentMethod: enumValue(payment.payment_method ?? 'other'),
+          status: enumValue(payment.status ?? 'succeeded'),
+          ...(payment.payment_date === undefined
+            ? {}
+            : { paymentDate: payment.payment_date }),
+          ...(payment.notes === undefined ? {} : { notes: payment.notes }),
+        },
+      },
+      organizationId,
+    );
+    return;
+  }
   await api.post(
     '/api/invoices/payments',
     payment,
     { headers: { 'x-organization-id': organizationId.toString() } },
   );
+};
+
+export const recordInvoicePaymentViaGraphql = async (
+  invoiceId: number,
+  payment: {
+    amount: number;
+    payment_method?: InvoicePayment['payment_method'];
+    notes?: string;
+  },
+  organizationId?: number,
+): Promise<{
+  payment: InvoicePayment;
+  invoice: { amount_paid: number; amount_due: number; status: string };
+}> => {
+  const data = await graphqlMutationRequest<{
+    recordInvoicePayment: {
+      payment: GraphqlPayment;
+      invoice: {
+        amountPaid: string;
+        amountDue: string;
+        status: string;
+      };
+    };
+  }>(
+    `mutation RecordInvoicePayment(
+      $invoiceId: Int!,
+      $input: RecordInvoicePaymentInput!
+    ) {
+      recordInvoicePayment(invoiceId: $invoiceId, input: $input) {
+        payment { ${fields} }
+        invoice { amountPaid amountDue status }
+      }
+    }`,
+    {
+      invoiceId,
+      input: {
+        amount: String(payment.amount),
+        paymentMethod: enumValue(payment.payment_method ?? 'other'),
+        ...(payment.notes === undefined ? {} : { notes: payment.notes }),
+      },
+    },
+    organizationId,
+  );
+  return {
+    payment: mapPayment(data.recordInvoicePayment.payment),
+    invoice: {
+      amount_paid: Number(data.recordInvoicePayment.invoice.amountPaid),
+      amount_due: Number(data.recordInvoicePayment.invoice.amountDue),
+      status: data.recordInvoicePayment.invoice.status,
+    },
+  };
 };

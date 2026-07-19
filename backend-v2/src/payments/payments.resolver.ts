@@ -1,5 +1,5 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { OrganizationScoped } from '../common/metadata';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
@@ -7,8 +7,13 @@ import {
   PaymentMethod,
   PaymentPage,
   PaymentStatus,
+  RecordPaymentResult,
 } from './payment.types';
 import { PaymentsService } from './payments.service';
+import {
+  RecordInvoicePaymentInput,
+  RecordPaymentInput,
+} from './payment.inputs';
 
 @Resolver(() => Payment)
 export class PaymentsResolver {
@@ -31,6 +36,29 @@ export class PaymentsResolver {
       page,
       status,
       paymentMethod,
+    );
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => RecordPaymentResult)
+  recordPayment(
+    @Args('input') input: RecordPaymentInput,
+  ): Promise<RecordPaymentResult> {
+    return this.paymentService.record(this.organizationId(), input);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => RecordPaymentResult)
+  recordInvoicePayment(
+    @Args('invoiceId', { type: () => Int }) invoiceId: number,
+    @Args('input') input: RecordInvoicePaymentInput,
+  ): Promise<RecordPaymentResult> {
+    return this.paymentService.recordInvoice(
+      this.organizationId(),
+      invoiceId,
+      input,
     );
   }
 
