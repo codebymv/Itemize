@@ -18,6 +18,8 @@ jest.mock('googleapis', () => ({
 
 const {
   deterministicGoogleEventId,
+  getCalendarOAuthRedirectUri,
+  getOAuth2Client,
   listEvents,
   syncBookingsToGoogle,
 } = require('../../services/googleCalendarService');
@@ -49,6 +51,39 @@ describe('Google calendar delivery replay contract', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+  });
+
+  afterAll(() => {
+    delete process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+  });
+
+  test('uses an explicit environment-specific OAuth callback', () => {
+    process.env.GOOGLE_CALENDAR_REDIRECT_URI =
+      'https://itemizecloud-backend-staging.up.railway.app/api/calendar-integrations/google/callback';
+
+    getOAuth2Client();
+
+    const { google } = require('googleapis');
+    expect(google.auth.OAuth2).toHaveBeenCalledWith(
+      'test-client',
+      'test-secret',
+      process.env.GOOGLE_CALENDAR_REDIRECT_URI
+    );
+  });
+
+  test('rejects an insecure production OAuth callback', () => {
+    const priorNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    process.env.GOOGLE_CALENDAR_REDIRECT_URI =
+      'http://localhost:3001/api/calendar-integrations/google/callback';
+    try {
+      expect(() => getCalendarOAuthRedirectUri()).toThrow(
+        'credential-free HTTPS URL in production'
+      );
+    } finally {
+      process.env.NODE_ENV = priorNodeEnv;
+    }
   });
 
   test('uses a deterministic provider ID and repairs an ambiguous create replay', async () => {

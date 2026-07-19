@@ -91,12 +91,36 @@ const withRetry = async (operation, context = {}) => {
 };
 
 // OAuth2 Configuration
+const getCalendarOAuthRedirectUri = () => {
+    const configured = process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim();
+    if (!configured) {
+        return process.env.NODE_ENV === 'production'
+            ? 'https://api.itemize.cloud/api/calendar-integrations/google/callback'
+            : 'http://localhost:3001/api/calendar-integrations/google/callback';
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(configured);
+    } catch {
+        throw new Error('GOOGLE_CALENDAR_REDIRECT_URI must be an absolute HTTP(S) URL');
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)
+        || parsed.username
+        || parsed.password
+        || parsed.hash
+        || (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:')) {
+        throw new Error(
+            'GOOGLE_CALENDAR_REDIRECT_URI must be a credential-free HTTPS URL in production'
+        );
+    }
+    return configured;
+};
+
 const getOAuth2Client = () => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.NODE_ENV === 'production'
-        ? 'https://api.itemize.cloud/api/calendar-integrations/google/callback'
-        : 'http://localhost:3001/api/calendar-integrations/google/callback';
+    const redirectUri = getCalendarOAuthRedirectUri();
 
     if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured');
@@ -416,6 +440,7 @@ const syncBookingsToGoogle = async (pool, connection, bookings) => {
 };
 
 module.exports = {
+    getCalendarOAuthRedirectUri,
     getOAuth2Client,
     getAuthUrl,
     exchangeCodeForTokens,

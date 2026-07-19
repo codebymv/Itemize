@@ -74,6 +74,8 @@ Migration `032_calendar_token_encryption` converts every stored provider credent
 
 OAuth callback storage encrypts before persistence and tokens remain excluded from DTOs/logs/errors. Provider calendar reads and the calendar-sync worker load credentials through one row-locked transaction. The first expired-token caller refreshes and commits encrypted access/refresh envelopes; concurrent followers re-read the committed generation and reuse it instead of issuing another provider refresh.
 
+`GOOGLE_CALENDAR_REDIRECT_URI` selects the calendar OAuth callback independently from Google sign-in. Staging must set it explicitly to the staging backend callback registered on its OAuth client; production mode rejects insecure configured callbacks. The production and local callback defaults remain compatibility fallbacks, but a provider rehearsal must never rely on them.
+
 Rotation is additive: generate a new 32-byte key, add it to `CALENDAR_TOKEN_ENCRYPTION_KEYS`, switch `CALENDAR_TOKEN_ACTIVE_KEY_ID`, deploy, and retain prior keys while reads lazily rewrap existing envelopes. Removing an old key before every envelope using it has rotated makes those credentials intentionally unreadable and requires provider reconnection.
 
 Connection settings validate provider, sync direction, and selected calendar identifiers. Disconnect defines whether remote events are retained or removed. Provider calls do not run inside a GraphQL resolver transaction.
