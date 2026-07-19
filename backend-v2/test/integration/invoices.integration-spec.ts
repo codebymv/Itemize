@@ -131,6 +131,12 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
+    const createEstimateRouter =
+      require('../../../backend/src/routes/estimates.routes');
+    legacyApp.use(
+      '/api/invoices/estimates',
+      createEstimateRouter(pool, authenticateJWT),
+    );
     legacyApp.use(
       '/api/invoices',
       createCrudRouter({ pool, authenticateJWT, requireOrganization }),
@@ -390,5 +396,203 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(second.body.errors).toBeUndefined();
     expect(first.body.data.createInvoice.invoiceNumber)
       .not.toBe(second.body.data.createInvoice.invoiceNumber);
+  });
+
+  const estimateMutation = `
+    mutation CreateEstimate($input: CreateEstimateInput!) {
+      createEstimate(input: $input) {
+        id organizationId estimateNumber contactId status issueDate validUntil
+        subtotal taxAmount discountAmount total
+        items { productId quantity unitPrice taxRate taxAmount total sortOrder }
+      }
+    }
+  `;
+
+  const estimateInput = () => ({
+    contactId,
+    customerName: 'Ada Estimate',
+    customerEmail: 'ada@example.com',
+    validUntil: '2026-08-17',
+    discountType: 'fixed',
+    discountValue: '1.00',
+    items: [{
+      productId,
+      name: 'Consulting',
+      quantity: '2',
+      unitPrice: '12.50',
+      taxRate: '8',
+    }],
+  });
+
+  it('supports estimate CRUD with exact per-line tax and REST interoperability', async () => {
+    const created = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      { input: estimateInput() },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createEstimate).toMatchObject({
+      organizationId,
+      contactId,
+      status: 'draft',
+      subtotal: '25.00',
+      taxAmount: '2.00',
+      discountAmount: '1.00',
+      total: '26.00',
+      items: [{ productId, taxAmount: '2.00', total: '27.00' }],
+    });
+    const id = Number(created.body.data.createEstimate.id);
+    const rest = await request(legacyApp)
+      .get(`/api/invoices/estimates/${id}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(rest.body.data.estimate_number)
+      .toBe(created.body.data.createEstimate.estimateNumber);
+    const updated = await graphql(
+      memberToken,
+      organizationId,
+      `mutation UpdateEstimate($id: Int!, $input: UpdateEstimateInput!) {
+        updateEstimate(id: $id, input: $input) {
+          id customerName subtotal taxAmount total items { name sortOrder }
+        }
+      }`,
+      {
+        id,
+        input: {
+          customerName: 'Updated Estimate',
+          discountType: null,
+          discountValue: '0',
+          items: [{
+            name: 'Repriced',
+            quantity: '3',
+            unitPrice: '10',
+            taxRate: '5',
+          }],
+        },
+      },
+    ).expect(200);
+    expect(updated.body.data.updateEstimate).toMatchObject({
+      customerName: 'Updated Estimate',
+      subtotal: '30.00',
+      taxAmount: '1.50',
+      total: '31.50',
+      items: [{ name: 'Repriced', sortOrder: 0 }],
+    });
+    const deleted = await graphql(
+      memberToken,
+      organizationId,
+      `mutation DeleteEstimate($id: Int!) {
+        deleteEstimate(id: $id) { success deletedId estimateNumber }
+      }`,
+      { id },
+    ).expect(200);
+    expect(deleted.body.data.deleteEstimate).toMatchObject({
+      success: true,
+      deletedId: id,
+    });
+  });
+
+  it('enforces estimate CSRF, tenant references, dates, and edit states', async () => {
+    const noCsrf = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: estimateInput() }, false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const foreign = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), contactId: outsiderContactId } },
+    ).expect(200);
+    expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const invalidDate = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), validUntil: '2020-01-01' } },
+    ).expect(200);
+    expect(invalidDate.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_DATE_ORDER',
+    });
+    const fixedDiscount = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      {
+        input: {
+          ...estimateInput(),
+          discountValue: '101',
+          items: [{
+            name: 'Taxed service',
+            quantity: '2',
+            unitPrice: '100',
+            taxRate: '100',
+          }],
+        },
+      },
+    ).expect(200);
+    const invalidEffectiveDiscount = await graphql(
+      memberToken,
+      organizationId,
+      `mutation UpdateEstimate($id: Int!, $input: UpdateEstimateInput!) {
+        updateEstimate(id: $id, input: $input) { id }
+      }`,
+      {
+        id: Number(fixedDiscount.body.data.createEstimate.id),
+        input: {
+          discountType: 'percent',
+          items: [{
+            name: 'Taxed service',
+            quantity: '2',
+            unitPrice: '100',
+            taxRate: '100',
+          }],
+        },
+      },
+    ).expect(200);
+    expect(invalidEffectiveDiscount.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_DISCOUNT',
+    });
+    const created = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: estimateInput() },
+    ).expect(200);
+    const id = Number(created.body.data.createEstimate.id);
+    await pool.query(
+      `UPDATE estimates SET status = 'accepted'
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    const locked = await graphql(
+      memberToken,
+      organizationId,
+      `mutation UpdateEstimate($id: Int!, $input: UpdateEstimateInput!) {
+        updateEstimate(id: $id, input: $input) { id }
+      }`,
+      { id, input: { notes: 'Forbidden' } },
+    ).expect(200);
+    expect(locked.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'NOT_EDITABLE',
+    });
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      `query Estimate($id: Int!) { estimate(id: $id) { id } }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('allocates unique estimate numbers for concurrent creates', async () => {
+    const [first, second] = await Promise.all([
+      graphql(memberToken, organizationId, estimateMutation, { input: estimateInput() }),
+      graphql(memberToken, organizationId, estimateMutation, { input: estimateInput() }),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    expect(first.body.data.createEstimate.estimateNumber)
+      .not.toBe(second.body.data.createEstimate.estimateNumber);
   });
 });

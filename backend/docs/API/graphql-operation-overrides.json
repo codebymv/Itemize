@@ -391,40 +391,45 @@
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "estimates",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "Default-off GraphQL reads preserve organization-scoped filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape."
     },
     "POST /api/invoices/estimates": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "createEstimate",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "CSRF-protected creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically."
     },
     "DELETE /api/invoices/estimates/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "deleteEstimate",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "Tenant-scoped deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter."
     },
     "GET /api/invoices/estimates/:id": {
       "disposition": "graphql-query",
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "estimate",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary."
     },
     "PUT /api/invoices/estimates/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "updateEstimate",
-      "parityStatus": "characterizing",
-      "risk": "medium"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "CSRF-protected updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically."
     },
     "POST /api/invoices/estimates/:id/convert-to-invoice": {
       "disposition": "graphql-mutation",

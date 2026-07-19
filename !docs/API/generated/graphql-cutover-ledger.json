@@ -9,7 +9,7 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 388,
+    "frontendCallsiteCount": 386,
     "operationsWithFrontendConsumers": 365,
     "operationsWithBackendTests": 198,
     "unmatchedFrontendCallCount": 0,
@@ -6859,7 +6859,7 @@
           "method": "GET",
           "path": "/api/invoices/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 238
+          "line": 244
         },
         {
           "method": "GET",
@@ -7482,8 +7482,8 @@
           "method": "GET",
           "path": "/api/invoices/estimates",
           "rawPath": "/api/invoices/estimates",
-          "source": "frontend/src/pages/invoices/EstimatesPage.tsx",
-          "line": 92,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 109,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7532,8 +7532,8 @@
       "owner": "billing",
       "targetOperation": "estimates",
       "targetModule": "EstimatesModule",
-      "parityStatus": "characterizing",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL reads preserve organization-scoped filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -7553,8 +7553,8 @@
           "method": "POST",
           "path": "/api/invoices/estimates",
           "rawPath": "/api/invoices/estimates",
-          "source": "frontend/src/pages/invoices/EstimateEditorPage.tsx",
-          "line": 325,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 136,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7621,8 +7621,8 @@
       "owner": "billing",
       "targetOperation": "createEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "characterizing",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -7642,8 +7642,8 @@
           "method": "DELETE",
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
-          "source": "frontend/src/pages/invoices/EstimatesPage.tsx",
-          "line": 137,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 163,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7668,8 +7668,8 @@
       "owner": "billing",
       "targetOperation": "deleteEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "characterizing",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Tenant-scoped deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -7689,13 +7689,19 @@
           "method": "GET",
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
-          "source": "frontend/src/pages/invoices/EstimateEditorPage.tsx",
-          "line": 181,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 123,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/estimates/:id",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 447
+        },
         {
           "method": "GET",
           "path": "/api/invoices/estimates/:estimateId",
@@ -7715,8 +7721,8 @@
       "owner": "billing",
       "targetOperation": "estimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "characterizing",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -7736,8 +7742,8 @@
           "method": "PUT",
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
-          "source": "frontend/src/pages/invoices/EstimateEditorPage.tsx",
-          "line": 331,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 150,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7768,8 +7774,8 @@
       "owner": "billing",
       "targetOperation": "updateEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "characterizing",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -7789,17 +7795,8 @@
           "method": "POST",
           "path": "/api/invoices/estimates/:id/convert-to-invoice",
           "rawPath": "/api/invoices/estimates/${id}/convert-to-invoice",
-          "source": "frontend/src/pages/invoices/EstimateEditorPage.tsx",
-          "line": 367,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/:id/convert-to-invoice",
-          "rawPath": "/api/invoices/estimates/${id}/convert-to-invoice",
-          "source": "frontend/src/pages/invoices/EstimatesPage.tsx",
-          "line": 124,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 182,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7845,17 +7842,8 @@
           "method": "POST",
           "path": "/api/invoices/estimates/:id/send",
           "rawPath": "/api/invoices/estimates/${id}/send",
-          "source": "frontend/src/pages/invoices/EstimateEditorPage.tsx",
-          "line": 349,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/:id/send",
-          "rawPath": "/api/invoices/estimates/${id}/send",
-          "source": "frontend/src/pages/invoices/EstimatesPage.tsx",
-          "line": 111,
+          "source": "frontend/src/services/estimatesApi.ts",
+          "line": 173,
           "client": "api",
           "literalInterpolation": false
         }

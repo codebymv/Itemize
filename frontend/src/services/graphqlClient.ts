@@ -123,6 +123,12 @@ export const isInvoiceGraphqlReadsEnabled = (): boolean =>
 export const isInvoiceGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_MUTATIONS_GRAPHQL === 'true';
 
+export const isEstimateGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_ESTIMATE_READS_GRAPHQL === 'true';
+
+export const isEstimateGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_ESTIMATE_MUTATIONS_GRAPHQL === 'true';
+
 export const isPaymentGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_PAYMENT_READS_GRAPHQL === 'true';
 

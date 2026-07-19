@@ -7,7 +7,7 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 388
+- Static frontend callsites: 386
 - Operations with frontend consumers: 365
 - Operations referenced by backend tests: 198
 - Recommended GraphQL queries: 127
@@ -193,10 +193,10 @@
 | GET | `/api/invoices/estimates` | 1 | 6 | graphql-query | medium | billing / EstimatesModule / estimates |
 | POST | `/api/invoices/estimates` | 1 | 9 | graphql-mutation | medium | billing / EstimatesModule / createEstimate |
 | DELETE | `/api/invoices/estimates/:id` | 1 | 2 | graphql-mutation | medium | billing / EstimatesModule / deleteEstimate |
-| GET | `/api/invoices/estimates/:id` | 1 | 2 | graphql-query | medium | billing / EstimatesModule / estimate |
+| GET | `/api/invoices/estimates/:id` | 1 | 3 | graphql-query | medium | billing / EstimatesModule / estimate |
 | PUT | `/api/invoices/estimates/:id` | 1 | 3 | graphql-mutation | medium | billing / EstimatesModule / updateEstimate |
-| POST | `/api/invoices/estimates/:id/convert-to-invoice` | 2 | 2 | graphql-mutation | high | billing / EstimatesModule / convertEstimateToInvoice |
-| POST | `/api/invoices/estimates/:id/send` | 2 | 0 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
+| POST | `/api/invoices/estimates/:id/convert-to-invoice` | 1 | 2 | graphql-mutation | high | billing / EstimatesModule / convertEstimateToInvoice |
+| POST | `/api/invoices/estimates/:id/send` | 1 | 0 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
 | GET | `/api/invoices/payments` | 1 | 0 | graphql-query | high | billing / PaymentsModule / payments |
 | POST | `/api/invoices/payments` | 1 | 3 | graphql-mutation | medium | billing / PaymentsModule / recordPayment |
 | GET | `/api/invoices/products` | 1 | 0 | graphql-query | high | billing / ProductsModule / products |

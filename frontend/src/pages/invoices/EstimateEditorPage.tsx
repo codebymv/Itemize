@@ -33,7 +33,14 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getProducts, Product } from '@/services/invoicesApi';
-import api from '@/lib/api';
+import {
+    convertEstimateToInvoice,
+    createEstimate,
+    EstimateItem,
+    getEstimate,
+    sendEstimate,
+    updateEstimate,
+} from '@/services/estimatesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import type { JsonRecord } from '@/types';
 
@@ -45,15 +52,6 @@ interface LineItem {
     quantity: number;
     unit_price: number;
     tax_rate: number;
-}
-
-interface EstimateLineItem {
-    product_id?: number;
-    name: string;
-    description?: string;
-    quantity: number;
-    unit_price: number;
-    tax_rate?: number;
 }
 
 interface Contact {
@@ -178,10 +176,7 @@ export function EstimateEditorPage() {
 
                 // Load existing estimate if editing
                 if (!isNew && id) {
-                    const response = await api.get(`/api/invoices/estimates/${id}`, {
-                        headers: { 'x-organization-id': organizationId.toString() }
-                    });
-                    const estimate = response.data;
+                    const estimate = await getEstimate(Number(id), organizationId);
                     
                     setContactId(estimate.contact_id);
                     setCustomerName(estimate.customer_name || '');
@@ -195,7 +190,7 @@ export function EstimateEditorPage() {
                     setStatus(estimate.status || 'draft');
                     
                     if (estimate.items && estimate.items.length > 0) {
-                        setLineItems((estimate.items as EstimateLineItem[]).map((item) => ({
+                        setLineItems((estimate.items as EstimateItem[]).map((item) => ({
                             id: crypto.randomUUID(),
                             product_id: item.product_id,
                             name: item.name,
@@ -322,15 +317,11 @@ export function EstimateEditorPage() {
             };
 
             if (isNew) {
-                const response = await api.post('/api/invoices/estimates', estimateData, {
-                    headers: { 'x-organization-id': organizationId.toString() }
-                });
+                const response = await createEstimate(estimateData, organizationId);
                 toast({ title: 'Created', description: toastMessages.created('estimate') });
-                navigate(`/estimates/${response.data.id}`);
+                navigate(`/estimates/${response.id}`);
             } else if (id) {
-                await api.put(`/api/invoices/estimates/${id}`, estimateData, {
-                    headers: { 'x-organization-id': organizationId.toString() }
-                });
+                await updateEstimate(Number(id), estimateData, organizationId);
                 toast({ title: 'Saved', description: toastMessages.saved('estimate') });
             }
         } catch (error) {
@@ -346,9 +337,7 @@ export function EstimateEditorPage() {
 
         setSaving(true);
         try {
-            await api.post(`/api/invoices/estimates/${id}/send`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await sendEstimate(Number(id), organizationId);
             setStatus('sent');
             toast({ title: 'Sent', description: 'Estimate sent successfully' });
         } catch (error) {
@@ -364,11 +353,9 @@ export function EstimateEditorPage() {
 
         setSaving(true);
         try {
-            const response = await api.post(`/api/invoices/estimates/${id}/convert-to-invoice`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            const response = await convertEstimateToInvoice(Number(id), organizationId);
             toast({ title: 'Converted', description: 'Estimate converted to invoice successfully' });
-            navigate(`/invoices/${response.data.invoice_id}`);
+            navigate(`/invoices/${response.invoice_id}`);
         } catch (error) {
             toast({ title: 'Error', description: toastMessages.failedToConvert('estimate'), variant: 'destructive' });
         } finally {

@@ -32,26 +32,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import api from '@/lib/api';
+import {
+    convertEstimateToInvoice,
+    deleteEstimate,
+    Estimate,
+    getEstimates,
+    sendEstimate,
+} from '@/services/estimatesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-
-interface Estimate {
-    id: number;
-    estimate_number: string;
-    contact_id?: number;
-    contact_first_name?: string;
-    contact_last_name?: string;
-    customer_name?: string;
-    status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired';
-    total: number;
-    valid_until: string;
-    converted_invoice_id?: number;
-    created_at: string;
-}
 
 export function EstimatesPage() {
     const navigate = useNavigate();
@@ -89,10 +81,8 @@ export function EstimatesPage() {
         if (!organizationId) return;
         setLoading(true);
         try {
-            const response = await api.get('/api/invoices/estimates', {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
-            setEstimates(response.data.estimates || response.data || []);
+            const response = await getEstimates({}, organizationId);
+            setEstimates(response.estimates);
         } catch (error) {
             // Endpoint might not exist yet
             setEstimates([]);
@@ -108,9 +98,7 @@ export function EstimatesPage() {
     const handleSendEstimate = async (id: number) => {
         if (!organizationId) return;
         try {
-            await api.post(`/api/invoices/estimates/${id}/send`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await sendEstimate(id, organizationId);
             toast({ title: 'Sent', description: 'Estimate sent successfully' });
             fetchEstimates();
         } catch (error) {
@@ -121,11 +109,9 @@ export function EstimatesPage() {
     const handleConvertToInvoice = async (id: number) => {
         if (!organizationId) return;
         try {
-            const response = await api.post(`/api/invoices/estimates/${id}/convert-to-invoice`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            const response = await convertEstimateToInvoice(id, organizationId);
             toast({ title: 'Converted', description: 'Estimate converted to invoice successfully' });
-            navigate(`/invoices/${response.data.invoice_id}`);
+            navigate(`/invoices/${response.invoice_id}`);
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to convert estimate', variant: 'destructive' });
         }
@@ -134,9 +120,7 @@ export function EstimatesPage() {
     const handleDelete = async (id: number) => {
         if (!organizationId) return;
         try {
-            await api.delete(`/api/invoices/estimates/${id}`, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await deleteEstimate(id, organizationId);
             setEstimates(prev => prev.filter(e => e.id !== id));
             toast({ title: 'Deleted', description: 'Estimate deleted successfully' });
         } catch (error) {
