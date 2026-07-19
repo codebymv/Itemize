@@ -69,6 +69,9 @@ export class Calendar {
   slug: string;
 
   @Field()
+  publicId: string;
+
+  @Field()
   timezone: string;
 
   @Field(() => Int)

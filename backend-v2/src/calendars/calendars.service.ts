@@ -634,6 +634,7 @@ export class CalendarsService {
       name: row.name,
       description: row.description,
       slug: row.slug,
+      publicId: row.public_id,
       timezone: row.timezone,
       durationMinutes: Number(row.duration_minutes),
       bufferBeforeMinutes: Number(row.buffer_before_minutes),

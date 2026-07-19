@@ -468,6 +468,7 @@ export interface Calendar {
   name: string;
   description?: string;
   slug: string;
+  public_id: string;
   timezone: string;
   duration_minutes: number;
   buffer_before_minutes: number;
@@ -509,7 +510,6 @@ export interface Booking {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   cancelled_at?: string;
   cancellation_reason?: string;
-  cancellation_token?: string;
   notes?: string;
   internal_notes?: string;
   reminder_sent_at?: string;
@@ -547,6 +547,7 @@ export interface PublicCalendarInfo {
   name: string;
   description?: string;
   slug: string;
+  public_id: string;
   timezone: string;
   duration_minutes: number;
   min_notice_hours: number;

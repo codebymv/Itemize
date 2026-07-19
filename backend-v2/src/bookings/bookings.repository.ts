@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { BookingStatus } from './booking.enums';
@@ -240,14 +240,12 @@ export class BookingsRepository {
            organization_id, calendar_id, contact_id, title,
            start_time, end_time, timezone,
            attendee_name, attendee_email, attendee_phone,
-           assigned_to, notes, internal_notes, custom_fields,
-           cancellation_token, source
+           assigned_to, notes, internal_notes, custom_fields, source
          ) VALUES (
            $1, $2, $3, $4,
            $5, $6, $7,
            $8, $9, $10,
-           $11, $12, $13, $14::jsonb,
-           $15, 'manual'
+           $11, $12, $13, $14::jsonb, 'manual'
          )
          RETURNING *`,
         [
@@ -265,7 +263,6 @@ export class BookingsRepository {
           values.notes,
           values.internalNotes,
           JSON.stringify(values.customFields),
-          randomBytes(32).toString('hex'),
         ],
       );
       const booking = inserted.rows[0];
@@ -324,6 +321,8 @@ export class BookingsRepository {
          SET status = 'cancelled',
              cancelled_at = CURRENT_TIMESTAMP,
              cancellation_reason = $3,
+             cancellation_token_hash = NULL,
+             cancellation_token_expires_at = NULL,
              updated_at = CURRENT_TIMESTAMP
          WHERE organization_id = $1 AND id = $2
          RETURNING *`,
@@ -419,6 +418,10 @@ export class BookingsRepository {
          SET start_time = $3,
              end_time = $4,
              timezone = COALESCE($5, timezone),
+             cancellation_token_expires_at = CASE
+               WHEN cancellation_token_hash IS NULL THEN NULL
+               ELSE $4::timestamptz + INTERVAL '1 day'
+             END,
              updated_at = CURRENT_TIMESTAMP
          WHERE organization_id = $1 AND id = $2
          RETURNING *`,

@@ -33,14 +33,6 @@ function createApp(pool) {
     return app;
 }
 
-const DEFAULT_AVAILABILITY = [
-    { day_of_week: 1, start_time: '09:00', end_time: '17:00' },
-    { day_of_week: 2, start_time: '09:00', end_time: '17:00' },
-    { day_of_week: 3, start_time: '09:00', end_time: '17:00' },
-    { day_of_week: 4, start_time: '09:00', end_time: '17:00' },
-    { day_of_week: 5, start_time: '09:00', end_time: '17:00' },
-];
-
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
 describe('Calendars Integration Tests', () => {
@@ -221,9 +213,9 @@ describe('Calendars Integration Tests', () => {
             // Insert a confirmed upcoming booking manually (must include timezone — NOT NULL)
             await dbHelper.pool.query(
                 `INSERT INTO bookings (organization_id, calendar_id, start_time, end_time, 
-                 timezone, attendee_name, attendee_email, status, cancellation_token)
+                 timezone, attendee_name, attendee_email, status)
                  VALUES ($1, $2, NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day 1 hour',
-                 'UTC', 'Test Attendee', 'attendee@test.com', 'confirmed', 'tok-${Date.now()}')`,
+                 'UTC', 'Test Attendee', 'attendee@test.com', 'confirmed')`,
                 [userA.org.id, protectedCalId]
             );
         });

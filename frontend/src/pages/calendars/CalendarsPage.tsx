@@ -301,12 +301,12 @@ export function CalendarsPage() {
                                                         <Settings className="h-4 w-4 mr-2" />
                                                         Settings
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => copyBookingLink(calendar.slug)}>
+                                                    <DropdownMenuItem onClick={() => copyBookingLink(calendar.public_id)}>
                                                         <Copy className="h-4 w-4 mr-2" />
                                                         Copy Link
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => window.open(`/book/${calendar.slug}`, '_blank')}
+                                                        onClick={() => window.open(`/book/${calendar.public_id}`, '_blank')}
                                                     >
                                                         <ExternalLink className="h-4 w-4 mr-2" />
                                                         Preview
@@ -342,7 +342,7 @@ export function CalendarsPage() {
                                             <div className="flex items-center gap-2">
                                                 <Link2 className="h-4 w-4 text-muted-foreground" />
                                                 <span className="text-sm text-muted-foreground truncate max-w-[120px]">
-                                                    /book/{calendar.slug}
+                                                    /book/{calendar.public_id}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">

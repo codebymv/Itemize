@@ -12,6 +12,7 @@ const calendarRow = (values: Partial<CalendarRow> = {}): CalendarRow => ({
   name: 'Consultation',
   description: null,
   slug: 'consultation-test',
+  public_id: 'cal_1234567890abcdef1234567890abcdef',
   timezone: 'America/Phoenix',
   duration_minutes: 30,
   buffer_before_minutes: 5,

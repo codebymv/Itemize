@@ -75,11 +75,11 @@
 | GET | `/api/bookings` | 1 | 8 | graphql-query | high | scheduling / BookingsModule / bookings |
 | POST | `/api/bookings` | 1 | 12 | graphql-mutation | high | scheduling / BookingsModule / createBooking |
 | GET | `/api/bookings/:id` | 1 | 3 | graphql-query | high | scheduling / BookingsModule / booking |
-| PATCH | `/api/bookings/:id/cancel` | 1 | 2 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |
-| PATCH | `/api/bookings/:id/reschedule` | 1 | 3 | graphql-mutation | high | scheduling / BookingsModule / rescheduleBooking |
-| GET | `/api/bookings/public/book/:slug` | 1 | 3 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
-| POST | `/api/bookings/public/book/:slug` | 1 | 6 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
-| POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 3 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
+| PATCH | `/api/bookings/:id/cancel` | 1 | 3 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |
+| PATCH | `/api/bookings/:id/reschedule` | 1 | 4 | graphql-mutation | high | scheduling / BookingsModule / rescheduleBooking |
+| GET | `/api/bookings/public/book/:slug` | 1 | 5 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
+| POST | `/api/bookings/public/book/:slug` | 1 | 8 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
+| POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
 | GET | `/api/bookings/public/book/:slug/slots` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
 | GET | `/api/calendar-integrations/connections` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarConnections |
 | DELETE | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / disconnectCalendar |

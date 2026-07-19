@@ -73,6 +73,7 @@ describe('test database schema contract', () => {
             'subscription_webhook_reconciliation',
             'module_invoicing',
             'booking_availability_policy',
+            'booking_public_capabilities',
             'module_estimates_recurring',
             'estimates_business_column',
             'module_subscriptions',
@@ -276,14 +277,28 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'EXTERNAL_BUSY'");
     });
 
-    test('production startup requires the latest availability-policy migration marker', () => {
+    test('production migration stream installs public booking capabilities', async () => {
+        const migration = require('../../../scripts/migrations/031_booking_public_capabilities');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('public_id');
+        expect(sql).toContain('idx_calendars_public_id');
+        expect(sql).toContain("digest(cancellation_token, 'sha256')");
+        expect(sql).toContain('cancellation_token_hash');
+        expect(sql).toContain('cancellation_token_expires_at');
+        expect(sql).toContain('bookings_raw_cancellation_token_forbidden');
+    });
+
+    test('production startup requires the latest public-capability migration marker', () => {
         const startupSource = fs.readFileSync(
             path.resolve(__dirname, '../../index.js'),
             'utf8'
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '030_booking_availability_policy'"
+            "WHERE version = '031_booking_public_capabilities'"
         );
     });
 

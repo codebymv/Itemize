@@ -29,6 +29,32 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      * Generate cancellation token
      */
     const generateCancellationToken = () => crypto.randomBytes(32).toString('hex');
+    const hashCancellationToken = (token) => crypto
+        .createHash('sha256')
+        .update(token, 'utf8')
+        .digest('hex');
+
+    const resolvePublicCalendarId = async (client, identifier) => {
+        const publicIdResult = await client.query(
+            `SELECT id
+             FROM calendars
+             WHERE public_id = $1 AND is_active = TRUE`,
+            [identifier]
+        );
+        if (publicIdResult.rows.length === 1) return publicIdResult.rows[0].id;
+
+        const legacySlugResult = await client.query(
+            `SELECT id
+             FROM calendars
+             WHERE slug = $1 AND is_active = TRUE
+             ORDER BY id
+             LIMIT 2`,
+            [identifier]
+        );
+        return legacySlugResult.rows.length === 1
+            ? legacySlugResult.rows[0].id
+            : null;
+    };
 
     const validateTimeRange = (startTime, endTime) => {
         const start = new Date(startTime);
@@ -265,7 +291,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     };
                 }
 
-                const cancellationToken = generateCancellationToken();
                 const bookingAssignedTo = assigned_to || calendarCheck.rows[0].assigned_to;
 
                 const result = await client.query(`
@@ -273,9 +298,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           organization_id, calendar_id, contact_id, title,
           start_time, end_time, timezone,
           attendee_name, attendee_email, attendee_phone,
-          assigned_to, notes, internal_notes, custom_fields,
-          cancellation_token, source
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'manual')
+          assigned_to, notes, internal_notes, custom_fields, source
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'manual')
         RETURNING ${bookingColumns()}
       `, [
                 req.organizationId,
@@ -291,8 +315,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 bookingAssignedTo,
                 notes || null,
                 internal_notes || null,
-                JSON.stringify(custom_fields || {}),
-                cancellationToken
+                JSON.stringify(custom_fields || {})
                 ]);
                 const booking = result.rows[0];
                 await enqueueWorkflowTrigger(client, {
@@ -339,6 +362,8 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             status = 'cancelled',
             cancelled_at = CURRENT_TIMESTAMP,
             cancellation_reason = $1,
+            cancellation_token_hash = NULL,
+            cancellation_token_expires_at = NULL,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $2 AND organization_id = $3
           RETURNING ${bookingColumns()}
@@ -453,6 +478,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           start_time = $1,
           end_time = $2,
           timezone = COALESCE($3, timezone),
+          cancellation_token_expires_at = CASE
+            WHEN cancellation_token_hash IS NULL THEN NULL
+            ELSE $2::timestamptz + INTERVAL '1 day'
+          END,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $4 AND organization_id = $5
         RETURNING ${bookingColumns()}
@@ -500,18 +529,20 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/public/book/:slug', publicRateLimit, async (req, res) => {
         try {
-            const { slug } = req.params;
+            const { slug: identifier } = req.params;
             const data = await withDbClient(pool, async (client) => {
+                const calendarId = await resolvePublicCalendarId(client, identifier);
+                if (calendarId === null) return { calendar: null, availability: [] };
                 const result = await client.query(`
         SELECT 
-          c.id, c.name, c.description, c.slug, c.timezone,
+          c.id, c.name, c.description, c.slug, c.public_id, c.timezone,
           c.duration_minutes, c.min_notice_hours, c.max_future_days,
           c.color, c.is_active,
           o.name as organization_name
         FROM calendars c
         JOIN organizations o ON c.organization_id = o.id
-        WHERE c.slug = $1 AND c.is_active = TRUE
-      `, [slug]);
+        WHERE c.id = $1 AND c.is_active = TRUE
+      `, [calendarId]);
 
                 if (result.rows.length !== 1) {
                     return { calendar: null, availability: [] };
@@ -547,7 +578,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.get('/public/book/:slug/slots', publicRateLimit, async (req, res) => {
         try {
-            const { slug } = req.params;
+            const { slug: identifier } = req.params;
             const { start_date, end_date } = req.query;
 
             const parsedStart = validateDate(start_date);
@@ -568,11 +599,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             const data = await withDbClient(pool, async (client) => {
+                const calendarId = await resolvePublicCalendarId(client, identifier);
+                if (calendarId === null) return { calendar: null, slots: [] };
                 const calendarResult = await client.query(`
         SELECT id, duration_minutes, min_notice_hours, max_future_days, timezone
         FROM calendars
-        WHERE slug = $1 AND is_active = TRUE
-      `, [slug]);
+        WHERE id = $1 AND is_active = TRUE
+      `, [calendarId]);
 
                 if (calendarResult.rows.length !== 1) {
                     return { calendar: null, slots: [] };
@@ -615,7 +648,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/public/book/:slug', publicRateLimit, async (req, res) => {
         try {
-            const { slug } = req.params;
+            const { slug: identifier } = req.params;
             const {
                 start_time,
                 end_time,
@@ -638,12 +671,15 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
             }
 
             const data = await withTransaction(pool, async (client) => {
-                // Get calendar
+                const resolvedCalendarId = await resolvePublicCalendarId(client, identifier);
+                if (resolvedCalendarId === null) {
+                    return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
+                }
                 const calendarResult = await client.query(`
-        SELECT id, organization_id, duration_minutes, assigned_to, min_notice_hours, timezone
+        SELECT id, organization_id, public_id, duration_minutes, assigned_to, min_notice_hours, timezone
         FROM calendars
-        WHERE slug = $1 AND is_active = TRUE
-      `, [slug]);
+        WHERE id = $1 AND is_active = TRUE
+      `, [resolvedCalendarId]);
 
                 if (calendarResult.rows.length !== 1) {
                     return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
@@ -662,11 +698,16 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
                 await lockCalendarBookings(client, calendar.id);
 
+                const currentCalendarId = await resolvePublicCalendarId(client, identifier);
+                if (currentCalendarId !== calendar.id) {
+                    return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
+                }
                 const currentCalendar = await client.query(`
-        SELECT id, organization_id, duration_minutes, assigned_to, min_notice_hours, timezone
+        SELECT id, organization_id, public_id, duration_minutes, assigned_to, min_notice_hours, timezone
         FROM calendars
-        WHERE id = $1 AND slug = $2 AND is_active = TRUE
-      `, [calendar.id, slug]);
+        WHERE id = $1 AND is_active = TRUE
+        FOR UPDATE
+      `, [calendar.id]);
                 if (currentCalendar.rows.length === 0) {
                     return { error: 'Calendar not found', status: 404, booking: null, calendar: null, contactId: null };
                 }
@@ -692,6 +733,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 }
 
                 const cancellationToken = generateCancellationToken();
+                const cancellationTokenHash = hashCancellationToken(cancellationToken);
 
                 // Try to find or create contact
                 let contactId = null;
@@ -737,9 +779,12 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
           start_time, end_time, timezone,
           attendee_name, attendee_email, attendee_phone,
           assigned_to, notes, custom_fields,
-          cancellation_token, source
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'booking_page')
-        RETURNING id, start_time, end_time, timezone, attendee_name, attendee_email, cancellation_token
+          cancellation_token_hash, cancellation_token_expires_at, source
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+          $13, $5::timestamptz + INTERVAL '1 day', 'booking_page'
+        )
+        RETURNING id, start_time, end_time, timezone, attendee_name, attendee_email
       `, [
                     calendar.organization_id,
                     calendar.id,
@@ -753,10 +798,13 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                     calendar.assigned_to,
                     notes || null,
                     JSON.stringify(custom_fields || {}),
-                    cancellationToken
+                    cancellationTokenHash
                 ]);
 
-                const booking = result.rows[0];
+                const booking = {
+                    ...result.rows[0],
+                    cancellation_token: cancellationToken,
+                };
                 await enqueueWorkflowTrigger(client, {
                     contactId,
                     entityId: booking.id,
@@ -797,23 +845,31 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
      */
     router.post('/public/book/:slug/cancel/:token', publicRateLimit, async (req, res) => {
         try {
-            const { slug, token } = req.params;
+            const { slug: identifier, token } = req.params;
             const { reason } = req.body;
 
+            if (!/^[a-f0-9]{64}$/.test(token)) {
+                return res.status(404).json({ error: 'Booking not found or already cancelled' });
+            }
+
             const result = await withTransaction(pool, async (client) => {
+                const calendarId = await resolvePublicCalendarId(client, identifier);
+                if (calendarId === null) return { rows: [] };
+                const tokenHash = hashCancellationToken(token);
                 const updateResult = await client.query(`
           UPDATE bookings SET
             status = 'cancelled',
             cancelled_at = CURRENT_TIMESTAMP,
             cancellation_reason = $1,
+            cancellation_token_hash = NULL,
+            cancellation_token_expires_at = NULL,
             updated_at = CURRENT_TIMESTAMP
-          FROM calendars c
-          WHERE bookings.calendar_id = c.id
-            AND c.slug = $2
-            AND bookings.cancellation_token = $3
+          WHERE bookings.calendar_id = $2
+            AND bookings.cancellation_token_hash = $3
+            AND bookings.cancellation_token_expires_at > CURRENT_TIMESTAMP
             AND bookings.status = 'confirmed'
           RETURNING ${bookingColumns().split(', ').map(column => `bookings.${column}`).join(', ')}
-        `, [reason || 'Cancelled by attendee', slug, token]);
+        `, [reason || 'Cancelled by attendee', calendarId, tokenHash]);
                 if (updateResult.rows.length > 0) {
                     const booking = updateResult.rows[0];
                     await enqueueWorkflowTrigger(client, {

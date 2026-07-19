@@ -84,6 +84,7 @@ const calendar = {
   organization_id: 3,
   name: 'Consultation',
   slug: 'consultation-test',
+  public_id: 'cal_1234567890abcdef1234567890abcdef',
   timezone: 'America/Phoenix',
   duration_minutes: 30,
   buffer_before_minutes: 0,

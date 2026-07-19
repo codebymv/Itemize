@@ -131,11 +131,11 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       `INSERT INTO bookings (
          organization_id, calendar_id, contact_id, title,
          start_time, end_time, timezone, attendee_name, attendee_email,
-         assigned_to, status, cancellation_token, custom_fields, source
+         assigned_to, status, custom_fields, source
        ) VALUES
-         ($1, $2, $3, 'Newest confirmed', '2099-08-03T17:00:00Z', '2099-08-03T17:30:00Z', 'America/Phoenix', 'Ada Lovelace', $4, $5, 'confirmed', 'secret-newest', '{"channel":"partner"}', 'manual'),
-         ($1, $2, $3, 'Pending', '2099-08-02T17:00:00Z', '2099-08-02T17:30:00Z', 'America/Phoenix', 'Ada Lovelace', $4, $5, 'pending', 'secret-pending', '{}', 'manual'),
-         ($1, $2, $3, 'Older confirmed', '2099-08-01T17:00:00Z', '2099-08-01T17:30:00Z', 'America/Phoenix', 'Ada Lovelace', $4, $5, 'confirmed', 'secret-older', '{}', 'manual')
+         ($1, $2, $3, 'Newest confirmed', '2099-08-03T17:00:00Z', '2099-08-03T17:30:00Z', 'America/Phoenix', 'Ada Lovelace', $4, $5, 'confirmed', '{"channel":"partner"}', 'manual'),
+         ($1, $2, $3, 'Pending', '2099-08-02T17:00:00Z', '2099-08-02T17:30:00Z', 'America/Phoenix', 'Ada Lovelace', $4, $5, 'pending', '{}', 'manual'),
+         ($1, $2, $3, 'Older confirmed', '2099-08-01T17:00:00Z', '2099-08-01T17:30:00Z', 'America/Phoenix', 'Ada Lovelace', $4, $5, 'confirmed', '{}', 'manual')
        RETURNING id`,
       [
         organizationId,
@@ -413,10 +413,26 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       internal_notes: 'Prepared',
       source: 'manual',
     });
-    expect(typeof legacy.body.cancellation_token).toBe('string');
+    expect(legacy.body).not.toHaveProperty('cancellation_token');
     expect(response.body.data.createBooking).not.toHaveProperty(
       'cancellationToken',
     );
+    const storedCapability = await pool.query<{
+      cancellation_token: string | null;
+      cancellation_token_hash: string | null;
+      cancellation_token_expires_at: Date | null;
+    }>(
+      `SELECT cancellation_token, cancellation_token_hash,
+              cancellation_token_expires_at
+       FROM bookings
+       WHERE id = $1`,
+      [bookingId],
+    );
+    expect(storedCapability.rows[0]).toEqual({
+      cancellation_token: null,
+      cancellation_token_hash: null,
+      cancellation_token_expires_at: null,
+    });
 
     const events = await pool.query<{
       total: number;

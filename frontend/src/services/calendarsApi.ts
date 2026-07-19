@@ -305,9 +305,17 @@ export interface PublicBookingData {
 export const submitPublicBooking = async (
     slug: string,
     data: PublicBookingData
-): Promise<{ success: boolean; booking: Booking; message: string }> => {
+): Promise<{
+    success: boolean;
+    booking: Booking & { cancellation_token: string };
+    message: string;
+}> => {
     const response = await api.post(`/api/bookings/public/book/${slug}`, data);
-    return unwrapResponse<{ success: boolean; booking: Booking; message: string }>(response.data);
+    return unwrapResponse<{
+        success: boolean;
+        booking: Booking & { cancellation_token: string };
+        message: string;
+    }>(response.data);
 };
 
 export const cancelPublicBooking = async (

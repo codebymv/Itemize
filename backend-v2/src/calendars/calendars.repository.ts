@@ -8,6 +8,7 @@ export type CalendarRow = {
   name: string;
   description: string | null;
   slug: string;
+  public_id: string;
   timezone: string;
   duration_minutes: number;
   buffer_before_minutes: number;
@@ -122,6 +123,7 @@ const calendarSelection = `
   c.name,
   c.description,
   c.slug,
+  c.public_id,
   c.timezone,
   c.duration_minutes,
   c.buffer_before_minutes,

@@ -35,6 +35,7 @@ const calendar = {
     name: 'Consultation',
     description: 'A focused call',
     slug: 'consultation-a1b2c3d4',
+    public_id: 'cal_1234567890abcdef1234567890abcdef',
     timezone: 'America/Phoenix',
     duration_minutes: 30,
     buffer_before_minutes: 5,

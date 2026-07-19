@@ -28,6 +28,7 @@ const calendar = {
   name: 'Consultation',
   description: null,
   slug: 'consultation-test',
+  publicId: 'cal_1234567890abcdef1234567890abcdef',
   timezone: 'America/Phoenix',
   durationMinutes: 30,
   bufferBeforeMinutes: 5,
@@ -92,6 +93,7 @@ describe('calendar GraphQL consumer', () => {
         {
           id: 4,
           organization_id: 3,
+          public_id: 'cal_1234567890abcdef1234567890abcdef',
           name: 'Consultation',
           slug: 'consultation-test',
           timezone: 'America/Phoenix',

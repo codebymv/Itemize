@@ -50,6 +50,9 @@ const { runAllCalendarMigrations } = require('./db_calendar_migrations');
 const {
   runBookingAvailabilityPolicyMigration,
 } = require('./db_booking_availability_policy_migrations');
+const {
+  runBookingPublicCapabilityMigration,
+} = require('./db_booking_public_capability_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -455,6 +458,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'workflow_execution_claims', runWorkflowExecutionClaimMigration);
     await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
     await runMigrationOnce(pool, 'booking_availability_policy', runBookingAvailabilityPolicyMigration);
+    await runMigrationOnce(pool, 'booking_public_capabilities', runBookingPublicCapabilityMigration);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);

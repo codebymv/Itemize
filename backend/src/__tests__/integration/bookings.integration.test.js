@@ -1,10 +1,14 @@
 const request = require('supertest');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const crypto = require('crypto');
 
 const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
+const {
+    runBookingPublicCapabilityMigration,
+} = require('../../db_booking_public_capability_migrations');
 
 function createApp(pool) {
     const app = express();
@@ -141,7 +145,19 @@ describe('Bookings Integration Tests', () => {
             // DB default status is 'confirmed'
             expect(b.status).toBe('confirmed');
             expect(b.organization_id).toBe(userA.org.id);
-            expect(typeof b.cancellation_token).toBe('string');
+            expect(b).not.toHaveProperty('cancellation_token');
+            const capability = await dbHelper.pool.query(
+                `SELECT cancellation_token, cancellation_token_hash,
+                        cancellation_token_expires_at
+                 FROM bookings
+                 WHERE id = $1`,
+                [b.id]
+            );
+            expect(capability.rows[0]).toEqual({
+                cancellation_token: null,
+                cancellation_token_hash: null,
+                cancellation_token_expires_at: null,
+            });
             bookingId = b.id;
         });
 
@@ -325,12 +341,12 @@ describe('Bookings Integration Tests', () => {
 
     describe('List filtering', () => {
         let calendarId;
-        let confirmedId, pendingId;
+        let confirmedId;
 
         beforeAll(async () => {
             calendarId = await seedCalendar(app, userA);
 
-            const [r1, r2] = await Promise.all([
+            const [, r2] = await Promise.all([
                 request(app)
                     .post('/api/bookings')
                     .set('Cookie', [`itemize_auth=${userA.token}`])
@@ -342,7 +358,6 @@ describe('Bookings Integration Tests', () => {
                     .set('x-organization-id', String(userA.org.id))
                     .send({ calendar_id: calendarId, attendee_name: 'A2', attendee_email: 'a2@t.com', ...futureSlot(192) }),
             ]);
-            pendingId = r1.body.id;
             confirmedId = r2.body.id;
 
             await dbHelper.pool.query(
@@ -404,8 +419,9 @@ describe('Bookings Integration Tests', () => {
 
     // ── Public booking endpoint ───────────────────────────────────────────────
 
-    describe('Public booking via calendar slug', () => {
+    describe('Public booking via global calendar ID', () => {
         let calendarSlug;
+        let calendarPublicId;
         let calendarId;
 
         beforeAll(async () => {
@@ -416,6 +432,7 @@ describe('Bookings Integration Tests', () => {
                 .send({ name: 'Public Booking Cal', is_active: true });
             calendarId = res.body.id;
             calendarSlug = res.body.slug;
+            calendarPublicId = res.body.public_id;
 
             // Activate it (it defaults to true already, but ensure it)
             await dbHelper.pool.query(
@@ -433,13 +450,22 @@ describe('Bookings Integration Tests', () => {
             await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
         });
 
-        it('fetches public calendar info without auth', async () => {
+        it('fetches public calendar info by global ID without auth', async () => {
+            const res = await request(app)
+                .get(`/api/bookings/public/book/${calendarPublicId}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.slug).toBe(calendarSlug);
+            expect(res.body.public_id).toBe(calendarPublicId);
+            expect(Array.isArray(res.body.availability)).toBe(true);
+        });
+
+        it('retains an unambiguous legacy slug fallback', async () => {
             const res = await request(app)
                 .get(`/api/bookings/public/book/${calendarSlug}`);
 
             expect(res.status).toBe(200);
-            expect(res.body.slug).toBe(calendarSlug);
-            expect(Array.isArray(res.body.availability)).toBe(true);
+            expect(res.body.public_id).toBe(calendarPublicId);
         });
 
         it('returns 404 for unknown slug', async () => {
@@ -452,7 +478,7 @@ describe('Bookings Integration Tests', () => {
         it('creates a public booking without auth', async () => {
             const slot = futureSlot(216);
             const res = await request(app)
-                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .post(`/api/bookings/public/book/${calendarPublicId}`)
                 .send({
                     attendee_name: 'Public Booker',
                     attendee_email: 'public@test.com',
@@ -464,6 +490,23 @@ describe('Bookings Integration Tests', () => {
             expect(res.body.success).toBe(true);
             expect(res.body.booking.attendee_email).toBe('public@test.com');
             expect(typeof res.body.booking.cancellation_token).toBe('string');
+            const capability = await dbHelper.pool.query(
+                `SELECT cancellation_token, cancellation_token_hash,
+                        cancellation_token_expires_at, end_time
+                 FROM bookings
+                 WHERE id = $1`,
+                [res.body.booking.id]
+            );
+            expect(capability.rows[0].cancellation_token).toBeNull();
+            expect(capability.rows[0].cancellation_token_hash).toBe(
+                crypto.createHash('sha256')
+                    .update(res.body.booking.cancellation_token, 'utf8')
+                    .digest('hex')
+            );
+            expect(
+                new Date(capability.rows[0].cancellation_token_expires_at).getTime()
+                - new Date(capability.rows[0].end_time).getTime()
+            ).toBe(86400000);
         });
 
         it('links canonical duplicate email to the lowest organization contact ID', async () => {
@@ -476,7 +519,7 @@ describe('Bookings Integration Tests', () => {
                 [userA.org.id, email, userA.user.id]
             );
             const res = await request(app)
-                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .post(`/api/bookings/public/book/${calendarPublicId}`)
                 .send({
                     attendee_name: 'Canonical Booker',
                     attendee_email: `  ${email.toUpperCase()}  `,
@@ -508,6 +551,7 @@ describe('Bookings Integration Tests', () => {
     describe('Booking collision and cancellation invariants', () => {
         let calendarId;
         let calendarSlug;
+        let calendarPublicId;
 
         beforeAll(async () => {
             const calendar = await request(app)
@@ -517,6 +561,7 @@ describe('Bookings Integration Tests', () => {
                 .send({ name: `Booking Invariants ${Date.now()}`, duration_minutes: 60 });
             calendarId = calendar.body.id;
             calendarSlug = calendar.body.slug;
+            calendarPublicId = calendar.body.public_id;
             await configureCalendarPolicy(dbHelper.pool, calendarId);
         });
 
@@ -559,9 +604,22 @@ describe('Bookings Integration Tests', () => {
 
         it('binds a public cancellation token to its calendar and rejects replay', async () => {
             const createRes = await request(app)
-                .post(`/api/bookings/public/book/${calendarSlug}`)
+                .post(`/api/bookings/public/book/${calendarPublicId}`)
                 .send({ attendee_name: 'Cancellation Test', attendee_email: 'cancel-public@test.com', ...futureSlot(336) });
             const token = createRes.body.booking.cancellation_token;
+
+            const stored = await dbHelper.pool.query(
+                `SELECT cancellation_token, cancellation_token_hash
+                 FROM bookings
+                 WHERE id = $1`,
+                [createRes.body.booking.id]
+            );
+            expect(stored.rows[0]).toEqual({
+                cancellation_token: null,
+                cancellation_token_hash: crypto.createHash('sha256')
+                    .update(token, 'utf8')
+                    .digest('hex'),
+            });
 
             const wrongSlug = await request(app)
                 .post(`/api/bookings/public/book/not-${calendarSlug}/cancel/${token}`)
@@ -569,20 +627,132 @@ describe('Bookings Integration Tests', () => {
             expect(wrongSlug.status).toBe(404);
 
             const cancelled = await request(app)
-                .post(`/api/bookings/public/book/${calendarSlug}/cancel/${token}`)
+                .post(`/api/bookings/public/book/${calendarPublicId}/cancel/${token}`)
                 .send({ reason: 'Cannot attend' });
             expect(cancelled.status).toBe(200);
 
+            const consumed = await dbHelper.pool.query(
+                `SELECT cancellation_token_hash, cancellation_token_expires_at
+                 FROM bookings
+                 WHERE id = $1`,
+                [createRes.body.booking.id]
+            );
+            expect(consumed.rows[0]).toEqual({
+                cancellation_token_hash: null,
+                cancellation_token_expires_at: null,
+            });
+
             const replay = await request(app)
-                .post(`/api/bookings/public/book/${calendarSlug}/cancel/${token}`)
+                .post(`/api/bookings/public/book/${calendarPublicId}/cancel/${token}`)
                 .send({});
             expect(replay.status).toBe(404);
+        });
+
+        it('rejects an expired cancellation capability', async () => {
+            const createRes = await request(app)
+                .post(`/api/bookings/public/book/${calendarPublicId}`)
+                .send({ attendee_name: 'Expired Capability', attendee_email: 'expired-public@test.com', ...futureSlot(360) });
+            const token = createRes.body.booking.cancellation_token;
+            await dbHelper.pool.query(
+                `UPDATE bookings
+                 SET cancellation_token_expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+                 WHERE id = $1`,
+                [createRes.body.booking.id]
+            );
+
+            const expired = await request(app)
+                .post(`/api/bookings/public/book/${calendarPublicId}/cancel/${token}`)
+                .send({});
+            expect(expired.status).toBe(404);
+        });
+
+        it('keeps the public capability aligned with authenticated lifecycle changes', async () => {
+            const createRes = await request(app)
+                .post(`/api/bookings/public/book/${calendarPublicId}`)
+                .send({ attendee_name: 'Operator Lifecycle', attendee_email: 'operator-lifecycle@test.com', ...futureSlot(372) });
+            const rescheduledSlot = futureSlot(396);
+            const rescheduled = await request(app)
+                .patch(`/api/bookings/${createRes.body.booking.id}/reschedule`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send(rescheduledSlot);
+            expect(rescheduled.status).toBe(200);
+
+            const movedCapability = await dbHelper.pool.query(
+                `SELECT cancellation_token_hash, cancellation_token_expires_at
+                 FROM bookings
+                 WHERE id = $1`,
+                [createRes.body.booking.id]
+            );
+            expect(movedCapability.rows[0].cancellation_token_hash).not.toBeNull();
+            expect(
+                new Date(movedCapability.rows[0].cancellation_token_expires_at).getTime()
+                - new Date(rescheduledSlot.end_time).getTime()
+            ).toBe(86400000);
+
+            const cancelled = await request(app)
+                .patch(`/api/bookings/${createRes.body.booking.id}/cancel`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .set('x-organization-id', String(userA.org.id))
+                .send({ reason: 'Operator cancellation' });
+            expect(cancelled.status).toBe(200);
+            const revoked = await dbHelper.pool.query(
+                `SELECT cancellation_token_hash, cancellation_token_expires_at
+                 FROM bookings
+                 WHERE id = $1`,
+                [createRes.body.booking.id]
+            );
+            expect(revoked.rows[0]).toEqual({
+                cancellation_token_hash: null,
+                cancellation_token_expires_at: null,
+            });
+        });
+
+        it('migrates useful legacy raw tokens once and preserves hashes on rerun', async () => {
+            const legacyToken = `legacy-${Date.now()}`;
+            const slot = futureSlot(384);
+            await dbHelper.pool.query(
+                'ALTER TABLE bookings DROP CONSTRAINT bookings_raw_cancellation_token_forbidden'
+            );
+            const legacy = await dbHelper.pool.query(
+                `INSERT INTO bookings (
+                   organization_id, calendar_id, start_time, end_time, timezone,
+                   attendee_name, attendee_email, status, cancellation_token, source
+                 ) VALUES ($1, $2, $3, $4, 'UTC', 'Legacy Capability',
+                           'legacy-capability@test.com', 'confirmed', $5, 'booking_page')
+                 RETURNING id`,
+                [userA.org.id, calendarId, slot.start_time, slot.end_time, legacyToken]
+            );
+
+            await runBookingPublicCapabilityMigration(dbHelper.pool);
+            const first = await dbHelper.pool.query(
+                `SELECT cancellation_token, cancellation_token_hash,
+                        cancellation_token_expires_at
+                 FROM bookings
+                 WHERE id = $1`,
+                [legacy.rows[0].id]
+            );
+            await runBookingPublicCapabilityMigration(dbHelper.pool);
+            const second = await dbHelper.pool.query(
+                `SELECT cancellation_token, cancellation_token_hash,
+                        cancellation_token_expires_at
+                 FROM bookings
+                 WHERE id = $1`,
+                [legacy.rows[0].id]
+            );
+
+            expect(first.rows[0].cancellation_token).toBeNull();
+            expect(first.rows[0].cancellation_token_hash).toBe(
+                crypto.createHash('sha256').update(legacyToken, 'utf8').digest('hex')
+            );
+            expect(second.rows[0]).toEqual(first.rows[0]);
         });
     });
 
     describe('Server-authoritative availability policy', () => {
         let calendarId;
         let calendarSlug;
+        let calendarPublicId;
         let connectionId;
         const overrideDate = '2027-03-10';
 
@@ -597,6 +767,7 @@ describe('Bookings Integration Tests', () => {
                 });
             calendarId = calendar.body.id;
             calendarSlug = calendar.body.slug;
+            calendarPublicId = calendar.body.public_id;
             await configureCalendarPolicy(dbHelper.pool, calendarId, {
                 maxFutureDays: 1000,
                 timezone: 'UTC',
@@ -807,6 +978,9 @@ describe('Bookings Integration Tests', () => {
             const response = await request(app)
                 .get(`/api/bookings/public/book/${calendarSlug}`);
             expect(response.status).toBe(404);
+            const globalResponse = await request(app)
+                .get(`/api/bookings/public/book/${calendarPublicId}`);
+            expect(globalResponse.status).toBe(200);
             await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [
                 duplicate.rows[0].id,
             ]);

@@ -34,6 +34,7 @@ type GraphqlCalendar = {
   name: string;
   description: string | null;
   slug: string;
+  publicId: string;
   timezone: string;
   durationMinutes: number;
   bufferBeforeMinutes: number;
@@ -62,6 +63,7 @@ const calendarFields = `
   name
   description
   slug
+  publicId
   timezone
   durationMinutes
   bufferBeforeMinutes
@@ -240,6 +242,7 @@ const mapCalendar = (calendar: GraphqlCalendar): Calendar => ({
   name: calendar.name,
   ...(calendar.description === null ? {} : { description: calendar.description }),
   slug: calendar.slug,
+  public_id: calendar.publicId,
   timezone: calendar.timezone,
   duration_minutes: calendar.durationMinutes,
   buffer_before_minutes: calendar.bufferBeforeMinutes,

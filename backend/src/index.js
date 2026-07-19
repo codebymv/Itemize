@@ -499,7 +499,7 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '030_booking_availability_policy'
+                    WHERE version = '031_booking_public_capabilities'
                 ) AS has_required_migration
             `);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {
