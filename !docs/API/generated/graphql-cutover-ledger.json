@@ -2562,8 +2562,8 @@
       "owner": "scheduling",
       "targetOperation": "deleteCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind the default-off calendar definition-mutation flag. Delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases; the browser rollback gate remains open.",
+      "parityStatus": "dual-parity",
+      "notes": "Behind the default-off calendar definition-mutation flag, delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases. The real browser passed a successful GraphQL delete, stable upcoming-booking rejection, and independent flag-off REST delete without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

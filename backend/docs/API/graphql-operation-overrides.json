@@ -1357,8 +1357,8 @@
       "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated. The same staged calendar passed GraphQL update followed by independent flag-off REST update and GraphQL readback without data repair."
     },
     "DELETE /api/calendars/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendar", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the default-off calendar definition-mutation flag. Delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases; the browser rollback gate remains open."
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendar", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Behind the default-off calendar definition-mutation flag, delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases. The real browser passed a successful GraphQL delete, stable upcoming-booking rejection, and independent flag-off REST delete without data repair."
     },
     "PUT /api/calendars/:id/availability": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "replaceCalendarAvailability", "parityStatus": "dual-parity", "risk": "high",

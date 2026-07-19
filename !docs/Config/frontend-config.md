@@ -227,11 +227,12 @@ VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
 VITE_ORGANIZATION_READS_GRAPHQL=false
 VITE_ORGANIZATION_MUTATIONS_GRAPHQL=false
 
-# Authenticated calendar list/detail reads and definition create/update writes
-# have independent default-off rollback boundaries. Availability replacement,
-# date overrides, delete, and every anonymous booking protocol remain on REST.
+# Authenticated calendar list/detail reads, definition create/update/delete
+# writes, and availability/date-override writes have three independent
+# default-off rollback boundaries. Anonymous booking protocols remain on REST.
 VITE_CALENDAR_READS_GRAPHQL=false
 VITE_CALENDAR_MUTATIONS_GRAPHQL=false
+VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL=false
 
 # Personal workspace category reads and writes have independent rollback
 # boundaries. Both remain disabled until the browser gate passes.
