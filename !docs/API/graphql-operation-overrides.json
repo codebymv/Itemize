@@ -1385,8 +1385,8 @@
       "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route."
     },
     "PATCH /api/bookings/:id/cancel": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "cancelBooking", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implementation/integration-proven behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Staging browser mutation and REST rollback remain."
+      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "cancelBooking", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event."
     },
     "PATCH /api/bookings/:id/reschedule": {
       "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "rescheduleBooking", "parityStatus": "characterized", "risk": "high",

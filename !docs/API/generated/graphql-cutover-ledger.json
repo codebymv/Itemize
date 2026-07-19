@@ -1839,8 +1839,8 @@
       "owner": "scheduling",
       "targetOperation": "cancelBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "implemented",
-      "notes": "Implementation/integration-proven behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Staging browser mutation and REST rollback remain.",
+      "parityStatus": "dual-parity",
+      "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
