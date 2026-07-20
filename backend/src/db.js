@@ -62,6 +62,9 @@ const {
 const {
   runEstimateEmailDeliveryMigration,
 } = require('./db_estimate_email_delivery_migrations');
+const {
+  runInvoiceEmailDeliveryMigration,
+} = require('./db_invoice_email_delivery_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -491,6 +494,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
     await runMigrationOnce(pool, 'estimate_email_deliveries', runEstimateEmailDeliveryMigration);
+    await runMigrationOnce(pool, 'invoice_email_deliveries', runInvoiceEmailDeliveryMigration);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
     await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {

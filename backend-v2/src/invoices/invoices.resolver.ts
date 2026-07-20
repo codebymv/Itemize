@@ -6,6 +6,7 @@ import {
   CreateInvoiceInput,
   InvoiceFilterInput,
   PreviewInvoiceEmailInput,
+  SendInvoiceInput,
   UpdateInvoiceInput,
 } from './invoice.inputs';
 import {
@@ -15,6 +16,8 @@ import {
   InvoicePage,
 } from './invoice.types';
 import { InvoiceEmailPreviewService } from './invoice-email-preview.service';
+import { InvoiceEmailDeliveryService } from './invoice-email-delivery.service';
+import { InvoiceSendResult } from './invoice-email-delivery.types';
 import { InvoicesService } from './invoices.service';
 
 @Resolver(() => Invoice)
@@ -22,6 +25,7 @@ export class InvoicesResolver {
   constructor(
     private readonly invoices: InvoicesService,
     private readonly emailPreview: InvoiceEmailPreviewService,
+    private readonly emailDelivery: InvoiceEmailDeliveryService,
     private readonly requestContext: RequestContextService,
   ) {}
 
@@ -82,6 +86,18 @@ export class InvoicesResolver {
   ): InvoiceEmailPreview {
     this.organizationId();
     return this.emailPreview.preview(input);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => InvoiceSendResult)
+  sendInvoice(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: SendInvoiceInput,
+  ): Promise<InvoiceSendResult> {
+    return this.emailDelivery.send(
+      this.organizationId(), this.userId(), id, input,
+    );
   }
 
   private organizationId(): number {

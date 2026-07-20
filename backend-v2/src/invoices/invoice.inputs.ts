@@ -140,3 +140,24 @@ export class PreviewInvoiceEmailInput {
   @Field(() => Boolean, { defaultValue: false })
   includePaymentLink = false;
 }
+
+@InputType()
+export class SendInvoiceInput {
+  @Field(() => String)
+  idempotencyKey: string;
+
+  @Field(() => String)
+  subject: string;
+
+  @Field(() => String)
+  message: string;
+
+  @Field(() => [String], { defaultValue: [] })
+  ccEmails: string[] = [];
+
+  @Field(() => Boolean, { defaultValue: false })
+  includePaymentLink = false;
+
+  @Field(() => Boolean, { defaultValue: false })
+  resend = false;
+}

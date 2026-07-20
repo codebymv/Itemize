@@ -14,6 +14,7 @@ import {
     isInvoiceEmailPreviewGraphqlEnabled,
     isInvoiceGraphqlMutationsEnabled,
     isInvoiceGraphqlReadsEnabled,
+    isInvoiceGraphqlSendEnabled,
     isPaymentGraphqlMutationsEnabled,
     isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
@@ -37,6 +38,7 @@ import {
     getInvoiceViaGraphql,
     getInvoicesViaGraphql,
     updateInvoiceViaGraphql,
+    sendInvoiceViaGraphql,
 } from './invoicesGraphql';
 import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoicesGraphql';
 import {
@@ -390,6 +392,9 @@ export const sendInvoice = async (
     organizationId?: number,
     options?: SendInvoiceOptions
 ): Promise<SendInvoiceResponse> => {
+    if (isInvoiceGraphqlSendEnabled()) {
+        return sendInvoiceViaGraphql(invoiceId, options ?? {}, organizationId);
+    }
     const response = await api.post(`/api/invoices/${invoiceId}/send`, options || {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

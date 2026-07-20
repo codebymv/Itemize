@@ -5,6 +5,7 @@ import {
   deleteInvoiceViaGraphql,
   getInvoiceViaGraphql,
   getInvoicesViaGraphql,
+  sendInvoiceViaGraphql,
   updateInvoiceViaGraphql,
 } from './invoicesGraphql';
 
@@ -180,5 +181,48 @@ describe('core invoice GraphQL adapter', () => {
       { id: 12 },
       4,
     );
+  });
+
+  it('sends with a caller-stable key and reloads only confirmed delivery', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      sendInvoice: { success: true, emailSent: true, status: 'SENT' },
+    });
+    vi.mocked(graphqlRequest).mockResolvedValue({
+      invoice: graphqlInvoice({ status: 'sent' }),
+    });
+    await expect(sendInvoiceViaGraphql(12, {
+      subject: 'Your invoice',
+      message: 'Please pay.',
+      ccEmails: ['owner@example.com'],
+      includePaymentLink: true,
+      resend: true,
+    }, 4, 'stable-send-key')).resolves.toMatchObject({
+      id: 12, status: 'sent', emailSent: true,
+    });
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('mutation SendInvoice'),
+      {
+        id: 12,
+        input: {
+          idempotencyKey: 'stable-send-key',
+          subject: 'Your invoice',
+          message: 'Please pay.',
+          ccEmails: ['owner@example.com'],
+          includePaymentLink: true,
+          resend: true,
+        },
+      },
+      4,
+    );
+  });
+
+  it('rejects unconfirmed invoice delivery without reloading stale state', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      sendInvoice: { success: false, emailSent: false, status: 'RETRY' },
+    });
+    await expect(sendInvoiceViaGraphql(12, {
+      subject: 'Your invoice', message: 'Please pay.',
+    }, 4, 'retry-key')).rejects.toThrow('not confirmed (RETRY)');
+    expect(graphqlRequest).not.toHaveBeenCalled();
   });
 });

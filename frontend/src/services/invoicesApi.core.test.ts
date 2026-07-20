@@ -6,11 +6,13 @@ import {
   deleteInvoice,
   getInvoice,
   getInvoices,
+  sendInvoice,
   updateInvoice,
 } from './invoicesApi';
 import {
   isInvoiceGraphqlMutationsEnabled,
   isInvoiceGraphqlReadsEnabled,
+  isInvoiceGraphqlSendEnabled,
   isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
 import {
@@ -18,6 +20,7 @@ import {
   deleteInvoiceViaGraphql,
   getInvoiceViaGraphql,
   getInvoicesViaGraphql,
+  sendInvoiceViaGraphql,
   updateInvoiceViaGraphql,
 } from './invoicesGraphql';
 import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoicesGraphql';
@@ -33,6 +36,7 @@ vi.mock('@/lib/api', () => ({
 vi.mock('./graphqlClient', () => ({
   isInvoiceGraphqlMutationsEnabled: vi.fn(),
   isInvoiceGraphqlReadsEnabled: vi.fn(),
+  isInvoiceGraphqlSendEnabled: vi.fn(),
   isInvoiceBusinessGraphqlMutationsEnabled: vi.fn(() => false),
   isInvoiceBusinessGraphqlReadsEnabled: vi.fn(() => false),
   isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
@@ -45,6 +49,7 @@ vi.mock('./invoicesGraphql', () => ({
   deleteInvoiceViaGraphql: vi.fn(),
   getInvoiceViaGraphql: vi.fn(),
   getInvoicesViaGraphql: vi.fn(),
+  sendInvoiceViaGraphql: vi.fn(),
   updateInvoiceViaGraphql: vi.fn(),
 }));
 vi.mock('./recurringInvoicesGraphql', () => ({
@@ -78,6 +83,7 @@ describe('core invoice API transport selection', () => {
     vi.clearAllMocks();
     vi.mocked(isInvoiceGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isInvoiceGraphqlMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isInvoiceGraphqlSendEnabled).mockReturnValue(false);
     vi.mocked(isRecurringInvoiceGraphqlCloneEnabled).mockReturnValue(false);
   });
 
@@ -184,5 +190,29 @@ describe('core invoice API transport selection', () => {
     );
     expect(deleteInvoiceViaGraphql).toHaveBeenCalledWith(12, 4);
     expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('keeps send on REST by default and cuts it over independently', async () => {
+    const options = {
+      subject: 'Your invoice', message: 'Please pay.',
+      ccEmails: ['owner@example.com'], includePaymentLink: true,
+    };
+    vi.mocked(api.post).mockResolvedValue({
+      data: { data: { ...invoice, emailSent: true } },
+    });
+    await sendInvoice(12, 4, options);
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/invoices/12/send', options,
+      { headers: { 'x-organization-id': '4' } },
+    );
+
+    vi.clearAllMocks();
+    vi.mocked(isInvoiceGraphqlSendEnabled).mockReturnValue(true);
+    vi.mocked(sendInvoiceViaGraphql).mockResolvedValue({
+      ...invoice, status: 'sent', emailSent: true,
+    });
+    await sendInvoice(12, 4, options);
+    expect(sendInvoiceViaGraphql).toHaveBeenCalledWith(12, options, 4);
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

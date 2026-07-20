@@ -1,5 +1,11 @@
 import type { JsonRecord } from '@/types';
-import type { Invoice, InvoiceItem, Payment } from './invoicesApi';
+import type {
+  Invoice,
+  InvoiceItem,
+  Payment,
+  SendInvoiceOptions,
+  SendInvoiceResponse,
+} from './invoicesApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlInvoiceItem = {
@@ -424,4 +430,57 @@ export const deleteInvoiceViaGraphql = async (
     throw new Error('GraphQL invoice delete returned the wrong invoice');
   }
   return { success: data.deleteInvoice.success };
+};
+
+export const sendInvoiceViaGraphql = async (
+  id: number,
+  options: SendInvoiceOptions,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<SendInvoiceResponse> => {
+  const subject = String(options.subject ?? '').trim();
+  const message = String(options.message ?? '').trim();
+  if (!subject || !message) {
+    throw new Error('Invoice subject and message are required');
+  }
+  const data = await graphqlMutationRequest<{
+    sendInvoice: { success: boolean; emailSent: boolean; status: string };
+  }, {
+    id: number;
+    input: {
+      idempotencyKey: string;
+      subject: string;
+      message: string;
+      ccEmails: string[];
+      includePaymentLink: boolean;
+      resend: boolean;
+    };
+  }>(
+    `mutation SendInvoice($id: Int!, $input: SendInvoiceInput!) {
+      sendInvoice(id: $id, input: $input) {
+        success emailSent replayed deliveryId status
+      }
+    }`,
+    {
+      id,
+      input: {
+        idempotencyKey:
+          idempotencyKey ?? globalThis.crypto?.randomUUID?.() ??
+          `invoice-send-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        subject,
+        message,
+        ccEmails: options.ccEmails ?? [],
+        includePaymentLink: Boolean(options.includePaymentLink),
+        resend: Boolean(options.resend),
+      },
+    },
+    organizationId,
+  );
+  if (!data.sendInvoice.success || !data.sendInvoice.emailSent) {
+    throw new Error(`Invoice delivery was not confirmed (${data.sendInvoice.status})`);
+  }
+  return {
+    ...(await getInvoiceViaGraphql(id, organizationId)),
+    emailSent: true,
+  };
 };

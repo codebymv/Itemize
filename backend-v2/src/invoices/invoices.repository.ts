@@ -89,6 +89,48 @@ export type InvoiceAggregate = {
   payments: InvoicePaymentRow[];
 };
 
+export type InvoiceEmailPayload = {
+  subject: string;
+  message: string;
+  ccEmails: string[];
+  includePaymentLink: boolean;
+  resend: boolean;
+  invoice: Record<string, unknown>;
+  settings: Record<string, unknown>;
+};
+
+export type InvoiceEmailDeliveryRow = {
+  id: number;
+  organization_id: number;
+  invoice_id: number;
+  requested_by_user_id: number | null;
+  idempotency_key: string;
+  recipient_email: string;
+  subject: string;
+  payload: InvoiceEmailPayload;
+  payment_session_id: string | null;
+  payment_url: string | null;
+  status: string;
+  attempt_count: number;
+  next_attempt_at: Date;
+  lease_expires_at: Date | null;
+  claimed_by: string | null;
+  provider_id: string | null;
+  last_error: string | null;
+  sent_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type InvoiceEmailPreparation =
+  | { kind: 'created'; delivery: InvoiceEmailDeliveryRow }
+  | { kind: 'replayed'; delivery: InvoiceEmailDeliveryRow }
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'delivery-in-progress' }
+  | { kind: 'not-found' }
+  | { kind: 'invalid-state' }
+  | { kind: 'missing-email' };
+
 export type InvoiceItemValues = {
   productId: number | null;
   name: string;
@@ -391,6 +433,236 @@ export class InvoicesRepository {
       [invoiceId, organizationId],
     );
     return result.rows[0] ?? null;
+  }
+
+  async prepareEmailDelivery(
+    organizationId: number,
+    userId: number,
+    invoiceId: number,
+    idempotencyKey: string,
+    options: Pick<InvoiceEmailPayload, 'subject' | 'message' | 'ccEmails' | 'includePaymentLink' | 'resend'>,
+  ): Promise<InvoiceEmailPreparation> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{ status: string }>(
+        `SELECT status FROM invoices
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [invoiceId, organizationId],
+      );
+      if (!locked.rows[0]) return { kind: 'not-found' };
+      const existing = await client.query<InvoiceEmailDeliveryRow>(
+        `SELECT * FROM invoice_email_deliveries
+         WHERE organization_id = $1 AND invoice_id = $2
+           AND idempotency_key = $3`,
+        [organizationId, invoiceId, idempotencyKey],
+      );
+      if (existing.rows[0]) {
+        const prior = existing.rows[0].payload;
+        const matches = prior.subject === options.subject &&
+          prior.message === options.message &&
+          prior.includePaymentLink === options.includePaymentLink &&
+          prior.resend === options.resend &&
+          JSON.stringify(prior.ccEmails) === JSON.stringify(options.ccEmails);
+        return matches
+          ? { kind: 'replayed', delivery: existing.rows[0] }
+          : { kind: 'idempotency-conflict' };
+      }
+      const active = await client.query(
+        `SELECT 1 FROM invoice_email_deliveries
+         WHERE organization_id = $1 AND invoice_id = $2
+           AND status IN ('queued', 'processing', 'retry', 'reconciliation_required')
+         LIMIT 1`,
+        [organizationId, invoiceId],
+      );
+      if (active.rows[0]) return { kind: 'delivery-in-progress' };
+      const allowed = options.resend
+        ? ['draft', 'sent', 'viewed', 'partial', 'overdue']
+        : ['draft'];
+      if (!allowed.includes(locked.rows[0].status)) return { kind: 'invalid-state' };
+      const aggregate = await this.load(client, organizationId, invoiceId);
+      if (!aggregate) return { kind: 'not-found' };
+      const recipient = aggregate.invoice.customer_email?.trim();
+      if (!recipient) return { kind: 'missing-email' };
+      const settingsResult = await client.query<Record<string, unknown>>(
+        'SELECT * FROM payment_settings WHERE organization_id = $1',
+        [organizationId],
+      );
+      const row = aggregate.invoice;
+      const payload: InvoiceEmailPayload = {
+        ...options,
+        invoice: {
+          ...row,
+          items: aggregate.items,
+          business: row.business_id === null ? null : {
+            id: row.business_id,
+            name: row.business_name,
+            email: row.business_email,
+            phone: row.business_phone,
+            address: row.business_address,
+            tax_id: row.business_tax_id,
+            logo_url: row.business_logo_url,
+          },
+        },
+        settings: settingsResult.rows[0] ?? {},
+      };
+      const inserted = await client.query<InvoiceEmailDeliveryRow>(
+        `INSERT INTO invoice_email_deliveries (
+           organization_id, invoice_id, requested_by_user_id,
+           idempotency_key, recipient_email, subject, payload
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+         RETURNING *`,
+        [organizationId, invoiceId, userId, idempotencyKey, recipient,
+          options.subject, JSON.stringify(payload)],
+      );
+      return { kind: 'created', delivery: inserted.rows[0] };
+    });
+  }
+
+  async findEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+  ): Promise<InvoiceEmailDeliveryRow | null> {
+    const result = await this.pool.query<InvoiceEmailDeliveryRow>(
+      `SELECT * FROM invoice_email_deliveries
+       WHERE id = $1 AND organization_id = $2`,
+      [deliveryId, organizationId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async dueEmailDeliveryIds(
+    limit: number,
+  ): Promise<Array<{ id: number; organizationId: number }>> {
+    const result = await this.pool.query<{ id: number; organization_id: number }>(
+      `SELECT id, organization_id FROM invoice_email_deliveries
+       WHERE (status IN ('queued', 'retry') AND next_attempt_at <= CURRENT_TIMESTAMP)
+          OR (status = 'processing' AND lease_expires_at <= CURRENT_TIMESTAMP)
+       ORDER BY next_attempt_at, id LIMIT $1`,
+      [limit],
+    );
+    return result.rows.map((row) => ({
+      id: Number(row.id), organizationId: Number(row.organization_id),
+    }));
+  }
+
+  async claimEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+  ): Promise<InvoiceEmailDeliveryRow | null> {
+    const result = await this.pool.query<InvoiceEmailDeliveryRow>(
+      `UPDATE invoice_email_deliveries
+       SET status = 'processing', attempt_count = attempt_count + 1,
+           lease_expires_at = CURRENT_TIMESTAMP + INTERVAL '60 seconds',
+           claimed_by = $3, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2
+         AND ((status IN ('queued', 'retry') AND next_attempt_at <= CURRENT_TIMESTAMP)
+           OR (status = 'processing' AND lease_expires_at <= CURRENT_TIMESTAMP))
+       RETURNING *`,
+      [deliveryId, organizationId, `nest:${process.pid}`],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async recordPaymentLink(
+    organizationId: number,
+    deliveryId: number,
+    sessionId: string,
+    paymentUrl: string,
+  ): Promise<InvoiceEmailDeliveryRow> {
+    return this.transaction(async (client) => {
+      const delivery = await client.query<InvoiceEmailDeliveryRow>(
+        `UPDATE invoice_email_deliveries
+         SET payment_session_id = $3, payment_url = $4,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2 AND status = 'processing'
+         RETURNING *`,
+        [deliveryId, organizationId, sessionId, paymentUrl],
+      );
+      if (!delivery.rows[0]) throw new Error('Invoice email delivery not found');
+      await client.query(
+        `UPDATE invoices
+         SET stripe_payment_intent_id = $3, stripe_hosted_invoice_url = $4,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [delivery.rows[0].invoice_id, organizationId, sessionId, paymentUrl],
+      );
+      return delivery.rows[0];
+    });
+  }
+
+  async completeEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+    providerId: string | null,
+  ): Promise<InvoiceEmailDeliveryRow> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<InvoiceEmailDeliveryRow>(
+        `SELECT * FROM invoice_email_deliveries
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [deliveryId, organizationId],
+      );
+      const delivery = locked.rows[0];
+      if (!delivery) throw new Error('Invoice email delivery not found');
+      if (delivery.status === 'sent') return delivery;
+      const invoice = await client.query<{ status: string }>(
+        `SELECT status FROM invoices
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [delivery.invoice_id, organizationId],
+      );
+      const allowed = delivery.payload.resend
+        ? ['draft', 'sent', 'viewed', 'partial', 'overdue']
+        : ['draft'];
+      if (!invoice.rows[0] || !allowed.includes(invoice.rows[0].status)) {
+        const reconciled = await client.query<InvoiceEmailDeliveryRow>(
+          `UPDATE invoice_email_deliveries
+           SET status = 'reconciliation_required', provider_id = $3,
+               last_error = 'Invoice changed state after provider delivery',
+               lease_expires_at = NULL, claimed_by = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 AND organization_id = $2 RETURNING *`,
+          [deliveryId, organizationId, providerId],
+        );
+        return reconciled.rows[0];
+      }
+      await client.query(
+        `UPDATE invoices
+         SET status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END,
+             sent_at = COALESCE(sent_at, CURRENT_TIMESTAMP),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [delivery.invoice_id, organizationId],
+      );
+      const completed = await client.query<InvoiceEmailDeliveryRow>(
+        `UPDATE invoice_email_deliveries
+         SET status = 'sent', provider_id = $3, sent_at = CURRENT_TIMESTAMP,
+             lease_expires_at = NULL, claimed_by = NULL, last_error = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2 RETURNING *`,
+        [deliveryId, organizationId, providerId],
+      );
+      return completed.rows[0];
+    });
+  }
+
+  async failEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+    error: string,
+    ambiguous: boolean,
+  ): Promise<InvoiceEmailDeliveryRow> {
+    const result = await this.pool.query<InvoiceEmailDeliveryRow>(
+      `UPDATE invoice_email_deliveries
+       SET status = CASE
+             WHEN $3::boolean THEN 'reconciliation_required'
+             WHEN attempt_count >= 5 THEN 'dead_letter' ELSE 'retry' END,
+           next_attempt_at = CURRENT_TIMESTAMP +
+             (LEAST(300, POWER(2, GREATEST(attempt_count - 1))) * INTERVAL '1 second'),
+           last_error = LEFT($4, 2000), lease_expires_at = NULL,
+           claimed_by = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2 RETURNING *`,
+      [deliveryId, organizationId, ambiguous, error],
+    );
+    if (!result.rows[0]) throw new Error('Invoice email delivery not found');
+    return result.rows[0];
   }
 
   private async references(

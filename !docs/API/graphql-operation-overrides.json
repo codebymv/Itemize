@@ -312,9 +312,9 @@
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "sendInvoice",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Separate committed state changes from observable email side effects and make retries safe."
+      "notes": "The CSRF-protected mutation snapshots the tenant-owned invoice, recipient, custom message, CC list, resend intent, PDF inputs, and optional payment-link request into a durable delivery row. Stripe and Resend receive intent-derived idempotency keys; the PDF attachment and requested payment link are required, and only confirmed email delivery marks a draft sent. Definite failures retry through a leased worker, ambiguous provider outcomes require reconciliation, conflicting key reuse fails, one unresolved intent prevents bypass with a new key, exact replay cannot duplicate delivery, and the frontend adapter is independently default-off."
     },
     "GET /api/invoices/businesses": {
       "disposition": "graphql-query",

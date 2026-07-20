@@ -11,6 +11,11 @@ import { PG_POOL } from '../../src/database/database.module';
 import { EstimateEmailDeliveryService } from '../../src/estimates/estimate-email-delivery.service';
 import { ESTIMATE_EMAIL_PROVIDER } from '../../src/estimates/estimate-email.provider';
 import { RecurringInvoicesService } from '../../src/recurring-invoices/recurring-invoices.service';
+import {
+  INVOICE_EMAIL_PROVIDER,
+  INVOICE_PAYMENT_LINK_PROVIDER,
+  INVOICE_PDF_RENDERER,
+} from '../../src/invoices/invoice-delivery.providers';
 
 describe('Core invoice GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -29,6 +34,9 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   let recurringInvoicesService: RecurringInvoicesService;
   let estimateEmailDeliveryService: EstimateEmailDeliveryService;
   const estimateEmailProvider = { send: jest.fn() };
+  const invoiceEmailProvider = { send: jest.fn() };
+  const invoicePaymentLinkProvider = { getOrCreate: jest.fn() };
+  const invoicePdfRenderer = { render: jest.fn() };
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -123,6 +131,12 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       .useValue(pool)
       .overrideProvider(ESTIMATE_EMAIL_PROVIDER)
       .useValue(estimateEmailProvider)
+      .overrideProvider(INVOICE_EMAIL_PROVIDER)
+      .useValue(invoiceEmailProvider)
+      .overrideProvider(INVOICE_PAYMENT_LINK_PROVIDER)
+      .useValue(invoicePaymentLinkProvider)
+      .overrideProvider(INVOICE_PDF_RENDERER)
+      .useValue(invoicePdfRenderer)
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
@@ -239,6 +253,23 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     ],
   });
 
+  const sendInvoiceMutation = `
+    mutation SendInvoice($id: Int!, $input: SendInvoiceInput!) {
+      sendInvoice(id: $id, input: $input) {
+        success emailSent replayed deliveryId status
+      }
+    }
+  `;
+
+  const sendInput = (key: string) => ({
+    idempotencyKey: key,
+    subject: 'Your invoice',
+    message: 'Please review and pay this invoice.',
+    ccEmails: ['owner@example.com'],
+    includePaymentLink: true,
+    resend: false,
+  });
+
   it('creates atomically, calculates decimals in PostgreSQL, and interoperates with REST', async () => {
     const created = await graphql(
       memberToken,
@@ -343,6 +374,138 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(deleted.body.data.deleteInvoice).toMatchObject({
       success: true,
       deletedId: id,
+    });
+  });
+
+  it('sends invoices durably and leaves every unconfirmed delivery unsent', async () => {
+    invoiceEmailProvider.send.mockReset();
+    invoicePaymentLinkProvider.getOrCreate.mockReset();
+    invoicePdfRenderer.render.mockReset();
+    invoicePaymentLinkProvider.getOrCreate.mockResolvedValue({
+      kind: 'ready', sessionId: 'cs_invoice_send', url: 'https://pay.test/invoice',
+    });
+    invoicePdfRenderer.render.mockResolvedValue(Buffer.from('invoice-pdf'));
+    invoiceEmailProvider.send.mockResolvedValue({ kind: 'sent', providerId: 'email-1' });
+
+    const created = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const id = Number(created.body.data.createInvoice.id);
+
+    const noCsrf = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id, input: sendInput('invoice-no-csrf') }, false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const hidden = await graphql(
+      outsiderToken, outsiderOrganizationId, sendInvoiceMutation,
+      { id, input: sendInput('invoice-hidden') },
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const sent = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id, input: sendInput('invoice-success') },
+    ).expect(200);
+    expect(sent.body.errors).toBeUndefined();
+    expect(sent.body.data.sendInvoice).toMatchObject({
+      success: true, emailSent: true, replayed: false, status: 'SENT',
+    });
+    expect(invoicePaymentLinkProvider.getOrCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ invoiceId: id, amountDue: '26.06' }),
+    );
+    expect(invoiceEmailProvider.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'ada@example.com',
+      cc: ['owner@example.com'],
+      html: expect.stringContaining('https://pay.test/invoice'),
+      filename: expect.stringMatching(/^.+\.pdf$/),
+      pdf: Buffer.from('invoice-pdf'),
+    }));
+    const committed = await pool.query(
+      `SELECT i.status, i.sent_at IS NOT NULL AS sent,
+              i.stripe_payment_intent_id, i.stripe_hosted_invoice_url,
+              d.status AS delivery_status, d.provider_id
+       FROM invoices i JOIN invoice_email_deliveries d ON d.invoice_id = i.id
+       WHERE i.id = $1 AND i.organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(committed.rows[0]).toMatchObject({
+      status: 'sent', sent: true, stripe_payment_intent_id: 'cs_invoice_send',
+      stripe_hosted_invoice_url: 'https://pay.test/invoice',
+      delivery_status: 'sent', provider_id: 'email-1',
+    });
+
+    const replay = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id, input: sendInput('invoice-success') },
+    ).expect(200);
+    expect(replay.body.data.sendInvoice).toMatchObject({
+      success: true, emailSent: true, replayed: true, status: 'SENT',
+    });
+    expect(invoiceEmailProvider.send).toHaveBeenCalledTimes(1);
+    const conflictingReplay = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id, input: { ...sendInput('invoice-success'), subject: 'Different request' } },
+    ).expect(200);
+    expect(conflictingReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'INVOICE_SEND_IDEMPOTENCY_CONFLICT',
+    });
+    expect(invoiceEmailProvider.send).toHaveBeenCalledTimes(1);
+
+    const rejectedCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const rejectedId = Number(rejectedCreate.body.data.createInvoice.id);
+    invoiceEmailProvider.send.mockResolvedValueOnce({
+      kind: 'rejected', message: 'provider rejected',
+    });
+    const rejected = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id: rejectedId, input: { ...sendInput('invoice-rejected'), includePaymentLink: false } },
+    ).expect(200);
+    expect(rejected.body.data.sendInvoice).toMatchObject({
+      success: false, emailSent: false, status: 'RETRY',
+    });
+    expect((await pool.query(
+      'SELECT status, sent_at FROM invoices WHERE id = $1', [rejectedId],
+    )).rows[0]).toEqual({ status: 'draft', sent_at: null });
+
+    const pdfCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const pdfId = Number(pdfCreate.body.data.createInvoice.id);
+    invoicePdfRenderer.render.mockRejectedValueOnce(new Error('renderer failed'));
+    const callsBeforePdfFailure = invoiceEmailProvider.send.mock.calls.length;
+    const pdfFailed = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id: pdfId, input: { ...sendInput('invoice-pdf-failed'), includePaymentLink: false } },
+    ).expect(200);
+    expect(pdfFailed.body.data.sendInvoice.status).toBe('RETRY');
+    expect(invoiceEmailProvider.send).toHaveBeenCalledTimes(callsBeforePdfFailure);
+    expect((await pool.query(
+      'SELECT status, sent_at FROM invoices WHERE id = $1', [pdfId],
+    )).rows[0]).toEqual({ status: 'draft', sent_at: null });
+
+    const ambiguousCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const ambiguousId = Number(ambiguousCreate.body.data.createInvoice.id);
+    invoiceEmailProvider.send.mockRejectedValueOnce(new Error('connection reset'));
+    const ambiguous = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id: ambiguousId, input: { ...sendInput('invoice-ambiguous'), includePaymentLink: false } },
+    ).expect(200);
+    expect(ambiguous.body.data.sendInvoice.status).toBe('RECONCILIATION_REQUIRED');
+    expect((await pool.query(
+      'SELECT status, sent_at FROM invoices WHERE id = $1', [ambiguousId],
+    )).rows[0]).toEqual({ status: 'draft', sent_at: null });
+    const bypass = await graphql(
+      memberToken, organizationId, sendInvoiceMutation,
+      { id: ambiguousId, input: { ...sendInput('invoice-bypass'), includePaymentLink: false } },
+    ).expect(200);
+    expect(bypass.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'INVOICE_DELIVERY_IN_PROGRESS',
     });
   });
 
