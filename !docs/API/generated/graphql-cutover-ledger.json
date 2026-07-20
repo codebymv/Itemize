@@ -6863,6 +6863,12 @@
         },
         {
           "method": "GET",
+          "path": "/api/invoices/:invoiceId",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 751
+        },
+        {
+          "method": "GET",
           "path": "/api/invoices/:id",
           "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
           "line": 231
@@ -7483,7 +7489,7 @@
           "path": "/api/invoices/estimates",
           "rawPath": "/api/invoices/estimates",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 109,
+          "line": 111,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7554,7 +7560,7 @@
           "path": "/api/invoices/estimates",
           "rawPath": "/api/invoices/estimates",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 136,
+          "line": 138,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7643,7 +7649,7 @@
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 163,
+          "line": 165,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7690,7 +7696,7 @@
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 123,
+          "line": 125,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7743,7 +7749,7 @@
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 150,
+          "line": 152,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7796,7 +7802,7 @@
           "path": "/api/invoices/estimates/:id/convert-to-invoice",
           "rawPath": "/api/invoices/estimates/${id}/convert-to-invoice",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 182,
+          "line": 187,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7821,8 +7827,8 @@
       "owner": "billing",
       "targetOperation": "convertEstimateToInvoice",
       "targetModule": "EstimatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Conversion now locks the tenant-owned source and uses atomic invoice-number allocation; real-PostgreSQL repeat and concurrent-repeat coverage remains required.",
+      "parityStatus": "implemented",
+      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact values, REST readback, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7843,7 +7849,7 @@
           "path": "/api/invoices/estimates/:id/send",
           "rawPath": "/api/invoices/estimates/${id}/send",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 173,
+          "line": 175,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8212,19 +8218,19 @@
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 653
+          "line": 888
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 831
+          "line": 1066
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:templateId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1001
+          "line": 1236
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8380,7 +8386,7 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/pause",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 687
+          "line": 922
         }
       ],
       "recommendedDisposition": "graphql-mutation",

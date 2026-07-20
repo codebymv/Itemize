@@ -1,24 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
-  createEstimate, deleteEstimate, getEstimate, getEstimates, updateEstimate,
+  convertEstimateToInvoice, createEstimate, deleteEstimate, getEstimate,
+  getEstimates, updateEstimate,
 } from './estimatesApi';
 import {
-  isEstimateGraphqlMutationsEnabled, isEstimateGraphqlReadsEnabled,
+  isEstimateGraphqlConversionEnabled, isEstimateGraphqlMutationsEnabled,
+  isEstimateGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
-  createEstimateViaGraphql, deleteEstimateViaGraphql, getEstimateViaGraphql,
-  getEstimatesViaGraphql, updateEstimateViaGraphql,
+  convertEstimateToInvoiceViaGraphql, createEstimateViaGraphql,
+  deleteEstimateViaGraphql, getEstimateViaGraphql, getEstimatesViaGraphql,
+  updateEstimateViaGraphql,
 } from './estimatesGraphql';
 
 vi.mock('@/lib/api', () => ({
   default: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 vi.mock('./graphqlClient', () => ({
+  isEstimateGraphqlConversionEnabled: vi.fn(),
   isEstimateGraphqlMutationsEnabled: vi.fn(),
   isEstimateGraphqlReadsEnabled: vi.fn(),
 }));
 vi.mock('./estimatesGraphql', () => ({
+  convertEstimateToInvoiceViaGraphql: vi.fn(),
   createEstimateViaGraphql: vi.fn(),
   deleteEstimateViaGraphql: vi.fn(),
   getEstimateViaGraphql: vi.fn(),
@@ -41,13 +46,18 @@ describe('estimate API transport selection', () => {
     vi.clearAllMocks();
     vi.mocked(isEstimateGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isEstimateGraphqlMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isEstimateGraphqlConversionEnabled).mockReturnValue(false);
   });
 
-  it('keeps all five CRUD operations on REST by default', async () => {
+  it('keeps CRUD and conversion on REST by default', async () => {
     vi.mocked(api.get)
       .mockResolvedValueOnce({ data: { estimates: [estimate], pagination: {} } })
       .mockResolvedValueOnce({ data: estimate });
-    vi.mocked(api.post).mockResolvedValue({ data: estimate });
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({ data: estimate })
+      .mockResolvedValueOnce({
+        data: { invoice_id: 19, invoice_number: 'INV-00019' },
+      });
     vi.mocked(api.put).mockResolvedValue({ data: estimate });
     vi.mocked(api.delete).mockResolvedValue({ data: { success: true } });
     await getEstimates({}, 4);
@@ -55,17 +65,27 @@ describe('estimate API transport selection', () => {
     await createEstimate({ items: estimate.items }, 4);
     await updateEstimate(8, { notes: 'Updated' }, 4);
     await deleteEstimate(8, 4);
+    await expect(convertEstimateToInvoice(8, 4)).resolves.toEqual({
+      invoice_id: 19,
+      invoice_number: 'INV-00019',
+    });
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(api.post).toHaveBeenCalledWith(
       '/api/invoices/estimates', { items: estimate.items },
       { headers: { 'x-organization-id': '4' } },
     );
     expect(createEstimateViaGraphql).not.toHaveBeenCalled();
+    expect(api.post).toHaveBeenLastCalledWith(
+      '/api/invoices/estimates/8/convert-to-invoice',
+      {},
+      { headers: { 'x-organization-id': '4' } },
+    );
   });
 
-  it('routes reads and CRUD through independent GraphQL flags', async () => {
+  it('routes reads, CRUD, and conversion through independent GraphQL flags', async () => {
     vi.mocked(isEstimateGraphqlReadsEnabled).mockReturnValue(true);
     vi.mocked(isEstimateGraphqlMutationsEnabled).mockReturnValue(true);
+    vi.mocked(isEstimateGraphqlConversionEnabled).mockReturnValue(true);
     vi.mocked(getEstimatesViaGraphql).mockResolvedValue({
       estimates: [estimate],
       pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
@@ -74,16 +94,22 @@ describe('estimate API transport selection', () => {
     vi.mocked(createEstimateViaGraphql).mockResolvedValue(estimate);
     vi.mocked(updateEstimateViaGraphql).mockResolvedValue(estimate);
     vi.mocked(deleteEstimateViaGraphql).mockResolvedValue({ success: true });
+    vi.mocked(convertEstimateToInvoiceViaGraphql).mockResolvedValue({
+      invoice_id: 19,
+      invoice_number: 'INV-00019',
+    });
     await getEstimates({ search: 'EST' }, 4);
     await getEstimate(8, 4);
     await createEstimate({ items: estimate.items }, 4);
     await updateEstimate(8, { notes: 'Updated' }, 4);
     await deleteEstimate(8, 4);
+    await convertEstimateToInvoice(8, 4);
     expect(getEstimatesViaGraphql).toHaveBeenCalledWith({ search: 'EST' }, 4);
     expect(getEstimateViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(updateEstimateViaGraphql).toHaveBeenCalledWith(
       8, { notes: 'Updated' }, 4,
     );
     expect(api.get).not.toHaveBeenCalled();
+    expect(convertEstimateToInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
   });
 });

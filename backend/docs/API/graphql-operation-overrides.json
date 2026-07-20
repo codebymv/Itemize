@@ -436,9 +436,9 @@
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "convertEstimateToInvoice",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Conversion now locks the tenant-owned source and uses atomic invoice-number allocation; real-PostgreSQL repeat and concurrent-repeat coverage remains required."
+      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact values, REST readback, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation."
     },
     "POST /api/invoices/estimates/:id/send": {
       "disposition": "graphql-mutation",

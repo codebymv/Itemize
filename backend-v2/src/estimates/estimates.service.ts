@@ -4,10 +4,14 @@ import { PageInput, pageInfo } from '../common/pagination';
 import {
   CreateEstimateInput, EstimateFilterInput, EstimateItemInput, UpdateEstimateInput,
 } from './estimate.inputs';
-import { DeleteEstimateResult, Estimate, EstimateItem, EstimatePage } from './estimate.types';
 import {
-  EstimateAggregate, EstimateItemRow, EstimateItemValues, EstimateUpdates,
-  EstimateValues, EstimateWriteOutcome, EstimatesRepository,
+  DeleteEstimateResult, Estimate, EstimateConversionResult, EstimateItem,
+  EstimatePage,
+} from './estimate.types';
+import {
+  EstimateAggregate, EstimateConversionOutcome, EstimateItemRow,
+  EstimateItemValues, EstimateUpdates, EstimateValues, EstimateWriteOutcome,
+  EstimatesRepository,
 } from './estimates.repository';
 
 const MONEY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
@@ -133,6 +137,37 @@ export class EstimatesService {
       deletedId: Number(deleted.id),
       estimateNumber: deleted.estimate_number,
     };
+  }
+
+  async convertToInvoice(
+    organizationId: number,
+    estimateId: number,
+    userId: number,
+  ): Promise<EstimateConversionResult> {
+    this.id(estimateId, 'id');
+    const outcome = await this.estimates.convertToInvoice(
+      organizationId,
+      estimateId,
+      userId,
+    );
+    return this.converted(outcome);
+  }
+
+  private converted(outcome: EstimateConversionOutcome): EstimateConversionResult {
+    if (outcome.kind === 'converted') {
+      return {
+        success: true,
+        invoiceId: outcome.invoiceId,
+        invoiceNumber: outcome.invoiceNumber,
+        replayed: outcome.replayed,
+      };
+    }
+    if (outcome.kind === 'not-found') this.notFound();
+    throw itemizeGraphqlError(
+      'Estimate conversion state is invalid',
+      'CONFLICT',
+      { reason: 'ESTIMATE_CONVERSION_INVALID_STATE' },
+    );
   }
 
   private saved(outcome: EstimateWriteOutcome): Estimate {

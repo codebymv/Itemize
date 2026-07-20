@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import {
-  createEstimateViaGraphql, deleteEstimateViaGraphql,
-  getEstimateViaGraphql, getEstimatesViaGraphql,
+  convertEstimateToInvoiceViaGraphql, createEstimateViaGraphql,
+  deleteEstimateViaGraphql, getEstimateViaGraphql, getEstimatesViaGraphql,
 } from './estimatesGraphql';
 
 vi.mock('./graphqlClient', () => ({
@@ -81,5 +81,21 @@ describe('estimate GraphQL adapter', () => {
       },
     });
     await expect(deleteEstimateViaGraphql(8, 4)).resolves.toEqual({ success: true });
+  });
+
+  it('maps protected conversion back to the retained response shape', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      convertEstimateToInvoice: {
+        success: true,
+        invoiceId: 19,
+        invoiceNumber: 'INV-00019',
+      },
+    });
+    await expect(convertEstimateToInvoiceViaGraphql(8, 4)).resolves.toEqual({
+      invoice_id: 19,
+      invoice_number: 'INV-00019',
+    });
+    expect(vi.mocked(graphqlMutationRequest).mock.calls[0][1]).toEqual({ id: 8 });
+    expect(vi.mocked(graphqlMutationRequest).mock.calls[0][2]).toBe(4);
   });
 });

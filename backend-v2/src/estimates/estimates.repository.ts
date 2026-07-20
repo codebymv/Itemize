@@ -99,6 +99,16 @@ export type EstimateWriteOutcome =
   | { kind: 'invalid-discount' }
   | { kind: 'negative-total' };
 
+export type EstimateConversionOutcome =
+  | {
+    kind: 'converted';
+    invoiceId: number;
+    invoiceNumber: string;
+    replayed: boolean;
+  }
+  | { kind: 'not-found' }
+  | { kind: 'invalid-state' };
+
 export type EstimateCriteria = {
   organizationId: number;
   status?: string;
@@ -317,6 +327,135 @@ export class EstimatesRepository {
       [estimateId, organizationId],
     );
     return result.rows[0] ?? null;
+  }
+
+  async convertToInvoice(
+    organizationId: number,
+    estimateId: number,
+    userId: number,
+  ): Promise<EstimateConversionOutcome> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{
+        contact_id: number | null;
+        customer_name: string | null;
+        customer_email: string | null;
+        customer_phone: string | null;
+        customer_address: string | null;
+        subtotal: string;
+        tax_amount: string;
+        discount_amount: string;
+        discount_type: string | null;
+        discount_value: string;
+        total: string;
+        notes: string | null;
+        terms_and_conditions: string | null;
+        converted_invoice_id: number | null;
+      }>(
+        `SELECT
+           CASE WHEN c.id IS NULL THEN NULL ELSE e.contact_id END AS contact_id,
+           e.customer_name, e.customer_email, e.customer_phone,
+           e.customer_address, e.subtotal, e.tax_amount, e.discount_amount,
+           e.discount_type, e.discount_value, e.total, e.notes,
+           e.terms_and_conditions, e.converted_invoice_id
+         FROM estimates e
+         LEFT JOIN contacts c
+           ON c.id = e.contact_id AND c.organization_id = e.organization_id
+         WHERE e.id = $1 AND e.organization_id = $2
+         FOR UPDATE OF e`,
+        [estimateId, organizationId],
+      );
+      const estimate = locked.rows[0];
+      if (!estimate) return { kind: 'not-found' };
+
+      if (estimate.converted_invoice_id !== null) {
+        const existing = await client.query<{
+          id: number;
+          invoice_number: string;
+        }>(
+          `SELECT id, invoice_number
+           FROM invoices
+           WHERE id = $1 AND organization_id = $2`,
+          [estimate.converted_invoice_id, organizationId],
+        );
+        if (!existing.rows[0]) return { kind: 'invalid-state' };
+        return {
+          kind: 'converted',
+          invoiceId: Number(existing.rows[0].id),
+          invoiceNumber: existing.rows[0].invoice_number,
+          replayed: true,
+        };
+      }
+
+      const allocation = await client.query<{
+        invoice_prefix: string;
+        allocated_number: string;
+      }>(
+        `INSERT INTO payment_settings (organization_id, next_invoice_number)
+         VALUES ($1, 2)
+         ON CONFLICT (organization_id) DO UPDATE SET
+           next_invoice_number =
+             GREATEST(COALESCE(payment_settings.next_invoice_number, 1), 1) + 1,
+           updated_at = CURRENT_TIMESTAMP
+         RETURNING COALESCE(invoice_prefix, 'INV-') AS invoice_prefix,
+                   next_invoice_number - 1 AS allocated_number`,
+        [organizationId],
+      );
+      const invoiceNumber =
+        `${allocation.rows[0].invoice_prefix}` +
+        `${allocation.rows[0].allocated_number}`.padStart(5, '0');
+      const inserted = await client.query<{ id: number }>(
+        `INSERT INTO invoices (
+           organization_id, invoice_number, contact_id,
+           customer_name, customer_email, customer_phone, customer_address,
+           due_date, subtotal, tax_amount, discount_amount, discount_type,
+           discount_value, total, amount_due, notes, terms_and_conditions,
+           created_by
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7, CURRENT_DATE + 30, $8, $9, $10,
+           $11, $12, $13, $13, $14, $15, $16
+         )
+         RETURNING id`,
+        [
+          organizationId, invoiceNumber, estimate.contact_id,
+          estimate.customer_name, estimate.customer_email,
+          estimate.customer_phone, estimate.customer_address,
+          estimate.subtotal, estimate.tax_amount, estimate.discount_amount,
+          estimate.discount_type, estimate.discount_value, estimate.total,
+          estimate.notes, estimate.terms_and_conditions, userId,
+        ],
+      );
+      const invoiceId = Number(inserted.rows[0].id);
+      await client.query(
+        `INSERT INTO invoice_items (
+           invoice_id, organization_id, product_id, name, description,
+           quantity, unit_price, tax_rate, tax_amount, total, sort_order
+         )
+         SELECT $3, ei.organization_id,
+                CASE WHEN p.id IS NULL THEN NULL ELSE ei.product_id END,
+                ei.name, ei.description, ei.quantity, ei.unit_price,
+                ei.tax_rate, ei.tax_amount, ei.total, ei.sort_order
+         FROM estimate_items ei
+         LEFT JOIN products p
+           ON p.id = ei.product_id AND p.organization_id = ei.organization_id
+         WHERE ei.estimate_id = $1 AND ei.organization_id = $2
+         ORDER BY ei.sort_order, ei.id`,
+        [estimateId, organizationId, invoiceId],
+      );
+      await client.query(
+        `UPDATE estimates
+         SET converted_invoice_id = $3,
+             status = 'accepted',
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [estimateId, organizationId, invoiceId],
+      );
+      return {
+        kind: 'converted',
+        invoiceId,
+        invoiceNumber,
+        replayed: false,
+      };
+    });
   }
 
   private async references(

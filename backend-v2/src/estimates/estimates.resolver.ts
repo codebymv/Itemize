@@ -10,6 +10,7 @@ import {
 import {
   DeleteEstimateResult,
   Estimate,
+  EstimateConversionResult,
   EstimatePage,
 } from './estimate.types';
 import { EstimatesService } from './estimates.service';
@@ -60,6 +61,19 @@ export class EstimatesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteEstimateResult> {
     return this.estimates.delete(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => EstimateConversionResult)
+  convertEstimateToInvoice(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<EstimateConversionResult> {
+    return this.estimates.convertToInvoice(
+      this.organizationId(),
+      id,
+      this.userId(),
+    );
   }
 
   private organizationId(): number {

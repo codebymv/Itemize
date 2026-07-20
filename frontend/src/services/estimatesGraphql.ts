@@ -266,3 +266,31 @@ export const deleteEstimateViaGraphql = async (
   }
   return { success: data.deleteEstimate.success };
 };
+
+export const convertEstimateToInvoiceViaGraphql = async (
+  id: number,
+  organizationId?: number,
+): Promise<{ invoice_id: number; invoice_number: string }> => {
+  const data = await graphqlMutationRequest<{
+    convertEstimateToInvoice: {
+      success: boolean;
+      invoiceId: number;
+      invoiceNumber: string;
+    };
+  }, { id: number }>(
+    `mutation ConvertEstimateToInvoice($id: Int!) {
+      convertEstimateToInvoice(id: $id) {
+        success invoiceId invoiceNumber
+      }
+    }`,
+    { id },
+    organizationId,
+  );
+  if (!data.convertEstimateToInvoice.success) {
+    throw new Error('GraphQL estimate conversion did not succeed');
+  }
+  return {
+    invoice_id: data.convertEstimateToInvoice.invoiceId,
+    invoice_number: data.convertEstimateToInvoice.invoiceNumber,
+  };
+};

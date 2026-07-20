@@ -178,3 +178,18 @@ export class DeleteEstimateResult {
   @Field()
   estimateNumber: string;
 }
+
+@ObjectType()
+export class EstimateConversionResult {
+  @Field()
+  success: boolean;
+
+  @Field(() => Int)
+  invoiceId: number;
+
+  @Field()
+  invoiceNumber: string;
+
+  @Field()
+  replayed: boolean;
+}

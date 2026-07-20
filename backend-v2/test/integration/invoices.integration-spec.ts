@@ -602,6 +602,241 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       .not.toBe(second.body.data.createEstimate.estimateNumber);
   });
 
+  it('converts an estimate once and converges concurrent retries on one invoice', async () => {
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, invoice_prefix, next_invoice_number
+       ) VALUES ($1, 'CONV-', 51)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         invoice_prefix = EXCLUDED.invoice_prefix,
+         next_invoice_number = EXCLUDED.next_invoice_number`,
+      [organizationId],
+    );
+    const source = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      {
+        input: {
+          ...estimateInput(),
+          customerPhone: '555-0100',
+          customerAddress: '123 Test Way',
+          notes: 'Converted notes',
+          termsAndConditions: 'Converted terms',
+        },
+      },
+    ).expect(200);
+    expect(source.body.errors).toBeUndefined();
+    const estimateId = Number(source.body.data.createEstimate.id);
+    const conversionMutation = `mutation ConvertEstimate($id: Int!) {
+      convertEstimateToInvoice(id: $id) {
+        success invoiceId invoiceNumber replayed
+      }
+    }`;
+
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      conversionMutation,
+      { id: estimateId },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      conversionMutation,
+      { id: estimateId },
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions).toMatchObject({
+      code: 'NOT_FOUND',
+      reason: 'ESTIMATE_NOT_FOUND',
+    });
+
+    const [first, second] = await Promise.all([
+      graphql(
+        memberToken, organizationId, conversionMutation, { id: estimateId },
+      ),
+      graphql(
+        memberToken, organizationId, conversionMutation, { id: estimateId },
+      ),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    const results = [
+      first.body.data.convertEstimateToInvoice,
+      second.body.data.convertEstimateToInvoice,
+    ];
+    expect(results.map((result) => result.replayed).sort()).toEqual([false, true]);
+    expect(new Set(results.map((result) => Number(result.invoiceId))).size).toBe(1);
+    expect(new Set(results.map((result) => result.invoiceNumber))).toEqual(
+      new Set(['CONV-00051']),
+    );
+    const invoiceId = Number(results[0].invoiceId);
+
+    const state = await pool.query(
+      `SELECT
+         e.status AS estimate_status, e.converted_invoice_id,
+         i.invoice_number, i.contact_id, i.customer_name, i.customer_email,
+         i.customer_phone, i.customer_address, i.issue_date = CURRENT_DATE AS issued_today,
+         i.due_date = CURRENT_DATE + 30 AS due_in_thirty_days,
+         i.subtotal::text, i.tax_amount::text, i.discount_amount::text,
+         i.discount_type, i.discount_value::text, i.total::text,
+         i.amount_due::text, i.notes, i.terms_and_conditions, i.created_by
+       FROM estimates e
+       JOIN invoices i
+         ON i.id = e.converted_invoice_id
+        AND i.organization_id = e.organization_id
+       WHERE e.id = $1 AND e.organization_id = $2`,
+      [estimateId, organizationId],
+    );
+    expect(state.rows[0]).toMatchObject({
+      estimate_status: 'accepted',
+      converted_invoice_id: invoiceId,
+      invoice_number: 'CONV-00051',
+      contact_id: contactId,
+      customer_name: 'Ada Estimate',
+      customer_email: 'ada@example.com',
+      customer_phone: '555-0100',
+      customer_address: '123 Test Way',
+      issued_today: true,
+      due_in_thirty_days: true,
+      subtotal: '25.00',
+      tax_amount: '2.00',
+      discount_amount: '1.00',
+      discount_type: 'fixed',
+      discount_value: '1.00',
+      total: '26.00',
+      amount_due: '26.00',
+      notes: 'Converted notes',
+      terms_and_conditions: 'Converted terms',
+      created_by: memberId,
+    });
+    const items = await pool.query(
+      `SELECT product_id, name, quantity::text, unit_price::text,
+              tax_rate::text, tax_amount::text, total::text, sort_order
+       FROM invoice_items
+       WHERE invoice_id = $1 AND organization_id = $2
+       ORDER BY sort_order, id`,
+      [invoiceId, organizationId],
+    );
+    expect(items.rows).toEqual([{
+      product_id: productId,
+      name: 'Consulting',
+      quantity: '2.00',
+      unit_price: '12.50',
+      tax_rate: '8.00',
+      tax_amount: '2.00',
+      total: '27.00',
+      sort_order: 0,
+    }]);
+    const allocation = await pool.query<{ next_invoice_number: number }>(
+      `SELECT next_invoice_number FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(Number(allocation.rows[0].next_invoice_number)).toBe(52);
+
+    const replay = await graphql(
+      memberToken, organizationId, conversionMutation, { id: estimateId },
+    ).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.convertEstimateToInvoice).toEqual({
+      success: true,
+      invoiceId,
+      invoiceNumber: 'CONV-00051',
+      replayed: true,
+    });
+    const retained = await request(legacyApp)
+      .get(`/api/invoices/${invoiceId}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(retained.body.data).toMatchObject({
+      id: invoiceId,
+      invoice_number: 'CONV-00051',
+      total: '26.00',
+    });
+
+    const corruptedSource = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      { input: estimateInput() },
+    ).expect(200);
+    const corruptedEstimateId = Number(
+      corruptedSource.body.data.createEstimate.id,
+    );
+    const foreignInvoice = await pool.query<{ id: number }>(
+      `INSERT INTO invoices (
+         organization_id, invoice_number, due_date, total, amount_due, created_by
+       ) VALUES ($1, $2, CURRENT_DATE + 30, 0, 0, $3)
+       RETURNING id`,
+      [
+        outsiderOrganizationId,
+        `FOREIGN-CONVERSION-${corruptedEstimateId}`,
+        outsiderId,
+      ],
+    );
+    await pool.query(
+      `UPDATE estimates SET converted_invoice_id = $3
+       WHERE id = $1 AND organization_id = $2`,
+      [
+        corruptedEstimateId,
+        organizationId,
+        Number(foreignInvoice.rows[0].id),
+      ],
+    );
+    const corrupted = await graphql(
+      memberToken,
+      organizationId,
+      conversionMutation,
+      { id: corruptedEstimateId },
+    ).expect(200);
+    expect(corrupted.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'ESTIMATE_CONVERSION_INVALID_STATE',
+    });
+
+    const rollbackSource = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      { input: estimateInput() },
+    ).expect(200);
+    const rollbackEstimateId = Number(rollbackSource.body.data.createEstimate.id);
+    await pool.query(
+      `UPDATE estimates SET total = 100000000.00
+       WHERE id = $1 AND organization_id = $2`,
+      [rollbackEstimateId, organizationId],
+    );
+    const failed = await graphql(
+      memberToken,
+      organizationId,
+      conversionMutation,
+      { id: rollbackEstimateId },
+    ).expect(200);
+    expect(failed.body.errors[0].extensions.code).toBe('INTERNAL_SERVER_ERROR');
+    const rolledBack = await pool.query(
+      `SELECT status, converted_invoice_id
+       FROM estimates
+       WHERE id = $1 AND organization_id = $2`,
+      [rollbackEstimateId, organizationId],
+    );
+    expect(rolledBack.rows[0]).toEqual({
+      status: 'draft',
+      converted_invoice_id: null,
+    });
+    const allocationAfterFailures = await pool.query<{
+      next_invoice_number: number;
+    }>(
+      `SELECT next_invoice_number FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(Number(allocationAfterFailures.rows[0].next_invoice_number)).toBe(52);
+  });
+
   const recurringMutation = `
     mutation CreateRecurringInvoice($input: CreateRecurringInvoiceInput!) {
       createRecurringInvoice(input: $input) {

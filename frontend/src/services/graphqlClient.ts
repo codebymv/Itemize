@@ -129,6 +129,9 @@ export const isEstimateGraphqlReadsEnabled = (): boolean =>
 export const isEstimateGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_ESTIMATE_MUTATIONS_GRAPHQL === 'true';
 
+export const isEstimateGraphqlConversionEnabled = (): boolean =>
+  import.meta.env.VITE_ESTIMATE_CONVERSION_GRAPHQL === 'true';
+
 export const isRecurringInvoiceGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_RECURRING_INVOICE_READS_GRAPHQL === 'true';
 

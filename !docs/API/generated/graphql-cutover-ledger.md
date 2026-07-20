@@ -176,7 +176,7 @@
 | GET | `/api/invoices` | 1 | 5 | graphql-query | medium | billing / InvoicesModule / invoices |
 | POST | `/api/invoices` | 1 | 13 | graphql-mutation | medium | billing / InvoicesModule / createInvoice |
 | DELETE | `/api/invoices/:id` | 1 | 9 | graphql-mutation | medium | billing / InvoicesModule / deleteInvoice |
-| GET | `/api/invoices/:id` | 1 | 5 | graphql-query | medium | billing / InvoicesModule / invoice |
+| GET | `/api/invoices/:id` | 1 | 6 | graphql-query | medium | billing / InvoicesModule / invoice |
 | PUT | `/api/invoices/:id` | 1 | 3 | graphql-mutation | medium | billing / InvoicesModule / updateInvoice |
 | POST | `/api/invoices/:id/create-payment-link` | 1 | 0 | graphql-mutation | high | billing / InvoicesModule / createInvoicePaymentLink |
 | GET | `/api/invoices/:id/pdf` | 0 | 0 | retain-http | high | billing / InvoicesModule / invoicePdf |
