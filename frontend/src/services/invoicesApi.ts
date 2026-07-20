@@ -9,6 +9,8 @@ import {
     isProductGraphqlReadsEnabled,
     isInvoiceBusinessGraphqlMutationsEnabled,
     isInvoiceBusinessGraphqlReadsEnabled,
+    isInvoiceSettingsGraphqlMutationsEnabled,
+    isInvoiceSettingsGraphqlReadsEnabled,
     isInvoiceGraphqlMutationsEnabled,
     isInvoiceGraphqlReadsEnabled,
     isPaymentGraphqlMutationsEnabled,
@@ -36,6 +38,10 @@ import {
     updateInvoiceViaGraphql,
 } from './invoicesGraphql';
 import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoicesGraphql';
+import {
+    getInvoiceSettingsViaGraphql,
+    updateInvoiceSettingsViaGraphql,
+} from './invoiceSettingsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -490,6 +496,9 @@ export const createRecurringTemplateFromInvoice = async (
 // ======================
 
 export const getPaymentSettings = async (organizationId?: number): Promise<PaymentSettings> => {
+    if (isInvoiceSettingsGraphqlReadsEnabled()) {
+        return getInvoiceSettingsViaGraphql(organizationId);
+    }
     const response = await api.get('/api/invoices/settings', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -500,6 +509,9 @@ export const updatePaymentSettings = async (
     settings: Partial<PaymentSettings>,
     organizationId?: number
 ): Promise<PaymentSettings> => {
+    if (isInvoiceSettingsGraphqlMutationsEnabled()) {
+        return updateInvoiceSettingsViaGraphql(settings, organizationId);
+    }
     const response = await api.put('/api/invoices/settings', settings, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

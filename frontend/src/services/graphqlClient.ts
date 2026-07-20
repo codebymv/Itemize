@@ -117,6 +117,12 @@ export const isInvoiceBusinessGraphqlReadsEnabled = (): boolean =>
 export const isInvoiceBusinessGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_BUSINESS_MUTATIONS_GRAPHQL === 'true';
 
+export const isInvoiceSettingsGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_INVOICE_SETTINGS_READS_GRAPHQL === 'true';
+
+export const isInvoiceSettingsGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_INVOICE_SETTINGS_MUTATIONS_GRAPHQL === 'true';
+
 export const isInvoiceGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_READS_GRAPHQL === 'true';
 

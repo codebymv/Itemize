@@ -607,16 +607,18 @@
       "owner": "billing",
       "targetModule": "InvoiceSettingsModule",
       "targetOperation": "invoiceSettings",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Returns selected-organization settings or virtual retained defaults without creating a row; provider-owned Stripe fields and the server-owned logo URL are read-only."
     },
     "PUT /api/invoices/settings": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "InvoiceSettingsModule",
       "targetOperation": "updateInvoiceSettings",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "CSRF-protected partial writes validate bounded settings, preserve omitted fields, serialize on the shared invoice-number row, reject counter regression and exact-number collision, and never accept Stripe or logo fields."
     },
     "DELETE /api/invoices/settings/logo": {
       "disposition": "graphql-mutation",

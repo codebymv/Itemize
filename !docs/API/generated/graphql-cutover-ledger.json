@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 388,
     "operationsWithFrontendConsumers": 367,
-    "operationsWithBackendTests": 200,
+    "operationsWithBackendTests": 201,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -6582,7 +6582,7 @@
           "path": "/api/invoices",
           "rawPath": "/api/invoices",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 276,
+          "line": 282,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6647,7 +6647,7 @@
           "path": "/api/invoices",
           "rawPath": "/api/invoices",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 334,
+          "line": 340,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6760,7 +6760,7 @@
           "path": "/api/invoices/:invoiceId",
           "rawPath": "/api/invoices/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 361,
+          "line": 367,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6849,7 +6849,7 @@
           "path": "/api/invoices/:invoiceId",
           "rawPath": "/api/invoices/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 305,
+          "line": 311,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6859,13 +6859,13 @@
           "method": "GET",
           "path": "/api/invoices/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 253
+          "line": 259
         },
         {
           "method": "GET",
           "path": "/api/invoices/:invoiceId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 754
+          "line": 934
         },
         {
           "method": "GET",
@@ -6920,7 +6920,7 @@
           "path": "/api/invoices/:invoiceId",
           "rawPath": "/api/invoices/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 348,
+          "line": 354,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6973,7 +6973,7 @@
           "path": "/api/invoices/:invoiceId/create-payment-link",
           "rawPath": "/api/invoices/${invoiceId}/create-payment-link",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 450,
+          "line": 456,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7031,7 +7031,7 @@
           "path": "/api/invoices/:invoiceId/record-payment",
           "rawPath": "/api/invoices/${invoiceId}/record-payment",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 440,
+          "line": 446,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7132,7 +7132,7 @@
           "path": "/api/invoices/:invoiceId/send",
           "rawPath": "/api/invoices/${invoiceId}/send",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 385,
+          "line": 391,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7203,7 +7203,7 @@
           "path": "/api/invoices/businesses",
           "rawPath": "/api/invoices/businesses",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 539,
+          "line": 551,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7237,7 +7237,7 @@
           "path": "/api/invoices/businesses",
           "rawPath": "/api/invoices/businesses",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 572,
+          "line": 584,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7278,7 +7278,7 @@
           "path": "/api/invoices/businesses/:businessId",
           "rawPath": "/api/invoices/businesses/${businessId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 599,
+          "line": 611,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7312,7 +7312,7 @@
           "path": "/api/invoices/businesses/:businessId",
           "rawPath": "/api/invoices/businesses/${businessId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 559,
+          "line": 571,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7346,7 +7346,7 @@
           "path": "/api/invoices/businesses/:businessId",
           "rawPath": "/api/invoices/businesses/${businessId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 586,
+          "line": 598,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7380,7 +7380,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 625,
+          "line": 637,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7414,7 +7414,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 612,
+          "line": 624,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7455,7 +7455,7 @@
           "path": "/api/invoices/email/preview",
           "rawPath": "/api/invoices/email/preview",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 410,
+          "line": 416,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7706,7 +7706,7 @@
           "method": "GET",
           "path": "/api/invoices/estimates/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 456
+          "line": 636
         },
         {
           "method": "GET",
@@ -7970,7 +7970,7 @@
           "path": "/api/invoices/products",
           "rawPath": "/api/invoices/products",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 212,
+          "line": 218,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8004,7 +8004,7 @@
           "path": "/api/invoices/products",
           "rawPath": "/api/invoices/products",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 226,
+          "line": 232,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8038,7 +8038,7 @@
           "path": "/api/invoices/products/:productId",
           "rawPath": "/api/invoices/products/${productId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 253,
+          "line": 259,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8072,7 +8072,7 @@
           "path": "/api/invoices/products/:productId",
           "rawPath": "/api/invoices/products/${productId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 240,
+          "line": 246,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8218,19 +8218,19 @@
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 891
+          "line": 1071
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1069
+          "line": 1249
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:templateId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1239
+          "line": 1419
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8386,7 +8386,7 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/pause",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 925
+          "line": 1105
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8451,7 +8451,7 @@
           "path": "/api/invoices/recurring/from-invoice/:invoiceId",
           "rawPath": "/api/invoices/recurring/from-invoice/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 473,
+          "line": 479,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8519,20 +8519,27 @@
           "path": "/api/invoices/settings",
           "rawPath": "/api/invoices/settings",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 493,
+          "line": 502,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/settings",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 518
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
       "owner": "billing",
       "targetOperation": "invoiceSettings",
       "targetModule": "InvoiceSettingsModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Returns selected-organization settings or virtual retained defaults without creating a row; provider-owned Stripe fields and the server-owned logo URL are read-only.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8553,7 +8560,7 @@
           "path": "/api/invoices/settings",
           "rawPath": "/api/invoices/settings",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 503,
+          "line": 515,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8572,8 +8579,8 @@
       "owner": "billing",
       "targetOperation": "updateInvoiceSettings",
       "targetModule": "InvoiceSettingsModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected partial writes validate bounded settings, preserve omitted fields, serialize on the shared invoice-number row, reject counter regression and exact-number collision, and never accept Stripe or logo fields.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8594,7 +8601,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 525,
+          "line": 537,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8628,7 +8635,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 515,
+          "line": 527,
           "client": "api",
           "literalInterpolation": false
         }

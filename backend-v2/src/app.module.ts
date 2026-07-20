@@ -19,6 +19,7 @@ import { EstimatesModule } from './estimates/estimates.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
+import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
@@ -63,6 +64,7 @@ const observabilityPlugins = [
     TagsModule,
     FormsModule,
     InvoiceBusinessesModule,
+    InvoiceSettingsModule,
     InvoicesModule,
     OnboardingModule,
     FoundationModule,

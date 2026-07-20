@@ -128,6 +128,8 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
 
     const createCrudRouter =
       require('../../../backend/src/routes/invoices/crud.routes');
+    const createSettingsRouter =
+      require('../../../backend/src/routes/invoices/settings.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const { requireOrganization } =
       require('../../../backend/src/middleware/organization')(pool);
@@ -145,6 +147,10 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     legacyApp.use(
       '/api/invoices/recurring',
       createRecurringRouter(pool, authenticateJWT),
+    );
+    legacyApp.use(
+      '/api/invoices',
+      createSettingsRouter({ pool, authenticateJWT, requireOrganization }),
     );
     legacyApp.use(
       '/api/invoices',
@@ -405,6 +411,180 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(second.body.errors).toBeUndefined();
     expect(first.body.data.createInvoice.invoiceNumber)
       .not.toBe(second.body.data.createInvoice.invoiceNumber);
+  });
+
+  it('updates invoice settings safely and serializes against number allocation', async () => {
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, invoice_prefix, next_invoice_number,
+         default_payment_terms, default_tax_rate, default_currency
+       ) VALUES ($1, 'SET-', 900, 30, 10, 'USD')
+       ON CONFLICT (organization_id) DO UPDATE SET
+         invoice_prefix = EXCLUDED.invoice_prefix,
+         next_invoice_number = EXCLUDED.next_invoice_number,
+         default_payment_terms = EXCLUDED.default_payment_terms,
+         default_tax_rate = EXCLUDED.default_tax_rate,
+         default_currency = EXCLUDED.default_currency`,
+      [organizationId],
+    );
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, invoice_prefix, next_invoice_number
+       ) VALUES ($1, 'OTHER-', 33)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         invoice_prefix = EXCLUDED.invoice_prefix,
+         next_invoice_number = EXCLUDED.next_invoice_number`,
+      [outsiderOrganizationId],
+    );
+    const settingsFields = `
+      id organizationId stripeAccountId stripeConnected invoicePrefix
+      nextInvoiceNumber defaultPaymentTerms defaultNotes defaultTerms
+      defaultTaxRate taxId businessName businessAddress businessPhone
+      businessEmail logoUrl defaultCurrency createdAt updatedAt
+    `;
+    const settingsQuery = `query Settings { invoiceSettings { ${settingsFields} } }`;
+    const initial = await graphql(
+      memberToken,
+      organizationId,
+      settingsQuery,
+      {},
+      false,
+    ).expect(200);
+    expect(initial.body.data.invoiceSettings).toMatchObject({
+      organizationId,
+      invoicePrefix: 'SET-',
+      nextInvoiceNumber: 900,
+      defaultTaxRate: '10.00',
+    });
+    const outsider = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      settingsQuery,
+      {},
+      false,
+    ).expect(200);
+    expect(outsider.body.data.invoiceSettings).toMatchObject({
+      organizationId: outsiderOrganizationId,
+      invoicePrefix: 'OTHER-',
+      nextInvoiceNumber: 33,
+    });
+
+    const updateSettings = `
+      mutation UpdateSettings($input: UpdateInvoiceSettingsInput!) {
+        updateInvoiceSettings(input: $input) { ${settingsFields} }
+      }
+    `;
+    const settingsInput = {
+      invoicePrefix: 'SET-',
+      nextInvoiceNumber: 901,
+      defaultPaymentTerms: 14,
+      defaultNotes: null,
+      defaultTerms: 'Net 14',
+      defaultTaxRate: '8.25',
+      taxId: 'TAX-123',
+      businessName: 'Settings Studio',
+      businessAddress: 'Phoenix, AZ',
+      businessPhone: '555-0100',
+      businessEmail: 'billing@example.com',
+      defaultCurrency: 'usd',
+    };
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      updateSettings,
+      { input: settingsInput },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const updated = await graphql(
+      memberToken,
+      organizationId,
+      updateSettings,
+      { input: settingsInput },
+    ).expect(200);
+    expect(updated.body.errors).toBeUndefined();
+    expect(updated.body.data.updateInvoiceSettings).toMatchObject({
+      organizationId,
+      invoicePrefix: 'SET-',
+      nextInvoiceNumber: 901,
+      defaultPaymentTerms: 14,
+      defaultNotes: null,
+      defaultTerms: 'Net 14',
+      defaultTaxRate: '8.25',
+      businessEmail: 'billing@example.com',
+      defaultCurrency: 'USD',
+    });
+    const retained = await request(legacyApp)
+      .get('/api/invoices/settings')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(retained.body.data).toMatchObject({
+      invoice_prefix: 'SET-',
+      next_invoice_number: 901,
+      default_payment_terms: 14,
+      default_tax_rate: '8.25',
+      business_email: 'billing@example.com',
+      default_currency: 'USD',
+    });
+
+    const regression = await graphql(
+      memberToken,
+      organizationId,
+      updateSettings,
+      { input: { nextInvoiceNumber: 900 } },
+    ).expect(200);
+    expect(regression.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'INVOICE_COUNTER_REGRESSION',
+      current: 901,
+    });
+    await pool.query(
+      `INSERT INTO invoices (
+         organization_id, invoice_number, due_date, total, amount_due, created_by
+       ) VALUES ($1, 'SET-00902', CURRENT_DATE, 0, 0, $2)`,
+      [organizationId, memberId],
+    );
+    const collision = await graphql(
+      memberToken,
+      organizationId,
+      updateSettings,
+      { input: { nextInvoiceNumber: 902 } },
+    ).expect(200);
+    expect(collision.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'INVOICE_NUMBER_ALREADY_EXISTS',
+    });
+
+    const [settingsRace, invoiceRace] = await Promise.all([
+      graphql(
+        memberToken,
+        organizationId,
+        updateSettings,
+        { input: { nextInvoiceNumber: 950 } },
+      ),
+      graphql(memberToken, organizationId, createMutation, { input: input() }),
+    ]);
+    expect(settingsRace.body.errors).toBeUndefined();
+    expect(invoiceRace.body.errors).toBeUndefined();
+    const allocated = invoiceRace.body.data.createInvoice.invoiceNumber;
+    expect(['SET-00901', 'SET-00950']).toContain(allocated);
+    const final = await pool.query<{
+      next_invoice_number: number;
+      invoice_count: number;
+    }>(
+      `SELECT ps.next_invoice_number,
+              (SELECT COUNT(*) FROM invoices i
+               WHERE i.organization_id = ps.organization_id
+                 AND i.invoice_number = $2)::int AS invoice_count
+       FROM payment_settings ps
+       WHERE ps.organization_id = $1`,
+      [organizationId, allocated],
+    );
+    expect(Number(final.rows[0].next_invoice_number)).toBe(
+      allocated === 'SET-00950' ? 951 : 950,
+    );
+    expect(final.rows[0].invoice_count).toBe(1);
   });
 
   const estimateMutation = `

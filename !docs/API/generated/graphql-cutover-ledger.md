@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 388
 - Operations with frontend consumers: 367
-- Operations referenced by backend tests: 200
+- Operations referenced by backend tests: 201
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -214,7 +214,7 @@
 | POST | `/api/invoices/recurring/:id/resume` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / resumeRecurringInvoice |
 | POST | `/api/invoices/recurring/from-invoice/:invoiceId` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoiceFromInvoice |
 | GET | `/api/invoices/recurring/preview-invoice-number` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / previewRecurringInvoiceNumber |
-| GET | `/api/invoices/settings` | 1 | 0 | graphql-query | high | billing / InvoiceSettingsModule / invoiceSettings |
+| GET | `/api/invoices/settings` | 1 | 1 | graphql-query | high | billing / InvoiceSettingsModule / invoiceSettings |
 | PUT | `/api/invoices/settings` | 1 | 1 | graphql-mutation | high | billing / InvoiceSettingsModule / updateInvoiceSettings |
 | DELETE | `/api/invoices/settings/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceSettingsModule / removeInvoiceSettingsLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
