@@ -22,6 +22,7 @@ import {
 import {
     createInvoiceBusinessViaGraphql,
     deleteInvoiceBusinessViaGraphql,
+    removeInvoiceBusinessLogoViaGraphql,
     getInvoiceBusinessesViaGraphql,
     getInvoiceBusinessViaGraphql,
     updateInvoiceBusinessViaGraphql,
@@ -46,6 +47,7 @@ import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoices
 import {
     getInvoiceSettingsViaGraphql,
     updateInvoiceSettingsViaGraphql,
+    removeInvoiceSettingsLogoViaGraphql,
 } from './invoiceSettingsGraphql';
 import { previewInvoiceEmailViaGraphql } from './invoiceEmailPreviewGraphql';
 
@@ -549,6 +551,9 @@ export const uploadLogo = async (
 };
 
 export const deleteLogo = async (organizationId?: number): Promise<{ success: boolean }> => {
+    if (isInvoiceSettingsGraphqlMutationsEnabled()) {
+        return removeInvoiceSettingsLogoViaGraphql(organizationId);
+    }
     const response = await api.delete('/api/invoices/settings/logo', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -649,6 +654,9 @@ export const deleteBusinessLogo = async (
     businessId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
+        return removeInvoiceBusinessLogoViaGraphql(businessId, organizationId);
+    }
     const response = await api.delete(`/api/invoices/businesses/${businessId}/logo`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

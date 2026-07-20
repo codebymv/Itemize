@@ -46,6 +46,10 @@ export type InvoiceSettingsWriteOutcome =
   | { kind: 'counter-regression'; current: number }
   | { kind: 'invoice-number-conflict'; invoiceNumber: string };
 
+export type InvoiceSettingsLogoRemoval = {
+  cleanupQueued: boolean;
+};
+
 const selection = `
   id, organization_id, stripe_account_id, stripe_publishable_key,
   stripe_connected, stripe_connected_at, invoice_prefix,
@@ -158,6 +162,47 @@ export class InvoiceSettingsRepository {
         [organizationId],
       );
       return { kind: 'saved', row: saved.rows[0] };
+    });
+  }
+
+  async removeLogo(organizationId: number): Promise<InvoiceSettingsLogoRemoval> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{ logo_url: string | null }>(
+        `SELECT logo_url FROM payment_settings
+         WHERE organization_id = $1 FOR UPDATE`,
+        [organizationId],
+      );
+      const logoUrl = locked.rows[0]?.logo_url ?? null;
+      let cleanupQueued = false;
+      if (logoUrl) {
+        const queued = await client.query(
+          `INSERT INTO invoice_logo_deletion_jobs (
+             organization_id, scope, resource_id, logo_url
+           ) VALUES ($1, 'settings', NULL, $2)
+           ON CONFLICT (organization_id, logo_url) DO UPDATE SET
+             scope = EXCLUDED.scope,
+             resource_id = EXCLUDED.resource_id,
+             status = 'queued',
+             attempt_count = 0,
+             next_attempt_at = CURRENT_TIMESTAMP,
+             lease_expires_at = NULL,
+             claimed_by = NULL,
+             last_error = NULL,
+             deleted_at = NULL,
+             updated_at = CURRENT_TIMESTAMP
+           WHERE invoice_logo_deletion_jobs.status IN ('deleted', 'dead_letter')
+           RETURNING id`,
+          [organizationId, logoUrl],
+        );
+        cleanupQueued = queued.rows.length === 1;
+      }
+      await client.query(
+        `UPDATE payment_settings
+         SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE organization_id = $1`,
+        [organizationId],
+      );
+      return { cleanupQueued };
     });
   }
 

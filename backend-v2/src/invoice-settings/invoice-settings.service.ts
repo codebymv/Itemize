@@ -8,6 +8,7 @@ import {
   InvoiceSettingsWriteOutcome,
 } from './invoice-settings.repository';
 import { InvoiceSettings } from './invoice-settings.types';
+import { InvoiceLogoRemovalResult } from '../invoice-logo-cleanup/invoice-logo-cleanup.types';
 
 const TAX_RATE = /^(?:(?:0|[1-9]\d?)(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/;
 const PREFIX = /^[A-Za-z0-9._\/-]{1,10}$/;
@@ -94,6 +95,11 @@ export class InvoiceSettingsService {
       }),
     };
     return this.saved(await this.settings.update(organizationId, values));
+  }
+
+  async removeLogo(organizationId: number): Promise<InvoiceLogoRemovalResult> {
+    const result = await this.settings.removeLogo(organizationId);
+    return { success: true, cleanupQueued: result.cleanupQueued };
   }
 
   private saved(outcome: InvoiceSettingsWriteOutcome): InvoiceSettings {

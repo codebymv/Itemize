@@ -5,6 +5,7 @@ import {
   deleteInvoiceBusinessViaGraphql,
   getInvoiceBusinessesViaGraphql,
   getInvoiceBusinessViaGraphql,
+  removeInvoiceBusinessLogoViaGraphql,
   updateInvoiceBusinessViaGraphql,
 } from './invoiceBusinessesGraphql';
 import {
@@ -42,6 +43,7 @@ const response = (payload: unknown): Response =>
 
 describe('invoice business GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('business-csrf');
@@ -150,5 +152,22 @@ describe('invoice business GraphQL consumer', () => {
       input: { phone: null, address: 'Phoenix, AZ' },
     });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(3);
+  });
+
+  it('removes a logo through a CSRF-protected mutation', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        removeInvoiceBusinessLogo: { success: true, cleanupQueued: true },
+      },
+    }));
+    await expect(removeInvoiceBusinessLogoViaGraphql(8, 4)).resolves.toEqual({
+      success: true,
+    });
+    const body = JSON.parse(String(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body,
+    ));
+    expect(body.query).toContain('mutation RemoveInvoiceBusinessLogo');
+    expect(body.variables).toEqual({ id: 8 });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
   });
 });

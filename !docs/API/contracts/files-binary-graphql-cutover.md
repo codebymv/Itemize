@@ -1,8 +1,8 @@
 # File, binary, and bulk-transfer cutover contract
 
-**Status:** Retained HTTP target implemented for contact transfer; remaining file-service boundaries characterized
+**Status:** Retained HTTP target implemented for contact transfer; durable invoice-logo deletion implemented; remaining file-service boundaries characterized
 
-**Evidence date:** 2026-07-17
+**Evidence date:** 2026-07-20
 
 ## Decision
 
@@ -19,7 +19,7 @@ Never persist or return a permanent public URL for a private signature document.
 | Completed signature download | Authenticated HTTP attachment | Tenant-owned completed artifact only; safe filename and the same private delivery/storage allowlist |
 | Public signing PDF | Rate-limited signing capability over HTTP | Active, unexpired recipient/document capability first; private/no-store stream or attachment; no arbitrary URL proxy and no permanent object URL |
 | Invoice PDF | Authenticated HTTP binary response | Organization-owned invoice; preserve generation semantics and attachment headers outside GraphQL |
-| Business/settings logos | Authenticated multipart HTTP for writes; public HTTP for bytes | One image, 2 MiB maximum, PNG/JPEG/GIF/WebP magic bytes, safe server-selected extension/name; JSON metadata writes cannot select `logo_url` |
+| Business/settings logos | Authenticated multipart HTTP for uploads; CSRF-protected GraphQL for deletion; public HTTP for bytes | One image, 2 MiB maximum, PNG/JPEG/GIF/WebP magic bytes, safe server-selected extension/name; JSON metadata writes cannot select `logo_url`; deletion atomically clears metadata and enqueues exact server-owned cleanup |
 | Contact export | Authenticated HTTP CSV attachment | Organization filters, deterministic newest-first order, 50,000-row rejection boundary, quoted cells, formula neutralization, private/no-store and `nosniff` |
 | Contact import | Authenticated, CSRF-protected HTTP JSON bulk request despite the legacy `/csv` name | 1 MiB body, non-empty object array, 10,000 rows, 20 columns, strict field validation and duplicate policy, at most 100 returned row errors with total/truncation metadata, organization lock, atomic plan-limit enforcement, and a 30-second query/upstream timeout |
 
@@ -36,6 +36,8 @@ Never persist or return a permanent public URL for a private signature document.
 The server validates authorization and the owning draft/template before accepting the stored reference. An invalid, foreign, or missing owner leaves no local temporary upload behind. Replacing or deleting a file must validate the old key against the same namespace before deleting it.
 
 Database transactions cannot atomically commit object-store side effects. The NestJS target must use a staged object followed by a locked metadata commit and idempotent finalize/cleanup work. Failed commits, abandoned upload intents, replaced objects, and deleted drafts require a retryable garbage-collection path. Legal source/signed artifacts attached to sent or completed documents are immutable and follow the evidence-retention policy.
+
+Invoice-logo removal now follows that split boundary. Migration `037_invoice_logo_deletion_jobs` commits the tenant, scope, owner ID, and exact former URL with the metadata clear. Its leased one-shot worker preserves URLs still referenced by another tenant row and allows the terminal receipt to be requeued when the final reference is later removed. It accepts only a safe filename under the local public logo directory or an HTTPS object in the configured bucket's exact S3 host and `logos/` prefix. Missing local objects converge on success; provider errors retry with bounded backoff; malformed, foreign, or unsupported URLs dead-letter without an outbound request or filesystem traversal.
 
 Persist at least byte length, normalized media type, SHA-256, storage key, uploader, organization, creation time, and lifecycle state. Log stable object/document IDs, never capabilities, raw storage URLs, or file contents.
 

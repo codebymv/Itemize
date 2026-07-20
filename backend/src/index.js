@@ -499,7 +499,7 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '036_invoice_payment_link_intents'
+                    WHERE version = '037_invoice_logo_deletion_jobs'
                 ) AS has_required_migration
             `);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {

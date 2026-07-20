@@ -8,6 +8,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { InvoiceLogoCleanupService } from '../../src/invoice-logo-cleanup/invoice-logo-cleanup.service';
 
 describe('Invoice business GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -19,6 +20,7 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
   let outsiderOrganizationId: number;
   let memberToken: string;
   let outsiderToken: string;
+  let logoCleanupService: InvoiceLogoCleanupService;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -87,6 +89,7 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       .overrideProvider(PG_POOL)
       .useValue(pool)
       .compile();
+    logoCleanupService = moduleRef.get(InvoiceLogoCleanupService);
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
       logger: false,
@@ -312,6 +315,153 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
         (business: { id: number }) => business.id,
       ),
     ).not.toContain(id);
+  });
+
+  it('clears business logos atomically and durably cleans server-owned storage', async () => {
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO businesses (organization_id, name, logo_url)
+       VALUES ($1, 'Logo cleanup business', '/uploads/logos/integration-missing.png')
+       RETURNING id`,
+      [organizationId],
+    );
+    const id = Number(inserted.rows[0].id);
+    const shared = await pool.query<{ id: number }>(
+      `INSERT INTO businesses (organization_id, name, logo_url)
+       VALUES ($1, 'Shared logo business', '/uploads/logos/integration-missing.png')
+       RETURNING id`,
+      [organizationId],
+    );
+    const sharedId = Number(shared.rows[0].id);
+    const mutation = `mutation RemoveLogo($id: Int!) {
+      removeInvoiceBusinessLogo(id: $id) { success cleanupQueued }
+    }`;
+
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { id },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      mutation,
+      { id },
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const removed = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { id },
+    ).expect(200);
+    expect(removed.body.errors).toBeUndefined();
+    expect(removed.body.data.removeInvoiceBusinessLogo).toEqual({
+      success: true,
+      cleanupQueued: true,
+    });
+    const persisted = await pool.query<{ logo_url: string | null }>(
+      'SELECT logo_url FROM businesses WHERE id = $1',
+      [id],
+    );
+    expect(persisted.rows[0].logo_url).toBeNull();
+    const queued = await pool.query<{ id: number; logo_url: string; status: string }>(
+      `SELECT id, logo_url, status FROM invoice_logo_deletion_jobs
+       WHERE organization_id = $1 AND scope = 'business' AND resource_id = $2`,
+      [organizationId, id],
+    );
+    expect(queued.rows).toHaveLength(1);
+    expect(queued.rows[0]).toMatchObject({
+      logo_url: '/uploads/logos/integration-missing.png',
+      status: 'queued',
+    });
+
+    await logoCleanupService.runDue(100);
+    const cleaned = await pool.query<{ status: string; attempt_count: number }>(
+      'SELECT status, attempt_count FROM invoice_logo_deletion_jobs WHERE id = $1',
+      [queued.rows[0].id],
+    );
+    expect(cleaned.rows[0]).toMatchObject({ status: 'deleted', attempt_count: 1 });
+    const sharedReference = await pool.query<{ logo_url: string | null }>(
+      'SELECT logo_url FROM businesses WHERE id = $1',
+      [sharedId],
+    );
+    expect(sharedReference.rows[0].logo_url).toBe(
+      '/uploads/logos/integration-missing.png',
+    );
+
+    const lastReference = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { id: sharedId },
+    ).expect(200);
+    expect(lastReference.body.data.removeInvoiceBusinessLogo).toEqual({
+      success: true,
+      cleanupQueued: true,
+    });
+    await logoCleanupService.runDue(100);
+    const requeued = await pool.query<{
+      resource_id: number;
+      status: string;
+      attempt_count: number;
+    }>(
+      `SELECT resource_id, status, attempt_count
+       FROM invoice_logo_deletion_jobs WHERE id = $1`,
+      [queued.rows[0].id],
+    );
+    expect(requeued.rows[0]).toMatchObject({
+      resource_id: sharedId,
+      status: 'deleted',
+      attempt_count: 1,
+    });
+
+    const replay = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { id },
+    ).expect(200);
+    expect(replay.body.data.removeInvoiceBusinessLogo).toEqual({
+      success: true,
+      cleanupQueued: false,
+    });
+
+    const rejectedUrl = '/uploads/logos/integration-rollback.png';
+    const rollbackBusiness = await pool.query<{ id: number }>(
+      `INSERT INTO businesses (organization_id, name, logo_url)
+       VALUES ($1, 'Rollback business', $2) RETURNING id`,
+      [organizationId, rejectedUrl],
+    );
+    await pool.query(
+      `ALTER TABLE invoice_logo_deletion_jobs
+       ADD CONSTRAINT integration_reject_rollback_logo
+       CHECK (logo_url <> '/uploads/logos/integration-rollback.png')`,
+    );
+    const rolledBack = await (async () => {
+      try {
+        return await graphql(
+          memberToken,
+          organizationId,
+          mutation,
+          { id: Number(rollbackBusiness.rows[0].id) },
+        ).expect(200);
+      } finally {
+        await pool.query(
+          `ALTER TABLE invoice_logo_deletion_jobs
+           DROP CONSTRAINT integration_reject_rollback_logo`,
+        );
+      }
+    })();
+    expect(rolledBack.body.errors[0].extensions.code).toBe('INTERNAL_SERVER_ERROR');
+    const retained = await pool.query<{ logo_url: string }>(
+      'SELECT logo_url FROM businesses WHERE id = $1',
+      [rollbackBusiness.rows[0].id],
+    );
+    expect(retained.rows[0].logo_url).toBe(rejectedUrl);
   });
 
   it('enforces CSRF, validation, paging, and tenant-hidden misses', async () => {

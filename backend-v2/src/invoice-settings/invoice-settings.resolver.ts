@@ -4,6 +4,7 @@ import { RequestContextService } from '../request-context/request-context.servic
 import { UpdateInvoiceSettingsInput } from './invoice-settings.inputs';
 import { InvoiceSettingsService } from './invoice-settings.service';
 import { InvoiceSettings } from './invoice-settings.types';
+import { InvoiceLogoRemovalResult } from '../invoice-logo-cleanup/invoice-logo-cleanup.types';
 
 @Resolver(() => InvoiceSettings)
 export class InvoiceSettingsResolver {
@@ -25,6 +26,13 @@ export class InvoiceSettingsResolver {
     @Args('input') input: UpdateInvoiceSettingsInput,
   ): Promise<InvoiceSettings> {
     return this.settingsService.update(this.organizationId(), input);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => InvoiceLogoRemovalResult)
+  removeInvoiceSettingsLogo(): Promise<InvoiceLogoRemovalResult> {
+    return this.settingsService.removeLogo(this.organizationId());
   }
 
   private organizationId(): number {

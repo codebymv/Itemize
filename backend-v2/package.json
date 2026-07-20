@@ -10,6 +10,7 @@
     "jobs:recurring-invoices": "node dist/run-recurring-invoice-generation.js",
     "jobs:estimate-email-deliveries": "node dist/run-estimate-email-delivery.js",
     "jobs:invoice-email-deliveries": "node dist/run-invoice-email-delivery.js",
+    "jobs:invoice-logo-cleanup": "node dist/run-invoice-logo-cleanup.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
     "test:watch": "jest --watch",

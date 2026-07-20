@@ -934,6 +934,89 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(final.rows[0].invoice_count).toBe(1);
   });
 
+  it('removes only the selected tenant settings logo and records durable cleanup', async () => {
+    await pool.query(
+      `UPDATE payment_settings
+       SET logo_url = CASE organization_id
+         WHEN $1 THEN '/uploads/logos/settings-primary.png'
+         WHEN $2 THEN '/uploads/logos/settings-outsider.png'
+       END
+       WHERE organization_id = ANY($3::int[])`,
+      [
+        organizationId,
+        outsiderOrganizationId,
+        [organizationId, outsiderOrganizationId],
+      ],
+    );
+    const mutation = `mutation {
+      removeInvoiceSettingsLogo { success cleanupQueued }
+    }`;
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      {},
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const outsider = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      mutation,
+    ).expect(200);
+    expect(outsider.body.data.removeInvoiceSettingsLogo).toEqual({
+      success: true,
+      cleanupQueued: true,
+    });
+    const isolated = await pool.query<{
+      organization_id: number;
+      logo_url: string | null;
+    }>(
+      `SELECT organization_id, logo_url FROM payment_settings
+       WHERE organization_id = ANY($1::int[]) ORDER BY organization_id`,
+      [[organizationId, outsiderOrganizationId]],
+    );
+    expect(isolated.rows.find(
+      (row) => Number(row.organization_id) === organizationId,
+    )?.logo_url).toBe('/uploads/logos/settings-primary.png');
+    expect(isolated.rows.find(
+      (row) => Number(row.organization_id) === outsiderOrganizationId,
+    )?.logo_url).toBeNull();
+
+    const removed = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+    ).expect(200);
+    expect(removed.body.errors).toBeUndefined();
+    expect(removed.body.data.removeInvoiceSettingsLogo).toEqual({
+      success: true,
+      cleanupQueued: true,
+    });
+    const queued = await pool.query<{ logo_url: string; status: string }>(
+      `SELECT logo_url, status FROM invoice_logo_deletion_jobs
+       WHERE organization_id = $1 AND scope = 'settings'`,
+      [organizationId],
+    );
+    expect(queued.rows).toEqual([
+      {
+        logo_url: '/uploads/logos/settings-primary.png',
+        status: 'queued',
+      },
+    ]);
+
+    const replay = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+    ).expect(200);
+    expect(replay.body.data.removeInvoiceSettingsLogo).toEqual({
+      success: true,
+      cleanupQueued: false,
+    });
+  });
+
   it('previews invoice email as bounded inert HTML behind tenant and CSRF guards', async () => {
     const mutation = `
       mutation PreviewInvoiceEmail($input: PreviewInvoiceEmailInput!) {

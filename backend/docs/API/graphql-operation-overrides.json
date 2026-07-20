@@ -366,8 +366,9 @@
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "removeInvoiceBusinessLogo",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "CSRF-protected tenant-scoped removal clears the server-owned URL and enqueues its exact prior value in one transaction. A leased worker retries safe local or exact configured-S3 deletion; foreign URLs dead-letter without storage access. The existing business mutation flag is independently default-off while multipart upload remains HTTP."
     },
     "POST /api/invoices/businesses/:id/logo": {
       "disposition": "retain-http",
@@ -626,8 +627,9 @@
       "owner": "billing",
       "targetModule": "InvoiceSettingsModule",
       "targetOperation": "removeInvoiceSettingsLogo",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "CSRF-protected selected-organization removal clears the server-owned URL and enqueues its exact prior value in one transaction. A leased worker retries safe local or exact configured-S3 deletion; foreign URLs dead-letter without storage access. The existing settings mutation flag is independently default-off while multipart upload remains HTTP."
     },
     "POST /api/invoices/settings/logo": {
       "disposition": "retain-http",

@@ -3,6 +3,7 @@ import api from '@/lib/api';
 import {
   createBusiness,
   deleteBusiness,
+  deleteBusinessLogo,
   getBusiness,
   getBusinesses,
   updateBusiness,
@@ -17,6 +18,7 @@ import {
   deleteInvoiceBusinessViaGraphql,
   getInvoiceBusinessesViaGraphql,
   getInvoiceBusinessViaGraphql,
+  removeInvoiceBusinessLogoViaGraphql,
   updateInvoiceBusinessViaGraphql,
 } from './invoiceBusinessesGraphql';
 
@@ -37,6 +39,7 @@ vi.mock('./invoiceBusinessesGraphql', () => ({
   deleteInvoiceBusinessViaGraphql: vi.fn(),
   getInvoiceBusinessesViaGraphql: vi.fn(),
   getInvoiceBusinessViaGraphql: vi.fn(),
+  removeInvoiceBusinessLogoViaGraphql: vi.fn(),
   updateInvoiceBusinessViaGraphql: vi.fn(),
 }));
 
@@ -75,6 +78,7 @@ describe('invoice business API transport selection', () => {
     await createBusiness(business, 4);
     await updateBusiness(8, { name: 'Itemize Studio' }, 4);
     await deleteBusiness(8, 4);
+    await deleteBusinessLogo(8, 4);
     await uploadBusinessLogo(
       8,
       new File(['logo'], 'logo.png', { type: 'image/png' }),
@@ -83,7 +87,7 @@ describe('invoice business API transport selection', () => {
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(api.post).toHaveBeenCalledTimes(2);
     expect(api.put).toHaveBeenCalledTimes(1);
-    expect(api.delete).toHaveBeenCalledTimes(1);
+    expect(api.delete).toHaveBeenCalledTimes(2);
     expect(getInvoiceBusinessesViaGraphql).not.toHaveBeenCalled();
   });
 
@@ -97,6 +101,9 @@ describe('invoice business API transport selection', () => {
     vi.mocked(deleteInvoiceBusinessViaGraphql).mockResolvedValue({
       success: true,
     });
+    vi.mocked(removeInvoiceBusinessLogoViaGraphql).mockResolvedValue({
+      success: true,
+    });
     vi.mocked(api.post).mockResolvedValue({
       data: { data: { logo_url: '/uploads/logos/safe.png' } },
     });
@@ -105,6 +112,7 @@ describe('invoice business API transport selection', () => {
     await createBusiness(business, 4);
     await updateBusiness(8, { name: 'Itemize Studio' }, 4);
     await deleteBusiness(8, 4);
+    await deleteBusinessLogo(8, 4);
     await uploadBusinessLogo(
       8,
       new File(['logo'], 'logo.png', { type: 'image/png' }),
@@ -119,6 +127,7 @@ describe('invoice business API transport selection', () => {
       4,
     );
     expect(deleteInvoiceBusinessViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(removeInvoiceBusinessLogoViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();

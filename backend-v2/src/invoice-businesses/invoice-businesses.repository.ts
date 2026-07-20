@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
 export type InvoiceBusinessRow = {
@@ -28,6 +28,11 @@ export type InvoiceBusinessValues = {
 export type InvoiceBusinessUpdates = Partial<
   InvoiceBusinessValues & { isActive: boolean }
 >;
+
+export type InvoiceBusinessLogoRemoval = {
+  row: InvoiceBusinessRow;
+  cleanupQueued: boolean;
+};
 
 const selection = `
   id, organization_id, name, email, phone, address, tax_id, logo_url,
@@ -136,5 +141,68 @@ export class InvoiceBusinessesRepository {
       [businessId, organizationId],
     );
     return result.rows.length === 1;
+  }
+
+  async removeLogo(
+    organizationId: number,
+    businessId: number,
+  ): Promise<InvoiceBusinessLogoRemoval | null> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<InvoiceBusinessRow>(
+        `SELECT ${selection} FROM businesses
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [businessId, organizationId],
+      );
+      const business = locked.rows[0];
+      if (!business) return null;
+      let cleanupQueued = false;
+      if (business.logo_url) {
+        const queued = await client.query(
+          `INSERT INTO invoice_logo_deletion_jobs (
+             organization_id, scope, resource_id, logo_url
+           ) VALUES ($1, 'business', $2, $3)
+           ON CONFLICT (organization_id, logo_url) DO UPDATE SET
+             scope = EXCLUDED.scope,
+             resource_id = EXCLUDED.resource_id,
+             status = 'queued',
+             attempt_count = 0,
+             next_attempt_at = CURRENT_TIMESTAMP,
+             lease_expires_at = NULL,
+             claimed_by = NULL,
+             last_error = NULL,
+             deleted_at = NULL,
+             updated_at = CURRENT_TIMESTAMP
+           WHERE invoice_logo_deletion_jobs.status IN ('deleted', 'dead_letter')
+           RETURNING id`,
+          [organizationId, businessId, business.logo_url],
+        );
+        cleanupQueued = queued.rows.length === 1;
+      }
+      const updated = await client.query<InvoiceBusinessRow>(
+        `UPDATE businesses
+         SET logo_url = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2
+         RETURNING ${selection}`,
+        [businessId, organizationId],
+      );
+      return { row: updated.rows[0], cleanupQueued };
+    });
+  }
+
+  private async transaction<T>(
+    work: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

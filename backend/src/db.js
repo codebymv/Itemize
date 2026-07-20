@@ -68,6 +68,9 @@ const {
 const {
   runInvoicePaymentLinkMigration,
 } = require('./db_invoice_payment_link_migrations');
+const {
+  runInvoiceLogoDeletionMigration,
+} = require('./db_invoice_logo_deletion_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -499,6 +502,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'estimate_email_deliveries', runEstimateEmailDeliveryMigration);
     await runMigrationOnce(pool, 'invoice_email_deliveries', runInvoiceEmailDeliveryMigration);
     await runMigrationOnce(pool, 'invoice_payment_link_intents', runInvoicePaymentLinkMigration);
+    await runMigrationOnce(pool, 'invoice_logo_deletion_jobs', runInvoiceLogoDeletionMigration);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
     await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {

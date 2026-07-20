@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   getInvoiceSettingsViaGraphql,
+  removeInvoiceSettingsLogoViaGraphql,
   updateInvoiceSettingsViaGraphql,
 } from './invoiceSettingsGraphql';
 import {
@@ -47,6 +48,7 @@ const response = (payload: unknown): Response => ({
 
 describe('invoice settings GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('settings-csrf');
@@ -114,6 +116,23 @@ describe('invoice settings GraphQL consumer', () => {
       businessEmail: null,
       defaultCurrency: 'USD',
     });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes a settings logo through a CSRF-protected mutation', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        removeInvoiceSettingsLogo: { success: true, cleanupQueued: true },
+      },
+    }));
+    await expect(removeInvoiceSettingsLogoViaGraphql(7)).resolves.toEqual({
+      success: true,
+    });
+    const body = JSON.parse(String(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body,
+    ));
+    expect(body.query).toContain('mutation RemoveInvoiceSettingsLogo');
+    expect(body.variables).toEqual({});
     expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
   });
 });

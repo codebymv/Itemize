@@ -177,3 +177,19 @@ export const deleteInvoiceBusinessViaGraphql = async (
   }
   return { success: data.deleteInvoiceBusiness.success };
 };
+
+export const removeInvoiceBusinessLogoViaGraphql = async (
+  id: number,
+  organizationId?: number,
+): Promise<{ success: boolean }> => {
+  const data = await graphqlMutationRequest<{
+    removeInvoiceBusinessLogo: { success: boolean; cleanupQueued: boolean };
+  }, { id: number }>(
+    `mutation RemoveInvoiceBusinessLogo($id: Int!) {
+      removeInvoiceBusinessLogo(id: $id) { success cleanupQueued }
+    }`,
+    { id },
+    organizationId,
+  );
+  return { success: data.removeInvoiceBusinessLogo.success };
+};

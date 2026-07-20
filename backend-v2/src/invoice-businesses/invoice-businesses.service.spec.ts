@@ -31,6 +31,7 @@ describe('InvoiceBusinessesService', () => {
       create: jest.fn(),
       update: jest.fn(),
       deactivate: jest.fn(),
+      removeLogo: jest.fn(),
     } as unknown as jest.Mocked<InvoiceBusinessesRepository>;
     service = new InvoiceBusinessesService(repository);
   });
@@ -111,6 +112,19 @@ describe('InvoiceBusinessesService', () => {
     });
     repository.deactivate.mockResolvedValue(false);
     await expect(service.delete(3, 999)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
+  });
+
+  it('removes a tenant-owned logo and reports durable cleanup', async () => {
+    repository.removeLogo.mockResolvedValue({
+      row: row({ logo_url: null }), cleanupQueued: true,
+    });
+    await expect(service.removeLogo(3, 6)).resolves.toEqual({
+      success: true, cleanupQueued: true,
+    });
+    repository.removeLogo.mockResolvedValue(null);
+    await expect(service.removeLogo(3, 999)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
     });
   });

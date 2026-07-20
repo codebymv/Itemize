@@ -329,7 +329,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '036_invoice_payment_link_intents'"
+            "WHERE version = '037_invoice_logo_deletion_jobs'"
         );
     });
 
@@ -369,6 +369,19 @@ describe('test database schema contract', () => {
         expect(sql).toContain('invoice_payment_link_intent_idempotency');
         expect(sql).toContain('idx_invoice_payment_link_intents_active');
         expect(sql).toContain('invoice_payment_link_intent_tenant');
+    });
+
+    test('production migration stream creates durable invoice logo cleanup jobs', async () => {
+        const migration = require('../../../scripts/migrations/037_invoice_logo_deletion_jobs');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS invoice_logo_deletion_jobs');
+        expect(sql).toContain('invoice_logo_deletion_identity');
+        expect(sql).toContain('idx_invoice_logo_deletion_jobs_claim');
+        expect(sql).toContain('invoice_logo_deletion_tenant');
+        expect(sql).toContain("'dead_letter'");
     });
 
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {

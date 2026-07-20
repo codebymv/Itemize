@@ -12,6 +12,7 @@ import {
   InvoiceBusinessPage,
 } from './invoice-business.types';
 import { InvoiceBusinessesService } from './invoice-businesses.service';
+import { InvoiceLogoRemovalResult } from '../invoice-logo-cleanup/invoice-logo-cleanup.types';
 
 @Resolver(() => InvoiceBusiness)
 export class InvoiceBusinessesResolver {
@@ -62,6 +63,15 @@ export class InvoiceBusinessesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteInvoiceBusinessResult> {
     return this.businessService.delete(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => InvoiceLogoRemovalResult)
+  removeInvoiceBusinessLogo(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<InvoiceLogoRemovalResult> {
+    return this.businessService.removeLogo(this.organizationId(), id);
   }
 
   private organizationId(): number {

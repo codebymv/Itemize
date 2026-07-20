@@ -143,3 +143,18 @@ export const updateInvoiceSettingsViaGraphql = async (
   );
   return mapInvoiceSettings(data.updateInvoiceSettings);
 };
+
+export const removeInvoiceSettingsLogoViaGraphql = async (
+  organizationId?: number,
+): Promise<{ success: boolean }> => {
+  const data = await graphqlMutationRequest<{
+    removeInvoiceSettingsLogo: { success: boolean; cleanupQueued: boolean };
+  }, Record<string, never>>(
+    `mutation RemoveInvoiceSettingsLogo {
+      removeInvoiceSettingsLogo { success cleanupQueued }
+    }`,
+    {},
+    organizationId,
+  );
+  return { success: data.removeInvoiceSettingsLogo.success };
+};

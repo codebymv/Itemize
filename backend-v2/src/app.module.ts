@@ -19,6 +19,7 @@ import { EstimatesModule } from './estimates/estimates.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
+import { InvoiceLogoCleanupModule } from './invoice-logo-cleanup/invoice-logo-cleanup.module';
 import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
@@ -64,6 +65,7 @@ const observabilityPlugins = [
     TagsModule,
     FormsModule,
     InvoiceBusinessesModule,
+    InvoiceLogoCleanupModule,
     InvoiceSettingsModule,
     InvoicesModule,
     OnboardingModule,

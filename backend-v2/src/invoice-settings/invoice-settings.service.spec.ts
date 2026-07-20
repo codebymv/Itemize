@@ -37,6 +37,7 @@ describe('InvoiceSettingsService', () => {
     repository = {
       find: jest.fn(),
       update: jest.fn(),
+      removeLogo: jest.fn(),
     } as unknown as jest.Mocked<InvoiceSettingsRepository>;
     service = new InvoiceSettingsService(repository);
   });
@@ -117,5 +118,12 @@ describe('InvoiceSettingsService', () => {
           reason: 'INVOICE_NUMBER_ALREADY_EXISTS',
         },
       });
+  });
+
+  it('removes the settings logo and reports durable cleanup', async () => {
+    repository.removeLogo.mockResolvedValue({ cleanupQueued: true });
+    await expect(service.removeLogo(3)).resolves.toEqual({
+      success: true, cleanupQueued: true,
+    });
   });
 });

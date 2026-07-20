@@ -15,6 +15,7 @@ import {
   InvoiceBusinessesRepository,
   InvoiceBusinessUpdates,
 } from './invoice-businesses.repository';
+import { InvoiceLogoRemovalResult } from '../invoice-logo-cleanup/invoice-logo-cleanup.types';
 
 @Injectable()
 export class InvoiceBusinessesService {
@@ -111,6 +112,16 @@ export class InvoiceBusinessesService {
       this.notFound();
     }
     return { deletedId: businessId, success: true };
+  }
+
+  async removeLogo(
+    organizationId: number,
+    businessId: number,
+  ): Promise<InvoiceLogoRemovalResult> {
+    this.id(businessId);
+    const removed = await this.businesses.removeLogo(organizationId, businessId);
+    if (!removed) this.notFound();
+    return { success: true, cleanupQueued: removed.cleanupQueued };
   }
 
   private page(input: PageInput) {
