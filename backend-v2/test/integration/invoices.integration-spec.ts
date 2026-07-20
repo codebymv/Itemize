@@ -1035,6 +1035,180 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     });
   });
 
+  it('generates recurring invoices once for concurrent idempotent requests', async () => {
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, invoice_prefix, next_invoice_number
+       ) VALUES ($1, 'GEN-', 100)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         invoice_prefix = EXCLUDED.invoice_prefix,
+         next_invoice_number = EXCLUDED.next_invoice_number`,
+      [organizationId],
+    );
+    const created = await graphql(
+      memberToken,
+      organizationId,
+      recurringMutation,
+      { input: { ...recurringInput(), endDate: null } },
+    ).expect(200);
+    const templateId = Number(created.body.data.createRecurringInvoice.id);
+    const generationMutation = `mutation GenerateRecurringInvoiceNow(
+      $id: Int!, $idempotencyKey: String!
+    ) {
+      generateRecurringInvoiceNow(
+        id: $id, idempotencyKey: $idempotencyKey
+      ) {
+        invoiceId invoiceNumber nextRunDate templateStatus replayed
+      }
+    }`;
+    const variables = {
+      id: templateId,
+      idempotencyKey: `recurring-generation-${templateId}`,
+    };
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      generationMutation,
+      variables,
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const invalidKey = await graphql(
+      memberToken,
+      organizationId,
+      generationMutation,
+      { id: templateId, idempotencyKey: 'invalid key' },
+    ).expect(200);
+    expect(invalidKey.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_IDEMPOTENCY_KEY',
+    });
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      generationMutation,
+      variables,
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const [first, second] = await Promise.all([
+      graphql(
+        memberToken, organizationId, generationMutation, variables,
+      ),
+      graphql(
+        memberToken, organizationId, generationMutation, variables,
+      ),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    const outcomes = [
+      first.body.data.generateRecurringInvoiceNow,
+      second.body.data.generateRecurringInvoiceNow,
+    ];
+    expect(outcomes[0]).toMatchObject({
+      invoiceNumber: 'GEN-00100',
+      nextRunDate: '2026-08-20',
+      templateStatus: 'active',
+    });
+    expect(outcomes[1]).toMatchObject({
+      invoiceId: outcomes[0].invoiceId,
+      invoiceNumber: 'GEN-00100',
+      nextRunDate: '2026-08-20',
+      templateStatus: 'active',
+    });
+    expect(outcomes.map((outcome) => outcome.replayed).sort())
+      .toEqual([false, true]);
+
+    const persisted = await pool.query<{
+      id: number;
+      invoice_number: string;
+      due_date_matches: boolean;
+      item_count: number;
+      item_tax: string;
+      item_total: string;
+      idempotency_key: string;
+    }>(
+      `SELECT i.id, i.invoice_number,
+              i.due_date = CURRENT_DATE + 30 AS due_date_matches,
+              COUNT(ii.id)::int AS item_count,
+              MIN(ii.tax_amount)::text AS item_tax,
+              MIN(ii.total)::text AS item_total,
+              i.custom_fields #>>
+                '{_itemize,recurringGeneration,idempotencyKey}'
+                AS idempotency_key
+       FROM invoices i
+       LEFT JOIN invoice_items ii
+         ON ii.invoice_id = i.id AND ii.organization_id = i.organization_id
+       WHERE i.organization_id = $1 AND i.recurring_template_id = $2
+       GROUP BY i.id`,
+      [organizationId, templateId],
+    );
+    expect(persisted.rows).toEqual([expect.objectContaining({
+      id: Number(outcomes[0].invoiceId),
+      invoice_number: 'GEN-00100',
+      due_date_matches: true,
+      item_count: 1,
+      item_tax: '2.00',
+      item_total: '27.00',
+      idempotency_key: variables.idempotencyKey,
+    })]);
+    const schedule = await pool.query<{
+      next_run_date: string;
+      generated: boolean;
+      next_invoice_number: number;
+    }>(
+      `SELECT r.next_run_date::text,
+              r.last_generated_at IS NOT NULL AS generated,
+              ps.next_invoice_number
+       FROM recurring_invoice_templates r
+       JOIN payment_settings ps
+         ON ps.organization_id = r.organization_id
+       WHERE r.id = $1 AND r.organization_id = $2`,
+      [templateId, organizationId],
+    );
+    expect(schedule.rows[0]).toMatchObject({
+      next_run_date: '2026-08-20',
+      generated: true,
+      next_invoice_number: 101,
+    });
+
+    await pool.query(
+      `UPDATE recurring_invoice_templates SET status = 'completed'
+       WHERE id = $1 AND organization_id = $2`,
+      [templateId, organizationId],
+    );
+    const replay = await graphql(
+      memberToken,
+      organizationId,
+      generationMutation,
+      variables,
+    ).expect(200);
+    expect(replay.body.data.generateRecurringInvoiceNow).toMatchObject({
+      invoiceId: outcomes[0].invoiceId,
+      invoiceNumber: 'GEN-00100',
+      nextRunDate: '2026-08-20',
+      templateStatus: 'active',
+      replayed: true,
+    });
+    const completed = await graphql(
+      memberToken,
+      organizationId,
+      generationMutation,
+      { id: templateId, idempotencyKey: `${variables.idempotencyKey}-new` },
+    ).expect(200);
+    expect(completed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'RECURRING_INVOICE_COMPLETED',
+      actualStatus: 'completed',
+    });
+    const finalCounter = await pool.query<{ next_invoice_number: number }>(
+      `SELECT next_invoice_number FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(Number(finalCounter.rows[0].next_invoice_number)).toBe(101);
+  });
+
   it('enforces recurring CSRF, tenant references, dates, and private misses', async () => {
     const noCsrf = await graphql(
       memberToken, organizationId, recurringMutation,

@@ -159,6 +159,24 @@ export class RecurringInvoiceHistoryPage {
 }
 
 @ObjectType()
+export class RecurringInvoiceGenerationResult {
+  @Field(() => Int)
+  invoiceId: number;
+
+  @Field()
+  invoiceNumber: string;
+
+  @Field(() => String, { nullable: true })
+  nextRunDate: string | null;
+
+  @Field()
+  templateStatus: string;
+
+  @Field()
+  replayed: boolean;
+}
+
+@ObjectType()
 export class DeleteRecurringInvoiceResult {
   @Field()
   success: boolean;

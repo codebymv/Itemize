@@ -109,6 +109,20 @@ export type RecurringInvoiceCloneOutcome =
   | { kind: 'invalid-discount' }
   | { kind: 'negative-total' };
 
+export type RecurringInvoiceGeneration = {
+  invoiceId: number;
+  invoiceNumber: string;
+  nextRunDate: string | null;
+  templateStatus: string;
+  replayed: boolean;
+};
+
+export type RecurringInvoiceGenerationOutcome =
+  | { kind: 'generated'; result: RecurringInvoiceGeneration }
+  | { kind: 'not-found' }
+  | { kind: 'completed' }
+  | { kind: 'invalid-template' };
+
 export type RecurringInvoiceCriteria = {
   organizationId: number;
   status?: string;
@@ -513,6 +527,221 @@ export class RecurringInvoicesRepository {
     });
   }
 
+  async generateNow(
+    organizationId: number,
+    userId: number,
+    recurringInvoiceId: number,
+    idempotencyKey: string,
+  ): Promise<RecurringInvoiceGenerationOutcome> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{
+        id: number;
+        contact_id: number | null;
+        customer_name: string | null;
+        customer_email: string | null;
+        contact_email: string | null;
+        frequency: string;
+        start_date: string;
+        end_date: string | null;
+        next_run_date: string | null;
+        status: string;
+        items: unknown;
+        subtotal: string;
+        tax_amount: string;
+        discount_amount: string;
+        discount_type: string | null;
+        discount_value: string;
+        total: string;
+        notes: string | null;
+        payment_terms: string | null;
+      }>(
+        `SELECT r.id,
+                CASE WHEN c.id IS NULL THEN NULL ELSE r.contact_id END AS contact_id,
+                r.customer_name, r.customer_email, c.email AS contact_email,
+                r.frequency, r.start_date::text, r.end_date::text,
+                r.next_run_date::text, r.status, r.items, r.subtotal,
+                r.tax_amount, r.discount_amount, r.discount_type,
+                r.discount_value, r.total, r.notes, r.payment_terms
+         FROM recurring_invoice_templates r
+         LEFT JOIN contacts c
+           ON c.id = r.contact_id AND c.organization_id = r.organization_id
+         WHERE r.id = $1 AND r.organization_id = $2
+         FOR UPDATE OF r`,
+        [recurringInvoiceId, organizationId],
+      );
+      const template = locked.rows[0];
+      if (!template) return { kind: 'not-found' };
+
+      const replay = await client.query<{
+        id: number;
+        invoice_number: string;
+        next_run_date: string | null;
+        template_status: string;
+      }>(
+        `SELECT id, invoice_number,
+                NULLIF(custom_fields #>> '{_itemize,recurringGeneration,nextRunDate}', '')
+                  AS next_run_date,
+                custom_fields #>> '{_itemize,recurringGeneration,templateStatus}'
+                  AS template_status
+         FROM invoices
+         WHERE organization_id = $1
+           AND recurring_template_id = $2
+           AND custom_fields #>> '{_itemize,recurringGeneration,idempotencyKey}' = $3
+         ORDER BY id
+         LIMIT 1`,
+        [organizationId, recurringInvoiceId, idempotencyKey],
+      );
+      if (replay.rows[0]) {
+        return {
+          kind: 'generated',
+          result: {
+            invoiceId: Number(replay.rows[0].id),
+            invoiceNumber: replay.rows[0].invoice_number,
+            nextRunDate: replay.rows[0].next_run_date,
+            templateStatus:
+              replay.rows[0].template_status || template.status,
+            replayed: true,
+          },
+        };
+      }
+      if (template.status === 'completed') return { kind: 'completed' };
+
+      const items = this.generationItems(template.items);
+      const paymentTermDays = this.paymentTermDays(template.payment_terms);
+      if (
+        !items ||
+        paymentTermDays === null ||
+        !this.generationTotals(template)
+      ) {
+        return { kind: 'invalid-template' };
+      }
+      const productIds = [...new Set(
+        items
+          .map((item) => item.productId)
+          .filter((id): id is number => id !== null),
+      )];
+      if (productIds.length > 0) {
+        const products = await client.query<{ id: number }>(
+          `SELECT id FROM products
+           WHERE organization_id = $1 AND id = ANY($2::int[])`,
+          [organizationId, productIds],
+        );
+        const allowed = new Set(products.rows.map((row) => Number(row.id)));
+        for (const item of items) {
+          if (item.productId !== null && !allowed.has(item.productId)) {
+            item.productId = null;
+          }
+        }
+      }
+
+      const currentRunDate = template.next_run_date ?? template.start_date;
+      const followingRunDate = this.nextRunDate(
+        currentRunDate,
+        template.frequency,
+      );
+      if (!followingRunDate) return { kind: 'invalid-template' };
+      const completed =
+        template.end_date !== null && followingRunDate > template.end_date;
+      const storedNextRunDate = completed
+        ? template.end_date
+        : followingRunDate;
+      const responseNextRunDate = completed ? null : followingRunDate;
+      const templateStatus = completed ? 'completed' : template.status;
+
+      const allocation = await client.query<{
+        invoice_prefix: string;
+        allocated_number: string;
+      }>(
+        `INSERT INTO payment_settings (organization_id, next_invoice_number)
+         VALUES ($1, 2)
+         ON CONFLICT (organization_id) DO UPDATE SET
+           next_invoice_number =
+             GREATEST(COALESCE(payment_settings.next_invoice_number, 1), 1) + 1,
+           updated_at = CURRENT_TIMESTAMP
+         RETURNING COALESCE(invoice_prefix, 'INV-') AS invoice_prefix,
+                   next_invoice_number - 1 AS allocated_number`,
+        [organizationId],
+      );
+      const invoiceNumber =
+        `${allocation.rows[0].invoice_prefix}` +
+        `${allocation.rows[0].allocated_number}`.padStart(5, '0');
+      const metadata = {
+        _itemize: {
+          recurringGeneration: {
+            idempotencyKey,
+            nextRunDate: responseNextRunDate ?? '',
+            templateStatus,
+          },
+        },
+      };
+      const inserted = await client.query<{ id: number }>(
+        `INSERT INTO invoices (
+           organization_id, invoice_number, contact_id,
+           customer_name, customer_email, due_date, subtotal, tax_amount,
+           discount_amount, discount_type, discount_value, total, amount_due,
+           notes, recurring_template_id, custom_fields, created_by
+         ) VALUES (
+           $1, $2, $3, $4, $5, CURRENT_DATE + $6::int, $7, $8, $9, $10,
+           $11, $12, $12, $13, $14, $15::jsonb, $16
+         ) RETURNING id`,
+        [
+          organizationId, invoiceNumber, template.contact_id,
+          template.customer_name,
+          template.customer_email || template.contact_email,
+          paymentTermDays, template.subtotal, template.tax_amount,
+          template.discount_amount, template.discount_type,
+          template.discount_value, template.total, template.notes,
+          recurringInvoiceId, JSON.stringify(metadata), userId,
+        ],
+      );
+      const invoiceId = Number(inserted.rows[0].id);
+      for (const [index, item] of items.entries()) {
+        await client.query(
+          `INSERT INTO invoice_items (
+             invoice_id, organization_id, product_id, name, description,
+             quantity, unit_price, tax_rate, tax_amount, total, sort_order
+           ) VALUES (
+             $1, $2, $3, $4, $5, $6, $7, $8,
+             ROUND($6::numeric * $7::numeric * $8::numeric / 100, 2),
+             ROUND(
+               ($6::numeric * $7::numeric) +
+               ($6::numeric * $7::numeric * $8::numeric / 100),
+               2
+             ),
+             $9
+           )`,
+          [
+            invoiceId, organizationId, item.productId, item.name,
+            item.description, item.quantity, item.unitPrice, item.taxRate,
+            index,
+          ],
+        );
+      }
+      await client.query(
+        `UPDATE recurring_invoice_templates
+         SET next_run_date = $3::date,
+             last_generated_at = CURRENT_TIMESTAMP,
+             status = $4,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [
+          recurringInvoiceId, organizationId, storedNextRunDate,
+          templateStatus,
+        ],
+      );
+      return {
+        kind: 'generated',
+        result: {
+          invoiceId,
+          invoiceNumber,
+          nextRunDate: responseNextRunDate,
+          templateStatus,
+          replayed: false,
+        },
+      };
+    });
+  }
+
   async findHistoryPage(
     organizationId: number,
     recurringInvoiceId: number,
@@ -677,6 +906,66 @@ export class RecurringInvoicesRepository {
         taxRate: String(item.taxRate ?? item.tax_rate ?? '0'),
       };
     });
+  }
+
+  private generationItems(value: unknown): RecurringInvoiceItemValues[] | null {
+    if (!Array.isArray(value)) return null;
+    let items: RecurringInvoiceItemValues[];
+    try {
+      items = this.itemValues(value);
+    } catch {
+      return null;
+    }
+    if (items.length < 1 || items.length > 100) return null;
+    const money = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
+    const rate = /^(?:(?:0|[1-9]\d?)(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/;
+    if (items.some((item) =>
+      item.name.trim().length < 1 ||
+      item.name.length > 255 ||
+      !money.test(item.quantity) ||
+      Number(item.quantity) <= 0 ||
+      !money.test(item.unitPrice) ||
+      !rate.test(item.taxRate)
+    )) {
+      return null;
+    }
+    return items;
+  }
+
+  private generationTotals(template: {
+    subtotal: string;
+    tax_amount: string;
+    discount_amount: string;
+    discount_value: string;
+    total: string;
+  }): boolean {
+    const money = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
+    return [
+      template.subtotal,
+      template.tax_amount,
+      template.discount_amount,
+      template.discount_value,
+      template.total,
+    ].every((value) => money.test(String(value)));
+  }
+
+  private paymentTermDays(value: string | null): number | null {
+    if (value === null || value.trim() === '') return 30;
+    const days = Number.parseInt(value, 10);
+    return Number.isSafeInteger(days) && Math.abs(days) <= 36_500
+      ? days
+      : null;
+  }
+
+  private nextRunDate(currentDate: string, frequency: string): string | null {
+    const date = new Date(`${currentDate}T00:00:00.000Z`);
+    if (Number.isNaN(date.getTime())) return null;
+    if (frequency === 'weekly') date.setUTCDate(date.getUTCDate() + 7);
+    else if (frequency === 'monthly') date.setUTCMonth(date.getUTCMonth() + 1);
+    else if (frequency === 'quarterly') date.setUTCMonth(date.getUTCMonth() + 3);
+    else if (frequency === 'yearly') date.setUTCFullYear(date.getUTCFullYear() + 1);
+    else return null;
+    return date.toISOString().slice(0, 10);
   }
 
   private futureRunDate(

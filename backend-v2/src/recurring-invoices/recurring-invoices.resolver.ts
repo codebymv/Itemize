@@ -11,6 +11,7 @@ import {
 import {
   DeleteRecurringInvoiceResult,
   RecurringInvoice,
+  RecurringInvoiceGenerationResult,
   RecurringInvoiceHistoryPage,
   RecurringInvoicePage,
 } from './recurring-invoice.types';
@@ -113,6 +114,18 @@ export class RecurringInvoicesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<RecurringInvoice> {
     return this.recurringInvoices.resume(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => RecurringInvoiceGenerationResult)
+  generateRecurringInvoiceNow(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<RecurringInvoiceGenerationResult> {
+    return this.recurringInvoices.generateNow(
+      this.organizationId(), this.userId(), id, idempotencyKey,
+    );
   }
 
   private organizationId(): number {

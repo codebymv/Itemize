@@ -553,9 +553,9 @@
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "generateRecurringInvoiceNow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "The route now locks the tenant-owned schedule and allocates numbers atomically; explicit request idempotency and real-PostgreSQL concurrent-repeat coverage remain required."
+      "notes": "The CSRF-protected mutation locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number."
     },
     "GET /api/invoices/recurring/:id/history": {
       "disposition": "graphql-query",

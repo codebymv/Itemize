@@ -380,3 +380,40 @@ export const resumeRecurringInvoiceViaGraphql = (
   organizationId?: number,
 ): Promise<RecurringInvoice> =>
   lifecycleMutation('resumeRecurringInvoice', id, organizationId);
+
+export const generateRecurringInvoiceNowViaGraphql = async (
+  id: number,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<{ invoice_number: string }> => {
+  const data = await graphqlMutationRequest<{
+    generateRecurringInvoiceNow: {
+      invoiceId: number;
+      invoiceNumber: string;
+      nextRunDate: string | null;
+      templateStatus: string;
+      replayed: boolean;
+    };
+  }, { id: number; idempotencyKey: string }>(
+    `mutation GenerateRecurringInvoiceNow(
+      $id: Int!, $idempotencyKey: String!
+    ) {
+      generateRecurringInvoiceNow(
+        id: $id, idempotencyKey: $idempotencyKey
+      ) {
+        invoiceId invoiceNumber nextRunDate templateStatus replayed
+      }
+    }`,
+    {
+      id,
+      idempotencyKey:
+        idempotencyKey ??
+        globalThis.crypto?.randomUUID?.() ??
+        `recurring-generation-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    },
+    organizationId,
+  );
+  return {
+    invoice_number: data.generateRecurringInvoiceNow.invoiceNumber,
+  };
+};

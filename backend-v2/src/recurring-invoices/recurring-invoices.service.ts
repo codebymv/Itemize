@@ -11,12 +11,14 @@ import {
 import {
   DeleteRecurringInvoiceResult,
   RecurringInvoice,
+  RecurringInvoiceGenerationResult,
   RecurringInvoiceHistoryPage,
   RecurringInvoiceItem,
   RecurringInvoicePage,
 } from './recurring-invoice.types';
 import {
   RecurringInvoiceCloneOutcome,
+  RecurringInvoiceGenerationOutcome,
   RecurringInvoiceLifecycleOutcome,
   RecurringInvoiceItemValues,
   RecurringInvoiceRow,
@@ -32,6 +34,7 @@ const RATE = /^(?:(?:0|[1-9]\d?)(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const FREQUENCIES = new Set(['weekly', 'monthly', 'quarterly', 'yearly']);
 const STATUSES = new Set(['active', 'paused', 'completed']);
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 
 @Injectable()
 export class RecurringInvoicesService {
@@ -200,6 +203,26 @@ export class RecurringInvoicesService {
     );
   }
 
+  async generateNow(
+    organizationId: number,
+    userId: number,
+    recurringInvoiceId: number,
+    idempotencyKey: string,
+  ): Promise<RecurringInvoiceGenerationResult> {
+    this.id(recurringInvoiceId, 'id');
+    const key = String(idempotencyKey ?? '').trim();
+    if (!IDEMPOTENCY_KEY.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return this.generated(await this.recurringInvoices.generateNow(
+      organizationId, userId, recurringInvoiceId, key,
+    ));
+  }
+
   async history(
     organizationId: number,
     recurringInvoiceId: number,
@@ -241,6 +264,25 @@ export class RecurringInvoicesService {
           : 'RECURRING_INVOICE_NOT_PAUSED',
         actualStatus: outcome.actualStatus,
       },
+    );
+  }
+
+  private generated(
+    outcome: RecurringInvoiceGenerationOutcome,
+  ): RecurringInvoiceGenerationResult {
+    if (outcome.kind === 'generated') return outcome.result;
+    if (outcome.kind === 'not-found') this.notFound();
+    if (outcome.kind === 'completed') {
+      throw itemizeGraphqlError(
+        'Cannot generate an invoice from a completed recurring invoice',
+        'CONFLICT',
+        { reason: 'RECURRING_INVOICE_COMPLETED', actualStatus: 'completed' },
+      );
+    }
+    throw itemizeGraphqlError(
+      'Recurring invoice contains invalid generation data',
+      'BAD_USER_INPUT',
+      { reason: 'INVALID_RECURRING_GENERATION_TEMPLATE' },
     );
   }
 

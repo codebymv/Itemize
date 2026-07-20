@@ -13,6 +13,7 @@ import {
   updateRecurringInvoice,
 } from './recurringInvoicesApi';
 import {
+  isRecurringInvoiceGraphqlGenerationEnabled,
   isRecurringInvoiceGraphqlLifecycleEnabled,
   isRecurringInvoiceGraphqlMutationsEnabled,
   isRecurringInvoiceGraphqlReadsEnabled,
@@ -20,6 +21,7 @@ import {
 import {
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
+  generateRecurringInvoiceNowViaGraphql,
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoiceNumberPreviewViaGraphql,
@@ -33,6 +35,7 @@ vi.mock('@/lib/api', () => ({
   default: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 vi.mock('./graphqlClient', () => ({
+  isRecurringInvoiceGraphqlGenerationEnabled: vi.fn(),
   isRecurringInvoiceGraphqlLifecycleEnabled: vi.fn(),
   isRecurringInvoiceGraphqlMutationsEnabled: vi.fn(),
   isRecurringInvoiceGraphqlReadsEnabled: vi.fn(),
@@ -40,6 +43,7 @@ vi.mock('./graphqlClient', () => ({
 vi.mock('./recurringInvoicesGraphql', () => ({
   createRecurringInvoiceViaGraphql: vi.fn(),
   deleteRecurringInvoiceViaGraphql: vi.fn(),
+  generateRecurringInvoiceNowViaGraphql: vi.fn(),
   getRecurringInvoiceViaGraphql: vi.fn(),
   getRecurringInvoiceHistoryViaGraphql: vi.fn(),
   getRecurringInvoiceNumberPreviewViaGraphql: vi.fn(),
@@ -71,6 +75,7 @@ describe('recurring invoice API transport selection', () => {
     vi.mocked(isRecurringInvoiceGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isRecurringInvoiceGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isRecurringInvoiceGraphqlLifecycleEnabled).mockReturnValue(false);
+    vi.mocked(isRecurringInvoiceGraphqlGenerationEnabled).mockReturnValue(false);
   });
 
   it('keeps CRUD and lifecycle operations on REST by default', async () => {
@@ -135,7 +140,7 @@ describe('recurring invoice API transport selection', () => {
     );
   });
 
-  it('switches pause and resume without moving generate-now to GraphQL', async () => {
+  it('switches pause and resume without moving generation across its boundary', async () => {
     vi.mocked(isRecurringInvoiceGraphqlLifecycleEnabled).mockReturnValue(true);
     vi.mocked(pauseRecurringInvoiceViaGraphql).mockResolvedValue({
       ...recurring, status: 'paused',
@@ -154,5 +159,16 @@ describe('recurring invoice API transport selection', () => {
       '/api/invoices/recurring/8/generate-now', {},
       { headers: { 'x-organization-id': '4' } },
     );
+  });
+
+  it('switches generation independently and preserves the retained result', async () => {
+    vi.mocked(isRecurringInvoiceGraphqlGenerationEnabled).mockReturnValue(true);
+    vi.mocked(generateRecurringInvoiceNowViaGraphql).mockResolvedValue({
+      invoice_number: 'INV-00010',
+    });
+    await expect(generateRecurringInvoiceNow(8, 4))
+      .resolves.toEqual({ invoice_number: 'INV-00010' });
+    expect(generateRecurringInvoiceNowViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

@@ -8100,7 +8100,7 @@
           "path": "/api/invoices/recurring",
           "rawPath": "/api/invoices/recurring",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 101,
+          "line": 103,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8134,7 +8134,7 @@
           "path": "/api/invoices/recurring",
           "rawPath": "/api/invoices/recurring",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 133,
+          "line": 135,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8168,7 +8168,7 @@
           "path": "/api/invoices/recurring/:id",
           "rawPath": "/api/invoices/recurring/${id}",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 160,
+          "line": 162,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8202,7 +8202,7 @@
           "path": "/api/invoices/recurring/:id",
           "rawPath": "/api/invoices/recurring/${id}",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 115,
+          "line": 117,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8255,7 +8255,7 @@
           "path": "/api/invoices/recurring/:id",
           "rawPath": "/api/invoices/recurring/${id}",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 147,
+          "line": 149,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8289,7 +8289,7 @@
           "path": "/api/invoices/recurring/:id/generate-now",
           "rawPath": "/api/invoices/recurring/${id}/generate-now",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 209,
+          "line": 214,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8314,8 +8314,8 @@
       "owner": "billing",
       "targetOperation": "generateRecurringInvoiceNow",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "characterizing",
-      "notes": "The route now locks the tenant-owned schedule and allocates numbers atomically; explicit request idempotency and real-PostgreSQL concurrent-repeat coverage remain required.",
+      "parityStatus": "implemented",
+      "notes": "The CSRF-protected mutation locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8336,7 +8336,7 @@
           "path": "/api/invoices/recurring/:id/history",
           "rawPath": "/api/invoices/recurring/${id}/history",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 199,
+          "line": 201,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8370,7 +8370,7 @@
           "path": "/api/invoices/recurring/:id/pause",
           "rawPath": "/api/invoices/recurring/${id}/pause",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 174,
+          "line": 176,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8411,7 +8411,7 @@
           "path": "/api/invoices/recurring/:id/resume",
           "rawPath": "/api/invoices/recurring/${id}/resume",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 187,
+          "line": 189,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8479,7 +8479,7 @@
           "path": "/api/invoices/recurring/preview-invoice-number",
           "rawPath": "/api/invoices/recurring/preview-invoice-number",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 221,
+          "line": 226,
           "client": "api",
           "literalInterpolation": false
         }

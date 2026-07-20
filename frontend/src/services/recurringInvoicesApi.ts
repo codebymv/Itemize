@@ -1,5 +1,6 @@
 import api from '@/lib/api';
 import {
+  isRecurringInvoiceGraphqlGenerationEnabled,
   isRecurringInvoiceGraphqlLifecycleEnabled,
   isRecurringInvoiceGraphqlMutationsEnabled,
   isRecurringInvoiceGraphqlReadsEnabled,
@@ -7,6 +8,7 @@ import {
 import {
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
+  generateRecurringInvoiceNowViaGraphql,
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoiceNumberPreviewViaGraphql,
@@ -206,6 +208,9 @@ export const generateRecurringInvoiceNow = async (
   id: number,
   organizationId?: number,
 ): Promise<{ invoice_number: string }> => {
+  if (isRecurringInvoiceGraphqlGenerationEnabled()) {
+    return generateRecurringInvoiceNowViaGraphql(id, organizationId);
+  }
   const response = await api.post(`/api/invoices/recurring/${id}/generate-now`, {}, {
     headers: headers(organizationId),
   });

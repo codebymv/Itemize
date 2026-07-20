@@ -4,6 +4,7 @@ import {
   createRecurringInvoiceFromInvoiceViaGraphql,
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
+  generateRecurringInvoiceNowViaGraphql,
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoiceNumberPreviewViaGraphql,
@@ -179,6 +180,29 @@ describe('recurring invoice GraphQL adapter', () => {
           startDate: '2026-07-21',
           endDate: '2026-12-21',
         },
+      },
+      4,
+    );
+  });
+
+  it('generates with an explicit idempotency key and maps the retained response', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValueOnce({
+      generateRecurringInvoiceNow: {
+        invoiceId: 51,
+        invoiceNumber: 'INV-00051',
+        nextRunDate: '2026-08-20',
+        templateStatus: 'active',
+        replayed: false,
+      },
+    });
+    await expect(generateRecurringInvoiceNowViaGraphql(
+      8, 4, 'recurring-generation-request-1',
+    )).resolves.toEqual({ invoice_number: 'INV-00051' });
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('generateRecurringInvoiceNow'),
+      {
+        id: 8,
+        idempotencyKey: 'recurring-generation-request-1',
       },
       4,
     );
