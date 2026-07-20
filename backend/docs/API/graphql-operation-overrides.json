@@ -383,8 +383,9 @@
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "previewInvoiceEmail",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "CSRF-protected selected-organization mutation returns bounded branded HTML, treats message and subject as plain text, uses only the server-configured frontend origin, and is displayed in a script-disabled browser sandbox."
     },
     "GET /api/invoices/estimates": {
       "disposition": "graphql-query",

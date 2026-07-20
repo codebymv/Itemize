@@ -5,19 +5,23 @@ import { RequestContextService } from '../request-context/request-context.servic
 import {
   CreateInvoiceInput,
   InvoiceFilterInput,
+  PreviewInvoiceEmailInput,
   UpdateInvoiceInput,
 } from './invoice.inputs';
 import {
   DeleteInvoiceResult,
   Invoice,
+  InvoiceEmailPreview,
   InvoicePage,
 } from './invoice.types';
+import { InvoiceEmailPreviewService } from './invoice-email-preview.service';
 import { InvoicesService } from './invoices.service';
 
 @Resolver(() => Invoice)
 export class InvoicesResolver {
   constructor(
     private readonly invoices: InvoicesService,
+    private readonly emailPreview: InvoiceEmailPreviewService,
     private readonly requestContext: RequestContextService,
   ) {}
 
@@ -68,6 +72,16 @@ export class InvoicesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteInvoiceResult> {
     return this.invoices.delete(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => InvoiceEmailPreview)
+  previewInvoiceEmail(
+    @Args('input') input: PreviewInvoiceEmailInput,
+  ): InvoiceEmailPreview {
+    this.organizationId();
+    return this.emailPreview.preview(input);
   }
 
   private organizationId(): number {

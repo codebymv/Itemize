@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Monitor, Smartphone, ExternalLink, AlertCircle } from 'lucide-react';
 import { getInvoiceEmailPreview } from '@/services/invoicesApi';
+import { sandboxedEmailPreviewDocument } from '@/lib/emailPreviewWindow';
 import { cn } from '@/lib/utils';
 
 interface InvoiceEmailPreviewProps {
@@ -69,7 +70,8 @@ export function InvoiceEmailPreview({
 
         const newWindow = window.open('', '_blank');
         if (newWindow) {
-            newWindow.document.write(previewHtml);
+            newWindow.opener = null;
+            newWindow.document.write(sandboxedEmailPreviewDocument(previewHtml));
             newWindow.document.close();
         }
     };

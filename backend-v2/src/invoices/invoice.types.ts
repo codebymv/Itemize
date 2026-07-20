@@ -262,3 +262,9 @@ export class DeleteInvoiceResult {
   @Field()
   invoiceNumber: string;
 }
+
+@ObjectType()
+export class InvoiceEmailPreview {
+  @Field()
+  html: string;
+}

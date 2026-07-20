@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 388
 - Operations with frontend consumers: 367
-- Operations referenced by backend tests: 201
+- Operations referenced by backend tests: 202
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -189,7 +189,7 @@
 | PUT | `/api/invoices/businesses/:id` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / updateInvoiceBusiness |
 | DELETE | `/api/invoices/businesses/:id/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / removeInvoiceBusinessLogo |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 1 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
-| POST | `/api/invoices/email/preview` | 1 | 0 | graphql-mutation | high | billing / InvoicesModule / previewInvoiceEmail |
+| POST | `/api/invoices/email/preview` | 1 | 1 | graphql-mutation | high | billing / InvoicesModule / previewInvoiceEmail |
 | GET | `/api/invoices/estimates` | 1 | 6 | graphql-query | medium | billing / EstimatesModule / estimates |
 | POST | `/api/invoices/estimates` | 1 | 9 | graphql-mutation | medium | billing / EstimatesModule / createEstimate |
 | DELETE | `/api/invoices/estimates/:id` | 1 | 2 | graphql-mutation | medium | billing / EstimatesModule / deleteEstimate |

@@ -128,3 +128,15 @@ export class UpdateInvoiceInput {
   @Field(() => String, { nullable: true })
   paymentTerms?: string | null;
 }
+
+@InputType()
+export class PreviewInvoiceEmailInput {
+  @Field(() => String)
+  message: string;
+
+  @Field(() => String, { nullable: true })
+  subject?: string | null;
+
+  @Field(() => Boolean, { defaultValue: false })
+  includePaymentLink = false;
+}

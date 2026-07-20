@@ -123,6 +123,9 @@ export const isInvoiceSettingsGraphqlReadsEnabled = (): boolean =>
 export const isInvoiceSettingsGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_SETTINGS_MUTATIONS_GRAPHQL === 'true';
 
+export const isInvoiceEmailPreviewGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_INVOICE_EMAIL_PREVIEW_GRAPHQL === 'true';
+
 export const isInvoiceGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_READS_GRAPHQL === 'true';
 

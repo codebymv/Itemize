@@ -130,6 +130,8 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       require('../../../backend/src/routes/invoices/crud.routes');
     const createSettingsRouter =
       require('../../../backend/src/routes/invoices/settings.routes');
+    const createEmailPreviewRouter =
+      require('../../../backend/src/routes/invoices/email-preview.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const { requireOrganization } =
       require('../../../backend/src/middleware/organization')(pool);
@@ -151,6 +153,10 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     legacyApp.use(
       '/api/invoices',
       createSettingsRouter({ pool, authenticateJWT, requireOrganization }),
+    );
+    legacyApp.use(
+      '/api/invoices',
+      createEmailPreviewRouter({ pool, authenticateJWT, requireOrganization }),
     );
     legacyApp.use(
       '/api/invoices',
@@ -585,6 +591,76 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       allocated === 'SET-00950' ? 951 : 950,
     );
     expect(final.rows[0].invoice_count).toBe(1);
+  });
+
+  it('previews invoice email as bounded inert HTML behind tenant and CSRF guards', async () => {
+    const mutation = `
+      mutation PreviewInvoiceEmail($input: PreviewInvoiceEmailInput!) {
+        previewInvoiceEmail(input: $input) { html }
+      }
+    `;
+    const input = {
+      message: 'Hello Ada,\nYour invoice is attached.',
+      subject: 'Invoice SET-00950',
+      includePaymentLink: true,
+    };
+    const retained = await request(legacyApp)
+      .post('/api/invoices/email/preview')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .send({ ...input, baseUrl: 'https://frontend.test.itemize' })
+      .expect(200);
+    expect(retained.body.data.html).toContain('Hello Ada,\nYour invoice is attached.');
+    expect(retained.body.data.html).toContain('Pay Now');
+    expect(retained.body.data.html).not.toContain('Unsubscribe');
+
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { input },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const foreignOrganization = await graphql(
+      memberToken,
+      outsiderOrganizationId,
+      mutation,
+      { input },
+    ).expect(200);
+    expect(foreignOrganization.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const hostile = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      {
+        input: {
+          message: '<script>window.opener.pwned=true</script>',
+          subject: '</title><script>alert(1)</script>',
+          includePaymentLink: true,
+        },
+      },
+    ).expect(200);
+    expect(hostile.body.errors).toBeUndefined();
+    const html = hostile.body.data.previewInvoiceEmail.html;
+    expect(html).toContain('&lt;script&gt;window.opener.pwned=true&lt;/script&gt;');
+    expect(html).toContain('&lt;/title&gt;&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('Pay Now');
+    expect(html).not.toContain('Unsubscribe');
+
+    const empty = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { input: { message: '   ' } },
+    ).expect(200);
+    expect(empty.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      field: 'message',
+      reason: 'EMPTY_INVOICE_EMAIL_MESSAGE',
+    });
   });
 
   const estimateMutation = `

@@ -11,6 +11,7 @@ import {
     isInvoiceBusinessGraphqlReadsEnabled,
     isInvoiceSettingsGraphqlMutationsEnabled,
     isInvoiceSettingsGraphqlReadsEnabled,
+    isInvoiceEmailPreviewGraphqlEnabled,
     isInvoiceGraphqlMutationsEnabled,
     isInvoiceGraphqlReadsEnabled,
     isPaymentGraphqlMutationsEnabled,
@@ -42,6 +43,7 @@ import {
     getInvoiceSettingsViaGraphql,
     updateInvoiceSettingsViaGraphql,
 } from './invoiceSettingsGraphql';
+import { previewInvoiceEmailViaGraphql } from './invoiceEmailPreviewGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -412,6 +414,9 @@ export const getInvoiceEmailPreview = async (
     data: InvoiceEmailPreviewRequest,
     organizationId?: number
 ): Promise<InvoiceEmailPreviewResponse> => {
+    if (isInvoiceEmailPreviewGraphqlEnabled()) {
+        return previewInvoiceEmailViaGraphql(data, organizationId);
+    }
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     const response = await api.post('/api/invoices/email/preview', { ...data, baseUrl }, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
