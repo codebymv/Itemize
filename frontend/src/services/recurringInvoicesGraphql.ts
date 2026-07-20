@@ -193,6 +193,22 @@ export const getRecurringInvoiceViaGraphql = async (
   return mapRecurringInvoice(data.recurringInvoice);
 };
 
+export const getRecurringInvoiceNumberPreviewViaGraphql = async (
+  organizationId?: number,
+): Promise<string> => {
+  const data = await graphqlRequest<
+    { previewRecurringInvoiceNumber: string },
+    Record<string, never>
+  >(
+    `query PreviewRecurringInvoiceNumber {
+      previewRecurringInvoiceNumber
+    }`,
+    {},
+    organizationId,
+  );
+  return data.previewRecurringInvoiceNumber;
+};
+
 export const getRecurringInvoiceHistoryViaGraphql = async (
   id: number,
   organizationId?: number,
@@ -249,6 +265,51 @@ export const createRecurringInvoiceViaGraphql = async (
     organizationId,
   );
   return mapRecurringInvoice(data.createRecurringInvoice);
+};
+
+export const createRecurringInvoiceFromInvoiceViaGraphql = async (
+  invoiceId: number,
+  input: {
+    template_name: string;
+    frequency: string;
+    start_date: string;
+    end_date?: string;
+  },
+  organizationId?: number,
+): Promise<{ recurring_template_id: number }> => {
+  const data = await graphqlMutationRequest<
+    { createRecurringInvoiceFromInvoice: { id: number } },
+    {
+      invoiceId: number;
+      input: {
+        templateName: string;
+        frequency: string;
+        startDate: string;
+        endDate?: string;
+      };
+    }
+  >(
+    `mutation CreateRecurringInvoiceFromInvoice(
+      $invoiceId: Int!, $input: CreateRecurringInvoiceFromInvoiceInput!
+    ) {
+      createRecurringInvoiceFromInvoice(invoiceId: $invoiceId, input: $input) {
+        id
+      }
+    }`,
+    {
+      invoiceId,
+      input: {
+        templateName: input.template_name,
+        frequency: input.frequency,
+        startDate: input.start_date,
+        ...(input.end_date === undefined ? {} : { endDate: input.end_date }),
+      },
+    },
+    organizationId,
+  );
+  return {
+    recurring_template_id: data.createRecurringInvoiceFromInvoice.id,
+  };
 };
 
 export const updateRecurringInvoiceViaGraphql = async (

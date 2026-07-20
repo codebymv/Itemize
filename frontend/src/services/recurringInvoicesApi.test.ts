@@ -22,6 +22,7 @@ import {
   deleteRecurringInvoiceViaGraphql,
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
+  getRecurringInvoiceNumberPreviewViaGraphql,
   getRecurringInvoicesViaGraphql,
   pauseRecurringInvoiceViaGraphql,
   resumeRecurringInvoiceViaGraphql,
@@ -41,6 +42,7 @@ vi.mock('./recurringInvoicesGraphql', () => ({
   deleteRecurringInvoiceViaGraphql: vi.fn(),
   getRecurringInvoiceViaGraphql: vi.fn(),
   getRecurringInvoiceHistoryViaGraphql: vi.fn(),
+  getRecurringInvoiceNumberPreviewViaGraphql: vi.fn(),
   getRecurringInvoicesViaGraphql: vi.fn(),
   pauseRecurringInvoiceViaGraphql: vi.fn(),
   resumeRecurringInvoiceViaGraphql: vi.fn(),
@@ -107,6 +109,8 @@ describe('recurring invoice API transport selection', () => {
     vi.mocked(getRecurringInvoicesViaGraphql).mockResolvedValue([recurring]);
     vi.mocked(getRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(getRecurringInvoiceHistoryViaGraphql).mockResolvedValue([]);
+    vi.mocked(getRecurringInvoiceNumberPreviewViaGraphql)
+      .mockResolvedValue('INV-00009');
     vi.mocked(createRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(updateRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(deleteRecurringInvoiceViaGraphql).mockResolvedValue({ success: true });
@@ -114,6 +118,7 @@ describe('recurring invoice API transport selection', () => {
     await getRecurringInvoices('paused', 4);
     await getRecurringInvoice(8, 4);
     await getRecurringInvoiceHistory(8, 4);
+    await getRecurringInvoiceNumberPreview(4);
     await createRecurringInvoice(createInput, 4);
     await updateRecurringInvoice(8, { notes: 'Updated' }, 4);
     await deleteRecurringInvoice(8, 4);
@@ -123,6 +128,7 @@ describe('recurring invoice API transport selection', () => {
       8, { notes: 'Updated' }, 4,
     );
     expect(getRecurringInvoiceHistoryViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(getRecurringInvoiceNumberPreviewViaGraphql).toHaveBeenCalledWith(4);
     expect(api.post).toHaveBeenCalledWith(
       '/api/invoices/recurring/8/pause', {},
       { headers: { 'x-organization-id': '4' } },

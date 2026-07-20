@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ItemizeGraphqlErrorCode, itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
+  CreateRecurringInvoiceFromInvoiceInput,
   CreateRecurringInvoiceInput,
   RecurringInvoiceFilterInput,
   RecurringInvoiceItemInput,
@@ -15,6 +16,7 @@ import {
   RecurringInvoicePage,
 } from './recurring-invoice.types';
 import {
+  RecurringInvoiceCloneOutcome,
   RecurringInvoiceLifecycleOutcome,
   RecurringInvoiceItemValues,
   RecurringInvoiceRow,
@@ -62,6 +64,10 @@ export class RecurringInvoicesService {
     return this.map(row);
   }
 
+  async previewInvoiceNumber(organizationId: number): Promise<string> {
+    return this.recurringInvoices.previewInvoiceNumber(organizationId);
+  }
+
   async create(
     organizationId: number,
     userId: number,
@@ -82,6 +88,30 @@ export class RecurringInvoicesService {
       paymentTerms: this.text(input.paymentTerms, 'paymentTerms', 50),
     };
     return this.saved(await this.recurringInvoices.create(organizationId, userId, values));
+  }
+
+  async createFromInvoice(
+    organizationId: number,
+    userId: number,
+    invoiceId: number,
+    input: CreateRecurringInvoiceFromInvoiceInput,
+  ): Promise<RecurringInvoice> {
+    this.id(invoiceId, 'invoiceId');
+    const values = {
+      templateName: this.requiredText(input.templateName, 'templateName', 255),
+      frequency: this.frequency(input.frequency),
+      startDate: this.date(input.startDate, 'startDate'),
+      endDate: this.optionalDate(input.endDate, 'endDate'),
+    };
+    if (values.endDate !== null && values.endDate < values.startDate) {
+      throw itemizeGraphqlError(
+        'endDate cannot be before startDate', 'BAD_USER_INPUT',
+        { field: 'endDate', reason: 'INVALID_DATE_ORDER' },
+      );
+    }
+    return this.cloned(await this.recurringInvoices.createFromInvoice(
+      organizationId, userId, invoiceId, values,
+    ));
   }
 
   async update(
@@ -212,6 +242,45 @@ export class RecurringInvoicesService {
         actualStatus: outcome.actualStatus,
       },
     );
+  }
+
+  private cloned(outcome: RecurringInvoiceCloneOutcome): RecurringInvoice {
+    if (outcome.kind === 'saved') return this.map(outcome.row);
+    if (outcome.kind === 'not-found') {
+      throw itemizeGraphqlError('Invoice not found', 'NOT_FOUND', {
+        reason: 'SOURCE_INVOICE_NOT_FOUND',
+      });
+    }
+    if (outcome.kind === 'invalid-state') {
+      throw itemizeGraphqlError(
+        'Cancelled or refunded invoices cannot become recurring',
+        'BAD_USER_INPUT',
+        {
+          reason: 'SOURCE_INVOICE_NOT_CONVERTIBLE',
+          actualStatus: outcome.actualStatus,
+        },
+      );
+    }
+    const messages: Record<
+      Exclude<RecurringInvoiceCloneOutcome['kind'], 'saved' | 'not-found' | 'invalid-state'>,
+      [string, string]
+    > = {
+      'no-items': ['Invoice has no line items', 'SOURCE_INVOICE_HAS_NO_ITEMS'],
+      'invalid-source': [
+        'Invoice contains data that cannot be copied to a recurring template',
+        'SOURCE_INVOICE_INVALID',
+      ],
+      'invalid-discount': [
+        'Invoice discount cannot be copied to a recurring template',
+        'SOURCE_INVOICE_DISCOUNT_INVALID',
+      ],
+      'negative-total': [
+        'Invoice discount would make the recurring total negative',
+        'SOURCE_INVOICE_NEGATIVE_TOTAL',
+      ],
+    };
+    const [message, reason] = messages[outcome.kind];
+    throw itemizeGraphqlError(message, 'BAD_USER_INPUT', { reason });
   }
 
   private saved(outcome: RecurringInvoiceWriteOutcome): RecurringInvoice {

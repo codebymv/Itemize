@@ -206,7 +206,7 @@
 | GET | `/api/invoices/recurring` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoices |
 | POST | `/api/invoices/recurring` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoice |
 | DELETE | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / deleteRecurringInvoice |
-| GET | `/api/invoices/recurring/:id` | 1 | 2 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoice |
+| GET | `/api/invoices/recurring/:id` | 1 | 3 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoice |
 | PUT | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / updateRecurringInvoice |
 | POST | `/api/invoices/recurring/:id/generate-now` | 1 | 2 | graphql-mutation | high | billing / RecurringInvoicesModule / generateRecurringInvoiceNow |
 | GET | `/api/invoices/recurring/:id/history` | 1 | 0 | graphql-query | medium | billing / RecurringInvoicesModule / recurringInvoiceHistory |

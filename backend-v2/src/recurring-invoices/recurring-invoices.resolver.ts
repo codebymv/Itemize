@@ -3,6 +3,7 @@ import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
+  CreateRecurringInvoiceFromInvoiceInput,
   CreateRecurringInvoiceInput,
   RecurringInvoiceFilterInput,
   UpdateRecurringInvoiceInput,
@@ -40,6 +41,12 @@ export class RecurringInvoicesResolver {
   }
 
   @OrganizationScoped()
+  @Query(() => String)
+  previewRecurringInvoiceNumber(): Promise<string> {
+    return this.recurringInvoices.previewInvoiceNumber(this.organizationId());
+  }
+
+  @OrganizationScoped()
   @Query(() => RecurringInvoiceHistoryPage)
   recurringInvoiceHistory(
     @Args('id', { type: () => Int }) id: number,
@@ -56,6 +63,18 @@ export class RecurringInvoicesResolver {
   ): Promise<RecurringInvoice> {
     return this.recurringInvoices.create(
       this.organizationId(), this.userId(), input,
+    );
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => RecurringInvoice)
+  createRecurringInvoiceFromInvoice(
+    @Args('invoiceId', { type: () => Int }) invoiceId: number,
+    @Args('input') input: CreateRecurringInvoiceFromInvoiceInput,
+  ): Promise<RecurringInvoice> {
+    return this.recurringInvoices.createFromInvoice(
+      this.organizationId(), this.userId(), invoiceId, input,
     );
   }
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
   createInvoice,
+  createRecurringTemplateFromInvoice,
   deleteInvoice,
   getInvoice,
   getInvoices,
@@ -10,6 +11,7 @@ import {
 import {
   isInvoiceGraphqlMutationsEnabled,
   isInvoiceGraphqlReadsEnabled,
+  isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
 import {
   createInvoiceViaGraphql,
@@ -18,6 +20,7 @@ import {
   getInvoicesViaGraphql,
   updateInvoiceViaGraphql,
 } from './invoicesGraphql';
+import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoicesGraphql';
 
 vi.mock('@/lib/api', () => ({
   default: {
@@ -35,6 +38,7 @@ vi.mock('./graphqlClient', () => ({
   isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
   isProductGraphqlMutationsEnabled: vi.fn(() => false),
   isProductGraphqlReadsEnabled: vi.fn(() => false),
+  isRecurringInvoiceGraphqlCloneEnabled: vi.fn(),
 }));
 vi.mock('./invoicesGraphql', () => ({
   createInvoiceViaGraphql: vi.fn(),
@@ -42,6 +46,9 @@ vi.mock('./invoicesGraphql', () => ({
   getInvoiceViaGraphql: vi.fn(),
   getInvoicesViaGraphql: vi.fn(),
   updateInvoiceViaGraphql: vi.fn(),
+}));
+vi.mock('./recurringInvoicesGraphql', () => ({
+  createRecurringInvoiceFromInvoiceViaGraphql: vi.fn(),
 }));
 
 const invoice = {
@@ -71,6 +78,53 @@ describe('core invoice API transport selection', () => {
     vi.clearAllMocks();
     vi.mocked(isInvoiceGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isInvoiceGraphqlMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isRecurringInvoiceGraphqlCloneEnabled).mockReturnValue(false);
+  });
+
+  it('keeps from-invoice cloning on REST by default', async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: {
+        success: true,
+        template: { id: 22 },
+        sourceInvoicePreserved: true,
+      },
+    });
+    await expect(createRecurringTemplateFromInvoice(
+      12,
+      {
+        template_name: 'Retainer',
+        frequency: 'monthly',
+        start_date: '2026-07-21',
+      },
+      4,
+    )).resolves.toEqual({ recurring_template_id: 22 });
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/invoices/recurring/from-invoice/12',
+      {
+        template_name: 'Retainer',
+        frequency: 'monthly',
+        start_date: '2026-07-21',
+      },
+      { headers: { 'x-organization-id': '4' } },
+    );
+    expect(createRecurringInvoiceFromInvoiceViaGraphql).not.toHaveBeenCalled();
+  });
+
+  it('routes from-invoice cloning through its independent GraphQL flag', async () => {
+    vi.mocked(isRecurringInvoiceGraphqlCloneEnabled).mockReturnValue(true);
+    vi.mocked(createRecurringInvoiceFromInvoiceViaGraphql)
+      .mockResolvedValue({ recurring_template_id: 22 });
+    const input = {
+      template_name: 'Retainer',
+      frequency: 'monthly',
+      start_date: '2026-07-21',
+      end_date: '2026-12-21',
+    };
+    await expect(createRecurringTemplateFromInvoice(12, input, 4))
+      .resolves.toEqual({ recurring_template_id: 22 });
+    expect(createRecurringInvoiceFromInvoiceViaGraphql)
+      .toHaveBeenCalledWith(12, input, 4);
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it('retains all five operations on REST by default', async () => {

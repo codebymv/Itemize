@@ -863,6 +863,178 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
+  it('previews without reserving and clones a tenant-owned invoice transactionally', async () => {
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, invoice_prefix, next_invoice_number
+       ) VALUES ($1, 'REC-', 37)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         invoice_prefix = EXCLUDED.invoice_prefix,
+         next_invoice_number = EXCLUDED.next_invoice_number`,
+      [organizationId],
+    );
+    const previewDocument = `query PreviewRecurringInvoiceNumber {
+      previewRecurringInvoiceNumber
+    }`;
+    const firstPreview = await graphql(
+      memberToken, organizationId, previewDocument, {}, false,
+    ).expect(200);
+    const secondPreview = await graphql(
+      memberToken, organizationId, previewDocument, {}, false,
+    ).expect(200);
+    expect(firstPreview.body.data.previewRecurringInvoiceNumber).toBe('REC-00037');
+    expect(secondPreview.body.data.previewRecurringInvoiceNumber).toBe('REC-00037');
+    const unreserved = await pool.query<{ next_invoice_number: number }>(
+      `SELECT next_invoice_number FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(Number(unreserved.rows[0].next_invoice_number)).toBe(37);
+
+    const source = await graphql(
+      memberToken,
+      organizationId,
+      createMutation,
+      {
+        input: {
+          ...input(),
+          notes: 'Copied source notes',
+          paymentTerms: '14',
+        },
+      },
+    ).expect(200);
+    expect(source.body.errors).toBeUndefined();
+    const sourceId = Number(source.body.data.createInvoice.id);
+    expect(source.body.data.createInvoice.invoiceNumber).toBe('REC-00037');
+    const sourceBefore = await pool.query(
+      `SELECT total::text, amount_due::text, status, is_recurring_source,
+              (SELECT COUNT(*) FROM invoice_items ii
+               WHERE ii.invoice_id = invoices.id
+                 AND ii.organization_id = invoices.organization_id)::int AS item_count
+       FROM invoices
+       WHERE id = $1 AND organization_id = $2`,
+      [sourceId, organizationId],
+    );
+
+    const cloneMutation = `mutation CreateRecurringInvoiceFromInvoice(
+      $invoiceId: Int!, $input: CreateRecurringInvoiceFromInvoiceInput!
+    ) {
+      createRecurringInvoiceFromInvoice(invoiceId: $invoiceId, input: $input) {
+        id organizationId templateName sourceInvoiceId sourceInvoiceNumber
+        contactId frequency startDate endDate nextRunDate status
+        subtotal taxAmount discountAmount discountType discountValue total
+        notes paymentTerms
+        items { productId name description quantity unitPrice taxRate }
+      }
+    }`;
+    const cloneInput = {
+      templateName: 'Copied monthly invoice',
+      frequency: 'monthly',
+      startDate: '2026-07-21',
+      endDate: '2026-12-21',
+    };
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      cloneMutation,
+      { invoiceId: sourceId, input: cloneInput },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const cloned = await graphql(
+      memberToken,
+      organizationId,
+      cloneMutation,
+      { invoiceId: sourceId, input: cloneInput },
+    ).expect(200);
+    expect(cloned.body.errors).toBeUndefined();
+    expect(cloned.body.data.createRecurringInvoiceFromInvoice).toMatchObject({
+      organizationId,
+      templateName: 'Copied monthly invoice',
+      sourceInvoiceId: sourceId,
+      sourceInvoiceNumber: 'REC-00037',
+      contactId,
+      frequency: 'monthly',
+      startDate: '2026-07-21',
+      endDate: '2026-12-21',
+      nextRunDate: '2026-07-21',
+      status: 'active',
+      subtotal: '25.00',
+      taxAmount: '1.25',
+      discountAmount: '1.00',
+      discountType: 'fixed',
+      discountValue: '1.00',
+      total: '25.25',
+      notes: 'Copied source notes',
+      paymentTerms: '14',
+      items: [{
+        productId,
+        name: 'Consulting',
+        quantity: '2.00',
+        unitPrice: '12.50',
+        taxRate: '5.00',
+      }],
+    });
+    const templateId = Number(
+      cloned.body.data.createRecurringInvoiceFromInvoice.id,
+    );
+    const sourceAfter = await pool.query(
+      `SELECT total::text, amount_due::text, status, is_recurring_source,
+              (SELECT COUNT(*) FROM invoice_items ii
+               WHERE ii.invoice_id = invoices.id
+                 AND ii.organization_id = invoices.organization_id)::int AS item_count
+       FROM invoices
+       WHERE id = $1 AND organization_id = $2`,
+      [sourceId, organizationId],
+    );
+    expect(sourceAfter.rows[0]).toEqual({
+      ...sourceBefore.rows[0],
+      is_recurring_source: true,
+    });
+    const allocation = await pool.query<{ next_invoice_number: number }>(
+      `SELECT next_invoice_number FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(Number(allocation.rows[0].next_invoice_number)).toBe(38);
+    const retained = await request(legacyApp)
+      .get(`/api/invoices/recurring/${templateId}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(retained.body).toMatchObject({
+      id: templateId,
+      source_invoice_id: sourceId,
+      total: '25.25',
+    });
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      cloneMutation,
+      { invoiceId: sourceId, input: cloneInput },
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions).toMatchObject({
+      code: 'NOT_FOUND',
+      reason: 'SOURCE_INVOICE_NOT_FOUND',
+    });
+    await pool.query(
+      `UPDATE invoices SET status = 'cancelled'
+       WHERE id = $1 AND organization_id = $2`,
+      [sourceId, organizationId],
+    );
+    const cancelled = await graphql(
+      memberToken,
+      organizationId,
+      cloneMutation,
+      { invoiceId: sourceId, input: cloneInput },
+    ).expect(200);
+    expect(cancelled.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'SOURCE_INVOICE_NOT_CONVERTIBLE',
+      actualStatus: 'cancelled',
+    });
+  });
+
   it('enforces recurring CSRF, tenant references, dates, and private misses', async () => {
     const noCsrf = await graphql(
       memberToken, organizationId, recurringMutation,

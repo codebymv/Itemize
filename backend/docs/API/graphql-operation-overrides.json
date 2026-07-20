@@ -589,18 +589,18 @@
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "createRecurringInvoiceFromInvoice",
-      "parityStatus": "not-started",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Clone only organization-owned source data and preserve decimal/date semantics without sharing mutable line-item rows."
+      "notes": "The CSRF-protected mutation row-locks the tenant-owned source invoice, rejects terminal sources, clones tenant-qualified item snapshots into legacy-compatible JSON, recalculates exact recurring totals in PostgreSQL, marks the preserved source, and commits all effects atomically."
     },
     "GET /api/invoices/recurring/preview-invoice-number": {
       "disposition": "graphql-query",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "previewRecurringInvoiceNumber",
-      "parityStatus": "not-started",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Preview does not reserve a number; creation must remain safe under concurrent numbering."
+      "notes": "The tenant-scoped query returns the configured prefix and current next number without reserving or incrementing it; invoice creation remains the atomic allocation authority."
     },
     "GET /api/invoices/settings": {
       "disposition": "graphql-query",

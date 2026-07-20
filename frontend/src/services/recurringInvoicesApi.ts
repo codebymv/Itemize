@@ -9,6 +9,7 @@ import {
   deleteRecurringInvoiceViaGraphql,
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
+  getRecurringInvoiceNumberPreviewViaGraphql,
   getRecurringInvoicesViaGraphql,
   pauseRecurringInvoiceViaGraphql,
   resumeRecurringInvoiceViaGraphql,
@@ -214,6 +215,9 @@ export const generateRecurringInvoiceNow = async (
 export const getRecurringInvoiceNumberPreview = async (
   organizationId?: number,
 ): Promise<string> => {
+  if (isRecurringInvoiceGraphqlReadsEnabled()) {
+    return getRecurringInvoiceNumberPreviewViaGraphql(organizationId);
+  }
   const response = await api.get('/api/invoices/recurring/preview-invoice-number', {
     headers: headers(organizationId),
   });

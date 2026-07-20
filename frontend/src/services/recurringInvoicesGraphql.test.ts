@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import {
+  createRecurringInvoiceFromInvoiceViaGraphql,
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
+  getRecurringInvoiceNumberPreviewViaGraphql,
   getRecurringInvoicesViaGraphql,
   pauseRecurringInvoiceViaGraphql,
   resumeRecurringInvoiceViaGraphql,
@@ -143,5 +145,42 @@ describe('recurring invoice GraphQL adapter', () => {
       .resolves.toMatchObject({ id: 8, status: 'active' });
     expect(vi.mocked(graphqlMutationRequest).mock.calls.map((call) => call[1]))
       .toEqual([{ id: 8 }, { id: 8 }]);
+  });
+
+  it('previews without reserving and maps invoice cloning to the retained ID shape', async () => {
+    vi.mocked(graphqlRequest)
+      .mockResolvedValueOnce({ previewRecurringInvoiceNumber: 'ACME-00042' });
+    vi.mocked(graphqlMutationRequest)
+      .mockResolvedValueOnce({ createRecurringInvoiceFromInvoice: { id: 42 } });
+    await expect(getRecurringInvoiceNumberPreviewViaGraphql(4))
+      .resolves.toBe('ACME-00042');
+    await expect(createRecurringInvoiceFromInvoiceViaGraphql(
+      12,
+      {
+        template_name: 'Monthly support',
+        frequency: 'monthly',
+        start_date: '2026-07-21',
+        end_date: '2026-12-21',
+      },
+      4,
+    )).resolves.toEqual({ recurring_template_id: 42 });
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('previewRecurringInvoiceNumber'),
+      {},
+      4,
+    );
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('createRecurringInvoiceFromInvoice'),
+      {
+        invoiceId: 12,
+        input: {
+          templateName: 'Monthly support',
+          frequency: 'monthly',
+          startDate: '2026-07-21',
+          endDate: '2026-12-21',
+        },
+      },
+      4,
+    );
   });
 });

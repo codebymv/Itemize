@@ -12,6 +12,7 @@ import {
     isInvoiceGraphqlMutationsEnabled,
     isInvoiceGraphqlReadsEnabled,
     isPaymentGraphqlMutationsEnabled,
+    isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
 import {
     createInvoiceBusinessViaGraphql,
@@ -34,6 +35,7 @@ import {
     getInvoicesViaGraphql,
     updateInvoiceViaGraphql,
 } from './invoicesGraphql';
+import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoicesGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -461,10 +463,26 @@ export const createRecurringTemplateFromInvoice = async (
     },
     organizationId?: number
 ): Promise<{ recurring_template_id: number }> => {
+    if (isRecurringInvoiceGraphqlCloneEnabled()) {
+        return createRecurringInvoiceFromInvoiceViaGraphql(
+            invoiceId,
+            data,
+            organizationId
+        );
+    }
     const response = await api.post(`/api/invoices/recurring/from-invoice/${invoiceId}`, data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return unwrapResponse<{ recurring_template_id: number }>(response.data);
+    const payload = unwrapResponse<{
+        recurring_template_id?: number;
+        template?: { id: number };
+    }>(response.data);
+    const recurringTemplateId =
+        payload.recurring_template_id ?? payload.template?.id;
+    if (!recurringTemplateId) {
+        throw new Error('Recurring template response did not include an ID');
+    }
+    return { recurring_template_id: recurringTemplateId };
 };
 
 // ======================

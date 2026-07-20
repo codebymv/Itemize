@@ -67,6 +67,21 @@ export class CreateRecurringInvoiceInput {
 }
 
 @InputType()
+export class CreateRecurringInvoiceFromInvoiceInput {
+  @Field()
+  templateName: string;
+
+  @Field()
+  frequency: string;
+
+  @Field()
+  startDate: string;
+
+  @Field(() => String, { nullable: true })
+  endDate?: string | null;
+}
+
+@InputType()
 export class UpdateRecurringInvoiceInput {
   @Field(() => String, { nullable: true })
   templateName?: string;

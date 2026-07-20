@@ -93,6 +93,22 @@ export type RecurringInvoiceHistoryOutcome =
   | { kind: 'found'; rows: RecurringInvoiceHistoryRow[]; total: number }
   | { kind: 'not-found' };
 
+export type RecurringInvoiceCloneValues = {
+  templateName: string;
+  frequency: string;
+  startDate: string;
+  endDate: string | null;
+};
+
+export type RecurringInvoiceCloneOutcome =
+  | { kind: 'saved'; row: RecurringInvoiceRow }
+  | { kind: 'not-found' }
+  | { kind: 'invalid-state'; actualStatus: string }
+  | { kind: 'no-items' }
+  | { kind: 'invalid-source' }
+  | { kind: 'invalid-discount' }
+  | { kind: 'negative-total' };
+
 export type RecurringInvoiceCriteria = {
   organizationId: number;
   status?: string;
@@ -165,6 +181,23 @@ export class RecurringInvoicesRepository {
     return result.rows[0] ?? null;
   }
 
+  async previewInvoiceNumber(organizationId: number): Promise<string> {
+    const result = await this.pool.query<{
+      invoice_prefix: string;
+      next_invoice_number: string;
+    }>(
+      `SELECT
+         COALESCE(NULLIF(invoice_prefix, ''), 'INV-') AS invoice_prefix,
+         GREATEST(COALESCE(next_invoice_number, 1), 1) AS next_invoice_number
+       FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    const prefix = result.rows[0]?.invoice_prefix ?? 'INV-';
+    const nextNumber = String(result.rows[0]?.next_invoice_number ?? 1);
+    return `${prefix}${nextNumber.padStart(5, '0')}`;
+  }
+
   async create(
     organizationId: number,
     userId: number,
@@ -203,6 +236,112 @@ export class RecurringInvoicesRepository {
       );
       const row = await this.load(client, organizationId, Number(inserted.rows[0].id));
       if (!row) throw new Error('Created recurring invoice could not be reloaded');
+      return { kind: 'saved', row };
+    });
+  }
+
+  async createFromInvoice(
+    organizationId: number,
+    userId: number,
+    invoiceId: number,
+    values: RecurringInvoiceCloneValues,
+  ): Promise<RecurringInvoiceCloneOutcome> {
+    return this.transaction(async (client) => {
+      const invoiceResult = await client.query<{
+        status: string;
+        contact_id: number | null;
+        customer_name: string | null;
+        customer_email: string | null;
+        discount_type: string | null;
+        discount_value: string;
+        notes: string | null;
+        payment_terms: string | null;
+      }>(
+        `SELECT i.status,
+                CASE WHEN c.id IS NULL THEN NULL ELSE i.contact_id END AS contact_id,
+                i.customer_name, i.customer_email, i.discount_type,
+                COALESCE(i.discount_value, 0)::text AS discount_value,
+                i.notes, i.payment_terms
+         FROM invoices i
+         LEFT JOIN contacts c
+           ON c.id = i.contact_id AND c.organization_id = i.organization_id
+         WHERE i.id = $1 AND i.organization_id = $2
+         FOR UPDATE OF i`,
+        [invoiceId, organizationId],
+      );
+      const invoice = invoiceResult.rows[0];
+      if (!invoice) return { kind: 'not-found' };
+      if (['cancelled', 'refunded'].includes(invoice.status)) {
+        return { kind: 'invalid-state', actualStatus: invoice.status };
+      }
+      if ((invoice.payment_terms?.length ?? 0) > 50) {
+        return { kind: 'invalid-source' };
+      }
+      const itemResult = await client.query<{
+        product_id: number | null;
+        name: string;
+        description: string | null;
+        quantity: string;
+        unit_price: string;
+        tax_rate: string;
+      }>(
+        `SELECT CASE WHEN p.id IS NULL THEN NULL ELSE ii.product_id END AS product_id,
+                ii.name, ii.description, ii.quantity, ii.unit_price, ii.tax_rate
+         FROM invoice_items ii
+         LEFT JOIN products p
+           ON p.id = ii.product_id AND p.organization_id = ii.organization_id
+         WHERE ii.invoice_id = $1 AND ii.organization_id = $2
+         ORDER BY ii.sort_order, ii.id
+         FOR SHARE OF ii`,
+        [invoiceId, organizationId],
+      );
+      if (itemResult.rows.length === 0) return { kind: 'no-items' };
+      const items = itemResult.rows.map((item): RecurringInvoiceItemValues => ({
+        productId: item.product_id === null ? null : Number(item.product_id),
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        taxRate: item.tax_rate,
+      }));
+      if (!this.discount(invoice.discount_type, invoice.discount_value)) {
+        return { kind: 'invalid-discount' };
+      }
+      const totals = await this.totals(
+        client, items, invoice.discount_type, invoice.discount_value,
+      );
+      if (Number(totals.total) < 0) return { kind: 'negative-total' };
+      const inserted = await client.query<{ id: number }>(
+        `INSERT INTO recurring_invoice_templates (
+           organization_id, template_name, contact_id, customer_name,
+           customer_email, frequency, start_date, end_date, next_run_date,
+           items, subtotal, tax_amount, discount_amount, discount_type,
+           discount_value, total, notes, payment_terms, created_by, status,
+           source_invoice_id
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7::date, $8::date, $7::date, $9::jsonb,
+           $10, $11, $12, $13, $14, $15, $16, $17, $18, 'active', $19
+         ) RETURNING id`,
+        [
+          organizationId, values.templateName, invoice.contact_id,
+          invoice.customer_name, invoice.customer_email, values.frequency,
+          values.startDate, values.endDate,
+          JSON.stringify(this.storedItems(items)), totals.subtotal,
+          totals.taxAmount, totals.discountAmount, invoice.discount_type,
+          invoice.discount_value, totals.total, invoice.notes,
+          invoice.payment_terms, userId, invoiceId,
+        ],
+      );
+      await client.query(
+        `UPDATE invoices
+         SET is_recurring_source = true, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [invoiceId, organizationId],
+      );
+      const row = await this.load(
+        client, organizationId, Number(inserted.rows[0].id),
+      );
+      if (!row) throw new Error('Cloned recurring invoice could not be reloaded');
       return { kind: 'saved', row };
     });
   }

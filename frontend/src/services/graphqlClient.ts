@@ -138,6 +138,9 @@ export const isRecurringInvoiceGraphqlMutationsEnabled = (): boolean =>
 export const isRecurringInvoiceGraphqlLifecycleEnabled = (): boolean =>
   import.meta.env.VITE_RECURRING_INVOICE_LIFECYCLE_GRAPHQL === 'true';
 
+export const isRecurringInvoiceGraphqlCloneEnabled = (): boolean =>
+  import.meta.env.VITE_RECURRING_INVOICE_CLONE_GRAPHQL === 'true';
+
 export const isPaymentGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_PAYMENT_READS_GRAPHQL === 'true';
 
