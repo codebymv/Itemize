@@ -508,40 +508,45 @@
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "recurringInvoices",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Tenant-scoped status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape behind a default-off read flag."
     },
     "POST /api/invoices/recurring": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "createRecurringInvoice",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "CSRF-protected creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally."
     },
     "DELETE /api/invoices/recurring/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "deleteRecurringInvoice",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Tenant-scoped deletion returns stable identity and conceals foreign or absent templates."
     },
     "GET /api/invoices/recurring/:id": {
       "disposition": "graphql-query",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "recurringInvoice",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates."
     },
     "PUT /api/invoices/recurring/:id": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "updateRecurringInvoice",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change."
     },
     "POST /api/invoices/recurring/:id/generate-now": {
       "disposition": "graphql-mutation",

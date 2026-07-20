@@ -27,6 +27,7 @@ import { createGraphqlObservabilityPlugin } from './observability/graphql-observ
 import { PipelinesModule } from './pipelines/pipelines.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ProductsModule } from './products/products.module';
+import { RecurringInvoicesModule } from './recurring-invoices/recurring-invoices.module';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
 import { RequestContextModule } from './request-context/request-context.module';
 import { TagsModule } from './tags/tags.module';
@@ -58,6 +59,7 @@ const observabilityPlugins = [
     PipelinesModule,
     PaymentsModule,
     ProductsModule,
+    RecurringInvoicesModule,
     TagsModule,
     FormsModule,
     InvoiceBusinessesModule,

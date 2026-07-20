@@ -68,6 +68,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { getContacts } from '@/services/contactsApi';
 import { getProducts, Product, getBusinesses, Business } from '@/services/invoicesApi';
+import {
+    createRecurringInvoice,
+    deleteRecurringInvoice,
+    generateRecurringInvoiceNow,
+    getRecurringInvoice,
+    getRecurringInvoiceNumberPreview,
+    getRecurringInvoices,
+    pauseRecurringInvoice,
+    RecurringFrequency,
+    RecurringInvoice,
+    resumeRecurringInvoice,
+} from '@/services/recurringInvoicesApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
@@ -76,42 +88,6 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { cn } from '@/lib/utils';
-import api from '@/lib/api';
-
-interface RecurringInvoice {
-    id: number;
-    template_name: string;
-    contact_id?: number;
-    contact_first_name?: string;
-    contact_last_name?: string;
-    customer_name?: string;
-    customer_email?: string;
-    frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
-    status: 'active' | 'paused' | 'completed';
-    next_run_date: string;
-    start_date: string;
-    end_date?: string;
-    total: number;
-    subtotal?: number;
-    tax_amount?: number;
-    discount_amount?: number;
-    last_generated_at?: string;
-    invoices_generated: number;
-    created_at: string;
-    items?: Array<{
-        name: string;
-        description?: string;
-        quantity: number;
-        unit_price: number;
-        tax_rate?: number;
-    }>;
-    notes?: string;
-    payment_terms?: string;
-    source_invoice_id?: number;
-    source_invoice_number?: string;
-}
-
-type RecurringFrequency = RecurringInvoice['frequency'];
 
 const RECURRING_FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -239,10 +215,7 @@ export function RecurringInvoicesPage() {
         if (!organizationId) return;
         setLoading(true);
         try {
-            const response = await api.get('/api/invoices/recurring', {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
-            setRecurringInvoices(response.data.recurring || response.data || []);
+            setRecurringInvoices(await getRecurringInvoices('all', organizationId));
         } catch (error) {
             // Endpoint might not exist yet
             setRecurringInvoices([]);
@@ -312,7 +285,7 @@ export function RecurringInvoicesPage() {
 
         setSaving(true);
         try {
-            await api.post('/api/invoices/recurring', {
+            await createRecurringInvoice({
                 template_name: templateName,
                 contact_id: contactId,
                 customer_name: customerName || undefined,
@@ -326,9 +299,7 @@ export function RecurringInvoicesPage() {
                     unit_price: item.unit_price,
                     tax_rate: item.tax_rate,
                 })),
-            }, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            }, organizationId);
             toast({ title: 'Created', description: 'Recurring invoice created successfully' });
             setDialogOpen(false);
             fetchRecurringInvoices();
@@ -342,9 +313,7 @@ export function RecurringInvoicesPage() {
     const handlePause = async (id: number) => {
         if (!organizationId) return;
         try {
-            await api.post(`/api/invoices/recurring/${id}/pause`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await pauseRecurringInvoice(id, organizationId);
             toast({ title: 'Paused', description: 'Recurring invoice paused' });
             fetchRecurringInvoices();
         } catch (error) {
@@ -355,9 +324,7 @@ export function RecurringInvoicesPage() {
     const handleResume = async (id: number) => {
         if (!organizationId) return;
         try {
-            await api.post(`/api/invoices/recurring/${id}/resume`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await resumeRecurringInvoice(id, organizationId);
             toast({ title: 'Resumed', description: 'Recurring invoice resumed' });
             fetchRecurringInvoices();
         } catch (error) {
@@ -371,12 +338,10 @@ export function RecurringInvoicesPage() {
         
         setGeneratingInvoice(id);
         try {
-            const response = await api.post(`/api/invoices/recurring/${id}/generate-now`, {}, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            const result = await generateRecurringInvoiceNow(id, organizationId);
             toast({ 
                 title: 'Invoice Generated', 
-                description: `${response.data.invoice_number} created successfully` 
+                description: `${result.invoice_number} created successfully`
             });
             fetchRecurringInvoices();
         } catch (error: unknown) {
@@ -397,9 +362,7 @@ export function RecurringInvoicesPage() {
         if (!organizationId || !recurringToDelete) return;
         setDeleting(true);
         try {
-            await api.delete(`/api/invoices/recurring/${recurringToDelete.id}`, {
-                headers: { 'x-organization-id': organizationId.toString() }
-            });
+            await deleteRecurringInvoice(recurringToDelete.id, organizationId);
             setRecurringInvoices(prev => prev.filter(r => r.id !== recurringToDelete.id));
             toast({ title: 'Deleted', description: 'Recurring invoice deleted successfully' });
             setDeleteDialogOpen(false);
@@ -434,16 +397,12 @@ export function RecurringInvoicesPage() {
         if (!organizationId) return;
         
         try {
-            const [recurringResponse, previewNumberResponse] = await Promise.all([
-                api.get(`/api/invoices/recurring/${recurringId}`, {
-                    headers: { 'x-organization-id': organizationId.toString() }
-                }),
-                api.get('/api/invoices/recurring/preview-invoice-number', {
-                    headers: { 'x-organization-id': organizationId.toString() }
-                })
+            const [recurring, previewNumber] = await Promise.all([
+                getRecurringInvoice(recurringId, organizationId),
+                getRecurringInvoiceNumberPreview(organizationId),
             ]);
-            setExpandedData(recurringResponse.data);
-            setPreviewInvoiceNumber(previewNumberResponse.data.invoice_number || 'INV-00001');
+            setExpandedData(recurring);
+            setPreviewInvoiceNumber(previewNumber);
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load recurring invoice details', variant: 'destructive' });
             setExpandedId(null);

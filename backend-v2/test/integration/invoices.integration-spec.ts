@@ -137,6 +137,12 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       '/api/invoices/estimates',
       createEstimateRouter(pool, authenticateJWT),
     );
+    const createRecurringRouter =
+      require('../../../backend/src/routes/recurring.routes');
+    legacyApp.use(
+      '/api/invoices/recurring',
+      createRecurringRouter(pool, authenticateJWT),
+    );
     legacyApp.use(
       '/api/invoices',
       createCrudRouter({ pool, authenticateJWT, requireOrganization }),
@@ -594,5 +600,153 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(second.body.errors).toBeUndefined();
     expect(first.body.data.createEstimate.estimateNumber)
       .not.toBe(second.body.data.createEstimate.estimateNumber);
+  });
+
+  const recurringMutation = `
+    mutation CreateRecurringInvoice($input: CreateRecurringInvoiceInput!) {
+      createRecurringInvoice(input: $input) {
+        id organizationId templateName contactId frequency status
+        startDate endDate nextRunDate subtotal taxAmount discountAmount total
+        items { productId name quantity unitPrice taxRate }
+      }
+    }
+  `;
+
+  const recurringInput = () => ({
+    templateName: 'Monthly Consulting',
+    contactId,
+    customerName: 'Ada Recurring',
+    customerEmail: 'ada@example.com',
+    frequency: 'monthly',
+    startDate: '2026-07-20',
+    endDate: '2026-10-20',
+    discountType: 'fixed',
+    discountValue: '1.00',
+    items: [{
+      productId,
+      name: 'Consulting',
+      quantity: '2',
+      unitPrice: '12.50',
+      taxRate: '8',
+    }],
+  });
+
+  it('supports recurring CRUD, recalculates stored items, and interoperates with REST', async () => {
+    const created = await graphql(
+      memberToken, organizationId, recurringMutation,
+      { input: recurringInput() },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createRecurringInvoice).toMatchObject({
+      organizationId,
+      contactId,
+      status: 'active',
+      nextRunDate: '2026-07-20',
+      subtotal: '25.00',
+      taxAmount: '2.00',
+      discountAmount: '1.00',
+      total: '26.00',
+      items: [{ productId, unitPrice: '12.50', taxRate: '8' }],
+    });
+    const id = Number(created.body.data.createRecurringInvoice.id);
+    const rest = await request(legacyApp)
+      .get(`/api/invoices/recurring/${id}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(rest.body.template_name).toBe('Monthly Consulting');
+    const updated = await graphql(
+      memberToken,
+      organizationId,
+      `mutation UpdateRecurringInvoice(
+        $id: Int!, $input: UpdateRecurringInvoiceInput!
+      ) {
+        updateRecurringInvoice(id: $id, input: $input) {
+          id templateName frequency subtotal taxAmount discountAmount total
+        }
+      }`,
+      {
+        id,
+        input: {
+          templateName: 'Weekly Consulting',
+          frequency: 'weekly',
+          discountType: 'percent',
+          discountValue: '10',
+        },
+      },
+    ).expect(200);
+    expect(updated.body.data.updateRecurringInvoice).toMatchObject({
+      templateName: 'Weekly Consulting',
+      frequency: 'weekly',
+      subtotal: '25.00',
+      taxAmount: '2.00',
+      discountAmount: '2.50',
+      total: '24.50',
+    });
+    await request(legacyApp)
+      .post(`/api/invoices/recurring/${id}/pause`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    const paused = await graphql(
+      memberToken,
+      organizationId,
+      `query RecurringInvoices($filter: RecurringInvoiceFilterInput) {
+        recurringInvoices(filter: $filter) {
+          nodes { id status }
+          pageInfo { total }
+        }
+      }`,
+      { filter: { status: 'paused' } },
+      false,
+    ).expect(200);
+    expect(paused.body.data.recurringInvoices.nodes).toContainEqual({ id, status: 'paused' });
+    const deleted = await graphql(
+      memberToken,
+      organizationId,
+      `mutation DeleteRecurringInvoice($id: Int!) {
+        deleteRecurringInvoice(id: $id) { success deletedId templateName }
+      }`,
+      { id },
+    ).expect(200);
+    expect(deleted.body.data.deleteRecurringInvoice).toMatchObject({
+      success: true,
+      deletedId: id,
+      templateName: 'Weekly Consulting',
+    });
+  });
+
+  it('enforces recurring CSRF, tenant references, dates, and private misses', async () => {
+    const noCsrf = await graphql(
+      memberToken, organizationId, recurringMutation,
+      { input: recurringInput() }, false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const foreign = await graphql(
+      memberToken, organizationId, recurringMutation,
+      { input: { ...recurringInput(), contactId: outsiderContactId } },
+    ).expect(200);
+    expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const invalidDate = await graphql(
+      memberToken, organizationId, recurringMutation,
+      { input: { ...recurringInput(), endDate: '2026-07-19' } },
+    ).expect(200);
+    expect(invalidDate.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_DATE_ORDER',
+    });
+    const created = await graphql(
+      memberToken, organizationId, recurringMutation,
+      { input: recurringInput() },
+    ).expect(200);
+    const id = Number(created.body.data.createRecurringInvoice.id);
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      `query RecurringInvoice($id: Int!) { recurringInvoice(id: $id) { id } }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 });

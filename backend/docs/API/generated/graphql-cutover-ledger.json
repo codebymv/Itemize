@@ -9,9 +9,9 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 386,
-    "operationsWithFrontendConsumers": 365,
-    "operationsWithBackendTests": 198,
+    "frontendCallsiteCount": 387,
+    "operationsWithFrontendConsumers": 366,
+    "operationsWithBackendTests": 200,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -6859,7 +6859,7 @@
           "method": "GET",
           "path": "/api/invoices/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 244
+          "line": 250
         },
         {
           "method": "GET",
@@ -7700,7 +7700,7 @@
           "method": "GET",
           "path": "/api/invoices/estimates/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 447
+          "line": 453
         },
         {
           "method": "GET",
@@ -8099,8 +8099,8 @@
           "method": "GET",
           "path": "/api/invoices/recurring",
           "rawPath": "/api/invoices/recurring",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 242,
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 88,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8112,8 +8112,8 @@
       "owner": "billing",
       "targetOperation": "recurringInvoices",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Tenant-scoped status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape behind a default-off read flag.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8133,8 +8133,8 @@
           "method": "POST",
           "path": "/api/invoices/recurring",
           "rawPath": "/api/invoices/recurring",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 315,
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 120,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8146,8 +8146,8 @@
       "owner": "billing",
       "targetOperation": "createRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8166,9 +8166,9 @@
         {
           "method": "DELETE",
           "path": "/api/invoices/recurring/:id",
-          "rawPath": "/api/invoices/recurring/${recurringToDelete.id}",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 400,
+          "rawPath": "/api/invoices/recurring/${id}",
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 147,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8180,8 +8180,8 @@
       "owner": "billing",
       "targetOperation": "deleteRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Tenant-scoped deletion returns stable identity and conceals foreign or absent templates.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8199,23 +8199,30 @@
       "consumerCallsites": [
         {
           "method": "GET",
-          "path": "/api/invoices/recurring/:recurringId",
-          "rawPath": "/api/invoices/recurring/${recurringId}",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 438,
+          "path": "/api/invoices/recurring/:id",
+          "rawPath": "/api/invoices/recurring/${id}",
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 102,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/recurring/:id",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 653
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
       "owner": "billing",
       "targetOperation": "recurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8230,7 +8237,17 @@
           "line": 228
         }
       ],
-      "consumerCallsites": [],
+      "consumerCallsites": [
+        {
+          "method": "PUT",
+          "path": "/api/invoices/recurring/:id",
+          "rawPath": "/api/invoices/recurring/${id}",
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 134,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
@@ -8238,8 +8255,8 @@
       "owner": "billing",
       "targetOperation": "updateRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8259,8 +8276,8 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/generate-now",
           "rawPath": "/api/invoices/recurring/${id}/generate-now",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 374,
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 175,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8330,13 +8347,20 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/pause",
           "rawPath": "/api/invoices/recurring/${id}/pause",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 345,
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 157,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/recurring/:id/pause",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 687
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
@@ -8364,8 +8388,8 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/resume",
           "rawPath": "/api/invoices/recurring/${id}/resume",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 358,
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 166,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8432,8 +8456,8 @@
           "method": "GET",
           "path": "/api/invoices/recurring/preview-invoice-number",
           "rawPath": "/api/invoices/recurring/preview-invoice-number",
-          "source": "frontend/src/pages/invoices/RecurringInvoicesPage.tsx",
-          "line": 441,
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 184,
           "client": "api",
           "literalInterpolation": false
         }
