@@ -6859,13 +6859,13 @@
           "method": "GET",
           "path": "/api/invoices/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 265
+          "line": 272
         },
         {
           "method": "GET",
           "path": "/api/invoices/:invoiceId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1010
+          "line": 1017
         },
         {
           "method": "GET",
@@ -7465,7 +7465,7 @@
           "method": "POST",
           "path": "/api/invoices/email/preview",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 608
+          "line": 615
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -7496,7 +7496,7 @@
           "path": "/api/invoices/estimates",
           "rawPath": "/api/invoices/estimates",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 111,
+          "line": 113,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7567,7 +7567,7 @@
           "path": "/api/invoices/estimates",
           "rawPath": "/api/invoices/estimates",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 138,
+          "line": 140,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7656,7 +7656,7 @@
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 165,
+          "line": 167,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7703,7 +7703,7 @@
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 125,
+          "line": 127,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7713,7 +7713,7 @@
           "method": "GET",
           "path": "/api/invoices/estimates/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 712
+          "line": 719
         },
         {
           "method": "GET",
@@ -7756,7 +7756,7 @@
           "path": "/api/invoices/estimates/:id",
           "rawPath": "/api/invoices/estimates/${id}",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 152,
+          "line": 154,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7809,7 +7809,7 @@
           "path": "/api/invoices/estimates/:id/convert-to-invoice",
           "rawPath": "/api/invoices/estimates/${id}/convert-to-invoice",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 187,
+          "line": 192,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7856,7 +7856,7 @@
           "path": "/api/invoices/estimates/:id/send",
           "rawPath": "/api/invoices/estimates/${id}/send",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 175,
+          "line": 180,
           "client": "api",
           "literalInterpolation": false
         }
@@ -7868,8 +7868,8 @@
       "owner": "billing",
       "targetOperation": "sendEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "not-started",
-      "notes": "Characterize state transition, recipient selection, email failure, retries, and duplicate sends.",
+      "parityStatus": "implemented",
+      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, requires a bounded idempotency key and recipient, and persists a delivery snapshot before provider work. Resend receives an intent-derived idempotency key; only confirmed delivery atomically marks the intent and draft estimate sent. Definite failures retry through a leased one-shot worker, ambiguous failures require reconciliation, and exact request replay cannot duplicate delivery. Fresh PostgreSQL proves success evidence, replay, provider failure and worker recovery, ambiguous quarantine, CSRF, tenant isolation, recipient/key validation, and terminal-state denial. The frontend adapter is independently default-off.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8225,19 +8225,19 @@
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1147
+          "line": 1341
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1325
+          "line": 1519
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:templateId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1495
+          "line": 1689
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8393,7 +8393,7 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/pause",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1181
+          "line": 1375
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8536,7 +8536,7 @@
           "method": "GET",
           "path": "/api/invoices/settings",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 524
+          "line": 531
         }
       ],
       "recommendedDisposition": "graphql-query",

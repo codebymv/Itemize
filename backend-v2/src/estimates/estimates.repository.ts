@@ -109,6 +109,45 @@ export type EstimateConversionOutcome =
   | { kind: 'not-found' }
   | { kind: 'invalid-state' };
 
+export type EstimateEmailPayload = {
+  subject: string;
+  estimateNumber: string;
+  customerName: string | null;
+  total: string;
+  currency: string;
+  validUntil: string;
+  businessName: string | null;
+  businessEmail: string | null;
+};
+
+export type EstimateEmailDeliveryRow = {
+  id: number;
+  organization_id: number;
+  estimate_id: number;
+  requested_by_user_id: number | null;
+  idempotency_key: string;
+  recipient_email: string;
+  subject: string;
+  payload: EstimateEmailPayload;
+  status: string;
+  attempt_count: number;
+  next_attempt_at: Date;
+  lease_expires_at: Date | null;
+  claimed_by: string | null;
+  provider_id: string | null;
+  last_error: string | null;
+  sent_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type EstimateEmailPreparation =
+  | { kind: 'created'; delivery: EstimateEmailDeliveryRow }
+  | { kind: 'replayed'; delivery: EstimateEmailDeliveryRow }
+  | { kind: 'not-found' }
+  | { kind: 'invalid-state' }
+  | { kind: 'missing-email' };
+
 export type EstimateCriteria = {
   organizationId: number;
   status?: string;
@@ -456,6 +495,217 @@ export class EstimatesRepository {
         replayed: false,
       };
     });
+  }
+
+  async prepareEmailDelivery(
+    organizationId: number,
+    userId: number,
+    estimateId: number,
+    idempotencyKey: string,
+  ): Promise<EstimateEmailPreparation> {
+    return this.transaction(async (client) => {
+      const estimateResult = await client.query<{
+        estimate_number: string;
+        customer_name: string | null;
+        customer_email: string | null;
+        valid_until: string;
+        total: string;
+        currency: string;
+        status: string;
+        business_name: string | null;
+        business_email: string | null;
+      }>(
+        `SELECT e.estimate_number, e.customer_name, e.customer_email,
+                e.valid_until::text, e.total, e.currency, e.status,
+                COALESCE(NULLIF(b.name, ''), NULLIF(settings.business_name, ''))
+                  AS business_name,
+                COALESCE(NULLIF(b.email, ''), NULLIF(settings.business_email, ''))
+                  AS business_email
+         FROM estimates e
+         LEFT JOIN businesses b
+           ON b.id = e.business_id AND b.organization_id = e.organization_id
+         LEFT JOIN payment_settings settings
+           ON settings.organization_id = e.organization_id
+         WHERE e.id = $1 AND e.organization_id = $2
+         FOR UPDATE OF e`,
+        [estimateId, organizationId],
+      );
+      const estimate = estimateResult.rows[0];
+      if (!estimate) return { kind: 'not-found' };
+
+      const existing = await client.query<EstimateEmailDeliveryRow>(
+        `SELECT * FROM estimate_email_deliveries
+         WHERE organization_id = $1 AND estimate_id = $2
+           AND idempotency_key = $3`,
+        [organizationId, estimateId, idempotencyKey],
+      );
+      if (existing.rows[0]) {
+        return { kind: 'replayed', delivery: existing.rows[0] };
+      }
+      if (!['draft', 'sent'].includes(estimate.status)) {
+        return { kind: 'invalid-state' };
+      }
+      if (!estimate.customer_email?.trim()) return { kind: 'missing-email' };
+
+      const businessName = estimate.business_name || 'Our Company';
+      const subject = `Estimate ${estimate.estimate_number} from ${businessName}`
+        .slice(0, 255);
+      const payload: EstimateEmailPayload = {
+        subject,
+        estimateNumber: estimate.estimate_number,
+        customerName: estimate.customer_name,
+        total: estimate.total,
+        currency: estimate.currency,
+        validUntil: estimate.valid_until,
+        businessName,
+        businessEmail: estimate.business_email,
+      };
+      const inserted = await client.query<EstimateEmailDeliveryRow>(
+        `INSERT INTO estimate_email_deliveries (
+           organization_id, estimate_id, requested_by_user_id,
+           idempotency_key, recipient_email, subject, payload
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+         RETURNING *`,
+        [
+          organizationId, estimateId, userId, idempotencyKey,
+          estimate.customer_email.trim(), subject, JSON.stringify(payload),
+        ],
+      );
+      return { kind: 'created', delivery: inserted.rows[0] };
+    });
+  }
+
+  async findEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+  ): Promise<EstimateEmailDeliveryRow | null> {
+    const result = await this.pool.query<EstimateEmailDeliveryRow>(
+      `SELECT * FROM estimate_email_deliveries
+       WHERE id = $1 AND organization_id = $2`,
+      [deliveryId, organizationId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async dueEmailDeliveryIds(
+    limit: number,
+  ): Promise<Array<{ id: number; organizationId: number }>> {
+    const result = await this.pool.query<{ id: number; organization_id: number }>(
+      `SELECT id, organization_id
+       FROM estimate_email_deliveries
+       WHERE (
+         status IN ('queued', 'retry') AND next_attempt_at <= CURRENT_TIMESTAMP
+       ) OR (
+         status = 'processing' AND lease_expires_at <= CURRENT_TIMESTAMP
+       )
+       ORDER BY next_attempt_at, id
+       LIMIT $1`,
+      [limit],
+    );
+    return result.rows.map((row) => ({
+      id: Number(row.id), organizationId: Number(row.organization_id),
+    }));
+  }
+
+  async claimEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+  ): Promise<EstimateEmailDeliveryRow | null> {
+    const result = await this.pool.query<EstimateEmailDeliveryRow>(
+      `UPDATE estimate_email_deliveries
+       SET status = 'processing',
+           attempt_count = attempt_count + 1,
+           lease_expires_at = CURRENT_TIMESTAMP + INTERVAL '30 seconds',
+           claimed_by = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2
+         AND (
+           (status IN ('queued', 'retry') AND next_attempt_at <= CURRENT_TIMESTAMP)
+           OR (status = 'processing' AND lease_expires_at <= CURRENT_TIMESTAMP)
+         )
+       RETURNING *`,
+      [deliveryId, organizationId, `nest:${process.pid}`],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async completeEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+    providerId: string | null,
+  ): Promise<EstimateEmailDeliveryRow> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<EstimateEmailDeliveryRow>(
+        `SELECT * FROM estimate_email_deliveries
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [deliveryId, organizationId],
+      );
+      const delivery = locked.rows[0];
+      if (!delivery) throw new Error('Estimate email delivery not found');
+      if (delivery.status === 'sent') return delivery;
+      const estimate = await client.query<{ status: string }>(
+        `SELECT status FROM estimates
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [delivery.estimate_id, organizationId],
+      );
+      if (!estimate.rows[0] || !['draft', 'sent'].includes(estimate.rows[0].status)) {
+        const reconciled = await client.query<EstimateEmailDeliveryRow>(
+          `UPDATE estimate_email_deliveries
+           SET status = 'reconciliation_required', provider_id = $3,
+               last_error = 'Estimate changed state after provider delivery',
+               lease_expires_at = NULL, claimed_by = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 AND organization_id = $2
+           RETURNING *`,
+          [deliveryId, organizationId, providerId],
+        );
+        return reconciled.rows[0];
+      }
+      await client.query(
+        `UPDATE estimates
+         SET status = 'sent', sent_at = COALESCE(sent_at, CURRENT_TIMESTAMP),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [delivery.estimate_id, organizationId],
+      );
+      const completed = await client.query<EstimateEmailDeliveryRow>(
+        `UPDATE estimate_email_deliveries
+         SET status = 'sent', provider_id = $3, sent_at = CURRENT_TIMESTAMP,
+             lease_expires_at = NULL, claimed_by = NULL, last_error = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2
+         RETURNING *`,
+        [deliveryId, organizationId, providerId],
+      );
+      return completed.rows[0];
+    });
+  }
+
+  async failEmailDelivery(
+    organizationId: number,
+    deliveryId: number,
+    error: string,
+    ambiguous: boolean,
+  ): Promise<EstimateEmailDeliveryRow> {
+    const result = await this.pool.query<EstimateEmailDeliveryRow>(
+      `UPDATE estimate_email_deliveries
+       SET status = CASE
+             WHEN $3::boolean THEN 'reconciliation_required'
+             WHEN attempt_count >= 5 THEN 'dead_letter'
+             ELSE 'retry'
+           END,
+           next_attempt_at = CURRENT_TIMESTAMP +
+             (LEAST(300, POWER(2, GREATEST(attempt_count - 1))) * INTERVAL '1 second'),
+           last_error = LEFT($4, 2000), lease_expires_at = NULL,
+           claimed_by = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2
+       RETURNING *`,
+      [deliveryId, organizationId, ambiguous, error],
+    );
+    if (!result.rows[0]) throw new Error('Estimate email delivery not found');
+    return result.rows[0];
   }
 
   private async references(

@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "jobs:recurring-invoices": "node dist/run-recurring-invoice-generation.js",
+    "jobs:estimate-email-deliveries": "node dist/run-estimate-email-delivery.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
     "test:watch": "jest --watch",

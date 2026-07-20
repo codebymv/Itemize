@@ -13,12 +13,15 @@ import {
   EstimateConversionResult,
   EstimatePage,
 } from './estimate.types';
+import { EstimateEmailDeliveryService } from './estimate-email-delivery.service';
+import { EstimateSendResult } from './estimate-email-delivery.types';
 import { EstimatesService } from './estimates.service';
 
 @Resolver(() => Estimate)
 export class EstimatesResolver {
   constructor(
     private readonly estimates: EstimatesService,
+    private readonly emailDelivery: EstimateEmailDeliveryService,
     private readonly requestContext: RequestContextService,
   ) {}
 
@@ -73,6 +76,18 @@ export class EstimatesResolver {
       this.organizationId(),
       id,
       this.userId(),
+    );
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => EstimateSendResult)
+  sendEstimate(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<EstimateSendResult> {
+    return this.emailDelivery.send(
+      this.organizationId(), this.userId(), id, idempotencyKey,
     );
   }
 

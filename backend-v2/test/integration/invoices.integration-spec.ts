@@ -8,6 +8,8 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { EstimateEmailDeliveryService } from '../../src/estimates/estimate-email-delivery.service';
+import { ESTIMATE_EMAIL_PROVIDER } from '../../src/estimates/estimate-email.provider';
 import { RecurringInvoicesService } from '../../src/recurring-invoices/recurring-invoices.service';
 
 describe('Core invoice GraphQL PostgreSQL contract', () => {
@@ -25,6 +27,8 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   let businessId: number;
   let productId: number;
   let recurringInvoicesService: RecurringInvoicesService;
+  let estimateEmailDeliveryService: EstimateEmailDeliveryService;
+  const estimateEmailProvider = { send: jest.fn() };
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -117,12 +121,15 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue(pool)
+      .overrideProvider(ESTIMATE_EMAIL_PROVIDER)
+      .useValue(estimateEmailProvider)
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
       logger: false,
     });
     recurringInvoicesService = moduleRef.get(RecurringInvoicesService);
+    estimateEmailDeliveryService = moduleRef.get(EstimateEmailDeliveryService);
     configureApp(app);
     await app.init();
 
@@ -1094,6 +1101,193 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       [organizationId],
     );
     expect(Number(allocationAfterFailures.rows[0].next_invoice_number)).toBe(52);
+  });
+
+  const sendEstimateMutation = `mutation SendEstimate(
+    $id: Int!, $idempotencyKey: String!
+  ) {
+    sendEstimate(id: $id, idempotencyKey: $idempotencyKey) {
+      success emailSent replayed deliveryId status
+    }
+  }`;
+
+  it('sends an estimate once, persists evidence, and replays the request key', async () => {
+    estimateEmailProvider.send.mockReset();
+    estimateEmailProvider.send.mockResolvedValue({
+      kind: 'sent', providerId: 'email-provider-1',
+    });
+    const created = await graphql(
+      memberToken, organizationId, estimateMutation,
+      {
+        input: {
+          ...estimateInput(),
+          customerName: 'Ada <script>alert(1)</script>',
+          customerEmail: 'send@example.com',
+        },
+      },
+    ).expect(200);
+    const id = Number(created.body.data.createEstimate.id);
+    const variables = { id, idempotencyKey: `estimate-send-${id}` };
+
+    const noCsrf = await graphql(
+      memberToken, organizationId, sendEstimateMutation, variables, false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const hidden = await graphql(
+      outsiderToken, outsiderOrganizationId, sendEstimateMutation, variables,
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    expect(estimateEmailProvider.send).not.toHaveBeenCalled();
+
+    const sent = await graphql(
+      memberToken, organizationId, sendEstimateMutation, variables,
+    ).expect(200);
+    expect(sent.body.errors).toBeUndefined();
+    expect(sent.body.data.sendEstimate).toMatchObject({
+      success: true, emailSent: true, replayed: false, status: 'SENT',
+    });
+    expect(estimateEmailProvider.send).toHaveBeenCalledTimes(1);
+    expect(estimateEmailProvider.send.mock.calls[0][0]).toMatchObject({
+      to: 'send@example.com',
+      idempotencyKey: `estimate-email:${organizationId}:${sent.body.data.sendEstimate.deliveryId}`,
+    });
+    expect(estimateEmailProvider.send.mock.calls[0][0].html)
+      .toContain('Estimate');
+    expect(estimateEmailProvider.send.mock.calls[0][0].html)
+      .toContain('Ada &lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(estimateEmailProvider.send.mock.calls[0][0].html)
+      .not.toContain('<script>');
+
+    const replay = await graphql(
+      memberToken, organizationId, sendEstimateMutation, variables,
+    ).expect(200);
+    expect(replay.body.data.sendEstimate).toMatchObject({
+      success: true, emailSent: true, replayed: true, status: 'SENT',
+      deliveryId: sent.body.data.sendEstimate.deliveryId,
+    });
+    expect(estimateEmailProvider.send).toHaveBeenCalledTimes(1);
+    const state = await pool.query(
+      `SELECT e.status, e.sent_at IS NOT NULL AS has_sent_at,
+              d.status AS delivery_status, d.provider_id, d.attempt_count
+       FROM estimates e
+       JOIN estimate_email_deliveries d
+         ON d.estimate_id = e.id AND d.organization_id = e.organization_id
+       WHERE e.id = $1 AND e.organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(state.rows[0]).toEqual({
+      status: 'sent', has_sent_at: true, delivery_status: 'sent',
+      provider_id: 'email-provider-1', attempt_count: 1,
+    });
+  });
+
+  it('keeps failed and ambiguous estimate deliveries honest and retryable', async () => {
+    estimateEmailProvider.send.mockReset();
+    estimateEmailProvider.send.mockResolvedValueOnce({
+      kind: 'rejected', message: 'Provider unavailable',
+    });
+    const created = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), customerEmail: 'retry@example.com' } },
+    ).expect(200);
+    const id = Number(created.body.data.createEstimate.id);
+    const variables = { id, idempotencyKey: `estimate-retry-${id}` };
+    const failed = await graphql(
+      memberToken, organizationId, sendEstimateMutation, variables,
+    ).expect(200);
+    expect(failed.body.data.sendEstimate).toMatchObject({
+      success: false, emailSent: false, replayed: false, status: 'RETRY',
+    });
+    const unchanged = await pool.query(
+      `SELECT status, sent_at FROM estimates
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(unchanged.rows[0]).toEqual({ status: 'draft', sent_at: null });
+
+    await pool.query(
+      `UPDATE estimate_email_deliveries SET next_attempt_at = CURRENT_TIMESTAMP
+       WHERE estimate_id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    estimateEmailProvider.send.mockResolvedValueOnce({
+      kind: 'sent', providerId: 'email-provider-retry',
+    });
+    await expect(estimateEmailDeliveryService.runDue(10)).resolves.toEqual(
+      expect.objectContaining({ sent: expect.any(Number) }),
+    );
+    const retried = await pool.query(
+      `SELECT e.status, d.status AS delivery_status, d.attempt_count
+       FROM estimates e JOIN estimate_email_deliveries d
+         ON d.estimate_id = e.id AND d.organization_id = e.organization_id
+       WHERE e.id = $1 AND e.organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(retried.rows[0]).toEqual({
+      status: 'sent', delivery_status: 'sent', attempt_count: 2,
+    });
+
+    const ambiguousSource = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), customerEmail: 'ambiguous@example.com' } },
+    ).expect(200);
+    const ambiguousId = Number(ambiguousSource.body.data.createEstimate.id);
+    estimateEmailProvider.send.mockRejectedValueOnce(new Error('Request timed out'));
+    const ambiguous = await graphql(
+      memberToken,
+      organizationId,
+      sendEstimateMutation,
+      { id: ambiguousId, idempotencyKey: `estimate-ambiguous-${ambiguousId}` },
+    ).expect(200);
+    expect(ambiguous.body.data.sendEstimate).toMatchObject({
+      success: false,
+      emailSent: false,
+      status: 'RECONCILIATION_REQUIRED',
+    });
+    const quarantined = await pool.query(
+      `SELECT e.status, d.status AS delivery_status
+       FROM estimates e JOIN estimate_email_deliveries d
+         ON d.estimate_id = e.id AND d.organization_id = e.organization_id
+       WHERE e.id = $1 AND e.organization_id = $2`,
+      [ambiguousId, organizationId],
+    );
+    expect(quarantined.rows[0]).toEqual({
+      status: 'draft', delivery_status: 'reconciliation_required',
+    });
+  });
+
+  it('validates estimate send keys, recipient presence, and terminal state', async () => {
+    const missingEmail = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), customerEmail: null } },
+    ).expect(200);
+    const missingId = Number(missingEmail.body.data.createEstimate.id);
+    const missing = await graphql(
+      memberToken, organizationId, sendEstimateMutation,
+      { id: missingId, idempotencyKey: 'missing-email' },
+    ).expect(200);
+    expect(missing.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT', reason: 'ESTIMATE_CUSTOMER_EMAIL_REQUIRED',
+    });
+    const invalid = await graphql(
+      memberToken, organizationId, sendEstimateMutation,
+      { id: missingId, idempotencyKey: 'invalid key' },
+    ).expect(200);
+    expect(invalid.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT', reason: 'INVALID_IDEMPOTENCY_KEY',
+    });
+    await pool.query(
+      `UPDATE estimates SET status = 'accepted'
+       WHERE id = $1 AND organization_id = $2`,
+      [missingId, organizationId],
+    );
+    const terminal = await graphql(
+      memberToken, organizationId, sendEstimateMutation,
+      { id: missingId, idempotencyKey: 'terminal-estimate' },
+    ).expect(200);
+    expect(terminal.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'ESTIMATE_SEND_INVALID_STATE',
+    });
   });
 
   const recurringMutation = `

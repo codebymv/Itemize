@@ -59,6 +59,9 @@ const {
 const {
   runCalendarSyncJobMigration,
 } = require('./db_calendar_sync_job_migrations');
+const {
+  runEstimateEmailDeliveryMigration,
+} = require('./db_estimate_email_delivery_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -487,6 +490,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'stripe_webhook_idempotency', runStripeWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
+    await runMigrationOnce(pool, 'estimate_email_deliveries', runEstimateEmailDeliveryMigration);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
     await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {

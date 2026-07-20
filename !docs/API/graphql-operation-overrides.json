@@ -446,9 +446,9 @@
       "owner": "billing",
       "targetModule": "EstimatesModule",
       "targetOperation": "sendEstimate",
-      "parityStatus": "not-started",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Characterize state transition, recipient selection, email failure, retries, and duplicate sends."
+      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, requires a bounded idempotency key and recipient, and persists a delivery snapshot before provider work. Resend receives an intent-derived idempotency key; only confirmed delivery atomically marks the intent and draft estimate sent. Definite failures retry through a leased one-shot worker, ambiguous failures require reconciliation, and exact request replay cannot duplicate delivery. Fresh PostgreSQL proves success evidence, replay, provider failure and worker recovery, ambiguous quarantine, CSRF, tenant isolation, recipient/key validation, and terminal-state denial. The frontend adapter is independently default-off."
     },
     "GET /api/invoices/payments": {
       "disposition": "graphql-query",

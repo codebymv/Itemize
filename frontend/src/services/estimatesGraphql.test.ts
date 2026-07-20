@@ -3,6 +3,7 @@ import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import {
   convertEstimateToInvoiceViaGraphql, createEstimateViaGraphql,
   deleteEstimateViaGraphql, getEstimateViaGraphql, getEstimatesViaGraphql,
+  sendEstimateViaGraphql,
 } from './estimatesGraphql';
 
 vi.mock('./graphqlClient', () => ({
@@ -97,5 +98,21 @@ describe('estimate GraphQL adapter', () => {
     });
     expect(vi.mocked(graphqlMutationRequest).mock.calls[0][1]).toEqual({ id: 8 });
     expect(vi.mocked(graphqlMutationRequest).mock.calls[0][2]).toBe(4);
+  });
+
+  it('sends with a stable caller key and rejects unconfirmed delivery', async () => {
+    vi.mocked(graphqlMutationRequest)
+      .mockResolvedValueOnce({
+        sendEstimate: { success: true, emailSent: true, status: 'SENT' },
+      })
+      .mockResolvedValueOnce({
+        sendEstimate: { success: false, emailSent: false, status: 'RETRY' },
+      });
+    await expect(sendEstimateViaGraphql(8, 4, 'estimate-request-1')).resolves.toBeUndefined();
+    expect(vi.mocked(graphqlMutationRequest).mock.calls[0][1]).toEqual({
+      id: 8, idempotencyKey: 'estimate-request-1',
+    });
+    await expect(sendEstimateViaGraphql(8, 4, 'estimate-request-2'))
+      .rejects.toThrow('Estimate email delivery is RETRY');
   });
 });

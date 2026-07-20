@@ -322,15 +322,27 @@ describe('test database schema contract', () => {
         expect(sql).toContain('idx_calendar_sync_events_booking');
     });
 
-    test('production startup requires the latest calendar-sync migration marker', () => {
+    test('production startup requires the latest numbered migration marker', () => {
         const startupSource = fs.readFileSync(
             path.resolve(__dirname, '../../index.js'),
             'utf8'
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '033_calendar_sync_jobs'"
+            "WHERE version = '034_estimate_email_deliveries'"
         );
+    });
+
+    test('production migration stream creates durable estimate email delivery intents', async () => {
+        const migration = require('../../../scripts/migrations/034_estimate_email_deliveries');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS estimate_email_deliveries');
+        expect(sql).toContain('reconciliation_required');
+        expect(sql).toContain('estimate_email_delivery_idempotency');
+        expect(sql).toContain('estimate_email_delivery_tenant');
     });
 
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {

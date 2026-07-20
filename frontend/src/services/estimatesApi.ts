@@ -3,6 +3,7 @@ import {
   isEstimateGraphqlMutationsEnabled,
   isEstimateGraphqlConversionEnabled,
   isEstimateGraphqlReadsEnabled,
+  isEstimateGraphqlSendEnabled,
 } from './graphqlClient';
 import {
   createEstimateViaGraphql,
@@ -10,6 +11,7 @@ import {
   deleteEstimateViaGraphql,
   getEstimateViaGraphql,
   getEstimatesViaGraphql,
+  sendEstimateViaGraphql,
   updateEstimateViaGraphql,
 } from './estimatesGraphql';
 
@@ -172,6 +174,9 @@ export const sendEstimate = async (
   id: number,
   organizationId?: number,
 ): Promise<void> => {
+  if (isEstimateGraphqlSendEnabled()) {
+    return sendEstimateViaGraphql(id, organizationId);
+  }
   await api.post(`/api/invoices/estimates/${id}/send`, {}, {
     headers: headers(organizationId),
   });

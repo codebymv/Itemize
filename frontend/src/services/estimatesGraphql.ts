@@ -294,3 +294,34 @@ export const convertEstimateToInvoiceViaGraphql = async (
     invoice_number: data.convertEstimateToInvoice.invoiceNumber,
   };
 };
+
+export const sendEstimateViaGraphql = async (
+  id: number,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<void> => {
+  const data = await graphqlMutationRequest<{
+    sendEstimate: {
+      success: boolean;
+      emailSent: boolean;
+      status: string;
+    };
+  }, { id: number; idempotencyKey: string }>(
+    `mutation SendEstimate($id: Int!, $idempotencyKey: String!) {
+      sendEstimate(id: $id, idempotencyKey: $idempotencyKey) {
+        success emailSent replayed deliveryId status
+      }
+    }`,
+    {
+      id,
+      idempotencyKey:
+        idempotencyKey ??
+        globalThis.crypto?.randomUUID?.() ??
+        `estimate-send-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    },
+    organizationId,
+  );
+  if (!data.sendEstimate.success || !data.sendEstimate.emailSent) {
+    throw new Error(`Estimate email delivery is ${data.sendEstimate.status}`);
+  }
+};
