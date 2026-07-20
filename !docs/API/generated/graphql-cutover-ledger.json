@@ -9,8 +9,8 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 387,
-    "operationsWithFrontendConsumers": 366,
+    "frontendCallsiteCount": 388,
+    "operationsWithFrontendConsumers": 367,
     "operationsWithBackendTests": 200,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
@@ -8100,7 +8100,7 @@
           "path": "/api/invoices/recurring",
           "rawPath": "/api/invoices/recurring",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 88,
+          "line": 100,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8134,7 +8134,7 @@
           "path": "/api/invoices/recurring",
           "rawPath": "/api/invoices/recurring",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 120,
+          "line": 132,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8168,7 +8168,7 @@
           "path": "/api/invoices/recurring/:id",
           "rawPath": "/api/invoices/recurring/${id}",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 147,
+          "line": 159,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8202,7 +8202,7 @@
           "path": "/api/invoices/recurring/:id",
           "rawPath": "/api/invoices/recurring/${id}",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 102,
+          "line": 114,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8213,6 +8213,12 @@
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
           "line": 653
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/recurring/:id",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 831
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8243,7 +8249,7 @@
           "path": "/api/invoices/recurring/:id",
           "rawPath": "/api/invoices/recurring/${id}",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 134,
+          "line": 146,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8277,7 +8283,7 @@
           "path": "/api/invoices/recurring/:id/generate-now",
           "rawPath": "/api/invoices/recurring/${id}/generate-now",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 175,
+          "line": 208,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8318,7 +8324,17 @@
           "line": 616
         }
       ],
-      "consumerCallsites": [],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/recurring/:id/history",
+          "rawPath": "/api/invoices/recurring/${id}/history",
+          "source": "frontend/src/services/recurringInvoicesApi.ts",
+          "line": 198,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
@@ -8326,10 +8342,10 @@
       "owner": "billing",
       "targetOperation": "recurringInvoiceHistory",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable.",
       "literalInterpolationRisk": false,
-      "risk": "unknown"
+      "risk": "medium"
     },
     {
       "id": "POST /api/invoices/recurring/:id/pause",
@@ -8348,7 +8364,7 @@
           "path": "/api/invoices/recurring/:id/pause",
           "rawPath": "/api/invoices/recurring/${id}/pause",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 157,
+          "line": 173,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8367,8 +8383,8 @@
       "owner": "billing",
       "targetOperation": "pauseRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8389,7 +8405,7 @@
           "path": "/api/invoices/recurring/:id/resume",
           "rawPath": "/api/invoices/recurring/${id}/resume",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 166,
+          "line": 186,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8401,8 +8417,8 @@
       "owner": "billing",
       "targetOperation": "resumeRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "not-started",
-      "notes": null,
+      "parityStatus": "implemented",
+      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8457,7 +8473,7 @@
           "path": "/api/invoices/recurring/preview-invoice-number",
           "rawPath": "/api/invoices/recurring/preview-invoice-number",
           "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 184,
+          "line": 217,
           "client": "api",
           "literalInterpolation": false
         }

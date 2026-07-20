@@ -10,6 +10,7 @@ import {
 import {
   DeleteRecurringInvoiceResult,
   RecurringInvoice,
+  RecurringInvoiceHistoryPage,
   RecurringInvoicePage,
 } from './recurring-invoice.types';
 import { RecurringInvoicesService } from './recurring-invoices.service';
@@ -36,6 +37,15 @@ export class RecurringInvoicesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<RecurringInvoice> {
     return this.recurringInvoices.get(this.organizationId(), id);
+  }
+
+  @OrganizationScoped()
+  @Query(() => RecurringInvoiceHistoryPage)
+  recurringInvoiceHistory(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('page', { nullable: true }) page?: PageInput,
+  ): Promise<RecurringInvoiceHistoryPage> {
+    return this.recurringInvoices.history(this.organizationId(), id, page);
   }
 
   @CsrfProtected()
@@ -66,6 +76,24 @@ export class RecurringInvoicesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteRecurringInvoiceResult> {
     return this.recurringInvoices.delete(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => RecurringInvoice)
+  pauseRecurringInvoice(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<RecurringInvoice> {
+    return this.recurringInvoices.pause(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => RecurringInvoice)
+  resumeRecurringInvoice(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<RecurringInvoice> {
+    return this.recurringInvoices.resume(this.organizationId(), id);
   }
 
   private organizationId(): number {

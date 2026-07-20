@@ -1,5 +1,6 @@
 import type {
   RecurringInvoice,
+  RecurringInvoiceHistoryEntry,
   RecurringInvoiceItem,
   RecurringInvoiceWriteInput,
   RecurringStatus,
@@ -48,6 +49,14 @@ type GraphqlRecurringInvoice = {
   contactEmail: string | null;
   sourceInvoiceNumber: string | null;
   invoicesGenerated: number;
+};
+
+type GraphqlRecurringHistoryEntry = {
+  id: number;
+  invoiceNumber: string;
+  total: string;
+  status: string;
+  createdAt: string;
 };
 
 const coreFields = `
@@ -184,6 +193,42 @@ export const getRecurringInvoiceViaGraphql = async (
   return mapRecurringInvoice(data.recurringInvoice);
 };
 
+export const getRecurringInvoiceHistoryViaGraphql = async (
+  id: number,
+  organizationId?: number,
+): Promise<RecurringInvoiceHistoryEntry[]> => {
+  const rows: RecurringInvoiceHistoryEntry[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const data = await graphqlRequest<{
+      recurringInvoiceHistory: {
+        nodes: GraphqlRecurringHistoryEntry[];
+        pageInfo: { totalPages: number };
+      };
+    }, { id: number; page: { page: number; pageSize: number } }>(
+      `query RecurringInvoiceHistory($id: Int!, $page: PageInput) {
+        recurringInvoiceHistory(id: $id, page: $page) {
+          nodes { id invoiceNumber total status createdAt }
+          pageInfo { totalPages }
+        }
+      }`,
+      { id, page: { page, pageSize: 100 } },
+      organizationId,
+    );
+    rows.push(...data.recurringInvoiceHistory.nodes.map((row) => ({
+      id: row.id,
+      invoice_number: row.invoiceNumber,
+      total: Number(row.total),
+      status: row.status,
+      created_at: row.createdAt,
+    })));
+    totalPages = data.recurringInvoiceHistory.pageInfo.totalPages;
+    page += 1;
+  } while (page <= totalPages);
+  return rows;
+};
+
 export const createRecurringInvoiceViaGraphql = async (
   input: RecurringInvoiceWriteInput & {
     template_name: string;
@@ -244,3 +289,33 @@ export const deleteRecurringInvoiceViaGraphql = async (
   }
   return { success: data.deleteRecurringInvoice.success };
 };
+
+const lifecycleMutation = async (
+  operation: 'pauseRecurringInvoice' | 'resumeRecurringInvoice',
+  id: number,
+  organizationId?: number,
+): Promise<RecurringInvoice> => {
+  const data = await graphqlMutationRequest<
+    Record<typeof operation, GraphqlRecurringInvoice>,
+    { id: number }
+  >(
+    `mutation RecurringInvoiceLifecycle($id: Int!) {
+      ${operation}(id: $id) { ${detailFields} }
+    }`,
+    { id },
+    organizationId,
+  );
+  return mapRecurringInvoice(data[operation]);
+};
+
+export const pauseRecurringInvoiceViaGraphql = (
+  id: number,
+  organizationId?: number,
+): Promise<RecurringInvoice> =>
+  lifecycleMutation('pauseRecurringInvoice', id, organizationId);
+
+export const resumeRecurringInvoiceViaGraphql = (
+  id: number,
+  organizationId?: number,
+): Promise<RecurringInvoice> =>
+  lifecycleMutation('resumeRecurringInvoice', id, organizationId);

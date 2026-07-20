@@ -562,24 +562,27 @@
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "recurringInvoiceHistory",
-      "parityStatus": "not-started",
-      "risk": "unknown"
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable."
     },
     "POST /api/invoices/recurring/:id/pause": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "pauseRecurringInvoice",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict."
     },
     "POST /api/invoices/recurring/:id/resume": {
       "disposition": "graphql-mutation",
       "owner": "billing",
       "targetModule": "RecurringInvoicesModule",
       "targetOperation": "resumeRecurringInvoice",
-      "parityStatus": "not-started",
-      "risk": "high"
+      "parityStatus": "implemented",
+      "risk": "high",
+      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit."
     },
     "POST /api/invoices/recurring/from-invoice/:invoiceId": {
       "disposition": "graphql-mutation",

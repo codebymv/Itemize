@@ -716,6 +716,153 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     });
   });
 
+  it('supports recurring lifecycle transitions and bounded generated-invoice history', async () => {
+    const created = await graphql(
+      memberToken, organizationId, recurringMutation,
+      { input: { ...recurringInput(), endDate: null } },
+    ).expect(200);
+    const id = Number(created.body.data.createRecurringInvoice.id);
+    const inserted = await pool.query<{ id: number; invoice_number: string }>(
+      `INSERT INTO invoices (
+         organization_id, invoice_number, due_date, total, amount_due,
+         status, recurring_template_id, created_by, created_at
+       ) VALUES
+         ($1, $2, CURRENT_DATE, 10, 10, 'draft', $4, $5, NOW() - INTERVAL '1 day'),
+         ($1, $3, CURRENT_DATE, 20, 20, 'sent', $4, $5, NOW())
+       RETURNING id, invoice_number`,
+      [
+        organizationId,
+        `INV-HISTORY-${id}-1`,
+        `INV-HISTORY-${id}-2`,
+        id,
+        memberId,
+      ],
+    );
+    const history = await graphql(
+      memberToken,
+      organizationId,
+      `query RecurringInvoiceHistory($id: Int!, $page: PageInput) {
+        recurringInvoiceHistory(id: $id, page: $page) {
+          nodes { id invoiceNumber total status createdAt }
+          pageInfo { page pageSize total totalPages hasNextPage }
+        }
+      }`,
+      { id, page: { page: 1, pageSize: 1 } },
+      false,
+    ).expect(200);
+    expect(history.body.errors).toBeUndefined();
+    expect(history.body.data.recurringInvoiceHistory).toMatchObject({
+      nodes: [{
+        id: Number(inserted.rows[1].id),
+        invoiceNumber: `INV-HISTORY-${id}-2`,
+        total: '20.00',
+        status: 'sent',
+      }],
+      pageInfo: {
+        page: 1,
+        pageSize: 1,
+        total: 2,
+        totalPages: 2,
+        hasNextPage: true,
+      },
+    });
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      `mutation PauseRecurringInvoice($id: Int!) {
+        pauseRecurringInvoice(id: $id) { id }
+      }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    const paused = await graphql(
+      memberToken,
+      organizationId,
+      `mutation PauseRecurringInvoice($id: Int!) {
+        pauseRecurringInvoice(id: $id) { id status nextRunDate }
+      }`,
+      { id },
+    ).expect(200);
+    expect(paused.body.data.pauseRecurringInvoice).toMatchObject({
+      id,
+      status: 'paused',
+    });
+    const pauseReplay = await graphql(
+      memberToken,
+      organizationId,
+      `mutation PauseRecurringInvoice($id: Int!) {
+        pauseRecurringInvoice(id: $id) { id }
+      }`,
+      { id },
+    ).expect(200);
+    expect(pauseReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'RECURRING_INVOICE_NOT_ACTIVE',
+      actualStatus: 'paused',
+    });
+    await pool.query(
+      `UPDATE recurring_invoice_templates
+       SET next_run_date = CURRENT_DATE - INTERVAL '40 days'
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    const resumed = await graphql(
+      memberToken,
+      organizationId,
+      `mutation ResumeRecurringInvoice($id: Int!) {
+        resumeRecurringInvoice(id: $id) { id status nextRunDate }
+      }`,
+      { id },
+    ).expect(200);
+    expect(resumed.body.errors).toBeUndefined();
+    expect(resumed.body.data.resumeRecurringInvoice).toMatchObject({
+      id,
+      status: 'active',
+    });
+    const dateCheck = await pool.query<{ future: boolean }>(
+      `SELECT next_run_date > CURRENT_DATE AS future
+       FROM recurring_invoice_templates
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(dateCheck.rows[0].future).toBe(true);
+    const rest = await request(legacyApp)
+      .get(`/api/invoices/recurring/${id}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(rest.body).toMatchObject({
+      id,
+      status: 'active',
+    });
+    expect(rest.body.next_run_date.slice(0, 10))
+      .toBe(resumed.body.data.resumeRecurringInvoice.nextRunDate);
+    const resumeReplay = await graphql(
+      memberToken,
+      organizationId,
+      `mutation ResumeRecurringInvoice($id: Int!) {
+        resumeRecurringInvoice(id: $id) { id }
+      }`,
+      { id },
+    ).expect(200);
+    expect(resumeReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'RECURRING_INVOICE_NOT_PAUSED',
+      actualStatus: 'active',
+    });
+    const hidden = await graphql(
+      outsiderToken,
+      outsiderOrganizationId,
+      `query RecurringInvoiceHistory($id: Int!) {
+        recurringInvoiceHistory(id: $id) { nodes { id } }
+      }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
   it('enforces recurring CSRF, tenant references, dates, and private misses', async () => {
     const noCsrf = await graphql(
       memberToken, organizationId, recurringMutation,

@@ -76,6 +76,23 @@ export type RecurringInvoiceWriteOutcome =
   | { kind: 'invalid-discount' }
   | { kind: 'negative-total' };
 
+export type RecurringInvoiceLifecycleOutcome =
+  | { kind: 'saved'; row: RecurringInvoiceRow }
+  | { kind: 'not-found' }
+  | { kind: 'invalid-state'; actualStatus: string };
+
+export type RecurringInvoiceHistoryRow = {
+  id: number;
+  invoice_number: string;
+  total: string;
+  status: string;
+  created_at: Date;
+};
+
+export type RecurringInvoiceHistoryOutcome =
+  | { kind: 'found'; rows: RecurringInvoiceHistoryRow[]; total: number }
+  | { kind: 'not-found' };
+
 export type RecurringInvoiceCriteria = {
   organizationId: number;
   status?: string;
@@ -285,6 +302,111 @@ export class RecurringInvoicesRepository {
     return result.rows[0] ?? null;
   }
 
+  async pause(
+    organizationId: number,
+    recurringInvoiceId: number,
+  ): Promise<RecurringInvoiceLifecycleOutcome> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{ status: string }>(
+        `SELECT status
+         FROM recurring_invoice_templates
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [recurringInvoiceId, organizationId],
+      );
+      const current = locked.rows[0];
+      if (!current) return { kind: 'not-found' };
+      if (current.status !== 'active') {
+        return { kind: 'invalid-state', actualStatus: current.status };
+      }
+      await client.query(
+        `UPDATE recurring_invoice_templates
+         SET status = 'paused', updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [recurringInvoiceId, organizationId],
+      );
+      const row = await this.load(client, organizationId, recurringInvoiceId);
+      if (!row) return { kind: 'not-found' };
+      return { kind: 'saved', row };
+    });
+  }
+
+  async resume(
+    organizationId: number,
+    recurringInvoiceId: number,
+  ): Promise<RecurringInvoiceLifecycleOutcome> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{
+        status: string;
+        start_date: string;
+        next_run_date: string | null;
+        frequency: string;
+        today: string;
+      }>(
+        `SELECT status, start_date::text, next_run_date::text, frequency,
+                CURRENT_DATE::text AS today
+         FROM recurring_invoice_templates
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [recurringInvoiceId, organizationId],
+      );
+      const current = locked.rows[0];
+      if (!current) return { kind: 'not-found' };
+      if (current.status !== 'paused') {
+        return { kind: 'invalid-state', actualStatus: current.status };
+      }
+      const nextRunDate = this.futureRunDate(
+        current.start_date,
+        current.frequency,
+        current.next_run_date,
+        current.today,
+      );
+      await client.query(
+        `UPDATE recurring_invoice_templates
+         SET status = 'active', next_run_date = $3::date,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [recurringInvoiceId, organizationId, nextRunDate],
+      );
+      const row = await this.load(client, organizationId, recurringInvoiceId);
+      if (!row) return { kind: 'not-found' };
+      return { kind: 'saved', row };
+    });
+  }
+
+  async findHistoryPage(
+    organizationId: number,
+    recurringInvoiceId: number,
+    pageSize: number,
+    offset: number,
+  ): Promise<RecurringInvoiceHistoryOutcome> {
+    const template = await this.pool.query(
+      `SELECT 1 FROM recurring_invoice_templates
+       WHERE id = $1 AND organization_id = $2`,
+      [recurringInvoiceId, organizationId],
+    );
+    if (!template.rows[0]) return { kind: 'not-found' };
+    const count = await this.pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total
+       FROM invoices
+       WHERE recurring_template_id = $1 AND organization_id = $2`,
+      [recurringInvoiceId, organizationId],
+    );
+    const rows = await this.pool.query<RecurringInvoiceHistoryRow>(
+      `SELECT id, invoice_number, total, status, created_at
+       FROM invoices
+       WHERE recurring_template_id = $1 AND organization_id = $2
+       ORDER BY created_at DESC, id DESC
+       LIMIT $3 OFFSET $4`,
+      [recurringInvoiceId, organizationId, pageSize, offset],
+    );
+    return {
+      kind: 'found',
+      rows: rows.rows,
+      total: Number(count.rows[0].total),
+    };
+  }
+
   private async load(
     client: PoolClient,
     organizationId: number,
@@ -416,6 +538,25 @@ export class RecurringInvoicesRepository {
         taxRate: String(item.taxRate ?? item.tax_rate ?? '0'),
       };
     });
+  }
+
+  private futureRunDate(
+    startDate: string,
+    frequency: string,
+    nextRunDate: string | null,
+    today: string,
+  ): string {
+    let candidate = nextRunDate ?? startDate;
+    while (candidate <= today) {
+      const date = new Date(`${candidate}T00:00:00.000Z`);
+      if (frequency === 'weekly') date.setUTCDate(date.getUTCDate() + 7);
+      else if (frequency === 'monthly') date.setUTCMonth(date.getUTCMonth() + 1);
+      else if (frequency === 'quarterly') date.setUTCMonth(date.getUTCMonth() + 3);
+      else if (frequency === 'yearly') date.setUTCFullYear(date.getUTCFullYear() + 1);
+      else throw new Error(`Unsupported recurring frequency: ${frequency}`);
+      candidate = date.toISOString().slice(0, 10);
+    }
+    return candidate;
   }
 
   private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {

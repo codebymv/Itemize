@@ -4,7 +4,10 @@ import {
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
   getRecurringInvoiceViaGraphql,
+  getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoicesViaGraphql,
+  pauseRecurringInvoiceViaGraphql,
+  resumeRecurringInvoiceViaGraphql,
   updateRecurringInvoiceViaGraphql,
 } from './recurringInvoicesGraphql';
 
@@ -91,5 +94,54 @@ describe('recurring invoice GraphQL adapter', () => {
     });
     await expect(deleteRecurringInvoiceViaGraphql(8, 4))
       .resolves.toEqual({ success: true });
+  });
+
+  it('walks history pages and sends protected lifecycle mutations', async () => {
+    vi.mocked(graphqlRequest)
+      .mockResolvedValueOnce({
+        recurringInvoiceHistory: {
+          nodes: [{
+            id: 14,
+            invoiceNumber: 'INV-00014',
+            total: '42.50',
+            status: 'sent',
+            createdAt: '2026-07-19T00:00:00.000Z',
+          }],
+          pageInfo: { totalPages: 2 },
+        },
+      })
+      .mockResolvedValueOnce({
+        recurringInvoiceHistory: {
+          nodes: [{
+            id: 13,
+            invoiceNumber: 'INV-00013',
+            total: '20.00',
+            status: 'paid',
+            createdAt: '2026-06-19T00:00:00.000Z',
+          }],
+          pageInfo: { totalPages: 2 },
+        },
+      });
+    await expect(getRecurringInvoiceHistoryViaGraphql(8, 4)).resolves.toEqual([
+      expect.objectContaining({ invoice_number: 'INV-00014', total: 42.5 }),
+      expect.objectContaining({ invoice_number: 'INV-00013', total: 20 }),
+    ]);
+    expect(vi.mocked(graphqlRequest).mock.calls.map((call) => call[1])).toEqual([
+      { id: 8, page: { page: 1, pageSize: 100 } },
+      { id: 8, page: { page: 2, pageSize: 100 } },
+    ]);
+    vi.mocked(graphqlMutationRequest)
+      .mockResolvedValueOnce({
+        pauseRecurringInvoice: row({ status: 'paused' }),
+      })
+      .mockResolvedValueOnce({
+        resumeRecurringInvoice: row({ status: 'active' }),
+      });
+    await expect(pauseRecurringInvoiceViaGraphql(8, 4))
+      .resolves.toMatchObject({ id: 8, status: 'paused' });
+    await expect(resumeRecurringInvoiceViaGraphql(8, 4))
+      .resolves.toMatchObject({ id: 8, status: 'active' });
+    expect(vi.mocked(graphqlMutationRequest).mock.calls.map((call) => call[1]))
+      .toEqual([{ id: 8 }, { id: 8 }]);
   });
 });

@@ -132,6 +132,33 @@ export class RecurringInvoicePage {
 }
 
 @ObjectType()
+export class RecurringInvoiceHistoryEntry {
+  @Field(() => Int)
+  id: number;
+
+  @Field()
+  invoiceNumber: string;
+
+  @Field()
+  total: string;
+
+  @Field()
+  status: string;
+
+  @Field(() => GraphQLISODateTime)
+  createdAt: Date;
+}
+
+@ObjectType()
+export class RecurringInvoiceHistoryPage {
+  @Field(() => [RecurringInvoiceHistoryEntry])
+  nodes: RecurringInvoiceHistoryEntry[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+}
+
+@ObjectType()
 export class DeleteRecurringInvoiceResult {
   @Field()
   success: boolean;

@@ -10,10 +10,12 @@ import {
 import {
   DeleteRecurringInvoiceResult,
   RecurringInvoice,
+  RecurringInvoiceHistoryPage,
   RecurringInvoiceItem,
   RecurringInvoicePage,
 } from './recurring-invoice.types';
 import {
+  RecurringInvoiceLifecycleOutcome,
   RecurringInvoiceItemValues,
   RecurringInvoiceRow,
   RecurringInvoiceUpdates,
@@ -144,6 +146,72 @@ export class RecurringInvoicesService {
       deletedId: Number(deleted.id),
       templateName: deleted.template_name,
     };
+  }
+
+  async pause(
+    organizationId: number,
+    recurringInvoiceId: number,
+  ): Promise<RecurringInvoice> {
+    this.id(recurringInvoiceId, 'id');
+    return this.lifecycle(
+      await this.recurringInvoices.pause(organizationId, recurringInvoiceId),
+      'active',
+    );
+  }
+
+  async resume(
+    organizationId: number,
+    recurringInvoiceId: number,
+  ): Promise<RecurringInvoice> {
+    this.id(recurringInvoiceId, 'id');
+    return this.lifecycle(
+      await this.recurringInvoices.resume(organizationId, recurringInvoiceId),
+      'paused',
+    );
+  }
+
+  async history(
+    organizationId: number,
+    recurringInvoiceId: number,
+    page: PageInput = new PageInput(),
+  ): Promise<RecurringInvoiceHistoryPage> {
+    this.id(recurringInvoiceId, 'id');
+    const normalized = this.page(page);
+    const result = await this.recurringInvoices.findHistoryPage(
+      organizationId,
+      recurringInvoiceId,
+      normalized.pageSize,
+      normalized.offset,
+    );
+    if (result.kind === 'not-found') this.notFound();
+    return {
+      nodes: result.rows.map((row) => ({
+        id: Number(row.id),
+        invoiceNumber: row.invoice_number,
+        total: row.total,
+        status: row.status,
+        createdAt: row.created_at,
+      })),
+      pageInfo: pageInfo(normalized.page, normalized.pageSize, result.total),
+    };
+  }
+
+  private lifecycle(
+    outcome: RecurringInvoiceLifecycleOutcome,
+    expectedStatus: 'active' | 'paused',
+  ): RecurringInvoice {
+    if (outcome.kind === 'saved') return this.map(outcome.row);
+    if (outcome.kind === 'not-found') this.notFound();
+    throw itemizeGraphqlError(
+      `Recurring invoice must be ${expectedStatus}`,
+      'CONFLICT',
+      {
+        reason: expectedStatus === 'active'
+          ? 'RECURRING_INVOICE_NOT_ACTIVE'
+          : 'RECURRING_INVOICE_NOT_PAUSED',
+        actualStatus: outcome.actualStatus,
+      },
+    );
   }
 
   private saved(outcome: RecurringInvoiceWriteOutcome): RecurringInvoice {

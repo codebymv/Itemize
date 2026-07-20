@@ -44,6 +44,7 @@ export const formatItemizeGraphqlError = (error: GraphQLFormattedError) => {
     'requestId',
     'current',
     'currentUpdatedAt',
+    'actualStatus',
     'limit',
     'plan',
   ] as const) {

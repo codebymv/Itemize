@@ -1,5 +1,6 @@
 import api from '@/lib/api';
 import {
+  isRecurringInvoiceGraphqlLifecycleEnabled,
   isRecurringInvoiceGraphqlMutationsEnabled,
   isRecurringInvoiceGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -7,7 +8,10 @@ import {
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
   getRecurringInvoiceViaGraphql,
+  getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoicesViaGraphql,
+  pauseRecurringInvoiceViaGraphql,
+  resumeRecurringInvoiceViaGraphql,
   updateRecurringInvoiceViaGraphql,
 } from './recurringInvoicesGraphql';
 
@@ -73,6 +77,14 @@ export interface RecurringInvoiceWriteInput {
   discount_value?: number;
   notes?: string | null;
   payment_terms?: string | null;
+}
+
+export interface RecurringInvoiceHistoryEntry {
+  id: number;
+  invoice_number: string;
+  total: number;
+  status: string;
+  created_at: string;
 }
 
 const headers = (organizationId?: number) =>
@@ -154,6 +166,10 @@ export const pauseRecurringInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<void> => {
+  if (isRecurringInvoiceGraphqlLifecycleEnabled()) {
+    await pauseRecurringInvoiceViaGraphql(id, organizationId);
+    return;
+  }
   await api.post(`/api/invoices/recurring/${id}/pause`, {}, {
     headers: headers(organizationId),
   });
@@ -163,9 +179,26 @@ export const resumeRecurringInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<void> => {
+  if (isRecurringInvoiceGraphqlLifecycleEnabled()) {
+    await resumeRecurringInvoiceViaGraphql(id, organizationId);
+    return;
+  }
   await api.post(`/api/invoices/recurring/${id}/resume`, {}, {
     headers: headers(organizationId),
   });
+};
+
+export const getRecurringInvoiceHistory = async (
+  id: number,
+  organizationId?: number,
+): Promise<RecurringInvoiceHistoryEntry[]> => {
+  if (isRecurringInvoiceGraphqlReadsEnabled()) {
+    return getRecurringInvoiceHistoryViaGraphql(id, organizationId);
+  }
+  const response = await api.get(`/api/invoices/recurring/${id}/history`, {
+    headers: headers(organizationId),
+  });
+  return (response.data.invoices || []) as RecurringInvoiceHistoryEntry[];
 };
 
 export const generateRecurringInvoiceNow = async (
