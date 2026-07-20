@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import {
   createInvoiceViaGraphql,
+  createInvoicePaymentLinkViaGraphql,
   deleteInvoiceViaGraphql,
   getInvoiceViaGraphql,
   getInvoicesViaGraphql,
@@ -224,5 +225,42 @@ describe('core invoice GraphQL adapter', () => {
       subject: 'Your invoice', message: 'Please pay.',
     }, 4, 'retry-key')).rejects.toThrow('not confirmed (RETRY)');
     expect(graphqlRequest).not.toHaveBeenCalled();
+  });
+
+  it('creates a payment link with a caller-stable idempotency key', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      createInvoicePaymentLink: {
+        success: true,
+        status: 'READY',
+        url: 'https://checkout.test/invoice',
+        sessionId: 'cs_invoice',
+      },
+    });
+
+    await expect(createInvoicePaymentLinkViaGraphql(
+      12, 4, 'stable-payment-link-key',
+    )).resolves.toEqual({
+      url: 'https://checkout.test/invoice', session_id: 'cs_invoice',
+    });
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('mutation CreateInvoicePaymentLink'),
+      { id: 12, input: { idempotencyKey: 'stable-payment-link-key' } },
+      4,
+    );
+  });
+
+  it('does not expose an unconfirmed payment link', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      createInvoicePaymentLink: {
+        success: false,
+        status: 'RECONCILIATION_REQUIRED',
+        url: null,
+        sessionId: null,
+      },
+    });
+
+    await expect(createInvoicePaymentLinkViaGraphql(
+      12, 4, 'ambiguous-payment-link-key',
+    )).rejects.toThrow('not confirmed (RECONCILIATION_REQUIRED)');
   });
 });

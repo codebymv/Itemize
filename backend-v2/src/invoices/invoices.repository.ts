@@ -131,6 +131,33 @@ export type InvoiceEmailPreparation =
   | { kind: 'invalid-state' }
   | { kind: 'missing-email' };
 
+export type InvoicePaymentLinkIntentRow = {
+  id: number;
+  organization_id: number;
+  invoice_id: number;
+  requested_by_user_id: number | null;
+  idempotency_key: string;
+  amount_due: string;
+  currency: string;
+  invoice_number: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  status: string;
+  provider_session_id: string | null;
+  payment_url: string | null;
+  last_error: string | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type InvoicePaymentLinkPreparation =
+  | { kind: 'created'; intent: InvoicePaymentLinkIntentRow }
+  | { kind: 'replayed'; intent: InvoicePaymentLinkIntentRow }
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'intent-in-progress' }
+  | { kind: 'not-found' }
+  | { kind: 'not-payable' };
+
 export type InvoiceItemValues = {
   productId: number | null;
   name: string;
@@ -433,6 +460,155 @@ export class InvoicesRepository {
       [invoiceId, organizationId],
     );
     return result.rows[0] ?? null;
+  }
+
+  async preparePaymentLink(
+    organizationId: number,
+    userId: number,
+    invoiceId: number,
+    idempotencyKey: string,
+  ): Promise<InvoicePaymentLinkPreparation> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<{
+        amount_due: string;
+        currency: string;
+        invoice_number: string;
+        customer_name: string | null;
+        customer_email: string | null;
+        status: string;
+      }>(
+        `SELECT amount_due, currency, invoice_number, customer_name,
+                customer_email, status
+         FROM invoices
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [invoiceId, organizationId],
+      );
+      const invoice = locked.rows[0];
+      if (!invoice) return { kind: 'not-found' };
+      if (
+        !['draft', 'sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) ||
+        Number(invoice.amount_due) <= 0
+      ) {
+        return { kind: 'not-payable' };
+      }
+      const existing = await client.query<InvoicePaymentLinkIntentRow>(
+        `SELECT * FROM invoice_payment_link_intents
+         WHERE organization_id = $1 AND invoice_id = $2
+           AND idempotency_key = $3`,
+        [organizationId, invoiceId, idempotencyKey],
+      );
+      if (existing.rows[0]) {
+        const intent = existing.rows[0];
+        const matches = Number(intent.amount_due) === Number(invoice.amount_due) &&
+          intent.currency.toUpperCase() === invoice.currency.toUpperCase() &&
+          intent.invoice_number === invoice.invoice_number;
+        return matches
+          ? { kind: 'replayed', intent }
+          : { kind: 'idempotency-conflict' };
+      }
+      const active = await client.query(
+        `SELECT 1 FROM invoice_payment_link_intents
+         WHERE organization_id = $1 AND invoice_id = $2
+           AND status IN ('processing', 'reconciliation_required')
+         LIMIT 1`,
+        [organizationId, invoiceId],
+      );
+      if (active.rows[0]) return { kind: 'intent-in-progress' };
+      const inserted = await client.query<InvoicePaymentLinkIntentRow>(
+        `INSERT INTO invoice_payment_link_intents (
+           organization_id, invoice_id, requested_by_user_id,
+           idempotency_key, amount_due, currency, invoice_number,
+           customer_name, customer_email
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [organizationId, invoiceId, userId, idempotencyKey,
+          invoice.amount_due, invoice.currency.toUpperCase(),
+          invoice.invoice_number, invoice.customer_name, invoice.customer_email],
+      );
+      return { kind: 'created', intent: inserted.rows[0] };
+    });
+  }
+
+  async completePaymentLink(
+    organizationId: number,
+    intentId: number,
+    sessionId: string,
+    paymentUrl: string,
+  ): Promise<InvoicePaymentLinkIntentRow> {
+    return this.transaction(async (client) => {
+      const locked = await client.query<InvoicePaymentLinkIntentRow>(
+        `SELECT * FROM invoice_payment_link_intents
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [intentId, organizationId],
+      );
+      const intent = locked.rows[0];
+      if (!intent) throw new Error('Invoice payment-link intent not found');
+      if (intent.status === 'ready') return intent;
+      const invoice = await client.query<{
+        amount_due: string; currency: string; status: string;
+      }>(
+        `SELECT amount_due, currency, status FROM invoices
+         WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [intent.invoice_id, organizationId],
+      );
+      const current = invoice.rows[0];
+      const unchanged = current &&
+        ['draft', 'sent', 'viewed', 'partial', 'overdue'].includes(current.status) &&
+        Number(current.amount_due) === Number(intent.amount_due) &&
+        current.currency.toUpperCase() === intent.currency.toUpperCase();
+      if (!unchanged) {
+        const reconciled = await client.query<InvoicePaymentLinkIntentRow>(
+          `UPDATE invoice_payment_link_intents
+           SET status = 'reconciliation_required',
+               provider_session_id = $3, payment_url = $4,
+               last_error = 'Invoice balance or state changed after Stripe creation',
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 AND organization_id = $2 RETURNING *`,
+          [intentId, organizationId, sessionId, paymentUrl],
+        );
+        return reconciled.rows[0];
+      }
+      await client.query(
+        `UPDATE invoices
+         SET stripe_payment_intent_id = $3, stripe_hosted_invoice_url = $4,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2`,
+        [intent.invoice_id, organizationId, sessionId, paymentUrl],
+      );
+      const completed = await client.query<InvoicePaymentLinkIntentRow>(
+        `UPDATE invoice_payment_link_intents
+         SET status = 'ready', provider_session_id = $3, payment_url = $4,
+             last_error = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND organization_id = $2 RETURNING *`,
+        [intentId, organizationId, sessionId, paymentUrl],
+      );
+      return completed.rows[0];
+    });
+  }
+
+  async failPaymentLink(
+    organizationId: number,
+    intentId: number,
+    error: string,
+    ambiguous: boolean,
+  ): Promise<InvoicePaymentLinkIntentRow> {
+    const result = await this.pool.query<InvoicePaymentLinkIntentRow>(
+      `UPDATE invoice_payment_link_intents
+       SET status = CASE WHEN $3::boolean THEN 'reconciliation_required'
+                         ELSE 'rejected' END,
+           last_error = LEFT($4, 2000), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2 AND status = 'processing'
+       RETURNING *`,
+      [intentId, organizationId, ambiguous, error],
+    );
+    if (result.rows[0]) return result.rows[0];
+    const current = await this.pool.query<InvoicePaymentLinkIntentRow>(
+      `SELECT * FROM invoice_payment_link_intents
+       WHERE id = $1 AND organization_id = $2`,
+      [intentId, organizationId],
+    );
+    if (!current.rows[0]) throw new Error('Invoice payment-link intent not found');
+    return current.rows[0];
   }
 
   async prepareEmailDelivery(

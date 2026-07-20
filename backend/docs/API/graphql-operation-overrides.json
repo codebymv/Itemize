@@ -285,9 +285,9 @@
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "createInvoicePaymentLink",
-      "parityStatus": "not-started",
-      "risk": "high",
-      "notes": "External Stripe side effect requires idempotency, amount/currency parity, organization scope, and retry characterization."
+      "parityStatus": "implemented",
+      "risk": "medium",
+      "notes": "The CSRF-protected mutation snapshots the exact tenant-owned payable balance in a durable intent before Stripe. Intent-derived provider idempotency, exact replay, conflicting stale-key rejection, unresolved ambiguous-outcome fencing, and a post-provider balance/state recheck prevent duplicate or stale links. Definite rejection permits a fresh request; ambiguous and raced outcomes expose no URL and require reconciliation. The frontend adapter is independently default-off."
     },
     "GET /api/invoices/:id/pdf": {
       "disposition": "retain-http",

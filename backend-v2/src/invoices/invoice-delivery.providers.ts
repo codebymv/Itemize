@@ -67,7 +67,7 @@ export type PaymentLinkRequest = {
   amountDue: string;
   currency: string;
   customerName: string | null;
-  customerEmail: string;
+  customerEmail: string | null;
   existingSessionId: string | null;
   idempotencyKey: string;
 };
@@ -86,21 +86,28 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
   async getOrCreate(request: PaymentLinkRequest): Promise<PaymentLinkResult> {
     const secret = process.env.STRIPE_SECRET_KEY?.trim();
     if (!secret) return { kind: 'rejected', message: 'Stripe is not configured' };
+    const amount = Math.round(Number(request.amountDue) * 100);
+    if (!Number.isSafeInteger(amount) || amount < 1) {
+      return { kind: 'rejected', message: 'Invoice has no payable balance' };
+    }
     if (request.existingSessionId) {
       const existing = await this.request(
         `/v1/checkout/sessions/${encodeURIComponent(request.existingSessionId)}`,
         secret,
       );
-      if (existing.ok && existing.body.status === 'open' && existing.body.url) {
+      const metadata = existing.body.metadata as Record<string, unknown> | undefined;
+      if (
+        existing.ok && existing.body.status === 'open' && existing.body.url &&
+        Number(existing.body.amount_total) === amount &&
+        String(existing.body.currency ?? '').toUpperCase() === request.currency.toUpperCase() &&
+        String(metadata?.invoice_id ?? '') === String(request.invoiceId) &&
+        String(metadata?.organization_id ?? '') === String(request.organizationId)
+      ) {
         return {
           kind: 'ready', sessionId: request.existingSessionId,
           url: String(existing.body.url),
         };
       }
-    }
-    const amount = Math.round(Number(request.amountDue) * 100);
-    if (!Number.isSafeInteger(amount) || amount < 1) {
-      return { kind: 'rejected', message: 'Invoice has no payable balance' };
     }
     const origin = this.frontendOrigin();
     const form = new URLSearchParams({
@@ -114,11 +121,11 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
       'line_items[0][quantity]': '1',
       success_url: `${origin}/invoices?payment=success&invoice=${request.invoiceId}`,
       cancel_url: `${origin}/invoices?payment=cancelled&invoice=${request.invoiceId}`,
-      customer_email: request.customerEmail,
       'metadata[invoice_id]': String(request.invoiceId),
       'metadata[invoice_number]': request.invoiceNumber,
       'metadata[organization_id]': String(request.organizationId),
     });
+    if (request.customerEmail) form.set('customer_email', request.customerEmail);
     const created = await this.request('/v1/checkout/sessions', secret, form, request.idempotencyKey);
     if (!created.ok || !created.body.id || !created.body.url) {
       return {

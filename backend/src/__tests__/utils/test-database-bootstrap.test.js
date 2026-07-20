@@ -329,7 +329,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '035_invoice_email_deliveries'"
+            "WHERE version = '036_invoice_payment_link_intents'"
         );
     });
 
@@ -356,6 +356,19 @@ describe('test database schema contract', () => {
         expect(sql).toContain('invoice_email_delivery_idempotency');
         expect(sql).toContain('idx_invoice_email_deliveries_active');
         expect(sql).toContain('invoice_email_delivery_tenant');
+    });
+
+    test('production migration stream creates durable invoice payment-link intents', async () => {
+        const migration = require('../../../scripts/migrations/036_invoice_payment_link_intents');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS invoice_payment_link_intents');
+        expect(sql).toContain('reconciliation_required');
+        expect(sql).toContain('invoice_payment_link_intent_idempotency');
+        expect(sql).toContain('idx_invoice_payment_link_intents_active');
+        expect(sql).toContain('invoice_payment_link_intent_tenant');
     });
 
     test('production migration stream quarantines ambiguous workflow SMS attempts', async () => {

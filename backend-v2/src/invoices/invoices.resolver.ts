@@ -4,6 +4,7 @@ import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   CreateInvoiceInput,
+  CreateInvoicePaymentLinkInput,
   InvoiceFilterInput,
   PreviewInvoiceEmailInput,
   SendInvoiceInput,
@@ -18,6 +19,8 @@ import {
 import { InvoiceEmailPreviewService } from './invoice-email-preview.service';
 import { InvoiceEmailDeliveryService } from './invoice-email-delivery.service';
 import { InvoiceSendResult } from './invoice-email-delivery.types';
+import { InvoicePaymentLinkService } from './invoice-payment-link.service';
+import { InvoicePaymentLinkResult } from './invoice-payment-link.types';
 import { InvoicesService } from './invoices.service';
 
 @Resolver(() => Invoice)
@@ -26,6 +29,7 @@ export class InvoicesResolver {
     private readonly invoices: InvoicesService,
     private readonly emailPreview: InvoiceEmailPreviewService,
     private readonly emailDelivery: InvoiceEmailDeliveryService,
+    private readonly paymentLinks: InvoicePaymentLinkService,
     private readonly requestContext: RequestContextService,
   ) {}
 
@@ -97,6 +101,18 @@ export class InvoicesResolver {
   ): Promise<InvoiceSendResult> {
     return this.emailDelivery.send(
       this.organizationId(), this.userId(), id, input,
+    );
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => InvoicePaymentLinkResult)
+  createInvoicePaymentLink(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: CreateInvoicePaymentLinkInput,
+  ): Promise<InvoicePaymentLinkResult> {
+    return this.paymentLinks.create(
+      this.organizationId(), this.userId(), id, input.idempotencyKey,
     );
   }
 

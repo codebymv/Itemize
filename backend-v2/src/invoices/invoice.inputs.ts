@@ -161,3 +161,9 @@ export class SendInvoiceInput {
   @Field(() => Boolean, { defaultValue: false })
   resend = false;
 }
+
+@InputType()
+export class CreateInvoicePaymentLinkInput {
+  @Field(() => String)
+  idempotencyKey: string;
+}

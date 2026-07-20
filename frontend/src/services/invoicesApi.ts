@@ -15,6 +15,7 @@ import {
     isInvoiceGraphqlMutationsEnabled,
     isInvoiceGraphqlReadsEnabled,
     isInvoiceGraphqlSendEnabled,
+    isInvoicePaymentLinkGraphqlEnabled,
     isPaymentGraphqlMutationsEnabled,
     isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
@@ -39,6 +40,7 @@ import {
     getInvoicesViaGraphql,
     updateInvoiceViaGraphql,
     sendInvoiceViaGraphql,
+    createInvoicePaymentLinkViaGraphql,
 } from './invoicesGraphql';
 import { createRecurringInvoiceFromInvoiceViaGraphql } from './recurringInvoicesGraphql';
 import {
@@ -463,6 +465,9 @@ export const createPaymentLink = async (
     invoiceId: number,
     organizationId?: number
 ): Promise<{ url: string; session_id: string }> => {
+    if (isInvoicePaymentLinkGraphqlEnabled()) {
+        return createInvoicePaymentLinkViaGraphql(invoiceId, organizationId);
+    }
     const response = await api.post(`/api/invoices/${invoiceId}/create-payment-link`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

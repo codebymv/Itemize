@@ -135,6 +135,9 @@ export const isInvoiceGraphqlMutationsEnabled = (): boolean =>
 export const isInvoiceGraphqlSendEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_SEND_GRAPHQL === 'true';
 
+export const isInvoicePaymentLinkGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_INVOICE_PAYMENT_LINK_GRAPHQL === 'true';
+
 export const isEstimateGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_ESTIMATE_READS_GRAPHQL === 'true';
 

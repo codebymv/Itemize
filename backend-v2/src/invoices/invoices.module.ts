@@ -4,6 +4,7 @@ import { InvoiceEmailPreviewService } from './invoice-email-preview.service';
 import { InvoicesResolver } from './invoices.resolver';
 import { InvoicesService } from './invoices.service';
 import { InvoiceEmailDeliveryService } from './invoice-email-delivery.service';
+import { InvoicePaymentLinkService } from './invoice-payment-link.service';
 import {
   INVOICE_EMAIL_PROVIDER,
   INVOICE_PAYMENT_LINK_PROVIDER,
@@ -19,6 +20,7 @@ import {
     InvoicesService,
     InvoiceEmailPreviewService,
     InvoiceEmailDeliveryService,
+    InvoicePaymentLinkService,
     ResendInvoiceEmailProvider,
     StripeInvoicePaymentLinkProvider,
     LegacyInvoicePdfRenderer,
@@ -27,6 +29,6 @@ import {
     { provide: INVOICE_PDF_RENDERER, useExisting: LegacyInvoicePdfRenderer },
     InvoicesResolver,
   ],
-  exports: [InvoicesService, InvoiceEmailDeliveryService],
+  exports: [InvoicesService, InvoiceEmailDeliveryService, InvoicePaymentLinkService],
 })
 export class InvoicesModule {}

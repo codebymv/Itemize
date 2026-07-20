@@ -13,7 +13,7 @@
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
-- High-risk operations: 336
+- High-risk operations: 335
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -178,7 +178,7 @@
 | DELETE | `/api/invoices/:id` | 1 | 9 | graphql-mutation | medium | billing / InvoicesModule / deleteInvoice |
 | GET | `/api/invoices/:id` | 1 | 6 | graphql-query | medium | billing / InvoicesModule / invoice |
 | PUT | `/api/invoices/:id` | 1 | 3 | graphql-mutation | medium | billing / InvoicesModule / updateInvoice |
-| POST | `/api/invoices/:id/create-payment-link` | 1 | 0 | graphql-mutation | high | billing / InvoicesModule / createInvoicePaymentLink |
+| POST | `/api/invoices/:id/create-payment-link` | 1 | 0 | graphql-mutation | medium | billing / InvoicesModule / createInvoicePaymentLink |
 | GET | `/api/invoices/:id/pdf` | 0 | 0 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/:id/record-payment` | 1 | 11 | graphql-mutation | medium | billing / PaymentsModule / recordInvoicePayment |
 | POST | `/api/invoices/:id/send` | 1 | 6 | graphql-mutation | medium | billing / InvoicesModule / sendInvoice |

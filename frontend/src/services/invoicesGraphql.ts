@@ -484,3 +484,40 @@ export const sendInvoiceViaGraphql = async (
     emailSent: true,
   };
 };
+
+export const createInvoicePaymentLinkViaGraphql = async (
+  id: number,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<{ url: string; session_id: string }> => {
+  const data = await graphqlMutationRequest<{
+    createInvoicePaymentLink: {
+      success: boolean;
+      status: string;
+      url: string | null;
+      sessionId: string | null;
+    };
+  }, { id: number; input: { idempotencyKey: string } }>(
+    `mutation CreateInvoicePaymentLink(
+      $id: Int!, $input: CreateInvoicePaymentLinkInput!
+    ) {
+      createInvoicePaymentLink(id: $id, input: $input) {
+        success replayed intentId status url sessionId
+      }
+    }`,
+    {
+      id,
+      input: {
+        idempotencyKey:
+          idempotencyKey ?? globalThis.crypto?.randomUUID?.() ??
+          `invoice-payment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      },
+    },
+    organizationId,
+  );
+  const result = data.createInvoicePaymentLink;
+  if (!result.success || !result.url || !result.sessionId) {
+    throw new Error(`Invoice payment link was not confirmed (${result.status})`);
+  }
+  return { url: result.url, session_id: result.sessionId };
+};

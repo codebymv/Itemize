@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
   createInvoice,
+  createPaymentLink,
   createRecurringTemplateFromInvoice,
   deleteInvoice,
   getInvoice,
@@ -13,10 +14,12 @@ import {
   isInvoiceGraphqlMutationsEnabled,
   isInvoiceGraphqlReadsEnabled,
   isInvoiceGraphqlSendEnabled,
+  isInvoicePaymentLinkGraphqlEnabled,
   isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
 import {
   createInvoiceViaGraphql,
+  createInvoicePaymentLinkViaGraphql,
   deleteInvoiceViaGraphql,
   getInvoiceViaGraphql,
   getInvoicesViaGraphql,
@@ -37,6 +40,7 @@ vi.mock('./graphqlClient', () => ({
   isInvoiceGraphqlMutationsEnabled: vi.fn(),
   isInvoiceGraphqlReadsEnabled: vi.fn(),
   isInvoiceGraphqlSendEnabled: vi.fn(),
+  isInvoicePaymentLinkGraphqlEnabled: vi.fn(),
   isInvoiceBusinessGraphqlMutationsEnabled: vi.fn(() => false),
   isInvoiceBusinessGraphqlReadsEnabled: vi.fn(() => false),
   isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
@@ -46,6 +50,7 @@ vi.mock('./graphqlClient', () => ({
 }));
 vi.mock('./invoicesGraphql', () => ({
   createInvoiceViaGraphql: vi.fn(),
+  createInvoicePaymentLinkViaGraphql: vi.fn(),
   deleteInvoiceViaGraphql: vi.fn(),
   getInvoiceViaGraphql: vi.fn(),
   getInvoicesViaGraphql: vi.fn(),
@@ -84,6 +89,7 @@ describe('core invoice API transport selection', () => {
     vi.mocked(isInvoiceGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isInvoiceGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isInvoiceGraphqlSendEnabled).mockReturnValue(false);
+    vi.mocked(isInvoicePaymentLinkGraphqlEnabled).mockReturnValue(false);
     vi.mocked(isRecurringInvoiceGraphqlCloneEnabled).mockReturnValue(false);
   });
 
@@ -213,6 +219,30 @@ describe('core invoice API transport selection', () => {
     });
     await sendInvoice(12, 4, options);
     expect(sendInvoiceViaGraphql).toHaveBeenCalledWith(12, options, 4);
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('keeps payment-link creation on REST by default and cuts it over independently', async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { data: { url: 'https://pay.test/rest', session_id: 'cs_rest' } },
+    });
+    await expect(createPaymentLink(12, 4)).resolves.toEqual({
+      url: 'https://pay.test/rest', session_id: 'cs_rest',
+    });
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/invoices/12/create-payment-link', {},
+      { headers: { 'x-organization-id': '4' } },
+    );
+
+    vi.clearAllMocks();
+    vi.mocked(isInvoicePaymentLinkGraphqlEnabled).mockReturnValue(true);
+    vi.mocked(createInvoicePaymentLinkViaGraphql).mockResolvedValue({
+      url: 'https://pay.test/graphql', session_id: 'cs_graphql',
+    });
+    await expect(createPaymentLink(12, 4)).resolves.toEqual({
+      url: 'https://pay.test/graphql', session_id: 'cs_graphql',
+    });
+    expect(createInvoicePaymentLinkViaGraphql).toHaveBeenCalledWith(12, 4);
     expect(api.post).not.toHaveBeenCalled();
   });
 });

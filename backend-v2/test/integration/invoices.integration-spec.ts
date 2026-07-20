@@ -270,6 +270,16 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     resend: false,
   });
 
+  const paymentLinkMutation = `
+    mutation CreateInvoicePaymentLink(
+      $id: Int!, $input: CreateInvoicePaymentLinkInput!
+    ) {
+      createInvoicePaymentLink(id: $id, input: $input) {
+        success replayed intentId status url sessionId
+      }
+    }
+  `;
+
   it('creates atomically, calculates decimals in PostgreSQL, and interoperates with REST', async () => {
     const created = await graphql(
       memberToken,
@@ -506,6 +516,167 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(bypass.body.errors[0].extensions).toMatchObject({
       code: 'CONFLICT', reason: 'INVOICE_DELIVERY_IN_PROGRESS',
+    });
+  });
+
+  it('creates replay-safe payment links and fences stale or ambiguous outcomes', async () => {
+    invoicePaymentLinkProvider.getOrCreate.mockReset();
+    invoicePaymentLinkProvider.getOrCreate.mockResolvedValue({
+      kind: 'ready', sessionId: 'cs_payment_link', url: 'https://pay.test/ready',
+    });
+    const created = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const id = Number(created.body.data.createInvoice.id);
+
+    const noCsrf = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id, input: { idempotencyKey: 'payment-no-csrf' } }, false,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const hidden = await graphql(
+      outsiderToken, outsiderOrganizationId, paymentLinkMutation,
+      { id, input: { idempotencyKey: 'payment-hidden' } },
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const ready = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id, input: { idempotencyKey: 'payment-ready' } },
+    ).expect(200);
+    expect(ready.body.errors).toBeUndefined();
+    expect(ready.body.data.createInvoicePaymentLink).toMatchObject({
+      success: true, replayed: false, status: 'READY',
+      url: 'https://pay.test/ready', sessionId: 'cs_payment_link',
+    });
+    expect(invoicePaymentLinkProvider.getOrCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invoiceId: id, organizationId, amountDue: '26.06',
+        existingSessionId: null,
+      }),
+    );
+    const replay = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id, input: { idempotencyKey: 'payment-ready' } },
+    ).expect(200);
+    expect(replay.body.data.createInvoicePaymentLink).toMatchObject({
+      success: true, replayed: true, status: 'READY',
+      url: 'https://pay.test/ready', sessionId: 'cs_payment_link',
+    });
+    expect(invoicePaymentLinkProvider.getOrCreate).toHaveBeenCalledTimes(1);
+    expect((await pool.query(
+      `SELECT stripe_payment_intent_id, stripe_hosted_invoice_url
+       FROM invoices WHERE id = $1`, [id],
+    )).rows[0]).toEqual({
+      stripe_payment_intent_id: 'cs_payment_link',
+      stripe_hosted_invoice_url: 'https://pay.test/ready',
+    });
+
+    await pool.query(
+      'UPDATE invoices SET amount_due = amount_due - 1 WHERE id = $1', [id],
+    );
+    const staleReplay = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id, input: { idempotencyKey: 'payment-ready' } },
+    ).expect(200);
+    expect(staleReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'INVOICE_PAYMENT_LINK_IDEMPOTENCY_CONFLICT',
+    });
+
+    const paidCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const paidId = Number(paidCreate.body.data.createInvoice.id);
+    await pool.query(
+      `UPDATE invoices SET status = 'paid', amount_due = 0 WHERE id = $1`,
+      [paidId],
+    );
+    const callsBeforePaid = invoicePaymentLinkProvider.getOrCreate.mock.calls.length;
+    const paid = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id: paidId, input: { idempotencyKey: 'payment-paid' } },
+    ).expect(200);
+    expect(paid.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'INVOICE_NOT_PAYABLE',
+    });
+    expect(invoicePaymentLinkProvider.getOrCreate).toHaveBeenCalledTimes(callsBeforePaid);
+
+    const rejectedCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const rejectedId = Number(rejectedCreate.body.data.createInvoice.id);
+    invoicePaymentLinkProvider.getOrCreate.mockResolvedValueOnce({
+      kind: 'rejected', message: 'Stripe rejected the request',
+    });
+    const rejected = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id: rejectedId, input: { idempotencyKey: 'payment-rejected' } },
+    ).expect(200);
+    expect(rejected.body.data.createInvoicePaymentLink).toMatchObject({
+      success: false, status: 'REJECTED', url: null, sessionId: null,
+    });
+    invoicePaymentLinkProvider.getOrCreate.mockResolvedValueOnce({
+      kind: 'ready', sessionId: 'cs_retry', url: 'https://pay.test/retry',
+    });
+    const retried = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id: rejectedId, input: { idempotencyKey: 'payment-retry' } },
+    ).expect(200);
+    expect(retried.body.data.createInvoicePaymentLink).toMatchObject({
+      success: true, status: 'READY', sessionId: 'cs_retry',
+    });
+
+    const ambiguousCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const ambiguousId = Number(ambiguousCreate.body.data.createInvoice.id);
+    invoicePaymentLinkProvider.getOrCreate.mockRejectedValueOnce(
+      new Error('connection reset after request'),
+    );
+    const ambiguous = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id: ambiguousId, input: { idempotencyKey: 'payment-ambiguous' } },
+    ).expect(200);
+    expect(ambiguous.body.data.createInvoicePaymentLink).toMatchObject({
+      success: false, status: 'RECONCILIATION_REQUIRED',
+      url: null, sessionId: null,
+    });
+    const bypass = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id: ambiguousId, input: { idempotencyKey: 'payment-bypass' } },
+    ).expect(200);
+    expect(bypass.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'INVOICE_PAYMENT_LINK_IN_PROGRESS',
+    });
+
+    const racedCreate = await graphql(
+      memberToken, organizationId, createMutation, { input: input() },
+    ).expect(200);
+    const racedId = Number(racedCreate.body.data.createInvoice.id);
+    invoicePaymentLinkProvider.getOrCreate.mockImplementationOnce(async () => {
+      await pool.query(
+        'UPDATE invoices SET amount_due = amount_due - 1 WHERE id = $1',
+        [racedId],
+      );
+      return {
+        kind: 'ready', sessionId: 'cs_stale_race',
+        url: 'https://pay.test/stale-race',
+      };
+    });
+    const raced = await graphql(
+      memberToken, organizationId, paymentLinkMutation,
+      { id: racedId, input: { idempotencyKey: 'payment-stale-race' } },
+    ).expect(200);
+    expect(raced.body.data.createInvoicePaymentLink).toMatchObject({
+      success: false, status: 'RECONCILIATION_REQUIRED',
+      url: null, sessionId: null,
+    });
+    expect((await pool.query(
+      `SELECT stripe_payment_intent_id, stripe_hosted_invoice_url
+       FROM invoices WHERE id = $1`, [racedId],
+    )).rows[0]).toEqual({
+      stripe_payment_intent_id: null, stripe_hosted_invoice_url: null,
     });
   });
 
