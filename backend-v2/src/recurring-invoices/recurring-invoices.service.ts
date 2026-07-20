@@ -22,6 +22,7 @@ import {
   RecurringInvoiceLifecycleOutcome,
   RecurringInvoiceItemValues,
   RecurringInvoiceRow,
+  ScheduledRecurringInvoiceGeneration,
   RecurringInvoiceUpdates,
   RecurringInvoiceValues,
   RecurringInvoiceWriteOutcome,
@@ -223,6 +224,15 @@ export class RecurringInvoicesService {
     ));
   }
 
+  async generateDue(
+    batchSize = 100,
+  ): Promise<ScheduledRecurringInvoiceGeneration> {
+    if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 500) {
+      throw new Error('Recurring invoice batch size must be between 1 and 500');
+    }
+    return this.recurringInvoices.generateDue(batchSize);
+  }
+
   async history(
     organizationId: number,
     recurringInvoiceId: number,
@@ -277,6 +287,13 @@ export class RecurringInvoicesService {
         'Cannot generate an invoice from a completed recurring invoice',
         'CONFLICT',
         { reason: 'RECURRING_INVOICE_COMPLETED', actualStatus: 'completed' },
+      );
+    }
+    if (outcome.kind === 'not-due') {
+      throw itemizeGraphqlError(
+        'Recurring invoice is not due for scheduled generation',
+        'CONFLICT',
+        { reason: 'RECURRING_INVOICE_NOT_DUE' },
       );
     }
     throw itemizeGraphqlError(

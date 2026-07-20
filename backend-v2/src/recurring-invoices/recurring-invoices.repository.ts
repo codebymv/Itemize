@@ -121,7 +121,22 @@ export type RecurringInvoiceGenerationOutcome =
   | { kind: 'generated'; result: RecurringInvoiceGeneration }
   | { kind: 'not-found' }
   | { kind: 'completed' }
+  | { kind: 'not-due' }
   | { kind: 'invalid-template' };
+
+export type ScheduledRecurringInvoiceFailure = {
+  templateId: number;
+  organizationId: number;
+  reason: 'INVALID_TEMPLATE' | 'DATABASE_ERROR';
+};
+
+export type ScheduledRecurringInvoiceGeneration = {
+  candidates: number;
+  generated: RecurringInvoiceGeneration[];
+  replayed: number;
+  skipped: number;
+  failures: ScheduledRecurringInvoiceFailure[];
+};
 
 export type RecurringInvoiceCriteria = {
   organizationId: number;
@@ -529,9 +544,10 @@ export class RecurringInvoicesRepository {
 
   async generateNow(
     organizationId: number,
-    userId: number,
+    userId: number | null,
     recurringInvoiceId: number,
     idempotencyKey: string,
+    scheduledRunDate?: string,
   ): Promise<RecurringInvoiceGenerationOutcome> {
     return this.transaction(async (client) => {
       const locked = await client.query<{
@@ -554,6 +570,7 @@ export class RecurringInvoicesRepository {
         total: string;
         notes: string | null;
         payment_terms: string | null;
+        today: string;
       }>(
         `SELECT r.id,
                 CASE WHEN c.id IS NULL THEN NULL ELSE r.contact_id END AS contact_id,
@@ -561,7 +578,8 @@ export class RecurringInvoicesRepository {
                 r.frequency, r.start_date::text, r.end_date::text,
                 r.next_run_date::text, r.status, r.items, r.subtotal,
                 r.tax_amount, r.discount_amount, r.discount_type,
-                r.discount_value, r.total, r.notes, r.payment_terms
+                r.discount_value, r.total, r.notes, r.payment_terms,
+                CURRENT_DATE::text AS today
          FROM recurring_invoice_templates r
          LEFT JOIN contacts c
            ON c.id = r.contact_id AND c.organization_id = r.organization_id
@@ -603,6 +621,17 @@ export class RecurringInvoicesRepository {
             replayed: true,
           },
         };
+      }
+      if (
+        scheduledRunDate !== undefined &&
+        (
+          template.status !== 'active' ||
+          template.next_run_date !== scheduledRunDate ||
+          scheduledRunDate > template.today ||
+          (template.end_date !== null && template.end_date < template.today)
+        )
+      ) {
+        return { kind: 'not-due' };
       }
       if (template.status === 'completed') return { kind: 'completed' };
 
@@ -740,6 +769,63 @@ export class RecurringInvoicesRepository {
         },
       };
     });
+  }
+
+  async generateDue(
+    batchSize: number,
+  ): Promise<ScheduledRecurringInvoiceGeneration> {
+    const due = await this.pool.query<{
+      id: number;
+      organization_id: number;
+      created_by: number | null;
+      next_run_date: string;
+    }>(
+      `SELECT id, organization_id, created_by, next_run_date::text
+       FROM recurring_invoice_templates
+       WHERE status = 'active'
+         AND next_run_date <= CURRENT_DATE
+         AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+       ORDER BY next_run_date, id
+       LIMIT $1`,
+      [batchSize],
+    );
+    const result: ScheduledRecurringInvoiceGeneration = {
+      candidates: due.rows.length,
+      generated: [],
+      replayed: 0,
+      skipped: 0,
+      failures: [],
+    };
+    for (const candidate of due.rows) {
+      try {
+        const outcome = await this.generateNow(
+          Number(candidate.organization_id),
+          candidate.created_by === null ? null : Number(candidate.created_by),
+          Number(candidate.id),
+          `scheduled-${candidate.id}-${candidate.next_run_date}`,
+          candidate.next_run_date,
+        );
+        if (outcome.kind === 'generated') {
+          if (outcome.result.replayed) result.replayed += 1;
+          else result.generated.push(outcome.result);
+        } else if (outcome.kind === 'invalid-template') {
+          result.failures.push({
+            templateId: Number(candidate.id),
+            organizationId: Number(candidate.organization_id),
+            reason: 'INVALID_TEMPLATE',
+          });
+        } else {
+          result.skipped += 1;
+        }
+      } catch {
+        result.failures.push({
+          templateId: Number(candidate.id),
+          organizationId: Number(candidate.organization_id),
+          reason: 'DATABASE_ERROR',
+        });
+      }
+    }
+    return result;
   }
 
   async findHistoryPage(

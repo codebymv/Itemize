@@ -8,6 +8,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { RecurringInvoicesService } from '../../src/recurring-invoices/recurring-invoices.service';
 
 describe('Core invoice GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -23,6 +24,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   let outsiderContactId: number;
   let businessId: number;
   let productId: number;
+  let recurringInvoicesService: RecurringInvoicesService;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -120,6 +122,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       bodyParser: false,
       logger: false,
     });
+    recurringInvoicesService = moduleRef.get(RecurringInvoicesService);
     configureApp(app);
     await app.init();
 
@@ -1442,6 +1445,162 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       [organizationId],
     );
     expect(Number(finalCounter.rows[0].next_invoice_number)).toBe(101);
+  });
+
+  it('runs scheduled recurring generation once per due date and rolls failures back', async () => {
+    await pool.query(
+      `UPDATE recurring_invoice_templates SET status = 'paused'
+       WHERE status = 'active' AND next_run_date <= CURRENT_DATE`,
+    );
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, invoice_prefix, next_invoice_number
+       ) VALUES ($1, 'JOB-', 500)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         invoice_prefix = EXCLUDED.invoice_prefix,
+         next_invoice_number = EXCLUDED.next_invoice_number`,
+      [organizationId],
+    );
+    const createTemplate = async (templateName: string) => {
+      const created = await graphql(
+        memberToken,
+        organizationId,
+        recurringMutation,
+        {
+          input: {
+            ...recurringInput(),
+            templateName,
+            frequency: 'weekly',
+            endDate: null,
+          },
+        },
+      ).expect(200);
+      expect(created.body.errors).toBeUndefined();
+      return Number(created.body.data.createRecurringInvoice.id);
+    };
+    const dueId = await createTemplate('Scheduled due template');
+    const terminalId = await createTemplate('Scheduled terminal template');
+    const futureId = await createTemplate('Scheduled future template');
+    await pool.query(
+      `UPDATE recurring_invoice_templates
+       SET next_run_date = CASE id
+             WHEN $1 THEN CURRENT_DATE - 1
+             WHEN $2 THEN CURRENT_DATE
+             WHEN $3 THEN CURRENT_DATE + 1
+           END,
+           end_date = CASE WHEN id = $2 THEN CURRENT_DATE ELSE NULL END
+       WHERE id = ANY($4::int[]) AND organization_id = $5`,
+      [dueId, terminalId, futureId, [dueId, terminalId, futureId], organizationId],
+    );
+
+    const workerResults = await Promise.all([
+      recurringInvoicesService.generateDue(100),
+      recurringInvoicesService.generateDue(100),
+    ]);
+    expect(workerResults.reduce(
+      (total, result) => total + result.generated.length,
+      0,
+    )).toBe(2);
+    expect(workerResults.every((result) => result.failures.length === 0)).toBe(true);
+    const generated = await pool.query<{
+      recurring_template_id: number;
+      invoice_count: number;
+      scheduled_key: string;
+    }>(
+      `SELECT recurring_template_id, COUNT(*)::int AS invoice_count,
+              MIN(custom_fields #>>
+                '{_itemize,recurringGeneration,idempotencyKey}') AS scheduled_key
+       FROM invoices
+       WHERE organization_id = $1
+         AND recurring_template_id = ANY($2::int[])
+       GROUP BY recurring_template_id
+       ORDER BY recurring_template_id`,
+      [organizationId, [dueId, terminalId, futureId]],
+    );
+    expect(generated.rows).toEqual([
+      {
+        recurring_template_id: dueId,
+        invoice_count: 1,
+        scheduled_key: expect.stringMatching(`^scheduled-${dueId}-`),
+      },
+      {
+        recurring_template_id: terminalId,
+        invoice_count: 1,
+        scheduled_key: expect.stringMatching(`^scheduled-${terminalId}-`),
+      },
+    ]);
+    const schedules = await pool.query<{
+      id: number;
+      status: string;
+      is_future: boolean;
+      generated: boolean;
+    }>(
+      `SELECT id, status, next_run_date > CURRENT_DATE AS is_future,
+              last_generated_at IS NOT NULL AS generated
+       FROM recurring_invoice_templates
+       WHERE id = ANY($1::int[]) AND organization_id = $2
+       ORDER BY id`,
+      [[dueId, terminalId, futureId], organizationId],
+    );
+    expect(schedules.rows).toEqual([
+      { id: dueId, status: 'active', is_future: true, generated: true },
+      { id: terminalId, status: 'completed', is_future: false, generated: true },
+      { id: futureId, status: 'active', is_future: true, generated: false },
+    ]);
+    const counterAfterSuccess = await pool.query<{ next_invoice_number: number }>(
+      `SELECT next_invoice_number FROM payment_settings WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(Number(counterAfterSuccess.rows[0].next_invoice_number)).toBe(502);
+
+    const rollbackId = await createTemplate('Scheduled rollback template');
+    await pool.query(
+      `UPDATE recurring_invoice_templates
+       SET next_run_date = CURRENT_DATE, end_date = NULL
+       WHERE id = $1 AND organization_id = $2`,
+      [rollbackId, organizationId],
+    );
+    await pool.query(
+      `UPDATE payment_settings
+       SET invoice_prefix = 'ROLL-', next_invoice_number = 700
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    await pool.query(
+      `INSERT INTO invoices (
+         organization_id, invoice_number, due_date, total, amount_due, created_by
+       ) VALUES ($1, 'ROLL-00700', CURRENT_DATE, 0, 0, $2)`,
+      [organizationId, memberId],
+    );
+    const failed = await recurringInvoicesService.generateDue(1);
+    expect(failed.failures).toEqual([{
+      templateId: rollbackId,
+      organizationId,
+      reason: 'DATABASE_ERROR',
+    }]);
+    const rollback = await pool.query<{
+      next_invoice_number: number;
+      next_run_unchanged: boolean;
+      generated: boolean;
+      generated_invoices: number;
+    }>(
+      `SELECT ps.next_invoice_number,
+              r.next_run_date = CURRENT_DATE AS next_run_unchanged,
+              r.last_generated_at IS NOT NULL AS generated,
+              (SELECT COUNT(*) FROM invoices i
+               WHERE i.organization_id = r.organization_id
+                 AND i.recurring_template_id = r.id)::int AS generated_invoices
+       FROM recurring_invoice_templates r
+       JOIN payment_settings ps ON ps.organization_id = r.organization_id
+       WHERE r.id = $1 AND r.organization_id = $2`,
+      [rollbackId, organizationId],
+    );
+    expect(rollback.rows[0]).toEqual({
+      next_invoice_number: 700,
+      next_run_unchanged: true,
+      generated: false,
+      generated_invoices: 0,
+    });
   });
 
   it('enforces recurring CSRF, tenant references, dates, and private misses', async () => {
