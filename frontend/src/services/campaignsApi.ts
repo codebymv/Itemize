@@ -3,6 +3,20 @@
  * Handles campaign CRUD, scheduling, and sending
  */
 import api from '@/lib/api';
+import {
+    createCampaignViaGraphql,
+    deleteCampaignViaGraphql,
+    duplicateCampaignViaGraphql,
+    getCampaignViaGraphql,
+    getCampaignsViaGraphql,
+    scheduleCampaignViaGraphql,
+    unscheduleCampaignViaGraphql,
+    updateCampaignViaGraphql,
+} from './campaignsGraphql';
+import {
+    isCampaignGraphqlMutationsEnabled,
+    isCampaignGraphqlReadsEnabled,
+} from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
 
@@ -24,14 +38,14 @@ export interface EmailCampaign {
     // Campaign info
     name: string;
     subject: string;
-    from_name?: string;
-    from_email?: string;
-    reply_to?: string;
+    from_name?: string | null;
+    from_email?: string | null;
+    reply_to?: string | null;
     
     // Content
-    template_id?: number;
-    content_html?: string;
-    content_text?: string;
+    template_id?: number | null;
+    content_html?: string | null;
+    content_text?: string | null;
     
     // Targeting
     segment_type: 'all' | 'tag' | 'status' | 'custom' | 'segment';
@@ -44,15 +58,15 @@ export interface EmailCampaign {
     status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled' | 'failed';
     
     // Scheduling
-    scheduled_at?: string;
+    scheduled_at?: string | null;
     send_immediately: boolean;
     timezone: string;
     
     // A/B Testing
     is_ab_test: boolean;
     ab_variants?: unknown;
-    ab_winner_criteria?: string;
-    ab_test_duration_hours?: number;
+    ab_winner_criteria?: string | null;
+    ab_test_duration_hours?: number | null;
     
     // Stats
     total_recipients: number;
@@ -70,20 +84,20 @@ export interface EmailCampaign {
     bounce_rate: number;
     
     // Metadata
-    created_by?: number;
-    sent_by?: number;
+    created_by?: number | null;
+    sent_by?: number | null;
     
     // Timestamps
-    started_at?: string;
-    completed_at?: string;
+    started_at?: string | null;
+    completed_at?: string | null;
     created_at: string;
     updated_at: string;
     
     // From joins
-    template_name?: string;
-    created_by_name?: string;
-    sent_by_name?: string;
-    template_html?: string;
+    template_name?: string | null;
+    created_by_name?: string | null;
+    sent_by_name?: string | null;
+    template_html?: string | null;
     links?: CampaignLink[];
 }
 
@@ -91,9 +105,9 @@ export interface CampaignLink {
     id: number;
     campaign_id: number;
     original_url: string;
-    tracking_url?: string;
-    link_text?: string;
-    link_position?: number;
+    tracking_url?: string | null;
+    link_text?: string | null;
+    link_position?: number | null;
     total_clicks: number;
     unique_clicks: number;
     created_at: string;
@@ -159,6 +173,9 @@ export const getCampaigns = async (
     } = {},
     organizationId?: number
 ): Promise<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    if (isCampaignGraphqlReadsEnabled()) {
+        return getCampaignsViaGraphql(params, organizationId);
+    }
     const response = await api.get('/api/campaigns', {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -180,6 +197,9 @@ export const getCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignGraphqlReadsEnabled()) {
+        return getCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.get(`/api/campaigns/${campaignId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -193,6 +213,9 @@ export const createCampaign = async (
     campaign: Partial<EmailCampaign>,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignGraphqlMutationsEnabled()) {
+        return createCampaignViaGraphql(campaign, organizationId);
+    }
     const response = await api.post('/api/campaigns', campaign, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -207,6 +230,9 @@ export const updateCampaign = async (
     campaign: Partial<EmailCampaign>,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignGraphqlMutationsEnabled()) {
+        return updateCampaignViaGraphql(campaignId, campaign, organizationId);
+    }
     const response = await api.put(`/api/campaigns/${campaignId}`, campaign, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -220,6 +246,9 @@ export const deleteCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isCampaignGraphqlMutationsEnabled()) {
+        return deleteCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.delete(`/api/campaigns/${campaignId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -233,6 +262,9 @@ export const duplicateCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignGraphqlMutationsEnabled()) {
+        return duplicateCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.post(`/api/campaigns/${campaignId}/duplicate`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -248,6 +280,9 @@ export const scheduleCampaign = async (
     timezone?: string,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignGraphqlMutationsEnabled()) {
+        return scheduleCampaignViaGraphql(campaignId, scheduledAt, timezone, organizationId);
+    }
     const response = await api.post(`/api/campaigns/${campaignId}/schedule`, {
         scheduled_at: scheduledAt,
         timezone
@@ -264,6 +299,9 @@ export const unscheduleCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignGraphqlMutationsEnabled()) {
+        return unscheduleCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.post(`/api/campaigns/${campaignId}/unschedule`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

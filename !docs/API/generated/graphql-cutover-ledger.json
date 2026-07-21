@@ -15,7 +15,7 @@
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 5,
+    "unmatchedBackendTestCallCount": 6,
     "retainHttpCount": 40,
     "graphqlQueryCount": 127,
     "graphqlMutationCount": 244,
@@ -2990,7 +2990,7 @@
           "path": "/api/campaigns",
           "rawPath": "/api/campaigns",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 162,
+          "line": 179,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3039,8 +3039,8 @@
       "owner": "growth",
       "targetOperation": "campaigns",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Use the shared page contract and preserve organization scope, status/search filtering, and created-at descending order.",
+      "parityStatus": "implemented",
+      "notes": "CampaignsModule now provides organization-scoped status/search filtering, literal escaped search, stable created-at/id ordering, bounded shared paging, safe numeric mapping, and a default-off frontend read rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3061,7 +3061,7 @@
           "path": "/api/campaigns",
           "rawPath": "/api/campaigns",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 196,
+          "line": 219,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3134,8 +3134,8 @@
       "owner": "growth",
       "targetOperation": "createCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Create only in the active organization and validate content, sender, template, and targeting references before persistence.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected creation requires nonblank content, validates tenant-owned template/tag/saved-segment references, rejects unsupported custom targeting, clears irrelevant audience fields, and retains REST behind the default-off mutation flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3156,7 +3156,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 223,
+          "line": 252,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3193,8 +3193,8 @@
       "owner": "growth",
       "targetOperation": "deleteCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Scope by organization and reject deletion while status is sending.",
+      "parityStatus": "implemented",
+      "notes": "The mutation locks and conceals the organization-owned campaign, rejects deletion while sending, returns verified stable identity, and permits every other retained state.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3215,7 +3215,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 183,
+          "line": 203,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3240,8 +3240,8 @@
       "owner": "growth",
       "targetOperation": "campaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Return the organization-owned campaign with template metadata and ordered tracked links.",
+      "parityStatus": "implemented",
+      "notes": "The query conceals foreign IDs and returns tenant-owned campaign, template/user metadata, and tracked links in stable position/id order behind the read rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3262,7 +3262,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 210,
+          "line": 236,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3293,8 +3293,8 @@
       "owner": "growth",
       "targetOperation": "updateCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Only draft or scheduled campaigns are editable; preserve partial-field and explicit-null behavior.",
+      "parityStatus": "implemented",
+      "notes": "The mutation locks draft/scheduled rows, serializes concurrent partial updates, distinguishes omission from nullable clearing, and revalidates tenant-owned audience/template references.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3315,7 +3315,7 @@
           "path": "/api/campaigns/:campaignId/duplicate",
           "rawPath": "/api/campaigns/${campaignId}/duplicate",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 236,
+          "line": 268,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3340,8 +3340,8 @@
       "owner": "growth",
       "targetOperation": "duplicateCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Copy organization-owned configuration into a new draft without copying delivery history.",
+      "parityStatus": "implemented",
+      "notes": "The mutation atomically copies tenant-owned configuration into a bounded-name draft, preserves saved-segment targeting, and does not copy schedule, delivery state, statistics, recipients, or tracked links.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3362,7 +3362,7 @@
           "path": "/api/campaigns/:campaignId/pause",
           "rawPath": "/api/campaigns/${campaignId}/pause",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 293,
+          "line": 331,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3396,7 +3396,7 @@
           "path": "/api/campaigns/:campaignId/preview",
           "rawPath": "/api/campaigns/${campaignId}/preview",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 338,
+          "line": 376,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3437,7 +3437,7 @@
           "path": "/api/campaigns/:campaignId/recipients",
           "rawPath": "/api/campaigns/${campaignId}/recipients",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 324,
+          "line": 362,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3471,7 +3471,7 @@
           "path": "/api/campaigns/:campaignId/resume",
           "rawPath": "/api/campaigns/${campaignId}/resume",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 306,
+          "line": 344,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3505,7 +3505,7 @@
           "path": "/api/campaigns/:campaignId/schedule",
           "rawPath": "/api/campaigns/${campaignId}/schedule",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 251,
+          "line": 286,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3536,8 +3536,8 @@
       "owner": "growth",
       "targetOperation": "scheduleCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Accept a future absolute timestamp plus timezone metadata and allow only draft or scheduled sources.",
+      "parityStatus": "implemented",
+      "notes": "The mutation requires a future absolute timestamp, treats bounded timezone as metadata, and locks draft/scheduled rows before the scheduled transition.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3558,7 +3558,7 @@
           "path": "/api/campaigns/:campaignId/send",
           "rawPath": "/api/campaigns/${campaignId}/send",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 280,
+          "line": 318,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3605,7 +3605,7 @@
           "path": "/api/campaigns/:campaignId/send-test",
           "rawPath": "/api/campaigns/${campaignId}/send-test",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 352,
+          "line": 390,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3639,7 +3639,7 @@
           "path": "/api/campaigns/:campaignId/unschedule",
           "rawPath": "/api/campaigns/${campaignId}/unschedule",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 267,
+          "line": 305,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3658,8 +3658,8 @@
       "owner": "growth",
       "targetOperation": "unscheduleCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Allow only scheduled to draft and clear the scheduled timestamp.",
+      "parityStatus": "implemented",
+      "notes": "The mutation locks and conceals the row, allows only scheduled-to-draft, clears the instant atomically, and returns stable BAD_USER_INPUT state evidence for invalid transitions.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -18496,6 +18496,12 @@
     }
   ],
   "unmatchedBackendTestCalls": [
+    {
+      "method": "GET",
+      "path": "/api/campaigns:path",
+      "source": "backend-v2/test/integration/campaigns.integration-spec.ts",
+      "line": 114
+    },
     {
       "method": "POST",
       "path": "/api/:kinds/:id/share",

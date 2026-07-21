@@ -219,6 +219,12 @@ export const isSmsTemplateGraphqlReadsEnabled = (): boolean =>
 export const isSmsTemplateGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_SMS_TEMPLATE_MUTATIONS_GRAPHQL === 'true';
 
+export const isCampaignGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_CAMPAIGN_READS_GRAPHQL === 'true';
+
+export const isCampaignGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

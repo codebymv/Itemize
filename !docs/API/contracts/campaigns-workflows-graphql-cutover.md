@@ -1,8 +1,8 @@
 # Campaigns and workflows GraphQL cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Phase 1 campaign management implemented; delivery and workflows remain characterized
 
-**Evidence date:** 2026-07-16
+**Evidence date:** 2026-07-21
 
 ## Decision
 
@@ -222,7 +222,11 @@ The retained endpoint and first-party producers now converge on the same durable
 
 ## Current evidence and remaining blockers
 
-Current PostgreSQL suites characterize campaign CRUD, list filters, schedule/unschedule, duplicate, state-based edit/delete restrictions, workflow CRUD, trigger validation, ordered step replacement, activation, enrollment, tenant denial, duplicate, plan limits, manual pause/resume, deactivation pause/resume, same-step retry, provider dead-letter retry, and cancellation races.
+`CampaignsModule` now implements campaign list/detail/create/update/delete/duplicate and schedule/unschedule. Its queries use tenant-qualified stable paging, escaped search, safe numeric projections, private misses, and ordered link detail. Its CSRF-protected mutations validate nonblank content and tenant-owned template/tag/segment references, reject legacy `custom` targeting, serialize partial updates and all state transitions with row locks, preserve explicit nullable clearing, and copy configuration into a bounded-name draft without delivery history. Independent default-off frontend read and mutation flags preserve the retained response shape and REST rollback; campaign delivery, audience preview, and recipient inspection deliberately remain on REST.
+
+Fresh PostgreSQL coverage proves GraphQL/REST interoperability, filters and paging, concurrent partial-update convergence, explicit null clearing, cross-tenant concealment, foreign-reference denial, CSRF, absolute scheduling, invalid transition evidence, draft duplication, and sending-state deletion denial. Focused service and frontend tests protect validation, mapping, CSRF transport, independent flags, and verified delete identity.
+
+Existing PostgreSQL suites continue to characterize workflow CRUD, trigger validation, ordered step replacement, activation, enrollment, tenant denial, duplicate, plan limits, manual pause/resume, deactivation pause/resume, same-step retry, provider dead-letter retry, and cancellation races.
 
 Focused tests also protect campaign send locking, pause-safe completion, campaign pagination-envelope mapping, workflow webhook signature expiry/replay, clean-schema webhook claims, engine claim collision, provider failure semantics, one-attempt Twilio message creation, tenant-scoped step mutations, safe webhook envelopes, DNS-pinned public-only webhook egress, redirect/proxy denial, bounded response handling, and invalid waits/conditions. Fresh PostgreSQL coverage proves ordered execution/logs, wait scheduling, forward branching, one provider call when two workers race an enrollment, selective lifecycle transitions, the accepted-in-flight cancellation boundary, immediate and expired-lease SMS ambiguity quarantine, accepted-SID and explicit-resend reconciliation, tenant-isolated execution metrics, strict operator filtering, and payload-free queue projections.
 
@@ -234,4 +238,4 @@ The slice is not ready for traffic cutover until:
 - workflow plan limits are concurrency-safe;
 - a staging canary exercises the opt-in trigger, enrollment, and provider workers with sandbox credentials, alerts, and rollback rehearsal;
 - every automation step type retains execution and provider-failure coverage as the NestJS worker replaces the legacy engine;
-- critical React journeys pass against the GraphQL operations.
+- campaign send/preview and critical workflow React journeys pass against their eventual GraphQL operations.

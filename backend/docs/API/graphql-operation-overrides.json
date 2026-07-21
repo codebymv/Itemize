@@ -663,54 +663,54 @@
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "campaigns",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Use the shared page contract and preserve organization scope, status/search filtering, and created-at descending order."
+      "notes": "CampaignsModule now provides organization-scoped status/search filtering, literal escaped search, stable created-at/id ordering, bounded shared paging, safe numeric mapping, and a default-off frontend read rollback flag."
     },
     "POST /api/campaigns": {
       "disposition": "graphql-mutation",
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "createCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Create only in the active organization and validate content, sender, template, and targeting references before persistence."
+      "notes": "CSRF-protected creation requires nonblank content, validates tenant-owned template/tag/saved-segment references, rejects unsupported custom targeting, clears irrelevant audience fields, and retains REST behind the default-off mutation flag."
     },
     "DELETE /api/campaigns/:id": {
       "disposition": "graphql-mutation",
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "deleteCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Scope by organization and reject deletion while status is sending."
+      "notes": "The mutation locks and conceals the organization-owned campaign, rejects deletion while sending, returns verified stable identity, and permits every other retained state."
     },
     "GET /api/campaigns/:id": {
       "disposition": "graphql-query",
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "campaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Return the organization-owned campaign with template metadata and ordered tracked links."
+      "notes": "The query conceals foreign IDs and returns tenant-owned campaign, template/user metadata, and tracked links in stable position/id order behind the read rollback flag."
     },
     "PUT /api/campaigns/:id": {
       "disposition": "graphql-mutation",
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "updateCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Only draft or scheduled campaigns are editable; preserve partial-field and explicit-null behavior."
+      "notes": "The mutation locks draft/scheduled rows, serializes concurrent partial updates, distinguishes omission from nullable clearing, and revalidates tenant-owned audience/template references."
     },
     "POST /api/campaigns/:id/duplicate": {
       "disposition": "graphql-mutation",
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "duplicateCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Copy organization-owned configuration into a new draft without copying delivery history."
+      "notes": "The mutation atomically copies tenant-owned configuration into a bounded-name draft, preserves saved-segment targeting, and does not copy schedule, delivery state, statistics, recipients, or tracked links."
     },
     "POST /api/campaigns/:id/pause": {
       "disposition": "graphql-mutation",
@@ -753,9 +753,9 @@
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "scheduleCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Accept a future absolute timestamp plus timezone metadata and allow only draft or scheduled sources."
+      "notes": "The mutation requires a future absolute timestamp, treats bounded timezone as metadata, and locks draft/scheduled rows before the scheduled transition."
     },
     "POST /api/campaigns/:id/send": {
       "disposition": "graphql-mutation",
@@ -780,9 +780,9 @@
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "unscheduleCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Allow only scheduled to draft and clear the scheduled timestamp."
+      "notes": "The mutation locks and conceals the row, allows only scheduled-to-draft, clears the instant atomically, and returns stable BAD_USER_INPUT state evidence for invalid transitions."
     },
     "GET /api/workflows": {
       "disposition": "graphql-query",
