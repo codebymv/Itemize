@@ -16,7 +16,19 @@ import {
 import {
   isEmailTemplateGraphqlMutationsEnabled,
   isEmailTemplateGraphqlReadsEnabled,
+  isWorkflowGraphqlMutationsEnabled,
+  isWorkflowGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+  activateWorkflowViaGraphql,
+  createWorkflowViaGraphql,
+  deactivateWorkflowViaGraphql,
+  deleteWorkflowViaGraphql,
+  duplicateWorkflowViaGraphql,
+  getWorkflowViaGraphql,
+  getWorkflowsViaGraphql,
+  updateWorkflowViaGraphql,
+} from './workflowsGraphql';
 import type {
   WorkflowStepType,
   WorkflowTriggerType,
@@ -121,6 +133,9 @@ export const getWorkflows = async (organizationId: number, params?: {
   is_active?: boolean;
   search?: string;
 }): Promise<{ workflows: Workflow[]; total: number }> => {
+  if (isWorkflowGraphqlReadsEnabled()) {
+    return getWorkflowsViaGraphql(organizationId, params);
+  }
   const response = await api.get('/api/workflows', {
     params: { organization_id: organizationId, ...params },
   });
@@ -128,6 +143,9 @@ export const getWorkflows = async (organizationId: number, params?: {
 };
 
 export const getWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
+  if (isWorkflowGraphqlReadsEnabled()) {
+    return getWorkflowViaGraphql(id, organizationId);
+  }
   const response = await api.get(`/api/workflows/${id}`, {
     params: { organization_id: organizationId },
   });
@@ -142,6 +160,9 @@ export const createWorkflow = async (data: {
   trigger_config?: WorkflowConfig;
   steps?: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
 }): Promise<Workflow> => {
+  if (isWorkflowGraphqlMutationsEnabled()) {
+    return createWorkflowViaGraphql(data);
+  }
   const response = await api.post('/api/workflows', data);
   return unwrapResponse<Workflow>(response.data);
 };
@@ -157,17 +178,30 @@ export const updateWorkflow = async (
     steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
   }>
 ): Promise<Workflow> => {
+  if (isWorkflowGraphqlMutationsEnabled()) {
+    if (!data.organization_id) {
+      throw new Error('organization_id is required for GraphQL workflow updates');
+    }
+    const { organization_id: organizationId, ...input } = data;
+    return updateWorkflowViaGraphql(id, input, organizationId);
+  }
   const response = await api.put(`/api/workflows/${id}`, data);
   return unwrapResponse<Workflow>(response.data);
 };
 
 export const deleteWorkflow = async (id: number, organizationId: number): Promise<void> => {
+  if (isWorkflowGraphqlMutationsEnabled()) {
+    return deleteWorkflowViaGraphql(id, organizationId);
+  }
   await api.delete(`/api/workflows/${id}`, {
     params: { organization_id: organizationId },
   });
 };
 
 export const activateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
+  if (isWorkflowGraphqlMutationsEnabled()) {
+    return activateWorkflowViaGraphql(id, organizationId);
+  }
   const response = await api.post(`/api/workflows/${id}/activate`, {
     organization_id: organizationId,
   });
@@ -175,6 +209,9 @@ export const activateWorkflow = async (id: number, organizationId: number): Prom
 };
 
 export const deactivateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
+  if (isWorkflowGraphqlMutationsEnabled()) {
+    return deactivateWorkflowViaGraphql(id, organizationId);
+  }
   const response = await api.post(`/api/workflows/${id}/deactivate`, {
     organization_id: organizationId,
   });
@@ -228,6 +265,9 @@ export const cancelEnrollment = async (
 };
 
 export const duplicateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
+  if (isWorkflowGraphqlMutationsEnabled()) {
+    return duplicateWorkflowViaGraphql(id, organizationId);
+  }
   const response = await api.post(`/api/workflows/${id}/duplicate`, {
     organization_id: organizationId,
   });

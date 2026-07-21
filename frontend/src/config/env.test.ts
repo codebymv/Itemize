@@ -57,6 +57,8 @@ describe('Environment Validation', () => {
     expect(env.VITE_BOOKING_ANALYTICS_GRAPHQL).toBe('false');
     expect(env.VITE_COMMUNICATION_STATS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_PERFORMANCE_GRAPHQL).toBe('false');
+    expect(env.VITE_WORKFLOW_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_WORKFLOW_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_EMAIL_TEMPLATE_READS_GRAPHQL).toBe('false');
     expect(env.VITE_EMAIL_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_SMS_TEMPLATE_READS_GRAPHQL).toBe('false');
