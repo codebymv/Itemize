@@ -15,6 +15,7 @@
     "jobs:campaign-deliveries": "node dist/run-campaign-delivery.js",
     "jobs:workflow-schedules": "node dist/run-workflow-schedules.js",
     "jobs:workflow-triggers": "node dist/run-workflow-triggers.js",
+    "jobs:workflow-enrollments": "node dist/run-workflow-enrollments.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
     "test:watch": "jest --watch",

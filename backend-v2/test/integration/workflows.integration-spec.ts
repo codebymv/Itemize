@@ -8,6 +8,8 @@ import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 import { WorkflowTriggerJobsRepository } from '../../src/workflow-jobs/workflow-trigger-jobs.repository';
 import { WorkflowTriggerJobsService } from '../../src/workflow-jobs/workflow-trigger-jobs.service';
+import { WorkflowEnrollmentJobsRepository } from '../../src/workflow-jobs/workflow-enrollment-jobs.repository';
+import { WorkflowEnrollmentJobsService } from '../../src/workflow-jobs/workflow-enrollment-jobs.service';
 
 describe('Workflow definitions GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -20,6 +22,8 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
   let outsiderToken: string;
   let workflowJobs: WorkflowTriggerJobsService;
   let workflowJobRepository: WorkflowTriggerJobsRepository;
+  let workflowEnrollmentJobs: WorkflowEnrollmentJobsService;
+  let workflowEnrollmentRepository: WorkflowEnrollmentJobsRepository;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -62,6 +66,8 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     await app.init();
     workflowJobs = app.get(WorkflowTriggerJobsService);
     workflowJobRepository = app.get(WorkflowTriggerJobsRepository);
+    workflowEnrollmentJobs = app.get(WorkflowEnrollmentJobsService);
+    workflowEnrollmentRepository = app.get(WorkflowEnrollmentJobsRepository);
 
   });
 
@@ -566,5 +572,162 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
       status: 'dead_letter', attempt_count: 2, next_attempt_at: null, lease_expires_at: null,
       last_error: 'send [redacted-email] [redacted-phone] with [redacted-secret]',
     });
+  });
+
+  it('executes ordered database steps exactly once under competing NestJS enrollment runners', async () => {
+    const contact = await pool.query<{ id: number }>(`INSERT INTO contacts
+      (organization_id,first_name,last_name,email,status,tags,custom_fields,created_by)
+      VALUES ($1,'Enrollment','Worker',$2,'active','{}','{}',$3) RETURNING id`,
+    [organizationId, `enrollment-worker-${Date.now()}@test.itemize`, memberId]);
+    const workflow = await pool.query<{ id: number }>(`INSERT INTO workflows
+      (organization_id,name,trigger_type,is_active,created_by,stats)
+      VALUES ($1,'Nest enrollment database steps','manual',true,$2,'{}') RETURNING id`,
+    [organizationId, memberId]);
+    const workflowId = Number(workflow.rows[0].id);
+    await pool.query(`INSERT INTO workflow_steps (workflow_id,step_order,step_type,step_config)
+      VALUES ($1,1,'add_tag','{"tag_name":"nested"}'),
+        ($1,2,'update_contact','{"status":"inactive","custom_fields":{"score":10}}'),
+        ($1,3,'create_task','{"title":"Follow up {{first_name}}","priority":"high"}')`, [workflowId]);
+    const enrollment = await pool.query<{ id: number }>(`INSERT INTO workflow_enrollments
+      (workflow_id,contact_id,status,current_step,next_action_at,trigger_data,context)
+      VALUES ($1,$2,'active',1,NOW(),'{}','{}') RETURNING id`, [workflowId, Number(contact.rows[0].id)]);
+    const enrollmentId = Number(enrollment.rows[0].id);
+
+    const runs = await Promise.all([
+      workflowEnrollmentJobs.run({ batchSize: 1, enrollmentId }),
+      workflowEnrollmentJobs.run({ batchSize: 1, enrollmentId }),
+    ]);
+    expect(runs.reduce((total, run) => total + run.claimed, 0)).toBe(1);
+    expect(runs.reduce((total, run) => total + run.completed, 0)).toBe(1);
+    const [retainedContact, retainedEnrollment, tasks, logs, retainedWorkflow] = await Promise.all([
+      pool.query<{ status: string; tags: string[]; custom_fields: { score: number } }>(
+        'SELECT status,tags,custom_fields FROM contacts WHERE id=$1', [Number(contact.rows[0].id)]),
+      pool.query<{ status: string; execution_claim_token: string | null }>(
+        'SELECT status,execution_claim_token FROM workflow_enrollments WHERE id=$1', [enrollmentId]),
+      pool.query<{ title: string; priority: string; created_by: number }>(
+        'SELECT title,priority,created_by FROM tasks WHERE contact_id=$1', [Number(contact.rows[0].id)]),
+      pool.query<{ status: string; action_type: string; input_data: unknown }>(
+        'SELECT status,action_type,input_data FROM workflow_execution_logs WHERE enrollment_id=$1 ORDER BY id', [enrollmentId]),
+      pool.query<{ completed: string }>(`SELECT COALESCE(stats->>'completed','0') AS completed FROM workflows WHERE id=$1`, [workflowId]),
+    ]);
+    expect(retainedContact.rows[0]).toMatchObject({ status: 'inactive', tags: ['nested'], custom_fields: { score: 10 } });
+    expect(retainedEnrollment.rows[0]).toEqual({ status: 'completed', execution_claim_token: null });
+    expect(tasks.rows).toEqual([{ title: 'Follow up Enrollment', priority: 'high', created_by: memberId }]);
+    expect(logs.rows).toHaveLength(6);
+    expect(logs.rows.filter((row) => row.status === 'completed')).toHaveLength(3);
+    expect(logs.rows[1].input_data).toEqual({ step_type: 'add_tag', config_keys: ['tag_name'] });
+    expect(retainedWorkflow.rows[0].completed).toBe('1');
+  });
+
+  it('recovers an expired enrollment lease, fences the stale worker, and resumes after a wait', async () => {
+    const contact = await pool.query<{ id: number }>(`INSERT INTO contacts
+      (organization_id,first_name,email,tags,created_by) VALUES ($1,'Waiting',$2,'{}',$3) RETURNING id`,
+    [organizationId, `waiting-${Date.now()}@test.itemize`, memberId]);
+    const workflow = await pool.query<{ id: number }>(`INSERT INTO workflows
+      (organization_id,name,trigger_type,is_active,created_by,stats)
+      VALUES ($1,'Nest wait fencing','manual',true,$2,'{}') RETURNING id`, [organizationId, memberId]);
+    const workflowId = Number(workflow.rows[0].id);
+    await pool.query(`INSERT INTO workflow_steps (workflow_id,step_order,step_type,step_config)
+      VALUES ($1,1,'wait','{"delay_minutes":5}'),($1,2,'add_tag','{"tag_name":"after-wait"}')`, [workflowId]);
+    const enrollment = await pool.query<{ id: number }>(`INSERT INTO workflow_enrollments
+      (workflow_id,contact_id,status,current_step,next_action_at,trigger_data,context)
+      VALUES ($1,$2,'active',1,NOW(),'{}','{}') RETURNING id`, [workflowId, Number(contact.rows[0].id)]);
+    const enrollmentId = Number(enrollment.rows[0].id);
+    const stale = await workflowEnrollmentRepository.claimEnrollment(1, enrollmentId);
+    await pool.query(`UPDATE workflow_enrollments SET execution_lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1`, [enrollmentId]);
+    const recovered = await workflowEnrollmentRepository.claimEnrollment(300, enrollmentId);
+    expect(recovered?.execution_attempt_count).toBe((stale?.execution_attempt_count ?? 0) + 1);
+    await expect(workflowEnrollmentRepository.processEnrollment(stale!)).resolves.toMatchObject({ stale: true, skipped: true });
+    await expect(workflowEnrollmentRepository.processEnrollment(recovered!)).resolves.toMatchObject({ waiting: true });
+    const waiting = await pool.query<{ current_step: number; next_action_at: Date; execution_claim_token: string | null }>(
+      'SELECT current_step,next_action_at,execution_claim_token FROM workflow_enrollments WHERE id=$1', [enrollmentId]);
+    expect(waiting.rows[0]).toMatchObject({ current_step: 2, execution_claim_token: null });
+    expect(waiting.rows[0].next_action_at.getTime()).toBeGreaterThan(Date.now());
+
+    await pool.query('UPDATE workflow_enrollments SET next_action_at=NOW() WHERE id=$1', [enrollmentId]);
+    await expect(workflowEnrollmentJobs.run({ enrollmentId })).resolves.toMatchObject({ claimed: 1, completed: 1 });
+    const finished = await pool.query<{ status: string; tags: string[] }>(`SELECT e.status,c.tags
+      FROM workflow_enrollments e JOIN contacts c ON c.id=e.contact_id WHERE e.id=$1`, [enrollmentId]);
+    expect(finished.rows[0]).toMatchObject({ status: 'completed', tags: ['after-wait'] });
+  });
+
+  it('snapshots provider steps without provider I/O or spoofable webhook transport headers', async () => {
+    const contact = await pool.query<{ id: number }>(`INSERT INTO contacts
+      (organization_id,first_name,last_name,email,phone,tags,created_by)
+      VALUES ($1,'Provider','Queue',$2,'(602) 555-0101','{}',$3) RETURNING id`,
+    [organizationId, `provider-queue-${Date.now()}@test.itemize`, memberId]);
+    await pool.query(`INSERT INTO sms_receiving_numbers
+      (organization_id,phone_number,provider,is_primary,is_active)
+      VALUES ($1,$2,'twilio',true,true)
+      ON CONFLICT (phone_number) DO UPDATE SET organization_id=EXCLUDED.organization_id,is_primary=true,is_active=true`,
+    [organizationId, `+1520${String(Date.now()).slice(-7)}`]);
+    const template = await pool.query<{ id: number }>(`INSERT INTO email_templates
+      (organization_id,name,subject,body_html,body_text,created_by)
+      VALUES ($1,'Nest worker email','Hello {{first_name}}','<p>Hi {{full_name}}</p>','Hi {{first_name}}',$2) RETURNING id`,
+    [organizationId, memberId]);
+    const workflow = await pool.query<{ id: number }>(`INSERT INTO workflows
+      (organization_id,name,trigger_type,is_active,created_by,stats)
+      VALUES ($1,'Nest provider queue','manual',true,$2,'{}') RETURNING id`, [organizationId, memberId]);
+    const workflowId = Number(workflow.rows[0].id);
+    await pool.query(`INSERT INTO workflow_steps (workflow_id,step_order,step_type,step_config)
+      VALUES ($1,1,'send_email',$2::jsonb),($1,2,'send_sms',$3::jsonb),($1,3,'webhook',$4::jsonb)`,
+    [workflowId, JSON.stringify({ template_id: Number(template.rows[0].id) }),
+      JSON.stringify({ message: 'Hello {{first_name}}' }),
+      JSON.stringify({ url: 'https://example.com/hook', headers: { Authorization: 'Bearer tenant-secret',
+        'Content-Type': 'text/plain', 'Idempotency-Key': 'spoofed' }, custom_payload: { event: 'spoofed', custom: true } })]);
+    const enrollment = await pool.query<{ id: number }>(`INSERT INTO workflow_enrollments
+      (workflow_id,contact_id,status,current_step,next_action_at,trigger_data,context)
+      VALUES ($1,$2,'active',1,NOW(),'{}','{}') RETURNING id`, [workflowId, Number(contact.rows[0].id)]);
+    const enrollmentId = Number(enrollment.rows[0].id);
+    await expect(workflowEnrollmentJobs.run({ enrollmentId })).resolves.toMatchObject({ claimed: 1, completed: 1 });
+    const outbox = await pool.query<{ effect_type: string; status: string; payload: Record<string, any> }>(
+      `SELECT effect_type,status,payload FROM workflow_side_effect_outbox WHERE enrollment_id=$1 ORDER BY id`, [enrollmentId]);
+    expect(outbox.rows.map((row) => [row.effect_type, row.status])).toEqual([
+      ['email', 'queued'], ['sms', 'queued'], ['webhook', 'queued'],
+    ]);
+    expect(outbox.rows[0].payload).toMatchObject({ subject: 'Hello Provider', to: expect.stringContaining('@test.itemize') });
+    expect(outbox.rows[1].payload).toMatchObject({ message: 'Hello Provider', to: '+16025550101' });
+    expect(outbox.rows[2].payload).toMatchObject({
+      url: 'https://example.com/hook', headers: { Authorization: 'Bearer tenant-secret' },
+      body: { event: 'workflow_step', enrollment_id: enrollmentId, workflow_id: workflowId, custom: true },
+    });
+  });
+
+  it('takes the selected forward condition branch and moves only a valid tenant pipeline stage', async () => {
+    const contact = await pool.query<{ id: number }>(`INSERT INTO contacts
+      (organization_id,first_name,email,status,tags,created_by)
+      VALUES ($1,'Branch',$2,'active','{}',$3) RETURNING id`,
+    [organizationId, `branch-${Date.now()}@test.itemize`, memberId]);
+    const contactId = Number(contact.rows[0].id);
+    const pipeline = await pool.query<{ id: number }>(`INSERT INTO pipelines
+      (organization_id,name,description,stages,is_default,created_by)
+      VALUES ($1,'Workflow branch pipeline','', $2::jsonb,false,$3) RETURNING id`,
+    [organizationId, JSON.stringify([
+      { id: 'lead', name: 'Lead', color: '#6B7280', order: 0 },
+      { id: 'qualified', name: 'Qualified', color: '#3B82F6', order: 1 },
+    ]), memberId]);
+    const deal = await pool.query<{ id: number }>(`INSERT INTO deals
+      (organization_id,pipeline_id,contact_id,stage_id,title,value,currency,probability,created_by,tags)
+      VALUES ($1,$2,$3,'lead','Branch deal',100,'USD',25,$4,'{}') RETURNING id`,
+    [organizationId, Number(pipeline.rows[0].id), contactId, memberId]);
+    const workflow = await pool.query<{ id: number }>(`INSERT INTO workflows
+      (organization_id,name,trigger_type,is_active,created_by,stats)
+      VALUES ($1,'Nest branch move','manual',true,$2,'{}') RETURNING id`, [organizationId, memberId]);
+    const workflowId = Number(workflow.rows[0].id);
+    await pool.query(`INSERT INTO workflow_steps
+      (workflow_id,step_order,step_type,step_config,condition_config,true_branch_step,false_branch_step)
+      VALUES ($1,1,'condition','{}',$2::jsonb,2,3),
+        ($1,2,'add_tag','{"tag_name":"wrong-branch"}',NULL,NULL,NULL),
+        ($1,3,'move_deal',$3::jsonb,NULL,NULL,NULL)`,
+    [workflowId, JSON.stringify({ field: 'status', operator: 'equals', value: 'inactive' }),
+      JSON.stringify({ deal_id: Number(deal.rows[0].id), stage_id: 'qualified' })]);
+    const enrollment = await pool.query<{ id: number }>(`INSERT INTO workflow_enrollments
+      (workflow_id,contact_id,status,current_step,next_action_at,trigger_data,context)
+      VALUES ($1,$2,'active',1,NOW(),'{}','{}') RETURNING id`, [workflowId, contactId]);
+    await expect(workflowEnrollmentJobs.run({ enrollmentId: Number(enrollment.rows[0].id) }))
+      .resolves.toMatchObject({ claimed: 1, completed: 1 });
+    const retained = await pool.query<{ stage_id: string; tags: string[] }>(`SELECT d.stage_id,c.tags
+      FROM deals d JOIN contacts c ON c.id=d.contact_id WHERE d.id=$1`, [Number(deal.rows[0].id)]);
+    expect(retained.rows[0]).toEqual({ stage_id: 'qualified', tags: [] });
   });
 });
