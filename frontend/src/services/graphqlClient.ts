@@ -225,6 +225,9 @@ export const isCampaignGraphqlReadsEnabled = (): boolean =>
 export const isCampaignGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL === 'true';
 
+export const isCampaignAudiencePreviewGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

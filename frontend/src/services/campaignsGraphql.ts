@@ -1,4 +1,4 @@
-import type { EmailCampaign } from './campaignsApi';
+import type { CampaignPreview, EmailCampaign } from './campaignsApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlCampaignLink = {
@@ -148,6 +148,23 @@ export const getCampaignViaGraphql = async (id: number, organizationId?: number)
     organizationId,
   );
   return mapCampaign(data.campaign);
+};
+
+export const previewCampaignViaGraphql = async (
+  id: number,
+  organizationId?: number,
+): Promise<CampaignPreview> => {
+  const data = await graphqlRequest<
+    { campaignAudiencePreview: CampaignPreview },
+    { id: number }
+  >(
+    `query CampaignAudiencePreview($id: Int!) {
+      campaignAudiencePreview(id: $id) { recipientCount segmentType segmentId tagIds excludedTagIds }
+    }`,
+    { id },
+    organizationId,
+  );
+  return data.campaignAudiencePreview;
 };
 
 export const createCampaignViaGraphql = async (

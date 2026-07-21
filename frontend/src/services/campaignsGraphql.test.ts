@@ -6,11 +6,16 @@ import {
   duplicateCampaignViaGraphql,
   getCampaignViaGraphql,
   getCampaignsViaGraphql,
+  previewCampaignViaGraphql,
   scheduleCampaignViaGraphql,
   unscheduleCampaignViaGraphql,
   updateCampaignViaGraphql,
 } from './campaignsGraphql';
-import { isCampaignGraphqlMutationsEnabled, isCampaignGraphqlReadsEnabled } from './graphqlClient';
+import {
+  isCampaignAudiencePreviewGraphqlEnabled,
+  isCampaignGraphqlMutationsEnabled,
+  isCampaignGraphqlReadsEnabled,
+} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -53,11 +58,14 @@ describe('campaign GraphQL consumer', () => {
   it('keeps read and mutation rollout independent and default-off', () => {
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_MUTATIONS_GRAPHQL', 'false');
+    vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
     expect(isCampaignGraphqlReadsEnabled()).toBe(false);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
+    expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
     expect(isCampaignGraphqlReadsEnabled()).toBe(true);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
+    expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
   });
 
   it('maps paginated reads, filters, joined fields, and legacy casing', async () => {
@@ -76,11 +84,21 @@ describe('campaign GraphQL consumer', () => {
     });
   });
 
-  it('maps detail without a REST response envelope', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { campaign } }));
+  it('maps detail and advisory preview without REST envelopes or a CSRF fetch', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { campaign } }))
+      .mockResolvedValueOnce(response({ data: { campaignAudiencePreview: {
+        recipientCount: 3, segmentType: 'segment', segmentId: 12, tagIds: [], excludedTagIds: [5],
+      } } }));
     await expect(getCampaignViaGraphql(9, 4)).resolves.toMatchObject({
       id: 9, created_by_name: 'Owner', template_id: 3,
     });
+    await expect(previewCampaignViaGraphql(9, 4)).resolves.toEqual({
+      recipientCount: 3, segmentType: 'segment', segmentId: 12, tagIds: [], excludedTagIds: [5],
+    });
+    const request = vi.mocked(fetch).mock.calls[1][1] as RequestInit;
+    expect(JSON.parse(String(request.body)).variables).toEqual({ id: 9 });
+    expect(fetchCsrfToken).not.toHaveBeenCalled();
   });
 
   it('maps protected management mutations and verifies delete identity', async () => {

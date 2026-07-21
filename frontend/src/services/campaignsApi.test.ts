@@ -12,6 +12,7 @@ vi.mock('@/lib/api', () => ({
 describe('campaigns API', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
     });
 
     it('maps the shared REST pagination envelope to the campaign consumer contract', async () => {

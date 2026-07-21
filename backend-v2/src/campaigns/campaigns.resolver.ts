@@ -8,7 +8,7 @@ import {
   ScheduleCampaignInput,
   UpdateCampaignInput,
 } from './campaign.inputs';
-import { Campaign, CampaignPage, DeleteCampaignResult } from './campaign.types';
+import { Campaign, CampaignAudiencePreview, CampaignPage, DeleteCampaignResult } from './campaign.types';
 import { CampaignsService } from './campaigns.service';
 
 @Resolver(() => Campaign)
@@ -31,6 +31,14 @@ export class CampaignsResolver {
   @Query(() => Campaign)
   campaign(@Args('id', { type: () => Int }) id: number): Promise<Campaign> {
     return this.campaignsService.detail(this.organizationId(), id);
+  }
+
+  @OrganizationScoped()
+  @Query(() => CampaignAudiencePreview)
+  campaignAudiencePreview(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<CampaignAudiencePreview> {
+    return this.campaignsService.audiencePreview(this.organizationId(), id);
   }
 
   @CsrfProtected()

@@ -726,9 +726,9 @@
       "owner": "growth",
       "targetModule": "CampaignsModule",
       "targetOperation": "campaignAudiencePreview",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Count only organization-owned deliverable contacts after include/exclude, unsubscribe, and bounce filters."
+      "notes": "CampaignsModule uses the shared fail-closed, parameterized audience compiler to count distinct organization-owned deliverable emails across all/tag/status/dynamic/static saved-segment modes. PostgreSQL proves include/exclude, unsubscribe, bounce, empty-email, hostile custom-key, tenant-concealment, and retained-REST parity behavior behind an independent default-off frontend flag."
     },
     "GET /api/campaigns/:id/recipients": {
       "disposition": "graphql-query",

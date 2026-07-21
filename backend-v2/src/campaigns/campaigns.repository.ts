@@ -1,6 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import {
+  AudienceValidationError,
+  CampaignAudience,
+  CONTACT_STATUSES,
+  SegmentRow,
+  compileCampaignAudience,
+  compileSegmentCondition,
+} from './audience.compiler';
 
 export type CampaignRow = {
   id: number; organization_id: number; name: string; subject: string;
@@ -38,6 +46,10 @@ export type CampaignValues = AudienceValues & {
 
 export type CampaignUpdates = Partial<CampaignValues>;
 export type RepositoryOutcome = { kind: 'ok'; row: CampaignRow } | { kind: 'not_found' } | { kind: 'invalid_status'; status: string };
+export type CampaignAudiencePreviewRow = {
+  recipientCount: number; segmentType: string; segmentId: number | null;
+  tagIds: number[]; excludedTagIds: number[];
+};
 
 export class CampaignValidationError extends Error {
   constructor(message: string, readonly field: string) {
@@ -119,6 +131,44 @@ export class CampaignsRepository {
       [id],
     );
     return { row: result.rows[0], links: links.rows };
+  }
+
+  async previewAudience(organizationId: number, id: number): Promise<CampaignAudiencePreviewRow | null> {
+    const client = await this.pool.connect();
+    try {
+      const result = await client.query<CampaignRow>(
+        `SELECT ${campaignColumns('email_campaigns')} FROM email_campaigns
+         WHERE id=$1 AND organization_id=$2`,
+        [id, organizationId],
+      );
+      const campaign = result.rows[0];
+      if (!campaign) return null;
+      const audience = await this.normalizeStoredAudience(client, organizationId, campaign);
+      const compiled = compileCampaignAudience(audience, { alias: 'c', startIndex: 2 });
+      const count = await client.query<{ total: string }>(
+        `SELECT COUNT(DISTINCT c.email) AS total
+         FROM contacts c
+         WHERE c.organization_id=$1
+           AND c.email IS NOT NULL AND c.email != ''
+           AND (c.email_unsubscribed IS NULL OR c.email_unsubscribed=FALSE)
+           AND (c.email_bounced IS NULL OR c.email_bounced=FALSE)
+           AND ${compiled.condition}`,
+        [organizationId, ...compiled.params],
+      );
+      const recipientCount = Number(count.rows[0]?.total);
+      if (!Number.isSafeInteger(recipientCount) || recipientCount < 0) {
+        throw new Error('Unsafe campaign audience count');
+      }
+      return {
+        recipientCount,
+        segmentType: audience.segmentType,
+        segmentId: audience.segmentId,
+        tagIds: audience.tagIds,
+        excludedTagIds: audience.excludedTagIds,
+      };
+    } finally {
+      client.release();
+    }
   }
 
   async create(organizationId: number, userId: number, values: CampaignValues): Promise<CampaignRow> {
@@ -295,16 +345,86 @@ export class CampaignsRepository {
       if (!Number.isSafeInteger(segmentId) || Number(segmentId) < 1) {
         throw new CampaignValidationError('segmentId is required for saved-segment targeting', 'segmentId');
       }
-      const result = await client.query(
-        'SELECT 1 FROM segments WHERE id=$1 AND organization_id=$2 AND is_active=TRUE',
+      const result = await client.query<SegmentRow>(
+        `SELECT segment_type, filter_type, filters, static_contact_ids FROM segments
+         WHERE id=$1 AND organization_id=$2 AND is_active=TRUE`,
         [segmentId, organizationId],
       );
       if (result.rows.length !== 1) {
         throw new CampaignValidationError('segmentId is not an active segment in this organization', 'segmentId');
       }
+      try {
+        compileSegmentCondition(result.rows[0]);
+      } catch (error) {
+        if (error instanceof AudienceValidationError) {
+          throw new CampaignValidationError(error.message, `segmentId.${error.field}`);
+        }
+        throw error;
+      }
       audience.segmentId = Number(segmentId);
     }
     return audience;
+  }
+
+  private async normalizeStoredAudience(
+    client: PoolClient,
+    organizationId: number,
+    campaign: CampaignRow,
+  ): Promise<CampaignAudience> {
+    const segmentType = campaign.segment_type;
+    if (!['all', 'tag', 'status', 'segment'].includes(segmentType)) {
+      throw new AudienceValidationError('segment_type is unsupported', 'segmentType');
+    }
+    const tagIds = this.storedIds(campaign.tag_ids, 'tagIds');
+    const excludedTagIds = this.storedIds(campaign.excluded_tag_ids, 'excludedTagIds');
+    await this.validateTags(client, organizationId, excludedTagIds, 'excludedTagIds');
+    const audience: CampaignAudience = {
+      segmentType: segmentType as CampaignAudience['segmentType'],
+      segmentId: null,
+      segmentFilter: {},
+      tagIds: [],
+      excludedTagIds,
+      segment: null,
+    };
+    if (segmentType === 'tag') {
+      if (tagIds.length === 0) throw new AudienceValidationError('tagIds is required for tag targeting', 'tagIds');
+      await this.validateTags(client, organizationId, tagIds, 'tagIds');
+      audience.tagIds = tagIds;
+    } else if (segmentType === 'status') {
+      const filter = campaign.segment_filter && typeof campaign.segment_filter === 'object' &&
+        !Array.isArray(campaign.segment_filter) ? campaign.segment_filter as Record<string, unknown> : null;
+      if (!filter || !CONTACT_STATUSES.includes(filter.status as typeof CONTACT_STATUSES[number])) {
+        throw new AudienceValidationError('segmentFilter.status is invalid', 'segmentFilter.status');
+      }
+      audience.segmentFilter = { status: filter.status };
+    } else if (segmentType === 'segment') {
+      const segmentId = Number(campaign.segment_id);
+      if (!Number.isSafeInteger(segmentId) || segmentId < 1) {
+        throw new AudienceValidationError('segmentId is required for saved-segment targeting', 'segmentId');
+      }
+      const segment = await client.query<SegmentRow>(
+        `SELECT segment_type, filter_type, filters, static_contact_ids FROM segments
+         WHERE id=$1 AND organization_id=$2 AND is_active=TRUE`,
+        [segmentId, organizationId],
+      );
+      if (!segment.rows[0]) {
+        throw new AudienceValidationError('segmentId is not an active segment in this organization', 'segmentId');
+      }
+      compileSegmentCondition(segment.rows[0]);
+      audience.segmentId = segmentId;
+      audience.segment = segment.rows[0];
+    }
+    return audience;
+  }
+
+  private storedIds(value: number[] | null, field: string): number[] {
+    if (value === null) return [];
+    if (!Array.isArray(value) || value.length > 100 || value.some((id) => !Number.isSafeInteger(Number(id)) || Number(id) < 1)) {
+      throw new AudienceValidationError(`${field} must contain at most 100 positive IDs`, field);
+    }
+    const ids = value.map(Number);
+    if (new Set(ids).size !== ids.length) throw new AudienceValidationError(`${field} cannot contain duplicate IDs`, field);
+    return ids;
   }
 
   private async validateTags(client: PoolClient, organizationId: number, ids: number[], field: string): Promise<void> {

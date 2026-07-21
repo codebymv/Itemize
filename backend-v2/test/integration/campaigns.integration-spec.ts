@@ -355,4 +355,127 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(deleted.body.data.deleteCampaign).toEqual({ deletedId: id, success: true });
   });
+
+  it('previews deliverable audiences with REST parity and fail-closed saved segments', async () => {
+    const suffix = `${Date.now()}-${process.pid}`;
+    const tags = await pool.query<{ id: number }>(
+      `INSERT INTO tags (organization_id, name)
+       VALUES ($1, $2), ($1, $3) RETURNING id`,
+      [organizationId, `Preview include ${suffix}`, `Preview exclude ${suffix}`],
+    );
+    const includeTagId = Number(tags.rows[0].id);
+    const excludeTagId = Number(tags.rows[1].id);
+    const contacts = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (
+         organization_id, first_name, last_name, email, status, source, custom_fields,
+         email_unsubscribed, email_bounced, created_by
+       ) VALUES
+         ($1, 'Eligible', 'Preview', $3, 'active', 'manual', '{"tier":"gold"}', FALSE, FALSE, $2),
+         ($1, 'Excluded', 'Preview', $4, 'active', 'manual', '{"tier":"silver"}', FALSE, FALSE, $2),
+         ($1, 'Unsubscribed', 'Preview', $5, 'active', 'manual', '{"tier":"gold"}', TRUE, FALSE, $2),
+         ($1, 'Bounced', 'Preview', $6, 'active', 'manual', '{}', FALSE, TRUE, $2),
+         ($1, 'Blank', 'Preview', '', 'active', 'manual', '{}', FALSE, FALSE, $2),
+         ($1, 'Inactive', 'Preview', $7, 'inactive', 'manual', '{}', FALSE, FALSE, $2)
+       RETURNING id`,
+      [organizationId, memberId,
+        `eligible-${suffix}@preview.test`, `excluded-${suffix}@preview.test`,
+        `unsub-${suffix}@preview.test`, `bounce-${suffix}@preview.test`,
+        `inactive-${suffix}@preview.test`],
+    );
+    const ids = contacts.rows.map((row) => Number(row.id));
+    await pool.query(
+      `INSERT INTO contact_tags (contact_id, tag_id)
+       SELECT contact_id, tag_id FROM UNNEST($1::int[], $2::int[]) AS x(contact_id, tag_id)`,
+      [[ids[0], ids[1], ids[2], ids[3], ids[4], ids[1]],
+        [includeTagId, includeTagId, includeTagId, includeTagId, includeTagId, excludeTagId]],
+    );
+    const segments = await pool.query<{ id: number }>(
+      `INSERT INTO segments (
+         organization_id, name, filter_type, filters, segment_type, static_contact_ids, is_active, created_by
+       ) VALUES
+         ($1, $3, 'and', $4::jsonb, 'dynamic', '{}', TRUE, $2),
+         ($1, $5, 'and', '[]', 'static', $6::int[], TRUE, $2)
+       RETURNING id`,
+      [organizationId, memberId, `Dynamic preview ${suffix}`,
+        JSON.stringify([{ field: 'custom_field', operator: 'equals', custom_field_key: 'tier', value: 'gold' }]),
+        `Static preview ${suffix}`, [ids[0], ids[2]]],
+    );
+    const dynamicSegmentId = Number(segments.rows[0].id);
+    const staticSegmentId = Number(segments.rows[1].id);
+    const campaign = await pool.query<{ id: number }>(
+      `INSERT INTO email_campaigns (
+         organization_id, name, subject, segment_type, tag_ids, excluded_tag_ids, created_by
+       ) VALUES ($1, $2, 'Preview', 'tag', $3::int[], $4::int[], $5) RETURNING id`,
+      [organizationId, `Preview ${suffix}`, [includeTagId], [excludeTagId], memberId],
+    );
+    const id = Number(campaign.rows[0].id);
+    const document = `query Preview($id: Int!) {
+      campaignAudiencePreview(id: $id) { recipientCount segmentType segmentId tagIds excludedTagIds }
+    }`;
+    const preview = async () => graphql(memberToken, organizationId, document, { id }, false).expect(200);
+
+    const tagPreview = await preview();
+    expect(tagPreview.body.errors).toBeUndefined();
+    expect(tagPreview.body.data.campaignAudiencePreview).toEqual({
+      recipientCount: 1, segmentType: 'tag', segmentId: null,
+      tagIds: [includeTagId], excludedTagIds: [excludeTagId],
+    });
+    const retained = await legacy(`/${id}/preview`).expect(200);
+    expect(retained.body.data).toEqual(tagPreview.body.data.campaignAudiencePreview);
+
+    await pool.query(
+      `UPDATE email_campaigns SET segment_type='all', segment_id=NULL, segment_filter='{}',
+         tag_ids='{}', excluded_tag_ids='{}' WHERE id=$1`, [id],
+    );
+    await expect(preview()).resolves.toMatchObject({ body: { data: {
+      campaignAudiencePreview: { recipientCount: 3, segmentType: 'all' },
+    } } });
+
+    await pool.query(
+      `UPDATE email_campaigns SET segment_type='status', segment_filter=$2::jsonb WHERE id=$1`,
+      [id, JSON.stringify({ status: 'inactive' })],
+    );
+    await expect(preview()).resolves.toMatchObject({ body: { data: {
+      campaignAudiencePreview: { recipientCount: 1, segmentType: 'status' },
+    } } });
+
+    for (const segmentId of [dynamicSegmentId, staticSegmentId]) {
+      await pool.query(
+        `UPDATE email_campaigns SET segment_type='segment', segment_id=$2,
+           segment_filter='{}', tag_ids='{}', excluded_tag_ids='{}' WHERE id=$1`,
+        [id, segmentId],
+      );
+      const result = await preview();
+      expect(result.body.errors).toBeUndefined();
+      expect(result.body.data.campaignAudiencePreview).toMatchObject({
+        recipientCount: 1, segmentType: 'segment', segmentId,
+      });
+    }
+
+    await pool.query(
+      `UPDATE segments SET filters=$2::jsonb WHERE id=$1`,
+      [dynamicSegmentId, JSON.stringify([{
+        field: 'custom_field', operator: 'equals', custom_field_key: "tier') OR TRUE --", value: 'gold',
+      }])],
+    );
+    await pool.query('UPDATE email_campaigns SET segment_id=$2 WHERE id=$1', [id, dynamicSegmentId]);
+    const hostile = await preview();
+    expect(hostile.body.errors).toBeUndefined();
+    expect(hostile.body.data.campaignAudiencePreview.recipientCount).toBe(0);
+
+    await pool.query(
+      `UPDATE segments SET filters=$2::jsonb WHERE id=$1`,
+      [dynamicSegmentId, JSON.stringify([{ field: 'unknown', operator: 'equals', value: 'x' }])],
+    );
+    const invalid = await preview();
+    expect(invalid.body.data).toBeNull();
+    expect(invalid.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT', reason: 'INVALID_CAMPAIGN_AUDIENCE',
+    });
+
+    const hidden = await graphql(
+      outsiderToken, outsiderOrganizationId, document, { id }, false,
+    ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
 });

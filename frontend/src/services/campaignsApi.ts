@@ -9,6 +9,7 @@ import {
     duplicateCampaignViaGraphql,
     getCampaignViaGraphql,
     getCampaignsViaGraphql,
+    previewCampaignViaGraphql,
     scheduleCampaignViaGraphql,
     unscheduleCampaignViaGraphql,
     updateCampaignViaGraphql,
@@ -16,6 +17,7 @@ import {
 import {
     isCampaignGraphqlMutationsEnabled,
     isCampaignGraphqlReadsEnabled,
+    isCampaignAudiencePreviewGraphqlEnabled,
 } from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
@@ -373,6 +375,9 @@ export const previewCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<CampaignPreview> => {
+    if (isCampaignAudiencePreviewGraphqlEnabled()) {
+        return previewCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.get(`/api/campaigns/${campaignId}/preview`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

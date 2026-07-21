@@ -222,9 +222,9 @@ The retained endpoint and first-party producers now converge on the same durable
 
 ## Current evidence and remaining blockers
 
-`CampaignsModule` now implements campaign list/detail/create/update/delete/duplicate and schedule/unschedule. Its queries use tenant-qualified stable paging, escaped search, safe numeric projections, private misses, and ordered link detail. Its CSRF-protected mutations validate nonblank content and tenant-owned template/tag/segment references, reject legacy `custom` targeting, serialize partial updates and all state transitions with row locks, preserve explicit nullable clearing, and copy configuration into a bounded-name draft without delivery history. Independent default-off frontend read and mutation flags preserve the retained response shape and REST rollback; campaign delivery, audience preview, and recipient inspection deliberately remain on REST.
+`CampaignsModule` now implements campaign list/detail/create/update/delete/duplicate, schedule/unschedule, and `campaignAudiencePreview`. Its queries use tenant-qualified stable paging, escaped search, safe numeric projections, private misses, and ordered link detail. Audience preview revalidates stored targeting fail-closed, compiles dynamic/static saved segments with bound parameters and tenant-correlated subqueries, and counts distinct deliverable emails after exclusion, unsubscribe, bounce, and empty-email rules. Its CSRF-protected mutations validate nonblank content and tenant-owned template/tag/segment references, reject legacy `custom` targeting, serialize partial updates and all state transitions with row locks, preserve explicit nullable clearing, and copy configuration into a bounded-name draft without delivery history. Independent default-off frontend read, mutation, and audience-preview flags preserve the retained response shape and REST rollback; campaign delivery and recipient inspection deliberately remain on REST.
 
-Fresh PostgreSQL coverage proves GraphQL/REST interoperability, filters and paging, concurrent partial-update convergence, explicit null clearing, cross-tenant concealment, foreign-reference denial, CSRF, absolute scheduling, invalid transition evidence, draft duplication, and sending-state deletion denial. Focused service and frontend tests protect validation, mapping, CSRF transport, independent flags, and verified delete identity.
+Fresh PostgreSQL coverage proves GraphQL/REST interoperability, filters and paging, concurrent partial-update convergence, explicit null clearing, cross-tenant concealment, foreign-reference denial, CSRF, absolute scheduling, invalid transition evidence, draft duplication, sending-state deletion denial, all/tag/status/dynamic/static preview modes, include/exclude behavior, deliverability suppression, hostile custom-field-key binding, invalid-definition failure, and exact retained-preview parity. Focused compiler, service, and frontend tests protect every filter family, validation, mapping, no-CSRF preview transport, independent flags, and verified delete identity.
 
 Existing PostgreSQL suites continue to characterize workflow CRUD, trigger validation, ordered step replacement, activation, enrollment, tenant denial, duplicate, plan limits, manual pause/resume, deactivation pause/resume, same-step retry, provider dead-letter retry, and cancellation races.
 
@@ -232,7 +232,7 @@ Focused tests also protect campaign send locking, pause-safe completion, campaig
 
 The slice is not ready for traffic cutover until:
 
-- audience preview/send parity has direct database coverage;
+- campaign send must reuse the now-proven preview compiler so preview/send equality and snapshot stability have direct database coverage;
 - campaign delivery uses a durable job/outbox with an atomic usage reservation;
 - send, pause, resume, recipient, and test-send operations have provider-isolated integration tests;
 - workflow plan limits are concurrency-safe;

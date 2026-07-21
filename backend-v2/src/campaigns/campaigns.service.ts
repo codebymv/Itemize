@@ -7,7 +7,7 @@ import {
   ScheduleCampaignInput,
   UpdateCampaignInput,
 } from './campaign.inputs';
-import { Campaign, CampaignLink, CampaignPage, DeleteCampaignResult } from './campaign.types';
+import { Campaign, CampaignAudiencePreview, CampaignLink, CampaignPage, DeleteCampaignResult } from './campaign.types';
 import {
   CampaignLinkRow,
   CampaignRow,
@@ -15,6 +15,7 @@ import {
   CampaignUpdates,
   CampaignValidationError,
 } from './campaigns.repository';
+import { AudienceValidationError } from './audience.compiler';
 
 const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'sent', 'paused', 'cancelled', 'failed'];
 
@@ -50,6 +51,22 @@ export class CampaignsService {
     const result = await this.campaigns.findById(organizationId, id);
     if (!result) this.notFound();
     return this.map(result.row, result.links);
+  }
+
+  async audiencePreview(organizationId: number, id: number): Promise<CampaignAudiencePreview> {
+    this.id(id);
+    try {
+      const result = await this.campaigns.previewAudience(organizationId, id);
+      if (!result) this.notFound();
+      return result;
+    } catch (error) {
+      if (error instanceof AudienceValidationError || error instanceof CampaignValidationError) {
+        throw itemizeGraphqlError(error.message, 'BAD_USER_INPUT', {
+          field: error.field, reason: 'INVALID_CAMPAIGN_AUDIENCE',
+        });
+      }
+      throw error;
+    }
   }
 
   async create(organizationId: number, userId: number, input: CreateCampaignInput): Promise<Campaign> {

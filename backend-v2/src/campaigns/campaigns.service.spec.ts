@@ -23,7 +23,7 @@ describe('CampaignsService', () => {
   beforeEach(() => {
     repository = {
       findPage: jest.fn(), findById: jest.fn(), create: jest.fn(), update: jest.fn(),
-      duplicate: jest.fn(), delete: jest.fn(), schedule: jest.fn(), unschedule: jest.fn(),
+      previewAudience: jest.fn(), duplicate: jest.fn(), delete: jest.fn(), schedule: jest.fn(), unschedule: jest.fn(),
     } as unknown as jest.Mocked<CampaignsRepository>;
     service = new CampaignsService(repository);
   });
@@ -90,5 +90,17 @@ describe('CampaignsService', () => {
     await expect(service.detail(4, 99)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
     await expect(service.duplicate(4, 99, 7)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
     await expect(service.delete(4, 99)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
+  });
+
+  it('maps audience previews and conceals foreign campaign IDs', async () => {
+    repository.previewAudience.mockResolvedValueOnce({
+      recipientCount: 3, segmentType: 'segment', segmentId: 12, tagIds: [], excludedTagIds: [5],
+    }).mockResolvedValueOnce(null);
+    await expect(service.audiencePreview(4, 9)).resolves.toEqual({
+      recipientCount: 3, segmentType: 'segment', segmentId: 12, tagIds: [], excludedTagIds: [5],
+    });
+    await expect(service.audiencePreview(4, 99)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
   });
 });

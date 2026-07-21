@@ -127,6 +127,20 @@ export class CampaignPage {
 }
 
 @ObjectType()
+export class CampaignAudiencePreview {
+  @Field(() => Int)
+  recipientCount: number;
+  @Field(() => String)
+  segmentType: string;
+  @Field(() => Int, { nullable: true })
+  segmentId: number | null;
+  @Field(() => [Int])
+  tagIds: number[];
+  @Field(() => [Int])
+  excludedTagIds: number[];
+}
+
+@ObjectType()
 export class DeleteCampaignResult {
   @Field(() => Int)
   deletedId: number;

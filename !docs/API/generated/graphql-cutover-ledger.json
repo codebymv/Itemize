@@ -2990,7 +2990,7 @@
           "path": "/api/campaigns",
           "rawPath": "/api/campaigns",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 179,
+          "line": 181,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3061,7 +3061,7 @@
           "path": "/api/campaigns",
           "rawPath": "/api/campaigns",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 219,
+          "line": 221,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3156,7 +3156,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 252,
+          "line": 254,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3215,7 +3215,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 203,
+          "line": 205,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3262,7 +3262,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 236,
+          "line": 238,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3315,7 +3315,7 @@
           "path": "/api/campaigns/:campaignId/duplicate",
           "rawPath": "/api/campaigns/${campaignId}/duplicate",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 268,
+          "line": 270,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3362,7 +3362,7 @@
           "path": "/api/campaigns/:campaignId/pause",
           "rawPath": "/api/campaigns/${campaignId}/pause",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 331,
+          "line": 333,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3396,7 +3396,7 @@
           "path": "/api/campaigns/:campaignId/preview",
           "rawPath": "/api/campaigns/${campaignId}/preview",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 376,
+          "line": 381,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3415,8 +3415,8 @@
       "owner": "growth",
       "targetOperation": "campaignAudiencePreview",
       "targetModule": "CampaignsModule",
-      "parityStatus": "characterizing",
-      "notes": "Count only organization-owned deliverable contacts after include/exclude, unsubscribe, and bounce filters.",
+      "parityStatus": "implemented",
+      "notes": "CampaignsModule uses the shared fail-closed, parameterized audience compiler to count distinct organization-owned deliverable emails across all/tag/status/dynamic/static saved-segment modes. PostgreSQL proves include/exclude, unsubscribe, bounce, empty-email, hostile custom-key, tenant-concealment, and retained-REST parity behavior behind an independent default-off frontend flag.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3437,7 +3437,7 @@
           "path": "/api/campaigns/:campaignId/recipients",
           "rawPath": "/api/campaigns/${campaignId}/recipients",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 362,
+          "line": 364,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3471,7 +3471,7 @@
           "path": "/api/campaigns/:campaignId/resume",
           "rawPath": "/api/campaigns/${campaignId}/resume",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 344,
+          "line": 346,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3505,7 +3505,7 @@
           "path": "/api/campaigns/:campaignId/schedule",
           "rawPath": "/api/campaigns/${campaignId}/schedule",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 286,
+          "line": 288,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3558,7 +3558,7 @@
           "path": "/api/campaigns/:campaignId/send",
           "rawPath": "/api/campaigns/${campaignId}/send",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 318,
+          "line": 320,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3605,7 +3605,7 @@
           "path": "/api/campaigns/:campaignId/send-test",
           "rawPath": "/api/campaigns/${campaignId}/send-test",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 390,
+          "line": 395,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3639,7 +3639,7 @@
           "path": "/api/campaigns/:campaignId/unschedule",
           "rawPath": "/api/campaigns/${campaignId}/unschedule",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 305,
+          "line": 307,
           "client": "api",
           "literalInterpolation": false
         }
