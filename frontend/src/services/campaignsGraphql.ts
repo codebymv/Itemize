@@ -311,6 +311,50 @@ export const sendCampaignViaGraphql = async (
   };
 };
 
+export const pauseCampaignViaGraphql = async (
+  campaignId: number,
+  organizationId?: number,
+): Promise<EmailCampaign> => {
+  const data = await graphqlMutationRequest<{
+    pauseCampaign: { campaign: GraphqlCampaign; pendingRecipients: number; message: string };
+  }, { campaignId: number }>(
+    `mutation PauseCampaign($campaignId: Int!) {
+      pauseCampaign(campaignId: $campaignId) {
+        campaign { ${fields} }
+        pendingRecipients message
+      }
+    }`,
+    { campaignId },
+    organizationId,
+  );
+  return mapCampaign(data.pauseCampaign.campaign);
+};
+
+export const resumeCampaignViaGraphql = async (
+  campaignId: number,
+  organizationId?: number,
+): Promise<{ message: string; pendingRecipients?: number }> => {
+  const data = await graphqlMutationRequest<{
+    resumeCampaign: {
+      campaign: Pick<GraphqlCampaign, 'id' | 'status'>;
+      pendingRecipients: number; message: string;
+    };
+  }, { campaignId: number }>(
+    `mutation ResumeCampaign($campaignId: Int!) {
+      resumeCampaign(campaignId: $campaignId) {
+        campaign { id status }
+        pendingRecipients message
+      }
+    }`,
+    { campaignId },
+    organizationId,
+  );
+  return {
+    message: data.resumeCampaign.message,
+    pendingRecipients: data.resumeCampaign.pendingRecipients,
+  };
+};
+
 export const createCampaignViaGraphql = async (
   input: Partial<EmailCampaign>,
   organizationId?: number,

@@ -10,6 +10,8 @@ import {
   previewCampaignViaGraphql,
   sendCampaignTestViaGraphql,
   sendCampaignViaGraphql,
+  pauseCampaignViaGraphql,
+  resumeCampaignViaGraphql,
   scheduleCampaignViaGraphql,
   unscheduleCampaignViaGraphql,
   updateCampaignViaGraphql,
@@ -21,6 +23,7 @@ import {
   isCampaignGraphqlReadsEnabled,
   isCampaignTestSendGraphqlEnabled,
   isCampaignSendGraphqlEnabled,
+  isCampaignPauseResumeGraphqlEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -69,12 +72,14 @@ describe('campaign GraphQL consumer', () => {
     vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_SEND_GRAPHQL', 'false');
+    vi.stubEnv('VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL', 'false');
     expect(isCampaignGraphqlReadsEnabled()).toBe(false);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
     expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
     expect(isCampaignSendGraphqlEnabled()).toBe(false);
+    expect(isCampaignPauseResumeGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
     expect(isCampaignGraphqlReadsEnabled()).toBe(true);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
@@ -82,6 +87,7 @@ describe('campaign GraphQL consumer', () => {
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
     expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
     expect(isCampaignSendGraphqlEnabled()).toBe(false);
+    expect(isCampaignPauseResumeGraphqlEnabled()).toBe(false);
   });
 
   it('accepts a bulk campaign into the durable delivery queue', async () => {
@@ -98,6 +104,25 @@ describe('campaign GraphQL consumer', () => {
     const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
     expect(body.variables).toEqual({ campaignId: 9, idempotencyKey: 'campaign-request-31' });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps pause and resume through their independent protected lifecycle flag', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { pauseCampaign: {
+        campaign: { ...campaign, status: 'paused', totalRecipients: 2 },
+        pendingRecipients: 2, message: 'Campaign paused',
+      } } }))
+      .mockResolvedValueOnce(response({ data: { resumeCampaign: {
+        campaign: { id: 9, status: 'sending' }, pendingRecipients: 2,
+        message: 'Campaign resumed',
+      } } }));
+    await expect(pauseCampaignViaGraphql(9, 4)).resolves.toMatchObject({
+      id: 9, status: 'paused', total_recipients: 2,
+    });
+    await expect(resumeCampaignViaGraphql(9, 4)).resolves.toEqual({
+      message: 'Campaign resumed', pendingRecipients: 2,
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(2);
   });
 
   it('maps durable test delivery through a CSRF-protected independent mutation', async () => {

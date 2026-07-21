@@ -1,6 +1,6 @@
 # Campaigns and workflows GraphQL cutover contract
 
-**Status:** Campaign management, audience, recipient inspection, test delivery, and bulk-send delivery implemented; pause/resume and workflows remain characterized
+**Status:** Campaign management and delivery lifecycle implemented; workflows remain characterized
 
 **Evidence date:** 2026-07-21
 
@@ -128,6 +128,8 @@ Completion derives aggregate counts from recipient rows. Definite provider rejec
 - Resume processes only pending recipients and preserves cumulative counts.
 - If no pending recipients remain, resume completes the campaign without resending.
 - Test send requires an organization-owned campaign and validated destination email, substitutes sample variables, prefixes the subject with `[TEST]`, and does not change campaign/recipient state or usage.
+
+`pauseCampaign` and `resumeCampaign` now use the same locked durable job. Paused campaigns are excluded from worker discovery and claim predicates; resume counts only queued, retrying, or leased recipient intents and never rebuilds the audience. A paused campaign with no active intents derives its terminal state from the persisted rows. Pre-cutover legacy sends without a durable job fail closed on GraphQL resume and must be drained or handled through retained rollback before enabling the lifecycle flag.
 
 Provider errors must be observable and retryable. Never report a successful test send merely because the provider client was unconfigured or simulated.
 

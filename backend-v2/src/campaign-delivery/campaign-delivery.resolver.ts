@@ -4,7 +4,7 @@ import { RequestContextService } from '../request-context/request-context.servic
 import { CampaignTestEmailService } from './campaign-test-email.service';
 import { CampaignTestEmailResult } from './campaign-test-email.types';
 import { CampaignSendService } from './campaign-send.service';
-import { CampaignSendResult } from './campaign-send.types';
+import { CampaignResumeResult, CampaignSendResult } from './campaign-send.types';
 
 @Resolver()
 export class CampaignDeliveryResolver {
@@ -24,6 +24,24 @@ export class CampaignDeliveryResolver {
     return this.campaignSends.send(
       this.organizationId(), this.userId(), campaignId, idempotencyKey,
     );
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => CampaignResumeResult)
+  pauseCampaign(
+    @Args('campaignId', { type: () => Int }) campaignId: number,
+  ): Promise<CampaignResumeResult> {
+    return this.campaignSends.pause(this.organizationId(), campaignId);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => CampaignResumeResult)
+  resumeCampaign(
+    @Args('campaignId', { type: () => Int }) campaignId: number,
+  ): Promise<CampaignResumeResult> {
+    return this.campaignSends.resume(this.organizationId(), campaignId);
   }
 
   @CsrfProtected()

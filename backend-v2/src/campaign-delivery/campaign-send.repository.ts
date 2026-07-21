@@ -32,6 +32,13 @@ export type ClaimedCampaignRecipient = {
   delivery_attempt_count: number; payload: CampaignDeliveryPayload;
 };
 
+export type CampaignLifecycleOutcome =
+  | { kind: 'ok'; pendingRecipients: number }
+  | { kind: 'completed'; pendingRecipients: 0 }
+  | { kind: 'not_found' }
+  | { kind: 'invalid_status'; status: string }
+  | { kind: 'delivery_unavailable' };
+
 @Injectable()
 export class CampaignSendRepository {
   constructor(
@@ -206,6 +213,86 @@ export class CampaignSendRepository {
       [limit],
     );
     return result.rows.map((row) => ({ id: Number(row.id), organizationId: Number(row.organization_id) }));
+  }
+
+  async pause(organizationId: number, campaignId: number): Promise<CampaignLifecycleOutcome> {
+    return this.transaction(async (client) => {
+      const campaign = await client.query<{ status: string }>(
+        `SELECT status FROM email_campaigns
+         WHERE id=$1 AND organization_id=$2 FOR UPDATE`,
+        [campaignId, organizationId],
+      );
+      if (!campaign.rows[0]) return { kind: 'not_found' };
+      if (campaign.rows[0].status !== 'sending') {
+        return { kind: 'invalid_status', status: campaign.rows[0].status };
+      }
+      await client.query(
+        `UPDATE email_campaigns SET status='paused', updated_at=CURRENT_TIMESTAMP
+         WHERE id=$1 AND organization_id=$2`,
+        [campaignId, organizationId],
+      );
+      const pending = await client.query<{ count: number }>(
+        `SELECT COUNT(*)::int count FROM campaign_recipients
+         WHERE campaign_id=$1 AND organization_id=$2 AND delivery_job_id IS NOT NULL
+           AND delivery_status IN ('queued','processing','retry')`,
+        [campaignId, organizationId],
+      );
+      return { kind: 'ok', pendingRecipients: Number(pending.rows[0]?.count ?? 0) };
+    });
+  }
+
+  async resume(organizationId: number, campaignId: number): Promise<CampaignLifecycleOutcome> {
+    return this.transaction(async (client) => {
+      const campaign = await client.query<{ status: string }>(
+        `SELECT status FROM email_campaigns
+         WHERE id=$1 AND organization_id=$2 FOR UPDATE`,
+        [campaignId, organizationId],
+      );
+      if (!campaign.rows[0]) return { kind: 'not_found' };
+      if (campaign.rows[0].status !== 'paused') {
+        return { kind: 'invalid_status', status: campaign.rows[0].status };
+      }
+      const delivery = await client.query<{ id: number }>(
+        `SELECT id FROM campaign_delivery_jobs
+         WHERE organization_id=$1 AND campaign_id=$2
+         ORDER BY id DESC LIMIT 1 FOR UPDATE`,
+        [organizationId, campaignId],
+      );
+      if (!delivery.rows[0]) return { kind: 'delivery_unavailable' };
+      const job = await client.query<{ active: number; sent: number; ambiguous: number }>(
+        `SELECT
+           COUNT(*) FILTER (WHERE delivery_status IN ('queued','processing','retry'))::int active,
+           COUNT(*) FILTER (WHERE delivery_status='sent')::int sent,
+           COUNT(*) FILTER (WHERE delivery_status='reconciliation_required')::int ambiguous
+         FROM campaign_recipients WHERE delivery_job_id=$1`,
+        [delivery.rows[0].id],
+      );
+      const counts = job.rows[0];
+      const active = Number(counts.active);
+      if (!Number.isSafeInteger(active) || active < 0) throw new Error('Unsafe pending recipient count');
+      if (active === 0) {
+        const ambiguous = Number(counts.ambiguous) > 0;
+        await client.query(
+          `UPDATE campaign_delivery_jobs SET status=$2,
+             completed_at=COALESCE(completed_at,CURRENT_TIMESTAMP), updated_at=CURRENT_TIMESTAMP
+           WHERE id=$1`,
+          [delivery.rows[0].id, ambiguous ? 'reconciliation_required' : 'completed'],
+        );
+        await client.query(
+          `UPDATE email_campaigns SET status=$3, total_sent=$4,
+             completed_at=COALESCE(completed_at,CURRENT_TIMESTAMP), updated_at=CURRENT_TIMESTAMP
+           WHERE id=$1 AND organization_id=$2`,
+          [campaignId, organizationId, ambiguous ? 'failed' : 'sent', Number(counts.sent)],
+        );
+        return { kind: 'completed', pendingRecipients: 0 };
+      }
+      await client.query(
+        `UPDATE email_campaigns SET status='sending', updated_at=CURRENT_TIMESTAMP
+         WHERE id=$1 AND organization_id=$2`,
+        [campaignId, organizationId],
+      );
+      return { kind: 'ok', pendingRecipients: active };
+    });
   }
 
   async claim(organizationId: number, recipientId: number): Promise<ClaimedCampaignRecipient | null> {

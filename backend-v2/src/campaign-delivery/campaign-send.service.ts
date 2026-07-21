@@ -7,6 +7,7 @@ import {
 } from './campaign-test-email.provider';
 import { CampaignSendRepository } from './campaign-send.repository';
 import { CampaignSendResult } from './campaign-send.types';
+import { CampaignResumeResult } from './campaign-send.types';
 
 const KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
@@ -129,5 +130,54 @@ export class CampaignSendService {
       }
     }
     return { attempted: due.length, sent };
+  }
+
+  async pause(organizationId: number, campaignId: number): Promise<CampaignResumeResult> {
+    this.campaignId(campaignId);
+    const outcome = await this.deliveries.pause(organizationId, campaignId);
+    this.lifecycle(outcome, 'Only a sending campaign can be paused');
+    return {
+      campaign: await this.campaigns.detail(organizationId, campaignId),
+      pendingRecipients: outcome.pendingRecipients,
+      message: 'Campaign paused',
+    };
+  }
+
+  async resume(organizationId: number, campaignId: number): Promise<CampaignResumeResult> {
+    this.campaignId(campaignId);
+    const outcome = await this.deliveries.resume(organizationId, campaignId);
+    this.lifecycle(outcome, 'Only a paused campaign can be resumed');
+    return {
+      campaign: await this.campaigns.detail(organizationId, campaignId),
+      pendingRecipients: outcome.pendingRecipients,
+      message: outcome.kind === 'completed' ? 'Campaign already fully sent' : 'Campaign resumed',
+    };
+  }
+
+  private campaignId(campaignId: number): void {
+    if (!Number.isSafeInteger(campaignId) || campaignId < 1) {
+      throw itemizeGraphqlError('campaignId must be a positive integer', 'BAD_USER_INPUT', {
+        field: 'campaignId', reason: 'INVALID_CAMPAIGN_ID',
+      });
+    }
+  }
+
+  private lifecycle(
+    outcome: Awaited<ReturnType<CampaignSendRepository['pause']>>,
+    invalidMessage: string,
+  ): asserts outcome is Extract<typeof outcome, { kind: 'ok' | 'completed' }> {
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Campaign not found', 'NOT_FOUND', { reason: 'CAMPAIGN_NOT_FOUND' });
+    }
+    if (outcome.kind === 'invalid_status') {
+      throw itemizeGraphqlError(invalidMessage, 'BAD_USER_INPUT', {
+        field: 'status', reason: 'INVALID_CAMPAIGN_STATE', actualStatus: outcome.status,
+      });
+    }
+    if (outcome.kind === 'delivery_unavailable') {
+      throw itemizeGraphqlError('Campaign has no durable delivery job', 'CONFLICT', {
+        reason: 'CAMPAIGN_DELIVERY_UNAVAILABLE',
+      });
+    }
   }
 }

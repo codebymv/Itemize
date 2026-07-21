@@ -14,6 +14,8 @@ import {
     scheduleCampaignViaGraphql,
     sendCampaignTestViaGraphql,
     sendCampaignViaGraphql,
+    pauseCampaignViaGraphql,
+    resumeCampaignViaGraphql,
     unscheduleCampaignViaGraphql,
     updateCampaignViaGraphql,
 } from './campaignsGraphql';
@@ -24,6 +26,7 @@ import {
     isCampaignRecipientReadsGraphqlEnabled,
     isCampaignTestSendGraphqlEnabled,
     isCampaignSendGraphqlEnabled,
+    isCampaignPauseResumeGraphqlEnabled,
 } from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
@@ -341,6 +344,9 @@ export const pauseCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
+    if (isCampaignPauseResumeGraphqlEnabled()) {
+        return pauseCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.post(`/api/campaigns/${campaignId}/pause`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -354,6 +360,9 @@ export const resumeCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<{ message: string; pendingRecipients?: number }> => {
+    if (isCampaignPauseResumeGraphqlEnabled()) {
+        return resumeCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.post(`/api/campaigns/${campaignId}/resume`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

@@ -640,6 +640,38 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     );
     expect(replayUsage.rows[0].count).toBe(usageAfter.rows[0].count);
 
+    const paused = await graphql(
+      memberToken, organizationId,
+      `mutation Pause($campaignId: Int!) {
+        pauseCampaign(campaignId: $campaignId) {
+          campaign { id status totalSent } pendingRecipients message
+        }
+      }`,
+      { campaignId },
+    ).expect(200);
+    expect(paused.body.errors).toBeUndefined();
+    expect(paused.body.data.pauseCampaign).toMatchObject({
+      campaign: { id: campaignId, status: 'paused', totalSent: 0 },
+      pendingRecipients: recipientCount, message: 'Campaign paused',
+    });
+    await expect(campaignSendService.runDue(500)).resolves.toEqual({ attempted: 0, sent: 0 });
+    expect(testEmailProvider.send).not.toHaveBeenCalled();
+
+    const resumed = await graphql(
+      memberToken, organizationId,
+      `mutation Resume($campaignId: Int!) {
+        resumeCampaign(campaignId: $campaignId) {
+          campaign { id status totalSent } pendingRecipients message
+        }
+      }`,
+      { campaignId },
+    ).expect(200);
+    expect(resumed.body.errors).toBeUndefined();
+    expect(resumed.body.data.resumeCampaign).toMatchObject({
+      campaign: { id: campaignId, status: 'sending', totalSent: 0 },
+      pendingRecipients: recipientCount, message: 'Campaign resumed',
+    });
+
     await expect(campaignSendService.runDue(500)).resolves.toEqual({
       attempted: recipientCount, sent: recipientCount,
     });

@@ -18,3 +18,15 @@ export class CampaignSendResult {
   @Field()
   message: string;
 }
+
+@ObjectType()
+export class CampaignResumeResult {
+  @Field(() => Campaign)
+  campaign: Campaign;
+
+  @Field(() => Int)
+  pendingRecipients: number;
+
+  @Field()
+  message: string;
+}

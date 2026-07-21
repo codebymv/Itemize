@@ -18,18 +18,17 @@ const claimed = (extra: Partial<ClaimedCampaignRecipient> = {}): ClaimedCampaign
 describe('CampaignSendService worker', () => {
   let repository: jest.Mocked<CampaignSendRepository>;
   let provider: jest.Mocked<CampaignTestEmailProvider>;
+  let campaigns: jest.Mocked<CampaignsService>;
   let service: CampaignSendService;
 
   beforeEach(() => {
     repository = {
       due: jest.fn(), claim: jest.fn(), complete: jest.fn(), fail: jest.fn(), prepare: jest.fn(),
+      pause: jest.fn(), resume: jest.fn(),
     } as unknown as jest.Mocked<CampaignSendRepository>;
     provider = { send: jest.fn() };
-    service = new CampaignSendService(
-      repository,
-      { detail: jest.fn() } as unknown as CampaignsService,
-      provider,
-    );
+    campaigns = { detail: jest.fn() } as unknown as jest.Mocked<CampaignsService>;
+    service = new CampaignSendService(repository, campaigns, provider);
     repository.due.mockResolvedValue([{ id: 12, organizationId: 4 }]);
     repository.claim.mockResolvedValue(claimed());
   });
@@ -55,5 +54,24 @@ describe('CampaignSendService worker', () => {
     provider.send.mockRejectedValueOnce(new Error('timeout after write'));
     await expect(service.runDue()).resolves.toEqual({ attempted: 1, sent: 0 });
     expect(repository.fail).toHaveBeenLastCalledWith(4, 12, 'timeout after write', true);
+  });
+
+  it('maps durable pause/resume outcomes and rejects legacy delivery state', async () => {
+    campaigns.detail.mockResolvedValue({ id: 9, status: 'paused' } as never);
+    repository.pause.mockResolvedValue({ kind: 'ok', pendingRecipients: 3 });
+    await expect(service.pause(4, 9)).resolves.toMatchObject({
+      campaign: { id: 9, status: 'paused' }, pendingRecipients: 3, message: 'Campaign paused',
+    });
+
+    campaigns.detail.mockResolvedValue({ id: 9, status: 'sending' } as never);
+    repository.resume.mockResolvedValue({ kind: 'ok', pendingRecipients: 3 });
+    await expect(service.resume(4, 9)).resolves.toMatchObject({
+      campaign: { id: 9, status: 'sending' }, pendingRecipients: 3, message: 'Campaign resumed',
+    });
+
+    repository.resume.mockResolvedValue({ kind: 'delivery_unavailable' });
+    await expect(service.resume(4, 9)).rejects.toMatchObject({
+      extensions: expect.objectContaining({ reason: 'CAMPAIGN_DELIVERY_UNAVAILABLE' }),
+    });
   });
 });

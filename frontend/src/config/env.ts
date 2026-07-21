@@ -71,6 +71,7 @@ const envSchema = z.object({
   VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_CAMPAIGN_TEST_SEND_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_CAMPAIGN_SEND_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -161,6 +162,7 @@ if (import.meta.env.DEV) {
     campaignRecipientReadsGraphql: env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL === 'true',
     campaignTestSendGraphql: env.VITE_CAMPAIGN_TEST_SEND_GRAPHQL === 'true',
     campaignSendGraphql: env.VITE_CAMPAIGN_SEND_GRAPHQL === 'true',
+    campaignPauseResumeGraphql: env.VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,

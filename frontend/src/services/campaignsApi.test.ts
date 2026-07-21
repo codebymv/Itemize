@@ -22,6 +22,7 @@ describe('campaigns API', () => {
         vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
         vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
         vi.stubEnv('VITE_CAMPAIGN_SEND_GRAPHQL', 'false');
+        vi.stubEnv('VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL', 'false');
     });
 
     it('maps the shared REST pagination envelope to the campaign consumer contract', async () => {
