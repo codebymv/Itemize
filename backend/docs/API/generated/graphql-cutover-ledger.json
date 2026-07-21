@@ -894,7 +894,7 @@
           "path": "/api/auth/google-login",
           "rawPath": "${apiUrl}/api/auth/google-login",
           "source": "frontend/src/hooks/useGoogleSignIn.ts",
-          "line": 25,
+          "line": 34,
           "client": "axios",
           "literalInterpolation": false
         },
@@ -962,7 +962,7 @@
           "path": "/api/auth/login",
           "rawPath": "/api/auth/login",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 246,
+          "line": 260,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1033,7 +1033,7 @@
           "path": "/api/auth/logout",
           "rawPath": "/api/auth/logout",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 302,
+          "line": 328,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1074,7 +1074,7 @@
           "path": "/api/auth/me",
           "rawPath": "/api/auth/me",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 201,
+          "line": 210,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1199,7 +1199,7 @@
           "path": "/api/auth/register",
           "rawPath": "/api/auth/register",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 269,
+          "line": 293,
           "client": "api",
           "literalInterpolation": false
         }

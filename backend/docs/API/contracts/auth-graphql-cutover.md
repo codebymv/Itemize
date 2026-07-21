@@ -1,6 +1,6 @@
 # Authentication GraphQL cutover contract
 
-**Status:** Characterizing  
+**Status:** Core browser session enabled in production behind a one-switch REST rollback
 **Owner:** Identity, with Platform Security owning cookie and CSRF transport  
 **NestJS boundary:** `AuthModule`
 
@@ -8,7 +8,9 @@
 
 Authentication remains cookie based. GraphQL must not return bearer or refresh tokens to browser JavaScript. The access token stays in `itemize_auth`; the refresh token stays in `itemize_refresh`; both remain `httpOnly` and scoped to `/`.
 
-`GET /api/auth/csrf` and `POST /api/auth/refresh` remain HTTP during the cutover. They are browser session protocol endpoints used outside normal application queries. All other supported auth operations move to `AuthModule` queries or mutations.
+The browser session protocol now moves as one unit behind `VITE_AUTH_SESSION_GRAPHQL`: login, active Google access-token login, current-user hydration, CSRF issuance, access refresh, and logout. The retained HTTP endpoints remain executable rollback paths. Registration, verification, recovery, password change, and profile update remain on REST until their transactional email/profile contracts are implemented.
+
+The coordinated switch was enabled in production on 2026-07-21. Backend deployment `5d155af6-e84b-4a8a-a385-2867a01f8fc2`, GraphQL deployment `62755717-ecb6-4249-8ee7-748f229d620b`, and frontend deployment `75a3b29a-3870-492a-b99e-d6f0c5cd9475` serve commit `9f3a4c86`. Same-origin probes verified the CSRF/cookie allowlist and stable anonymous errors, and a real browser login attempt was observed as GraphQL `Login` with no retained REST auth request.
 
 The active Google flow now sends an access token to the backend. The backend validates that token's audience against `GOOGLE_CLIENT_ID`, fetches the Google profile itself, requires a verified email, and derives the account identity from that provider response. Client-supplied Google IDs, email addresses, and names are not trusted.
 
@@ -18,9 +20,9 @@ The active Google flow now sends an access token to the backend. The backend val
 | --- | --- | --- |
 | `POST /api/auth/register` | `register(input)` | Validate and normalize credentials; create user and personal workspace atomically; send verification email without exposing its token |
 | `POST /api/auth/login` | `login(input)` | Generic bad-credential response; verified email required; set both session cookies; return user without tokens |
-| `POST /api/auth/google-login` | `loginWithGoogle(input)` | Verify provider token and audience server-side; require verified provider email; set cookie-only session |
-| `POST /api/auth/google-credential` | merge into `loginWithGoogle(input)` | Use the same provider-verification and account-linking service |
-| `GET /api/auth/me` | `viewer` | Read the signed access cookie; return normalized user identity; never cache |
+| `POST /api/auth/google-login` | `loginWithGoogleAccessToken(input)` | Verify provider token and audience server-side; require verified provider email; set cookie-only session |
+| `POST /api/auth/google-credential` | future merge into the Google login service | Use the same provider-verification and account-linking service |
+| `GET /api/auth/me` | `currentUser` | Read the signed access cookie; return normalized user identity; never cache |
 | `PUT /api/auth/me` | `updateViewerProfile(input)` | Authenticated and CSRF-protected; trim name; enforce 1-100 characters |
 | `POST /api/auth/logout` | `logout` | CSRF-protected; expire both session cookies; remain idempotent |
 | `POST /api/auth/change-password` | `changePassword(input)` | Verify current password; enforce password policy; replace password hash; notify user |
@@ -28,8 +30,8 @@ The active Google flow now sends an access token to the backend. The backend val
 | `POST /api/auth/reset-password` | `resetPassword(input)` | Validate and consume reset token; clear token state; enforce password policy; notify user |
 | `POST /api/auth/verify-email` | `verifyEmail(input)` | Validate and consume verification token; mark verified; establish session; welcome email |
 | `POST /api/auth/resend-verification` | `resendVerificationEmail(input)` | Non-enumerating response; strict rate limit; replace hashed 24-hour token |
-| `GET /api/auth/csrf` | retain HTTP | Issue a fresh double-submit cookie/token pair |
-| `POST /api/auth/refresh` | retain HTTP | Accept refresh cookie only; validate token type and user; rotate access cookie only; never return a token |
+| `GET /api/auth/csrf` | `csrfToken` query, retained HTTP rollback | Issue or reuse a double-submit cookie/token pair |
+| `POST /api/auth/refresh` | `refreshSession`, retained HTTP rollback | Accept refresh cookie only; validate token type and user; rotate access cookie only; never return a token |
 
 ## Session and CSRF invariants
 
@@ -39,6 +41,8 @@ The active Google flow now sends an access token to the backend. The backend val
 - Cookie-authenticated GraphQL mutations require the double-submit CSRF header. A mutation with an existing access or refresh cookie cannot bypass CSRF merely because it is a login or recovery operation.
 - Unauthenticated login, registration, verification, recovery, and Google bootstrap calls remain usable without a CSRF cookie because they do not carry an Itemize session.
 - Webhooks and non-browser API-key calls keep their separate signature/key security model and are not routed through `AuthModule` mutations.
+- Login and active Google bootstrap retain the legacy per-IP/identity 15-minute attempt limit in NestJS.
+- The same-origin GraphQL proxy forwards only the three authentication cookies plus the cache/CSRF response headers needed by this protocol; unrelated upstream cookies and headers are dropped.
 
 ## Identity and organization boundary
 
@@ -56,8 +60,8 @@ Resolvers return null data for failed mutations and use stable `extensions.code`
 | Missing, expired, or invalid access cookie | `UNAUTHENTICATED` |
 | Missing/mismatched CSRF token | `FORBIDDEN` with `reason=CSRF_*` |
 | Invalid input or password policy | `BAD_USER_INPUT` |
-| Invalid email/password | `INVALID_CREDENTIALS` |
-| Email not verified | `EMAIL_NOT_VERIFIED` |
+| Invalid email/password | `UNAUTHENTICATED` with `reason=INVALID_CREDENTIALS` |
+| Email not verified | `UNAUTHENTICATED` with `reason=EMAIL_NOT_VERIFIED` |
 | Existing local or Google account conflict | `ACCOUNT_CONFLICT` |
 | Invalid/expired verification or reset token | `INVALID_TOKEN` |
 | Provider token/audience/identity failure | `INVALID_PROVIDER_TOKEN` |
@@ -85,7 +89,7 @@ Password recovery and verification resend must not expose account existence thro
 7. Google token failure, wrong audience, unverified email, normalized verified identity, existing account, new account, and workspace-creation rollback.
 8. Organization header/default selection, non-member denial, role changes after token issuance, and cross-tenant record denial.
 
-Current executable evidence covers cookie-only local login, `viewer`, CSRF enforcement, access refresh, missing refresh cookie, logout cookie expiration, profile update, Google legacy-payload rejection, Google audience validation, verified-email enforcement, and server-derived Google identity. The NestJS global guard chain now has focused missing-cookie, missing-header, mismatch, success, and undecorated-operation cases; fresh PostgreSQL proves a contact mutation without CSRF is rejected before a write and matching double-submit tokens allow the tenant-scoped mutation. The legacy-origin proxy and frontend mutation client have header-forwarding tests. A staging browser rehearsal also proved that an expired GraphQL access cookie producing an HTTP-`200` `UNAUTHENTICATED` error performs one CSRF-protected retained-HTTP refresh and retries the GraphQL operation successfully. A subsequent disposable staging account signed in through the real credential form and completed GraphQL contact create/edit/delete with the retained HTTP CSRF token forwarded through the legacy-origin proxy; the account and all of its workspace data were then removed. Remaining registration, verification, recovery, Google, identity-concurrency, and transaction scenarios still require expansion in the disposable integration environment and production-like browser coverage.
+Current executable evidence covers cookie-only local GraphQL login, generic bad credentials, `currentUser`, public CSRF issuance, CSRF-protected access refresh, logout cookie expiration, and the legacy attempt limit. HTTP-level Nest tests prove that response bodies contain no token, both session cookies are `httpOnly`, refreshed access cookies authenticate subsequent operations, and failed login emits no cookie. The same-origin proxy proves the cookie/cache header allowlist and frontend tests prove one-flag routing, no refresh loop on public login failure, CSRF transport, refresh retry, REST-default behavior, and logout mapping. Existing evidence continues to cover profile update, Google legacy-payload rejection, provider audience and verified-email validation, server-derived identity, global CSRF guards, and tenant-scoped mutation denial. Remaining registration, verification, recovery, Google live-provider, identity-concurrency, and transaction scenarios still require expansion in the disposable integration environment and production-like browser coverage.
 
 ## Known consumer issue
 

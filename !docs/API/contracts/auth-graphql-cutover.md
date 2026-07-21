@@ -1,6 +1,6 @@
 # Authentication GraphQL cutover contract
 
-**Status:** Core browser session implemented behind rollback flag
+**Status:** Core browser session enabled in production behind a one-switch REST rollback
 **Owner:** Identity, with Platform Security owning cookie and CSRF transport  
 **NestJS boundary:** `AuthModule`
 
@@ -9,6 +9,8 @@
 Authentication remains cookie based. GraphQL must not return bearer or refresh tokens to browser JavaScript. The access token stays in `itemize_auth`; the refresh token stays in `itemize_refresh`; both remain `httpOnly` and scoped to `/`.
 
 The browser session protocol now moves as one unit behind `VITE_AUTH_SESSION_GRAPHQL`: login, active Google access-token login, current-user hydration, CSRF issuance, access refresh, and logout. The retained HTTP endpoints remain executable rollback paths. Registration, verification, recovery, password change, and profile update remain on REST until their transactional email/profile contracts are implemented.
+
+The coordinated switch was enabled in production on 2026-07-21. Backend deployment `5d155af6-e84b-4a8a-a385-2867a01f8fc2`, GraphQL deployment `62755717-ecb6-4249-8ee7-748f229d620b`, and frontend deployment `75a3b29a-3870-492a-b99e-d6f0c5cd9475` serve commit `9f3a4c86`. Same-origin probes verified the CSRF/cookie allowlist and stable anonymous errors, and a real browser login attempt was observed as GraphQL `Login` with no retained REST auth request.
 
 The active Google flow now sends an access token to the backend. The backend validates that token's audience against `GOOGLE_CLIENT_ID`, fetches the Google profile itself, requires a verified email, and derives the account identity from that provider response. Client-supplied Google IDs, email addresses, and names are not trusted.
 
