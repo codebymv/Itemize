@@ -1,6 +1,6 @@
 # GraphQL + NestJS cutover readiness
 
-**Status:** Phase 0 baseline validated; Phase 1 contact, retained CSV transfer, tag, pipeline, deal, authenticated form-definition/submission-management, organization selector, authenticated calendar and booking reads, calendar definition and provider-connection/sync-management mutations, authenticated booking create/reschedule/cancellation, public booking identity/capabilities, calendar provider-token encryption/refresh fencing, durable bidirectional calendar synchronization, canonical CRM persistence, retained public-form, workspace list/note/whiteboard mutations, organization email/SMS-template management, and public-content realtime-revocation boundaries implemented; contact staging CRUD, bulk, activity, related-content, aggregate-profile, CSV transfer, organization-selector GraphQL/rollback, calendar and booking read GraphQL/rollback, calendar create/update/delete/availability GraphQL/rollback, booking-cancellation GraphQL/rollback, workspace list/note/whiteboard read/mutation/realtime/rollback, and operation-observation gates completed
+**Status:** All implemented browser GraphQL consumers and workflow runtime phases enabled in production; explicitly non-GraphQL protocols remain retained
 
 **Evidence date:** 2026-07-21
 **Authority:** This document supersedes the testing counts and cutover-testing guidance in `ts-nest-rewrite.md`.
