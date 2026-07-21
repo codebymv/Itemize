@@ -1,8 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { AnalyticsRepository, DashboardSnapshotRows } from './analytics.repository';
 import {
+  CommunicationAnalyticsPeriod,
+  ContactAnalyticsPeriod,
+  DealAnalyticsPeriod,
+} from './analytics.enums';
+import {
+  BookingAnalytics,
+  CommunicationStatsAnalytics,
+  ContactTrendsAnalytics,
   DashboardAnalytics,
   DashboardFunnelStage,
+  DealPerformanceAnalytics,
+  WorkflowPerformanceAnalytics,
 } from './analytics.types';
 
 type StageDefinition = { id: string; name: string; color: string };
@@ -153,6 +163,191 @@ export class AnalyticsService {
     };
   }
 
+  async contactTrends(
+    organizationId: number,
+    period: ContactAnalyticsPeriod = ContactAnalyticsPeriod.MONTHS_6,
+  ): Promise<ContactTrendsAnalytics> {
+    const config = {
+      [ContactAnalyticsPeriod.DAYS_7]: { label: '7days', interval: '7 days', groupBy: 'day' },
+      [ContactAnalyticsPeriod.DAYS_30]: { label: '30days', interval: '30 days', groupBy: 'day' },
+      [ContactAnalyticsPeriod.MONTHS_6]: { label: '6months', interval: '6 months', groupBy: 'month' },
+      [ContactAnalyticsPeriod.MONTHS_12]: { label: '12months', interval: '12 months', groupBy: 'month' },
+    }[period];
+    const snapshot = await this.analytics.contactTrends(
+      organizationId,
+      config.interval,
+      config.groupBy,
+    );
+    return {
+      asOf: snapshot.asOf,
+      reportingTimezone: 'UTC',
+      period: config.label,
+      data: snapshot.data.map((row) => ({
+        period: this.date(row.period, 'contactTrends.period').toISOString(),
+        newContacts: this.count(row.new_contacts, 'contactTrends.newContacts'),
+        withSource: this.count(row.with_source, 'contactTrends.withSource'),
+      })),
+    };
+  }
+
+  async dealPerformance(
+    organizationId: number,
+    period: DealAnalyticsPeriod = DealAnalyticsPeriod.MONTHS_6,
+  ): Promise<DealPerformanceAnalytics> {
+    const config = {
+      [DealAnalyticsPeriod.DAYS_30]: { label: '30days', interval: '30 days' },
+      [DealAnalyticsPeriod.MONTHS_6]: { label: '6months', interval: '6 months' },
+      [DealAnalyticsPeriod.MONTHS_12]: { label: '12months', interval: '12 months' },
+    }[period];
+    const snapshot = await this.analytics.dealPerformance(organizationId, config.interval);
+    const closedTotal = this.count(snapshot.data.closed_total, 'dealPerformance.closedTotal');
+    const wonCount = this.count(snapshot.data.won_count, 'dealPerformance.wonCount');
+    return {
+      asOf: snapshot.asOf,
+      period: config.label,
+      metrics: {
+        closedTotal,
+        wonCount,
+        lostCount: this.count(snapshot.data.lost_count, 'dealPerformance.lostCount'),
+        winRate: this.percentage(wonCount, closedTotal),
+        avgDealValue: this.number(snapshot.data.avg_deal_value, 'dealPerformance.avgDealValue'),
+        totalRevenue: this.number(snapshot.data.total_revenue, 'dealPerformance.totalRevenue'),
+        avgDaysToClose: Math.round(
+          this.number(snapshot.data.avg_days_to_close, 'dealPerformance.avgDaysToClose'),
+        ),
+      },
+    };
+  }
+
+  async bookingAnalytics(organizationId: number): Promise<BookingAnalytics> {
+    const snapshot = await this.analytics.bookingAnalytics(organizationId);
+    const completed = this.count(snapshot.data.completed, 'bookingAnalytics.completed');
+    const noShow = this.count(snapshot.data.no_show, 'bookingAnalytics.noShow');
+    return {
+      asOf: snapshot.asOf,
+      total: this.count(snapshot.data.total, 'bookingAnalytics.total'),
+      confirmed: this.count(snapshot.data.confirmed, 'bookingAnalytics.confirmed'),
+      completed,
+      cancelled: this.count(snapshot.data.cancelled, 'bookingAnalytics.cancelled'),
+      noShow,
+      createdThisMonth: this.count(
+        snapshot.data.created_this_month,
+        'bookingAnalytics.createdThisMonth',
+      ),
+      upcoming: this.count(snapshot.data.upcoming, 'bookingAnalytics.upcoming'),
+      completionRate: this.percentage(completed, completed + noShow),
+    };
+  }
+
+  async communicationStats(
+    organizationId: number,
+    period: CommunicationAnalyticsPeriod = CommunicationAnalyticsPeriod.DAYS_30,
+  ): Promise<CommunicationStatsAnalytics> {
+    const config = {
+      [CommunicationAnalyticsPeriod.DAYS_7]: { label: '7days', interval: '7 days' },
+      [CommunicationAnalyticsPeriod.DAYS_30]: { label: '30days', interval: '30 days' },
+      [CommunicationAnalyticsPeriod.DAYS_90]: { label: '90days', interval: '90 days' },
+    }[period];
+    const snapshot = await this.analytics.communicationStats(organizationId, config.interval);
+    const emailTotal = this.count(snapshot.data.email.total, 'communicationStats.email.total');
+    const emailDelivered = this.count(
+      snapshot.data.email.delivered,
+      'communicationStats.email.delivered',
+    );
+    const emailOpened = this.count(
+      snapshot.data.email.opened,
+      'communicationStats.email.opened',
+    );
+    const emailClicked = this.count(
+      snapshot.data.email.clicked,
+      'communicationStats.email.clicked',
+    );
+    const smsOutbound = this.count(
+      snapshot.data.sms.outbound,
+      'communicationStats.sms.outbound',
+    );
+    const smsDelivered = this.count(
+      snapshot.data.sms.delivered,
+      'communicationStats.sms.delivered',
+    );
+    return {
+      asOf: snapshot.asOf,
+      period: config.label,
+      email: {
+        total: emailTotal,
+        sent: this.count(snapshot.data.email.sent, 'communicationStats.email.sent'),
+        delivered: emailDelivered,
+        opened: emailOpened,
+        clicked: emailClicked,
+        bounced: this.count(snapshot.data.email.bounced, 'communicationStats.email.bounced'),
+        failed: this.count(snapshot.data.email.failed, 'communicationStats.email.failed'),
+        rates: {
+          delivery: this.percentage(emailDelivered, emailTotal),
+          open: this.percentage(emailOpened, emailDelivered),
+          click: this.percentage(emailClicked, emailOpened),
+        },
+      },
+      sms: {
+        total: this.count(snapshot.data.sms.total, 'communicationStats.sms.total'),
+        outbound: smsOutbound,
+        inbound: this.count(snapshot.data.sms.inbound, 'communicationStats.sms.inbound'),
+        sent: this.count(snapshot.data.sms.sent, 'communicationStats.sms.sent'),
+        delivered: smsDelivered,
+        failed: this.count(snapshot.data.sms.failed, 'communicationStats.sms.failed'),
+        segments: this.count(snapshot.data.sms.total_segments, 'communicationStats.sms.segments'),
+        rates: { delivery: this.percentage(smsDelivered, smsOutbound) },
+      },
+    };
+  }
+
+  async workflowPerformance(organizationId: number): Promise<WorkflowPerformanceAnalytics> {
+    const snapshot = await this.analytics.workflowPerformance(organizationId);
+    const workflows = snapshot.data.map((row) => {
+      const total = this.count(row.total_enrollments, 'workflowPerformance.enrollments.total');
+      const completed = this.count(row.completed, 'workflowPerformance.enrollments.completed');
+      return {
+        id: this.id(row.id, 'workflowPerformance.id'),
+        name: this.string(row.name, 'workflowPerformance.name'),
+        triggerType: this.string(row.trigger_type, 'workflowPerformance.triggerType'),
+        isActive: row.is_active === true,
+        enrollments: {
+          total,
+          completed,
+          active: this.count(row.active, 'workflowPerformance.enrollments.active'),
+          failed: this.count(row.failed, 'workflowPerformance.enrollments.failed'),
+        },
+        completionRate: this.percentage(completed, total),
+        stats: this.record(row.stats),
+      };
+    });
+    const totalEnrollments = workflows.reduce((sum, workflow) => sum + workflow.enrollments.total, 0);
+    const completedEnrollments = workflows.reduce(
+      (sum, workflow) => sum + workflow.enrollments.completed,
+      0,
+    );
+    const activeEnrollments = workflows.reduce(
+      (sum, workflow) => sum + workflow.enrollments.active,
+      0,
+    );
+    const failedEnrollments = workflows.reduce(
+      (sum, workflow) => sum + workflow.enrollments.failed,
+      0,
+    );
+    return {
+      asOf: snapshot.asOf,
+      workflows,
+      summary: {
+        totalWorkflows: workflows.length,
+        activeWorkflows: workflows.filter((workflow) => workflow.isActive).length,
+        totalEnrollments,
+        completedEnrollments,
+        activeEnrollments,
+        failedEnrollments,
+        overallCompletionRate: this.percentage(completedEnrollments, totalEnrollments),
+      },
+    };
+  }
+
   private funnel(snapshot: DashboardSnapshotRows): DashboardFunnelStage[] {
     const stages = this.stages(snapshot.dealsByStage[0]?.stages);
     const values = new Map<string, { count: number; value: number }>();
@@ -225,5 +420,15 @@ export class AnalyticsService {
 
   private optionalString(value: unknown): string | null {
     return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  private percentage(numerator: number, denominator: number): number {
+    return denominator > 0 ? Math.round((numerator / denominator) * 100) : 0;
+  }
+
+  private record(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : {};
   }
 }

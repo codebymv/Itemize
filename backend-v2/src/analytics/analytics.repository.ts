@@ -23,6 +23,11 @@ export interface DashboardSnapshotRows {
   recentWorkspace: Row[];
 }
 
+export interface AnalyticsQuerySnapshot<T> {
+  asOf: Date;
+  data: T;
+}
+
 @Injectable()
 export class AnalyticsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -152,6 +157,131 @@ export class AnalyticsRepository {
         pipelines, recentActivity, payments, invoiceMetrics, recentInvoices,
         signatureMetrics, recentSignatures, workspaceMetrics, recentWorkspace,
       };
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  contactTrends(
+    organizationId: number,
+    interval: string,
+    groupBy: string,
+  ): Promise<AnalyticsQuerySnapshot<Row[]>> {
+    return this.withSnapshot(async (client, asOf) => this.many(client, `
+      SELECT
+        DATE_TRUNC($1, created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS period,
+        COUNT(*) AS new_contacts,
+        COUNT(*) FILTER (WHERE source IS NOT NULL) AS with_source
+      FROM contacts
+      WHERE organization_id = $2
+        AND created_at >= $3::timestamptz - $4::interval
+        AND created_at < $3::timestamptz
+      GROUP BY DATE_TRUNC($1, created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+      ORDER BY period ASC`, [groupBy, organizationId, asOf, interval]));
+  }
+
+  dealPerformance(
+    organizationId: number,
+    interval: string,
+  ): Promise<AnalyticsQuerySnapshot<Row>> {
+    return this.withSnapshot(async (client, asOf) => this.one(client, `
+      SELECT
+        COUNT(*) FILTER (WHERE won_at IS NOT NULL OR lost_at IS NOT NULL) AS closed_total,
+        COUNT(*) FILTER (WHERE won_at IS NOT NULL) AS won_count,
+        COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost_count,
+        COALESCE(AVG(value) FILTER (WHERE won_at IS NOT NULL), 0) AS avg_deal_value,
+        COALESCE(SUM(value) FILTER (WHERE won_at IS NOT NULL), 0) AS total_revenue,
+        COALESCE(AVG(EXTRACT(EPOCH FROM (won_at - created_at)) / 86400)
+          FILTER (WHERE won_at IS NOT NULL), 0) AS avg_days_to_close
+      FROM deals
+      WHERE organization_id = $1
+        AND ((won_at >= $2::timestamptz - $3::interval AND won_at < $2::timestamptz)
+          OR (lost_at >= $2::timestamptz - $3::interval AND lost_at < $2::timestamptz))`,
+    [organizationId, asOf, interval]));
+  }
+
+  bookingAnalytics(organizationId: number): Promise<AnalyticsQuerySnapshot<Row>> {
+    return this.withSnapshot(async (client, asOf) => this.one(client, `
+      SELECT COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE status = 'confirmed') AS confirmed,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed,
+        COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled,
+        COUNT(*) FILTER (WHERE status = 'no_show') AS no_show,
+        COUNT(*) FILTER (WHERE created_at >= $2::timestamptz - INTERVAL '30 days'
+          AND created_at < $2::timestamptz) AS created_this_month,
+        COUNT(*) FILTER (WHERE start_time >= $2::timestamptz
+          AND status IN ('pending', 'confirmed')) AS upcoming
+      FROM bookings WHERE organization_id = $1`, [organizationId, asOf]));
+  }
+
+  communicationStats(
+    organizationId: number,
+    interval: string,
+  ): Promise<AnalyticsQuerySnapshot<{ email: Row; sms: Row }>> {
+    return this.withSnapshot(async (client, asOf) => {
+      const values = [organizationId, asOf, interval];
+      const email = await this.one(client, `
+        SELECT COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE status IN ('sent', 'delivered', 'opened', 'clicked')) AS sent,
+          COUNT(*) FILTER (WHERE status IN ('delivered', 'opened', 'clicked')) AS delivered,
+          COUNT(*) FILTER (WHERE status IN ('opened', 'clicked')) AS opened,
+          COUNT(*) FILTER (WHERE status = 'clicked') AS clicked,
+          COUNT(*) FILTER (WHERE status = 'bounced') AS bounced,
+          COUNT(*) FILTER (WHERE status = 'failed') AS failed
+        FROM email_logs
+        WHERE organization_id = $1
+          AND queued_at >= $2::timestamptz - $3::interval
+          AND queued_at < $2::timestamptz`, values);
+      const sms = await this.one(client, `
+        SELECT COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE direction = 'outbound') AS outbound,
+          COUNT(*) FILTER (WHERE direction = 'inbound') AS inbound,
+          COUNT(*) FILTER (WHERE direction = 'outbound'
+            AND status IN ('sent', 'delivered')) AS sent,
+          COUNT(*) FILTER (WHERE direction = 'outbound' AND status = 'delivered') AS delivered,
+          COUNT(*) FILTER (WHERE direction = 'outbound' AND status = 'failed') AS failed,
+          COALESCE(SUM(segments) FILTER (WHERE direction = 'outbound'), 0) AS total_segments
+        FROM sms_logs
+        WHERE organization_id = $1
+          AND queued_at >= $2::timestamptz - $3::interval
+          AND queued_at < $2::timestamptz`, values);
+      return { email, sms };
+    });
+  }
+
+  workflowPerformance(organizationId: number): Promise<AnalyticsQuerySnapshot<Row[]>> {
+    return this.withSnapshot(async (client) => this.many(client, `
+      SELECT w.id, w.name, w.trigger_type, w.is_active, w.stats,
+        COUNT(DISTINCT we.id) AS total_enrollments,
+        COUNT(DISTINCT we.id) FILTER (WHERE we.status = 'completed') AS completed,
+        COUNT(DISTINCT we.id) FILTER (WHERE we.status = 'active') AS active,
+        COUNT(DISTINCT we.id) FILTER (WHERE we.status = 'failed') AS failed
+      FROM workflows w
+      LEFT JOIN workflow_enrollments we ON we.workflow_id = w.id
+        AND EXISTS (
+          SELECT 1 FROM contacts c
+          WHERE c.id = we.contact_id AND c.organization_id = $1
+        )
+      WHERE w.organization_id = $1
+      GROUP BY w.id, w.name, w.trigger_type, w.is_active, w.stats
+      ORDER BY total_enrollments DESC, w.id ASC`, [organizationId]));
+  }
+
+  private async withSnapshot<T>(
+    callback: (client: PoolClient, asOf: Date) => Promise<T>,
+  ): Promise<AnalyticsQuerySnapshot<T>> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      const captured = await client.query<{ as_of: Date }>('SELECT CURRENT_TIMESTAMP AS as_of');
+      const asOf = captured.rows[0]?.as_of;
+      if (!(asOf instanceof Date)) throw new Error('Database did not return an analytics snapshot timestamp');
+      const data = await callback(client, asOf);
+      await client.query('COMMIT');
+      return { asOf, data };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
       throw error;

@@ -444,7 +444,7 @@
           "path": "/api/analytics/bookings/summary",
           "rawPath": "/api/analytics/bookings/summary",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 354,
+          "line": 383,
           "client": "api",
           "literalInterpolation": false
         }
@@ -456,8 +456,8 @@
       "owner": "analytics",
       "targetOperation": "bookingAnalytics",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped booking status totals; upcoming includes only pending/confirmed future bookings.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind default-off VITE_BOOKING_ANALYTICS_GRAPHQL. One captured tenant snapshot returns safe status totals; upcoming includes only actionable pending/confirmed future bookings and completion excludes cancellation from its denominator.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -478,7 +478,7 @@
           "path": "/api/analytics/communication-stats",
           "rawPath": "/api/analytics/communication-stats",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 409,
+          "line": 441,
           "client": "api",
           "literalInterpolation": false
         }
@@ -490,8 +490,8 @@
       "owner": "analytics",
       "targetOperation": "communicationStats",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "characterizing",
-      "notes": "Cumulative email/SMS lifecycle milestones, strict rolling periods, organization scope, and zero-safe rates.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind default-off VITE_COMMUNICATION_STATS_GRAPHQL. Typed rolling periods share one captured boundary; email states are cumulative, while SMS sent/delivered/failed/segments and its delivery denominator are outbound-only. Queries are serialized and tenant-scoped.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -512,7 +512,7 @@
           "path": "/api/analytics/contacts/trends",
           "rawPath": "/api/analytics/contacts/trends",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 329,
+          "line": 352,
           "client": "api",
           "literalInterpolation": false
         }
@@ -524,8 +524,8 @@
       "owner": "analytics",
       "targetOperation": "contactTrends",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "characterizing",
-      "notes": "Strict typed period, organization scope, sparse UTC/session-timezone buckets, and integer counts.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind default-off VITE_CONTACT_TRENDS_GRAPHQL. Typed periods map to one captured read-only repeatable-read snapshot with inclusive-start/exclusive-end UTC buckets, tenant isolation, safe counts, REST parity, and invalid-enum rejection before SQL.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -546,7 +546,7 @@
           "path": "/api/analytics/conversion-rates",
           "rawPath": "/api/analytics/conversion-rates",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 367,
+          "line": 396,
           "client": "api",
           "literalInterpolation": false
         }
@@ -580,7 +580,7 @@
           "path": "/api/analytics/dashboard",
           "rawPath": "/api/analytics/dashboard",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 316,
+          "line": 336,
           "client": "api",
           "literalInterpolation": false
         }
@@ -590,7 +590,7 @@
           "method": "GET",
           "path": "/api/analytics/dashboard",
           "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-          "line": 231
+          "line": 288
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -621,7 +621,7 @@
           "path": "/api/analytics/deals/performance",
           "rawPath": "/api/analytics/deals/performance",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 343,
+          "line": 369,
           "client": "api",
           "literalInterpolation": false
         }
@@ -633,8 +633,8 @@
       "owner": "analytics",
       "targetOperation": "dealPerformance",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "characterizing",
-      "notes": "Closed-deal metrics use won/lost timestamps inside the selected rolling window and numeric, zero-safe outputs.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind default-off VITE_DEAL_PERFORMANCE_GRAPHQL. Closed-deal metrics use one captured inclusive-start/exclusive-end rolling window, safe numeric normalization, zero-safe rates, tenant isolation, and retained REST parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -655,7 +655,7 @@
           "path": "/api/analytics/pipeline-velocity",
           "rawPath": "/api/analytics/pipeline-velocity",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 395,
+          "line": 424,
           "client": "api",
           "literalInterpolation": false
         }
@@ -689,7 +689,7 @@
           "path": "/api/analytics/revenue-trends",
           "rawPath": "/api/analytics/revenue-trends",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 381,
+          "line": 410,
           "client": "api",
           "literalInterpolation": false
         }
@@ -723,7 +723,7 @@
           "path": "/api/analytics/workflow-performance",
           "rawPath": "/api/analytics/workflow-performance",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 420,
+          "line": 455,
           "client": "api",
           "literalInterpolation": false
         }
@@ -735,8 +735,8 @@
       "owner": "analytics",
       "targetOperation": "workflowPerformance",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-owned workflows with enrollment status totals and zero-safe completion rates.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind default-off VITE_WORKFLOW_PERFORMANCE_GRAPHQL. Organization-owned workflows count only enrollments whose contact belongs to the same organization; enrollment rows, not advisory stats JSON, drive deterministic totals and zero-safe completion rates.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

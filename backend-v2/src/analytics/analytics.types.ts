@@ -290,3 +290,252 @@ export class DashboardAnalytics {
   @Field(() => DashboardWorkspaceMetrics)
   workspaceMetrics: DashboardWorkspaceMetrics;
 }
+
+@ObjectType()
+export class ContactTrendBucket {
+  @Field(() => String)
+  period: string;
+
+  @Field(() => Float)
+  newContacts: number;
+
+  @Field(() => Float)
+  withSource: number;
+}
+
+@ObjectType()
+export class ContactTrendsAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => String)
+  reportingTimezone: string;
+
+  @Field(() => String)
+  period: string;
+
+  @Field(() => [ContactTrendBucket])
+  data: ContactTrendBucket[];
+}
+
+@ObjectType()
+export class DealPerformanceMetrics {
+  @Field(() => Float)
+  closedTotal: number;
+
+  @Field(() => Float)
+  wonCount: number;
+
+  @Field(() => Float)
+  lostCount: number;
+
+  @Field(() => Float)
+  winRate: number;
+
+  @Field(() => Float)
+  avgDealValue: number;
+
+  @Field(() => Float)
+  totalRevenue: number;
+
+  @Field(() => Float)
+  avgDaysToClose: number;
+}
+
+@ObjectType()
+export class DealPerformanceAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => String)
+  period: string;
+
+  @Field(() => DealPerformanceMetrics)
+  metrics: DealPerformanceMetrics;
+}
+
+@ObjectType()
+export class BookingAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => Float)
+  total: number;
+
+  @Field(() => Float)
+  confirmed: number;
+
+  @Field(() => Float)
+  completed: number;
+
+  @Field(() => Float)
+  cancelled: number;
+
+  @Field(() => Float)
+  noShow: number;
+
+  @Field(() => Float)
+  createdThisMonth: number;
+
+  @Field(() => Float)
+  upcoming: number;
+
+  @Field(() => Float)
+  completionRate: number;
+}
+
+@ObjectType()
+export class AnalyticsRates {
+  @Field(() => Float)
+  delivery: number;
+
+  @Field(() => Float, { nullable: true })
+  open?: number;
+
+  @Field(() => Float, { nullable: true })
+  click?: number;
+}
+
+@ObjectType()
+export class EmailAnalyticsMetrics {
+  @Field(() => Float)
+  total: number;
+
+  @Field(() => Float)
+  sent: number;
+
+  @Field(() => Float)
+  delivered: number;
+
+  @Field(() => Float)
+  opened: number;
+
+  @Field(() => Float)
+  clicked: number;
+
+  @Field(() => Float)
+  bounced: number;
+
+  @Field(() => Float)
+  failed: number;
+
+  @Field(() => AnalyticsRates)
+  rates: AnalyticsRates;
+}
+
+@ObjectType()
+export class SmsAnalyticsMetrics {
+  @Field(() => Float)
+  total: number;
+
+  @Field(() => Float)
+  outbound: number;
+
+  @Field(() => Float)
+  inbound: number;
+
+  @Field(() => Float)
+  sent: number;
+
+  @Field(() => Float)
+  delivered: number;
+
+  @Field(() => Float)
+  failed: number;
+
+  @Field(() => Float)
+  segments: number;
+
+  @Field(() => AnalyticsRates)
+  rates: AnalyticsRates;
+}
+
+@ObjectType()
+export class CommunicationStatsAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => String)
+  period: string;
+
+  @Field(() => EmailAnalyticsMetrics)
+  email: EmailAnalyticsMetrics;
+
+  @Field(() => SmsAnalyticsMetrics)
+  sms: SmsAnalyticsMetrics;
+}
+
+@ObjectType()
+export class WorkflowEnrollmentMetrics {
+  @Field(() => Float)
+  total: number;
+
+  @Field(() => Float)
+  completed: number;
+
+  @Field(() => Float)
+  active: number;
+
+  @Field(() => Float)
+  failed: number;
+}
+
+@ObjectType()
+export class WorkflowAnalyticsMetrics {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String)
+  triggerType: string;
+
+  @Field(() => Boolean)
+  isActive: boolean;
+
+  @Field(() => WorkflowEnrollmentMetrics)
+  enrollments: WorkflowEnrollmentMetrics;
+
+  @Field(() => Float)
+  completionRate: number;
+
+  @Field(() => GraphQLJSON)
+  stats: Record<string, unknown>;
+}
+
+@ObjectType()
+export class WorkflowAnalyticsSummary {
+  @Field(() => Float)
+  totalWorkflows: number;
+
+  @Field(() => Float)
+  activeWorkflows: number;
+
+  @Field(() => Float)
+  totalEnrollments: number;
+
+  @Field(() => Float)
+  completedEnrollments: number;
+
+  @Field(() => Float)
+  activeEnrollments: number;
+
+  @Field(() => Float)
+  failedEnrollments: number;
+
+  @Field(() => Float)
+  overallCompletionRate: number;
+}
+
+@ObjectType()
+export class WorkflowPerformanceAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => [WorkflowAnalyticsMetrics])
+  workflows: WorkflowAnalyticsMetrics[];
+
+  @Field(() => WorkflowAnalyticsSummary)
+  summary: WorkflowAnalyticsSummary;
+}

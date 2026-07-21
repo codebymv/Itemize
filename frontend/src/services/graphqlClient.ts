@@ -192,6 +192,21 @@ export const isWorkspaceWhiteboardGraphqlMutationsEnabled = (): boolean =>
 export const isDashboardAnalyticsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_DASHBOARD_ANALYTICS_GRAPHQL === 'true';
 
+export const isContactTrendsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_CONTACT_TRENDS_GRAPHQL === 'true';
+
+export const isDealPerformanceGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_DEAL_PERFORMANCE_GRAPHQL === 'true';
+
+export const isBookingAnalyticsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_BOOKING_ANALYTICS_GRAPHQL === 'true';
+
+export const isCommunicationStatsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_COMMUNICATION_STATS_GRAPHQL === 'true';
+
+export const isWorkflowPerformanceGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_WORKFLOW_PERFORMANCE_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

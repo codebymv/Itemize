@@ -1757,16 +1757,16 @@
       "notes": "Implemented behind default-off VITE_DASHBOARD_ANALYTICS_GRAPHQL. One read-only repeatable-read snapshot captures asOf, serializes aggregate reads, uses explicit UTC calendar boundaries, normalizes safe numeric scalars, isolates every source by organization, selects only the default/earliest pipeline, excludes terminal future bookings, and exposes booked/collected revenue separately while retaining deprecated mixed fields for frontend parity."
     },
     "GET /api/analytics/contacts/trends": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "contactTrends", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Strict typed period, organization scope, sparse UTC/session-timezone buckets, and integer counts."
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "contactTrends", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind default-off VITE_CONTACT_TRENDS_GRAPHQL. Typed periods map to one captured read-only repeatable-read snapshot with inclusive-start/exclusive-end UTC buckets, tenant isolation, safe counts, REST parity, and invalid-enum rejection before SQL."
     },
     "GET /api/analytics/deals/performance": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dealPerformance", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Closed-deal metrics use won/lost timestamps inside the selected rolling window and numeric, zero-safe outputs."
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dealPerformance", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind default-off VITE_DEAL_PERFORMANCE_GRAPHQL. Closed-deal metrics use one captured inclusive-start/exclusive-end rolling window, safe numeric normalization, zero-safe rates, tenant isolation, and retained REST parity."
     },
     "GET /api/analytics/bookings/summary": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "bookingAnalytics", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization-scoped booking status totals; upcoming includes only pending/confirmed future bookings."
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "bookingAnalytics", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind default-off VITE_BOOKING_ANALYTICS_GRAPHQL. One captured tenant snapshot returns safe status totals; upcoming includes only actionable pending/confirmed future bookings and completion excludes cancellation from its denominator."
     },
     "GET /api/analytics/conversion-rates": {
       "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "conversionRates", "parityStatus": "blocked", "risk": "high",
@@ -1781,12 +1781,12 @@
       "notes": "Tenant-scoped pipeline lookup and current deal ages are characterized; true time-in-stage is blocked until stage-transition history exists."
     },
     "GET /api/analytics/communication-stats": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "communicationStats", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Cumulative email/SMS lifecycle milestones, strict rolling periods, organization scope, and zero-safe rates."
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "communicationStats", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind default-off VITE_COMMUNICATION_STATS_GRAPHQL. Typed rolling periods share one captured boundary; email states are cumulative, while SMS sent/delivered/failed/segments and its delivery denominator are outbound-only. Queries are serialized and tenant-scoped."
     },
     "GET /api/analytics/workflow-performance": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "workflowPerformance", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization-owned workflows with enrollment status totals and zero-safe completion rates."
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "workflowPerformance", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind default-off VITE_WORKFLOW_PERFORMANCE_GRAPHQL. Organization-owned workflows count only enrollments whose contact belongs to the same organization; enrollment rows, not advisory stats JSON, drive deterministic totals and zero-safe completion rates."
     },
     "GET /api/segments": {
       "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "characterizing", "risk": "high",

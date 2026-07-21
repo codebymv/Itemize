@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphqlRequest } from './graphqlClient';
-import { getDashboardAnalyticsViaGraphql } from './analyticsGraphql';
+import {
+  getBookingAnalyticsViaGraphql,
+  getCommunicationStatsViaGraphql,
+  getContactTrendsViaGraphql,
+  getDashboardAnalyticsViaGraphql,
+  getDealPerformanceViaGraphql,
+  getWorkflowPerformanceViaGraphql,
+} from './analyticsGraphql';
 
 vi.mock('./graphqlClient', () => ({ graphqlRequest: vi.fn() }));
 
@@ -62,5 +69,33 @@ describe('dashboard analytics GraphQL adapter', () => {
       {},
       4,
     );
+  });
+
+  it('maps legacy period values to typed GraphQL enum variables', async () => {
+    vi.mocked(graphqlRequest)
+      .mockResolvedValueOnce({ contactTrends: { period: '7days', data: [] } })
+      .mockResolvedValueOnce({ dealPerformance: { period: '12months', metrics: {} } })
+      .mockResolvedValueOnce({ communicationStats: { period: '90days', email: {}, sms: {} } });
+
+    await getContactTrendsViaGraphql('7days', 4);
+    await getDealPerformanceViaGraphql('12months', 4);
+    await getCommunicationStatsViaGraphql('90days', 4);
+
+    expect(graphqlRequest).toHaveBeenNthCalledWith(1, expect.stringContaining('query ContactTrends'), { period: 'DAYS_7' }, 4);
+    expect(graphqlRequest).toHaveBeenNthCalledWith(2, expect.stringContaining('query DealPerformance'), { period: 'MONTHS_12' }, 4);
+    expect(graphqlRequest).toHaveBeenNthCalledWith(3, expect.stringContaining('query CommunicationStats'), { period: 'DAYS_90' }, 4);
+  });
+
+  it('returns booking and workflow payloads without lossy remapping', async () => {
+    const booking = { total: 2, completed: 1, completionRate: 100 };
+    const workflow = { workflows: [], summary: { totalWorkflows: 0 } };
+    vi.mocked(graphqlRequest)
+      .mockResolvedValueOnce({ bookingAnalytics: booking })
+      .mockResolvedValueOnce({ workflowPerformance: workflow });
+
+    await expect(getBookingAnalyticsViaGraphql(4)).resolves.toBe(booking);
+    await expect(getWorkflowPerformanceViaGraphql(4)).resolves.toBe(workflow);
+    expect(graphqlRequest).toHaveBeenNthCalledWith(1, expect.stringContaining('query BookingAnalytics'), {}, 4);
+    expect(graphqlRequest).toHaveBeenNthCalledWith(2, expect.stringContaining('query WorkflowPerformance'), {}, 4);
   });
 });

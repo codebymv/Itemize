@@ -55,4 +55,22 @@ describe('AnalyticsRepository', () => {
     expect(client.query).not.toHaveBeenCalledWith('COMMIT');
     expect(client.release).toHaveBeenCalledTimes(1);
   });
+
+  it('reuses the captured boundary and scopes SMS lifecycle metrics to outbound sends', async () => {
+    const repository = new AnalyticsRepository(pool);
+    await expect(repository.communicationStats(7, '30 days')).resolves.toEqual({
+      asOf,
+      data: { email: {}, sms: {} },
+    });
+
+    const statements = client.query.mock.calls.map((call) => String(call[0]));
+    const emailIndex = statements.findIndex((text) => text.includes('FROM email_logs'));
+    const smsIndex = statements.findIndex((text) => text.includes('FROM sms_logs'));
+    expect(emailIndex).toBeGreaterThan(1);
+    expect(smsIndex).toBeGreaterThan(emailIndex);
+    expect(client.query.mock.calls[emailIndex][1]).toEqual([7, asOf, '30 days']);
+    expect(client.query.mock.calls[smsIndex][1]).toEqual([7, asOf, '30 days']);
+    expect(statements[smsIndex]).toContain("SUM(segments) FILTER (WHERE direction = 'outbound')");
+    expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+  });
 });

@@ -9,7 +9,7 @@ import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Dashboard analytics GraphQL PostgreSQL contract', () => {
+describe('Analytics GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
   let legacyApp: Express;
   let pool: Pool;
@@ -131,6 +131,53 @@ describe('Dashboard analytics GraphQL PostgreSQL contract', () => {
        ) VALUES ($1, $2, CURRENT_DATE + 7, 20, 20, 20, 'sent', $3)`,
       [organizationId, `AN-${suffix}`, userId],
     );
+    await pool.query(
+      `INSERT INTO bookings (
+         organization_id, calendar_id, title, start_time, end_time, timezone, status
+       ) VALUES
+         ($1, $2, 'Completed', NOW() - INTERVAL '2 days', NOW() - INTERVAL '47 hours', 'UTC', 'completed'),
+         ($1, $2, 'No show', NOW() - INTERVAL '1 day', NOW() - INTERVAL '23 hours', 'UTC', 'no_show')`,
+      [organizationId, Number(calendar.rows[0].id)],
+    );
+    await pool.query(
+      `INSERT INTO email_logs (organization_id, contact_id, to_email, subject, status, queued_at)
+       VALUES
+         ($1, $2, $3, 'Clicked', 'clicked', NOW() - INTERVAL '1 hour'),
+         ($1, $2, $3, 'Delivered', 'delivered', NOW() - INTERVAL '1 hour'),
+         ($4, $5, $6, 'Foreign', 'clicked', NOW() - INTERVAL '1 hour')`,
+      [
+        organizationId, contactId, `analytics-own-${suffix}@test.itemize`,
+        otherOrganizationId, foreignContactId, `analytics-foreign-${suffix}@test.itemize`,
+      ],
+    );
+    await pool.query(
+      `INSERT INTO sms_logs (
+         organization_id, contact_id, to_phone, message, direction, status, segments, queued_at
+       ) VALUES
+         ($1, $2, '+15205550001', 'Delivered', 'outbound', 'delivered', 2, NOW() - INTERVAL '1 hour'),
+         ($1, $2, '+15205550001', 'Failed', 'outbound', 'failed', 1, NOW() - INTERVAL '1 hour'),
+         ($1, $2, '+15205550001', 'Inbound', 'inbound', 'received', 5, NOW() - INTERVAL '1 hour'),
+         ($3, $4, '+15205550002', 'Foreign', 'outbound', 'delivered', 9, NOW() - INTERVAL '1 hour')`,
+      [organizationId, contactId, otherOrganizationId, foreignContactId],
+    );
+    const workflows = await pool.query<{ id: number }>(
+      `INSERT INTO workflows (
+         organization_id, name, trigger_type, is_active, stats, created_by
+       ) VALUES
+         ($1, 'Primary workflow', 'contact_added', TRUE, '{"enrolled":999}'::jsonb, $3),
+         ($2, 'Foreign workflow', 'contact_added', TRUE, '{}'::jsonb, $3)
+       RETURNING id`,
+      [organizationId, otherOrganizationId, userId],
+    );
+    const [workflowId, foreignWorkflowId] = workflows.rows.map((row) => Number(row.id));
+    await pool.query(
+      `INSERT INTO workflow_enrollments (workflow_id, contact_id, status)
+       VALUES
+         ($1, $3, 'completed'),
+         ($1, $4, 'active'),
+         ($2, $4, 'failed')`,
+      [workflowId, foreignWorkflowId, contactId, foreignContactId],
+    );
 
     token = await jwt.signAsync(
       { id: userId },
@@ -200,6 +247,16 @@ describe('Dashboard analytics GraphQL PostgreSQL contract', () => {
       }`,
     });
 
+  const graphqlQuery = (
+    organization: number,
+    query: string,
+    variables: Record<string, unknown> = {},
+  ) => request(app.getHttpServer())
+    .post('/graphql')
+    .set('Cookie', `itemize_auth=${token}`)
+    .set('x-organization-id', String(organization))
+    .send({ query, variables });
+
   it('returns a typed, tenant-isolated snapshot with explicit revenue components', async () => {
     const response = await graphql(organizationId).expect(200);
     expect(response.body.errors).toBeUndefined();
@@ -219,7 +276,7 @@ describe('Dashboard analytics GraphQL PostgreSQL contract', () => {
       expect.objectContaining({ stageId: 'qualified', dealCount: 0, totalValue: 0 }),
       expect.objectContaining({ stageId: 'proposal', dealCount: 1, totalValue: 25 }),
     ]);
-    expect(result.bookings).toMatchObject({ total: 2, cancelled: 1, upcomingToday: 1 });
+    expect(result.bookings).toMatchObject({ total: 4, cancelled: 1, upcomingToday: 1 });
     expect(result.recentActivity).toEqual([
       expect.objectContaining({ title: 'Own activity', content: { action: 'created' } }),
     ]);
@@ -254,5 +311,107 @@ describe('Dashboard analytics GraphQL PostgreSQL contract', () => {
       .send({ query: 'query { dashboardAnalytics { asOf } }' })
       .expect(200);
     expect(unauthenticated.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('returns typed, tenant-isolated metrics for the five dedicated analytics reads', async () => {
+    const response = await graphqlQuery(
+      organizationId,
+      `query AnalyticsReads(
+        $contacts: ContactAnalyticsPeriod,
+        $deals: DealAnalyticsPeriod,
+        $communications: CommunicationAnalyticsPeriod
+      ) {
+        contactTrends(period: $contacts) {
+          asOf reportingTimezone period data { period newContacts withSource }
+        }
+        dealPerformance(period: $deals) {
+          asOf period metrics { closedTotal wonCount lostCount winRate avgDealValue totalRevenue avgDaysToClose }
+        }
+        bookingAnalytics {
+          asOf total confirmed completed cancelled noShow createdThisMonth upcoming completionRate
+        }
+        communicationStats(period: $communications) {
+          asOf period
+          email { total sent delivered opened clicked bounced failed rates { delivery open click } }
+          sms { total outbound inbound sent delivered failed segments rates { delivery } }
+        }
+        workflowPerformance {
+          asOf workflows {
+            id name triggerType isActive enrollments { total completed active failed } completionRate stats
+          }
+          summary {
+            totalWorkflows activeWorkflows totalEnrollments completedEnrollments
+            activeEnrollments failedEnrollments overallCompletionRate
+          }
+        }
+      }`,
+      { contacts: 'DAYS_30', deals: 'DAYS_30', communications: 'DAYS_30' },
+    ).expect(200);
+    expect(response.body.errors).toBeUndefined();
+    const result = response.body.data;
+    expect(result.contactTrends).toMatchObject({ period: '30days', reportingTimezone: 'UTC' });
+    expect(result.contactTrends.data.reduce(
+      (sum: number, bucket: { newContacts: number }) => sum + bucket.newContacts,
+      0,
+    )).toBe(1);
+    expect(result.dealPerformance).toMatchObject({
+      period: '30days',
+      metrics: { closedTotal: 1, wonCount: 1, lostCount: 0, winRate: 100, avgDealValue: 100, totalRevenue: 100 },
+    });
+    expect(result.bookingAnalytics).toMatchObject({
+      total: 4, confirmed: 1, completed: 1, cancelled: 1, noShow: 1,
+      upcoming: 1, completionRate: 50,
+    });
+    expect(result.communicationStats).toMatchObject({
+      period: '30days',
+      email: { total: 2, sent: 2, delivered: 2, opened: 1, clicked: 1, rates: { delivery: 100, open: 50, click: 100 } },
+      sms: { total: 3, outbound: 2, inbound: 1, sent: 1, delivered: 1, failed: 1, segments: 3, rates: { delivery: 50 } },
+    });
+    expect(result.workflowPerformance).toMatchObject({
+      workflows: [{
+        name: 'Primary workflow', enrollments: { total: 1, completed: 1, active: 0, failed: 0 },
+        completionRate: 100, stats: { enrolled: 999 },
+      }],
+      summary: {
+        totalWorkflows: 1, activeWorkflows: 1, totalEnrollments: 1,
+        completedEnrollments: 1, activeEnrollments: 0, failedEnrollments: 0,
+        overallCompletionRate: 100,
+      },
+    });
+  });
+
+  it('matches retained REST semantics where the source contract is unchanged', async () => {
+    const graphqlResponse = await graphqlQuery(
+      organizationId,
+      `query {
+        contactTrends(period: DAYS_30) { period data { period newContacts withSource } }
+        dealPerformance(period: DAYS_30) { period metrics { closedTotal wonCount lostCount winRate avgDealValue totalRevenue avgDaysToClose } }
+        bookingAnalytics { total confirmed completed cancelled noShow createdThisMonth upcoming completionRate }
+      }`,
+    ).expect(200);
+    expect(graphqlResponse.body.errors).toBeUndefined();
+    const pairs = [
+      ['contactTrends', '/api/analytics/contacts/trends?period=30days'],
+      ['dealPerformance', '/api/analytics/deals/performance?period=30days'],
+      ['bookingAnalytics', '/api/analytics/bookings/summary'],
+    ] as const;
+    for (const [field, path] of pairs) {
+      const legacy = await request(legacyApp)
+        .get(path)
+        .set('Cookie', `itemize_auth=${token}`)
+        .set('x-organization-id', String(organizationId))
+        .expect(200);
+      expect(graphqlResponse.body.data[field]).toEqual(legacy.body.data);
+    }
+  });
+
+  it('rejects unsupported enum values before executing analytics SQL', async () => {
+    const response = await graphqlQuery(
+      organizationId,
+      'query InvalidPeriod($period: ContactAnalyticsPeriod) { contactTrends(period: $period) { period } }',
+      { period: 'FOREVER' },
+    ).expect(400);
+    expect(response.body.data).toBeUndefined();
+    expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
   });
 });

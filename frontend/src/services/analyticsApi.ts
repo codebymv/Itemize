@@ -3,8 +3,22 @@
  * Handles all analytics and reporting API calls
  */
 import api from '@/lib/api';
-import { getDashboardAnalyticsViaGraphql } from './analyticsGraphql';
-import { isDashboardAnalyticsGraphqlEnabled } from './graphqlClient';
+import {
+    getBookingAnalyticsViaGraphql,
+    getCommunicationStatsViaGraphql,
+    getContactTrendsViaGraphql,
+    getDashboardAnalyticsViaGraphql,
+    getDealPerformanceViaGraphql,
+    getWorkflowPerformanceViaGraphql,
+} from './analyticsGraphql';
+import {
+    isBookingAnalyticsGraphqlEnabled,
+    isCommunicationStatsGraphqlEnabled,
+    isContactTrendsGraphqlEnabled,
+    isDashboardAnalyticsGraphqlEnabled,
+    isDealPerformanceGraphqlEnabled,
+    isWorkflowPerformanceGraphqlEnabled,
+} from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -137,6 +151,7 @@ export interface DashboardAnalytics {
 }
 
 export interface DealPerformance {
+    asOf?: string;
     period: string;
     metrics: {
         closedTotal: number;
@@ -150,6 +165,8 @@ export interface DealPerformance {
 }
 
 export interface ContactTrends {
+    asOf?: string;
+    reportingTimezone?: string;
     period: string;
     data: {
         period: string;
@@ -159,6 +176,7 @@ export interface ContactTrends {
 }
 
 export interface BookingSummary {
+    asOf?: string;
     total: number;
     confirmed: number;
     completed: number;
@@ -247,6 +265,7 @@ export interface PipelineVelocity {
 }
 
 export interface CommunicationStats {
+    asOf?: string;
     period: string;
     email: {
         total: number;
@@ -277,6 +296,7 @@ export interface CommunicationStats {
 }
 
 export interface WorkflowPerformance {
+    asOf?: string;
     workflows: Array<{
         id: number;
         name: string;
@@ -326,6 +346,9 @@ export const getContactTrends = async (
     period: '7days' | '30days' | '6months' | '12months' = '6months',
     organizationId?: number
 ): Promise<ContactTrends> => {
+    if (isContactTrendsGraphqlEnabled()) {
+        return getContactTrendsViaGraphql(period, organizationId);
+    }
     const response = await api.get('/api/analytics/contacts/trends', {
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -340,6 +363,9 @@ export const getDealPerformance = async (
     period: '30days' | '6months' | '12months' = '6months',
     organizationId?: number
 ): Promise<DealPerformance> => {
+    if (isDealPerformanceGraphqlEnabled()) {
+        return getDealPerformanceViaGraphql(period, organizationId);
+    }
     const response = await api.get('/api/analytics/deals/performance', {
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -351,6 +377,9 @@ export const getDealPerformance = async (
  * Get booking summary
  */
 export const getBookingSummary = async (organizationId?: number): Promise<BookingSummary> => {
+    if (isBookingAnalyticsGraphqlEnabled()) {
+        return getBookingAnalyticsViaGraphql(organizationId);
+    }
     const response = await api.get('/api/analytics/bookings/summary', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -406,6 +435,9 @@ export const getCommunicationStats = async (
     period: '7days' | '30days' | '90days' = '30days',
     organizationId?: number
 ): Promise<CommunicationStats> => {
+    if (isCommunicationStatsGraphqlEnabled()) {
+        return getCommunicationStatsViaGraphql(period, organizationId);
+    }
     const response = await api.get('/api/analytics/communication-stats', {
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -417,6 +449,9 @@ export const getCommunicationStats = async (
  * Get workflow performance metrics
  */
 export const getWorkflowPerformance = async (organizationId?: number): Promise<WorkflowPerformance> => {
+    if (isWorkflowPerformanceGraphqlEnabled()) {
+        return getWorkflowPerformanceViaGraphql(organizationId);
+    }
     const response = await api.get('/api/analytics/workflow-performance', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

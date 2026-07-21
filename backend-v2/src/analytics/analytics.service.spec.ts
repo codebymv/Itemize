@@ -1,5 +1,10 @@
 import { AnalyticsRepository, DashboardSnapshotRows } from './analytics.repository';
 import { AnalyticsService } from './analytics.service';
+import {
+  CommunicationAnalyticsPeriod,
+  ContactAnalyticsPeriod,
+  DealAnalyticsPeriod,
+} from './analytics.enums';
 
 const snapshot = (extra: Partial<DashboardSnapshotRows> = {}): DashboardSnapshotRows => ({
   asOf: new Date('2026-07-20T18:00:00.000Z'),
@@ -49,7 +54,14 @@ describe('AnalyticsService', () => {
   let service: AnalyticsService;
 
   beforeEach(() => {
-    repository = { dashboardSnapshot: jest.fn() } as unknown as jest.Mocked<AnalyticsRepository>;
+    repository = {
+      dashboardSnapshot: jest.fn(),
+      contactTrends: jest.fn(),
+      dealPerformance: jest.fn(),
+      bookingAnalytics: jest.fn(),
+      communicationStats: jest.fn(),
+      workflowPerformance: jest.fn(),
+    } as unknown as jest.Mocked<AnalyticsRepository>;
     service = new AnalyticsService(repository);
   });
 
@@ -94,5 +106,86 @@ describe('AnalyticsService', () => {
     await expect(service.dashboard(4)).rejects.toThrow(
       'Unsafe analytics count at contacts.total',
     );
+  });
+
+  it('maps the typed contact period and emits UTC bucket boundaries', async () => {
+    repository.contactTrends.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: [{ period: new Date('2026-07-20T00:00:00.000Z'), new_contacts: '3', with_source: '2' }],
+    });
+    await expect(service.contactTrends(4, ContactAnalyticsPeriod.DAYS_7)).resolves.toEqual({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      reportingTimezone: 'UTC',
+      period: '7days',
+      data: [{ period: '2026-07-20T00:00:00.000Z', newContacts: 3, withSource: 2 }],
+    });
+    expect(repository.contactTrends).toHaveBeenCalledWith(4, '7 days', 'day');
+  });
+
+  it('derives deal win rate and rounds average close duration', async () => {
+    repository.dealPerformance.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        closed_total: '3', won_count: '2', lost_count: '1', avg_deal_value: '125.50',
+        total_revenue: '251.00', avg_days_to_close: '4.6',
+      },
+    });
+    await expect(service.dealPerformance(4, DealAnalyticsPeriod.DAYS_30)).resolves.toMatchObject({
+      period: '30days',
+      metrics: { closedTotal: 3, wonCount: 2, lostCount: 1, winRate: 67, avgDealValue: 125.5, totalRevenue: 251, avgDaysToClose: 5 },
+    });
+    expect(repository.dealPerformance).toHaveBeenCalledWith(4, '30 days');
+  });
+
+  it('bases booking completion rate only on completed and no-show outcomes', async () => {
+    repository.bookingAnalytics.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        total: '10', confirmed: '2', completed: '3', cancelled: '4', no_show: '1',
+        created_this_month: '5', upcoming: '2',
+      },
+    });
+    await expect(service.bookingAnalytics(4)).resolves.toMatchObject({
+      total: 10, completed: 3, cancelled: 4, noShow: 1, completionRate: 75,
+    });
+  });
+
+  it('computes cumulative email rates and outbound-only SMS delivery', async () => {
+    repository.communicationStats.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        email: { total: '4', sent: '4', delivered: '3', opened: '2', clicked: '1', bounced: '1', failed: '0' },
+        sms: { total: '5', outbound: '4', inbound: '1', sent: '4', delivered: '3', failed: '1', total_segments: '7' },
+      },
+    });
+    await expect(
+      service.communicationStats(4, CommunicationAnalyticsPeriod.DAYS_90),
+    ).resolves.toMatchObject({
+      period: '90days',
+      email: { rates: { delivery: 75, open: 67, click: 50 } },
+      sms: { rates: { delivery: 75 }, segments: 7 },
+    });
+    expect(repository.communicationStats).toHaveBeenCalledWith(4, '90 days');
+  });
+
+  it('derives workflow summary from authoritative enrollment rows', async () => {
+    repository.workflowPerformance.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: [
+        { id: 2, name: 'Follow up', trigger_type: 'contact_created', is_active: true, total_enrollments: '3', completed: '2', active: '1', failed: '0', stats: { executions: 999 } },
+        { id: 3, name: 'Reminder', trigger_type: 'manual', is_active: false, total_enrollments: '1', completed: '0', active: '0', failed: '1', stats: null },
+      ],
+    });
+    await expect(service.workflowPerformance(4)).resolves.toMatchObject({
+      workflows: [
+        { id: 2, completionRate: 67, stats: { executions: 999 } },
+        { id: 3, completionRate: 0, stats: {} },
+      ],
+      summary: {
+        totalWorkflows: 2, activeWorkflows: 1, totalEnrollments: 4,
+        completedEnrollments: 2, activeEnrollments: 1, failedEnrollments: 1,
+        overallCompletionRate: 50,
+      },
+    });
   });
 });

@@ -56,6 +56,11 @@ const envSchema = z.object({
   VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DASHBOARD_ANALYTICS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_CONTACT_TRENDS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_DEAL_PERFORMANCE_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_BOOKING_ANALYTICS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_COMMUNICATION_STATS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_WORKFLOW_PERFORMANCE_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -131,6 +136,11 @@ if (import.meta.env.DEV) {
     workspaceWhiteboardReadsGraphql: env.VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL === 'true',
     workspaceWhiteboardMutationsGraphql: env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL === 'true',
     dashboardAnalyticsGraphql: env.VITE_DASHBOARD_ANALYTICS_GRAPHQL === 'true',
+    contactTrendsGraphql: env.VITE_CONTACT_TRENDS_GRAPHQL === 'true',
+    dealPerformanceGraphql: env.VITE_DEAL_PERFORMANCE_GRAPHQL === 'true',
+    bookingAnalyticsGraphql: env.VITE_BOOKING_ANALYTICS_GRAPHQL === 'true',
+    communicationStatsGraphql: env.VITE_COMMUNICATION_STATS_GRAPHQL === 'true',
+    workflowPerformanceGraphql: env.VITE_WORKFLOW_PERFORMANCE_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,

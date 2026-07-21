@@ -1,8 +1,8 @@
 # Analytics and dashboard GraphQL cutover contract
 
-**Status:** Dashboard snapshot implemented default-off; dedicated metric families remain characterized or blocked
+**Status:** Dashboard plus five dedicated metric queries implemented default-off; three business-definition queries remain blocked
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-21
 
 ## Decision
 
@@ -66,7 +66,7 @@ Persisted contact status is `active`, `inactive`, or `archived`, while the legac
 
 `pipelineVelocity` does not measure time in stage. No transition history is queried; `avgAgeDays` is the age of currently open deals from deal creation, grouped by their present stage. It must be renamed to `averageOpenDealAgeDays`, or a stage-transition event model must be introduced before exposing true stage velocity. The hard-coded bottleneck rule of more than 14 days and more than two deals is a UI heuristic, not a domain invariant, and should become a named configuration or remain client-side.
 
-Calendar buckets currently depend on the PostgreSQL session timezone and rolling `NOW()` boundaries. The GraphQL target needs an explicit reporting timezone (organization default with optional authorized override), documented inclusive-start/exclusive-end boundaries, DST tests, and stable local-date bucket keys. A bare `DATE_TRUNC` session default is not sufficient for cross-region deployment.
+The implemented dashboard and contact-trend buckets use explicit UTC and captured inclusive-start/exclusive-end boundaries rather than the PostgreSQL session timezone. Organization-configurable reporting timezone, stable local-date bucket keys, and DST fixtures remain production gates; the blocked revenue query must not reuse its legacy session-timezone `DATE_TRUNC` behavior.
 
 The dashboard invoice “pending” projection now means sent, viewed, or partial; signature “awaiting” means sent or in progress. These are presentation groups, not persisted statuses, and target enum names must make that distinction visible. Contact `active`, new-this-month/week rolling windows, paid-this-month calendar windows, and signed-this-week calendar windows must not be presented as though they share one boundary convention.
 
@@ -82,7 +82,13 @@ The target schema must avoid ambiguous or misleading names. In particular, do no
 
 The schema uses finite numeric scalars and rejects unsafe counts before serialization. Default/earliest-pipeline selection, configured zero-value stages, recent-row bounds, actionable future bookings, tenant-qualified activity joins, and every organization-owned base table match the characterized contract. `bookedValue`, `bookedThisMonth`, `collectedValue`, and `collectedThisMonth` expose the two revenue sources separately. The legacy mixed `wonValue` and `wonThisMonth`, plus the nonexistent contact `leads`/`customers` lifecycle projections, remain only as GraphQL-deprecated parity fields so the current React consumer can switch transports without silently inventing business meaning.
 
-The frontend adapter is independently controlled by default-off `VITE_DASHBOARD_ANALYTICS_GRAPHQL`; the other eight analytics calls remain on REST. PostgreSQL mounts both implementations and compares the retained fields, while focused tests cover transaction rollback, one-boundary reuse, numeric overflow, funnel zero stages, typed adapter mapping, and REST-default transport selection. No deployment configuration is enabled by this checkpoint.
+The frontend adapter is independently controlled by default-off `VITE_DASHBOARD_ANALYTICS_GRAPHQL`. Five additional independent default-off flags select `contactTrends`, `dealPerformance`, `bookingAnalytics`, `communicationStats`, and `workflowPerformance`; conversion, revenue trends, and pipeline velocity remain on REST. PostgreSQL mounts both implementations, compares the unchanged retained fields, and proves the deliberately stricter outbound-SMS and workflow-contact tenancy rules. Focused tests cover transaction rollback, one-boundary reuse, numeric overflow, funnel zero stages, typed enum mapping, independent transport selection, and REST-default rollback. No deployment configuration is enabled by this checkpoint.
+
+### Dedicated analytics implementation checkpoint
+
+Each implemented dedicated query captures database `asOf` inside its own read-only repeatable-read transaction and applies that value to every temporal predicate. Contact periods produce sparse UTC buckets; deal metrics use closed-state timestamps; booking completion uses completed plus no-show outcomes; communication reads are serialized and use cumulative email milestones with outbound-only SMS delivery semantics; workflow totals qualify both the workflow and enrolled contact to the authenticated organization and use enrollment rows rather than advisory `stats` JSON.
+
+The GraphQL schema accepts only family-specific enums and rejects an unsupported variable before resolver SQL. Counts and monetary/average values are normalized before serialization, zero denominators are explicit, and every query retains the current frontend response shape while adding `asOf` (and `reportingTimezone` for contact buckets). The independent flags are `VITE_CONTACT_TRENDS_GRAPHQL`, `VITE_DEAL_PERFORMANCE_GRAPHQL`, `VITE_BOOKING_ANALYTICS_GRAPHQL`, `VITE_COMMUNICATION_STATS_GRAPHQL`, and `VITE_WORKFLOW_PERFORMANCE_GRAPHQL`.
 
 ## Required parity scenarios
 
@@ -101,6 +107,6 @@ The frontend adapter is independently controlled by default-off `VITE_DASHBOARD_
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL coverage proves strict period rejection, positive pipeline-ID validation, requested contact windows, tenant isolation, same-bucket revenue merging, selected-pipeline funnel behavior, exclusion of terminal future bookings, numeric dashboard fields, cumulative communication milestones, foreign-pipeline non-enumeration, and zero-safe deal metrics. The NestJS dashboard comparison additionally proves a typed tenant-isolated snapshot, retained-field REST parity, explicit revenue components, default-organization selection, and unauthenticated denial against a database built from zero. Unit coverage proves the read-only repeatable-read transaction, one captured boundary, rollback/release after subquery failure, PostgreSQL numeric normalization, GraphQL-safe count rejection, and configured zero-value funnel stages.
+Fresh PostgreSQL coverage proves strict period rejection, positive pipeline-ID validation, requested contact windows, tenant isolation, same-bucket revenue merging, selected-pipeline funnel behavior, exclusion of terminal future bookings, numeric dashboard fields, cumulative communication milestones, outbound-only SMS metrics, cross-tenant workflow-contact exclusion, foreign-pipeline non-enumeration, and zero-safe deal and booking metrics. The NestJS comparisons additionally prove typed tenant-isolated snapshots, retained-field REST parity for unchanged contracts, explicit revenue components, default-organization selection, and unauthenticated denial against a database built from zero. Unit coverage proves read-only repeatable-read transactions, captured-boundary reuse, rollback/release after subquery failure, PostgreSQL numeric normalization, GraphQL-safe count rejection, configured zero-value funnel stages, typed period mapping, rate denominators, and enrollment-derived workflow summaries.
 
-The dashboard query remains default-off until comparison telemetry, query budgets/cancellation, an organization reporting-timezone decision, and migration of the React labels away from deprecated mixed/lifecycle fields are rehearsed. The dedicated revenue, conversion, and pipeline-velocity queries remain blocked on their business definitions; the other dedicated metric families still require resolver/service parity and boundary fixtures before traffic.
+All six implemented queries remain default-off until comparison telemetry, query budgets/cancellation, an organization reporting-timezone decision, and migration of the React dashboard labels away from deprecated mixed/lifecycle fields are rehearsed. Revenue trends, conversion rates, and pipeline velocity remain blocked on their documented business definitions; they are not safe candidates for mechanical resolver parity.
