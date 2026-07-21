@@ -51,6 +51,7 @@ describe('Environment Validation', () => {
     expect(env.VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL).toBe('false');
+    expect(env.VITE_DASHBOARD_ANALYTICS_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

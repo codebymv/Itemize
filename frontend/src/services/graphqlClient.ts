@@ -189,6 +189,9 @@ export const isWorkspaceWhiteboardGraphqlReadsEnabled = (): boolean =>
 export const isWorkspaceWhiteboardGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL === 'true';
 
+export const isDashboardAnalyticsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_DASHBOARD_ANALYTICS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

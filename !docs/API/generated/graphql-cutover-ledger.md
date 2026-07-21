@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 389
 - Operations with frontend consumers: 368
-- Operations referenced by backend tests: 203
+- Operations referenced by backend tests: 204
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -46,7 +46,7 @@
 | GET | `/api/analytics/communication-stats` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / communicationStats |
 | GET | `/api/analytics/contacts/trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / contactTrends |
 | GET | `/api/analytics/conversion-rates` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / conversionRates |
-| GET | `/api/analytics/dashboard` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / dashboardAnalytics |
+| GET | `/api/analytics/dashboard` | 1 | 1 | graphql-query | high | analytics / AnalyticsModule / dashboardAnalytics |
 | GET | `/api/analytics/deals/performance` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / dealPerformance |
 | GET | `/api/analytics/pipeline-velocity` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / pipelineVelocity |
 | GET | `/api/analytics/revenue-trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / revenueTrends |

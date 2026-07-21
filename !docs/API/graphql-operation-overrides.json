@@ -1753,8 +1753,8 @@
       "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit."
     },
     "GET /api/analytics/dashboard": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dashboardAnalytics", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization snapshot with normalized numeric scalars; funnel is the default/earliest pipeline only and terminal bookings are excluded from upcoming counts."
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dashboardAnalytics", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind default-off VITE_DASHBOARD_ANALYTICS_GRAPHQL. One read-only repeatable-read snapshot captures asOf, serializes aggregate reads, uses explicit UTC calendar boundaries, normalizes safe numeric scalars, isolates every source by organization, selects only the default/earliest pipeline, excludes terminal future bookings, and exposes booked/collected revenue separately while retaining deprecated mixed fields for frontend parity."
     },
     "GET /api/analytics/contacts/trends": {
       "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "contactTrends", "parityStatus": "characterizing", "risk": "high",

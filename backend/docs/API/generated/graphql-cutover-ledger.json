@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 389,
     "operationsWithFrontendConsumers": 368,
-    "operationsWithBackendTests": 203,
+    "operationsWithBackendTests": 204,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -444,7 +444,7 @@
           "path": "/api/analytics/bookings/summary",
           "rawPath": "/api/analytics/bookings/summary",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 343,
+          "line": 354,
           "client": "api",
           "literalInterpolation": false
         }
@@ -478,7 +478,7 @@
           "path": "/api/analytics/communication-stats",
           "rawPath": "/api/analytics/communication-stats",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 398,
+          "line": 409,
           "client": "api",
           "literalInterpolation": false
         }
@@ -512,7 +512,7 @@
           "path": "/api/analytics/contacts/trends",
           "rawPath": "/api/analytics/contacts/trends",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 318,
+          "line": 329,
           "client": "api",
           "literalInterpolation": false
         }
@@ -546,7 +546,7 @@
           "path": "/api/analytics/conversion-rates",
           "rawPath": "/api/analytics/conversion-rates",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 356,
+          "line": 367,
           "client": "api",
           "literalInterpolation": false
         }
@@ -580,20 +580,27 @@
           "path": "/api/analytics/dashboard",
           "rawPath": "/api/analytics/dashboard",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 305,
+          "line": 316,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/analytics/dashboard",
+          "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+          "line": 231
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
       "owner": "analytics",
       "targetOperation": "dashboardAnalytics",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization snapshot with normalized numeric scalars; funnel is the default/earliest pipeline only and terminal bookings are excluded from upcoming counts.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind default-off VITE_DASHBOARD_ANALYTICS_GRAPHQL. One read-only repeatable-read snapshot captures asOf, serializes aggregate reads, uses explicit UTC calendar boundaries, normalizes safe numeric scalars, isolates every source by organization, selects only the default/earliest pipeline, excludes terminal future bookings, and exposes booked/collected revenue separately while retaining deprecated mixed fields for frontend parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -614,7 +621,7 @@
           "path": "/api/analytics/deals/performance",
           "rawPath": "/api/analytics/deals/performance",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 332,
+          "line": 343,
           "client": "api",
           "literalInterpolation": false
         }
@@ -648,7 +655,7 @@
           "path": "/api/analytics/pipeline-velocity",
           "rawPath": "/api/analytics/pipeline-velocity",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 384,
+          "line": 395,
           "client": "api",
           "literalInterpolation": false
         }
@@ -682,7 +689,7 @@
           "path": "/api/analytics/revenue-trends",
           "rawPath": "/api/analytics/revenue-trends",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 370,
+          "line": 381,
           "client": "api",
           "literalInterpolation": false
         }
@@ -716,7 +723,7 @@
           "path": "/api/analytics/workflow-performance",
           "rawPath": "/api/analytics/workflow-performance",
           "source": "frontend/src/services/analyticsApi.ts",
-          "line": 409,
+          "line": 420,
           "client": "api",
           "literalInterpolation": false
         }

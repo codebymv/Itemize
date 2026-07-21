@@ -3,6 +3,8 @@
  * Handles all analytics and reporting API calls
  */
 import api from '@/lib/api';
+import { getDashboardAnalyticsViaGraphql } from './analyticsGraphql';
+import { isDashboardAnalyticsGraphqlEnabled } from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -44,12 +46,14 @@ export interface RecentActivity {
     id: number;
     type: string;
     title: string;
-    content: string;
+    content: unknown;
     createdAt: string;
     contactId: number | null;
 }
 
 export interface DashboardAnalytics {
+    asOf?: string;
+    reportingTimezone?: string;
     contacts: {
         total: number;
         active: number;
@@ -72,6 +76,10 @@ export interface DashboardAnalytics {
         openValue: number;
         wonValue: number;
         wonThisMonth: number;
+        bookedValue?: number;
+        bookedThisMonth?: number;
+        collectedValue?: number;
+        collectedThisMonth?: number;
         funnel: FunnelStage[];
     };
     bookings: {
@@ -302,6 +310,9 @@ export interface WorkflowPerformance {
  * Get dashboard analytics summary
  */
 export const getDashboardAnalytics = async (organizationId?: number): Promise<DashboardAnalytics> => {
+    if (isDashboardAnalyticsGraphqlEnabled()) {
+        return getDashboardAnalyticsViaGraphql(organizationId);
+    }
     const response = await api.get('/api/analytics/dashboard', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

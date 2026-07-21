@@ -1,6 +1,6 @@
 # Analytics and dashboard GraphQL cutover contract
 
-**Status:** Phase 0 characterization with blocked metric definitions
+**Status:** Dashboard snapshot implemented default-off; dedicated metric families remain characterized or blocked
 
 **Evidence date:** 2026-07-15
 
@@ -76,6 +76,14 @@ The dashboard invoice “pending” projection now means sent, viewed, or partia
 
 The target schema must avoid ambiguous or misleading names. In particular, do not preserve `wonValue` for a deal-plus-payment total, `avgDealValue` for mixed events, or `velocity` for deal age. New fields may coexist with deprecated parity fields during migration, but dashboards switch only after comparison telemetry shows accepted differences.
 
+### Dashboard implementation checkpoint
+
+`AnalyticsModule.dashboardAnalytics` now captures one database `asOf` and runs every aggregate read serially inside one read-only, repeatable-read transaction. Every temporal predicate receives that captured value instead of evaluating `NOW()` independently. Calendar month/week projections are explicitly UTC for this checkpoint and the result reports `reportingTimezone: "UTC"`; organization-configurable reporting timezone remains a production gate rather than an implicit session setting.
+
+The schema uses finite numeric scalars and rejects unsafe counts before serialization. Default/earliest-pipeline selection, configured zero-value stages, recent-row bounds, actionable future bookings, tenant-qualified activity joins, and every organization-owned base table match the characterized contract. `bookedValue`, `bookedThisMonth`, `collectedValue`, and `collectedThisMonth` expose the two revenue sources separately. The legacy mixed `wonValue` and `wonThisMonth`, plus the nonexistent contact `leads`/`customers` lifecycle projections, remain only as GraphQL-deprecated parity fields so the current React consumer can switch transports without silently inventing business meaning.
+
+The frontend adapter is independently controlled by default-off `VITE_DASHBOARD_ANALYTICS_GRAPHQL`; the other eight analytics calls remain on REST. PostgreSQL mounts both implementations and compares the retained fields, while focused tests cover transaction rollback, one-boundary reuse, numeric overflow, funnel zero stages, typed adapter mapping, and REST-default transport selection. No deployment configuration is enabled by this checkpoint.
+
 ## Required parity scenarios
 
 | Area | Required scenarios |
@@ -93,6 +101,6 @@ The target schema must avoid ambiguous or misleading names. In particular, do no
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL coverage proves strict period rejection, positive pipeline-ID validation, requested contact windows, tenant isolation, same-bucket revenue merging, selected-pipeline funnel behavior, exclusion of terminal future bookings, numeric dashboard fields, cumulative communication milestones, foreign-pipeline non-enumeration, and zero-safe deal metrics. A unit test proves multiple aggregate reads are serialized on one checked-out client in preparation for `pg` 9. The complete disposable run built 89 tables with 46 migration markers and passed 22 integration suites and 376 tests.
+Fresh PostgreSQL coverage proves strict period rejection, positive pipeline-ID validation, requested contact windows, tenant isolation, same-bucket revenue merging, selected-pipeline funnel behavior, exclusion of terminal future bookings, numeric dashboard fields, cumulative communication milestones, foreign-pipeline non-enumeration, and zero-safe deal metrics. The NestJS dashboard comparison additionally proves a typed tenant-isolated snapshot, retained-field REST parity, explicit revenue components, default-organization selection, and unauthenticated denial against a database built from zero. Unit coverage proves the read-only repeatable-read transaction, one captured boundary, rollback/release after subquery failure, PostgreSQL numeric normalization, GraphQL-safe count rejection, and configured zero-value funnel stages.
 
-This slice is not ready for traffic until revenue/currency/refund recognition, contact lifecycle, reporting timezone, and real pipeline-stage history are decided; GraphQL inputs and scalars encode those decisions; all metric families have exact boundary fixtures; resolver/service parity runs against PostgreSQL; the React widgets use the new names and operations; and production query budgets, cancellation, comparison telemetry, and rollback are rehearsed.
+The dashboard query remains default-off until comparison telemetry, query budgets/cancellation, an organization reporting-timezone decision, and migration of the React labels away from deprecated mixed/lifecycle fields are rehearsed. The dedicated revenue, conversion, and pipeline-velocity queries remain blocked on their business definitions; the other dedicated metric families still require resolver/service parity and boundary fixtures before traffic.
