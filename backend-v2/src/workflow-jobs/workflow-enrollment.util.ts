@@ -1,4 +1,5 @@
 import { isIP } from 'node:net';
+import ipaddr from 'ipaddr.js';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -140,28 +141,13 @@ const blockedHeaders = new Set([
 ]);
 
 const privateLiteral = (hostname: string): boolean => {
-  if (isIP(hostname) === 4) {
-    const [a, b, c] = hostname.split('.').map(Number);
-    return a === 10 || a === 127 || a === 0 || a >= 224 || (a === 169 && b === 254)
-      || (a === 172 && b >= 16 && b <= 31) || (a === 192 && [0, 2, 168].includes(b))
-      || (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100)))
-      || (a === 203 && b === 0 && c === 113);
-  }
-  if (isIP(hostname) === 6) {
-    const value = hostname.toLowerCase();
-    if (value.startsWith('::ffff:')) {
-      const parts = value.slice(7).split(':').map((part) => Number.parseInt(part || '0', 16));
-      if (parts.length === 2 && parts.every(Number.isFinite)) {
-        const mapped = `${parts[0] >> 8}.${parts[0] & 255}.${parts[1] >> 8}.${parts[1] & 255}`;
-        return privateLiteral(mapped);
-      }
-      return true;
-    }
-    const first = Number.parseInt(value.split(':')[0] || '0', 16);
-    return value === '::1' || value === '::' || first < 0x2000 || first > 0x3fff;
-  }
-  return false;
+  if (!isIP(hostname)) return false;
+  try { return ipaddr.process(hostname).range() !== 'unicast'; }
+  catch { return true; }
 };
+
+export const workflowWebhookAddressIsPublic = (address: string): boolean =>
+  isIP(address) !== 0 && !privateLiteral(address.toLowerCase().replace(/^\[|\]$/g, ''));
 
 export const workflowWebhookUrl = (value: unknown): string => {
   let url: URL;

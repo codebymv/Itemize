@@ -10,6 +10,14 @@ import { WorkflowTriggerJobsRepository } from '../../src/workflow-jobs/workflow-
 import { WorkflowTriggerJobsService } from '../../src/workflow-jobs/workflow-trigger-jobs.service';
 import { WorkflowEnrollmentJobsRepository } from '../../src/workflow-jobs/workflow-enrollment-jobs.repository';
 import { WorkflowEnrollmentJobsService } from '../../src/workflow-jobs/workflow-enrollment-jobs.service';
+import {
+  WorkflowDeliveryError,
+  WorkflowEmailProvider,
+  WorkflowSmsProvider,
+  WorkflowWebhookProvider,
+} from '../../src/workflow-jobs/workflow-side-effect.providers';
+import { WorkflowSideEffectJobsRepository } from '../../src/workflow-jobs/workflow-side-effect-jobs.repository';
+import { WorkflowSideEffectJobsService } from '../../src/workflow-jobs/workflow-side-effect-jobs.service';
 
 describe('Workflow definitions GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -24,6 +32,7 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
   let workflowJobRepository: WorkflowTriggerJobsRepository;
   let workflowEnrollmentJobs: WorkflowEnrollmentJobsService;
   let workflowEnrollmentRepository: WorkflowEnrollmentJobsRepository;
+  let workflowSideEffectRepository: WorkflowSideEffectJobsRepository;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -68,6 +77,7 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     workflowJobRepository = app.get(WorkflowTriggerJobsRepository);
     workflowEnrollmentJobs = app.get(WorkflowEnrollmentJobsService);
     workflowEnrollmentRepository = app.get(WorkflowEnrollmentJobsRepository);
+    workflowSideEffectRepository = app.get(WorkflowSideEffectJobsRepository);
 
   });
 
@@ -729,5 +739,116 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     const retained = await pool.query<{ stage_id: string; tags: string[] }>(`SELECT d.stage_id,c.tags
       FROM deals d JOIN contacts c ON c.id=d.contact_id WHERE d.id=$1`, [Number(deal.rows[0].id)]);
     expect(retained.rows[0]).toEqual({ stage_id: 'qualified', tags: [] });
+  });
+
+  it('delivers one email under competing workers and records one correlated provider log', async () => {
+    const outbox = await pool.query<{ id: number }>(`INSERT INTO workflow_side_effect_outbox
+      (idempotency_key,organization_id,enrollment_run_at,effect_type,payload,status,next_attempt_at)
+      VALUES ($1,$2,NOW(),'email',$3::jsonb,'queued',NOW()) RETURNING id`,
+    [`nest-email-race-${Date.now()}`, organizationId, JSON.stringify({
+      to: `delivery-${Date.now()}@test.itemize`, subject: 'Delivery race', bodyHtml: '<p>One</p>',
+    })]);
+    const outboxId = Number(outbox.rows[0].id);
+    const email: jest.Mocked<WorkflowEmailProvider> = { send: jest.fn().mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      return { providerId: 'provider-email-race' };
+    }) };
+    const sms: WorkflowSmsProvider = { send: jest.fn() };
+    const webhook: WorkflowWebhookProvider = { send: jest.fn() };
+    const worker = new WorkflowSideEffectJobsService(workflowSideEffectRepository, email, sms, webhook);
+    const runs = await Promise.all([worker.run({ outboxId }), worker.run({ outboxId })]);
+    expect(runs.reduce((total, run) => total + run.claimed, 0)).toBe(1);
+    expect(runs.reduce((total, run) => total + run.sent, 0)).toBe(1);
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const [retained, logs] = await Promise.all([
+      pool.query<{ status: string; attempt_count: number; provider_id: string }>(
+        'SELECT status,attempt_count,provider_id FROM workflow_side_effect_outbox WHERE id=$1', [outboxId]),
+      pool.query<{ workflow_side_effect_id: number; external_id: string }>(
+        'SELECT workflow_side_effect_id::int,external_id FROM email_logs WHERE workflow_side_effect_id=$1', [outboxId]),
+    ]);
+    expect(retained.rows[0]).toMatchObject({ status: 'sent', attempt_count: 1, provider_id: 'provider-email-race' });
+    expect(logs.rows).toEqual([{ workflow_side_effect_id: outboxId, external_id: 'provider-email-race' }]);
+  });
+
+  it('retries a redacted immutable email snapshot with the same provider key', async () => {
+    const key = `nest-email-retry-${Date.now()}`;
+    const outbox = await pool.query<{ id: number }>(`INSERT INTO workflow_side_effect_outbox
+      (idempotency_key,organization_id,enrollment_run_at,effect_type,payload,status,next_attempt_at)
+      VALUES ($1,$2,NOW(),'email',$3::jsonb,'queued',NOW()) RETURNING id`,
+    [key, organizationId, JSON.stringify({
+      to: 'retry-person@example.test', subject: 'Retry', bodyHtml: '<p>Stable</p>',
+    })]);
+    const outboxId = Number(outbox.rows[0].id);
+    const email: jest.Mocked<WorkflowEmailProvider> = { send: jest.fn()
+      .mockRejectedValueOnce(new WorkflowDeliveryError(
+        'retry-person@example.test +16025550101 Bearer abc.def sk_live_secret https://private.example/path',
+      )).mockResolvedValueOnce({ providerId: 'provider-retry-success' }) };
+    const worker = new WorkflowSideEffectJobsService(workflowSideEffectRepository, email,
+      { send: jest.fn() }, { send: jest.fn() });
+    await expect(worker.run({ outboxId, baseDelayMs: 1, maximumDelayMs: 1 }))
+      .resolves.toMatchObject({ claimed: 1, retry: 1 });
+    const retry = await pool.query<{ status: string; attempt_count: number; last_error: string }>(
+      'SELECT status,attempt_count,last_error FROM workflow_side_effect_outbox WHERE id=$1', [outboxId]);
+    expect(retry.rows[0]).toMatchObject({
+      status: 'retry', attempt_count: 1,
+      last_error: '[redacted-email] [redacted-phone] [redacted-authorization] [redacted-secret] [redacted-url]',
+    });
+    await pool.query(`UPDATE workflow_side_effect_outbox SET next_attempt_at=NOW()-INTERVAL '1 second' WHERE id=$1`, [outboxId]);
+    await expect(worker.run({ outboxId })).resolves.toMatchObject({ claimed: 1, sent: 1 });
+    expect(email.send.mock.calls.map(([message]) => message.idempotencyKey)).toEqual([key, key]);
+    const sent = await pool.query<{ status: string; attempt_count: number; last_error: string | null }>(
+      'SELECT status,attempt_count,last_error FROM workflow_side_effect_outbox WHERE id=$1', [outboxId]);
+    expect(sent.rows[0]).toEqual({ status: 'sent', attempt_count: 2, last_error: null });
+  });
+
+  it('quarantines ambiguous and expired SMS work and makes cancellation win a failed delivery', async () => {
+    const ambiguous = await pool.query<{ id: number }>(`INSERT INTO workflow_side_effect_outbox
+      (idempotency_key,organization_id,enrollment_run_at,effect_type,payload,status,next_attempt_at)
+      VALUES ($1,$2,NOW(),'sms',$3::jsonb,'queued',NOW()) RETURNING id`,
+    [`nest-sms-ambiguous-${Date.now()}`, organizationId,
+      JSON.stringify({ to: '+16025550101', from: '+16025550100', message: 'Ambiguous' })]);
+    const sms: jest.Mocked<WorkflowSmsProvider> = { send: jest.fn().mockRejectedValue(
+      new WorkflowDeliveryError('socket closed after write', false, true),
+    ) };
+    const worker = new WorkflowSideEffectJobsService(workflowSideEffectRepository,
+      { send: jest.fn() }, sms, { send: jest.fn() });
+    await expect(worker.run({ outboxId: Number(ambiguous.rows[0].id) })).resolves.toMatchObject({
+      claimed: 1, reconciliationRequired: 1,
+    });
+    expect(sms.send).toHaveBeenCalledTimes(1);
+
+    const expired = await pool.query<{ id: number }>(`INSERT INTO workflow_side_effect_outbox
+      (idempotency_key,organization_id,enrollment_run_at,effect_type,payload,status,attempt_count,next_attempt_at,lease_expires_at)
+      VALUES ($1,$2,NOW(),'sms',$3::jsonb,'processing',1,NOW(),NOW()-INTERVAL '1 second') RETURNING id`,
+    [`nest-sms-expired-${Date.now()}`, organizationId,
+      JSON.stringify({ to: '+16025550101', from: '+16025550100', message: 'Expired' })]);
+    sms.send.mockClear();
+    await expect(worker.run({ outboxId: Number(expired.rows[0].id) })).resolves.toMatchObject({
+      claimed: 0, reconciliationRequired: 1,
+    });
+    expect(sms.send).not.toHaveBeenCalled();
+
+    const cancelled = await pool.query<{ id: number }>(`INSERT INTO workflow_side_effect_outbox
+      (idempotency_key,organization_id,enrollment_run_at,effect_type,payload,status,next_attempt_at)
+      VALUES ($1,$2,NOW(),'email',$3::jsonb,'queued',NOW()) RETURNING id`,
+    [`nest-cancel-race-${Date.now()}`, organizationId,
+      JSON.stringify({ to: 'cancel@example.test', subject: 'Cancel', bodyHtml: '<p>Cancel</p>' })]);
+    const cancelledId = Number(cancelled.rows[0].id);
+    const cancellingEmail: WorkflowEmailProvider = { send: async () => {
+      await pool.query(`UPDATE workflow_side_effect_outbox SET cancelled_at=NOW(),cancellation_reason='test_cancel'
+        WHERE id=$1`, [cancelledId]);
+      throw new WorkflowDeliveryError('known rejection');
+    } };
+    const cancellationWorker = new WorkflowSideEffectJobsService(workflowSideEffectRepository,
+      cancellingEmail, { send: jest.fn() }, { send: jest.fn() });
+    await expect(cancellationWorker.run({ outboxId: cancelledId })).resolves.toMatchObject({
+      claimed: 1, cancelled: 1,
+    });
+    const states = await pool.query<{ id: number; status: string }>(
+      'SELECT id,status FROM workflow_side_effect_outbox WHERE id=ANY($1::int[]) ORDER BY id',
+      [[Number(ambiguous.rows[0].id), Number(expired.rows[0].id), cancelledId]]);
+    expect(states.rows.map((row) => row.status)).toEqual([
+      'reconciliation_required', 'reconciliation_required', 'cancelled',
+    ]);
   });
 });

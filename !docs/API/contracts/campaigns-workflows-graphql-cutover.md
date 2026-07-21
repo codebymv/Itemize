@@ -1,6 +1,6 @@
 # Campaigns and workflows GraphQL cutover contract
 
-**Status:** Campaign management plus workflow definitions and enrollment lifecycle implemented
+**Status:** Campaign management plus complete functional workflow execution implemented; runtime cutover remains
 
 **Evidence date:** 2026-07-21
 
@@ -244,10 +244,9 @@ Fresh PostgreSQL coverage proves exact enrollment/outbox summary counts, due wor
 
 Focused tests also protect campaign send locking, pause-safe completion, campaign pagination-envelope mapping, workflow webhook signature expiry/replay, clean-schema webhook claims, engine claim collision, provider failure semantics, one-attempt Twilio message creation, tenant-scoped step mutations, safe webhook envelopes, DNS-pinned public-only webhook egress, redirect/proxy denial, bounded response handling, and invalid waits/conditions. Fresh PostgreSQL coverage proves ordered execution/logs, wait scheduling, forward branching, one provider call when two workers race an enrollment, selective lifecycle transitions, the accepted-in-flight cancellation boundary, immediate and expired-lease SMS ambiguity quarantine, accepted-SID and explicit-resend reconciliation, tenant-isolated execution metrics, strict operator filtering, and payload-free queue projections.
 
-`WorkflowJobsModule` now implements bounded one-shot schedule dispatch, trigger fan-out, and enrollment execution. The phases use database claims with `FOR UPDATE SKIP LOCKED`; trigger and enrollment attempts have expiring leases and monotonic attempt fencing. Enrollment steps commit their database mutation or immutable provider-intent snapshot with safe logs and progress, and provider-facing steps perform no network I/O. Targeted workflow/trigger/enrollment IDs support controlled canaries. Fresh PostgreSQL races prove one schedule event, one trigger consumer, and one enrollment worker under contention; ordered database actions, forward branching, absolute waits, provider snapshots, expired-lease recovery, and rejection of stale attempts are covered. No deployment scheduler invokes the new commands yet.
+`WorkflowJobsModule` now implements bounded one-shot schedule dispatch, trigger fan-out, enrollment execution, and provider delivery. The phases use database claims with `FOR UPDATE SKIP LOCKED`; trigger, enrollment, and delivery attempts have expiring leases and attempt fencing. Enrollment steps commit their database mutation or immutable provider-intent snapshot with safe logs and progress, and provider-facing steps perform no network I/O. The delivery runner applies stable Resend/webhook keys, Twilio ambiguity quarantine, controlled webhook egress, bounded retry/dead-letter policy, cancellation precedence, and transactional provider-log correlation. Targeted workflow/trigger/enrollment/outbox IDs support controlled canaries. Fresh PostgreSQL races prove one schedule event, one trigger consumer, one enrollment worker, and one provider delivery under contention; ordered database actions, forward branching, absolute waits, provider snapshots, redacted retries, expired-lease recovery, SMS quarantine, cancellation races, and rejection of stale attempts are covered. No deployment scheduler invokes the new commands yet.
 
 The automation surface is not fully cut over until:
 
-- the durable provider worker has NestJS ownership while every automation step retains execution and provider-failure coverage;
 - critical workflow builder and enrollment React journeys pass against their GraphQL operations;
 - after the functional slices are complete, staging canary flags, sandbox provider credentials, alerts, drain behavior, and rollback rehearsal are configured and verified.

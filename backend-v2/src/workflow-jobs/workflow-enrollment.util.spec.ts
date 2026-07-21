@@ -5,6 +5,7 @@ import {
   workflowConditionResult,
   workflowTemplateData,
   workflowWaitUntil,
+  workflowWebhookAddressIsPublic,
   workflowWebhookHeaders,
   workflowWebhookUrl,
   wrapWorkflowEmail,
@@ -60,6 +61,9 @@ describe('workflow enrollment utilities', () => {
       expect(() => workflowWebhookUrl('http://127.0.0.1/internal')).toThrow();
       expect(() => workflowWebhookUrl('https://[::ffff:127.0.0.1]/internal')).toThrow();
       expect(() => workflowWebhookUrl('https://user:pass@example.com/hook')).toThrow();
+      expect(workflowWebhookAddressIsPublic('2001:4860:4860::8888')).toBe(true);
+      expect(workflowWebhookAddressIsPublic('2001:db8::1')).toBe(false);
+      expect(workflowWebhookAddressIsPublic('198.51.100.1')).toBe(false);
       expect(workflowWebhookHeaders({ Authorization: 'Bearer tenant', 'Content-Type': 'text/plain',
         'Idempotency-Key': 'spoofed', 'X-Itemize-Delivery': 'spoofed' }))
         .toEqual({ Authorization: 'Bearer tenant' });
