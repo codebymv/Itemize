@@ -482,7 +482,7 @@
 
 | Method | Requested path | Source |
 | --- | --- | --- |
-| GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:114` |
+| GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:123` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |

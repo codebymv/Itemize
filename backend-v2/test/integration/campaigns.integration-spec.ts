@@ -6,6 +6,10 @@ import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
+import {
+  CAMPAIGN_TEST_EMAIL_PROVIDER,
+  CampaignTestEmailProvider,
+} from '../../src/campaign-delivery/campaign-test-email.provider';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
@@ -20,6 +24,9 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
   let memberToken: string;
   let outsiderToken: string;
   const jwt = new JwtService();
+  const testEmailProvider: jest.Mocked<CampaignTestEmailProvider> = {
+    send: jest.fn(),
+  };
 
   beforeAll(async () => {
     const connectionString = process.env.TEST_DATABASE_URL;
@@ -65,6 +72,8 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue(pool)
+      .overrideProvider(CAMPAIGN_TEST_EMAIL_PROVIDER)
+      .useValue(testEmailProvider)
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
     configureApp(app);
@@ -451,6 +460,97 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     });
     await pool.query('DELETE FROM email_campaigns WHERE id=ANY($1::int[])', [[id, foreignCampaignId]]);
     await pool.query('DELETE FROM contacts WHERE id=ANY($1::int[])', [[contactA, contactB, foreignContact]]);
+  });
+
+  it('sends durable idempotent campaign tests without mutating campaign delivery state', async () => {
+    const suffix = `${Date.now()}-${process.pid}`;
+    const template = await pool.query<{ id: number }>(
+      `INSERT INTO email_templates (
+         organization_id, name, subject, body_html, body_text, created_by
+       ) VALUES ($1,$2,'Template subject','<p>Hello {{ first_name }} at {{company}} ({{email}})</p>',
+                 'Hello {{last_name}}', $3) RETURNING id`,
+      [organizationId, `Campaign test template ${suffix}`, memberId],
+    );
+    const campaigns = await pool.query<{ id: number }>(
+      `INSERT INTO email_campaigns (
+         organization_id, name, subject, from_name, from_email, reply_to,
+         template_id, status, created_by
+       ) VALUES
+         ($1,$3,'Test launch','Campaign Sender','sender@test.itemize','reply@test.itemize',$5,'draft',$6),
+         ($2,$4,'Foreign launch',NULL,NULL,NULL,NULL,'draft',$7)
+       RETURNING id`,
+      [organizationId, outsiderOrganizationId, `Campaign test ${suffix}`,
+        `Foreign campaign test ${suffix}`, Number(template.rows[0].id), memberId, outsiderId],
+    );
+    const campaignId = Number(campaigns.rows[0].id);
+    const foreignCampaignId = Number(campaigns.rows[1].id);
+    testEmailProvider.send.mockReset();
+    testEmailProvider.send.mockResolvedValue({ kind: 'sent', providerId: 'provider-test-1' });
+    const document = `mutation SendTest(
+      $campaignId: Int!, $testEmail: String!, $idempotencyKey: String!
+    ) {
+      sendCampaignTest(
+        campaignId: $campaignId, testEmail: $testEmail, idempotencyKey: $idempotencyKey
+      ) { success replayed deliveryId status emailId message }
+    }`;
+    const variables = {
+      campaignId, testEmail: `recipient-${suffix}@test.itemize`, idempotencyKey: `test-${suffix}`,
+    };
+    const sent = await graphql(memberToken, organizationId, document, variables).expect(200);
+    expect(sent.body.errors).toBeUndefined();
+    expect(sent.body.data.sendCampaignTest).toMatchObject({
+      success: true, replayed: false, status: 'SENT', emailId: 'provider-test-1',
+    });
+    expect(testEmailProvider.send).toHaveBeenCalledTimes(1);
+    expect(testEmailProvider.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: variables.testEmail,
+      subject: '[TEST] Test launch',
+      html: `<p>Hello Test at Test Company (${variables.testEmail})</p>`,
+      text: 'Hello User',
+      fromName: 'Campaign Sender',
+      idempotencyKey: expect.stringMatching(/^campaign-test-email:/),
+    }));
+    const persisted = await pool.query(
+      `SELECT status, provider_id, recipient_email, payload
+       FROM campaign_test_email_deliveries WHERE campaign_id=$1`,
+      [campaignId],
+    );
+    expect(persisted.rows).toHaveLength(1);
+    expect(persisted.rows[0]).toMatchObject({
+      status: 'sent', provider_id: 'provider-test-1', recipient_email: variables.testEmail,
+    });
+    const untouched = await pool.query(
+      `SELECT status, total_recipients, total_sent, started_at, completed_at,
+              (SELECT COUNT(*)::int FROM campaign_recipients WHERE campaign_id=$1) recipient_count
+       FROM email_campaigns WHERE id=$1`,
+      [campaignId],
+    );
+    expect(untouched.rows[0]).toMatchObject({
+      status: 'draft', total_recipients: 0, total_sent: 0,
+      started_at: null, completed_at: null, recipient_count: 0,
+    });
+
+    const replayed = await graphql(memberToken, organizationId, document, variables).expect(200);
+    expect(replayed.body.data.sendCampaignTest).toMatchObject({
+      success: true, replayed: true, deliveryId: sent.body.data.sendCampaignTest.deliveryId,
+    });
+    expect(testEmailProvider.send).toHaveBeenCalledTimes(1);
+    const conflict = await graphql(memberToken, organizationId, document, {
+      ...variables, testEmail: `other-${suffix}@test.itemize`,
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+    const hidden = await graphql(memberToken, organizationId, document, {
+      ...variables, campaignId: foreignCampaignId, idempotencyKey: `foreign-${suffix}`,
+    }).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const noCsrf = await graphql(memberToken, organizationId, document, {
+      ...variables, idempotencyKey: `csrf-${suffix}`,
+    }, false).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    await pool.query('DELETE FROM email_campaigns WHERE id=ANY($1::int[])', [[campaignId, foreignCampaignId]]);
+    await pool.query('DELETE FROM email_templates WHERE id=$1', [Number(template.rows[0].id)]);
   });
 
   it('previews deliverable audiences with REST parity and fail-closed saved segments', async () => {

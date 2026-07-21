@@ -8,6 +8,7 @@ import {
   getCampaignsViaGraphql,
   getCampaignRecipientsViaGraphql,
   previewCampaignViaGraphql,
+  sendCampaignTestViaGraphql,
   scheduleCampaignViaGraphql,
   unscheduleCampaignViaGraphql,
   updateCampaignViaGraphql,
@@ -17,6 +18,7 @@ import {
   isCampaignRecipientReadsGraphqlEnabled,
   isCampaignGraphqlMutationsEnabled,
   isCampaignGraphqlReadsEnabled,
+  isCampaignTestSendGraphqlEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -47,6 +49,7 @@ const response = (payload: unknown): Response => ({
 
 describe('campaign GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('campaign-csrf');
@@ -62,15 +65,37 @@ describe('campaign GraphQL consumer', () => {
     vi.stubEnv('VITE_CAMPAIGN_MUTATIONS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
+    vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
     expect(isCampaignGraphqlReadsEnabled()).toBe(false);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
+    expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
     expect(isCampaignGraphqlReadsEnabled()).toBe(true);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
+    expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
+  });
+
+  it('maps durable test delivery through a CSRF-protected independent mutation', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { sendCampaignTest: {
+      success: true, replayed: false, deliveryId: 19, status: 'SENT',
+      emailId: 'provider-19', message: 'Test email sent to recipient@test.itemize',
+    } } }));
+    await expect(sendCampaignTestViaGraphql(
+      9, 'recipient@test.itemize', 4, 'test-request-19',
+    )).resolves.toEqual({
+      success: true,
+      message: 'Test email sent to recipient@test.itemize',
+      emailId: 'provider-19',
+    });
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.variables).toEqual({
+      campaignId: 9, testEmail: 'recipient@test.itemize', idempotencyKey: 'test-request-19',
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
   });
 
   it('maps recipient snapshots, status, and shared paging without CSRF', async () => {

@@ -771,9 +771,9 @@
       "owner": "growth",
       "targetModule": "CampaignDeliveryModule",
       "targetOperation": "sendCampaignTest",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Organization-scope the campaign, validate the destination, mark the subject as test, and expose provider failure without mutating campaign delivery state."
+      "notes": "The CSRF-protected mutation locks and conceals the organization-owned campaign, validates the destination and bounded idempotency key, snapshots rendered test content with a prefixed subject, and commits a tenant-enforced durable intent before provider I/O. Leased attempts use a stable Resend idempotency key; definite failures retry, ambiguous outcomes require reconciliation, conflicting key reuse fails, and exact replay returns stored evidence. Fresh PostgreSQL proves provider-confirmed delivery, replay, tenant isolation, CSRF, snapshot substitution, and zero campaign/recipient state mutation behind an independent default-off frontend flag."
     },
     "POST /api/campaigns/:id/unschedule": {
       "disposition": "graphql-mutation",

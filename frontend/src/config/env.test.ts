@@ -65,6 +65,7 @@ describe('Environment Validation', () => {
     expect(env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_CAMPAIGN_TEST_SEND_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

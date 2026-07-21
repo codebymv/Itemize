@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { createCampaign, getCampaignRecipients, getCampaigns, previewCampaign } from './campaignsApi';
+import {
+    createCampaign,
+    getCampaignRecipients,
+    getCampaigns,
+    previewCampaign,
+    sendTestEmail,
+} from './campaignsApi';
 
 vi.mock('@/lib/api', () => ({
     default: {
@@ -14,6 +20,7 @@ describe('campaigns API', () => {
         vi.clearAllMocks();
         vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
         vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
+        vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
     });
 
     it('maps the shared REST pagination envelope to the campaign consumer contract', async () => {
@@ -78,5 +85,19 @@ describe('campaigns API', () => {
             params: { status: 'opened', page: 2, limit: 25 },
             headers: { 'x-organization-id': '7' },
         });
+    });
+
+    it('keeps campaign test delivery on REST by default', async () => {
+        vi.mocked(api.post).mockResolvedValue({
+            data: { success: true, data: {
+                success: true, message: 'Test email sent', emailId: 'legacy-1',
+            } },
+        });
+        await expect(sendTestEmail(43, 'recipient@test.itemize', 7)).resolves.toMatchObject({
+            success: true, emailId: 'legacy-1',
+        });
+        expect(api.post).toHaveBeenCalledWith('/api/campaigns/43/send-test', {
+            test_email: 'recipient@test.itemize',
+        }, { headers: { 'x-organization-id': '7' } });
     });
 });

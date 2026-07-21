@@ -244,6 +244,42 @@ export const getCampaignRecipientsViaGraphql = async (
   };
 };
 
+export const sendCampaignTestViaGraphql = async (
+  campaignId: number,
+  testEmail: string,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<{ success: boolean; message: string; emailId?: string }> => {
+  const data = await graphqlMutationRequest<{
+    sendCampaignTest: {
+      success: boolean; message: string; emailId: string | null; status: string;
+    };
+  }, { campaignId: number; testEmail: string; idempotencyKey: string }>(
+    `mutation SendCampaignTest(
+      $campaignId: Int!, $testEmail: String!, $idempotencyKey: String!
+    ) {
+      sendCampaignTest(
+        campaignId: $campaignId, testEmail: $testEmail, idempotencyKey: $idempotencyKey
+      ) { success replayed deliveryId status emailId message }
+    }`,
+    {
+      campaignId,
+      testEmail,
+      idempotencyKey: idempotencyKey ?? globalThis.crypto?.randomUUID?.() ??
+        `campaign-test-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    },
+    organizationId,
+  );
+  if (!data.sendCampaignTest.success) {
+    throw new Error(`Campaign test email delivery is ${data.sendCampaignTest.status}`);
+  }
+  return {
+    success: true,
+    message: data.sendCampaignTest.message,
+    ...(data.sendCampaignTest.emailId ? { emailId: data.sendCampaignTest.emailId } : {}),
+  };
+};
+
 export const createCampaignViaGraphql = async (
   input: Partial<EmailCampaign>,
   organizationId?: number,
