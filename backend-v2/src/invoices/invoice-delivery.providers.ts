@@ -178,6 +178,13 @@ export interface InvoicePdfRenderer {
   render(snapshot: InvoicePdfSnapshot): Promise<Buffer>;
 }
 
+export class InvoicePdfUnavailableError extends Error {
+  constructor() {
+    super('Invoice PDF renderer is unavailable');
+    this.name = 'InvoicePdfUnavailableError';
+  }
+}
+
 @Injectable()
 export class LegacyInvoicePdfRenderer implements InvoicePdfRenderer {
   async render(snapshot: InvoicePdfSnapshot): Promise<Buffer> {
@@ -187,13 +194,13 @@ export class LegacyInvoicePdfRenderer implements InvoicePdfRenderer {
       resolve(__dirname, '../../../backend/src/services/pdf.service.js'),
     ];
     const servicePath = candidates.find(existsSync);
-    if (!servicePath) throw new Error('Invoice PDF renderer is unavailable');
+    if (!servicePath) throw new InvoicePdfUnavailableError();
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const service = require(servicePath) as {
       isPDFAvailable(): boolean;
       generateInvoicePDF(invoice: Record<string, any>, settings: Record<string, any>): Promise<Buffer>;
     };
-    if (!service.isPDFAvailable()) throw new Error('Invoice PDF renderer is unavailable');
+    if (!service.isPDFAvailable()) throw new InvoicePdfUnavailableError();
     return service.generateInvoicePDF(snapshot.invoice, snapshot.settings);
   }
 }

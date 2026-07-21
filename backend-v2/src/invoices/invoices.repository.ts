@@ -89,6 +89,11 @@ export type InvoiceAggregate = {
   payments: InvoicePaymentRow[];
 };
 
+export type InvoicePdfSnapshot = {
+  invoice: Record<string, any>;
+  settings: Record<string, any>;
+};
+
 export type InvoiceEmailPayload = {
   subject: string;
   message: string;
@@ -276,6 +281,40 @@ export class InvoicesRepository {
     const client = await this.pool.connect();
     try {
       return await this.load(client, organizationId, invoiceId);
+    } finally {
+      client.release();
+    }
+  }
+
+  async findPdfSnapshot(
+    organizationId: number,
+    invoiceId: number,
+  ): Promise<InvoicePdfSnapshot | null> {
+    const client = await this.pool.connect();
+    try {
+      const aggregate = await this.load(client, organizationId, invoiceId);
+      if (!aggregate) return null;
+      const settings = await client.query<Record<string, any>>(
+        'SELECT * FROM payment_settings WHERE organization_id = $1',
+        [organizationId],
+      );
+      const row = aggregate.invoice;
+      return {
+        invoice: {
+          ...row,
+          items: aggregate.items,
+          business: row.business_id === null ? null : {
+            id: row.business_id,
+            name: row.business_name,
+            email: row.business_email,
+            phone: row.business_phone,
+            address: row.business_address,
+            tax_id: row.business_tax_id,
+            logo_url: row.business_logo_url,
+          },
+        },
+        settings: settings.rows[0] ?? {},
+      };
     } finally {
       client.release();
     }

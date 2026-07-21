@@ -17,6 +17,8 @@ During side-by-side migration, the preferred browser topology is the established
 
 The retained contact transfer routes use the same topology. `CONTACT_TRANSFERS_NESTJS_ENABLED=true` proxies only `GET /api/contacts/export/csv` and `POST /api/contacts/import/csv` to the NestJS service identified by `GRAPHQL_UPSTREAM_URL`; false or unset leaves both routes on the legacy implementation. `CONTACT_TRANSFERS_UPSTREAM_TIMEOUT_MS` defaults to 30 seconds. The proxy forwards only the host cookie, organization, CSRF, and request-ID headers and returns only the required download/content/request headers.
 
+Invoice PDF delivery uses the same private upstream and stable public URL. `INVOICE_PDF_NESTJS_ENABLED=true` proxies only `GET /api/invoices/:id/pdf` to NestJS; false or unset falls through to the legacy Express route. `INVOICE_PDF_UPSTREAM_TIMEOUT_MS` defaults to 60 seconds. The proxy forwards only the host cookie, selected organization, and request ID and returns only the hardened PDF download and request headers.
+
 ## Allowed Methods
 
 The following methods are allowed to be used with the API:

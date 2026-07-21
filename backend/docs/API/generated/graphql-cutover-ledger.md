@@ -7,9 +7,9 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 388
-- Operations with frontend consumers: 367
-- Operations referenced by backend tests: 202
+- Static frontend callsites: 389
+- Operations with frontend consumers: 368
+- Operations referenced by backend tests: 203
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -179,7 +179,7 @@
 | GET | `/api/invoices/:id` | 1 | 6 | graphql-query | medium | billing / InvoicesModule / invoice |
 | PUT | `/api/invoices/:id` | 1 | 3 | graphql-mutation | medium | billing / InvoicesModule / updateInvoice |
 | POST | `/api/invoices/:id/create-payment-link` | 1 | 0 | graphql-mutation | medium | billing / InvoicesModule / createInvoicePaymentLink |
-| GET | `/api/invoices/:id/pdf` | 0 | 0 | retain-http | high | billing / InvoicesModule / invoicePdf |
+| GET | `/api/invoices/:id/pdf` | 1 | 11 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/:id/record-payment` | 1 | 11 | graphql-mutation | medium | billing / PaymentsModule / recordInvoicePayment |
 | POST | `/api/invoices/:id/send` | 1 | 6 | graphql-mutation | medium | billing / InvoicesModule / sendInvoice |
 | GET | `/api/invoices/businesses` | 1 | 0 | graphql-query | high | billing / InvoiceBusinessesModule / invoiceBusinesses |

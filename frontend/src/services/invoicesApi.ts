@@ -663,6 +663,47 @@ export const deleteBusinessLogo = async (
     return response.data;
 };
 
+const invoicePdfFilename = (contentDisposition: unknown, invoiceId: number): string => {
+    const match = typeof contentDisposition === 'string'
+        ? contentDisposition.match(/filename\s*=\s*"?([^";]+)"?/i)
+        : null;
+    const candidate = match?.[1]
+        ?.trim()
+        .replace(/[\\/]/g, '')
+        .replace(/^[.\s-]+/, '')
+        .slice(0, 124);
+    return candidate || `invoice-${invoiceId}.pdf`;
+};
+
+export const downloadInvoicePdf = async (
+    invoiceId: number,
+    organizationId?: number
+): Promise<void> => {
+    const response = await api.get(`/api/invoices/${invoiceId}/pdf`, {
+        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
+        responseType: 'blob'
+    });
+    const blob = response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], {
+            type: response.headers?.['content-type'] || 'application/pdf'
+        });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = invoicePdfFilename(
+        response.headers?.['content-disposition'],
+        invoiceId
+    );
+    try {
+        document.body.appendChild(anchor);
+        anchor.click();
+    } finally {
+        anchor.remove();
+        window.URL.revokeObjectURL(objectUrl);
+    }
+};
+
 export default {
     // Products
     getProducts,
@@ -679,6 +720,7 @@ export default {
     recordPayment,
     createPaymentLink,
     createRecurringTemplateFromInvoice,
+    downloadInvoicePdf,
     // Settings
     getPaymentSettings,
     updatePaymentSettings,

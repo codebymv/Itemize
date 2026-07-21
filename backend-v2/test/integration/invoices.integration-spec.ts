@@ -15,6 +15,7 @@ import {
   INVOICE_EMAIL_PROVIDER,
   INVOICE_PAYMENT_LINK_PROVIDER,
   INVOICE_PDF_RENDERER,
+  InvoicePdfUnavailableError,
 } from '../../src/invoices/invoice-delivery.providers';
 
 describe('Core invoice GraphQL PostgreSQL contract', () => {
@@ -385,6 +386,89 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       success: true,
       deletedId: id,
     });
+  });
+
+  it('serves tenant-scoped invoice PDFs over retained authenticated HTTP', async () => {
+    invoicePdfRenderer.render.mockReset();
+    const created = await graphql(
+      memberToken,
+      organizationId,
+      createMutation,
+      { input: input() },
+    ).expect(200);
+    const invoice = created.body.data.createInvoice;
+    const id = Number(invoice.id);
+
+    const unauthenticated = await request(app.getHttpServer())
+      .get(`/api/invoices/${id}/pdf`)
+      .set('x-organization-id', String(organizationId))
+      .expect(401);
+    expect(unauthenticated.body.code).toBe('UNAUTHENTICATED');
+
+    const invalid = await request(app.getHttpServer())
+      .get('/api/invoices/not-an-id/pdf')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(404);
+    expect(invalid.body.code).toBe('NOT_FOUND');
+
+    const isolated = await request(app.getHttpServer())
+      .get(`/api/invoices/${id}/pdf`)
+      .set('Cookie', `itemize_auth=${outsiderToken}`)
+      .set('x-organization-id', String(outsiderOrganizationId))
+      .expect(404);
+    expect(isolated.body.code).toBe('NOT_FOUND');
+    expect(invoicePdfRenderer.render).not.toHaveBeenCalled();
+
+    const pdf = Buffer.from('%PDF-1.7\nintegration-pdf');
+    invoicePdfRenderer.render.mockResolvedValueOnce(pdf);
+    const downloaded = await request(app.getHttpServer())
+      .get(`/api/invoices/${id}/pdf`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(200);
+    expect(downloaded.headers).toMatchObject({
+      'cache-control': 'private, no-store',
+      'content-disposition': `attachment; filename="${invoice.invoiceNumber}.pdf"`,
+      'content-security-policy': 'sandbox',
+      'content-type': 'application/pdf',
+      'x-content-type-options': 'nosniff',
+    });
+    expect(Number(downloaded.headers['content-length'])).toBe(pdf.length);
+    expect(Buffer.from(downloaded.body)).toEqual(pdf);
+    expect(invoicePdfRenderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invoice: expect.objectContaining({
+          id,
+          organization_id: organizationId,
+          invoice_number: invoice.invoiceNumber,
+          items: [expect.objectContaining({ name: 'Consulting' })],
+          business: expect.objectContaining({
+            id: businessId,
+            name: 'Primary Business',
+          }),
+        }),
+        settings: expect.objectContaining({ organization_id: organizationId }),
+      }),
+    );
+
+    invoicePdfRenderer.render.mockResolvedValueOnce(Buffer.from('not-a-pdf'));
+    const invalidOutput = await request(app.getHttpServer())
+      .get(`/api/invoices/${id}/pdf`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(500);
+    expect(invalidOutput.body.code).toBe('INTERNAL_SERVER_ERROR');
+
+    invoicePdfRenderer.render.mockRejectedValueOnce(
+      new InvoicePdfUnavailableError(),
+    );
+    const unavailable = await request(app.getHttpServer())
+      .get(`/api/invoices/${id}/pdf`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .expect(503);
+    expect(unavailable.body.code).toBe('SERVICE_UNAVAILABLE');
   });
 
   it('sends invoices durably and leaves every unconfirmed delivery unsent', async () => {

@@ -5,6 +5,7 @@ import {
   createPaymentLink,
   createRecurringTemplateFromInvoice,
   deleteInvoice,
+  downloadInvoicePdf,
   getInvoice,
   getInvoices,
   sendInvoice,
@@ -244,5 +245,43 @@ describe('core invoice API transport selection', () => {
     });
     expect(createInvoicePaymentLinkViaGraphql).toHaveBeenCalledWith(12, 4);
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('downloads the retained PDF boundary with tenant context and a safe filename', async () => {
+    const pdf = new Blob(['%PDF-1.7\nfrontend-test'], { type: 'application/pdf' });
+    vi.mocked(api.get).mockResolvedValue({
+      data: pdf,
+      headers: {
+        'content-disposition': 'attachment; filename="../INV-00012.pdf"',
+        'content-type': 'application/pdf',
+      },
+    });
+    const anchor = document.createElement('a');
+    const click = vi.spyOn(anchor, 'click').mockImplementation(() => undefined);
+    const createElement = vi.spyOn(document, 'createElement').mockReturnValue(anchor);
+    const createObjectURL = vi.fn(() => 'blob:invoice-pdf');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+
+    await downloadInvoicePdf(12, 4);
+
+    expect(api.get).toHaveBeenCalledWith('/api/invoices/12/pdf', {
+      headers: { 'x-organization-id': '4' },
+      responseType: 'blob',
+    });
+    expect(anchor.download).toBe('INV-00012.pdf');
+    expect(anchor.href).toBe('blob:invoice-pdf');
+    expect(click).toHaveBeenCalledOnce();
+    expect(createObjectURL).toHaveBeenCalledWith(pdf);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:invoice-pdf');
+    expect(document.body.contains(anchor)).toBe(false);
+    createElement.mockRestore();
   });
 });

@@ -1,12 +1,12 @@
 # File, binary, and bulk-transfer cutover contract
 
-**Status:** Retained HTTP target implemented for contact transfer; durable invoice-logo deletion implemented; remaining file-service boundaries characterized
+**Status:** Retained HTTP targets implemented for contact transfer and invoice PDF; durable invoice-logo deletion implemented; remaining file-service boundaries characterized
 
 **Evidence date:** 2026-07-20
 
 ## Decision
 
-GraphQL owns file metadata, document lifecycle, logo deletion, and upload-intent orchestration. It does not carry multipart bodies, PDF streams, generated invoice PDFs, public logo bytes, or CSV transfers. Those protocols remain HTTP endpoints behind the same NestJS authentication, tenancy, capability, rate-limit, and observability services as GraphQL. `ContactTransfersModule` now owns the two retained CSV routes; the legacy origin can proxy only those routes behind a default-off rollback flag.
+GraphQL owns file metadata, document lifecycle, logo deletion, and upload-intent orchestration. It does not carry multipart bodies, PDF streams, generated invoice PDFs, public logo bytes, or CSV transfers. Those protocols remain HTTP endpoints behind the same NestJS authentication, tenancy, capability, rate-limit, and observability services as GraphQL. `ContactTransfersModule` owns the two retained CSV routes and `InvoicesModule` owns retained invoice-PDF delivery; the legacy origin proxies each boundary only behind its own default-off rollback flag.
 
 Never persist or return a permanent public URL for a private signature document. A GraphQL field may return metadata or an audience-bound, short-lived delivery capability; it must not expose a raw local path, bucket key, or unrestricted object URL.
 
@@ -18,7 +18,7 @@ Never persist or return a permanent public URL for a private signature document.
 | Signature template/source view | Authenticated HTTP PDF stream | Tenant lookup first; private/no-store, `nosniff`, sandbox CSP, safe inline filename; only the private signature local root or exact configured S3 bucket and `signatures/` prefix may be read |
 | Completed signature download | Authenticated HTTP attachment | Tenant-owned completed artifact only; safe filename and the same private delivery/storage allowlist |
 | Public signing PDF | Rate-limited signing capability over HTTP | Active, unexpired recipient/document capability first; private/no-store stream or attachment; no arbitrary URL proxy and no permanent object URL |
-| Invoice PDF | Authenticated HTTP binary response | Organization-owned invoice; preserve generation semantics and attachment headers outside GraphQL |
+| Invoice PDF | Cookie-authenticated NestJS HTTP attachment plus selected-organization membership | Tenant-scoped invoice/items/business/settings snapshot; shared renderer; validated `%PDF-` output; safe filename, exact length, private/no-store, `nosniff`, and sandbox CSP; same-origin default-off proxy preserves Express rollback |
 | Business/settings logos | Authenticated multipart HTTP for uploads; CSRF-protected GraphQL for deletion; public HTTP for bytes | One image, 2 MiB maximum, PNG/JPEG/GIF/WebP magic bytes, safe server-selected extension/name; JSON metadata writes cannot select `logo_url`; deletion atomically clears metadata and enqueues exact server-owned cleanup |
 | Contact export | Authenticated HTTP CSV attachment | Organization filters, deterministic newest-first order, 50,000-row rejection boundary, quoted cells, formula neutralization, private/no-store and `nosniff` |
 | Contact import | Authenticated, CSRF-protected HTTP JSON bulk request despite the legacy `/csv` name | 1 MiB body, non-empty object array, 10,000 rows, 20 columns, strict field validation and duplicate policy, at most 100 returned row errors with total/truncation metadata, organization lock, atomic plan-limit enforcement, and a 30-second query/upstream timeout |
@@ -56,6 +56,8 @@ CSV export quotes every data cell, doubles embedded quotes, and prefixes values 
 The import route does not parse an uploaded CSV file. Its compatibility contract is a JSON array of mapped contact objects. The browser parser accepts CRLF, escaped quotes, quoted commas/newlines, BOM, and documented header aliases, then enforces the same 1 MiB, 10,000-row, and 20-column limits before sending JSON. Malformed rows, unclosed quotes, duplicate mapped headers, and rows wider than the header fail before transport. A future server-side file upload must be a separately versioned operation with explicit encoding, delimiter, cancellation, and asynchronous-job semantics.
 
 Fresh-PostgreSQL tests prove authentication, membership and CSRF denial; tenant/status/tag export filtering; deterministic quoting and formula neutralization; strict row validation; both duplicate modes including concurrent imports; atomic plan-limit enforcement; bounded body/row/column/error behavior; and transactional contact, workflow-trigger, and activity writes. The 2026-07-17 staging gate enabled the two-route proxy, wrote and exported data through NestJS, then removed only the flag and read that same data plus a new legacy import through Express without repair. Cleanup left no fixture rows and production was untouched.
+
+Invoice-PDF PostgreSQL coverage proves cookie authentication, malformed identity handling, selected-organization concealment, ordered tenant snapshot construction, exact PDF bytes and hardened headers, renderer unavailability, and invalid-output failure. Focused proxy coverage proves default-off Express fallback, exact path construction, allowlisted request/response headers, timeout/upstream failure closure, and rejection of unsafe upstream URLs. The browser consumer uses the stable same-origin route for both transports, sanitizes the server filename, and always revokes its temporary object URL.
 
 ## Required cutover gates
 

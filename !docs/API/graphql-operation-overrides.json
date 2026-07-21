@@ -294,9 +294,9 @@
       "owner": "billing",
       "targetModule": "InvoicesModule",
       "targetOperation": "invoicePdf",
-      "parityStatus": "not-started",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain authorized binary download over HTTP; GraphQL may expose metadata or a short-lived URL only."
+      "notes": "NestJS owns the retained cookie-authenticated binary route with selected-organization concealment, the legacy renderer's tenant snapshot, validated PDF output, safe attachment naming, and private/no-store, nosniff, sandbox headers. The existing origin proxies this exact URL behind a default-off server flag; the active frontend controls download the blob without selecting a transport."
     },
     "POST /api/invoices/:id/record-payment": {
       "disposition": "graphql-mutation",

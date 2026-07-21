@@ -21,6 +21,7 @@ const segmentsRoutes = require('../routes/segments.routes');
 const estimatesRoutes = require('../routes/estimates.routes');
 const recurringRoutes = require('../routes/recurring.routes');
 const invoicesRoutes = require('../routes/invoices.routes');
+const { createInvoicePdfProxy } = require('../invoice-pdf-proxy');
 const billingRoutes = require('../routes/billing.routes');
 const reputationRoutes = require('../routes/reputation.routes');
 const socialRoutes = require('../routes/social.routes');
@@ -243,6 +244,7 @@ function registerApiRoutes({
     logger.info('Estimates routes initialized');
     app.use('/api/invoices/recurring', recurringRoutes(pool, authenticateJWT));
     logger.info('Recurring Invoices routes initialized');
+    app.get('/api/invoices/:id/pdf', createInvoicePdfProxy({ logger }));
     app.use('/api/invoices', invoicesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Invoicing routes initialized');
     app.use('/api/billing', billingRoutes(pool, authenticateJWT));

@@ -5,6 +5,11 @@ import { InvoicesResolver } from './invoices.resolver';
 import { InvoicesService } from './invoices.service';
 import { InvoiceEmailDeliveryService } from './invoice-email-delivery.service';
 import { InvoicePaymentLinkService } from './invoice-payment-link.service';
+import { AuthModule } from '../auth/auth.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
+import { InvoicePdfController } from './invoice-pdf.controller';
+import { InvoicePdfGuard } from './invoice-pdf.guard';
+import { InvoicePdfService } from './invoice-pdf.service';
 import {
   INVOICE_EMAIL_PROVIDER,
   INVOICE_PAYMENT_LINK_PROVIDER,
@@ -15,12 +20,16 @@ import {
 } from './invoice-delivery.providers';
 
 @Module({
+  imports: [AuthModule, OrganizationsModule],
+  controllers: [InvoicePdfController],
   providers: [
     InvoicesRepository,
     InvoicesService,
     InvoiceEmailPreviewService,
     InvoiceEmailDeliveryService,
     InvoicePaymentLinkService,
+    InvoicePdfGuard,
+    InvoicePdfService,
     ResendInvoiceEmailProvider,
     StripeInvoicePaymentLinkProvider,
     LegacyInvoicePdfRenderer,

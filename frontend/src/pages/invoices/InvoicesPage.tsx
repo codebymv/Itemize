@@ -63,6 +63,7 @@ import {
     recordPayment,
     createPaymentLink,
     createRecurringTemplateFromInvoice,
+    downloadInvoicePdf,
     Invoice as ApiInvoice,
     Business
 } from '@/services/invoicesApi';
@@ -139,6 +140,7 @@ export function InvoicesPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
     
     // Expanded invoice state
     const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(null);
@@ -442,6 +444,23 @@ export function InvoicesPage() {
         e.stopPropagation();
         setInvoiceToDelete(invoice);
         setDeleteDialogOpen(true);
+    };
+
+    const handleDownloadPdf = async (invoice: Invoice, e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!organizationId || downloadingInvoiceId !== null) return;
+        setDownloadingInvoiceId(invoice.id);
+        try {
+            await downloadInvoicePdf(invoice.id, organizationId);
+        } catch (error: unknown) {
+            toast({
+                title: 'Error',
+                description: getApiErrorMessage(error, 'Failed to download invoice PDF'),
+                variant: 'destructive'
+            });
+        } finally {
+            setDownloadingInvoiceId(null);
+        }
     };
 
     const confirmDelete = async () => {
@@ -880,8 +899,15 @@ export function InvoicesPage() {
                                                                     <RefreshCw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Resend
                                                                 </DropdownMenuItem>
                                                             )}
-                                                            <DropdownMenuItem className="group/menu">
-                                                                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Download PDF
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => handleDownloadPdf(invoice, e)}
+                                                                disabled={downloadingInvoiceId !== null}
+                                                                className="group/menu"
+                                                            >
+                                                                {downloadingInvoiceId === invoice.id
+                                                                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    : <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />}
+                                                                Download PDF
                                                             </DropdownMenuItem>
                                                             {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
                                                                 <>
@@ -1031,9 +1057,13 @@ export function InvoicesPage() {
                                                             )}
                                                             <Button 
                                                                 size="sm"
+                                                                onClick={(e) => handleDownloadPdf(invoice, e)}
+                                                                disabled={downloadingInvoiceId !== null}
                                                                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                                                             >
-                                                                <Download className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                {downloadingInvoiceId === invoice.id
+                                                                    ? <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 animate-spin" />
+                                                                    : <Download className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />}
                                                                 <span className="hidden md:inline">Download PDF</span>
                                                                 <span className="md:hidden">PDF</span>
                                                             </Button>

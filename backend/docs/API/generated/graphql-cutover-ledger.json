@@ -9,9 +9,9 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 388,
-    "operationsWithFrontendConsumers": 367,
-    "operationsWithBackendTests": 202,
+    "frontendCallsiteCount": 389,
+    "operationsWithFrontendConsumers": 368,
+    "operationsWithBackendTests": 203,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -3717,7 +3717,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 51
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4942,7 +4942,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 212
+          "line": 213
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5017,7 +5017,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 213
+          "line": 214
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -6859,13 +6859,13 @@
           "method": "GET",
           "path": "/api/invoices/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 313
+          "line": 314
         },
         {
           "method": "GET",
           "path": "/api/invoices/:invoiceId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1434
+          "line": 1518
         },
         {
           "method": "GET",
@@ -6997,20 +6997,101 @@
       "path": "/api/invoices/:id/pdf",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 247
+        },
+        {
           "source": "backend/src/routes/invoices/actions.routes.js",
           "line": 262
         }
       ],
-      "consumerCallsites": [],
-      "testCallsites": [],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/:invoiceId/pdf",
+          "rawPath": "/api/invoices/${invoiceId}/pdf",
+          "source": "frontend/src/services/invoicesApi.ts",
+          "line": 682,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 403
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/not-an-id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 409
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 416
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 426
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 457
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 467
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 19
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 32
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 62
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 103
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 115
+        }
+      ],
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Binary upload/download transport.",
       "disposition": "retain-http",
       "owner": "billing",
       "targetOperation": "invoicePdf",
       "targetModule": "InvoicesModule",
-      "parityStatus": "not-started",
-      "notes": "Retain authorized binary download over HTTP; GraphQL may expose metadata or a short-lived URL only.",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the retained cookie-authenticated binary route with selected-organization concealment, the legacy renderer's tenant snapshot, validated PDF output, safe attachment naming, and private/no-store, nosniff, sandbox headers. The existing origin proxies this exact URL behind a default-off server flag; the active frontend controls download the blob without selecting a transport.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7465,7 +7546,7 @@
           "method": "POST",
           "path": "/api/invoices/email/preview",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1032
+          "line": 1116
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -7713,7 +7794,7 @@
           "method": "GET",
           "path": "/api/invoices/estimates/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1136
+          "line": 1220
         },
         {
           "method": "GET",
@@ -8225,19 +8306,19 @@
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1758
+          "line": 1842
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1936
+          "line": 2020
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:templateId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 2106
+          "line": 2190
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8393,7 +8474,7 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/pause",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1792
+          "line": 1876
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8536,7 +8617,7 @@
           "method": "GET",
           "path": "/api/invoices/settings",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 865
+          "line": 949
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -8982,7 +9063,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 46
+          "line": 47
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -15566,7 +15647,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 114
+          "line": 115
         }
       ],
       "consumerCallsites": [
@@ -15600,7 +15681,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 58
+          "line": 59
         }
       ],
       "consumerCallsites": [
@@ -16295,7 +16376,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 50
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16639,7 +16720,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 47
+          "line": 48
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -16926,7 +17007,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 48
+          "line": 49
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
