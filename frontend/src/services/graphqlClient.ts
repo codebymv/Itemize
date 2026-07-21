@@ -207,6 +207,12 @@ export const isCommunicationStatsGraphqlEnabled = (): boolean =>
 export const isWorkflowPerformanceGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_WORKFLOW_PERFORMANCE_GRAPHQL === 'true';
 
+export const isEmailTemplateGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_EMAIL_TEMPLATE_READS_GRAPHQL === 'true';
+
+export const isEmailTemplateGraphqlMutationsEnabled = (): boolean =>
+  import.meta.env.VITE_EMAIL_TEMPLATE_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

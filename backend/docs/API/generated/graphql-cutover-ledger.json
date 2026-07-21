@@ -5346,7 +5346,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 233,
+          "line": 249,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5355,7 +5355,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 67,
+          "line": 80,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5410,8 +5410,8 @@
       "owner": "messaging",
       "targetOperation": "emailTemplates",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped template connection preserving category, active, and search filters.",
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped search, category and active filters, safe numeric counts, and retained response mapping.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5432,7 +5432,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 255,
+          "line": 277,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5493,8 +5493,8 @@
       "owner": "messaging",
       "targetOperation": "createEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Validate content limits and extract a deterministic unique variable set.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL creation validates required content and derives a deterministic unique variable set from the complete email body.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5515,7 +5515,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 276,
+          "line": 304,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5524,7 +5524,7 @@
           "path": "/api/email-templates/:templateId",
           "rawPath": "/api/email-templates/${templateId}",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 124,
+          "line": 143,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5555,8 +5555,8 @@
       "owner": "messaging",
       "targetOperation": "deleteEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Delete only an organization-owned template and preserve nullable historical log references.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL deletion conceals foreign templates and preserves nullable historical log references through the existing database contract.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5577,7 +5577,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 240,
+          "line": 259,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5586,7 +5586,7 @@
           "path": "/api/email-templates/:templateId",
           "rawPath": "/api/email-templates/${templateId}",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 81,
+          "line": 97,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5611,8 +5611,8 @@
       "owner": "messaging",
       "targetOperation": "emailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Return an organization-owned template without cross-tenant existence leakage.",
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL detail reads return an organization-owned template with retained-shape mapping and tenant-private misses.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5633,7 +5633,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 271,
+          "line": 296,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5658,8 +5658,8 @@
       "owner": "messaging",
       "targetOperation": "updateEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped partial update that re-extracts variables from the complete resulting content.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL partial updates lock the organization-owned row, preserve omitted fields, and re-extract variables from the complete resulting content without lost concurrent writes.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5680,7 +5680,7 @@
           "path": "/api/email-templates/:id/duplicate",
           "rawPath": "/api/email-templates/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 296,
+          "line": 327,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5689,7 +5689,7 @@
           "path": "/api/email-templates/:templateId/duplicate",
           "rawPath": "/api/email-templates/${templateId}/duplicate",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 136,
+          "line": 158,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5714,8 +5714,8 @@
       "owner": "messaging",
       "targetOperation": "duplicateEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Copy only an organization-owned template and always create the copy inactive.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL duplication copies only an organization-owned template, bounds the suffixed name, and always creates the copy inactive.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5736,7 +5736,7 @@
           "path": "/api/email-templates/:templateId/send-test",
           "rawPath": "/api/email-templates/${templateId}/send-test",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 287,
+          "line": 315,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5745,7 +5745,7 @@
           "path": "/api/email-templates/:templateId/send-test",
           "rawPath": "/api/email-templates/${templateId}/send-test",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 109,
+          "line": 125,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5779,7 +5779,7 @@
           "path": "/api/email-templates/categories/list",
           "rawPath": "/api/email-templates/categories/list",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 305,
+          "line": 339,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5798,8 +5798,8 @@
       "owner": "messaging",
       "targetOperation": "emailTemplateCategories",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped category aggregates with stable count scalar semantics.",
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL category aggregates are organization-scoped, deterministically ordered, case-preserving, and expose safe integer counts.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -5820,7 +5820,7 @@
           "path": "/api/email-templates/send-to-contact",
           "rawPath": "/api/email-templates/send-to-contact",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 94,
+          "line": 110,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17343,7 +17343,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 111,
+          "line": 124,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17396,7 +17396,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 132,
+          "line": 145,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17533,7 +17533,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 152,
+          "line": 165,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17598,7 +17598,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 118,
+          "line": 131,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17645,7 +17645,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 147,
+          "line": 160,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17710,7 +17710,7 @@
           "path": "/api/workflows/:id/activate",
           "rawPath": "/api/workflows/${id}/activate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 158,
+          "line": 171,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17793,7 +17793,7 @@
           "path": "/api/workflows/:id/deactivate",
           "rawPath": "/api/workflows/${id}/deactivate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 165,
+          "line": 178,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17840,7 +17840,7 @@
           "path": "/api/workflows/:id/duplicate",
           "rawPath": "/api/workflows/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 218,
+          "line": 231,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17887,7 +17887,7 @@
           "path": "/api/workflows/:workflowId/enroll",
           "rawPath": "/api/workflows/${workflowId}/enroll",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 177,
+          "line": 190,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17952,7 +17952,7 @@
           "path": "/api/workflows/:workflowId/enrollments",
           "rawPath": "/api/workflows/${workflowId}/enrollments",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 197,
+          "line": 210,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17993,7 +17993,7 @@
           "path": "/api/workflows/:workflowId/enrollments/:enrollmentId",
           "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 211,
+          "line": 224,
           "client": "api",
           "literalInterpolation": false
         }

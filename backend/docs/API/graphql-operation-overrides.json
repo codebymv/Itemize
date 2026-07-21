@@ -1005,54 +1005,54 @@
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "emailTemplates",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Organization-scoped template connection preserving category, active, and search filters."
+      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped search, category and active filters, safe numeric counts, and retained response mapping."
     },
     "POST /api/email-templates": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "createEmailTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Validate content limits and extract a deterministic unique variable set."
+      "notes": "CSRF-protected GraphQL creation validates required content and derives a deterministic unique variable set from the complete email body."
     },
     "DELETE /api/email-templates/:id": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "deleteEmailTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Delete only an organization-owned template and preserve nullable historical log references."
+      "notes": "CSRF-protected GraphQL deletion conceals foreign templates and preserves nullable historical log references through the existing database contract."
     },
     "GET /api/email-templates/:id": {
       "disposition": "graphql-query",
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "emailTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Return an organization-owned template without cross-tenant existence leakage."
+      "notes": "Default-off GraphQL detail reads return an organization-owned template with retained-shape mapping and tenant-private misses."
     },
     "PUT /api/email-templates/:id": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "updateEmailTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Organization-scoped partial update that re-extracts variables from the complete resulting content."
+      "notes": "CSRF-protected GraphQL partial updates lock the organization-owned row, preserve omitted fields, and re-extract variables from the complete resulting content without lost concurrent writes."
     },
     "POST /api/email-templates/:id/duplicate": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "duplicateEmailTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Copy only an organization-owned template and always create the copy inactive."
+      "notes": "CSRF-protected GraphQL duplication copies only an organization-owned template, bounds the suffixed name, and always creates the copy inactive."
     },
     "POST /api/email-templates/:id/send-test": {
       "disposition": "graphql-mutation",
@@ -1068,9 +1068,9 @@
       "owner": "messaging",
       "targetModule": "EmailTemplatesModule",
       "targetOperation": "emailTemplateCategories",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Organization-scoped category aggregates with stable count scalar semantics."
+      "notes": "Default-off GraphQL category aggregates are organization-scoped, deterministically ordered, case-preserving, and expose safe integer counts."
     },
     "POST /api/email-templates/send-to-contact": {
       "disposition": "graphql-mutation",

@@ -17,6 +17,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
 import { EstimatesModule } from './estimates/estimates.module';
+import { EmailTemplatesModule } from './email-templates/email-templates.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
@@ -61,6 +62,7 @@ const observabilityPlugins = [
     ContactsModule,
     ContactTransfersModule,
     DealsModule,
+    EmailTemplatesModule,
     EstimatesModule,
     PipelinesModule,
     PaymentsModule,

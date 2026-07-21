@@ -3,6 +3,16 @@
  * Handles email sending and template operations
  */
 import api from '@/lib/api';
+import {
+    deleteEmailTemplateViaGraphql,
+    duplicateEmailTemplateViaGraphql,
+    getEmailTemplateViaGraphql,
+    getEmailTemplatesViaGraphql,
+} from './emailTemplatesGraphql';
+import {
+    isEmailTemplateGraphqlMutationsEnabled,
+    isEmailTemplateGraphqlReadsEnabled,
+} from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -21,11 +31,11 @@ export interface EmailTemplate {
     name: string;
     subject: string;
     body_html: string;
-    body_text?: string;
+    body_text?: string | null;
     variables: string[];
     category: string;
     is_active: boolean;
-    created_by: number;
+    created_by?: number;
     created_by_name?: string;
     created_at: string;
     updated_at: string;
@@ -59,6 +69,9 @@ export const getEmailTemplates = async (
     organizationId?: number,
     filters?: { category?: string; is_active?: boolean; search?: string }
 ): Promise<{ templates: EmailTemplate[]; total: number }> => {
+    if (isEmailTemplateGraphqlReadsEnabled()) {
+        return getEmailTemplatesViaGraphql(filters, organizationId);
+    }
     const params: Record<string, string> = {};
     if (filters?.category) params.category = filters.category;
     if (filters?.is_active !== undefined) params.is_active = String(filters.is_active);
@@ -78,6 +91,9 @@ export const getEmailTemplate = async (
     templateId: number,
     organizationId?: number
 ): Promise<EmailTemplate> => {
+    if (isEmailTemplateGraphqlReadsEnabled()) {
+        return getEmailTemplateViaGraphql(templateId, organizationId);
+    }
     const response = await api.get(`/api/email-templates/${templateId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -121,6 +137,9 @@ export const deleteEmailTemplate = async (
     templateId: number,
     organizationId?: number
 ): Promise<void> => {
+    if (isEmailTemplateGraphqlMutationsEnabled()) {
+        return deleteEmailTemplateViaGraphql(templateId, organizationId);
+    }
     await api.delete(`/api/email-templates/${templateId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -133,6 +152,9 @@ export const duplicateEmailTemplate = async (
     templateId: number,
     organizationId?: number
 ): Promise<EmailTemplate> => {
+    if (isEmailTemplateGraphqlMutationsEnabled()) {
+        return duplicateEmailTemplateViaGraphql(templateId, organizationId);
+    }
     const response = await api.post(
         `/api/email-templates/${templateId}/duplicate`,
         {},

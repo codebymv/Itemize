@@ -1,8 +1,8 @@
 # Messaging GraphQL cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Email-template management implemented default-off; delivery, administrator, SMS-template, and provider boundaries remain characterized
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-21
 
 ## Decision
 
@@ -11,6 +11,12 @@ Authenticated email/SMS template management, previews, delivery requests, and ad
 GraphQL resolvers may validate and persist delivery intent, but they must not synchronously call Resend or Twilio. Provider work belongs in durable workers. Provider acceptance is not final delivery, and an unconfigured client or simulation is never a successful real send.
 
 The authoritative per-operation assignments are in `graphql-operation-overrides.json`. This contract defines the semantics shared by those 26 rows.
+
+## Email-template management implementation checkpoint
+
+`EmailTemplatesModule` now implements the seven organization email-template management operations. List and detail reads, category aggregation, and CSRF-protected create, update, duplicate, and delete mutations are available through independent default-off frontend read and mutation flags. The adapter preserves both existing consumer shapes, while send-test and send-to-contact continue to use REST.
+
+Fresh PostgreSQL coverage proves GraphQL/REST interoperability, deterministic filtering and paging, tenant-private misses, CSRF denial, complete-content variable extraction, locked concurrent partial updates, inactive duplication, and deletion. Focused frontend tests prove GraphQL mapping and flag-off REST rollback. No deployed traffic is enabled by this checkpoint.
 
 ## Ownership and targets
 
@@ -161,9 +167,9 @@ Verified events that arrive before their local provider ID is committed are reta
 
 ## Current evidence and remaining blockers
 
-Fresh PostgreSQL tests now cover email template CRUD/filtering/tenant isolation, successful email contact audit writes, provider-unavailable semantics, SMS template tenant isolation, successful/failed SMS contact logging, receiving-number ownership, concurrent inbound replay, same-sender cross-tenant routing, unmatched receiving-number quarantine, tenant-local sender ambiguity, SMS status replay/state validation, real Resend/Svix verification, duplicate and out-of-order email events, campaign engagement, contact suppression, and leased unmatched-event reconciliation.
+Fresh PostgreSQL tests now cover the implemented GraphQL email-template management contract, REST interoperability, locked concurrent partial updates, tenant isolation, CSRF, and retained frontend mapping/rollback. Existing retained suites also cover successful email contact audit writes, provider-unavailable semantics, SMS template tenant isolation, successful/failed SMS contact logging, receiving-number ownership, concurrent inbound replay, same-sender cross-tenant routing, unmatched receiving-number quarantine, tenant-local sender ambiguity, SMS status replay/state validation, real Resend/Svix verification, duplicate and out-of-order email events, campaign engagement, contact suppression, and leased unmatched-event reconciliation.
 
-This slice is not ready for traffic cutover until:
+Email-template management is implementation-ready but remains default-off pending a staging consumer/rollback gate. The broader messaging slice is not ready for traffic cutover until:
 
 - contact, campaign, workflow, invoice, and admin sends share one durable delivery/outbox abstraction;
 - email and SMS request idempotency and atomic usage reservation are implemented;
