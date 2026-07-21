@@ -21,6 +21,7 @@ import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
 import { InvoiceLogoCleanupModule } from './invoice-logo-cleanup/invoice-logo-cleanup.module';
 import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
+import { InvoiceWebhooksModule } from './invoice-webhooks/invoice-webhooks.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
@@ -67,6 +68,7 @@ const observabilityPlugins = [
     InvoiceBusinessesModule,
     InvoiceLogoCleanupModule,
     InvoiceSettingsModule,
+    InvoiceWebhooksModule,
     InvoicesModule,
     OnboardingModule,
     FoundationModule,

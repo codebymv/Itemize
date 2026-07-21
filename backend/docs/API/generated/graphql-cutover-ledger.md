@@ -218,7 +218,7 @@
 | PUT | `/api/invoices/settings` | 1 | 1 | graphql-mutation | high | billing / InvoiceSettingsModule / updateInvoiceSettings |
 | DELETE | `/api/invoices/settings/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceSettingsModule / removeInvoiceSettingsLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
-| POST | `/api/invoices/webhook/stripe` | 0 | 4 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
+| POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
 | GET | `/api/lists` | 1 | 4 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | POST | `/api/lists` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceList |
 | DELETE | `/api/lists/:id` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceList |

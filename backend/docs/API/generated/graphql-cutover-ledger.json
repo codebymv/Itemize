@@ -3717,7 +3717,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 51
+          "line": 52
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4942,7 +4942,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 213
+          "line": 214
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5017,7 +5017,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 215
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -6998,7 +6998,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 247
+          "line": 252
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -8747,12 +8747,22 @@
       "path": "/api/invoices/webhook/stripe",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 248
+        },
+        {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
           "line": 18
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend-v2/test/integration/invoice-webhooks.integration-spec.ts",
+          "line": 130
+        },
         {
           "method": "POST",
           "path": "/api/invoices/webhook/stripe",
@@ -8776,6 +8786,54 @@
           "path": "/api/invoices/webhook/stripe",
           "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
           "line": 117
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
+          "line": 146
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 38
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 67
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 103
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 115
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 124
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 136
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -8784,8 +8842,8 @@
       "owner": "billing",
       "targetOperation": "stripeInvoiceWebhook",
       "targetModule": "InvoiceWebhooksModule",
-      "parityStatus": "characterizing",
-      "notes": "Retain signed Stripe webhook over HTTP and preserve transactional event/payment idempotency.",
+      "parityStatus": "implemented",
+      "notes": "NestJS retains the signed webhook over HTTP, verifies the exact raw bytes with Stripe's SDK, fails closed without its secret, and commits the event claim, payment, PostgreSQL balance update, and one paid-workflow trigger transactionally. A default-off legacy-origin proxy preserves rollback.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -9063,7 +9121,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 47
+          "line": 48
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -15647,7 +15705,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 115
+          "line": 116
         }
       ],
       "consumerCallsites": [
@@ -15681,7 +15739,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 59
+          "line": 60
         }
       ],
       "consumerCallsites": [
@@ -16376,7 +16434,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 51
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16720,7 +16778,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 48
+          "line": 49
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -17007,7 +17065,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 50
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

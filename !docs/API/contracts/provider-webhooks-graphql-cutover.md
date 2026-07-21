@@ -1,8 +1,8 @@
 # Provider webhook cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Characterized; retained-HTTP cutover underway
 
-**Evidence date:** 2026-07-16
+**Evidence date:** 2026-07-20
 
 ## Decision
 
@@ -12,7 +12,7 @@ Provider callbacks are protocols, not GraphQL operations. NestJS controllers ret
 
 | Legacy operation | Target owner | Current evidence | Cutover state |
 | --- | --- | --- | --- |
-| `POST /api/invoices/webhook/stripe` | `InvoiceWebhooksModule` | Raw-body Stripe verification and transactional event/payment claim; concurrent duplicate PostgreSQL test | Characterizing |
+| `POST /api/invoices/webhook/stripe` | `InvoiceWebhooksModule` | Exact-byte Stripe SDK verification; transactional event/payment claim, PostgreSQL balance update, and one paid-workflow trigger; concurrent duplicate and failed-write redelivery tests | Implemented; rollout remains disabled |
 | `POST /api/billing/webhook` | `SubscriptionWebhooksModule` | Exact raw-body Stripe verification, transactional event claim, deterministic provider ordering, minimal replay snapshots, leased tenant reconciliation, normalized subscription/audit writes, and idempotent notification delivery | Characterized; operator tooling remains |
 | `POST /api/email/webhook/resend` | `EmailWebhooksModule` | Raw-body Resend/Svix verification, durable delivery claim, occurrence-time ordering, tenant-ambiguity quarantine, leased pending reconciliation, and log/campaign/suppression transitions | Characterized; operator tooling remains |
 | `POST /api/sms-templates/webhook/status` | `SmsWebhooksModule` | Twilio form-signature verification, durable state claim, normalized transition and replay tests | Characterized |
@@ -44,6 +44,8 @@ Signature middleware must see the unmodified body. Global JSON parsing must not 
 At-least-once delivery means database uniqueness is the authority; an in-memory cache is not sufficient. A delivery claim and its synchronous state mutation belong in one transaction. Slow enrichment, provider profile lookup, notifications, email/SMS, and workflow execution run after commit in idempotent workers.
 
 Provider occurrence timestamps decide the latest status, while milestone timestamps may still be filled by older deliveries. Unknown event types are recorded as ignored or quarantined and do not pass unchecked strings into domain constraints.
+
+The invoice Stripe receiver is now a retained NestJS HTTP controller. It verifies the captured bytes before normalization and fails closed when the signing secret or signature is absent. A single PostgreSQL transaction claims the Stripe event and payment reference, locks the invoice, inserts the payment, updates decimal balances and status in the database, and records one stable `invoice_paid` workflow trigger. Invoice ownership is authoritative when optional Stripe metadata disagrees. Duplicate deliveries acknowledge without repeating effects; any failed domain write rolls back the claim so a corrected provider retry can succeed. The default-off legacy-origin proxy forwards only the exact bytes, signature, content type, and request ID. The retained Express verifier was also corrected to consume its captured raw bytes rather than a reserialized object.
 
 Stripe upgrade notifications are claimed with `FOR UPDATE SKIP LOCKED`, leased before provider I/O, retried with bounded exponential delay, and sent to Resend with an idempotency key derived from the Stripe event ID. Exhausted attempts become redacted dead letters. `SUBSCRIPTION_WEBHOOK_JOBS_ENABLED=false` disables the scheduled worker; it is enabled by default and runs every minute.
 

@@ -19,6 +19,8 @@ The retained contact transfer routes use the same topology. `CONTACT_TRANSFERS_N
 
 Invoice PDF delivery uses the same private upstream and stable public URL. `INVOICE_PDF_NESTJS_ENABLED=true` proxies only `GET /api/invoices/:id/pdf` to NestJS; false or unset falls through to the legacy Express route. `INVOICE_PDF_UPSTREAM_TIMEOUT_MS` defaults to 60 seconds. The proxy forwards only the host cookie, selected organization, and request ID and returns only the hardened PDF download and request headers.
 
+The Stripe invoice webhook also keeps its existing public URL. `STRIPE_INVOICE_WEBHOOK_NESTJS_ENABLED=true` proxies only `POST /api/invoices/webhook/stripe` to the private NestJS service; false or unset falls through to Express. `STRIPE_INVOICE_WEBHOOK_UPSTREAM_TIMEOUT_MS` defaults to 30 seconds. The proxy never reserializes JSON: it forwards the captured body bytes plus only `Content-Type`, `Stripe-Signature`, and request ID, and it returns only content type, cache control, and request ID. Cookies, authorization, organization, and CSRF headers are not forwarded to this provider-authenticated endpoint.
+
 ## Allowed Methods
 
 The following methods are allowed to be used with the API:

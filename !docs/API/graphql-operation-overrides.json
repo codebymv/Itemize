@@ -645,9 +645,9 @@
       "owner": "billing",
       "targetModule": "InvoiceWebhooksModule",
       "targetOperation": "stripeInvoiceWebhook",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Retain signed Stripe webhook over HTTP and preserve transactional event/payment idempotency."
+      "notes": "NestJS retains the signed webhook over HTTP, verifies the exact raw bytes with Stripe's SDK, fails closed without its secret, and commits the event claim, payment, PostgreSQL balance update, and one paid-workflow trigger transactionally. A default-off legacy-origin proxy preserves rollback."
     },
     "POST /api/billing/webhook": {
       "disposition": "retain-http",

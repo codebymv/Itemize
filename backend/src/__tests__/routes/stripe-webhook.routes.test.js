@@ -123,4 +123,38 @@ describe('Stripe invoice webhook transaction', () => {
         expect(client.query.mock.calls.some(([sql]) => sql === 'COMMIT')).toBe(false);
         expect(client.release).toHaveBeenCalledTimes(1);
     });
+
+    test('verifies the exact body captured before JSON parsing', async () => {
+        process.env.STRIPE_WEBHOOK_SECRET = 'whsec_exact';
+        const client = createClient();
+        const pool = { connect: jest.fn().mockResolvedValue(client) };
+        const stripe = {
+            webhooks: {
+                constructEvent: jest.fn().mockReturnValue(stripeEvent('evt_exact')),
+            },
+        };
+        const app = express();
+        app.use(express.json({
+            verify: (req, _res, buffer) => {
+                req.rawBody = Buffer.from(buffer);
+            },
+        }));
+        app.use('/api/invoices', createStripeWebhookRoutes({ pool, stripe }));
+        const raw = '{ "signed": true, "spacing": "preserved" }';
+
+        await request(app)
+            .post('/api/invoices/webhook/stripe')
+            .set('Content-Type', 'application/json')
+            .set('Stripe-Signature', 't=1,v1=exact')
+            .send(raw)
+            .expect(200);
+
+        expect(stripe.webhooks.constructEvent).toHaveBeenCalledWith(
+            expect.any(Buffer),
+            't=1,v1=exact',
+            'whsec_exact',
+        );
+        expect(stripe.webhooks.constructEvent.mock.calls[0][0].toString('utf8'))
+            .toBe(raw);
+    });
 });

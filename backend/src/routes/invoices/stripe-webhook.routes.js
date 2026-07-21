@@ -26,6 +26,7 @@ module.exports = ({ pool, stripe }) => {
         const devSkipVerify =
             !isProd &&
             process.env.STRIPE_WEBHOOK_SKIP_VERIFY === 'true';
+        const rawBody = Buffer.isBuffer(req.rawBody) ? req.rawBody : req.body;
 
         let event;
 
@@ -35,14 +36,14 @@ module.exports = ({ pool, stripe }) => {
                     logger.warn('[Stripe webhook] Production requires STRIPE_WEBHOOK_SECRET and Stripe-Signature');
                     return sendBadRequest(res, 'Webhook verification required');
                 }
-                event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+                event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
             } else if (endpointSecret && sig) {
-                event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+                event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
             } else if (devSkipVerify) {
-                const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+                const raw = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : rawBody;
                 event = typeof raw === 'string' ? JSON.parse(raw) : raw;
             } else if (!endpointSecret) {
-                const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+                const raw = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : rawBody;
                 event = typeof raw === 'string' ? JSON.parse(raw) : raw;
             } else {
                 return sendBadRequest(res, 'Missing stripe-signature header');
