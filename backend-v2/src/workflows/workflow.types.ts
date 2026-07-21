@@ -59,3 +59,32 @@ export class DeleteWorkflowResult {
   @Field(() => Int) deletedId: number;
   @Field(() => Boolean) success: boolean;
 }
+
+@ObjectType()
+export class WorkflowEnrollment {
+  @Field(() => Int) id: number;
+  @Field(() => Int) workflowId: number;
+  @Field(() => Int) contactId: number;
+  @Field(() => Int) currentStep: number;
+  @Field(() => String) status: string;
+  @Field(() => GraphQLJSON) triggerData: Record<string, unknown>;
+  @Field(() => GraphQLJSON) context: Record<string, unknown>;
+  @Field(() => String, { nullable: true }) errorMessage: string | null;
+  @Field(() => GraphQLISODateTime) enrolledAt: Date;
+  @Field(() => GraphQLISODateTime, { nullable: true }) nextActionAt: Date | null;
+  @Field(() => GraphQLISODateTime, { nullable: true }) completedAt: Date | null;
+  @Field(() => Int) executionAttemptCount: number;
+  @Field(() => String, { nullable: true }) pauseReason: string | null;
+  @Field(() => GraphQLISODateTime, { nullable: true }) pausedAt: Date | null;
+  @Field(() => String, { nullable: true }) firstName: string | null;
+  @Field(() => String, { nullable: true }) lastName: string | null;
+  @Field(() => String, { nullable: true }) email: string | null;
+  @Field(() => String, { nullable: true }) company: string | null;
+  @Field(() => Int) affectedSideEffects: number;
+}
+
+@ObjectType()
+export class WorkflowEnrollmentPage {
+  @Field(() => [WorkflowEnrollment]) nodes: WorkflowEnrollment[];
+  @Field(() => PageInfo) pageInfo: PageInfo;
+}

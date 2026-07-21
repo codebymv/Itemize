@@ -1,4 +1,4 @@
-import type { Workflow, WorkflowStep } from './automationsApi';
+import type { Workflow, WorkflowEnrollment, WorkflowStep } from './automationsApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlWorkflowStep = {
@@ -24,12 +24,23 @@ type WorkflowWriteInput = {
 };
 type WorkflowUpdateInput = Partial<Omit<WorkflowWriteInput, 'organization_id'>>;
 
+type GraphqlWorkflowEnrollment = {
+  id: number; workflowId: number; contactId: number; currentStep: number; status: WorkflowEnrollment['status'];
+  triggerData: Record<string, unknown>; context: Record<string, unknown>; errorMessage: string | null;
+  enrolledAt: string; nextActionAt: string | null; completedAt: string | null;
+  firstName: string | null; lastName: string | null; email: string | null; company: string | null;
+};
+
 const fields = `
   id organizationId name description triggerType triggerConfig scheduledContactId
   nextTriggerAt lastTriggeredAt isActive stats createdById createdByName createdAt updatedAt
   stepCount activeEnrollments affectedEnrollments
   enrollmentStats { activeCount completedCount failedCount totalCount }
   steps { id workflowId stepOrder stepType stepConfig conditionConfig trueBranchStep falseBranchStep }
+`;
+const enrollmentFields = `
+  id workflowId contactId currentStep status triggerData context errorMessage
+  enrolledAt nextActionAt completedAt firstName lastName email company
 `;
 
 const mapStep = (step: GraphqlWorkflowStep): WorkflowStep => ({
@@ -57,6 +68,20 @@ const mapWorkflow = (workflow: GraphqlWorkflow): Workflow => ({
     failed_count: workflow.enrollmentStats.failedCount,
     total_count: workflow.enrollmentStats.totalCount,
   },
+});
+
+const mapEnrollment = (enrollment: GraphqlWorkflowEnrollment): WorkflowEnrollment => ({
+  id: enrollment.id, workflow_id: enrollment.workflowId, contact_id: enrollment.contactId,
+  current_step: enrollment.currentStep, status: enrollment.status,
+  trigger_data: enrollment.triggerData, context: enrollment.context,
+  ...(enrollment.errorMessage === null ? {} : { error_message: enrollment.errorMessage }),
+  enrolled_at: enrollment.enrolledAt,
+  ...(enrollment.nextActionAt === null ? {} : { next_action_at: enrollment.nextActionAt }),
+  ...(enrollment.completedAt === null ? {} : { completed_at: enrollment.completedAt }),
+  ...(enrollment.firstName === null ? {} : { first_name: enrollment.firstName }),
+  ...(enrollment.lastName === null ? {} : { last_name: enrollment.lastName }),
+  ...(enrollment.email === null ? {} : { email: enrollment.email }),
+  ...(enrollment.company === null ? {} : { company: enrollment.company }),
 });
 
 const mapSteps = (steps: WorkflowWriteInput['steps']) => steps?.map((step) => ({
@@ -154,3 +179,79 @@ export const deleteWorkflowViaGraphql = async (id: number, organizationId: numbe
   );
   if (!data.deleteWorkflow.success || data.deleteWorkflow.deletedId !== id) throw new Error('GraphQL workflow delete returned an invalid result');
 };
+
+export const getWorkflowEnrollmentsViaGraphql = async (
+  workflowId: number,
+  organizationId: number,
+  params: { status?: string; page?: number; limit?: number } = {},
+): Promise<{
+  enrollments: WorkflowEnrollment[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}> => {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 50;
+  const data = await graphqlRequest<
+    { workflowEnrollments: {
+      nodes: GraphqlWorkflowEnrollment[];
+      pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+    } },
+    { workflowId: number; filter: { status?: string }; page: { page: number; pageSize: number } }
+  >(`query WorkflowEnrollments($workflowId: Int!, $filter: WorkflowEnrollmentFilterInput, $page: PageInput) {
+    workflowEnrollments(workflowId: $workflowId, filter: $filter, page: $page) {
+      nodes { ${enrollmentFields} }
+      pageInfo { page pageSize total totalPages }
+    }
+  }`, {
+    workflowId, filter: params.status === undefined ? {} : { status: params.status },
+    page: { page, pageSize: limit },
+  }, organizationId);
+  return {
+    enrollments: data.workflowEnrollments.nodes.map(mapEnrollment),
+    pagination: {
+      page: data.workflowEnrollments.pageInfo.page,
+      limit: data.workflowEnrollments.pageInfo.pageSize,
+      total: data.workflowEnrollments.pageInfo.total,
+      totalPages: data.workflowEnrollments.pageInfo.totalPages,
+    },
+  };
+};
+
+export const enrollContactInWorkflowViaGraphql = async (
+  workflowId: number,
+  contactId: number,
+  organizationId: number,
+  triggerData?: Record<string, unknown>,
+): Promise<WorkflowEnrollment> => {
+  const data = await graphqlMutationRequest<
+    { enrollContactInWorkflow: GraphqlWorkflowEnrollment },
+    { workflowId: number; input: { contactId: number; triggerData?: Record<string, unknown> } }
+  >(`mutation EnrollContactInWorkflow($workflowId: Int!, $input: EnrollContactInWorkflowInput!) {
+    enrollContactInWorkflow(workflowId: $workflowId, input: $input) { ${enrollmentFields} }
+  }`, {
+    workflowId, input: { contactId, ...(triggerData === undefined ? {} : { triggerData }) },
+  }, organizationId);
+  return mapEnrollment(data.enrollContactInWorkflow);
+};
+
+const enrollmentLifecycleMutation = async (
+  operation: 'pauseWorkflowEnrollment' | 'resumeWorkflowEnrollment' | 'retryWorkflowEnrollment' | 'cancelWorkflowEnrollment',
+  workflowId: number,
+  enrollmentId: number,
+  organizationId: number,
+): Promise<WorkflowEnrollment> => {
+  const data = await graphqlMutationRequest<Record<string, GraphqlWorkflowEnrollment>, { workflowId: number; enrollmentId: number }>(
+    `mutation WorkflowEnrollmentLifecycle($workflowId: Int!, $enrollmentId: Int!) {
+      ${operation}(workflowId: $workflowId, enrollmentId: $enrollmentId) { ${enrollmentFields} }
+    }`, { workflowId, enrollmentId }, organizationId,
+  );
+  return mapEnrollment(data[operation]);
+};
+
+export const pauseWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  enrollmentLifecycleMutation('pauseWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+export const resumeWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  enrollmentLifecycleMutation('resumeWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+export const retryWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  enrollmentLifecycleMutation('retryWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+export const cancelWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  enrollmentLifecycleMutation('cancelWorkflowEnrollment', workflowId, enrollmentId, organizationId);

@@ -1,6 +1,6 @@
 # Campaigns and workflows GraphQL cutover contract
 
-**Status:** Campaign management and delivery lifecycle implemented; workflows remain characterized
+**Status:** Campaign management plus workflow definitions and enrollment lifecycle implemented
 
 **Evidence date:** 2026-07-21
 
@@ -141,7 +141,7 @@ Supported trigger types:
 contact_added, tag_added, tag_removed, deal_stage_changed,
 form_submitted, manual, scheduled, contact_updated,
 booking_created, booking_cancelled, booking_rescheduled,
-invoice_paid, contract_signed
+invoice_paid, contract_signed, deal_won, deal_lost, deal_reopened
 ```
 
 Supported step types:
@@ -230,14 +230,19 @@ Fresh PostgreSQL coverage proves GraphQL/REST interoperability, campaign and rec
 
 Existing PostgreSQL suites continue to characterize workflow CRUD, trigger validation, ordered step replacement, activation, enrollment, tenant denial, duplicate, plan limits, manual pause/resume, deactivation pause/resume, same-step retry, provider dead-letter retry, and cancellation races.
 
+`WorkflowsModule` now implements tenant-scoped `workflows`, `workflow`, `createWorkflow`, `updateWorkflow`, `deleteWorkflow`, `duplicateWorkflow`, `activateWorkflow`, and `deactivateWorkflow`. Definition writes validate the canonical trigger/step vocabulary before opening a transaction, persist contiguous ordered steps atomically, distinguish omitted steps from an explicit empty list, validate scheduled contacts against the active tenant, and conceal foreign IDs. Create and duplicate serialize the plan-limit check with an organization advisory transaction lock. Duplicate copies the full inactive definition without runtime history. Deactivate atomically pauses active enrollments with `workflow_deactivated`; activate requires steps and resumes only that pause reason. Independent default-off read and mutation flags adapt the GraphQL result back to the retained frontend shape.
+
+Fresh PostgreSQL coverage proves the shared stored representation, ordered creation, omitted-step preservation, atomic replacement and removal, scheduled-contact tenant denial, full inactive duplication, deactivation pause/reactivation resume, foreign-ID concealment, CSRF enforcement, invalid branch denial, and concurrent one-slot plan-limit enforcement. The full retained PostgreSQL suite remains green, as do the complete NestJS unit and frontend suites.
+
+`WorkflowEnrollmentsModule` now implements tenant-scoped `workflowEnrollments`, `enrollContactInWorkflow`, `pauseWorkflowEnrollment`, `resumeWorkflowEnrollment`, `retryWorkflowEnrollment`, and `cancelWorkflowEnrollment`. Enrollment creates serialize through the locked workflow and the existing `(workflow_id, contact_id)` uniqueness constraint; active and paused duplicates fail closed, while terminal rows reactivate in place from step one. Lists verify the tenant-owned parent, tenant-qualify contact joins, strictly validate status and paging, and use `enrolled_at DESC, id DESC`. Manual pause state remains distinct from workflow-deactivation state, failed retry preserves `current_step`, and cancellation clears the execution claim while marking queued or ambiguous provider work so processing work can finish without another attempt. An independent default-off frontend enrollment flag preserves the retained REST response envelope and rollback path.
+
+Fresh PostgreSQL coverage proves concurrent enrollment uniqueness, cross-tenant contact and workflow concealment, stable filtered paging, manual pause isolation, explicit resume, same-step failed retry, queued and in-flight cancellation semantics, terminal-row re-enrollment, and CSRF enforcement. Focused frontend tests prove enrollment mapping, paging, protected mutations, default-off transport selection, and the independent flag.
+
 Focused tests also protect campaign send locking, pause-safe completion, campaign pagination-envelope mapping, workflow webhook signature expiry/replay, clean-schema webhook claims, engine claim collision, provider failure semantics, one-attempt Twilio message creation, tenant-scoped step mutations, safe webhook envelopes, DNS-pinned public-only webhook egress, redirect/proxy denial, bounded response handling, and invalid waits/conditions. Fresh PostgreSQL coverage proves ordered execution/logs, wait scheduling, forward branching, one provider call when two workers race an enrollment, selective lifecycle transitions, the accepted-in-flight cancellation boundary, immediate and expired-lease SMS ambiguity quarantine, accepted-SID and explicit-resend reconciliation, tenant-isolated execution metrics, strict operator filtering, and payload-free queue projections.
 
-The slice is not ready for traffic cutover until:
+The automation surface is not fully cut over until:
 
-- campaign send must reuse the now-proven preview compiler so preview/send equality and snapshot stability have direct database coverage;
-- campaign delivery uses a durable job/outbox with an atomic usage reservation;
-- send, pause, and resume operations have provider-isolated integration tests;
-- workflow plan limits are concurrency-safe;
-- a staging canary exercises the opt-in trigger, enrollment, and provider workers with sandbox credentials, alerts, and rollback rehearsal;
-- every automation step type retains execution and provider-failure coverage as the NestJS worker replaces the legacy engine;
-- campaign send/pause/resume and critical workflow React journeys pass against their eventual GraphQL operations.
+- workflow execution/operator summary, side-effect inspection, retry, and SMS reconciliation move to NestJS without exposing provider payload secrets;
+- the durable trigger, enrollment, and provider workers have NestJS ownership while every automation step retains execution and provider-failure coverage;
+- critical workflow builder and enrollment React journeys pass against their GraphQL operations;
+- after the functional slices are complete, staging canary flags, sandbox provider credentials, alerts, drain behavior, and rollback rehearsal are configured and verified.

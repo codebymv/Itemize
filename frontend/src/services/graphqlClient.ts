@@ -213,6 +213,9 @@ export const isWorkflowGraphqlReadsEnabled = (): boolean =>
 export const isWorkflowGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_WORKFLOW_MUTATIONS_GRAPHQL === 'true';
 
+export const isWorkflowEnrollmentsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_WORKFLOW_ENROLLMENTS_GRAPHQL === 'true';
+
 export const isEmailTemplateGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_EMAIL_TEMPLATE_READS_GRAPHQL === 'true';
 

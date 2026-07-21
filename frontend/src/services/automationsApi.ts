@@ -18,6 +18,7 @@ import {
   isEmailTemplateGraphqlReadsEnabled,
   isWorkflowGraphqlMutationsEnabled,
   isWorkflowGraphqlReadsEnabled,
+  isWorkflowEnrollmentsGraphqlEnabled,
 } from './graphqlClient';
 import {
   activateWorkflowViaGraphql,
@@ -28,6 +29,9 @@ import {
   getWorkflowViaGraphql,
   getWorkflowsViaGraphql,
   updateWorkflowViaGraphql,
+  cancelWorkflowEnrollmentViaGraphql,
+  enrollContactInWorkflowViaGraphql,
+  getWorkflowEnrollmentsViaGraphql,
 } from './workflowsGraphql';
 import type {
   WorkflowStepType,
@@ -224,6 +228,9 @@ export const enrollContact = async (
   organizationId: number,
   triggerData?: WorkflowConfig
 ): Promise<WorkflowEnrollment> => {
+  if (isWorkflowEnrollmentsGraphqlEnabled()) {
+    return enrollContactInWorkflowViaGraphql(workflowId, contactId, organizationId, triggerData);
+  }
   const response = await api.post(`/api/workflows/${workflowId}/enroll`, {
     organization_id: organizationId,
     contact_id: contactId,
@@ -244,6 +251,9 @@ export const getWorkflowEnrollments = async (
   enrollments: WorkflowEnrollment[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }> => {
+  if (isWorkflowEnrollmentsGraphqlEnabled()) {
+    return getWorkflowEnrollmentsViaGraphql(workflowId, organizationId, params);
+  }
   const response = await api.get(`/api/workflows/${workflowId}/enrollments`, {
     params: { organization_id: organizationId, ...params },
   });
@@ -258,6 +268,9 @@ export const cancelEnrollment = async (
   enrollmentId: number,
   organizationId: number
 ): Promise<WorkflowEnrollment> => {
+  if (isWorkflowEnrollmentsGraphqlEnabled()) {
+    return cancelWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
+  }
   const response = await api.delete(`/api/workflows/${workflowId}/enrollments/${enrollmentId}`, {
     params: { organization_id: organizationId },
   });

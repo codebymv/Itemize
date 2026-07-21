@@ -236,4 +236,134 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     expect(responses.filter((body) => body.errors?.[0]?.extensions?.reason === 'PLAN_LIMIT_REACHED')).toHaveLength(1);
     await pool.query('UPDATE organizations SET workflows_limit = -1 WHERE id = $1', [organizationId]);
   });
+
+  it('manages enrollment state without crossing tenants or losing current-step progress', async () => {
+    const contacts = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id, first_name, last_name, email, company, created_by)
+       VALUES ($1, 'Local', 'Contact', $3, 'Itemize', $5),
+              ($2, 'Foreign', 'Contact', $4, 'Other', $6)
+       RETURNING id`,
+      [organizationId, outsiderOrganizationId, `enrollment-local-${Date.now()}@test.itemize`,
+        `enrollment-foreign-${Date.now()}@test.itemize`, memberId, outsiderId],
+    );
+    const workflow = await pool.query<{ id: number }>(
+      `INSERT INTO workflows (organization_id, name, trigger_type, is_active, created_by)
+       VALUES ($1, 'Enrollment lifecycle', 'manual', true, $2) RETURNING id`,
+      [organizationId, memberId],
+    );
+    const workflowId = Number(workflow.rows[0].id);
+    const steps = await pool.query<{ id: number }>(
+      `INSERT INTO workflow_steps (workflow_id, step_order, step_type, step_config)
+       VALUES ($1, 1, 'wait', '{}'), ($1, 2, 'add_tag', '{"tag_name":"done"}') RETURNING id`,
+      [workflowId],
+    );
+    const enroll = `mutation Enroll($workflowId: Int!, $input: EnrollContactInWorkflowInput!) {
+      enrollContactInWorkflow(workflowId: $workflowId, input: $input) {
+        id workflowId contactId currentStep status triggerData context firstName lastName email company
+      }
+    }`;
+
+    const [first, second] = await Promise.all([
+      graphql(memberToken, organizationId, enroll, {
+        workflowId, input: { contactId: Number(contacts.rows[0].id), triggerData: { source: 'manual' } },
+      }),
+      graphql(memberToken, organizationId, enroll, {
+        workflowId, input: { contactId: Number(contacts.rows[0].id), triggerData: { source: 'duplicate' } },
+      }),
+    ]);
+    const results = [first.body, second.body];
+    expect(results.filter((body) => body.data?.enrollContactInWorkflow)).toHaveLength(1);
+    expect(results.filter((body) => body.errors?.[0]?.extensions?.reason === 'WORKFLOW_ENROLLMENT_CONFLICT')).toHaveLength(1);
+    const enrollment = results.find((body) => body.data?.enrollContactInWorkflow)?.data.enrollContactInWorkflow;
+    expect(enrollment).toMatchObject({
+      workflowId, contactId: Number(contacts.rows[0].id), currentStep: 1, status: 'active',
+      triggerData: expect.objectContaining({ source: expect.any(String) }), firstName: null,
+    });
+    const enrollmentId = Number(enrollment.id);
+
+    const foreignContact = await graphql(memberToken, organizationId, enroll, {
+      workflowId, input: { contactId: Number(contacts.rows[1].id) },
+    }).expect(200);
+    expect(foreignContact.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const listed = await graphql(memberToken, organizationId,
+      `query Enrollments($workflowId: Int!, $filter: WorkflowEnrollmentFilterInput, $page: PageInput) {
+        workflowEnrollments(workflowId: $workflowId, filter: $filter, page: $page) {
+          nodes { id workflowId contactId status firstName email }
+          pageInfo { page pageSize total totalPages hasNextPage }
+        }
+      }`, { workflowId, filter: { status: 'active' }, page: { page: 1, pageSize: 1 } }, false).expect(200);
+    expect(listed.body.errors).toBeUndefined();
+    expect(listed.body.data.workflowEnrollments).toMatchObject({
+      nodes: [{ id: enrollmentId, workflowId, contactId: Number(contacts.rows[0].id), status: 'active', firstName: 'Local' }],
+      pageInfo: { page: 1, pageSize: 1, total: 1, totalPages: 1, hasNextPage: false },
+    });
+
+    const lifecycle = (operation: string) => graphql(memberToken, organizationId,
+      `mutation EnrollmentLifecycle($workflowId: Int!, $enrollmentId: Int!) {
+        ${operation}(workflowId: $workflowId, enrollmentId: $enrollmentId) {
+          id currentStep status pauseReason executionAttemptCount affectedSideEffects
+        }
+      }`, { workflowId, enrollmentId });
+    const paused = await lifecycle('pauseWorkflowEnrollment').expect(200);
+    expect(paused.body.data.pauseWorkflowEnrollment).toMatchObject({ status: 'paused', pauseReason: 'manual' });
+    await graphql(memberToken, organizationId,
+      'mutation Activate($id: Int!) { activateWorkflow(id: $id) { id affectedEnrollments } }',
+      { id: workflowId }).expect(200);
+    const stillPaused = await pool.query<{ status: string; pause_reason: string }>(
+      'SELECT status, pause_reason FROM workflow_enrollments WHERE id = $1', [enrollmentId],
+    );
+    expect(stillPaused.rows[0]).toMatchObject({ status: 'paused', pause_reason: 'manual' });
+    const resumed = await lifecycle('resumeWorkflowEnrollment').expect(200);
+    expect(resumed.body.data.resumeWorkflowEnrollment).toMatchObject({ status: 'active', pauseReason: null });
+
+    await pool.query(
+      `UPDATE workflow_enrollments SET status = 'failed', current_step = 2,
+         error_message = 'provider timeout', execution_attempt_count = 4, next_action_at = NULL
+       WHERE id = $1`, [enrollmentId],
+    );
+    const retried = await lifecycle('retryWorkflowEnrollment').expect(200);
+    expect(retried.body.data.retryWorkflowEnrollment).toMatchObject({
+      status: 'active', currentStep: 2, executionAttemptCount: 0,
+    });
+
+    const runAt = new Date().toISOString();
+    await pool.query(
+      `INSERT INTO workflow_side_effect_outbox (
+         idempotency_key, organization_id, enrollment_id, step_id, enrollment_run_at,
+         effect_type, payload, status, next_attempt_at, lease_expires_at
+       ) VALUES
+         ($1, $3, $4, $5, $7, 'email', '{}', 'queued', NOW(), NULL),
+         ($2, $3, $4, $6, $7, 'sms', '{}', 'processing', NOW(), NOW() + INTERVAL '5 minutes')`,
+      [`enrollment-queued-${Date.now()}`, `enrollment-processing-${Date.now()}`, organizationId,
+        enrollmentId, Number(steps.rows[0].id), Number(steps.rows[1].id), runAt],
+    );
+    const cancelled = await lifecycle('cancelWorkflowEnrollment').expect(200);
+    expect(cancelled.body.data.cancelWorkflowEnrollment).toMatchObject({ status: 'cancelled', affectedSideEffects: 2 });
+    const outbox = await pool.query<{ status: string; cancellation_reason: string; cancelled_at: Date | null }>(
+      `SELECT status, cancellation_reason, cancelled_at FROM workflow_side_effect_outbox
+       WHERE enrollment_id = $1 ORDER BY id`, [enrollmentId],
+    );
+    expect(outbox.rows).toEqual([
+      expect.objectContaining({ status: 'cancelled', cancellation_reason: 'enrollment_cancelled', cancelled_at: expect.any(Date) }),
+      expect.objectContaining({ status: 'processing', cancellation_reason: 'enrollment_cancelled', cancelled_at: expect.any(Date) }),
+    ]);
+
+    const reenrolled = await graphql(memberToken, organizationId, enroll, {
+      workflowId, input: { contactId: Number(contacts.rows[0].id), triggerData: { source: 'reenroll' } },
+    }).expect(200);
+    expect(reenrolled.body.data.enrollContactInWorkflow).toMatchObject({
+      id: enrollmentId, status: 'active', currentStep: 1, triggerData: { source: 'reenroll' }, context: {},
+    });
+
+    const hidden = await graphql(outsiderToken, outsiderOrganizationId,
+      'query Enrollments($workflowId: Int!) { workflowEnrollments(workflowId: $workflowId) { nodes { id } } }',
+      { workflowId }, false).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const noCsrf = await graphql(memberToken, organizationId,
+      `mutation Pause($workflowId: Int!, $enrollmentId: Int!) {
+        pauseWorkflowEnrollment(workflowId: $workflowId, enrollmentId: $enrollmentId) { id }
+      }`, { workflowId, enrollmentId }, false).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
 });

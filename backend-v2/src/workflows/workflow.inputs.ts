@@ -34,3 +34,14 @@ export class UpdateWorkflowInput {
   @Field(() => GraphQLJSON, { nullable: true }) triggerConfig?: Record<string, unknown> | null;
   @Field(() => [WorkflowStepInput], { nullable: true }) steps?: WorkflowStepInput[] | null;
 }
+
+@InputType()
+export class WorkflowEnrollmentFilterInput {
+  @Field(() => String, { nullable: true }) status?: string;
+}
+
+@InputType()
+export class EnrollContactInWorkflowInput {
+  @Field(() => Int) contactId: number;
+  @Field(() => GraphQLJSON, { nullable: true }) triggerData?: Record<string, unknown>;
+}

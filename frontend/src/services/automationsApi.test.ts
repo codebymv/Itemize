@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { createWorkflow, getWorkflows, updateWorkflow } from './automationsApi';
 import {
+  cancelEnrollment, createWorkflow, enrollContact, getWorkflowEnrollments, getWorkflows, updateWorkflow,
+} from './automationsApi';
+import {
+  cancelWorkflowEnrollmentViaGraphql,
   createWorkflowViaGraphql,
+  enrollContactInWorkflowViaGraphql,
+  getWorkflowEnrollmentsViaGraphql,
   getWorkflowsViaGraphql,
   updateWorkflowViaGraphql,
 } from './workflowsGraphql';
 import {
+  isWorkflowEnrollmentsGraphqlEnabled,
   isWorkflowGraphqlMutationsEnabled,
   isWorkflowGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -15,14 +21,16 @@ vi.mock('@/lib/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn
 vi.mock('./graphqlClient', () => ({
   isEmailTemplateGraphqlMutationsEnabled: vi.fn(() => false),
   isEmailTemplateGraphqlReadsEnabled: vi.fn(() => false),
+  isWorkflowEnrollmentsGraphqlEnabled: vi.fn(),
   isWorkflowGraphqlMutationsEnabled: vi.fn(),
   isWorkflowGraphqlReadsEnabled: vi.fn(),
 }));
 vi.mock('./workflowsGraphql', () => ({
   activateWorkflowViaGraphql: vi.fn(), createWorkflowViaGraphql: vi.fn(),
+  cancelWorkflowEnrollmentViaGraphql: vi.fn(), enrollContactInWorkflowViaGraphql: vi.fn(),
   deactivateWorkflowViaGraphql: vi.fn(), deleteWorkflowViaGraphql: vi.fn(),
   duplicateWorkflowViaGraphql: vi.fn(), getWorkflowViaGraphql: vi.fn(),
-  getWorkflowsViaGraphql: vi.fn(), updateWorkflowViaGraphql: vi.fn(),
+  getWorkflowEnrollmentsViaGraphql: vi.fn(), getWorkflowsViaGraphql: vi.fn(), updateWorkflowViaGraphql: vi.fn(),
 }));
 
 const workflow = {
@@ -30,12 +38,17 @@ const workflow = {
   trigger_config: {}, is_active: false, stats: { enrolled: 0, completed: 0, failed: 0 },
   created_at: '2026-07-21T10:00:00Z', updated_at: '2026-07-21T10:00:00Z',
 };
+const enrollment = {
+  id: 14, workflow_id: 9, contact_id: 22, current_step: 1, status: 'active' as const,
+  trigger_data: {}, context: {}, enrolled_at: '2026-07-21T10:00:00Z',
+};
 
 describe('workflow API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isWorkflowGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isWorkflowGraphqlMutationsEnabled).mockReturnValue(false);
+    vi.mocked(isWorkflowEnrollmentsGraphqlEnabled).mockReturnValue(false);
   });
 
   it('retains workflow reads and writes on REST by default', async () => {
@@ -67,5 +80,41 @@ describe('workflow API transport selection', () => {
     expect(updateWorkflowViaGraphql).toHaveBeenCalledWith(9, { name: 'Renamed', steps: [] }, 4);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('retains enrollment operations on REST by default', async () => {
+    const page = { enrollments: [enrollment], pagination: { page: 1, limit: 50, total: 1, totalPages: 1 } };
+    vi.mocked(api.post).mockResolvedValue({ data: { success: true, data: enrollment } });
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: page } });
+    vi.mocked(api.delete).mockResolvedValue({ data: { success: true, data: { ...enrollment, status: 'cancelled' } } });
+    await enrollContact(9, 22, 4, { source: 'manual' });
+    await getWorkflowEnrollments(9, 4, { status: 'active', page: 1, limit: 50 });
+    await cancelEnrollment(9, 14, 4);
+    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enroll', {
+      organization_id: 4, contact_id: 22, trigger_data: { source: 'manual' },
+    });
+    expect(api.get).toHaveBeenCalledWith('/api/workflows/9/enrollments', {
+      params: { organization_id: 4, status: 'active', page: 1, limit: 50 },
+    });
+    expect(api.delete).toHaveBeenCalledWith('/api/workflows/9/enrollments/14', {
+      params: { organization_id: 4 },
+    });
+  });
+
+  it('routes enrollment operations through their independent GraphQL flag', async () => {
+    const page = { enrollments: [enrollment], pagination: { page: 1, limit: 25, total: 1, totalPages: 1 } };
+    vi.mocked(isWorkflowEnrollmentsGraphqlEnabled).mockReturnValue(true);
+    vi.mocked(enrollContactInWorkflowViaGraphql).mockResolvedValue(enrollment);
+    vi.mocked(getWorkflowEnrollmentsViaGraphql).mockResolvedValue(page);
+    vi.mocked(cancelWorkflowEnrollmentViaGraphql).mockResolvedValue({ ...enrollment, status: 'cancelled' });
+    await enrollContact(9, 22, 4, { source: 'manual' });
+    await getWorkflowEnrollments(9, 4, { status: 'active', page: 2, limit: 25 });
+    await cancelEnrollment(9, 14, 4);
+    expect(enrollContactInWorkflowViaGraphql).toHaveBeenCalledWith(9, 22, 4, { source: 'manual' });
+    expect(getWorkflowEnrollmentsViaGraphql).toHaveBeenCalledWith(9, 4, { status: 'active', page: 2, limit: 25 });
+    expect(cancelWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
   });
 });
