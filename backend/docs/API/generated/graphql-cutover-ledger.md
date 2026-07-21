@@ -188,7 +188,7 @@
 | GET | `/api/invoices/businesses/:id` | 1 | 0 | graphql-query | high | billing / InvoiceBusinessesModule / invoiceBusiness |
 | PUT | `/api/invoices/businesses/:id` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / updateInvoiceBusiness |
 | DELETE | `/api/invoices/businesses/:id/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / removeInvoiceBusinessLogo |
-| POST | `/api/invoices/businesses/:id/logo` | 1 | 1 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
+| POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/email/preview` | 1 | 1 | graphql-mutation | high | billing / InvoicesModule / previewInvoiceEmail |
 | GET | `/api/invoices/estimates` | 1 | 6 | graphql-query | medium | billing / EstimatesModule / estimates |
 | POST | `/api/invoices/estimates` | 1 | 9 | graphql-mutation | medium | billing / EstimatesModule / createEstimate |

@@ -20,6 +20,7 @@ import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
 import { InvoiceLogoCleanupModule } from './invoice-logo-cleanup/invoice-logo-cleanup.module';
+import { InvoiceLogoUploadsModule } from './invoice-logo-uploads/invoice-logo-uploads.module';
 import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
 import { InvoiceWebhooksModule } from './invoice-webhooks/invoice-webhooks.module';
 import { InvoicesModule } from './invoices/invoices.module';
@@ -67,6 +68,7 @@ const observabilityPlugins = [
     FormsModule,
     InvoiceBusinessesModule,
     InvoiceLogoCleanupModule,
+    InvoiceLogoUploadsModule,
     InvoiceSettingsModule,
     InvoiceWebhooksModule,
     InvoicesModule,

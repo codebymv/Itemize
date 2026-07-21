@@ -21,6 +21,8 @@ Invoice PDF delivery uses the same private upstream and stable public URL. `INVO
 
 The Stripe invoice webhook also keeps its existing public URL. `STRIPE_INVOICE_WEBHOOK_NESTJS_ENABLED=true` proxies only `POST /api/invoices/webhook/stripe` to the private NestJS service; false or unset falls through to Express. `STRIPE_INVOICE_WEBHOOK_UPSTREAM_TIMEOUT_MS` defaults to 30 seconds. The proxy never reserializes JSON: it forwards the captured body bytes plus only `Content-Type`, `Stripe-Signature`, and request ID, and it returns only content type, cache control, and request ID. Cookies, authorization, organization, and CSRF headers are not forwarded to this provider-authenticated endpoint.
 
+Invoice logo uploads keep their two existing public URLs. `INVOICE_LOGO_UPLOADS_NESTJS_ENABLED=true` proxies only `POST /api/invoices/businesses/:id/logo` and `POST /api/invoices/settings/logo`; false or unset falls through to Express. `INVOICE_LOGO_UPLOADS_UPSTREAM_TIMEOUT_MS` defaults to 30 seconds. The proxy caps and preserves the multipart bytes and boundary, forwards only the host cookie, selected organization, CSRF token, and request ID, and returns only content type, cache control, and request ID.
+
 ## Allowed Methods
 
 The following methods are allowed to be used with the API:

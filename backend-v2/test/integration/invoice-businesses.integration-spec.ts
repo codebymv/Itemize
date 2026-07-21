@@ -9,6 +9,9 @@ import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 import { InvoiceLogoCleanupService } from '../../src/invoice-logo-cleanup/invoice-logo-cleanup.service';
+import {
+  INVOICE_LOGO_STORAGE, InvoiceLogoStorage,
+} from '../../src/invoice-logo-cleanup/invoice-logo-storage.provider';
 
 describe('Invoice business GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -21,6 +24,8 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
   let memberToken: string;
   let outsiderToken: string;
   let logoCleanupService: InvoiceLogoCleanupService;
+  let logoStorage: InvoiceLogoStorage;
+  const uploadedLogoUrls: string[] = [];
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -90,6 +95,7 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       .useValue(pool)
       .compile();
     logoCleanupService = moduleRef.get(InvoiceLogoCleanupService);
+    logoStorage = moduleRef.get(INVOICE_LOGO_STORAGE);
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
       logger: false,
@@ -121,6 +127,7 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
         [memberId, outsiderId].filter(Boolean),
       ]);
     }
+    for (const url of uploadedLogoUrls) await logoStorage?.remove(url);
     if (app) await app.close();
   });
 
@@ -511,5 +518,70 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       false,
     ).expect(200);
     expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('owns bounded multipart business and settings logo replacement over HTTP', async () => {
+    const oldLogo = '/uploads/logos/integration-old-logo.png';
+    const businessId = Number((await pool.query<{ id: number }>(
+      `INSERT INTO businesses (organization_id, name, logo_url)
+       VALUES ($1, 'Multipart Logo', $2) RETURNING id`,
+      [organizationId, oldLogo],
+    )).rows[0].id);
+    const png = Buffer.concat([
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      Buffer.from([0, 0, 0, 0]), Buffer.from('IEND'), Buffer.from([0, 0, 0, 0]),
+    ]);
+    const authenticated = (path: string) => request(app.getHttpServer())
+      .post(path)
+      .set('Cookie', `itemize_auth=${memberToken}; csrf-token=business-csrf`)
+      .set('x-csrf-token', 'business-csrf')
+      .set('x-organization-id', String(organizationId));
+
+    const business = await authenticated(`/api/invoices/businesses/${businessId}/logo`)
+      .attach('logo', png, { filename: 'brand.png', contentType: 'image/png' });
+    expect({ status: business.status, body: business.body }).toMatchObject({
+      status: 200,
+      body: {
+        success: true,
+        data: { logo_url: expect.stringMatching(/^\/uploads\/logos\/logo-/) },
+      },
+    });
+    uploadedLogoUrls.push(business.body.data.logo_url);
+    expect((await pool.query(
+      `SELECT 1 FROM invoice_logo_deletion_jobs
+       WHERE organization_id = $1 AND logo_url = $2 AND status = 'queued'`,
+      [organizationId, oldLogo],
+    )).rows).toHaveLength(1);
+
+    const settings = await authenticated('/api/invoices/settings/logo')
+      .attach('logo', png, { filename: 'settings.png', contentType: 'image/png' })
+      .expect(200);
+    expect(settings.body).toMatchObject({
+      success: true,
+      data: { success: true, logo_url: expect.stringMatching(/^\/uploads\/logos\/logo-/) },
+    });
+    uploadedLogoUrls.push(settings.body.data.logo_url);
+
+    await authenticated(`/api/invoices/businesses/${businessId}/logo`)
+      .attach('logo', Buffer.from('spoofed'), {
+        filename: 'spoofed.png', contentType: 'image/png',
+      }).expect(400);
+    expect((await pool.query<{ logo_url: string }>(
+      'SELECT logo_url FROM businesses WHERE id = $1', [businessId],
+    )).rows[0].logo_url).toBe(business.body.data.logo_url);
+
+    await request(app.getHttpServer())
+      .post(`/api/invoices/businesses/${businessId}/logo`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .attach('logo', png, { filename: 'no-csrf.png', contentType: 'image/png' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .post(`/api/invoices/businesses/${businessId}/logo`)
+      .set('Cookie', `itemize_auth=${outsiderToken}; csrf-token=business-csrf`)
+      .set('x-csrf-token', 'business-csrf')
+      .set('x-organization-id', String(outsiderOrganizationId))
+      .attach('logo', png, { filename: 'foreign.png', contentType: 'image/png' })
+      .expect(404);
   });
 });

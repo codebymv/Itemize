@@ -7,7 +7,7 @@ describe('InvoiceLogoCleanupService', () => {
     dueIds: jest.fn(), claim: jest.fn(), isReferenced: jest.fn(),
     complete: jest.fn(), fail: jest.fn(),
   } as unknown as jest.Mocked<InvoiceLogoCleanupRepository>;
-  const storage = { remove: jest.fn() } as jest.Mocked<InvoiceLogoStorage>;
+  const storage = { store: jest.fn(), remove: jest.fn() } as jest.Mocked<InvoiceLogoStorage>;
   const service = new InvoiceLogoCleanupService(jobs, storage);
   const job = {
     id: 9, organization_id: 4, scope: 'settings' as const, resource_id: null,

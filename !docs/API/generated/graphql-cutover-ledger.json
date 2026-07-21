@@ -3717,7 +3717,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 52
+          "line": 53
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4942,7 +4942,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 215
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5017,7 +5017,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 216
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -6998,7 +6998,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 252
+          "line": 261
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -7485,6 +7485,10 @@
       "path": "/api/invoices/businesses/:id/logo",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 253
+        },
+        {
           "source": "backend/src/routes/invoices/businesses.routes.js",
           "line": 213
         }
@@ -7503,6 +7507,54 @@
       "testCallsites": [
         {
           "method": "POST",
+          "path": "/api/invoices/businesses/:businessId/logo",
+          "source": "backend-v2/test/integration/invoice-businesses.integration-spec.ts",
+          "line": 574
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/:businessId/logo",
+          "source": "backend-v2/test/integration/invoice-businesses.integration-spec.ts",
+          "line": 580
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/:id/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 7
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 16
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 32
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 47
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 51
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 52
+        },
+        {
+          "method": "POST",
           "path": "/api/invoices/businesses/4/logo",
           "source": "backend/src/__tests__/routes/invoice-logo.routes.test.js",
           "line": 64
@@ -7514,8 +7566,8 @@
       "owner": "billing",
       "targetOperation": "uploadInvoiceBusinessLogo",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "characterized",
-      "notes": "Retain tenant-authorized multipart HTTP. Enforce a 2 MiB limit, PNG/JPEG/GIF/WebP magic bytes, server-owned storage URLs, safe replacement/deletion, and a separately public logo namespace.",
+      "parityStatus": "implemented",
+      "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8713,6 +8765,10 @@
       "path": "/api/invoices/settings/logo",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 257
+        },
+        {
           "source": "backend/src/routes/invoices/settings.routes.js",
           "line": 114
         }
@@ -8735,8 +8791,8 @@
       "owner": "billing",
       "targetOperation": "uploadInvoiceSettingsLogo",
       "targetModule": "InvoiceSettingsModule",
-      "parityStatus": "characterized",
-      "notes": "Retain tenant-authorized multipart HTTP. Enforce a 2 MiB limit, PNG/JPEG/GIF/WebP magic bytes, server-owned storage URLs, safe replacement/deletion, and a separately public logo namespace.",
+      "parityStatus": "implemented",
+      "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8748,7 +8804,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 248
+          "line": 249
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -9121,7 +9177,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 48
+          "line": 49
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -15705,7 +15761,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 116
+          "line": 117
         }
       ],
       "consumerCallsites": [
@@ -15739,7 +15795,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 60
+          "line": 61
         }
       ],
       "consumerCallsites": [
@@ -16434,7 +16490,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 51
+          "line": 52
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16778,7 +16834,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 50
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -17065,7 +17121,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 51
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

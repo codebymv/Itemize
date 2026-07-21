@@ -22,6 +22,7 @@ const estimatesRoutes = require('../routes/estimates.routes');
 const recurringRoutes = require('../routes/recurring.routes');
 const invoicesRoutes = require('../routes/invoices.routes');
 const { createInvoicePdfProxy } = require('../invoice-pdf-proxy');
+const { createInvoiceLogoUploadProxy } = require('../invoice-logo-upload-proxy');
 const { createStripeInvoiceWebhookProxy } = require('../stripe-invoice-webhook-proxy');
 const billingRoutes = require('../routes/billing.routes');
 const reputationRoutes = require('../routes/reputation.routes');
@@ -248,6 +249,14 @@ function registerApiRoutes({
     app.post(
         '/api/invoices/webhook/stripe',
         createStripeInvoiceWebhookProxy({ logger }),
+    );
+    app.post(
+        '/api/invoices/businesses/:id/logo',
+        createInvoiceLogoUploadProxy({ targetPath: '/api/invoices/businesses/:id/logo', logger }),
+    );
+    app.post(
+        '/api/invoices/settings/logo',
+        createInvoiceLogoUploadProxy({ targetPath: '/api/invoices/settings/logo', logger }),
     );
     app.get('/api/invoices/:id/pdf', createInvoicePdfProxy({ logger }));
     app.use('/api/invoices', invoicesRoutes(pool, authenticateJWT, publicRateLimit));

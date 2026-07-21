@@ -375,9 +375,9 @@
       "owner": "billing",
       "targetModule": "InvoiceBusinessesModule",
       "targetOperation": "uploadInvoiceBusinessLogo",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain tenant-authorized multipart HTTP. Enforce a 2 MiB limit, PNG/JPEG/GIF/WebP magic bytes, server-owned storage URLs, safe replacement/deletion, and a separately public logo namespace."
+      "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback."
     },
     "POST /api/invoices/email/preview": {
       "disposition": "graphql-mutation",
@@ -636,9 +636,9 @@
       "owner": "billing",
       "targetModule": "InvoiceSettingsModule",
       "targetOperation": "uploadInvoiceSettingsLogo",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain tenant-authorized multipart HTTP. Enforce a 2 MiB limit, PNG/JPEG/GIF/WebP magic bytes, server-owned storage URLs, safe replacement/deletion, and a separately public logo namespace."
+      "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback."
     },
     "POST /api/invoices/webhook/stripe": {
       "disposition": "retain-http",

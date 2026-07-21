@@ -13,6 +13,6 @@ import {
     LegacyInvoiceLogoStorage,
     { provide: INVOICE_LOGO_STORAGE, useExisting: LegacyInvoiceLogoStorage },
   ],
-  exports: [InvoiceLogoCleanupService],
+  exports: [InvoiceLogoCleanupService, INVOICE_LOGO_STORAGE],
 })
 export class InvoiceLogoCleanupModule {}
