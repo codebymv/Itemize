@@ -789,7 +789,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "workflows",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Preserve organization scope, trigger/active/search filters, updated-at ordering, step counts, and active enrollment counts."
     },
@@ -798,7 +798,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "createWorkflow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Validate trigger and step enums, enforce plan limits, and create workflow plus ordered steps atomically."
     },
@@ -807,7 +807,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "deleteWorkflow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Delete only an organization-owned workflow and characterize cascade/audit behavior for enrollments and execution logs."
     },
@@ -816,7 +816,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "workflow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Return the organization-owned workflow, ordered steps, and enrollment statistics without existence leakage."
     },
@@ -825,7 +825,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "updateWorkflow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Validate enums and atomically replace steps when supplied; omitted steps leave the current sequence intact."
     },
@@ -834,7 +834,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "activateWorkflow",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Require organization ownership and at least one step. Reactivation resumes only enrollments paused by workflow deactivation; explicit manual pauses remain paused."
     },
@@ -843,7 +843,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "deactivateWorkflow",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Organization-scoped deactivation atomically pauses active enrollments with a distinct reason and clears their live execution claims."
     },
@@ -852,7 +852,7 @@
       "owner": "automation",
       "targetModule": "WorkflowsModule",
       "targetOperation": "duplicateWorkflow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Enforce plan limits and atomically copy an organization-owned definition and ordered steps into an inactive workflow."
     },
@@ -861,7 +861,7 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "enrollContactInWorkflow",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Lock the organization-owned workflow, require a same-organization contact, and serialize the unique workflow/contact enrollment transition."
     },
@@ -870,7 +870,7 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "workflowEnrollments",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Use the shared page contract, organization-scope through the workflow, and support explicit status filtering."
     },
@@ -879,7 +879,7 @@
       "owner": "automation",
       "targetModule": "WorkflowExecutionModule",
       "targetOperation": "workflowExecutionSummary",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Return tenant-scoped enrollment and provider-outbox status/type counts, queue age, due/expired work, attempts, cancellations, dead letters, and operator retry totals without payloads, destinations, headers, or idempotency keys."
     },
@@ -888,7 +888,7 @@
       "owner": "automation",
       "targetModule": "WorkflowExecutionModule",
       "targetOperation": "workflowSideEffects",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Strictly paginate and filter the tenant-owned provider queue. Expose safe status/timing/attempt/error fields and provider correlation IDs while omitting serialized payloads and delivery secrets."
     },
@@ -897,7 +897,7 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "cancelWorkflowEnrollment",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Scope through an organization-owned workflow, clear execution claims and future scheduling, and cancel queued/retrying/dead-letter provider work. An accepted in-flight call may finish sent; failed or expired cancelled work must not retry."
     },
@@ -906,7 +906,7 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "pauseWorkflowEnrollment",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Pause only an active tenant-scoped enrollment, record the manual reason, and clear its live execution claim. Workflow activation must not resume this pause."
     },
@@ -915,7 +915,7 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "resumeWorkflowEnrollment",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Resume only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead."
     },
@@ -924,7 +924,7 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "retryWorkflowEnrollment",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Retry only a failed enrollment under an active tenant-owned workflow, preserving current_step so completed steps are not replayed."
     },
@@ -933,7 +933,7 @@
       "owner": "automation",
       "targetModule": "WorkflowExecutionModule",
       "targetOperation": "retryWorkflowSideEffect",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Retry only a tenant/workflow-owned non-cancelled dead letter whose enrollment is not cancelled. Reset the delivery attempt cycle while retaining operator retry count and timestamp."
     },
@@ -942,7 +942,7 @@
       "owner": "automation",
       "targetModule": "WorkflowExecutionModule",
       "targetOperation": "reconcileWorkflowSmsSideEffect",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Resolve only a tenant/workflow-owned SMS attempt in reconciliation_required. A valid Twilio message SID records provider acceptance and a correlated SMS log; resend is an explicit operator authorization that retains reconciliation and retry history."
     },

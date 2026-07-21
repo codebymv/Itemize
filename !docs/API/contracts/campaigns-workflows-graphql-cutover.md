@@ -244,8 +244,10 @@ Fresh PostgreSQL coverage proves exact enrollment/outbox summary counts, due wor
 
 Focused tests also protect campaign send locking, pause-safe completion, campaign pagination-envelope mapping, workflow webhook signature expiry/replay, clean-schema webhook claims, engine claim collision, provider failure semantics, one-attempt Twilio message creation, tenant-scoped step mutations, safe webhook envelopes, DNS-pinned public-only webhook egress, redirect/proxy denial, bounded response handling, and invalid waits/conditions. Fresh PostgreSQL coverage proves ordered execution/logs, wait scheduling, forward branching, one provider call when two workers race an enrollment, selective lifecycle transitions, the accepted-in-flight cancellation boundary, immediate and expired-lease SMS ambiguity quarantine, accepted-SID and explicit-resend reconciliation, tenant-isolated execution metrics, strict operator filtering, and payload-free queue projections.
 
+`WorkflowJobsModule` now implements bounded one-shot schedule dispatch and trigger fan-out. Both phases use database claims with `FOR UPDATE SKIP LOCKED`; trigger attempts have expiring leases, monotonic attempt fencing, bounded retry/dead-letter transitions, and redacted failure evidence. Targeted workflow/trigger IDs support controlled canaries. Fresh PostgreSQL races prove one schedule event, one trigger consumer, and one enrollment under competing runners, plus expired-lease recovery and rejection of stale attempts. No deployment scheduler invokes the new commands yet.
+
 The automation surface is not fully cut over until:
 
-- the durable trigger, enrollment, and provider workers have NestJS ownership while every automation step retains execution and provider-failure coverage;
+- the durable enrollment and provider workers have NestJS ownership while every automation step retains execution and provider-failure coverage;
 - critical workflow builder and enrollment React journeys pass against their GraphQL operations;
 - after the functional slices are complete, staging canary flags, sandbox provider credentials, alerts, drain behavior, and rollback rehearsal are configured and verified.

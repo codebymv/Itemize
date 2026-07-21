@@ -6,6 +6,8 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { WorkflowTriggerJobsRepository } from '../../src/workflow-jobs/workflow-trigger-jobs.repository';
+import { WorkflowTriggerJobsService } from '../../src/workflow-jobs/workflow-trigger-jobs.service';
 
 describe('Workflow definitions GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -16,6 +18,8 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
   let outsiderOrganizationId: number;
   let memberToken: string;
   let outsiderToken: string;
+  let workflowJobs: WorkflowTriggerJobsService;
+  let workflowJobRepository: WorkflowTriggerJobsRepository;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -56,6 +60,8 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
     configureApp(app);
     await app.init();
+    workflowJobs = app.get(WorkflowTriggerJobsService);
+    workflowJobRepository = app.get(WorkflowTriggerJobsRepository);
 
   });
 
@@ -474,5 +480,91 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
       'mutation Retry($workflowId:Int!,$sideEffectId:Int!){ retryWorkflowSideEffect(workflowId:$workflowId,sideEffectId:$sideEffectId){ id } }',
       { workflowId, sideEffectId: deadLetterId }, false).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
+
+  it('dispatches a due schedule and fans out its trigger exactly once under contention', async () => {
+    const contact = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id,first_name,last_name,email,created_by)
+       VALUES ($1,'Scheduled','Contact',$2,$3) RETURNING id`,
+      [organizationId, `scheduled-${Date.now()}@test.itemize`, memberId],
+    );
+    const contactId = Number(contact.rows[0].id);
+    const scheduledAt = new Date(Date.now() - 60_000);
+    const workflow = await pool.query<{ id: number }>(
+      `INSERT INTO workflows (organization_id,name,trigger_type,trigger_config,is_active,scheduled_contact_id,
+         next_trigger_at,created_by,stats)
+       VALUES ($1,'Contended schedule','scheduled','{}',true,$2,$3,$4,'{}') RETURNING id`,
+      [organizationId, contactId, scheduledAt, memberId],
+    );
+    const workflowId = Number(workflow.rows[0].id);
+
+    const scheduleRuns = await Promise.all([
+      workflowJobs.runScheduled({ batchSize: 1 }),
+      workflowJobs.runScheduled({ batchSize: 1 }),
+    ]);
+    expect(scheduleRuns.reduce((total, run) => total + run.claimed, 0)).toBe(1);
+    const queued = await pool.query<{ id: number; event_key: string; status: string }>(
+      `SELECT id,event_key,status FROM workflow_triggers WHERE workflow_id=$1`, [workflowId],
+    );
+    expect(queued.rows).toHaveLength(1);
+    expect(queued.rows[0]).toMatchObject({
+      event_key: `domain:scheduled:${workflowId}:${scheduledAt.toISOString()}`,
+      status: 'queued',
+    });
+
+    const triggerRuns = await Promise.all([
+      workflowJobs.runTriggers({ batchSize: 1 }),
+      workflowJobs.runTriggers({ batchSize: 1 }),
+    ]);
+    expect(triggerRuns.reduce((total, run) => total + run.claimed, 0)).toBe(1);
+    expect(triggerRuns.reduce((total, run) => total + run.enrolled, 0)).toBe(1);
+    const retained = await pool.query<{
+      trigger_status: string; enrollment_count: string; enrolled_stat: string; next_trigger_at: Date | null;
+    }>(
+      `SELECT t.status AS trigger_status,
+         (SELECT COUNT(*) FROM workflow_enrollments e WHERE e.workflow_id=w.id)::text AS enrollment_count,
+         COALESCE(w.stats->>'enrolled','0') AS enrolled_stat,w.next_trigger_at
+       FROM workflows w JOIN workflow_triggers t ON t.workflow_id=w.id WHERE w.id=$1`, [workflowId],
+    );
+    expect(retained.rows[0]).toMatchObject({
+      trigger_status: 'completed', enrollment_count: '1', enrolled_stat: '1', next_trigger_at: null,
+    });
+  });
+
+  it('recovers expired work with attempt fencing and redacted dead-letter evidence', async () => {
+    const trigger = await pool.query<{ id: number }>(
+      `INSERT INTO workflow_triggers (organization_id,contact_id,trigger_type,payload,status,event_key,source,
+         attempt_count,next_attempt_at,lease_expires_at)
+       VALUES ($1,NULL,'contact_added','{}','processing',$2,'domain',0,NOW()-INTERVAL '2 minutes',
+         NOW()-INTERVAL '1 minute') RETURNING id`,
+      [organizationId, `domain:test-fencing:${Date.now()}`],
+    );
+    const triggerId = Number(trigger.rows[0].id);
+    const first = await workflowJobRepository.claimTrigger(30, triggerId);
+    expect(first).toMatchObject({ id: triggerId, status: 'processing', attempt_count: 1 });
+    expect(await workflowJobRepository.failTrigger(first!, new Error(
+      'send secret@example.com +15551234567 with sk_live_supersecret',
+    ), { maxAttempts: 2, baseDelayMs: 1, maximumDelayMs: 1 })).toBe('retry');
+
+    await pool.query(`UPDATE workflow_triggers SET next_attempt_at=NOW()-INTERVAL '1 second' WHERE id=$1`, [triggerId]);
+    const second = await workflowJobRepository.claimTrigger(30, triggerId);
+    expect(second).toMatchObject({ id: triggerId, attempt_count: 2 });
+    await expect(workflowJobRepository.processTrigger(first!)).resolves.toMatchObject({
+      persisted: false, skippedReason: 'stale_claim',
+    });
+    await expect(workflowJobRepository.failTrigger(first!, new Error('stale'), {
+      maxAttempts: 2, baseDelayMs: 1, maximumDelayMs: 1,
+    })).resolves.toBe('stale');
+    expect(await workflowJobRepository.failTrigger(second!, new Error(
+      'send secret@example.com +15551234567 with sk_live_supersecret',
+    ), { maxAttempts: 2, baseDelayMs: 1, maximumDelayMs: 1 })).toBe('dead_letter');
+
+    const retained = await pool.query<{
+      status: string; attempt_count: number; last_error: string; next_attempt_at: Date | null; lease_expires_at: Date | null;
+    }>('SELECT status,attempt_count,last_error,next_attempt_at,lease_expires_at FROM workflow_triggers WHERE id=$1', [triggerId]);
+    expect(retained.rows[0]).toMatchObject({
+      status: 'dead_letter', attempt_count: 2, next_attempt_at: null, lease_expires_at: null,
+      last_error: 'send [redacted-email] [redacted-phone] with [redacted-secret]',
+    });
   });
 });
