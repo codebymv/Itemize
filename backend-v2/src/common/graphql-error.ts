@@ -1,10 +1,12 @@
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
 
 export type ItemizeGraphqlErrorCode =
+  | 'ACCOUNT_CONFLICT'
   | 'BAD_USER_INPUT'
   | 'CONFLICT'
   | 'FORBIDDEN'
   | 'INTERNAL_SERVER_ERROR'
+  | 'INVALID_TOKEN'
   | 'NOT_FOUND'
   | 'ORGANIZATION_REQUIRED'
   | 'RATE_LIMITED'

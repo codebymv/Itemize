@@ -65,7 +65,7 @@ export class SessionService {
         { reason: 'EMAIL_NOT_VERIFIED' },
       );
     }
-    await this.establish(user, response);
+    await this.createSession(user, response);
     return { success: true, user: this.sessionUser(user) };
   }
 
@@ -75,7 +75,7 @@ export class SessionService {
   ): Promise<AuthSessionPayload> {
     const identity = await this.verifyGoogleAccessToken(accessToken);
     const user = await this.users.findOrCreateGoogleUser(identity);
-    await this.establish(user, response);
+    await this.createSession(user, response);
     return { success: true, user: this.sessionUser(user) };
   }
 
@@ -143,7 +143,7 @@ export class SessionService {
     return token;
   }
 
-  private async establish(user: AuthenticationUser, response: Response): Promise<void> {
+  async createSession(user: AuthenticationUser, response: Response): Promise<void> {
     const [accessToken, refreshToken] = await Promise.all([
       this.signAccessToken(user),
       this.jwt.signAsync(

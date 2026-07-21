@@ -6,7 +6,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "changePassword",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
       "notes": "Authenticated credential rotation; preserve current-password verification, password policy, CSRF, and notification side effects."
     },
@@ -98,23 +98,23 @@
       "targetOperation": "register",
       "parityStatus": "not-started",
       "risk": "high",
-      "notes": "Target contract makes user, personal organization, owner membership, and default-organization assignment atomic."
+      "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback."
     },
     "POST /api/auth/resend-verification": {
       "disposition": "graphql-mutation",
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "resendVerificationEmail",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Preserve non-enumerating responses, strict rate limits, hashed tokens, 24-hour expiry, and email behavior."
+      "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery."
     },
     "POST /api/auth/reset-password": {
       "disposition": "graphql-mutation",
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "resetPassword",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
       "notes": "Consume a valid hashed reset token once, enforce password policy, clear reset state, and notify the user."
     },
@@ -125,7 +125,7 @@
       "targetOperation": "verifyEmail",
       "parityStatus": "not-started",
       "risk": "high",
-      "notes": "Consume a valid hashed verification token, mark the email verified, issue cookie-only session credentials, and send welcome notification."
+      "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit."
     },
     "GET /api/organizations": {
       "disposition": "graphql-query",

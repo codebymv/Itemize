@@ -25,6 +25,9 @@ export type CurrentGraphqlUser = {
 export const isAuthSessionGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_AUTH_SESSION_GRAPHQL === 'true';
 
+export const isAuthIdentityGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_AUTH_IDENTITY_GRAPHQL === 'true';
+
 const SESSION_FIELDS = `
   success
   user { uid email name role photoURL }
@@ -41,6 +44,49 @@ export const loginViaGraphql = async (email: string, password: string) => {
     { input: { email, password } },
   );
   return data.login;
+};
+
+export const registerViaGraphql = async (
+  email: string,
+  password: string,
+  name?: string,
+) => {
+  const data = await graphqlPublicRequest<
+    { register: { success: boolean; message: string; email?: string } },
+    { input: { email: string; password: string; name?: string } }
+  >(
+    `mutation Register($input: RegisterInput!) {
+      register(input: $input) { success message email }
+    }`,
+    { input: { email, password, ...(name ? { name } : {}) } },
+  );
+  return data.register;
+};
+
+export const verifyEmailViaGraphql = async (token: string) => {
+  const data = await graphqlPublicRequest<
+    { verifyEmail: { success: boolean; user: AuthGraphqlUser } },
+    { input: { token: string } }
+  >(
+    `mutation VerifyEmail($input: VerifyEmailInput!) {
+      verifyEmail(input: $input) { ${SESSION_FIELDS} }
+    }`,
+    { input: { token } },
+  );
+  return data.verifyEmail;
+};
+
+export const resendVerificationViaGraphql = async (email: string) => {
+  const data = await graphqlPublicRequest<
+    { resendVerificationEmail: { success: boolean; message: string } },
+    { input: { email: string } }
+  >(
+    `mutation ResendVerificationEmail($input: ResendVerificationInput!) {
+      resendVerificationEmail(input: $input) { success message }
+    }`,
+    { input: { email } },
+  );
+  return data.resendVerificationEmail;
 };
 
 export const loginWithGoogleAccessTokenViaGraphql = async (accessToken: string) => {

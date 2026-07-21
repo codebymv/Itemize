@@ -7,9 +7,11 @@ import { toast } from '@/components/ui/use-toast';
 import logger from '@/lib/logger';
 import {
   getCurrentUserViaGraphql,
+  isAuthIdentityGraphqlEnabled,
   isAuthSessionGraphqlEnabled,
   loginViaGraphql,
   logoutViaGraphql,
+  registerViaGraphql,
 } from '@/services/authGraphql';
 import { GraphqlRequestError } from '@/services/graphqlClient';
 
@@ -290,8 +292,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Axios rejects non-2xx responses. Successful response envelopes are
       // unwrapped by the shared interceptor, so a 201 resolves with `{ email }`
       // rather than the original `{ success, data }` object.
-      await api.post('/api/auth/register', { email, password, name });
+      if (isAuthIdentityGraphqlEnabled()) {
+        await registerViaGraphql(email, password, name);
+      } else {
+        await api.post('/api/auth/register', { email, password, name });
+      }
     } catch (error) {
+      if (
+        error instanceof GraphqlRequestError ||
+        (error instanceof Error && error.name === 'GraphqlRequestError')
+      ) {
+        const graphqlError = error as GraphqlRequestError;
+        throw new AuthError(
+          graphqlError.message,
+          graphqlError.reason || graphqlError.code || 'UNKNOWN',
+        );
+      }
       if (axios.isAxiosError(error) && error.response?.data) {
         const { message, code } = getAuthErrorDetails(error.response.data, 'Registration failed');
         throw new AuthError(message, code);

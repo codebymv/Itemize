@@ -34,6 +34,18 @@ export class AuthSessionStatus {
 }
 
 @ObjectType()
+export class AuthMessagePayload {
+  @Field()
+  success: boolean;
+
+  @Field()
+  message: string;
+
+  @Field({ nullable: true })
+  email?: string;
+}
+
+@ObjectType()
 export class CsrfTokenPayload {
   @Field()
   token: string;

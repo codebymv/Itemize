@@ -9,10 +9,16 @@ import { Mail, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
+import {
+  isAuthIdentityGraphqlEnabled,
+  resendVerificationViaGraphql,
+  verifyEmailViaGraphql,
+} from '@/services/authGraphql';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
-  return responseData?.error || responseData?.message || fallback;
+  return responseData?.error || responseData?.message ||
+    (error instanceof Error ? error.message : fallback);
 };
 
 export default function VerifyEmail() {
@@ -58,14 +64,16 @@ export default function VerifyEmail() {
     setError(null);
 
     try {
-      const response = await api.post('/api/auth/verify-email', { token });
+      const response = isAuthIdentityGraphqlEnabled()
+        ? await verifyEmailViaGraphql(token)
+        : (await api.post('/api/auth/verify-email', { token })).data;
       
-      if (response.data.success) {
+      if (response.success) {
         setVerified(true);
         
         // Set user in context if returned
-        if (response.data.user) {
-          setCurrentUser(response.data.user);
+        if (response.user) {
+          setCurrentUser({ ...response.user, uid: String(response.user.uid) });
         }
         
         toast({
@@ -89,7 +97,11 @@ export default function VerifyEmail() {
     setResending(true);
 
     try {
-      await api.post('/api/auth/resend-verification', { email });
+      if (isAuthIdentityGraphqlEnabled()) {
+        await resendVerificationViaGraphql(email);
+      } else {
+        await api.post('/api/auth/resend-verification', { email });
+      }
       toast({
         title: 'Verification email sent',
         description: 'Please check your inbox.',

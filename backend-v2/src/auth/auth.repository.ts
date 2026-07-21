@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { itemizeGraphqlError } from '../common/graphql-error';
 import { PG_POOL } from '../database/database.module';
 
 export type AuthenticationUser = {
@@ -57,6 +58,88 @@ export class AuthRepository {
       [userId],
     );
     return result.rows[0] ? mapUser(result.rows[0]) : null;
+  }
+
+  async registerEmailUser(input: {
+    email: string;
+    name: string;
+    passwordHash: string;
+    verificationTokenHash: string;
+    verificationTokenExpires: Date;
+  }): Promise<AuthenticationUser> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const inserted = await client.query<AuthenticationUserRow>(
+        `INSERT INTO users (
+           email, name, password_hash, provider, email_verified,
+           verification_token, verification_token_expires, created_at, updated_at
+         ) VALUES ($1, $2, $3, 'email', false, $4, $5, NOW(), NOW())
+         RETURNING ${USER_COLUMNS}`,
+        [
+          input.email,
+          input.name,
+          input.passwordHash,
+          input.verificationTokenHash,
+          input.verificationTokenExpires,
+        ],
+      );
+      const user = mapUser(inserted.rows[0]);
+      await this.ensurePersonalOrganization(client, user);
+      await client.query('COMMIT');
+      return user;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if ((error as { code?: string }).code === '23505') {
+        throw itemizeGraphqlError(
+          'An account with this email already exists.',
+          'ACCOUNT_CONFLICT',
+          { reason: 'USER_EXISTS' },
+        );
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async consumeVerificationToken(
+    tokenHash: string,
+  ): Promise<AuthenticationUser | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users
+       SET email_verified = true,
+           verification_token = NULL,
+           verification_token_expires = NULL,
+           updated_at = NOW()
+       WHERE verification_token = $1
+         AND verification_token_expires > NOW()
+         AND email_verified = false
+       RETURNING ${USER_COLUMNS}`,
+      [tokenHash],
+    );
+    return result.rows[0] ? mapUser(result.rows[0]) : null;
+  }
+
+  async replaceVerificationToken(input: {
+    email: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<Pick<AuthenticationUser, 'email' | 'name'> | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users
+       SET verification_token = $1,
+           verification_token_expires = $2,
+           updated_at = NOW()
+       WHERE email = $3
+         AND provider = 'email'
+         AND email_verified = false
+       RETURNING ${USER_COLUMNS}`,
+      [input.tokenHash, input.expiresAt, input.email],
+    );
+    return result.rows[0]
+      ? { email: result.rows[0].email, name: result.rows[0].name }
+      : null;
   }
 
   async findOrCreateGoogleUser(identity: {

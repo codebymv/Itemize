@@ -40,4 +40,27 @@ describe('AuthRateLimitService', () => {
     expect(() => service.consume(first, 'second@example.com')).not.toThrow();
     expect(() => service.consume(second, 'first@example.com')).not.toThrow();
   });
+
+  it('uses the stricter independent bucket for verification resend attempts', () => {
+    const service = new AuthRateLimitService();
+    const request = { ip: '203.0.113.10' } as Request;
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      expect(() =>
+        service.consumeStrict(request, 'member@example.com'),
+      ).not.toThrow();
+    }
+    expect(() =>
+      service.consumeStrict(request, 'member@example.com'),
+    ).toThrow(
+      expect.objectContaining({
+        extensions: expect.objectContaining({
+          code: 'RATE_LIMITED',
+          reason: 'AUTH_RATE_LIMITED',
+        }),
+      }),
+    );
+
+    expect(() => service.consume(request, 'member@example.com')).not.toThrow();
+  });
 });

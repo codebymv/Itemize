@@ -11,10 +11,24 @@ export class AuthRateLimitService {
   private readonly buckets = new Map<string, Bucket>();
 
   consume(request: Request, identity = ''): void {
+    this.consumeBucket(request, identity, 'standard',
+      process.env.NODE_ENV === 'development' ? 100 : 20);
+  }
+
+  consumeStrict(request: Request, identity = ''): void {
+    this.consumeBucket(request, identity, 'strict',
+      process.env.NODE_ENV === 'development' ? 80 : 10);
+  }
+
+  private consumeBucket(
+    request: Request,
+    identity: string,
+    namespace: string,
+    limit: number,
+  ): void {
     const now = Date.now();
-    const limit = process.env.NODE_ENV === 'development' ? 100 : 20;
     const ip = request.ip || request.socket?.remoteAddress || 'unknown';
-    const key = `${ip}:${identity.trim().toLowerCase()}`;
+    const key = `${namespace}:${ip}:${identity.trim().toLowerCase()}`;
     const existing = this.buckets.get(key);
     if (!existing || existing.resetAt <= now) {
       this.buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });

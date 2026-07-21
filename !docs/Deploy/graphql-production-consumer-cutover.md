@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 73 domain consumers and the coordinated authentication session consumer enabled
+**Status:** 73 domain consumers and the coordinated authentication session consumer enabled; identity lifecycle staged default-off
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser continues to use the public `itemize.cloud Backend` origin for REST and `/graphql`. The backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy now has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions without changing the public origin.
 
-The 73 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL` is a 74th coordinated switch referenced by the authentication adapter and shared refresh/CSRF transport, and it is enabled in production. A frontend rebuild is required because Vite embeds these values at build time.
+The 73 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL` is a 74th coordinated switch referenced by the authentication adapter and shared refresh/CSRF transport, and it is enabled in production. `VITE_AUTH_IDENTITY_GRAPHQL` independently controls registration, verification, and resend; it remains default-off until the staged GraphQL deployment and production probes pass. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -21,7 +21,7 @@ The enabled families are:
 
 ## Intentionally retained transports
 
-Enabling every implemented GraphQL consumer does not turn non-GraphQL protocols into GraphQL. Registration/verification/recovery/profile operations and unused OAuth callbacks, public booking/form/signing capabilities, provider webhooks, CSV/file/PDF HTTP responses, and Socket.IO realtime delivery remain on their documented HTTP or socket boundaries. Where an HTTP route is already owned by NestJS, the legacy backend may continue to act as the same-origin private proxy.
+Enabling every implemented GraphQL consumer does not turn non-GraphQL protocols into GraphQL. Password recovery/change, profile operations, and unused OAuth callbacks, public booking/form/signing capabilities, provider webhooks, CSV/file/PDF HTTP responses, and Socket.IO realtime delivery remain on their documented HTTP or socket boundaries. Where an HTTP route is already owned by NestJS, the legacy backend may continue to act as the same-origin private proxy.
 
 ## Verification
 

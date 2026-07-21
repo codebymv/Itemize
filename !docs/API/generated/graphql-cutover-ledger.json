@@ -759,7 +759,7 @@
       "owner": "identity",
       "targetOperation": "changePassword",
       "targetModule": "AuthModule",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "notes": "Authenticated credential rotation; preserve current-password verification, password policy, CSRF, and notification side effects.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -962,7 +962,7 @@
           "path": "/api/auth/login",
           "rawPath": "/api/auth/login",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 260,
+          "line": 262,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1033,7 +1033,7 @@
           "path": "/api/auth/logout",
           "rawPath": "/api/auth/logout",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 328,
+          "line": 344,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1074,7 +1074,7 @@
           "path": "/api/auth/me",
           "rawPath": "/api/auth/me",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 210,
+          "line": 212,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1199,7 +1199,7 @@
           "path": "/api/auth/register",
           "rawPath": "/api/auth/register",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 293,
+          "line": 298,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1212,7 +1212,7 @@
       "targetOperation": "register",
       "targetModule": "AuthModule",
       "parityStatus": "not-started",
-      "notes": "Target contract makes user, personal organization, owner membership, and default-organization assignment atomic.",
+      "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1233,7 +1233,7 @@
           "path": "/api/auth/resend-verification",
           "rawPath": "/api/auth/resend-verification",
           "source": "frontend/src/pages/VerifyEmail.tsx",
-          "line": 92,
+          "line": 103,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1245,8 +1245,8 @@
       "owner": "identity",
       "targetOperation": "resendVerificationEmail",
       "targetModule": "AuthModule",
-      "parityStatus": "not-started",
-      "notes": "Preserve non-enumerating responses, strict rate limits, hashed tokens, 24-hour expiry, and email behavior.",
+      "parityStatus": "dual-parity",
+      "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1279,7 +1279,7 @@
       "owner": "identity",
       "targetOperation": "resetPassword",
       "targetModule": "AuthModule",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "notes": "Consume a valid hashed reset token once, enforce password policy, clear reset state, and notify the user.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1301,7 +1301,7 @@
           "path": "/api/auth/verify-email",
           "rawPath": "/api/auth/verify-email",
           "source": "frontend/src/pages/VerifyEmail.tsx",
-          "line": 61,
+          "line": 69,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1314,7 +1314,7 @@
       "targetOperation": "verifyEmail",
       "targetModule": "AuthModule",
       "parityStatus": "not-started",
-      "notes": "Consume a valid hashed verification token, mark the email verified, issue cookie-only session credentials, and send welcome notification.",
+      "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

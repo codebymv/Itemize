@@ -2,10 +2,18 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 import { CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
-import { GoogleAccessTokenInput, LoginInput } from './auth.inputs';
+import {
+  GoogleAccessTokenInput,
+  LoginInput,
+  RegisterInput,
+  ResendVerificationInput,
+  VerifyEmailInput,
+} from './auth.inputs';
 import { AuthRateLimitService } from './auth-rate-limit.service';
+import { IdentityLifecycleService } from './identity-lifecycle.service';
 import { SessionService } from './session.service';
 import {
+  AuthMessagePayload,
   AuthSessionPayload,
   AuthSessionStatus,
   CsrfTokenPayload,
@@ -18,9 +26,40 @@ type GraphqlHttpContext = { req: Request; res: Response };
 export class AuthResolver {
   constructor(
     private readonly sessions: SessionService,
+    private readonly identityLifecycle: IdentityLifecycleService,
     private readonly rateLimit: AuthRateLimitService,
     private readonly requestContext: RequestContextService,
   ) {}
+
+  @Public()
+  @Mutation(() => AuthMessagePayload)
+  register(
+    @Args('input') input: RegisterInput,
+    @Context() context: GraphqlHttpContext,
+  ) {
+    this.rateLimit.consume(context.req, input.email);
+    return this.identityLifecycle.register(input.email, input.password, input.name);
+  }
+
+  @Public()
+  @Mutation(() => AuthSessionPayload)
+  verifyEmail(
+    @Args('input') input: VerifyEmailInput,
+    @Context() context: GraphqlHttpContext,
+  ) {
+    this.rateLimit.consume(context.req);
+    return this.identityLifecycle.verifyEmail(input.token, context.res);
+  }
+
+  @Public()
+  @Mutation(() => AuthMessagePayload)
+  resendVerificationEmail(
+    @Args('input') input: ResendVerificationInput,
+    @Context() context: GraphqlHttpContext,
+  ) {
+    this.rateLimit.consumeStrict(context.req, input.email);
+    return this.identityLifecycle.resendVerification(input.email);
+  }
 
   @Public()
   @Mutation(() => AuthSessionPayload)

@@ -6,9 +6,13 @@ import {
 } from '@/services/graphqlClient';
 import {
   getCurrentUserViaGraphql,
+  isAuthIdentityGraphqlEnabled,
   isAuthSessionGraphqlEnabled,
   loginViaGraphql,
   logoutViaGraphql,
+  registerViaGraphql,
+  resendVerificationViaGraphql,
+  verifyEmailViaGraphql,
 } from './authGraphql';
 
 vi.mock('@/services/graphqlClient', () => ({
@@ -26,6 +30,13 @@ describe('authentication GraphQL adapter', () => {
     expect(isAuthSessionGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_AUTH_SESSION_GRAPHQL', 'true');
     expect(isAuthSessionGraphqlEnabled()).toBe(true);
+  });
+
+  it('keeps registration and verification behind an independent rollback flag', () => {
+    vi.stubEnv('VITE_AUTH_IDENTITY_GRAPHQL', 'false');
+    expect(isAuthIdentityGraphqlEnabled()).toBe(false);
+    vi.stubEnv('VITE_AUTH_IDENTITY_GRAPHQL', 'true');
+    expect(isAuthIdentityGraphqlEnabled()).toBe(true);
   });
 
   it('maps login, current-user, and logout operations', async () => {
@@ -49,6 +60,32 @@ describe('authentication GraphQL adapter', () => {
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('mutation Logout'),
       {},
+    );
+  });
+
+  it('maps registration, verification, and resend operations', async () => {
+    vi.mocked(graphqlPublicRequest)
+      .mockResolvedValueOnce({ register: { success: true, email: 'new@example.com' } })
+      .mockResolvedValueOnce({ verifyEmail: { success: true, user: { uid: 8 } } })
+      .mockResolvedValueOnce({ resendVerificationEmail: { success: true } });
+
+    await registerViaGraphql('new@example.com', 'StrongPass1', 'New Member');
+    expect(graphqlPublicRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('mutation Register'),
+      { input: { email: 'new@example.com', password: 'StrongPass1', name: 'New Member' } },
+    );
+    await expect(verifyEmailViaGraphql('token')).resolves.toMatchObject({ success: true });
+    expect(graphqlPublicRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('mutation VerifyEmail'),
+      { input: { token: 'token' } },
+    );
+    await resendVerificationViaGraphql('new@example.com');
+    expect(graphqlPublicRequest).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('mutation ResendVerificationEmail'),
+      { input: { email: 'new@example.com' } },
     );
   });
 });
