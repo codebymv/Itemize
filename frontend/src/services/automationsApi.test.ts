@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import {
-  cancelEnrollment, createWorkflow, enrollContact, getWorkflowEnrollments, getWorkflows, updateWorkflow,
+  cancelEnrollment, createWorkflow, enrollContact, getWorkflowEnrollments, getWorkflows,
+  pauseEnrollment, resumeEnrollment, retryEnrollment, updateWorkflow,
 } from './automationsApi';
 import {
   cancelWorkflowEnrollmentViaGraphql,
   createWorkflowViaGraphql,
   enrollContactInWorkflowViaGraphql,
   getWorkflowEnrollmentsViaGraphql,
+  pauseWorkflowEnrollmentViaGraphql,
+  resumeWorkflowEnrollmentViaGraphql,
+  retryWorkflowEnrollmentViaGraphql,
   getWorkflowsViaGraphql,
   updateWorkflowViaGraphql,
 } from './workflowsGraphql';
@@ -30,7 +34,9 @@ vi.mock('./workflowsGraphql', () => ({
   cancelWorkflowEnrollmentViaGraphql: vi.fn(), enrollContactInWorkflowViaGraphql: vi.fn(),
   deactivateWorkflowViaGraphql: vi.fn(), deleteWorkflowViaGraphql: vi.fn(),
   duplicateWorkflowViaGraphql: vi.fn(), getWorkflowViaGraphql: vi.fn(),
-  getWorkflowEnrollmentsViaGraphql: vi.fn(), getWorkflowsViaGraphql: vi.fn(), updateWorkflowViaGraphql: vi.fn(),
+  getWorkflowEnrollmentsViaGraphql: vi.fn(), getWorkflowsViaGraphql: vi.fn(),
+  pauseWorkflowEnrollmentViaGraphql: vi.fn(), resumeWorkflowEnrollmentViaGraphql: vi.fn(),
+  retryWorkflowEnrollmentViaGraphql: vi.fn(), updateWorkflowViaGraphql: vi.fn(),
 }));
 
 const workflow = {
@@ -90,6 +96,9 @@ describe('workflow API transport selection', () => {
     await enrollContact(9, 22, 4, { source: 'manual' });
     await getWorkflowEnrollments(9, 4, { status: 'active', page: 1, limit: 50 });
     await cancelEnrollment(9, 14, 4);
+    await pauseEnrollment(9, 14, 4);
+    await resumeEnrollment(9, 14, 4);
+    await retryEnrollment(9, 14, 4);
     expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enroll', {
       organization_id: 4, contact_id: 22, trigger_data: { source: 'manual' },
     });
@@ -99,6 +108,9 @@ describe('workflow API transport selection', () => {
     expect(api.delete).toHaveBeenCalledWith('/api/workflows/9/enrollments/14', {
       params: { organization_id: 4 },
     });
+    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enrollments/14/pause', { organization_id: 4 });
+    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enrollments/14/resume', { organization_id: 4 });
+    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enrollments/14/retry', { organization_id: 4 });
   });
 
   it('routes enrollment operations through their independent GraphQL flag', async () => {
@@ -107,12 +119,21 @@ describe('workflow API transport selection', () => {
     vi.mocked(enrollContactInWorkflowViaGraphql).mockResolvedValue(enrollment);
     vi.mocked(getWorkflowEnrollmentsViaGraphql).mockResolvedValue(page);
     vi.mocked(cancelWorkflowEnrollmentViaGraphql).mockResolvedValue({ ...enrollment, status: 'cancelled' });
+    vi.mocked(pauseWorkflowEnrollmentViaGraphql).mockResolvedValue({ ...enrollment, status: 'paused' });
+    vi.mocked(resumeWorkflowEnrollmentViaGraphql).mockResolvedValue(enrollment);
+    vi.mocked(retryWorkflowEnrollmentViaGraphql).mockResolvedValue(enrollment);
     await enrollContact(9, 22, 4, { source: 'manual' });
     await getWorkflowEnrollments(9, 4, { status: 'active', page: 2, limit: 25 });
     await cancelEnrollment(9, 14, 4);
+    await pauseEnrollment(9, 14, 4);
+    await resumeEnrollment(9, 14, 4);
+    await retryEnrollment(9, 14, 4);
     expect(enrollContactInWorkflowViaGraphql).toHaveBeenCalledWith(9, 22, 4, { source: 'manual' });
     expect(getWorkflowEnrollmentsViaGraphql).toHaveBeenCalledWith(9, 4, { status: 'active', page: 2, limit: 25 });
     expect(cancelWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(pauseWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(resumeWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(retryWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();

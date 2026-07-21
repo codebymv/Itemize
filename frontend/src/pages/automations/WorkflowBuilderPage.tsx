@@ -73,6 +73,7 @@ import {
   WORKFLOW_STEP_LABELS,
   WORKFLOW_TRIGGER_OPTIONS,
 } from '@/domain/workflowRegistry';
+import { WorkflowEnrollmentsDialog } from './WorkflowEnrollmentsDialog';
 
 // Custom node component for workflow steps
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -188,6 +189,7 @@ export function WorkflowBuilderPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [showStepConfig, setShowStepConfig] = useState(false);
+  const [showEnrollments, setShowEnrollments] = useState(false);
 
   // Email templates for email step config
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
@@ -302,6 +304,16 @@ export function WorkflowBuilderPage() {
         </div>
         {/* Desktop-only controls */}
         <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
+          {!isNewWorkflow && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEnrollments(true)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Enrollments
+            </Button>
+          )}
           {!isNewWorkflow && (
             <Button
               variant="outline"
@@ -542,6 +554,17 @@ export function WorkflowBuilderPage() {
   return (
     <>
       <MobileControlsBar>
+        {!isNewWorkflow && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEnrollments(true)}
+            className="flex-1"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Enrollments
+          </Button>
+        )}
         {!isNewWorkflow && (
           <Button
             variant="outline"
@@ -839,6 +862,14 @@ export function WorkflowBuilderPage() {
           )}
         </SheetContent>
       </Sheet>
+      {!isNewWorkflow && organizationId && id && (
+        <WorkflowEnrollmentsDialog
+          open={showEnrollments}
+          onOpenChange={setShowEnrollments}
+          organizationId={organizationId}
+          workflowId={Number(id)}
+        />
+      )}
     </div>
     </>
   );

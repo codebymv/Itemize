@@ -7,14 +7,14 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 389
+- Static frontend callsites: 390
 - Operations with frontend consumers: 368
 - Operations referenced by backend tests: 204
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
 - High-risk operations: 335
-- Unmatched frontend calls: 0
+- Unmatched frontend calls: 1
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
 - Literal string interpolation callsites: 0
@@ -452,7 +452,7 @@
 
 ## Review queues
 
-- Unmatched frontend calls: 0
+- Unmatched frontend calls: 1
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 6
@@ -463,7 +463,7 @@
 
 | Method | Requested path | Source | Review note |
 | --- | --- | --- | --- |
-| — | — | — | None |
+| POST | `/api/workflows/:workflowId/enrollments/:enrollmentId/:action` | `frontend/src/services/automationsApi.ts:298` | No matching registered REST operation. |
 
 ### Runtime URL expressions
 

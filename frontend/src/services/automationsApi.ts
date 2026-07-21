@@ -32,6 +32,9 @@ import {
   cancelWorkflowEnrollmentViaGraphql,
   enrollContactInWorkflowViaGraphql,
   getWorkflowEnrollmentsViaGraphql,
+  pauseWorkflowEnrollmentViaGraphql,
+  resumeWorkflowEnrollmentViaGraphql,
+  retryWorkflowEnrollmentViaGraphql,
 } from './workflowsGraphql';
 import type {
   WorkflowStepType,
@@ -276,6 +279,36 @@ export const cancelEnrollment = async (
   });
   return unwrapResponse<WorkflowEnrollment>(response.data);
 };
+
+const changeEnrollmentState = async (
+  action: 'pause' | 'resume' | 'retry',
+  workflowId: number,
+  enrollmentId: number,
+  organizationId: number,
+): Promise<WorkflowEnrollment> => {
+  if (isWorkflowEnrollmentsGraphqlEnabled()) {
+    if (action === 'pause') {
+      return pauseWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
+    }
+    if (action === 'resume') {
+      return resumeWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
+    }
+    return retryWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
+  }
+  const response = await api.post(`/api/workflows/${workflowId}/enrollments/${enrollmentId}/${action}`, {
+    organization_id: organizationId,
+  });
+  return unwrapResponse<WorkflowEnrollment>(response.data);
+};
+
+export const pauseEnrollment = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  changeEnrollmentState('pause', workflowId, enrollmentId, organizationId);
+
+export const resumeEnrollment = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  changeEnrollmentState('resume', workflowId, enrollmentId, organizationId);
+
+export const retryEnrollment = (workflowId: number, enrollmentId: number, organizationId: number) =>
+  changeEnrollmentState('retry', workflowId, enrollmentId, organizationId);
 
 export const duplicateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
   if (isWorkflowGraphqlMutationsEnabled()) {

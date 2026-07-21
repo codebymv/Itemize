@@ -1,6 +1,6 @@
 # Campaigns and workflows GraphQL cutover contract
 
-**Status:** Campaign management plus complete functional workflow execution implemented; runtime cutover remains
+**Status:** Campaign management and complete functional workflow execution implemented; workflow browser cutover gate passed; runtime configuration remains
 
 **Evidence date:** 2026-07-21
 
@@ -238,6 +238,8 @@ Fresh PostgreSQL coverage proves the shared stored representation, ordered creat
 
 Fresh PostgreSQL coverage proves concurrent enrollment uniqueness, cross-tenant contact and workflow concealment, stable filtered paging, manual pause isolation, explicit resume, same-step failed retry, queued and in-flight cancellation semantics, terminal-row re-enrollment, and CSRF enforcement. Focused frontend tests prove enrollment mapping, paging, protected mutations, default-off transport selection, and the independent flag.
 
+The real-browser workflow gate passed on 2026-07-21 against a freshly initialized disposable PostgreSQL database. With workflow definition and enrollment GraphQL flags enabled, the shipped builder created and reloaded a manual workflow with an ordered `add_tag` step, activated it, enrolled a contact, paused it, resumed it, and cancelled it through the new enrollment dialog. No legacy `/api/workflows` request was observed during that pass, and PostgreSQL held the expected active definition, step configuration, and cancelled enrollment. Restarting only the frontend with all four workflow flags disabled exercised retained REST detail/update, deactivate/activate, enrollment list/create, pause/resume, and cancel routes; every request succeeded and converged on the same database postconditions. The rollback required no data repair.
+
 `WorkflowExecutionModule` now implements tenant-scoped `workflowExecutionSummary`, `workflowSideEffects`, `retryWorkflowSideEffect`, and `reconcileWorkflowSmsSideEffect`. Summary and queue queries share the tenant-owned workflow boundary, fixed status/type vocabulary, stable queue ordering, and bounded page contract. The operator projection exposes timing, state, safe error text, contact/step identity, and provider correlation while its GraphQL type contains no payload, destination, headers, authorization material, or idempotency key. Dead-letter retry is limited to uncancelled enrollments and retains operator history. SMS reconciliation locks the ambiguous intent and requires either a valid Twilio SID or an explicit resend decision; accepted reconciliation atomically records the provider identity and correlated SMS log.
 
 Fresh PostgreSQL coverage proves exact enrollment/outbox summary counts, due work, status/type filtering, stable bounded paging, error redaction, schema-level payload omission, retry-cycle reset with retained operator history, accepted-SID reconciliation and log correlation, foreign-workflow concealment, and CSRF enforcement.
@@ -248,5 +250,4 @@ Focused tests also protect campaign send locking, pause-safe completion, campaig
 
 The automation surface is not fully cut over until:
 
-- critical workflow builder and enrollment React journeys pass against their GraphQL operations;
-- after the functional slices are complete, staging canary flags, sandbox provider credentials, alerts, drain behavior, and rollback rehearsal are configured and verified.
+- production scheduler ownership, rollout flags, formal alert routing, named dead-letter/SMS-reconciliation owners, and the production change window are configured and approved.

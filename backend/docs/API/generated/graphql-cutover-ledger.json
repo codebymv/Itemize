@@ -9,10 +9,10 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 389,
+    "frontendCallsiteCount": 390,
     "operationsWithFrontendConsumers": 368,
     "operationsWithBackendTests": 204,
-    "unmatchedFrontendCallCount": 0,
+    "unmatchedFrontendCallCount": 1,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 6,
@@ -5346,7 +5346,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 302,
+          "line": 335,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5432,7 +5432,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 330,
+          "line": 363,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5515,7 +5515,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 357,
+          "line": 390,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5577,7 +5577,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 312,
+          "line": 345,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5633,7 +5633,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 349,
+          "line": 382,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5680,7 +5680,7 @@
           "path": "/api/email-templates/:id/duplicate",
           "rawPath": "/api/email-templates/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 380,
+          "line": 413,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5736,7 +5736,7 @@
           "path": "/api/email-templates/:templateId/send-test",
           "rawPath": "/api/email-templates/${templateId}/send-test",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 368,
+          "line": 401,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5779,7 +5779,7 @@
           "path": "/api/email-templates/categories/list",
           "rawPath": "/api/email-templates/categories/list",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 392,
+          "line": 425,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17349,7 +17349,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 143,
+          "line": 146,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17402,7 +17402,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 170,
+          "line": 173,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17539,7 +17539,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 200,
+          "line": 203,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17604,7 +17604,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 153,
+          "line": 156,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17651,7 +17651,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 192,
+          "line": 195,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17716,7 +17716,7 @@
           "path": "/api/workflows/:id/activate",
           "rawPath": "/api/workflows/${id}/activate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 209,
+          "line": 212,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17799,7 +17799,7 @@
           "path": "/api/workflows/:id/deactivate",
           "rawPath": "/api/workflows/${id}/deactivate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 219,
+          "line": 222,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17846,7 +17846,7 @@
           "path": "/api/workflows/:id/duplicate",
           "rawPath": "/api/workflows/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 284,
+          "line": 317,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17893,7 +17893,7 @@
           "path": "/api/workflows/:workflowId/enroll",
           "rawPath": "/api/workflows/${workflowId}/enroll",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 234,
+          "line": 237,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17958,7 +17958,7 @@
           "path": "/api/workflows/:workflowId/enrollments",
           "rawPath": "/api/workflows/${workflowId}/enrollments",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 257,
+          "line": 260,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17999,7 +17999,7 @@
           "path": "/api/workflows/:workflowId/enrollments/:enrollmentId",
           "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 274,
+          "line": 277,
           "client": "api",
           "literalInterpolation": false
         }
@@ -18475,7 +18475,17 @@
       "risk": "low"
     }
   ],
-  "unmatchedFrontendCalls": [],
+  "unmatchedFrontendCalls": [
+    {
+      "method": "POST",
+      "path": "/api/workflows/:workflowId/enrollments/:enrollmentId/:action",
+      "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}/${action}",
+      "source": "frontend/src/services/automationsApi.ts",
+      "line": 298,
+      "client": "api",
+      "literalInterpolation": false
+    }
+  ],
   "unresolvedFrontendExpressions": [],
   "acknowledgedRuntimeFrontendExpressions": [
     {

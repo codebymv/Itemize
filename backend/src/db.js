@@ -238,9 +238,9 @@ const createDbConnection = () => {
     // Create a connection pool with more robust timeout settings
     const pool = new Pool({
       connectionString: dbUrl,
-      ssl: {
-        rejectUnauthorized: false // Required for Supabase connections
-      },
+      ssl: process.env.DATABASE_SSL === 'false'
+        ? false
+        : { rejectUnauthorized: false }, // Required for hosted PostgreSQL connections
       // More robust connection settings to handle network latency and concurrent requests
       max: 20,                    // Increased from 5 to handle more concurrent OAuth requests
       min: 2,                     // Keep at least 2 connections alive for faster response
