@@ -1095,54 +1095,54 @@
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "smsTemplates",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Organization-scoped template connection preserving category, active, and search filters."
+      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped filters, integer counts, and retained response mapping."
     },
     "POST /api/sms-templates": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "createSmsTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Validate message limits, extract variables, and return deterministic encoding and segment information."
+      "notes": "CSRF-protected GraphQL creation validates the 1600-character bound, extracts deterministic variables, and returns standards-aware encoding and segment information."
     },
     "DELETE /api/sms-templates/:id": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "deleteSmsTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Delete only an organization-owned template while retaining nullable historical log references."
+      "notes": "CSRF-protected GraphQL deletion conceals foreign templates while retaining nullable historical log references."
     },
     "GET /api/sms-templates/:id": {
       "disposition": "graphql-query",
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "smsTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Return an organization-owned SMS template without existence leakage."
+      "notes": "Default-off GraphQL detail returns an organization-owned SMS template without cross-tenant existence leakage."
     },
     "PUT /api/sms-templates/:id": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "updateSmsTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Organization-scoped partial update that recomputes variables, encoding, and segment count."
+      "notes": "CSRF-protected GraphQL partial updates lock the tenant row, prevent lost concurrent changes, and recompute variables plus message information."
     },
     "POST /api/sms-templates/:id/duplicate": {
       "disposition": "graphql-mutation",
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "duplicateSmsTemplate",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Copy only an organization-owned template and create the copy inactive."
+      "notes": "CSRF-protected GraphQL duplication bounds the copy suffix, conceals foreign rows, and creates the copy inactive."
     },
     "POST /api/sms-templates/:id/send-test": {
       "disposition": "graphql-mutation",
@@ -1158,18 +1158,18 @@
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "smsTemplateCategories",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Organization-scoped category aggregates with stable count scalar semantics."
+      "notes": "Default-off GraphQL category aggregates preserve category case, deterministic ordering, tenant scope, and safe integer counts."
     },
     "POST /api/sms-templates/message-info": {
       "disposition": "graphql-query",
       "owner": "messaging",
       "targetModule": "SmsTemplatesModule",
       "targetOperation": "smsMessageInfo",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Pure authenticated calculation returning encoding, length, segment count, and remaining characters."
+      "notes": "Default-off authenticated GraphQL calculation counts GSM-7 extension characters as two septets and Unicode as UTF-16 units across single and concatenated segment boundaries."
     },
     "POST /api/sms-templates/send-to-contact": {
       "disposition": "graphql-mutation",

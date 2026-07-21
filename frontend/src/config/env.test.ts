@@ -59,6 +59,8 @@ describe('Environment Validation', () => {
     expect(env.VITE_WORKFLOW_PERFORMANCE_GRAPHQL).toBe('false');
     expect(env.VITE_EMAIL_TEMPLATE_READS_GRAPHQL).toBe('false');
     expect(env.VITE_EMAIL_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
+    expect(env.VITE_SMS_TEMPLATE_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_SMS_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

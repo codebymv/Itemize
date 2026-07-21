@@ -1,6 +1,6 @@
 # Messaging GraphQL cutover contract
 
-**Status:** Email-template management implemented default-off; delivery, administrator, SMS-template, and provider boundaries remain characterized
+**Status:** Email/SMS-template management implemented default-off; delivery, administrator, and provider boundaries remain characterized
 
 **Evidence date:** 2026-07-21
 
@@ -17,6 +17,8 @@ The authoritative per-operation assignments are in `graphql-operation-overrides.
 `EmailTemplatesModule` now implements the seven organization email-template management operations. List and detail reads, category aggregation, and CSRF-protected create, update, duplicate, and delete mutations are available through independent default-off frontend read and mutation flags. The adapter preserves both existing consumer shapes, while send-test and send-to-contact continue to use REST.
 
 Fresh PostgreSQL coverage proves GraphQL/REST interoperability, deterministic filtering and paging, tenant-private misses, CSRF denial, complete-content variable extraction, locked concurrent partial updates, inactive duplication, and deletion. Focused frontend tests prove GraphQL mapping and flag-off REST rollback. No deployed traffic is enabled by this checkpoint.
+
+`SmsTemplatesModule` now implements the corresponding seven organization SMS-template management operations plus authenticated `smsMessageInfo`. Message information counts GSM-7 extension-table characters as two septets, applies 160/153 septet boundaries, and applies 70/67 UTF-16-unit Unicode boundaries. Independent default-off read and mutation flags preserve the existing frontend shape; test/contact sends and both Twilio callbacks remain on REST.
 
 ## Ownership and targets
 
@@ -167,13 +169,12 @@ Verified events that arrive before their local provider ID is committed are reta
 
 ## Current evidence and remaining blockers
 
-Fresh PostgreSQL tests now cover the implemented GraphQL email-template management contract, REST interoperability, locked concurrent partial updates, tenant isolation, CSRF, and retained frontend mapping/rollback. Existing retained suites also cover successful email contact audit writes, provider-unavailable semantics, SMS template tenant isolation, successful/failed SMS contact logging, receiving-number ownership, concurrent inbound replay, same-sender cross-tenant routing, unmatched receiving-number quarantine, tenant-local sender ambiguity, SMS status replay/state validation, real Resend/Svix verification, duplicate and out-of-order email events, campaign engagement, contact suppression, and leased unmatched-event reconciliation.
+Fresh PostgreSQL tests now cover the implemented GraphQL email/SMS-template management contracts, REST interoperability, locked concurrent partial updates, tenant isolation, CSRF, message segment boundaries, and retained frontend mapping/rollback. Existing retained suites also cover successful email contact audit writes, provider-unavailable semantics, successful/failed SMS contact logging, receiving-number ownership, concurrent inbound replay, same-sender cross-tenant routing, unmatched receiving-number quarantine, tenant-local sender ambiguity, SMS status replay/state validation, real Resend/Svix verification, duplicate and out-of-order email events, campaign engagement, contact suppression, and leased unmatched-event reconciliation.
 
-Email-template management is implementation-ready but remains default-off pending a staging consumer/rollback gate. The broader messaging slice is not ready for traffic cutover until:
+Email/SMS-template management is implementation-ready but remains default-off pending staging consumer/rollback gates. The broader messaging slice is not ready for traffic cutover until:
 
 - contact, campaign, workflow, invoice, and admin sends share one durable delivery/outbox abstraction;
 - email and SMS request idempotency and atomic usage reservation are implemented;
 - the administrator batch becomes bounded asynchronous work;
 - provider adapters have deterministic contract tests for timeout, retry, permanent failure, and duplicate acceptance;
-- GSM-7/UCS-2 segmentation is replaced with a standards-correct implementation and boundary tests;
 - critical email/SMS operator journeys pass against the GraphQL schema.

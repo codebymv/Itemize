@@ -368,7 +368,7 @@
 | GET | `/api/sms-templates` | 1 | 0 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplates |
 | POST | `/api/sms-templates` | 1 | 1 | graphql-mutation | high | messaging / SmsTemplatesModule / createSmsTemplate |
 | DELETE | `/api/sms-templates/:id` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / deleteSmsTemplate |
-| GET | `/api/sms-templates/:id` | 1 | 1 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplate |
+| GET | `/api/sms-templates/:id` | 1 | 2 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplate |
 | PUT | `/api/sms-templates/:id` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / updateSmsTemplate |
 | POST | `/api/sms-templates/:id/duplicate` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / duplicateSmsTemplate |
 | POST | `/api/sms-templates/:id/send-test` | 1 | 0 | graphql-mutation | high | messaging / MessagingDeliveryModule / sendSmsTemplateTest |

@@ -14936,7 +14936,7 @@
           "path": "/api/sms-templates",
           "rawPath": "/api/sms-templates?${params.toString()}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 102,
+          "line": 114,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14948,8 +14948,8 @@
       "owner": "messaging",
       "targetOperation": "smsTemplates",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped template connection preserving category, active, and search filters.",
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped filters, integer counts, and retained response mapping.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14970,7 +14970,7 @@
           "path": "/api/sms-templates",
           "rawPath": "/api/sms-templates",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 122,
+          "line": 136,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14989,8 +14989,8 @@
       "owner": "messaging",
       "targetOperation": "createSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Validate message limits, extract variables, and return deterministic encoding and segment information.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL creation validates the 1600-character bound, extracts deterministic variables, and returns standards-aware encoding and segment information.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15011,7 +15011,7 @@
           "path": "/api/sms-templates/:id",
           "rawPath": "/api/sms-templates/${id}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 142,
+          "line": 158,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15023,8 +15023,8 @@
       "owner": "messaging",
       "targetOperation": "deleteSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Delete only an organization-owned template while retaining nullable historical log references.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL deletion conceals foreign templates while retaining nullable historical log references.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15045,12 +15045,18 @@
           "path": "/api/sms-templates/:id",
           "rawPath": "/api/sms-templates/${id}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 112,
+          "line": 125,
           "client": "api",
           "literalInterpolation": false
         }
       ],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/sms-templates/:id",
+          "source": "backend-v2/test/integration/sms-templates.integration-spec.ts",
+          "line": 71
+        },
         {
           "method": "GET",
           "path": "/api/sms-templates/:id",
@@ -15064,8 +15070,8 @@
       "owner": "messaging",
       "targetOperation": "smsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Return an organization-owned SMS template without existence leakage.",
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL detail returns an organization-owned SMS template without cross-tenant existence leakage.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15086,7 +15092,7 @@
           "path": "/api/sms-templates/:id",
           "rawPath": "/api/sms-templates/${id}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 132,
+          "line": 147,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15098,8 +15104,8 @@
       "owner": "messaging",
       "targetOperation": "updateSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped partial update that recomputes variables, encoding, and segment count.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL partial updates lock the tenant row, prevent lost concurrent changes, and recompute variables plus message information.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15120,7 +15126,7 @@
           "path": "/api/sms-templates/:id/duplicate",
           "rawPath": "/api/sms-templates/${id}/duplicate",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 176,
+          "line": 193,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15132,8 +15138,8 @@
       "owner": "messaging",
       "targetOperation": "duplicateSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Copy only an organization-owned template and create the copy inactive.",
+      "parityStatus": "implemented",
+      "notes": "CSRF-protected GraphQL duplication bounds the copy suffix, conceals foreign rows, and creates the copy inactive.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15154,7 +15160,7 @@
           "path": "/api/sms-templates/:templateId/send-test",
           "rawPath": "/api/sms-templates/${templateId}/send-test",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 159,
+          "line": 175,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15188,7 +15194,7 @@
           "path": "/api/sms-templates/categories/list",
           "rawPath": "/api/sms-templates/categories/list",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 208,
+          "line": 227,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15200,8 +15206,8 @@
       "owner": "messaging",
       "targetOperation": "smsTemplateCategories",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped category aggregates with stable count scalar semantics.",
+      "parityStatus": "implemented",
+      "notes": "Default-off GraphQL category aggregates preserve category case, deterministic ordering, tenant scope, and safe integer counts.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15222,7 +15228,7 @@
           "path": "/api/sms-templates/message-info",
           "rawPath": "/api/sms-templates/message-info",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 200,
+          "line": 218,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15234,8 +15240,8 @@
       "owner": "messaging",
       "targetOperation": "smsMessageInfo",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Pure authenticated calculation returning encoding, length, segment count, and remaining characters.",
+      "parityStatus": "implemented",
+      "notes": "Default-off authenticated GraphQL calculation counts GSM-7 extension characters as two septets and Unicode as UTF-16 units across single and concatenated segment boundaries.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -15256,7 +15262,7 @@
           "path": "/api/sms-templates/send-to-contact",
           "rawPath": "/api/sms-templates/send-to-contact",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 190,
+          "line": 207,
           "client": "api",
           "literalInterpolation": false
         }
