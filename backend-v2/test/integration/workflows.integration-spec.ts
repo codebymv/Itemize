@@ -366,4 +366,113 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
       }`, { workflowId, enrollmentId }, false).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
   });
+
+  it('exposes a payload-free operator queue and performs scoped retry and SMS reconciliation', async () => {
+    const contact = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id, first_name, last_name, email, phone, created_by)
+       VALUES ($1, 'Queue', 'Operator', $2, '+15205550123', $3) RETURNING id`,
+      [organizationId, `queue-${Date.now()}@test.itemize`, memberId],
+    );
+    const workflow = await pool.query<{ id: number }>(
+      `INSERT INTO workflows (organization_id, name, trigger_type, is_active, created_by)
+       VALUES ($1, 'Execution operator', 'manual', true, $2) RETURNING id`, [organizationId, memberId],
+    );
+    const workflowId = Number(workflow.rows[0].id);
+    const steps = await pool.query<{ id: number }>(
+      `INSERT INTO workflow_steps (workflow_id, step_order, step_type, step_config)
+       VALUES ($1,1,'send_email','{}'),($1,2,'send_sms','{}'),($1,3,'webhook','{}') RETURNING id`, [workflowId],
+    );
+    const enrollment = await pool.query<{ id: number }>(
+      `INSERT INTO workflow_enrollments (workflow_id,contact_id,status,current_step,trigger_data,context,next_action_at)
+       VALUES ($1,$2,'active',2,'{}','{}',NOW()-INTERVAL '2 minutes') RETURNING id`,
+      [workflowId, Number(contact.rows[0].id)],
+    );
+    const enrollmentId = Number(enrollment.rows[0].id);
+    const runAt = new Date(Date.now() - 300_000).toISOString();
+    const inserted = await pool.query<{ id: number; status: string }>(
+      `INSERT INTO workflow_side_effect_outbox (idempotency_key,organization_id,enrollment_id,step_id,
+         enrollment_run_at,effect_type,payload,status,attempt_count,next_attempt_at,last_error,
+         operator_retry_count,reconciliation_required_at,reconciliation_reason)
+       VALUES
+         ($1,$4,$5,$6,$9,'email','{"to":"secret@example.com"}','dead_letter',3,NULL,
+          'Bearer hidden https://private.example secret@example.com',2,NULL,NULL),
+         ($2,$4,$5,$7,$9,'sms',$10::jsonb,'reconciliation_required',1,NULL,'timeout',0,NOW(),'ambiguous_timeout'),
+         ($3,$4,$5,$8,$9,'webhook','{"url":"https://private.example"}','queued',0,NOW()-INTERVAL '1 minute',NULL,0,NULL,NULL)
+       RETURNING id,status`,
+      [`operator-email-${Date.now()}`, `operator-sms-${Date.now()}`, `operator-webhook-${Date.now()}`,
+        organizationId, enrollmentId, Number(steps.rows[0].id), Number(steps.rows[1].id), Number(steps.rows[2].id),
+        runAt, JSON.stringify({ contactId: Number(contact.rows[0].id), to: '+15205550123', from: '+15205550124', message: 'Hello', segments: 1 })],
+    );
+    const deadLetterId = Number(inserted.rows.find((row) => row.status === 'dead_letter')?.id);
+    const smsId = Number(inserted.rows.find((row) => row.status === 'reconciliation_required')?.id);
+
+    const summary = await graphql(memberToken, organizationId,
+      `query Summary($workflowId:Int!){ workflowExecutionSummary(workflowId:$workflowId){
+        workflowId sideEffects { total dueCount expiredProcessingCount maxAttemptCount totalAttemptCount operatorRetryCount
+          byStatus { queued processing retry sent deadLetter cancelled reconciliationRequired }
+          byType { email sms webhook } oldestPendingAt }
+        enrollments { total active paused completed failed cancelled oldestDueAt oldestDueAgeSeconds }
+      } }`, { workflowId }, false).expect(200);
+    expect(summary.body.errors).toBeUndefined();
+    expect(summary.body.data.workflowExecutionSummary).toMatchObject({
+      workflowId,
+      sideEffects: { total: 3, dueCount: 1, maxAttemptCount: 3, totalAttemptCount: 4, operatorRetryCount: 2,
+        byStatus: { queued: 1, deadLetter: 1, reconciliationRequired: 1 }, byType: { email: 1, sms: 1, webhook: 1 } },
+      enrollments: { total: 1, active: 1, paused: 0, completed: 0, failed: 0, cancelled: 0 },
+    });
+
+    const list = await graphql(memberToken, organizationId,
+      `query SideEffects($workflowId:Int!,$filter:WorkflowSideEffectFilterInput,$page:PageInput){
+        workflowSideEffects(workflowId:$workflowId,filter:$filter,page:$page){
+          nodes { id enrollmentId stepOrder effectType status attemptCount operatorRetryCount providerId lastError
+            isDue leaseExpired ageSeconds enrollmentStatus enrollmentCurrentStep contactId contactName }
+          pageInfo { page pageSize total totalPages }
+        }
+      }`, { workflowId, filter: { status: 'dead_letter', effectType: 'email' }, page: { page: 1, pageSize: 1 } }, false).expect(200);
+    expect(list.body.errors).toBeUndefined();
+    expect(list.body.data.workflowSideEffects).toMatchObject({
+      nodes: [{ id: deadLetterId, enrollmentId, stepOrder: 1, effectType: 'email', status: 'dead_letter',
+        attemptCount: 3, operatorRetryCount: 2, contactName: 'Queue Operator' }],
+      pageInfo: { page: 1, pageSize: 1, total: 1, totalPages: 1 },
+    });
+    const safeError = list.body.data.workflowSideEffects.nodes[0].lastError;
+    expect(safeError).toContain('[redacted-authorization]');
+    expect(safeError).toContain('[redacted-url]');
+    expect(safeError).toContain('[redacted-email]');
+    expect(JSON.stringify(list.body.data)).not.toContain('private.example');
+
+    const payloadDenied = await graphql(memberToken, organizationId,
+      'query Hidden($workflowId:Int!){ workflowSideEffects(workflowId:$workflowId){ nodes { id payload } } }',
+      { workflowId }, false).expect(400);
+    expect(payloadDenied.body.errors[0].message).toContain('Cannot query field');
+
+    const retry = await graphql(memberToken, organizationId,
+      `mutation Retry($workflowId:Int!,$sideEffectId:Int!){ retryWorkflowSideEffect(workflowId:$workflowId,sideEffectId:$sideEffectId){
+        id status attemptCount operatorRetryCount nextAttemptAt }
+      }`, { workflowId, sideEffectId: deadLetterId }).expect(200);
+    expect(retry.body.data.retryWorkflowSideEffect).toMatchObject({ id: deadLetterId, status: 'retry', attemptCount: 0, operatorRetryCount: 3 });
+
+    const sid = 'SM00000000000000000000000000000000';
+    const reconciled = await graphql(memberToken, organizationId,
+      `mutation Reconcile($workflowId:Int!,$sideEffectId:Int!,$input:ReconcileWorkflowSmsSideEffectInput!){
+        reconcileWorkflowSmsSideEffect(workflowId:$workflowId,sideEffectId:$sideEffectId,input:$input){
+          id status providerId lastReconciliationAction lastReconciledBy }
+      }`, { workflowId, sideEffectId: smsId, input: { action: 'accepted', providerId: sid } }).expect(200);
+    expect(reconciled.body.data.reconcileWorkflowSmsSideEffect).toMatchObject({
+      id: smsId, status: 'sent', providerId: sid, lastReconciliationAction: 'accepted', lastReconciledBy: memberId,
+    });
+    const smsLog = await pool.query<{ external_id: string; workflow_side_effect_id: number }>(
+      'SELECT external_id,workflow_side_effect_id FROM sms_logs WHERE workflow_side_effect_id=$1', [smsId],
+    );
+    expect(smsLog.rows).toEqual([{ external_id: sid, workflow_side_effect_id: String(smsId) }]);
+
+    const hidden = await graphql(outsiderToken, outsiderOrganizationId,
+      'query Summary($workflowId:Int!){ workflowExecutionSummary(workflowId:$workflowId){ workflowId } }',
+      { workflowId }, false).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const noCsrf = await graphql(memberToken, organizationId,
+      'mutation Retry($workflowId:Int!,$sideEffectId:Int!){ retryWorkflowSideEffect(workflowId:$workflowId,sideEffectId:$sideEffectId){ id } }',
+      { workflowId, sideEffectId: deadLetterId }, false).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
 });

@@ -1,8 +1,8 @@
 # Workflow execution cutover contract
 
-**Status:** Phase 0 trigger, enrollment, and provider boundaries hardened
+**Status:** Operator GraphQL surface implemented; durable worker ownership remains
 
-**Evidence date:** 2026-07-16
+**Evidence date:** 2026-07-21
 
 ## Decision
 
@@ -67,6 +67,8 @@ The enrollment scheduler remains deliberately opt-in. Provider steps define comp
 The outbox key is derived from enrollment ID, step ID, and `enrolled_at`, so replaying the same run reuses one intent while a later re-enrollment creates a new generation. The first committed payload snapshot wins. Deleting the source enrollment or step clears its foreign-key reference without deleting an already committed delivery intent. Execution logs store only the step type and configuration key names; provider headers, destinations, bodies, and custom payload values remain out of routine log input.
 
 Tenant-scoped execution visibility is explicit. `GET /api/workflows/:id/execution-summary` reports enrollment and side-effect status counts, effect-type counts, due work, expired processing leases, reconciliation-required SMS attempts, oldest queue age, attempt totals, cancellations, dead letters, and operator retry history. `GET /api/workflows/:id/side-effects` provides strict status/type filtering and bounded pagination with step/contact identity, safe error text, reconciliation timing/action fields, and provider correlation IDs. `POST /api/workflows/:id/side-effects/:sideEffectId/reconcile` resolves the ambiguous SMS state. None of these operations returns the durable payload, recipient, webhook destination, custom headers, authorization material, or idempotency key. The NestJS targets are `workflowExecutionSummary`, `workflowSideEffects`, and `reconcileWorkflowSmsSideEffect`.
+
+`WorkflowExecutionModule` now owns those GraphQL operations plus `retryWorkflowSideEffect`. Fresh PostgreSQL coverage proves exact status/type and due-work metrics, strict filters and bounded stable paging, safe error redaction, schema-level payload omission, tenant concealment, CSRF, dead-letter retry history, and accepted-SID SMS reconciliation with correlated log persistence. The legacy HTTP adapters remain available for rollback while execution workers are still transferred.
 
 Email delivery passes the stable key to Resend, which provides provider-side deduplication. Outbound webhooks send the same value in `Idempotency-Key`; exactly-once behavior depends on the receiver honoring it. Twilio's message-create API does not provide an equivalent key in this integration. A known Twilio HTTP rejection may retry because the provider reported that it rejected the request. A timeout, network failure, missing HTTP status, or expired in-flight lease has an unknown outcome and is quarantined for operator reconciliation rather than automatically resent. This is not exactly-once delivery: it is duplicate-safe recovery with an explicit operator decision between acknowledging provider acceptance and accepting resend risk.
 
