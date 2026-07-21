@@ -1,6 +1,6 @@
 # Campaigns and workflows GraphQL cutover contract
 
-**Status:** Phase 1 campaign management implemented; delivery and workflows remain characterized
+**Status:** Campaign management, audience, recipient inspection, test delivery, and bulk-send delivery implemented; pause/resume and workflows remain characterized
 
 **Evidence date:** 2026-07-21
 
@@ -117,9 +117,9 @@ The send mutation must perform one database transaction that:
 
 The resolver returns the accepted campaign and recipient count. A worker sends recipients idempotently and records provider message IDs and per-recipient failure details. Retrying the mutation or job must not send the same campaign/contact pair twice.
 
-The legacy route now locks the campaign before the `sending` transition, and the legacy worker no longer overwrites a concurrently paused campaign as `sent`. It is still an in-process fire-and-forget worker with a non-atomic usage check; that architecture is characterization evidence, not the NestJS target.
+Migration `039_campaign_deliveries` and `CampaignDeliveryModule` now implement this boundary. Acceptance locks the tenant-owned campaign, reuses the shared audience compiler, reserves the current month's entitlement through the locked usage row, snapshots canonical-email recipients, creates a tenant-enforced durable job, and transitions to `sending` in one transaction. Exact mutation replay returns the original job without reserving usage again. A separate leased worker calls the provider with a stable recipient-intent key and persists confirmed provider IDs, bounded retries, dead letters, or ambiguous-outcome reconciliation before deriving campaign totals.
 
-Completion must derive aggregate counts from recipient rows. A partial provider failure does not erase successful recipient state. Define an explicit terminal policy (`sent`, `failed`, or `sent_with_failures`) before schema implementation; the current database enum has no `sent_with_failures` value.
+Completion derives aggregate counts from recipient rows. Definite provider rejections retry five times and then leave that recipient `failed`; after all recipients are terminal, the campaign uses the legacy-compatible `sent` state even when some rows failed because the current enum has no `sent_with_failures`. An ambiguous provider exception is never automatically resent: its row and job become `reconciliation_required`, and the campaign becomes `failed` so operator intervention is visible. Successful recipient state is never erased.
 
 ### Pause, resume, and test sends
 

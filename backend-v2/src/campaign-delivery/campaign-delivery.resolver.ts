@@ -3,13 +3,28 @@ import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CampaignTestEmailService } from './campaign-test-email.service';
 import { CampaignTestEmailResult } from './campaign-test-email.types';
+import { CampaignSendService } from './campaign-send.service';
+import { CampaignSendResult } from './campaign-send.types';
 
 @Resolver()
 export class CampaignDeliveryResolver {
   constructor(
     private readonly testEmails: CampaignTestEmailService,
+    private readonly campaignSends: CampaignSendService,
     private readonly requestContext: RequestContextService,
   ) {}
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => CampaignSendResult)
+  sendCampaign(
+    @Args('campaignId', { type: () => Int }) campaignId: number,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<CampaignSendResult> {
+    return this.campaignSends.send(
+      this.organizationId(), this.userId(), campaignId, idempotencyKey,
+    );
+  }
 
   @CsrfProtected()
   @OrganizationScoped()

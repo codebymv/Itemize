@@ -366,7 +366,7 @@ export class CampaignsRepository {
     return audience;
   }
 
-  private async normalizeStoredAudience(
+  async normalizeStoredAudience(
     client: PoolClient,
     organizationId: number,
     campaign: CampaignRow,

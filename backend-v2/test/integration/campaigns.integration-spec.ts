@@ -10,6 +10,7 @@ import {
   CAMPAIGN_TEST_EMAIL_PROVIDER,
   CampaignTestEmailProvider,
 } from '../../src/campaign-delivery/campaign-test-email.provider';
+import { CampaignSendService } from '../../src/campaign-delivery/campaign-send.service';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
@@ -23,6 +24,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
   let outsiderOrganizationId: number;
   let memberToken: string;
   let outsiderToken: string;
+  let campaignSendService: CampaignSendService;
   const jwt = new JwtService();
   const testEmailProvider: jest.Mocked<CampaignTestEmailProvider> = {
     send: jest.fn(),
@@ -75,6 +77,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       .overrideProvider(CAMPAIGN_TEST_EMAIL_PROVIDER)
       .useValue(testEmailProvider)
       .compile();
+    campaignSendService = moduleRef.get(CampaignSendService);
     app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
     configureApp(app);
     await app.init();
@@ -551,6 +554,116 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
     await pool.query('DELETE FROM email_campaigns WHERE id=ANY($1::int[])', [[campaignId, foreignCampaignId]]);
     await pool.query('DELETE FROM email_templates WHERE id=$1', [Number(template.rows[0].id)]);
+  });
+
+  it('atomically accepts, replays, and durably completes a bulk campaign send', async () => {
+    const suffix = `${Date.now()}-${process.pid}`;
+    await pool.query(
+      `INSERT INTO subscriptions (organization_id, plan_id, status)
+       SELECT $1, id, 'trialing' FROM subscription_plans WHERE name='starter'
+       ON CONFLICT (organization_id) DO UPDATE SET
+         plan_id=EXCLUDED.plan_id, status=EXCLUDED.status`,
+      [organizationId],
+    );
+    const contacts = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id, first_name, last_name, email, source, created_by)
+       VALUES ($1,'Bulk','One',$2,'manual',$4), ($1,'Bulk','Two',$3,'manual',$4)
+       RETURNING id`,
+      [organizationId, `bulk-one-${suffix}@test.itemize`,
+        `bulk-two-${suffix}@test.itemize`, memberId],
+    );
+    const campaign = await pool.query<{ id: number }>(
+      `INSERT INTO email_campaigns (
+         organization_id, name, subject, content_html, content_text,
+         segment_type, status, created_by
+       ) VALUES ($1,$2,'Hello {{first_name}}','<p>{{full_name}}: {{email}}</p>',
+                 'Hi {{first_name}}','all','draft',$3) RETURNING id`,
+      [organizationId, `Bulk campaign ${suffix}`, memberId],
+    );
+    const campaignId = Number(campaign.rows[0].id);
+    const usageBefore = await pool.query<{ count: number }>(
+      `SELECT COALESCE((SELECT count FROM usage_tracking
+         WHERE organization_id=$1 AND resource_type='emails_per_month'
+           AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date),0)::int count`,
+      [organizationId],
+    );
+    testEmailProvider.send.mockReset();
+    testEmailProvider.send.mockResolvedValue({ kind: 'sent', providerId: 'provider-bulk' });
+    const document = `mutation SendCampaign($campaignId: Int!, $idempotencyKey: String!) {
+      sendCampaign(campaignId: $campaignId, idempotencyKey: $idempotencyKey) {
+        campaign { id status totalRecipients totalSent startedAt }
+        recipientCount deliveryJobId replayed message
+      }
+    }`;
+    const variables = { campaignId, idempotencyKey: `bulk-${suffix}` };
+    const accepted = await graphql(memberToken, organizationId, document, variables).expect(200);
+    expect(accepted.body.errors).toBeUndefined();
+    expect(accepted.body.data.sendCampaign).toMatchObject({
+      campaign: { id: campaignId, status: 'sending', totalSent: 0 },
+      replayed: false, message: 'Campaign is now sending',
+    });
+    const recipientCount = Number(accepted.body.data.sendCampaign.recipientCount);
+    expect(recipientCount).toBeGreaterThanOrEqual(2);
+    expect(testEmailProvider.send).not.toHaveBeenCalled();
+
+    const persisted = await pool.query(
+      `SELECT job.status, job.recipient_count,
+              COUNT(recipient.id)::int snapshot_count,
+              COUNT(*) FILTER (WHERE recipient.delivery_status='queued')::int queued_count
+       FROM campaign_delivery_jobs job
+       JOIN campaign_recipients recipient ON recipient.delivery_job_id=job.id
+       WHERE job.id=$1 GROUP BY job.id`,
+      [accepted.body.data.sendCampaign.deliveryJobId],
+    );
+    expect(persisted.rows[0]).toMatchObject({
+      status: 'queued', recipient_count: recipientCount,
+      snapshot_count: recipientCount, queued_count: recipientCount,
+    });
+    const usageAfter = await pool.query<{ count: number }>(
+      `SELECT count::int FROM usage_tracking
+       WHERE organization_id=$1 AND resource_type='emails_per_month'
+         AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date`,
+      [organizationId],
+    );
+    expect(usageAfter.rows[0].count).toBe(usageBefore.rows[0].count + recipientCount);
+
+    const replayed = await graphql(memberToken, organizationId, document, variables).expect(200);
+    expect(replayed.body.data.sendCampaign).toMatchObject({
+      deliveryJobId: accepted.body.data.sendCampaign.deliveryJobId,
+      recipientCount, replayed: true,
+    });
+    const replayUsage = await pool.query<{ count: number }>(
+      `SELECT count::int FROM usage_tracking
+       WHERE organization_id=$1 AND resource_type='emails_per_month'
+         AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date`,
+      [organizationId],
+    );
+    expect(replayUsage.rows[0].count).toBe(usageAfter.rows[0].count);
+
+    await expect(campaignSendService.runDue(500)).resolves.toEqual({
+      attempted: recipientCount, sent: recipientCount,
+    });
+    expect(testEmailProvider.send).toHaveBeenCalledTimes(recipientCount);
+    expect(testEmailProvider.send).toHaveBeenCalledWith(expect.objectContaining({
+      idempotencyKey: expect.stringMatching(/^campaign-recipient-email:/),
+    }));
+    const completed = await pool.query(
+      `SELECT campaign.status, campaign.total_sent, campaign.completed_at,
+              job.status job_status,
+              COUNT(*) FILTER (WHERE recipient.status='sent')::int sent_count
+       FROM email_campaigns campaign
+       JOIN campaign_delivery_jobs job ON job.campaign_id=campaign.id
+       JOIN campaign_recipients recipient ON recipient.delivery_job_id=job.id
+       WHERE campaign.id=$1 GROUP BY campaign.id, job.id`,
+      [campaignId],
+    );
+    expect(completed.rows[0]).toMatchObject({
+      status: 'sent', total_sent: recipientCount,
+      job_status: 'completed', sent_count: recipientCount,
+    });
+    expect(completed.rows[0].completed_at).toBeTruthy();
+    await pool.query('DELETE FROM email_campaigns WHERE id=$1', [campaignId]);
+    await pool.query('DELETE FROM contacts WHERE id=ANY($1::int[])', [contacts.rows.map((row) => row.id)]);
   });
 
   it('previews deliverable audiences with REST parity and fail-closed saved segments', async () => {

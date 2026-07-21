@@ -13,6 +13,7 @@ import {
     previewCampaignViaGraphql,
     scheduleCampaignViaGraphql,
     sendCampaignTestViaGraphql,
+    sendCampaignViaGraphql,
     unscheduleCampaignViaGraphql,
     updateCampaignViaGraphql,
 } from './campaignsGraphql';
@@ -22,6 +23,7 @@ import {
     isCampaignAudiencePreviewGraphqlEnabled,
     isCampaignRecipientReadsGraphqlEnabled,
     isCampaignTestSendGraphqlEnabled,
+    isCampaignSendGraphqlEnabled,
 } from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
@@ -323,6 +325,9 @@ export const sendCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<{ campaign: EmailCampaign; recipientCount: number; message: string }> => {
+    if (isCampaignSendGraphqlEnabled()) {
+        return sendCampaignViaGraphql(campaignId, organizationId);
+    }
     const response = await api.post(`/api/campaigns/${campaignId}/send`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

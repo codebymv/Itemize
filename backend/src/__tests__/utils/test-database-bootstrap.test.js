@@ -329,8 +329,22 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '038_campaign_test_email_deliveries'"
+            "WHERE version = '039_campaign_deliveries'"
         );
+    });
+
+    test('production migration stream creates durable bulk campaign delivery intents', async () => {
+        const migration = require('../../../scripts/migrations/039_campaign_deliveries');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS campaign_delivery_jobs');
+        expect(sql).toContain('campaign_delivery_job_idempotency');
+        expect(sql).toContain('delivery_lease_expires_at');
+        expect(sql).toContain('idx_campaign_recipients_delivery_claim');
+        expect(sql).toContain('campaign_recipient_delivery_job_tenant');
+        expect(sql).toContain("'reconciliation_required'");
     });
 
     test('production migration stream creates durable campaign test-email intents', async () => {

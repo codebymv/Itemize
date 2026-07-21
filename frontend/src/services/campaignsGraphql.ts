@@ -280,6 +280,37 @@ export const sendCampaignTestViaGraphql = async (
   };
 };
 
+export const sendCampaignViaGraphql = async (
+  campaignId: number,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<{ campaign: EmailCampaign; recipientCount: number; message: string }> => {
+  const data = await graphqlMutationRequest<{
+    sendCampaign: {
+      campaign: GraphqlCampaign; recipientCount: number; message: string;
+      deliveryJobId: number; replayed: boolean;
+    };
+  }, { campaignId: number; idempotencyKey: string }>(
+    `mutation SendCampaign($campaignId: Int!, $idempotencyKey: String!) {
+      sendCampaign(campaignId: $campaignId, idempotencyKey: $idempotencyKey) {
+        campaign { ${fields} }
+        recipientCount deliveryJobId replayed message
+      }
+    }`,
+    {
+      campaignId,
+      idempotencyKey: idempotencyKey ?? globalThis.crypto?.randomUUID?.() ??
+        `campaign-send-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    },
+    organizationId,
+  );
+  return {
+    campaign: mapCampaign(data.sendCampaign.campaign),
+    recipientCount: data.sendCampaign.recipientCount,
+    message: data.sendCampaign.message,
+  };
+};
+
 export const createCampaignViaGraphql = async (
   input: Partial<EmailCampaign>,
   organizationId?: number,

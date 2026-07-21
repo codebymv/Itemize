@@ -234,6 +234,9 @@ export const isCampaignRecipientReadsGraphqlEnabled = (): boolean =>
 export const isCampaignTestSendGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_CAMPAIGN_TEST_SEND_GRAPHQL === 'true';
 
+export const isCampaignSendGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_CAMPAIGN_SEND_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

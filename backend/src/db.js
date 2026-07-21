@@ -74,6 +74,9 @@ const {
 const {
   runCampaignTestEmailDeliveryMigration,
 } = require('./db_campaign_test_email_delivery_migrations');
+const {
+  runCampaignDeliveryMigration,
+} = require('./db_campaign_delivery_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -507,6 +510,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'invoice_payment_link_intents', runInvoicePaymentLinkMigration);
     await runMigrationOnce(pool, 'invoice_logo_deletion_jobs', runInvoiceLogoDeletionMigration);
     await runMigrationOnce(pool, 'campaign_test_email_deliveries', runCampaignTestEmailDeliveryMigration);
+    await runMigrationOnce(pool, 'campaign_deliveries', runCampaignDeliveryMigration);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
     await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {

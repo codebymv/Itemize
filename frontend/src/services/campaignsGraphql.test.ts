@@ -9,6 +9,7 @@ import {
   getCampaignRecipientsViaGraphql,
   previewCampaignViaGraphql,
   sendCampaignTestViaGraphql,
+  sendCampaignViaGraphql,
   scheduleCampaignViaGraphql,
   unscheduleCampaignViaGraphql,
   updateCampaignViaGraphql,
@@ -19,6 +20,7 @@ import {
   isCampaignGraphqlMutationsEnabled,
   isCampaignGraphqlReadsEnabled,
   isCampaignTestSendGraphqlEnabled,
+  isCampaignSendGraphqlEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -66,17 +68,36 @@ describe('campaign GraphQL consumer', () => {
     vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
+    vi.stubEnv('VITE_CAMPAIGN_SEND_GRAPHQL', 'false');
     expect(isCampaignGraphqlReadsEnabled()).toBe(false);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
     expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
+    expect(isCampaignSendGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
     expect(isCampaignGraphqlReadsEnabled()).toBe(true);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
     expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
+    expect(isCampaignSendGraphqlEnabled()).toBe(false);
+  });
+
+  it('accepts a bulk campaign into the durable delivery queue', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { sendCampaign: {
+      campaign: { ...campaign, status: 'sending', totalRecipients: 2 },
+      recipientCount: 2, deliveryJobId: 31, replayed: false,
+      message: 'Campaign is now sending',
+    } } }));
+    await expect(sendCampaignViaGraphql(9, 4, 'campaign-request-31')).resolves.toMatchObject({
+      campaign: { id: 9, status: 'sending', total_recipients: 2 },
+      recipientCount: 2,
+      message: 'Campaign is now sending',
+    });
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.variables).toEqual({ campaignId: 9, idempotencyKey: 'campaign-request-31' });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
   });
 
   it('maps durable test delivery through a CSRF-protected independent mutation', async () => {

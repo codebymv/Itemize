@@ -12,6 +12,7 @@
     "jobs:invoice-email-deliveries": "node dist/run-invoice-email-delivery.js",
     "jobs:invoice-logo-cleanup": "node dist/run-invoice-logo-cleanup.js",
     "jobs:campaign-test-email-deliveries": "node dist/run-campaign-test-email-delivery.js",
+    "jobs:campaign-deliveries": "node dist/run-campaign-delivery.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
     "test:watch": "jest --watch",
